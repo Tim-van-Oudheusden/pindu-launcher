@@ -42,21 +42,13 @@ pub fn play(
         let found = {
             let game = game.clone();
             gio::spawn_blocking(move || {
-                let dirs = proton::tool_dirs(&HostDirs::from_env(), &default_tools_dir());
-                proton::command(
-                    &game,
-                    &config,
-                    &proton::discover(&dirs),
-                    &default_prefixes_dir(),
-                )
+                proton::command(&game, &config, &builds(), &default_prefixes_dir())
             })
             .await
         };
         let title = game.title.clone();
-        let started = match found {
-            Ok(Ok(command)) => spawn(&command).inspect_err(|error| {
-                glib::g_warning!("pindu", "Could not start {:?}: {error}", command.argv);
-            }),
+        let command = match found {
+            Ok(Ok(command)) => command,
             Ok(Err(error)) => {
                 toast(adw::Toast::new(&cannot_start_message(&title, &error)));
                 return;
@@ -66,51 +58,119 @@ pub fn play(
                 return;
             }
         };
-        let Ok(child) = started else {
-            toast(adw::Toast::new(&could_not_start(&title)));
-            return;
+        let toast = Rc::new(toast);
+        let started = {
+            let (toast, title) = (toast.clone(), title.clone());
+            move || {
+                let (library, id) = (library.clone(), game.id.clone());
+                glib::spawn_future_local(async move { library.mark_played(&id, now()).await });
+                toast(adw::Toast::new(
+                    &gettext("Starting “{title}”").replace("{title}", &title),
+                ));
+            }
         };
-        let setup = Setup::new(app.clone(), window, title.clone(), child.clone());
-        let mut ready = false;
-        let log = gio::DataInputStream::new(&child.stderr_pipe().expect("stderr is piped"));
-        loop {
-            let line = match log.read_line_future(glib::Priority::DEFAULT).await {
-                Ok(Some(line)) => String::from_utf8_lossy(&line).into_owned(),
-                Ok(None) => break,
-                Err(error) => {
-                    glib::g_warning!("pindu", "Lost the log of “{title}”: {error}");
-                    break;
-                }
-            };
-            // The game's log goes on to ours, as a host game's does.
-            eprintln!("{line}");
-            match umu::setup_event(&line) {
-                Some(RuntimeSetup::Ready) if !ready => {
-                    ready = true;
-                    setup.close();
-                    library.mark_played(&game.id, now()).await;
-                    toast(adw::Toast::new(
-                        &gettext("Starting “{title}”").replace("{title}", &title),
-                    ));
-                }
-                Some(RuntimeSetup::Ready) => {}
-                Some(RuntimeSetup::Offline) => setup.show_offline(),
-                Some(step) => setup.show(step),
-                None => {}
-            }
-        }
-        if let Err(error) = child.wait_future().await {
-            glib::g_warning!("pindu", "Lost track of “{title}”: {error}");
-        }
-        if !ready && !setup.failed_offline() {
-            if setup.is_shown() {
-                setup.show_failed();
-            } else {
-                toast(adw::Toast::new(&could_not_start(&title)));
-            }
-        }
+        run(&app, window, &title, &command, &*toast, started).await;
         drop(hold);
     });
+}
+
+/// Runs a game's installer through umu in the prefix the game will use, with the named
+/// Proton build or the newest one, and waits until it exits. Returns whether it ran.
+pub async fn run_installer(
+    app: &gtk::Application,
+    window: Option<gtk::Window>,
+    installer: PathBuf,
+    proton_version: Option<String>,
+    prefix: PathBuf,
+    toast: impl Fn(adw::Toast),
+) -> bool {
+    let _hold = app.hold();
+    let title = installer
+        .file_name()
+        .map_or_else(String::new, |name| name.to_string_lossy().into_owned());
+    let found = gio::spawn_blocking(move || {
+        proton::installer_command(&installer, proton_version.as_deref(), &prefix, &builds())
+    })
+    .await;
+    match found {
+        Ok(Ok(command)) => run(app, window, &title, &command, &toast, || {}).await,
+        Ok(Err(error)) => {
+            toast(adw::Toast::new(&cannot_start_message(&title, &error)));
+            false
+        }
+        Err(_) => {
+            toast(adw::Toast::new(&could_not_start(&title)));
+            false
+        }
+    }
+}
+
+/// The Proton builds on this machine, newest first.
+pub fn builds() -> Vec<proton::ProtonBuild> {
+    proton::discover(&proton::tool_dirs(
+        &HostDirs::from_env(),
+        &default_tools_dir(),
+    ))
+}
+
+/// Runs a program through umu as our child and follows its log until umu exits. The
+/// Steam Linux Runtime setup shows in a dialog; `started` runs once umu reports the
+/// program starting. Returns whether it started; when it did not, the dialog or a toast
+/// says so.
+async fn run(
+    app: &gtk::Application,
+    window: Option<gtk::Window>,
+    title: &str,
+    command: &Command,
+    toast: &dyn Fn(adw::Toast),
+    started: impl FnOnce(),
+) -> bool {
+    let child = match spawn(command) {
+        Ok(child) => child,
+        Err(error) => {
+            glib::g_warning!("pindu", "Could not start {:?}: {error}", command.argv);
+            toast(adw::Toast::new(&could_not_start(title)));
+            return false;
+        }
+    };
+    let setup = Setup::new(app.clone(), window, title.to_owned(), child.clone());
+    let mut started = Some(started);
+    let log = gio::DataInputStream::new(&child.stderr_pipe().expect("stderr is piped"));
+    loop {
+        let line = match log.read_line_future(glib::Priority::DEFAULT).await {
+            Ok(Some(line)) => String::from_utf8_lossy(&line).into_owned(),
+            Ok(None) => break,
+            Err(error) => {
+                glib::g_warning!("pindu", "Lost the log of “{title}”: {error}");
+                break;
+            }
+        };
+        // The program's log goes on to ours, as a host game's does.
+        eprintln!("{line}");
+        match umu::setup_event(&line) {
+            Some(RuntimeSetup::Ready) => {
+                if let Some(started) = started.take() {
+                    setup.close();
+                    started();
+                }
+            }
+            Some(RuntimeSetup::Offline) => setup.show_offline(),
+            Some(step) => setup.show(step),
+            None => {}
+        }
+    }
+    if let Err(error) = child.wait_future().await {
+        glib::g_warning!("pindu", "Lost track of “{title}”: {error}");
+    }
+    let ran = started.is_none();
+    if !ran && !setup.failed_offline() {
+        if setup.is_shown() {
+            setup.show_failed();
+        } else {
+            toast(adw::Toast::new(&could_not_start(title)));
+        }
+    }
+    ran
 }
 
 /// Runs the command inside the sandbox, with its log piped to us.
@@ -121,6 +181,11 @@ fn spawn(command: &Command) -> Result<gio::Subprocess, glib::Error> {
     }
     if let Some(dir) = &command.working_dir {
         launcher.set_cwd(dir);
+        // pressure-vessel takes its folder from `PWD` when that names the same folder.
+        // Folders granted through the document portal must keep their
+        // `/run/user/<uid>/doc/…` path: the container has no `/run/flatpak/doc`, which
+        // is where that path leads in our sandbox.
+        launcher.setenv("PWD", dir, true);
     }
     let argv: Vec<&OsStr> = command.argv.iter().map(OsStr::new).collect();
     launcher.spawn(&argv)

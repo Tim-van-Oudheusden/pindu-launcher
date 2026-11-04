@@ -130,13 +130,7 @@ pub fn command(
     builds: &[ProtonBuild],
     prefixes: &Path,
 ) -> Result<Command, ProtonError> {
-    let build = match &config.proton_version {
-        Some(name) => builds
-            .iter()
-            .find(|build| &build.name == name)
-            .ok_or_else(|| ProtonError::Missing(name.clone()))?,
-        None => builds.first().ok_or(ProtonError::NoBuilds)?,
-    };
+    let build = pick_build(config.proton_version.as_deref(), builds)?;
     let prefix = config
         .prefix_path
         .clone()
@@ -152,6 +146,45 @@ pub fn command(
         environment,
         working_dir: config.working_dir.clone(),
     })
+}
+
+/// The command that runs a game's installer through umu, in the prefix the game will
+/// use, with the named Proton build or the newest one. It runs in the installer's folder,
+/// and with umu's default game ID, as there is no game yet.
+pub fn installer_command(
+    installer: &Path,
+    proton_version: Option<&str>,
+    prefix: &Path,
+    builds: &[ProtonBuild],
+) -> Result<Command, ProtonError> {
+    let build = pick_build(proton_version, builds)?;
+    let environment = [
+        ("GAMEID", "umu-default".to_owned()),
+        ("PROTONPATH", path_text(&build.path)),
+        ("WINEPREFIX", path_text(prefix)),
+    ]
+    .into_iter()
+    .map(|(key, value)| (key.to_owned(), value))
+    .collect();
+    Ok(Command {
+        argv: vec!["umu-run".to_owned(), path_text(installer)],
+        environment,
+        working_dir: installer.parent().map(Path::to_owned),
+    })
+}
+
+/// The build named, or the newest one when none is.
+fn pick_build<'a>(
+    name: Option<&str>,
+    builds: &'a [ProtonBuild],
+) -> Result<&'a ProtonBuild, ProtonError> {
+    match name {
+        Some(name) => builds
+            .iter()
+            .find(|build| build.name == name)
+            .ok_or_else(|| ProtonError::Missing(name.to_owned())),
+        None => builds.first().ok_or(ProtonError::NoBuilds),
+    }
 }
 
 fn path_text(path: &Path) -> String {
@@ -250,6 +283,27 @@ mod tests {
         assert_eq!(
             command(&game, &chosen, &[other], prefixes),
             Err(ProtonError::Missing("GE-Proton9-1".into()))
+        );
+    }
+
+    #[test]
+    fn an_installer_runs_in_the_prefix_it_installs_into() {
+        let builds = [build("GE-Proton11-3"), build("GE-Proton10-34")];
+        let installer = Path::new("/run/user/1000/doc/9f8e/setup_celeste.exe");
+        let prefix = Path::new(PREFIXES).join("new-prefix");
+
+        let command =
+            installer_command(installer, Some("GE-Proton10-34"), &prefix, &builds).unwrap();
+
+        assert_eq!(command.argv, ["umu-run", installer.to_str().unwrap()]);
+        assert_eq!(command.environment["PROTONPATH"], "/tools/GE-Proton10-34");
+        assert_eq!(command.environment["WINEPREFIX"], path_text(&prefix));
+        // No game yet, so no fixes for one.
+        assert_eq!(command.environment["GAMEID"], "umu-default");
+        assert_eq!(command.working_dir, Some("/run/user/1000/doc/9f8e".into()));
+        assert_eq!(
+            installer_command(installer, None, &prefix, &[]),
+            Err(ProtonError::NoBuilds)
         );
     }
 }
