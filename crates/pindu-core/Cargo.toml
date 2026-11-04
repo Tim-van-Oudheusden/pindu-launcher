@@ -1,0 +1,10 @@
+[package]
+name = "pindu-core"
+description = "GTK-free core of Pindu launcher: sources, launching, playtime and storage"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
