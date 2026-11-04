@@ -256,6 +256,7 @@ impl GamePage {
 /// The page's "more" menu, built when it opens so collection changes show at once.
 fn more_menu(object: &GameObject, collections: &[Collection]) -> gio::Menu {
     let game = object.game();
+    let hidden = game.hidden;
     let target = game.id.as_str().to_variant();
     let item = |label: String, action: &str| {
         let item = gio::MenuItem::new(Some(&label), None);
@@ -266,7 +267,12 @@ fn more_menu(object: &GameObject, collections: &[Collection]) -> gio::Menu {
     menu.append_section(None, &collection_menu(object, collections));
     let manage = gio::Menu::new();
     manage.append_item(&item(gettext("_Edit…"), "app.edit-game"));
-    manage.append_item(&item(gettext("_Hide"), "win.hide-game"));
+    if hidden {
+        manage.append_item(&item(gettext("_Unhide"), "win.unhide-game"));
+    } else {
+        manage.append_item(&item(gettext("_Hide"), "win.hide-game"));
+    }
+    manage.append_item(&item(gettext("_Remove"), "win.remove-game"));
     if pindu_core::launch::launcher_uri(&game).is_some() {
         manage.append_item(&item(gettext("_Open in Launcher"), "app.open-in-launcher"));
     }

@@ -227,6 +227,8 @@ pub enum View {
     Source(Source),
     /// A user collection, by ID.
     Collection(i64),
+    /// Games the user hid (Ctrl+H); the only view that shows them.
+    Hidden,
 }
 
 impl View {
@@ -238,6 +240,7 @@ impl View {
             Self::PlayHistory => game.last_played_at.is_some(),
             Self::Source(source) => game.source() == source,
             Self::Collection(id) => collections.contains(&id),
+            Self::Hidden => game.hidden,
         }
     }
 }
@@ -290,6 +293,8 @@ impl LibraryFilter {
     pub fn set_view(&mut self, view: View) -> FilterChange {
         let change = match (self.view, view) {
             (old, new) if old == new => FilterChange::Unchanged,
+            // Hidden games are in no other view, so this view is not a subset of All.
+            (View::Hidden, _) | (_, View::Hidden) => FilterChange::Different,
             (View::All, _) => FilterChange::MoreStrict,
             (_, View::All) => FilterChange::LessStrict,
             _ => FilterChange::Different,
@@ -326,12 +331,12 @@ impl LibraryFilter {
         change
     }
 
-    /// Whether a game shows: in the library, not hidden, in the view, allowed by the
-    /// toggles and matching the search. `collections` are the IDs of the collections
+    /// Whether a game shows: in the library, hidden only in the Hidden view, in the view,
+    /// allowed by the toggles and matching the search. `collections` are the IDs of the collections
     /// holding the game.
     pub fn matches(&self, game: &Game, collections: &[i64], key: &SearchKey) -> bool {
         game.in_library()
-            && !game.hidden
+            && (game.hidden == (self.view == View::Hidden))
             && self.view.includes(game, collections)
             && self.filters.includes(game)
             && self.search.matches(&key.0)
@@ -346,10 +351,11 @@ impl Counts {
     /// Counts games, each with the IDs of the collections holding it.
     pub fn of<'a>(games: impl IntoIterator<Item = (&'a Game, &'a [i64])>) -> Self {
         let mut counts = HashMap::new();
-        for (game, collections) in games
-            .into_iter()
-            .filter(|(game, _)| game.in_library() && !game.hidden)
-        {
+        for (game, collections) in games.into_iter().filter(|(game, _)| game.in_library()) {
+            if game.hidden {
+                *counts.entry(View::Hidden).or_default() += 1;
+                continue;
+            }
             let views = [
                 View::All,
                 View::Installed,
@@ -527,6 +533,36 @@ mod tests {
         assert_eq!(shown(View::Favourites), ["Favourite"]);
         assert_eq!(shown(View::PlayHistory), ["Installed"]);
         assert_eq!(shown(View::Source(Source::HeroicGog)), ["Heroic"]);
+    }
+
+    #[test]
+    fn the_hidden_view_shows_only_hidden_games() {
+        assert_eq!(shown(View::Hidden), ["Hidden"]);
+        let games = sample();
+        let counts = Counts::of(games.iter().map(|game| (game, &[][..])));
+        assert_eq!(counts.get(View::Hidden), 1);
+    }
+
+    #[test]
+    fn switching_to_or_from_hidden_games_is_a_different_filter() {
+        // Hidden games are not a part of All Games, so All → Hidden is not narrower.
+        let mut filter = LibraryFilter::default();
+
+        assert_eq!(filter.set_view(View::Hidden), FilterChange::Different);
+        assert_eq!(filter.set_view(View::All), FilterChange::Different);
+    }
+
+    #[test]
+    fn removed_games_show_in_no_view() {
+        let mut removed = game("1", "Removed", Some(5), 0);
+        removed.user_removed = true;
+        removed.hidden = true;
+
+        for view in [View::All, View::Hidden, View::PlayHistory] {
+            let mut filter = LibraryFilter::default();
+            filter.set_view(view);
+            assert!(!shows(&filter, &removed), "{view:?}");
+        }
     }
 
     #[test]
