@@ -10,6 +10,7 @@ use gtk::{gdk, gio, glib};
 
 use super::CoverArt;
 use crate::models::GameObject;
+use crate::permission_service;
 use crate::sources::{source_icon, source_name};
 
 /// The three tile sizes, as cover width and height in logical pixels.
@@ -156,11 +157,15 @@ impl CoverTile {
         imp.source_badge
             .set_tooltip_text(Some(&source_name(source)));
         let installed = entry.game.installed;
-        imp.state_badge.set_visible(!installed);
-        imp.state_badge
-            .set_icon_name(Some("folder-download-symbolic"));
-        imp.state_badge
-            .set_tooltip_text(Some(&gettext("Not installed")));
+        let needs_permission = permission_service::needs_permission(&entry.game);
+        imp.state_badge.set_visible(!installed || needs_permission);
+        let (icon, tooltip) = if needs_permission {
+            ("changes-prevent-symbolic", gettext("Needs permission"))
+        } else {
+            ("folder-download-symbolic", gettext("Not installed"))
+        };
+        imp.state_badge.set_icon_name(Some(icon));
+        imp.state_badge.set_tooltip_text(Some(&tooltip));
         if installed {
             imp.cover.remove_css_class("not-installed");
         } else {
@@ -225,7 +230,9 @@ impl CoverTile {
     /// What a screen reader says for the tile: title, launcher and state.
     pub fn accessible_label(game: &GameObject) -> String {
         let game = game.game();
-        let state = if game.installed {
+        let state = if permission_service::needs_permission(&game) {
+            gettext("Needs permission")
+        } else if game.installed {
             gettext("Installed")
         } else {
             gettext("Not installed")

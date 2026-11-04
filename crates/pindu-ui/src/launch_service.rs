@@ -3,14 +3,15 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use adw::prelude::*;
 use gettextrs::gettext;
-use gtk::prelude::*;
 use gtk::{gio, glib};
 use pindu_core::launch::{self, Route};
 use pindu_core::model::Source;
 
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
+use crate::permission_service;
 
 /// The app that owns a store game's source, as named in toasts and buttons.
 pub fn launcher_name(source: Source) -> Option<&'static str> {
@@ -42,6 +43,10 @@ pub fn play(
             launch::route(&game),
         )
     };
+    if permission_service::needs_permission(&game.game()) {
+        explain_permission(window, &title);
+        return;
+    }
     let launcher = launcher_name(source).unwrap_or_default();
     let Some(Route::StoreUri(uri)) = route else {
         toast(adw::Toast::new(&gettext("This game cannot be started yet")));
@@ -64,6 +69,32 @@ pub fn play(
                 .replace("{title}", &title)
                 .replace("{launcher}", launcher),
         ));
+    });
+}
+
+/// Explains, instead of failing, that a game needs the host-spawn permission.
+fn explain_permission(window: &impl IsA<gtk::Window>, title: &str) {
+    let dialog = adw::AlertDialog::new(
+        Some(&gettext("Permission Needed")),
+        Some(
+            &gettext(
+                "“{title}” starts on this computer, outside the sandbox. Allow that in \
+                 Preferences, then restart Pindu launcher.",
+            )
+            .replace("{title}", title),
+        ),
+    );
+    dialog.add_responses(&[
+        ("close", &gettext("_Close")),
+        ("enable", &gettext("_How to Enable")),
+    ]);
+    dialog.set_response_appearance("enable", adw::ResponseAppearance::Suggested);
+    dialog.set_default_response(Some("enable"));
+    dialog.set_close_response("close");
+    let parent = window.upcast_ref::<gtk::Window>().clone();
+    dialog.present(Some(&parent));
+    dialog.connect_response(Some("enable"), move |_, _| {
+        let _ = parent.activate_action("app.preferences", None);
     });
 }
 

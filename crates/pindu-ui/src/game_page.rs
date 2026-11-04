@@ -10,6 +10,7 @@ use pindu_core::model::{Game, LaunchKind, Source, Timestamp};
 use crate::launch_service::launcher_name;
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
+use crate::permission_service;
 use crate::sources::source_name;
 use crate::widgets::textures;
 
@@ -47,6 +48,8 @@ mod imp {
         pub open_in_launcher: TemplateChild<gtk::Button>,
         #[template_child]
         pub steam_dialog_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub permission_banner: TemplateChild<adw::Banner>,
     }
 
     #[glib::object_subclass]
@@ -115,6 +118,8 @@ impl GamePage {
         imp.description
             .set_label(game.description.as_deref().unwrap_or_default());
 
+        imp.permission_banner
+            .set_revealed(permission_service::needs_permission(game));
         let store_launcher = launcher_name(game.source());
         imp.launch_group
             .set_visible(game.launch_kind == LaunchKind::StoreUri && store_launcher.is_some());
