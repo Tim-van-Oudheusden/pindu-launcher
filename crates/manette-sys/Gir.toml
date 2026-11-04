@@ -1,0 +1,12 @@
+# FFI for libmanette 0.2, from the GNOME 51 SDK's Manette-0.2.gir (libmanette 0.2.13). Regenerate
+# with gir ece6e68 and gtk-rs/gir-files 675e208, which match glib 0.22:
+#   gir -c Gir.toml -d <gir-files>
+[options]
+library = "Manette"
+version = "0.2"
+min_cfg_version = "0.2"
+target_path = "."
+girs_directories = ["../manette/gir"]
+work_mode = "sys"
+single_version_file = true
+external_libraries = ["GLib", "GObject", "Gio"]

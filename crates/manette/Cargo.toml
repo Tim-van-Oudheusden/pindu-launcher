@@ -1,0 +1,17 @@
+[package]
+name = "manette"
+description = "Rust bindings for libmanette 0.2, the GNOME game controller library"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+ffi = { package = "manette-sys", path = "../manette-sys" }
+glib = "0.22"
+libc = "0.2"
+
+[features]
+v0_2_10 = ["ffi/v0_2_10"]

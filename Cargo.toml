@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/pindu-core", "crates/pindu-ui"]
+members = ["crates/manette", "crates/manette-sys", "crates/pindu-core", "crates/pindu-ui"]
 
 [workspace.package]
 version = "0.1.0"

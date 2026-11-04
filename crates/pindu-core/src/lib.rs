@@ -6,6 +6,7 @@
 pub mod art;
 pub mod art_cache;
 pub mod backup;
+pub mod gamepad;
 pub mod grid;
 pub mod launch;
 pub mod library;
