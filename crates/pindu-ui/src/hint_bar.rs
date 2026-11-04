@@ -74,18 +74,24 @@ impl PinduWindow {
         imp.hints.replace(shown);
     }
 
-    /// Where the user is, for the hints: the focused widget, an open dialog and whether a
-    /// page lies below the shown one.
+    /// Where the user is, for the hints: the focused widget, an open dialog, whether a
+    /// page lies below the shown one and whether it searches (Home and the library).
     fn hint_context(&self) -> Context {
-        let navigation_view = &self.imp().navigation_view;
-        let page_below = navigation_view
-            .visible_page()
-            .and_then(|page| navigation_view.previous_page(&page))
+        let imp = self.imp();
+        let navigation_view = &imp.navigation_view;
+        let page = navigation_view.visible_page();
+        let page_below = page
+            .as_ref()
+            .and_then(|page| navigation_view.previous_page(page))
             .is_some();
+        let search = page.is_some_and(|page| {
+            page == *imp.library_page || page == *imp.home_page.upcast_ref::<adw::NavigationPage>()
+        });
         Context {
             focus: self.hint_focus(),
             dialog: self.visible_dialog().is_some(),
             page_below,
+            search,
         }
     }
 
@@ -132,5 +138,6 @@ fn action_label(action: Action) -> String {
         Action::Select => gettext("Select"),
         Action::Back => gettext("Back"),
         Action::Close => gettext("Close"),
+        Action::Search => gettext("Search"),
     }
 }

@@ -17,6 +17,7 @@ use crate::application::PinduApplication;
 use crate::config::APP_ID;
 use crate::fullscreen::NavigationSounds;
 use crate::game_page::GamePage;
+use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
 use crate::models::{GameObject, LibraryModel};
 use crate::sources::{source_icon, source_name};
@@ -76,6 +77,8 @@ mod imp {
         #[template_child]
         pub library_page: TemplateChild<adw::NavigationPage>,
         #[template_child]
+        pub home_page: TemplateChild<HomePage>,
+        #[template_child]
         pub sync_spinner: TemplateChild<adw::Spinner>,
         #[template_child]
         pub empty_page: TemplateChild<adw::StatusPage>,
@@ -113,6 +116,8 @@ mod imp {
         pub sounds: OnceCell<NavigationSounds>,
         /// The hints the hint bar shows, and for which kind of controller.
         pub hints: RefCell<Option<(DeviceKind, Vec<Hint>)>>,
+        /// Whether the sidebar showed before fullscreen mode hid it, to show it again after.
+        pub sidebar_before_hiding: Cell<Option<bool>>,
     }
 
     #[glib::object_subclass]
@@ -122,6 +127,7 @@ mod imp {
         type ParentType = adw::ApplicationWindow;
 
         fn class_init(klass: &mut Self::Class) {
+            HomePage::ensure_type();
             klass.bind_template();
         }
 
@@ -178,6 +184,7 @@ impl PinduWindow {
         window.setup_grid();
         window.setup_search_and_filters();
         window.observe_sync(sync_service);
+        window.setup_home();
         window.setup_fullscreen();
         if let Some(application) = application.downcast_ref::<PinduApplication>() {
             window.setup_controller_navigation(application);
@@ -255,7 +262,11 @@ impl PinduWindow {
 
         let search = gio::ActionEntry::builder("search")
             .activate(|window: &Self, _, _| {
-                window.imp().search_entry.grab_focus();
+                if window.is_fullscreen() {
+                    window.start_search();
+                } else {
+                    window.imp().search_entry.grab_focus();
+                }
             })
             .build();
         self.add_action_entries([search]);
@@ -489,7 +500,7 @@ impl PinduWindow {
         }
         if quiet {
             for game in &games {
-                imp.jump_cards.append(&jump_card(game));
+                imp.jump_cards.append(&jump_card(game, (240, 112)));
             }
         }
     }
@@ -535,7 +546,7 @@ impl PinduWindow {
             imp.grid_cursor.set(self.recall_cover());
             imp.library_page.set_title(&gettext("Hidden Games"));
             imp.sidebar.set_selected(gtk::INVALID_LIST_POSITION);
-            imp.navigation_view.pop_to_tag("library");
+            self.show_library();
             self.update_jump_back_in();
         } else if self.library().view() == View::Hidden {
             self.select_view(View::All);
@@ -690,8 +701,8 @@ impl PinduWindow {
         self.update_jump_back_in();
         imp.library_page
             .set_title(&item.title().unwrap_or_default());
-        // Choosing a view from a game page goes back to the library.
-        imp.navigation_view.pop_to_tag("library");
+        // Choosing a view from a game page (or Home) goes to the library.
+        self.show_library();
         if imp.split_view.is_collapsed() {
             imp.split_view.set_show_sidebar(false);
         }
@@ -939,10 +950,9 @@ impl PinduWindow {
 
     /// Searches the library for `text`, as typing it in the search entry would.
     pub fn search_for(&self, text: &str) {
-        let imp = self.imp();
-        imp.navigation_view.pop_to_tag("library");
-        imp.search_entry.set_text(text);
-        imp.search_entry.grab_focus();
+        self.show_library();
+        self.imp().search_entry.set_text(text);
+        self.focus_search_entry();
     }
 
     /// Shows a toast over the window.
@@ -1019,10 +1029,9 @@ const SORT_MODES: [(SortMode, &str); 5] = [
     (SortMode::Playtime, "playtime"),
 ];
 
-/// A landscape card for "Jump back in": the game's banner (or cover) with its title.
-fn jump_card(game: &GameObject) -> gtk::Button {
-    const WIDTH: i32 = 240;
-    const HEIGHT: i32 = 112;
+/// A landscape card for "Jump back in" and fullscreen Home: the game's banner (or cover)
+/// with its title, `width`×`height` pixels.
+pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::Button {
     let (title, pinned, art, icon) = {
         let entry = game.entry();
         let art = entry.art.hero.clone().or_else(|| entry.art.cover.clone());
@@ -1035,7 +1044,7 @@ fn jump_card(game: &GameObject) -> gtk::Button {
     };
     // Cover art draws at its own fixed size, whatever the image's size.
     let picture = CoverArt::new();
-    picture.set_size_request(WIDTH, HEIGHT);
+    picture.set_size_request(width, height);
     let label = gtk::Label::builder()
         .label(&title)
         .xalign(0.0)
@@ -1068,7 +1077,7 @@ fn jump_card(game: &GameObject) -> gtk::Button {
     picture.show(
         art,
         icon,
-        ((WIDTH * scale) as u32, (HEIGHT * scale) as u32),
+        ((width * scale) as u32, (height * scale) as u32),
         |_| {},
     );
     card

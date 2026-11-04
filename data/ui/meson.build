@@ -3,6 +3,7 @@ blueprint_names = [
   'cover_tile',
   'game_dialog',
   'game_page',
+  'home_page',
   'preferences',
   'shortcuts-dialog',
   'window',
