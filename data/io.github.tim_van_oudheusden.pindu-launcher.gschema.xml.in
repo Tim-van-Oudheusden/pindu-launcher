@@ -72,5 +72,15 @@
       <summary>GameMode for new Windows games</summary>
       <description>Whether Windows games added from now on start with GameMode.</description>
     </key>
+    <key name="start-in-fullscreen" type="b">
+      <default>false</default>
+      <summary>Start in fullscreen mode</summary>
+      <description>Open the window in fullscreen mode, the controller-driven presentation of the library.</description>
+    </key>
+    <key name="navigation-sounds" type="b">
+      <default>false</default>
+      <summary>Navigation sounds</summary>
+      <description>Play a soft sound in fullscreen mode when the controller moves focus, selects or goes back.</description>
+    </key>
   </schema>
 </schemalist>

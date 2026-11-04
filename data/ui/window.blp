@@ -14,305 +14,320 @@ template $PinduWindow: Adw.ApplicationWindow {
     }
   }
 
-  content: Adw.ToastOverlay toast_overlay {
-    child: Adw.OverlaySplitView split_view {
-      sidebar: Adw.ToolbarView {
-        [top]
-        Adw.HeaderBar {
-          title-widget: Adw.WindowTitle {
-            title: _("Pindu launcher");
+  // The hint bar shows what the controller's buttons do, in fullscreen mode.
+  content: Adw.ToolbarView hint_toolbar {
+    reveal-bottom-bars: false;
+
+    content: Adw.ToastOverlay toast_overlay {
+      child: Adw.OverlaySplitView split_view {
+        sidebar: Adw.ToolbarView sidebar_toolbar {
+          [top]
+          Adw.HeaderBar {
+            title-widget: Adw.WindowTitle {
+              title: _("Pindu launcher");
+            };
+          }
+
+          content: Adw.Sidebar sidebar {
+            Adw.SidebarSection {
+              title: _("Library");
+
+              Adw.SidebarItem all_item {
+                title: _("All Games");
+                icon-name: "view-grid-symbolic";
+
+                suffix: Label all_count {
+                  styles [
+                    "dimmed",
+                    "numeric",
+                  ]
+                };
+              }
+
+              Adw.SidebarItem installed_item {
+                title: _("Installed");
+                icon-name: "drive-harddisk-symbolic";
+
+                suffix: Label installed_count {
+                  styles [
+                    "dimmed",
+                    "numeric",
+                  ]
+                };
+              }
+
+              Adw.SidebarItem favourites_item {
+                title: _("Favourites");
+                icon-name: "starred-symbolic";
+
+                suffix: Label favourites_count {
+                  styles [
+                    "dimmed",
+                    "numeric",
+                  ]
+                };
+              }
+
+              Adw.SidebarItem history_item {
+                title: _("Play History");
+                icon-name: "document-open-recent-symbolic";
+
+                suffix: Label history_count {
+                  styles [
+                    "dimmed",
+                    "numeric",
+                  ]
+                };
+              }
+            }
+
+            Adw.SidebarSection sources_section {
+              title: _("Sources");
+            }
+
+            Adw.SidebarSection collections_section {
+              title: _("Collections");
+              menu-model: collection_menu;
+            }
+
+            Adw.SidebarSection {
+              Adw.SidebarItem new_collection_item {
+                title: _("New Collection");
+                icon-name: "list-add-symbolic";
+              }
+            }
           };
-        }
+        };
 
-        content: Adw.Sidebar sidebar {
-          Adw.SidebarSection {
-            title: _("Library");
+        content: Adw.NavigationView navigation_view {
+          Adw.NavigationPage library_page {
+            title: _("All Games");
+            tag: "library";
 
-            Adw.SidebarItem all_item {
-              title: _("All Games");
-              icon-name: "view-grid-symbolic";
+            child: Adw.ToolbarView {
+              [top]
+              Adw.HeaderBar {
+                [start]
+                ToggleButton sidebar_toggle {
+                  icon-name: "sidebar-show-symbolic";
+                  tooltip-text: _("Toggle Sidebar");
+                  active: bind split_view.show-sidebar bidirectional;
+                }
 
-              suffix: Label all_count {
-                styles [
-                  "dimmed",
-                  "numeric",
-                ]
+                [start]
+                MenuButton {
+                  icon-name: "list-add-symbolic";
+                  tooltip-text: _("Add");
+                  menu-model: add_menu;
+                }
+
+                [start]
+                Adw.Spinner sync_spinner {
+                  visible: false;
+                  tooltip-text: _("Importing Games…");
+                }
+
+                title-widget: SearchEntry search_entry {
+                  placeholder-text: _("Search games");
+                  hexpand: true;
+                  max-width-chars: 32;
+                };
+
+                [end]
+                MenuButton {
+                  primary: true;
+                  icon-name: "open-menu-symbolic";
+                  tooltip-text: _("Main Menu");
+                  menu-model: primary_menu;
+                }
+
+                [end]
+                MenuButton {
+                  icon-name: "view-sort-descending-symbolic";
+                  tooltip-text: _("Sort");
+                  menu-model: sort_menu;
+                }
+              }
+
+              content: Box {
+                orientation: vertical;
+
+                Adw.WrapBox filter_row {
+                  child-spacing: 6;
+                  line-spacing: 6;
+                  margin-top: 6;
+                  margin-bottom: 6;
+                  margin-start: 18;
+                  margin-end: 18;
+
+                  styles [
+                    "filter-row",
+                  ]
+
+                  ToggleButton installed_filter {
+                    label: _("Installed");
+                  }
+
+                  ToggleButton not_installed_filter {
+                    label: _("Not Installed");
+                  }
+
+                  ToggleButton favourites_filter {
+                    label: _("Favourites");
+                  }
+
+                  ToggleButton windows_filter {
+                    label: _("Windows");
+                  }
+
+                  ToggleButton native_filter {
+                    label: _("Native");
+                  }
+
+                  Button clear_filters {
+                    label: _("Clear");
+                    visible: false;
+
+                    styles [
+                      "flat",
+                    ]
+                  }
+                }
+
+                Box jump_back_in {
+                  orientation: vertical;
+                  spacing: 6;
+                  visible: false;
+                  margin-start: 18;
+                  margin-end: 18;
+                  margin-bottom: 6;
+
+                  Label {
+                    label: _("Jump Back In");
+                    xalign: 0;
+
+                    styles [
+                      "heading",
+                    ]
+                  }
+
+                  ScrolledWindow {
+                    vscrollbar-policy: never;
+                    propagate-natural-height: true;
+
+                    child: Box jump_cards {
+                      spacing: 12;
+                      margin-bottom: 6;
+                    };
+                  }
+                }
+
+                Stack content_stack {
+                  vexpand: true;
+
+                  StackPage {
+                    name: "grid";
+
+                    child: ScrolledWindow {
+                      hscrollbar-policy: never;
+
+                      child: GridView grid {
+                        single-click-activate: true;
+
+                        styles [
+                          "library",
+                        ]
+                      };
+                    };
+                  }
+
+                  StackPage {
+                    name: "empty";
+
+                    child: Adw.StatusPage empty_page {
+                      title: _("No Games Yet");
+                      description: _("Games from your launchers appear here once they are imported");
+
+                      child: Button {
+                        label: _("_Import Now");
+                        use-underline: true;
+                        halign: center;
+                        action-name: "app.import";
+
+                        styles [
+                          "pill",
+                          "suggested-action",
+                        ]
+                      };
+                    };
+                  }
+
+                  StackPage {
+                    name: "no-results";
+
+                    child: Adw.StatusPage {
+                      icon-name: "edit-find-symbolic";
+                      title: _("No Results Found");
+                      description: _("Try a different search or filter");
+                    };
+                  }
+
+                  StackPage {
+                    name: "history";
+
+                    child: ScrolledWindow {
+                      hscrollbar-policy: never;
+
+                      child: Adw.Clamp {
+                        margin-top: 12;
+                        margin-bottom: 24;
+                        margin-start: 12;
+                        margin-end: 12;
+
+                        child: Box history_groups {
+                          orientation: vertical;
+                          spacing: 24;
+                        };
+                      };
+                    };
+                  }
+
+                  StackPage {
+                    name: "no-hidden";
+
+                    child: Adw.StatusPage {
+                      icon-name: "view-reveal-symbolic";
+                      title: _("No Hidden Games");
+                      description: _("Games you hide show here, to unhide them");
+                    };
+                  }
+
+                  StackPage {
+                    name: "empty-collection";
+
+                    child: Adw.StatusPage {
+                      icon-name: "folder-symbolic";
+                      title: _("Empty Collection");
+                      description: _("Add games with “Add to Collection” in their menu");
+                    };
+                  }
+                }
               };
-            }
-
-            Adw.SidebarItem installed_item {
-              title: _("Installed");
-              icon-name: "drive-harddisk-symbolic";
-
-              suffix: Label installed_count {
-                styles [
-                  "dimmed",
-                  "numeric",
-                ]
-              };
-            }
-
-            Adw.SidebarItem favourites_item {
-              title: _("Favourites");
-              icon-name: "starred-symbolic";
-
-              suffix: Label favourites_count {
-                styles [
-                  "dimmed",
-                  "numeric",
-                ]
-              };
-            }
-
-            Adw.SidebarItem history_item {
-              title: _("Play History");
-              icon-name: "document-open-recent-symbolic";
-
-              suffix: Label history_count {
-                styles [
-                  "dimmed",
-                  "numeric",
-                ]
-              };
-            }
-          }
-
-          Adw.SidebarSection sources_section {
-            title: _("Sources");
-          }
-
-          Adw.SidebarSection collections_section {
-            title: _("Collections");
-            menu-model: collection_menu;
-          }
-
-          Adw.SidebarSection {
-            Adw.SidebarItem new_collection_item {
-              title: _("New Collection");
-              icon-name: "list-add-symbolic";
-            }
+            };
           }
         };
       };
-
-      content: Adw.NavigationView navigation_view {
-        Adw.NavigationPage library_page {
-          title: _("All Games");
-          tag: "library";
-
-          child: Adw.ToolbarView {
-            [top]
-            Adw.HeaderBar {
-              [start]
-              ToggleButton sidebar_toggle {
-                icon-name: "sidebar-show-symbolic";
-                tooltip-text: _("Toggle Sidebar");
-                active: bind split_view.show-sidebar bidirectional;
-              }
-
-              [start]
-              MenuButton {
-                icon-name: "list-add-symbolic";
-                tooltip-text: _("Add");
-                menu-model: add_menu;
-              }
-
-              [start]
-              Adw.Spinner sync_spinner {
-                visible: false;
-                tooltip-text: _("Importing Games…");
-              }
-
-              title-widget: SearchEntry search_entry {
-                placeholder-text: _("Search games");
-                hexpand: true;
-                max-width-chars: 32;
-              };
-
-              [end]
-              MenuButton {
-                primary: true;
-                icon-name: "open-menu-symbolic";
-                tooltip-text: _("Main Menu");
-                menu-model: primary_menu;
-              }
-
-              [end]
-              MenuButton {
-                icon-name: "view-sort-descending-symbolic";
-                tooltip-text: _("Sort");
-                menu-model: sort_menu;
-              }
-            }
-
-            content: Box {
-              orientation: vertical;
-
-              Adw.WrapBox filter_row {
-                child-spacing: 6;
-                line-spacing: 6;
-                margin-top: 6;
-                margin-bottom: 6;
-                margin-start: 18;
-                margin-end: 18;
-
-                styles [
-                  "filter-row",
-                ]
-
-                ToggleButton installed_filter {
-                  label: _("Installed");
-                }
-
-                ToggleButton not_installed_filter {
-                  label: _("Not Installed");
-                }
-
-                ToggleButton favourites_filter {
-                  label: _("Favourites");
-                }
-
-                ToggleButton windows_filter {
-                  label: _("Windows");
-                }
-
-                ToggleButton native_filter {
-                  label: _("Native");
-                }
-
-                Button clear_filters {
-                  label: _("Clear");
-                  visible: false;
-
-                  styles [
-                    "flat",
-                  ]
-                }
-              }
-
-              Box jump_back_in {
-                orientation: vertical;
-                spacing: 6;
-                visible: false;
-                margin-start: 18;
-                margin-end: 18;
-                margin-bottom: 6;
-
-                Label {
-                  label: _("Jump Back In");
-                  xalign: 0;
-
-                  styles [
-                    "heading",
-                  ]
-                }
-
-                ScrolledWindow {
-                  vscrollbar-policy: never;
-                  propagate-natural-height: true;
-
-                  child: Box jump_cards {
-                    spacing: 12;
-                    margin-bottom: 6;
-                  };
-                }
-              }
-
-              Stack content_stack {
-                vexpand: true;
-
-                StackPage {
-                  name: "grid";
-
-                  child: ScrolledWindow {
-                    hscrollbar-policy: never;
-
-                    child: GridView grid {
-                      single-click-activate: true;
-
-                      styles [
-                        "library",
-                      ]
-                    };
-                  };
-                }
-
-                StackPage {
-                  name: "empty";
-
-                  child: Adw.StatusPage empty_page {
-                    title: _("No Games Yet");
-                    description: _("Games from your launchers appear here once they are imported");
-
-                    child: Button {
-                      label: _("_Import Now");
-                      use-underline: true;
-                      halign: center;
-                      action-name: "app.import";
-
-                      styles [
-                        "pill",
-                        "suggested-action",
-                      ]
-                    };
-                  };
-                }
-
-                StackPage {
-                  name: "no-results";
-
-                  child: Adw.StatusPage {
-                    icon-name: "edit-find-symbolic";
-                    title: _("No Results Found");
-                    description: _("Try a different search or filter");
-                  };
-                }
-
-                StackPage {
-                  name: "history";
-
-                  child: ScrolledWindow {
-                    hscrollbar-policy: never;
-
-                    child: Adw.Clamp {
-                      margin-top: 12;
-                      margin-bottom: 24;
-                      margin-start: 12;
-                      margin-end: 12;
-
-                      child: Box history_groups {
-                        orientation: vertical;
-                        spacing: 24;
-                      };
-                    };
-                  };
-                }
-
-                StackPage {
-                  name: "no-hidden";
-
-                  child: Adw.StatusPage {
-                    icon-name: "view-reveal-symbolic";
-                    title: _("No Hidden Games");
-                    description: _("Games you hide show here, to unhide them");
-                  };
-                }
-
-                StackPage {
-                  name: "empty-collection";
-
-                  child: Adw.StatusPage {
-                    icon-name: "folder-symbolic";
-                    title: _("Empty Collection");
-                    description: _("Add games with “Add to Collection” in their menu");
-                  };
-                }
-              }
-            };
-          };
-        }
-      };
     };
+
+    [bottom]
+    Box hint_bar {
+      halign: end;
+      spacing: 24;
+
+      styles [
+        "hint-bar",
+      ]
+    }
   };
 }
 
@@ -395,6 +410,11 @@ menu primary_menu {
     item {
       label: _("Show _Hidden Games");
       action: "win.show-hidden";
+    }
+
+    item {
+      label: _("_Fullscreen Mode");
+      action: "win.fullscreen-mode";
     }
   }
 

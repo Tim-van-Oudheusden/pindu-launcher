@@ -11,6 +11,8 @@ use pindu_core::gamepad::{DeviceKind, GamepadBackend, GamepadEvent, Intent, Inte
 
 /// Something the shells do with an intent.
 type Listener = Box<dyn Fn(Intent)>;
+/// Something the shells do when the active controller's kind changes.
+type KindListener = Box<dyn Fn(Option<DeviceKind>)>;
 
 #[derive(Clone)]
 pub struct GamepadService {
@@ -24,6 +26,9 @@ struct Inner {
     repeat: RefCell<Option<glib::SourceId>>,
     /// Whether controllers are open; events still queued after a stop are dropped.
     listening: Cell<bool>,
+    kind_listeners: RefCell<Vec<KindListener>>,
+    /// The active kind the kind listeners last heard of.
+    kind: Cell<Option<DeviceKind>>,
 }
 
 impl std::fmt::Debug for GamepadService {
@@ -43,6 +48,8 @@ impl GamepadService {
                 listeners: RefCell::new(Vec::new()),
                 repeat: RefCell::new(None),
                 listening: Cell::new(false),
+                kind_listeners: RefCell::new(Vec::new()),
+                kind: Cell::new(None),
             }),
         }
     }
@@ -79,12 +86,32 @@ impl GamepadService {
             }
             self.inner.intents.replace(Intents::new());
             glib::g_info!("pindu", "Controllers released");
+            self.notify_kind();
         }
     }
 
     /// The kind of the controller last plugged in or used, for glyphs and the A/B order.
     pub fn active_kind(&self) -> Option<DeviceKind> {
         self.inner.intents.borrow().active_kind()
+    }
+
+    /// Calls `listener` whenever the active controller's kind changes, with `None` once no
+    /// controller is left or the service stops listening.
+    pub fn connect_active_kind_notify(&self, listener: impl Fn(Option<DeviceKind>) + 'static) {
+        self.inner
+            .kind_listeners
+            .borrow_mut()
+            .push(Box::new(listener));
+    }
+
+    fn notify_kind(&self) {
+        let kind = self.active_kind();
+        if self.inner.kind.replace(kind) == kind {
+            return;
+        }
+        for listener in self.inner.kind_listeners.borrow().iter() {
+            listener(kind);
+        }
     }
 
     fn handle(&self, event: GamepadEvent) {
@@ -99,6 +126,7 @@ impl GamepadService {
             _ => {}
         }
         let intent = self.inner.intents.borrow_mut().handle(&event, now());
+        self.notify_kind();
         if let Some(intent) = intent {
             self.emit(intent);
         }
