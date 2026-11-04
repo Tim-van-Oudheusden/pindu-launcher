@@ -68,6 +68,8 @@ mod imp {
         #[template_child]
         pub sync_spinner: TemplateChild<adw::Spinner>,
         #[template_child]
+        pub empty_page: TemplateChild<adw::StatusPage>,
+        #[template_child]
         pub search_entry: TemplateChild<gtk::SearchEntry>,
         #[template_child]
         pub grid: TemplateChild<gtk::GridView>,
@@ -112,6 +114,8 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
             self.obj().restore_window_state();
+            // The app icon's name is the app ID, which differs in development builds.
+            self.empty_page.set_icon_name(Some(APP_ID));
         }
     }
 

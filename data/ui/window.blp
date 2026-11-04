@@ -240,8 +240,7 @@ template $PinduWindow: Adw.ApplicationWindow {
                 StackPage {
                   name: "empty";
 
-                  child: Adw.StatusPage {
-                    icon-name: "io.github.tim_van_oudheusden.pindu-launcher";
+                  child: Adw.StatusPage empty_page {
                     title: _("No Games Yet");
                     description: _("Games from your launchers appear here once they are imported");
 

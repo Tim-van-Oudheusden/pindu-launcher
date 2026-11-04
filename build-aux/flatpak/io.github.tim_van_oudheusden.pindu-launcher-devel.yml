@@ -1,18 +1,21 @@
-# Development manifest for Pindu: local builds and GNOME Builder only.
+# Development manifest for Pindu launcher: local builds, GNOME Builder and CI only.
 # Not for Flathub: it allows network access during the build.
 #
-# Put this file in build-aux/flatpak/ and build from the repo root:
+# Build and install from the repo root:
 #   flatpak-builder --user --install --force-clean build-dir \
-#     build-aux/flatpak/io.github.Tim_van_Oudheusden.Pindu.Devel.yml
-#   flatpak run io.github.Tim_van_Oudheusden.Pindu.Devel
+#     build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher-devel.yml
+#   flatpak run io.github.tim_van_oudheusden.pindu-launcher-devel
+#
+# The ID ends in `-devel`, not `.Devel`: Flatpak only allows a hyphen in the last
+# segment of an ID. The `development` profile gives the app this ID and the nightly icon.
 
-id: io.github.Tim_van_Oudheusden.Pindu.Devel
+id: io.github.tim_van_oudheusden.pindu-launcher-devel
 runtime: org.gnome.Platform
 runtime-version: '51'
 sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
-command: pindu
+command: pindu-launcher
 
 finish-args:
   # Display and GPU
@@ -50,8 +53,8 @@ finish-args:
   # - --device=input
   # - --device-if=all:!has-input-device
 
-  # Debug output (use your crate name in RUST_LOG)
-  - --env=RUST_LOG=pindu=debug
+  # Debug output
+  - --env=G_MESSAGES_DEBUG=pindu
   - --env=RUST_BACKTRACE=1
 
 build-options:
@@ -67,12 +70,10 @@ build-options:
     - --share=network
 
 modules:
-  - name: pindu
+  - name: pindu-launcher
     buildsystem: meson
     run-tests: true
     config-opts:
-      # Needs a `profile` option in meson_options.txt; the development
-      # profile should give the app the .Devel ID and the striped header.
       - -Dprofile=development
     sources:
       - type: dir
@@ -82,15 +83,3 @@ modules:
           - build-dir
           - _build
           - .flatpak-builder
-
-  # Cargo-only alternative while there is no meson.build yet
-  # (no desktop file, icon or GSettings schema gets installed this way):
-  # - name: pindu
-  #   buildsystem: simple
-  #   build-commands:
-  #     - cargo build --release
-  #     - install -Dm755 target/release/pindu -t /app/bin/
-  #   sources:
-  #     - type: dir
-  #       path: ../..
-  #       skip: [target, build-dir, .flatpak-builder]

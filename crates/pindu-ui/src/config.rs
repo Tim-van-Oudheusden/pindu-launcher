@@ -1,7 +1,11 @@
 //! Build-time configuration. Meson passes the install paths to cargo through the environment;
 //! plain cargo builds fall back to the `/usr` layout.
 
-pub const APP_ID: &str = "io.github.tim_van_oudheusden.pindu-launcher";
+/// `…-devel` in development builds; see the `profile` Meson option.
+pub const APP_ID: &str = match option_env!("PINDU_APP_ID") {
+    Some(id) => id,
+    None => "io.github.tim_van_oudheusden.pindu-launcher",
+};
 pub const RESOURCE_BASE_PATH: &str = "/io/github/tim_van_oudheusden/pindu-launcher";
 pub const GETTEXT_PACKAGE: &str = "pindu-launcher";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
