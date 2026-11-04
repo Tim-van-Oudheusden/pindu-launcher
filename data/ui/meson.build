@@ -4,6 +4,7 @@ blueprint_names = [
   'game_dialog',
   'game_page',
   'preferences',
+  'shortcuts-dialog',
   'window',
 ]
 

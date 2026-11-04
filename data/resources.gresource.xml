@@ -5,6 +5,8 @@
     <file preprocess="xml-stripblanks">ui/game_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/game_page.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences.ui</file>
+    <!-- AdwApplication loads it from here and adds app.shortcuts on Ctrl+?. -->
+    <file preprocess="xml-stripblanks" alias="shortcuts-dialog.ui">ui/shortcuts-dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/window.ui</file>
     <file compressed="true">style.css</file>
   </gresource>

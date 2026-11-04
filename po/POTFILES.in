@@ -18,4 +18,5 @@ data/ui/cover_tile.blp
 data/ui/game_dialog.blp
 data/ui/game_page.blp
 data/ui/preferences.blp
+data/ui/shortcuts-dialog.blp
 data/ui/window.blp
