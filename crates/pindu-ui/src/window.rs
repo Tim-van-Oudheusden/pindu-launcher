@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -51,6 +51,10 @@ mod imp {
         #[template_child]
         pub sources_section: TemplateChild<adw::SidebarSection>,
         #[template_child]
+        pub collections_section: TemplateChild<adw::SidebarSection>,
+        #[template_child]
+        pub new_collection_item: TemplateChild<adw::SidebarItem>,
+        #[template_child]
         pub library_page: TemplateChild<adw::NavigationPage>,
         #[template_child]
         pub sync_spinner: TemplateChild<adw::Spinner>,
@@ -76,6 +80,8 @@ mod imp {
         pub library: OnceCell<LibraryModel>,
         /// Every sidebar row with the view it selects and, for sources, its count label.
         pub views: RefCell<Vec<(adw::SidebarItem, View, gtk::Label)>>,
+        /// The collection whose sidebar menu is open.
+        pub menu_collection: Cell<Option<i64>>,
     }
 
     #[glib::object_subclass]
@@ -184,6 +190,8 @@ impl PinduWindow {
         self.add_game_action("hide-game", Self::hide_game);
         self.add_game_action("show-details", Self::show_details);
         self.add_game_action("open-install-folder", Self::open_install_folder);
+
+        self.setup_collection_actions();
 
         let search = gio::ActionEntry::builder("search")
             .activate(|window: &Self, _, _| {
@@ -318,13 +326,16 @@ impl PinduWindow {
             return;
         } else if library.counts().get(View::All) == 0 {
             "empty"
+        } else if matches!(library.view(), View::Collection(id) if library.counts().get(View::Collection(id)) == 0)
+        {
+            "empty-collection"
         } else {
             "no-results"
         };
         self.imp().content_stack.set_visible_child_name(page);
     }
 
-    fn library_service(&self) -> LibraryService {
+    pub(crate) fn library_service(&self) -> LibraryService {
         self.application()
             .and_downcast::<PinduApplication>()
             .expect("windows belong to the application")
@@ -396,11 +407,41 @@ impl PinduWindow {
             #[weak(rename_to = window)]
             self,
             move |sidebar, _| {
-                if let Some(item) = sidebar.selected_item() {
+                let Some(item) = sidebar.selected_item() else {
+                    return;
+                };
+                if item == *window.imp().new_collection_item {
+                    window.select_view(window.library().view());
+                    window.new_collection(None);
+                } else {
                     window.show_view_of(&item);
                 }
             }
         ));
+        imp.sidebar.connect_setup_menu(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, item| {
+                let collection = item.and_then(|item| {
+                    window
+                        .imp()
+                        .views
+                        .borrow()
+                        .iter()
+                        .find_map(|(candidate, view, _)| match view {
+                            View::Collection(id) if candidate == item => Some(*id),
+                            _ => None,
+                        })
+                });
+                window.imp().menu_collection.set(collection);
+            }
+        ));
+        self.library().connect_collections_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.show_collections()
+        ));
+        self.show_collections();
         self.library().connect_counts_changed(glib::clone!(
             #[weak(rename_to = window)]
             self,
@@ -427,6 +468,52 @@ impl PinduWindow {
         imp.navigation_view.pop_to_tag("library");
         if imp.split_view.is_collapsed() {
             imp.split_view.set_show_sidebar(false);
+        }
+    }
+
+    /// One sidebar row per collection, in the user's order, keeping the shown view.
+    fn show_collections(&self) {
+        let imp = self.imp();
+        let collections = self.library().collections();
+        imp.collections_section.remove_all();
+        imp.views
+            .borrow_mut()
+            .retain(|(_, view, _)| !matches!(view, View::Collection(_)));
+        for collection in &collections {
+            let count = gtk::Label::builder()
+                .css_classes(["dimmed", "numeric"])
+                .build();
+            let item = adw::SidebarItem::builder()
+                .title(&collection.name)
+                .icon_name("folder-symbolic")
+                .suffix(&count)
+                .build();
+            imp.collections_section.append(item.clone());
+            imp.views
+                .borrow_mut()
+                .push((item, View::Collection(collection.id), count));
+        }
+        self.show_counts(&self.library().counts());
+        let shown = self.library().view();
+        if matches!(shown, View::Collection(id) if !collections.iter().any(|c| c.id == id)) {
+            self.select_view(View::All);
+            self.show_view_of(&imp.all_item);
+        } else {
+            self.select_view(shown);
+        }
+    }
+
+    /// Selects the sidebar row of a view, without showing it again.
+    fn select_view(&self, view: View) {
+        let imp = self.imp();
+        if let Some(item) = imp
+            .views
+            .borrow()
+            .iter()
+            .find(|(_, candidate, _)| *candidate == view)
+            .map(|(item, _, _)| item.clone())
+        {
+            imp.sidebar.set_selected(item.index());
         }
     }
 

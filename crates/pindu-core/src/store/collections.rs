@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use rusqlite::params;
 
 use super::{Result, Store, StoreError};
@@ -49,6 +51,34 @@ impl Store {
             return Err(StoreError::NotFound);
         }
         Ok(())
+    }
+
+    /// Puts the collections in the given order; collections not listed keep their place
+    /// after them.
+    pub fn set_collection_order(&self, ids: &[i64]) -> Result<()> {
+        self.in_transaction(|store| {
+            for (position, id) in ids.iter().enumerate() {
+                store.conn.execute(
+                    "UPDATE collections SET position = ?2 WHERE id = ?1",
+                    params![id, position as i64],
+                )?;
+            }
+            Ok(())
+        })
+    }
+
+    /// For every game in a collection, the IDs of its collections, ascending.
+    pub fn collection_memberships(&self) -> Result<HashMap<GameId, Vec<i64>>> {
+        let mut statement = self.conn.prepare(
+            "SELECT game_id, collection_id FROM collection_members ORDER BY collection_id",
+        )?;
+        let mut memberships: HashMap<GameId, Vec<i64>> = HashMap::new();
+        let rows = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        for row in rows {
+            let (game_id, collection_id) = row?;
+            memberships.entry(game_id).or_default().push(collection_id);
+        }
+        Ok(memberships)
     }
 
     /// Deletes a collection; its games stay in the library.

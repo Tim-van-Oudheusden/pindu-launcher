@@ -7,8 +7,9 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
-use pindu_core::model::{Game, LaunchKind, Source, Timestamp};
+use pindu_core::model::{Collection, Game, LaunchKind, Source, Timestamp};
 
+use crate::collection_actions::collection_menu;
 use crate::launch_service::launcher_name;
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
@@ -121,7 +122,16 @@ impl GamePage {
         imp.playing_handler.replace(Some((object.clone(), handler)));
         self.show_playing(object.is_playing());
         imp.open_in_launcher.set_action_target_value(Some(&target));
-        imp.more_button.set_menu_model(Some(&more_menu(game)));
+        imp.more_button.set_create_popup_func(glib::clone!(
+            #[weak]
+            object,
+            #[weak]
+            library,
+            move |button| {
+                let collections = library.model().collections();
+                button.set_menu_model(Some(&more_menu(&object, &collections)));
+            }
+        ));
 
         for (caption, value) in facts(game, entry.playtime_secs) {
             imp.facts.append(&fact(&caption, &value));
@@ -215,7 +225,9 @@ impl GamePage {
     }
 }
 
-fn more_menu(game: &Game) -> gio::Menu {
+/// The page's "more" menu, built when it opens so collection changes show at once.
+fn more_menu(object: &GameObject, collections: &[Collection]) -> gio::Menu {
+    let game = object.game();
     let target = game.id.as_str().to_variant();
     let item = |label: String, action: &str| {
         let item = gio::MenuItem::new(Some(&label), None);
@@ -223,17 +235,20 @@ fn more_menu(game: &Game) -> gio::Menu {
         item
     };
     let menu = gio::Menu::new();
-    menu.append_item(&item(gettext("_Edit…"), "app.edit-game"));
-    menu.append_item(&item(gettext("_Hide"), "win.hide-game"));
-    if pindu_core::launch::launcher_uri(game).is_some() {
-        menu.append_item(&item(gettext("_Open in Launcher"), "app.open-in-launcher"));
+    menu.append_section(None, &collection_menu(object, collections));
+    let manage = gio::Menu::new();
+    manage.append_item(&item(gettext("_Edit…"), "app.edit-game"));
+    manage.append_item(&item(gettext("_Hide"), "win.hide-game"));
+    if pindu_core::launch::launcher_uri(&game).is_some() {
+        manage.append_item(&item(gettext("_Open in Launcher"), "app.open-in-launcher"));
     }
     if game.install_path.is_some() {
-        menu.append_item(&item(
+        manage.append_item(&item(
             gettext("Open _Install Folder"),
             "win.open-install-folder",
         ));
     }
+    menu.append_section(None, &manage);
     menu
 }
 

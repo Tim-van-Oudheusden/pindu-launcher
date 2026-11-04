@@ -393,6 +393,60 @@ fn extending_an_unknown_play_session_fails() {
 }
 
 #[test]
+fn collections_can_be_put_in_a_new_order() {
+    let (_dir, store) = temp_store();
+    let a = store.create_collection("A").unwrap();
+    let b = store.create_collection("B").unwrap();
+    let c = store.create_collection("C").unwrap();
+
+    store.set_collection_order(&[c.id, a.id, b.id]).unwrap();
+
+    let names: Vec<_> = store
+        .collections()
+        .unwrap()
+        .into_iter()
+        .map(|collection| collection.name)
+        .collect();
+    assert_eq!(names, ["C", "A", "B"]);
+}
+
+#[test]
+fn transactions_nest_into_the_outer_one() {
+    let (_dir, store) = temp_store();
+    let a = store.create_collection("A").unwrap();
+
+    store
+        .in_transaction(|store| {
+            let b = store.create_collection("B")?;
+            store.set_collection_order(&[b.id, a.id])
+        })
+        .unwrap();
+
+    let names: Vec<_> = store
+        .collections()
+        .unwrap()
+        .into_iter()
+        .map(|collection| collection.name)
+        .collect();
+    assert_eq!(names, ["B", "A"]);
+}
+
+#[test]
+fn memberships_list_every_games_collections() {
+    let (_dir, store) = temp_store();
+    let game = steam_game("570", "Dota 2");
+    store.insert_game(&game).unwrap();
+    let a = store.create_collection("A").unwrap();
+    let b = store.create_collection("B").unwrap();
+    store.add_to_collection(b.id, &game.id).unwrap();
+    store.add_to_collection(a.id, &game.id).unwrap();
+
+    let memberships = store.collection_memberships().unwrap();
+
+    assert_eq!(memberships.get(&game.id), Some(&vec![a.id, b.id]));
+}
+
+#[test]
 fn imported_playtime_round_trips_and_is_replaced_on_write() {
     let (_dir, store) = temp_store();
     let game = steam_game("570", "Dota 2");

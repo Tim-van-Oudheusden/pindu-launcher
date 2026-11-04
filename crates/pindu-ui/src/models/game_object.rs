@@ -17,6 +17,8 @@ pub struct Entry {
     pub game: Game,
     pub art: ArtSet,
     pub playtime_secs: i64,
+    /// IDs of the collections holding the game.
+    pub collections: Vec<i64>,
     pub search_key: SearchKey,
     pub sort_key: SortKey,
 }
@@ -29,6 +31,7 @@ impl Entry {
             game: entry.game,
             art: entry.art,
             playtime_secs: entry.playtime_secs,
+            collections: entry.collections,
         }
     }
 }
@@ -152,7 +155,11 @@ impl GameObject {
         let (changed, art_changed): (Vec<&str>, bool) = {
             let old = self.entry();
             let (game, art) = (&entry.game, &entry.art);
-            if old.game == *game && old.art == *art && old.playtime_secs == entry.playtime_secs {
+            if old.game == *game
+                && old.art == *art
+                && old.playtime_secs == entry.playtime_secs
+                && old.collections == entry.collections
+            {
                 return false;
             }
             let changed = [

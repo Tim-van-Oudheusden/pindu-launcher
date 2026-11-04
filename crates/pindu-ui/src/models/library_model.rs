@@ -12,6 +12,8 @@ use pindu_core::library::{
     Counts, FilterChange, Filters, LibraryEntry, LibraryFilter, SortMode, View, compare,
 };
 
+use pindu_core::model::Collection;
+
 use super::GameObject;
 
 mod imp {
@@ -27,6 +29,8 @@ mod imp {
         pub library_filter: RefCell<LibraryFilter>,
         pub sort_mode: Cell<SortMode>,
         pub counts: RefCell<Counts>,
+        /// The user's collections, in their order.
+        pub collections: RefCell<Vec<Collection>>,
     }
 
     impl Default for LibraryModel {
@@ -53,6 +57,7 @@ mod imp {
                 library_filter: RefCell::default(),
                 sort_mode: Cell::default(),
                 counts: RefCell::default(),
+                collections: RefCell::default(),
             }
         }
     }
@@ -67,7 +72,10 @@ mod imp {
         fn signals() -> &'static [glib::subclass::Signal] {
             static SIGNALS: std::sync::LazyLock<Vec<glib::subclass::Signal>> =
                 std::sync::LazyLock::new(|| {
-                    vec![glib::subclass::Signal::builder("counts-changed").build()]
+                    vec![
+                        glib::subclass::Signal::builder("counts-changed").build(),
+                        glib::subclass::Signal::builder("collections-changed").build(),
+                    ]
                 });
             SIGNALS.as_ref()
         }
@@ -82,11 +90,11 @@ mod imp {
                     return false;
                 };
                 let entry = game.entry();
-                model
-                    .imp()
-                    .library_filter
-                    .borrow()
-                    .matches(&entry.game, &entry.search_key)
+                model.imp().library_filter.borrow().matches(
+                    &entry.game,
+                    &entry.collections,
+                    &entry.search_key,
+                )
             });
             let model = self.obj().downgrade();
             self.sorter.set_sort_func(move |a, b| {
@@ -153,8 +161,11 @@ impl LibraryModel {
     /// widgets bound to them stay put.
     pub fn set_games(&self, entries: Vec<LibraryEntry>) {
         let imp = self.imp();
-        imp.counts
-            .replace(Counts::of(entries.iter().map(|entry| &entry.game)));
+        imp.counts.replace(Counts::of(
+            entries
+                .iter()
+                .map(|entry| (&entry.game, entry.collections.as_slice())),
+        ));
         self.emit_by_name::<()>("counts-changed", &[]);
         let mut existing: HashMap<String, GameObject> = (0..imp.games.n_items())
             .filter_map(|position| imp.games.item(position).and_downcast::<GameObject>())
@@ -189,6 +200,32 @@ impl LibraryModel {
         imp.games.splice(0, imp.games.n_items(), &objects);
     }
 
+    /// The user's collections, in their order.
+    pub fn collections(&self) -> Vec<Collection> {
+        self.imp().collections.borrow().clone()
+    }
+
+    /// Replaces the collections, telling observers when they changed.
+    pub fn set_collections(&self, collections: Vec<Collection>) {
+        if *self.imp().collections.borrow() == collections {
+            return;
+        }
+        self.imp().collections.replace(collections);
+        self.emit_by_name::<()>("collections-changed", &[]);
+    }
+
+    /// Calls `callback` when collections are added, renamed, reordered or deleted.
+    pub fn connect_collections_changed<F: Fn(&Self) + 'static>(
+        &self,
+        callback: F,
+    ) -> glib::SignalHandlerId {
+        self.connect_local("collections-changed", false, move |values| {
+            let model = values[0].get::<Self>().expect("emitted by the model");
+            callback(&model);
+            None
+        })
+    }
+
     /// A game in the library by ID, shown or not.
     pub fn game_object(&self, id: &pindu_core::model::GameId) -> Option<GameObject> {
         let games = &self.imp().games;
@@ -200,6 +237,11 @@ impl LibraryModel {
     /// The title of a game in the library, shown or not.
     pub fn game_title(&self, id: &pindu_core::model::GameId) -> Option<String> {
         self.game_object(id).map(|game| game.game().title.clone())
+    }
+
+    /// The sidebar view shown.
+    pub fn view(&self) -> View {
+        self.imp().library_filter.borrow().view()
     }
 
     /// Shows only the games of a sidebar view.
