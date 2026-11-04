@@ -5,8 +5,10 @@ use gtk::{gio, glib};
 
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
 use crate::game_dialog::GameDialog;
+use crate::gamepad_service::GamepadService;
 use crate::launch_service;
 use crate::library_service::{ImportFailure, LibraryService};
+use crate::manette_backend::ManetteBackend;
 use crate::models::GameObject;
 use crate::permission_service;
 use crate::preferences::PreferencesDialog;
@@ -40,6 +42,8 @@ mod imp {
         pub fetching_art: std::cell::Cell<bool>,
         /// A game `--launch` asked for when this is the first instance.
         pub pending_launch: RefCell<Option<String>>,
+        /// Controller input for every shell; it opens controllers only when one listens.
+        pub gamepad_service: OnceCell<GamepadService>,
     }
 
     #[glib::object_subclass]
@@ -100,6 +104,9 @@ mod imp {
                 .expect("start-up runs once");
             self.watch_service
                 .set(WatchService::new(&self.sync_service))
+                .expect("start-up runs once");
+            self.gamepad_service
+                .set(GamepadService::new(Box::new(ManetteBackend::new())))
                 .expect("start-up runs once");
             // Loaded here, not on the first window: Shell search and --launch need the
             // library when no window opens.
@@ -198,6 +205,14 @@ impl PinduApplication {
     pub fn session_service(&self) -> &SessionService {
         self.imp()
             .session_service
+            .get()
+            .expect("the application has started")
+    }
+
+    /// Controller input, as intents.
+    pub fn gamepad_service(&self) -> &GamepadService {
+        self.imp()
+            .gamepad_service
             .get()
             .expect("the application has started")
     }

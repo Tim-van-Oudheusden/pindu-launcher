@@ -1,0 +1,164 @@
+//! Controller navigation in the main window: directions move focus the way the arrow keys
+//! do (`move-focus` on the window), the cover grid steps through its covers with
+//! `scroll_to`, A activates the focused widget and B closes a dialog or goes back. Intents
+//! never become synthetic key events, and only the active window acts on them.
+
+use std::collections::BTreeSet;
+
+use adw::prelude::*;
+use adw::subclass::prelude::*;
+use gtk::glib;
+use pindu_core::gamepad::{Direction, Intent};
+use pindu_core::grid;
+
+use crate::application::PinduApplication;
+use crate::models::GameObject;
+use crate::window::PinduWindow;
+
+impl PinduWindow {
+    /// Listens to controllers while the `controller-navigation` setting is on.
+    pub(crate) fn setup_controller_navigation(&self, application: &PinduApplication) {
+        let gamepad = application.gamepad_service().clone();
+        gamepad.connect_intent(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |intent| window.handle_intent(intent)
+        ));
+        let settings = self.settings();
+        let update = glib::clone!(
+            #[strong]
+            gamepad,
+            move |settings: &gtk::gio::Settings| {
+                gamepad.set_listening(settings.boolean("controller-navigation"));
+            }
+        );
+        update(settings);
+        settings.connect_changed(Some("controller-navigation"), move |settings, _| {
+            update(settings)
+        });
+    }
+
+    fn handle_intent(&self, intent: Intent) {
+        if !self.has_toplevel_focus() || !self.settings().boolean("controller-navigation") {
+            return;
+        }
+        // As with the keyboard, focus shows once the controller moves it.
+        self.set_focus_visible(true);
+        match intent {
+            Intent::Navigate(direction) => self.navigate(direction),
+            Intent::Activate => self.activate_focus(),
+            Intent::Back => self.go_back(),
+            _ => {}
+        }
+    }
+
+    /// Whether the compositor gives this window focus. A game in front of it has focus
+    /// instead, and then the controller is the game's.
+    fn has_toplevel_focus(&self) -> bool {
+        self.surface()
+            .and_downcast::<gtk::gdk::Toplevel>()
+            .is_some_and(|toplevel| toplevel.state().contains(gtk::gdk::ToplevelState::FOCUSED))
+    }
+
+    /// Steps through the cover grid when it has focus, and moves focus as the arrow keys
+    /// would everywhere else, including out of the grid at its edges.
+    fn navigate(&self, direction: Direction) {
+        let grid = &self.imp().grid;
+        let Some(model) = grid.model() else {
+            return;
+        };
+        if let Some(position) = self.focused_grid_position() {
+            let columns = grid_columns(grid);
+            if let Some(target) = grid::step(position, direction, model.n_items(), columns) {
+                self.focus_cover(target);
+                return;
+            }
+            self.imp().grid_cursor.set(position);
+        }
+        let previous = gtk::prelude::GtkWindowExt::focus(self);
+        let in_grid = self.focused_tile().is_some();
+        // At its edge the grid would wrap to the next row itself: leave it instead.
+        grid.set_can_focus(!in_grid);
+        self.emit_move_focus(match direction {
+            Direction::Up => gtk::DirectionType::Up,
+            Direction::Down => gtk::DirectionType::Down,
+            Direction::Left => gtk::DirectionType::Left,
+            Direction::Right => gtk::DirectionType::Right,
+        });
+        grid.set_can_focus(true);
+        match gtk::prelude::GtkWindowExt::focus(self) {
+            // Nothing lies that way: the window dropped focus, so keep it where it was.
+            None => {
+                if let Some(previous) = previous {
+                    previous.grab_focus();
+                }
+            }
+            // GTK's grid takes focus on whichever cover it likes, often one far out of
+            // view: coming in, focus goes to the cover the controller was last on instead.
+            Some(_) if !in_grid && self.focused_tile().is_some() && model.n_items() > 0 => {
+                let cursor = self.imp().grid_cursor.get().min(model.n_items() - 1);
+                self.focus_cover(cursor);
+            }
+            Some(_) => {}
+        }
+    }
+
+    /// Scrolls to the cover at `position` and focuses it.
+    fn focus_cover(&self, position: u32) {
+        self.imp().grid_cursor.set(position);
+        self.imp().grid.scroll_to(
+            position,
+            gtk::ListScrollFlags::FOCUS | gtk::ListScrollFlags::SELECT,
+            None,
+        );
+    }
+
+    /// The model position of the cover with focus, if a cover has it.
+    fn focused_grid_position(&self) -> Option<u32> {
+        let game = self.focused_tile()?.game()?;
+        let model = self.imp().grid.model()?;
+        (0..model.n_items()).find(|&position| {
+            model
+                .item(position)
+                .and_downcast::<GameObject>()
+                .is_some_and(|item| item == game)
+        })
+    }
+
+    /// Activates the focused widget as Enter or Space would: a cover opens its game, a
+    /// button clicks, a row activates.
+    fn activate_focus(&self) {
+        let Some(focus) = gtk::prelude::GtkWindowExt::focus(self) else {
+            return;
+        };
+        if !focus.activate() {
+            // Covers are grid items, which activate through their list item action.
+            let _ = focus.activate_action("listitem.activate", None);
+        }
+    }
+
+    /// Closes the open dialog, or leaves the shown page for the one before it.
+    fn go_back(&self) {
+        if let Some(dialog) = self.visible_dialog() {
+            dialog.close();
+        } else {
+            self.imp().navigation_view.pop();
+        }
+    }
+}
+
+/// How many covers a row of the grid holds: GTK does not say, so count the distinct
+/// columns its tiles sit in.
+fn grid_columns(grid: &gtk::GridView) -> u32 {
+    let mut columns = BTreeSet::new();
+    let mut child = grid.first_child();
+    while let Some(widget) = child {
+        if widget.is_child_visible()
+            && let Some(bounds) = widget.compute_bounds(grid)
+        {
+            columns.insert(bounds.x().round() as i32);
+        }
+        child = widget.next_sibling();
+    }
+    columns.len().max(1) as u32
+}

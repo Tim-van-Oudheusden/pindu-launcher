@@ -145,8 +145,11 @@ pub const DEADZONE: f64 = 0.5;
 /// device access sits behind this trait.
 pub trait GamepadBackend {
     /// Starts reporting events to `sink` on the main thread: a `Connected` for each device
-    /// already plugged in, then input and hotplug as they happen, until it is dropped.
+    /// already plugged in, then input and hotplug as they happen, until it is stopped.
     fn start(&mut self, sink: Box<dyn Fn(GamepadEvent)>);
+
+    /// Stops reporting and lets go of every device, until the next `start`.
+    fn stop(&mut self);
 }
 
 /// Maps controller input to intents.

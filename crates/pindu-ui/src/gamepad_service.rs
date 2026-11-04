@@ -2,7 +2,7 @@
 //! queued through the main loop, so a modal dialog never stalls them, and held directions
 //! repeat on a main-loop timer. Intents never become synthetic key events.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -22,6 +22,16 @@ struct Inner {
     intents: RefCell<Intents>,
     listeners: RefCell<Vec<Listener>>,
     repeat: RefCell<Option<glib::SourceId>>,
+    /// Whether controllers are open; events still queued after a stop are dropped.
+    listening: Cell<bool>,
+}
+
+impl std::fmt::Debug for GamepadService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GamepadService")
+            .field("listening", &self.inner.listening.get())
+            .finish_non_exhaustive()
+    }
 }
 
 impl GamepadService {
@@ -32,16 +42,24 @@ impl GamepadService {
                 intents: RefCell::new(Intents::new()),
                 listeners: RefCell::new(Vec::new()),
                 repeat: RefCell::new(None),
+                listening: Cell::new(false),
             }),
         }
     }
 
-    /// Calls `listener` with every intent. Controllers are only opened once the first
-    /// listener connects, so nothing touches them until something wants their input.
+    /// Calls `listener` with every intent while the service listens.
     pub fn connect_intent(&self, listener: impl Fn(Intent) + 'static) {
-        let first = self.inner.listeners.borrow().is_empty();
         self.inner.listeners.borrow_mut().push(Box::new(listener));
-        if first {
+    }
+
+    /// Opens the controllers, or lets go of them. Nothing touches a controller until
+    /// something asks to listen: libmanette takes over a Steam Deck's controls once it
+    /// opens them.
+    pub fn set_listening(&self, listening: bool) {
+        if self.inner.listening.replace(listening) == listening {
+            return;
+        }
+        if listening {
             let service = Rc::downgrade(&self.inner);
             self.inner
                 .backend
@@ -54,6 +72,13 @@ impl GamepadService {
                         }
                     });
                 }));
+        } else {
+            self.inner.backend.borrow_mut().stop();
+            if let Some(source) = self.inner.repeat.take() {
+                source.remove();
+            }
+            self.inner.intents.replace(Intents::new());
+            glib::g_info!("pindu", "Controllers released");
         }
     }
 
@@ -63,6 +88,9 @@ impl GamepadService {
     }
 
     fn handle(&self, event: GamepadEvent) {
+        if !self.inner.listening.get() {
+            return;
+        }
         match &event {
             GamepadEvent::Connected { name, kind, .. } => {
                 glib::g_info!("pindu", "Controller connected: {name} ({kind:?})");
