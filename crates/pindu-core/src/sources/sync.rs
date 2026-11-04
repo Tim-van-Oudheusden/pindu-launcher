@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use super::location::{self, HostDirs, ResolveError};
-use super::{ImportError, ImportedGame, Snapshot, bottles, desktop, heroic, lutris, steam};
+use super::{ImportError, ImportedGame, Snapshot, bottles, desktop, faugus, heroic, lutris, steam};
 use crate::model::{
     ArtOrigin, Artwork, Game, GameId, ImportedPlaytime, Source, SourceState, Timestamp,
 };
@@ -19,6 +19,7 @@ pub const IMPORTED_SOURCES: &[Source] = &[
     Source::HeroicSideload,
     Source::Lutris,
     Source::Bottles,
+    Source::Faugus,
     Source::Desktop,
 ];
 
@@ -28,15 +29,21 @@ pub struct SyncSummary {
     pub problems: Vec<(Source, String)>,
 }
 
-/// Syncs every enabled source with an importer.
-pub fn sync_all(store: &Store, dirs: &HostDirs, now: Timestamp) -> store::Result<SyncSummary> {
+/// Syncs every enabled source with an importer. `utc_offset` (seconds east of UTC) reads
+/// the local times some sources record.
+pub fn sync_all(
+    store: &Store,
+    dirs: &HostDirs,
+    now: Timestamp,
+    utc_offset: i64,
+) -> store::Result<SyncSummary> {
     let mut summary = SyncSummary::default();
     for &source in IMPORTED_SOURCES {
         let enabled = store
             .source_state(source)?
             .is_none_or(|state| state.enabled);
         if enabled {
-            let problems = sync_source(store, source, dirs, now)?;
+            let problems = sync_source(store, source, dirs, now, utc_offset)?;
             summary
                 .problems
                 .extend(problems.into_iter().map(|problem| (source, problem)));
@@ -54,13 +61,14 @@ pub fn sync_source(
     source: Source,
     dirs: &HostDirs,
     now: Timestamp,
+    utc_offset: i64,
 ) -> store::Result<Vec<String>> {
     let snapshot = if source == Source::Desktop {
         // Desktop entries come from the host's application folders, not one source folder.
         Ok(desktop::import(dirs))
     } else {
         match location::resolve_and_record(store, source, dirs)? {
-            Ok(root) => import(source, &root).map_err(|error| error.to_string()),
+            Ok(root) => import(source, &root, utc_offset).map_err(|error| error.to_string()),
             Err(ResolveError::NotFound) => Ok(Snapshot::new(source)),
             Err(error) => Err(error.to_string()),
         }
@@ -81,11 +89,12 @@ pub fn sync_source(
     Ok(problems)
 }
 
-fn import(source: Source, root: &Path) -> Result<Snapshot, ImportError> {
+fn import(source: Source, root: &Path, utc_offset: i64) -> Result<Snapshot, ImportError> {
     match source {
         Source::Steam => steam::import(root),
         Source::Lutris => lutris::import(root),
         Source::Bottles => bottles::import(root),
+        Source::Faugus => faugus::import(root, utc_offset),
         _ => heroic::import(root, source),
     }
 }
@@ -559,8 +568,14 @@ mod tests {
         let (dir, store) = temp_store();
         sideload_home(dir.path(), SIDELOADED);
 
-        let problems =
-            sync_source(&store, Source::HeroicSideload, &host_dirs(dir.path()), 100).unwrap();
+        let problems = sync_source(
+            &store,
+            Source::HeroicSideload,
+            &host_dirs(dir.path()),
+            100,
+            0,
+        )
+        .unwrap();
 
         assert!(problems.is_empty(), "{problems:?}");
         assert!(
@@ -582,15 +597,28 @@ mod tests {
     fn a_source_that_cannot_be_read_keeps_its_games_and_reports_why() {
         let (dir, store) = temp_store();
         sideload_home(dir.path(), SIDELOADED);
-        sync_source(&store, Source::HeroicSideload, &host_dirs(dir.path()), 100).unwrap();
+        sync_source(
+            &store,
+            Source::HeroicSideload,
+            &host_dirs(dir.path()),
+            100,
+            0,
+        )
+        .unwrap();
         std::fs::write(
             dir.path().join(".config/heroic/sideload_apps/library.json"),
             "{ broken",
         )
         .unwrap();
 
-        let problems =
-            sync_source(&store, Source::HeroicSideload, &host_dirs(dir.path()), 200).unwrap();
+        let problems = sync_source(
+            &store,
+            Source::HeroicSideload,
+            &host_dirs(dir.path()),
+            200,
+            0,
+        )
+        .unwrap();
 
         assert_eq!(problems.len(), 1);
         let game = store
@@ -606,11 +634,24 @@ mod tests {
     fn a_source_no_longer_on_the_machine_has_its_games_marked_missing() {
         let (dir, store) = temp_store();
         sideload_home(dir.path(), SIDELOADED);
-        sync_source(&store, Source::HeroicSideload, &host_dirs(dir.path()), 100).unwrap();
+        sync_source(
+            &store,
+            Source::HeroicSideload,
+            &host_dirs(dir.path()),
+            100,
+            0,
+        )
+        .unwrap();
         std::fs::remove_dir_all(dir.path().join(".config/heroic")).unwrap();
 
-        let problems =
-            sync_source(&store, Source::HeroicSideload, &host_dirs(dir.path()), 200).unwrap();
+        let problems = sync_source(
+            &store,
+            Source::HeroicSideload,
+            &host_dirs(dir.path()),
+            200,
+            0,
+        )
+        .unwrap();
 
         assert!(problems.is_empty());
         let game = store
@@ -631,7 +672,8 @@ mod tests {
         )
         .unwrap();
 
-        let problems = sync_source(&store, Source::Desktop, &host_dirs(dir.path()), 100).unwrap();
+        let problems =
+            sync_source(&store, Source::Desktop, &host_dirs(dir.path()), 100, 0).unwrap();
 
         assert!(problems.is_empty(), "{problems:?}");
         let id = GameId::new(Source::Desktop, "neverball");
@@ -653,7 +695,7 @@ mod tests {
         disabled.enabled = false;
         store.set_source_state(&disabled).unwrap();
 
-        let summary = sync_all(&store, &host_dirs(dir.path()), 100).unwrap();
+        let summary = sync_all(&store, &host_dirs(dir.path()), 100, 0).unwrap();
 
         assert!(
             store
