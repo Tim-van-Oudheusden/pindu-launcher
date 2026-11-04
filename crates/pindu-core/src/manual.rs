@@ -1,6 +1,7 @@
 //! Games added by hand: a folder the user granted, a program in it, a title and options.
-//! They start through host spawn and record their own sessions. Art the user picks for
-//! any game, and art fetched from SteamGridDB, is kept here too, in the data folder.
+//! Native games start through host spawn and record their own sessions; Windows games run
+//! through umu and Proton. Art the user picks for any game, and art fetched from
+//! SteamGridDB, is kept here too, in the data folder.
 
 use std::fmt;
 use std::os::unix::fs::PermissionsExt;
@@ -12,14 +13,21 @@ use crate::model::{
     ArtLayout, ArtOrigin, Artwork, Game, GameId, LaunchConfig, LaunchKind, Platform, Source,
     Timestamp,
 };
+use crate::pe::Icon;
 use crate::sources::sha256::sha256_hex;
 use crate::store::{self, Store};
 
 /// How deep below the game folder programs are looked for.
 const EXECUTABLE_DEPTH: usize = 3;
+/// How deep below a Windows game's folder its programs are looked for.
+const WINDOWS_EXECUTABLE_DEPTH: usize = 4;
+/// How deep below a prefix's top folders (such as `Program Files`) installed programs are
+/// looked for: deep enough for a publisher folder above an engine's `Binaries/Win64`.
+const PREFIX_PROGRAM_DEPTH: usize = 6;
 
-/// The Add or Edit form of a game added by hand. Paths are host paths; the program and
-/// working folder may be relative to the game folder.
+/// The Add or Edit form of a game added by hand. The program and working folder may be
+/// relative to the game folder. Paths are as the game's runner sees them: host paths for
+/// native games (host spawn), paths inside the sandbox for Windows games (umu runs there).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ManualGame {
     pub title: String,
@@ -29,6 +37,17 @@ pub struct ManualGame {
     pub arguments: String,
     /// Empty for the program's own folder.
     pub working_dir: String,
+    /// Set for a Windows game, run through umu and Proton.
+    pub windows: Option<WindowsOptions>,
+}
+
+/// How a Windows game added by hand runs.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct WindowsOptions {
+    /// The Proton build, by its internal name; `None` for the newest one at each start.
+    pub proton_version: Option<String>,
+    /// The game's Wine prefix; `None` for a new one of its own in the prefixes folder.
+    pub prefix: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -65,10 +84,17 @@ impl From<std::io::Error> for ManualError {
     }
 }
 
-/// Adds a game by hand and returns its new ID.
-pub fn add_game(store: &Store, form: &ManualGame, now: Timestamp) -> Result<GameId, ManualError> {
-    let config = launch_config(form)?;
+/// Adds a game by hand and returns its new ID. A Windows game without a prefix gets a
+/// new one of its own in `prefixes`.
+pub fn add_game(
+    store: &Store,
+    form: &ManualGame,
+    prefixes: &Path,
+    now: Timestamp,
+) -> Result<GameId, ManualError> {
+    let mut config = launch_config(form)?;
     let id = GameId::new(Source::Manual, &new_native_id(&form.title));
+    set_runner(&mut config, form, || prefixes.join(id.native_id()));
     let mut game = Game::new(id.clone(), form.title.trim(), LaunchKind::HostCommand, now);
     describe(&mut game, form);
     store.in_transaction(|store| {
@@ -79,8 +105,14 @@ pub fn add_game(store: &Store, form: &ManualGame, now: Timestamp) -> Result<Game
 }
 
 /// Saves an edited game added by hand. Launch options set elsewhere (environment,
-/// wrappers, GameMode, MangoHud) are kept.
-pub fn update_game(store: &Store, id: &GameId, form: &ManualGame) -> Result<(), ManualError> {
+/// wrappers, GameMode, MangoHud) are kept, and so is a Windows game's prefix unless the
+/// form names another; a game that becomes a Windows game gets one in `prefixes`.
+pub fn update_game(
+    store: &Store,
+    id: &GameId,
+    form: &ManualGame,
+    prefixes: &Path,
+) -> Result<(), ManualError> {
     let command = launch_config(form)?;
     store.in_transaction(|store| {
         let Some(mut game) = store.game(id)? else {
@@ -94,6 +126,10 @@ pub fn update_game(store: &Store, id: &GameId, form: &ManualGame) -> Result<(), 
         config.executable = command.executable;
         config.arguments = command.arguments;
         config.working_dir = command.working_dir;
+        let kept = config.prefix_path.take();
+        set_runner(&mut config, form, || {
+            kept.unwrap_or_else(|| prefixes.join(id.native_id()))
+        });
         store.set_launch_config(id, &config)
     })?;
     Ok(())
@@ -115,19 +151,43 @@ pub fn read_game(store: &Store, id: &GameId) -> Result<Option<ManualGame>, Manua
         Some(dir) if Some(dir.as_path()) != config.executable.parent() => relative(dir),
         _ => String::new(),
     };
+    let windows = (game.launch_kind == LaunchKind::Proton).then(|| WindowsOptions {
+        proton_version: config.proton_version.clone(),
+        prefix: config.prefix_path.clone(),
+    });
     Ok(Some(ManualGame {
         title: game.title,
         executable: relative(&config.executable),
         arguments: join_arguments(&config.arguments),
         working_dir,
         folder,
+        windows,
     }))
 }
 
 fn describe(game: &mut Game, form: &ManualGame) {
     game.installed = true;
-    game.platform = Some(Platform::Linux);
+    (game.launch_kind, game.platform) = match form.windows {
+        Some(_) => (LaunchKind::Proton, Some(Platform::Windows)),
+        None => (LaunchKind::HostCommand, Some(Platform::Linux)),
+    };
     game.install_path = Some(form.folder.clone());
+}
+
+/// Sets the Proton build and prefix of a Windows game, `default_prefix` when the form
+/// names none; native games have neither.
+fn set_runner(
+    config: &mut LaunchConfig,
+    form: &ManualGame,
+    default_prefix: impl FnOnce() -> PathBuf,
+) {
+    (config.proton_version, config.prefix_path) = match &form.windows {
+        Some(windows) => (
+            windows.proton_version.clone(),
+            Some(windows.prefix.clone().unwrap_or_else(default_prefix)),
+        ),
+        None => (None, None),
+    };
 }
 
 fn launch_config(form: &ManualGame) -> Result<LaunchConfig, ManualError> {
@@ -162,10 +222,113 @@ fn new_native_id(title: &str) -> String {
     sha256_hex(seed.as_bytes())[..16].to_owned()
 }
 
+/// A prefix folder in `prefixes` that no game has yet, for an installer run before the
+/// game is added.
+pub fn new_prefix(prefixes: &Path, title: &str) -> PathBuf {
+    prefixes.join(new_native_id(title))
+}
+
 /// The programs in a game folder (files with an execute bit), at most three folders
 /// deep, skipping hidden ones; relative to the folder, shallowest first, then by name.
 pub fn find_executables(folder: &Path) -> Vec<PathBuf> {
-    fn walk(folder: &Path, base: &Path, depth: usize, out: &mut Vec<PathBuf>) {
+    let mut found = find_files(folder, EXECUTABLE_DEPTH, &|_, metadata| {
+        metadata.permissions().mode() & 0o111 != 0
+    });
+    found.sort_by(|a, b| (a.components().count(), a).cmp(&(b.components().count(), b)));
+    found
+}
+
+/// The Windows programs in a game folder (`.exe` files), at most four folders deep, as
+/// engines keep theirs in folders like `Binaries/Win64`; relative to the folder,
+/// uninstallers last, then shallowest first, then by name.
+pub fn find_windows_executables(folder: &Path) -> Vec<PathBuf> {
+    let mut found = find_files(folder, WINDOWS_EXECUTABLE_DEPTH, &|path, _| is_exe(path));
+    sort_windows_programs(&mut found);
+    found
+}
+
+/// The Windows programs in a prefix's `drive_c`, skipping Wine's own `windows` folder:
+/// what an installer may add to.
+pub fn prefix_programs(prefix: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(prefix.join("drive_c")) else {
+        return Vec::new();
+    };
+    let mut found: Vec<PathBuf> = entries
+        .flatten()
+        .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_dir()))
+        .filter(|entry| !entry.file_name().eq_ignore_ascii_case("windows"))
+        .flat_map(|entry| {
+            let folder = entry.path();
+            find_files(&folder, PREFIX_PROGRAM_DEPTH, &|path, _| is_exe(path))
+                .into_iter()
+                .map(move |program| folder.join(program))
+        })
+        .collect();
+    found.sort();
+    found
+}
+
+/// What an installer added to a prefix, from its programs before and after it ran: the
+/// deepest folder the new programs share, and the programs relative to it, sorted as in
+/// [`find_windows_executables`]. `None` when it added none.
+pub fn installed_programs(
+    before: &[PathBuf],
+    after: &[PathBuf],
+) -> Option<(PathBuf, Vec<PathBuf>)> {
+    let added: Vec<&PathBuf> = after
+        .iter()
+        .filter(|program| !before.contains(program))
+        .collect();
+    let mut folder = added.first()?.parent()?.to_owned();
+    while !added.iter().all(|program| program.starts_with(&folder)) {
+        folder = folder.parent()?.to_owned();
+    }
+    let mut programs: Vec<PathBuf> = added
+        .iter()
+        .filter_map(|program| Some(program.strip_prefix(&folder).ok()?.to_owned()))
+        .collect();
+    sort_windows_programs(&mut programs);
+    Some((folder, programs))
+}
+
+fn is_exe(path: &Path) -> bool {
+    path.extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
+}
+
+fn sort_windows_programs(programs: &mut [PathBuf]) {
+    let is_uninstaller = |path: &Path| {
+        let name = path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_lowercase();
+        name.starts_with("unins") || name.contains("uninstall")
+    };
+    programs.sort_by_cached_key(|path| {
+        (
+            is_uninstaller(path),
+            path.components().count(),
+            path.clone(),
+        )
+    });
+}
+
+/// The files below `folder` that `keep` accepts, at most `depth` levels deep (1 is the
+/// folder itself), skipping hidden ones; relative to the folder, unsorted.
+fn find_files(
+    folder: &Path,
+    depth: usize,
+    keep: &dyn Fn(&Path, &std::fs::Metadata) -> bool,
+) -> Vec<PathBuf> {
+    fn walk(
+        folder: &Path,
+        base: &Path,
+        level: usize,
+        depth: usize,
+        keep: &dyn Fn(&Path, &std::fs::Metadata) -> bool,
+        out: &mut Vec<PathBuf>,
+    ) {
         let Ok(entries) = std::fs::read_dir(folder) else {
             return;
         };
@@ -177,10 +340,10 @@ pub fn find_executables(folder: &Path) -> Vec<PathBuf> {
             let Ok(metadata) = entry.metadata() else {
                 continue;
             };
-            if metadata.is_dir() && depth < EXECUTABLE_DEPTH {
-                walk(&path, base, depth + 1, out);
+            if metadata.is_dir() && level < depth {
+                walk(&path, base, level + 1, depth, keep, out);
             } else if metadata.is_file()
-                && metadata.permissions().mode() & 0o111 != 0
+                && keep(&path, &metadata)
                 && let Ok(relative) = path.strip_prefix(base)
             {
                 out.push(relative.to_owned());
@@ -188,8 +351,7 @@ pub fn find_executables(folder: &Path) -> Vec<PathBuf> {
         }
     }
     let mut found = Vec::new();
-    walk(folder, folder, 1, &mut found);
-    found.sort_by(|a, b| (a.components().count(), a).cmp(&(b.components().count(), b)));
+    walk(folder, folder, 1, depth, keep, &mut found);
     found
 }
 
@@ -303,6 +465,25 @@ pub fn set_steamgriddb_art(
     )
 }
 
+/// Stores the icon a Windows game's program carries as the game's own icon, beside user
+/// art in `art_dir`.
+pub fn set_exe_icon(
+    store: &Store,
+    art_dir: &Path,
+    id: &GameId,
+    icon: &Icon,
+) -> Result<PathBuf, ManualError> {
+    store_art(
+        store,
+        art_dir,
+        id,
+        ArtLayout::Icon,
+        ArtOrigin::Source,
+        icon.extension,
+        &icon.bytes,
+    )
+}
+
 fn store_art(
     store: &Store,
     art_dir: &Path,
@@ -359,6 +540,8 @@ mod tests {
     use crate::model::{ArtLayout, ArtOrigin, LaunchKind, Platform, Source};
     use crate::store::Store;
 
+    const PREFIXES: &str = "/home/me/Games/pindu-launcher/prefixes";
+
     fn temp_store() -> (tempfile::TempDir, Store) {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::open(&dir.path().join("library.db")).unwrap();
@@ -372,6 +555,7 @@ mod tests {
             executable: "bin/Celeste".into(),
             arguments: "--fullscreen \"--save dir\"".into(),
             working_dir: String::new(),
+            windows: None,
         }
     }
 
@@ -433,11 +617,85 @@ mod tests {
         );
     }
 
+    fn touch_all(root: &Path, paths: &[&str]) {
+        for path in paths {
+            let path = root.join(path);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, "").unwrap();
+        }
+    }
+
+    #[test]
+    fn windows_programs_are_the_exe_files_with_uninstallers_last() {
+        let dir = tempfile::tempdir().unwrap();
+        touch_all(
+            dir.path(),
+            &[
+                "unins000.exe",
+                "Celeste.EXE",
+                "Celeste.pdb",
+                "Engine/Binaries/Win64/Celeste-Win64-Shipping.exe",
+                "Engine/Binaries/Win64/too/deep.exe",
+                ".backup/old.exe",
+            ],
+        );
+
+        assert_eq!(
+            find_windows_executables(dir.path()),
+            [
+                Path::new("Celeste.EXE"),
+                Path::new("Engine/Binaries/Win64/Celeste-Win64-Shipping.exe"),
+                Path::new("unins000.exe"),
+            ]
+        );
+    }
+
+    #[test]
+    fn an_installer_leaves_its_programs_in_a_folder_they_share() {
+        let prefix = tempfile::tempdir().unwrap();
+        let drive = prefix.path().join("drive_c");
+        touch_all(
+            &drive,
+            &[
+                "windows/system32/notepad.exe",
+                "Program Files/Internet Explorer/iexplore.exe",
+            ],
+        );
+        let before = prefix_programs(prefix.path());
+        assert_eq!(
+            before,
+            [drive.join("Program Files/Internet Explorer/iexplore.exe")]
+        );
+        touch_all(
+            &drive,
+            &[
+                "Program Files (x86)/Celeste/unins000.exe",
+                "Program Files (x86)/Celeste/tools/editor.exe",
+                "Program Files (x86)/Celeste/Celeste.exe",
+            ],
+        );
+
+        let installed = installed_programs(&before, &prefix_programs(prefix.path()));
+
+        assert_eq!(
+            installed,
+            Some((
+                drive.join("Program Files (x86)/Celeste"),
+                vec![
+                    PathBuf::from("Celeste.exe"),
+                    PathBuf::from("tools/editor.exe"),
+                    PathBuf::from("unins000.exe"),
+                ]
+            ))
+        );
+        assert_eq!(installed_programs(&before, &before), None);
+    }
+
     #[test]
     fn adding_a_game_stores_it_with_its_command() {
         let (_dir, store) = temp_store();
 
-        let id = add_game(&store, &form(), 100).unwrap();
+        let id = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
 
         assert_eq!(id.source(), Source::Manual);
         let game = store.game(&id).unwrap().unwrap();
@@ -460,13 +718,62 @@ mod tests {
         );
     }
 
+    fn windows_form() -> ManualGame {
+        ManualGame {
+            folder: "/run/user/1000/doc/1a2b3c/Celeste".into(),
+            executable: "Celeste.exe".into(),
+            windows: Some(WindowsOptions::default()),
+            ..form()
+        }
+    }
+
+    #[test]
+    fn a_windows_game_runs_through_proton_in_a_prefix_of_its_own() {
+        let (_dir, store) = temp_store();
+        let form = ManualGame {
+            windows: Some(WindowsOptions {
+                proton_version: Some("GE-Proton10-34".into()),
+                prefix: None,
+            }),
+            ..windows_form()
+        };
+
+        let id = add_game(&store, &form, Path::new(PREFIXES), 100).unwrap();
+
+        let game = store.game(&id).unwrap().unwrap();
+        assert_eq!(game.launch_kind, LaunchKind::Proton);
+        assert_eq!(game.platform, Some(Platform::Windows));
+        let config = store.launch_config(&id).unwrap().unwrap();
+        assert_eq!(
+            config.executable,
+            Path::new("/run/user/1000/doc/1a2b3c/Celeste/Celeste.exe")
+        );
+        assert_eq!(config.proton_version.as_deref(), Some("GE-Proton10-34"));
+        assert_eq!(
+            config.prefix_path,
+            Some(Path::new(PREFIXES).join(id.native_id()))
+        );
+    }
+
     #[test]
     fn two_games_with_the_same_title_get_their_own_ids() {
         let (_dir, store) = temp_store();
 
-        let first = add_game(&store, &form(), 100).unwrap();
-        let second = add_game(&store, &form(), 100).unwrap();
+        let first = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
+        let second = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
 
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn an_installer_gets_a_new_prefix_in_the_prefixes_folder() {
+        let prefixes = Path::new(PREFIXES);
+
+        let first = new_prefix(prefixes, "Celeste");
+        let second = new_prefix(prefixes, "Celeste");
+
+        assert_eq!(first.parent(), Some(prefixes));
+        assert_eq!(second.parent(), Some(prefixes));
         assert_ne!(first, second);
     }
 
@@ -487,13 +794,16 @@ mod tests {
             ..form()
         };
 
-        assert_eq!(add_game(&store, &untitled, 1), Err(ManualError::NoTitle));
         assert_eq!(
-            add_game(&store, &no_program, 1),
+            add_game(&store, &untitled, Path::new(PREFIXES), 1),
+            Err(ManualError::NoTitle)
+        );
+        assert_eq!(
+            add_game(&store, &no_program, Path::new(PREFIXES), 1),
             Err(ManualError::NoExecutable)
         );
         assert!(matches!(
-            add_game(&store, &broken, 1),
+            add_game(&store, &broken, Path::new(PREFIXES), 1),
             Err(ManualError::Arguments(_))
         ));
         assert!(store.games().unwrap().is_empty());
@@ -502,7 +812,7 @@ mod tests {
     #[test]
     fn editing_keeps_the_options_set_elsewhere() {
         let (_dir, store) = temp_store();
-        let id = add_game(&store, &form(), 100).unwrap();
+        let id = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
         let mut config = store.launch_config(&id).unwrap().unwrap();
         config.gamemode = true;
         store.set_launch_config(&id, &config).unwrap();
@@ -512,7 +822,7 @@ mod tests {
             working_dir: "/tmp".into(),
             ..form()
         };
-        update_game(&store, &id, &edited).unwrap();
+        update_game(&store, &id, &edited, Path::new(PREFIXES)).unwrap();
 
         assert_eq!(store.game(&id).unwrap().unwrap().title, "Celeste Classic");
         let config = store.launch_config(&id).unwrap().unwrap();
@@ -523,7 +833,7 @@ mod tests {
     #[test]
     fn a_stored_game_reads_back_as_its_form() {
         let (_dir, store) = temp_store();
-        let id = add_game(&store, &form(), 100).unwrap();
+        let id = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
 
         let read = read_game(&store, &id).unwrap();
 
@@ -538,9 +848,45 @@ mod tests {
     }
 
     #[test]
+    fn an_edited_windows_game_keeps_its_prefix_and_a_native_one_drops_proton() {
+        let (_dir, store) = temp_store();
+        let id = add_game(&store, &windows_form(), Path::new(PREFIXES), 100).unwrap();
+        let prefix = Path::new(PREFIXES).join(id.native_id());
+
+        let read = read_game(&store, &id).unwrap().unwrap();
+        assert_eq!(
+            read.windows,
+            Some(WindowsOptions {
+                proton_version: None,
+                prefix: Some(prefix.clone()),
+            })
+        );
+
+        // A new build, and no prefix named: the game keeps its own.
+        let newer = ManualGame {
+            windows: Some(WindowsOptions {
+                proton_version: Some("GE-Proton11-3".into()),
+                prefix: None,
+            }),
+            ..windows_form()
+        };
+        update_game(&store, &id, &newer, Path::new("/elsewhere")).unwrap();
+        let config = store.launch_config(&id).unwrap().unwrap();
+        assert_eq!(config.proton_version.as_deref(), Some("GE-Proton11-3"));
+        assert_eq!(config.prefix_path, Some(prefix));
+
+        update_game(&store, &id, &form(), Path::new(PREFIXES)).unwrap();
+        let game = store.game(&id).unwrap().unwrap();
+        assert_eq!(game.launch_kind, LaunchKind::HostCommand);
+        assert_eq!(game.platform, Some(Platform::Linux));
+        let config = store.launch_config(&id).unwrap().unwrap();
+        assert_eq!((config.proton_version, config.prefix_path), (None, None));
+    }
+
+    #[test]
     fn user_art_lives_in_the_data_folder_and_wins_over_source_art() {
         let (dir, store) = temp_store();
-        let id = add_game(&store, &form(), 100).unwrap();
+        let id = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
         let art_dir = dir.path().join("art");
 
         let path = set_user_art(&store, &art_dir, &id, ArtLayout::Cover, "png", b"bytes").unwrap();
@@ -561,7 +907,7 @@ mod tests {
     #[test]
     fn steamgriddb_art_is_kept_beside_user_art_and_replaced_when_fetched_again() {
         let (dir, store) = temp_store();
-        let id = add_game(&store, &form(), 100).unwrap();
+        let id = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
         let art_dir = dir.path().join("art");
         let user = set_user_art(&store, &art_dir, &id, ArtLayout::Cover, "png", b"mine").unwrap();
         let first =
@@ -583,6 +929,26 @@ mod tests {
         assert_eq!(
             origins,
             [(ArtOrigin::SteamGridDb, second), (ArtOrigin::User, user)]
+        );
+    }
+
+    #[test]
+    fn the_programs_own_icon_is_kept_as_the_games_icon() {
+        let (dir, store) = temp_store();
+        let id = add_game(&store, &windows_form(), Path::new(PREFIXES), 100).unwrap();
+        let icon = Icon {
+            bytes: b"\x89PNG icon".to_vec(),
+            extension: "png",
+        };
+
+        let path = set_exe_icon(&store, &dir.path().join("art"), &id, &icon).unwrap();
+
+        assert_eq!(std::fs::read(&path).unwrap(), icon.bytes);
+        assert_eq!(path.extension(), Some("png".as_ref()));
+        let art = store.artwork(&id).unwrap();
+        assert_eq!(
+            (art[0].layout, art[0].origin, &art[0].path),
+            (ArtLayout::Icon, ArtOrigin::Source, &path)
         );
     }
 }

@@ -1,7 +1,8 @@
-//! The Add Game and Edit Game dialog. Games added by hand get their folder, program,
-//! title and options here; every game can get its own cover, banner and logo.
+//! The Add Game and Edit Game dialog. Games added by hand get their type (native or
+//! Windows), folder, program, title and options here, and Windows games their Proton
+//! build, prefix and installer; every game can get its own cover, banner and logo.
 
-use std::cell::{OnceCell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -9,15 +10,20 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
-use pindu_core::manual::{self, ManualGame};
+use pindu_core::manual::{self, ManualGame, WindowsOptions};
 use pindu_core::model::{ArtLayout, ArtOrigin, GameId, Source};
-use pindu_core::paths::{default_library_db_path, default_user_art_dir};
+use pindu_core::paths::{default_library_db_path, default_prefixes_dir, default_user_art_dir};
+use pindu_core::pe::{self, Icon};
 use pindu_core::store::Store;
 
 use crate::file_service::{self, PickedImage};
 use crate::library_service::LibraryService;
+use crate::proton_launch;
 use crate::steamgriddb_picker::{self, PickerGame};
 use crate::window::PinduWindow;
+
+/// The Windows row of the Type list; the native one comes first.
+const WINDOWS: u32 = 1;
 
 /// What the dialog is for.
 #[derive(Debug, Clone, Default)]
@@ -62,6 +68,27 @@ mod imp {
         #[template_child]
         pub working_dir_row: TemplateChild<adw::EntryRow>,
         #[template_child]
+        pub kind_row: TemplateChild<adw::ComboRow>,
+        /// The selected Windows program's icon, at the start of the Program row while
+        /// there is one (an empty prefix would still indent the row).
+        pub program_icon: gtk::Image,
+        #[template_child]
+        pub windows_group: TemplateChild<adw::PreferencesGroup>,
+        #[template_child]
+        pub proton_row: TemplateChild<adw::ComboRow>,
+        #[template_child]
+        pub proton_builds: TemplateChild<gtk::StringList>,
+        #[template_child]
+        pub prefix_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub reset_prefix_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub installer_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub installer_spinner: TemplateChild<adw::Spinner>,
+        #[template_child]
+        pub installer_button: TemplateChild<gtk::Button>,
+        #[template_child]
         pub cover_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub hero_row: TemplateChild<adw::ActionRow>,
@@ -69,8 +96,23 @@ mod imp {
         pub logo_row: TemplateChild<adw::ActionRow>,
         pub mode: RefCell<Mode>,
         pub library: OnceCell<LibraryService>,
-        /// The chosen game folder, as the host sees it.
+        /// The chosen game folder, as the host sees it (for native games).
         pub folder: RefCell<Option<PathBuf>>,
+        /// The chosen game folder, as the sandbox sees it (for Windows games, which run
+        /// inside it), and for listing its programs.
+        pub local_folder: RefCell<Option<PathBuf>>,
+        /// The Proton list's builds, by internal name; `None` for "newest".
+        pub proton_names: RefCell<Vec<Option<String>>>,
+        /// The build to select once the list is read, when editing.
+        pub pending_proton: RefCell<Option<String>>,
+        /// The Windows game's prefix; `None` for a new one of its own.
+        pub prefix: RefCell<Option<PathBuf>>,
+        /// The icon of the selected Windows program.
+        pub exe_icon: RefCell<Option<Icon>>,
+        /// The title the dialog filled in itself, which a program's own title replaces.
+        pub auto_title: RefCell<Option<String>>,
+        /// Whether an installer is running; the game cannot be saved meanwhile.
+        pub installing: Cell<bool>,
         pub art: RefCell<HashMap<ArtLayout, ArtChange>>,
         /// Layouts that already have art the user picked.
         pub user_art: RefCell<Vec<ArtLayout>>,
@@ -111,6 +153,21 @@ mod imp {
         fn form_changed(&self) {
             self.obj().update_save_button();
         }
+
+        #[template_callback]
+        fn choose_prefix(&self) {
+            self.obj().choose_prefix();
+        }
+
+        #[template_callback]
+        fn reset_prefix(&self) {
+            self.obj().set_prefix(None);
+        }
+
+        #[template_callback]
+        fn run_installer(&self) {
+            self.obj().run_installer();
+        }
     }
 
     impl ObjectImpl for GameDialog {
@@ -120,11 +177,22 @@ mod imp {
             for layout in LAYOUTS {
                 dialog.add_art_buttons(layout);
             }
-            self.executable_row.connect_selected_notify(glib::clone!(
+            self.executable_row
+                .connect_selected_item_notify(glib::clone!(
+                    #[weak]
+                    dialog,
+                    move |_| {
+                        dialog.read_program();
+                        dialog.update_save_button();
+                    }
+                ));
+            self.kind_row.connect_selected_notify(glib::clone!(
                 #[weak]
                 dialog,
-                move |_| dialog.update_save_button()
+                move |_| dialog.kind_changed()
             ));
+            dialog.set_prefix(None);
+            dialog.load_builds();
         }
     }
     impl WidgetImpl for GameDialog {}
@@ -219,7 +287,34 @@ impl GameDialog {
         imp.title_row.set_text(&form.title);
         imp.arguments_row.set_text(&form.arguments);
         imp.working_dir_row.set_text(&form.working_dir);
-        self.set_folder(form.folder.clone(), Some(form.executable.clone()));
+        if let Some(windows) = &form.windows {
+            imp.pending_proton.replace(windows.proton_version.clone());
+            self.select_proton();
+            self.set_prefix(windows.prefix.clone());
+            imp.kind_row.set_selected(WINDOWS);
+        }
+        // The stored folder is the one the game's runner sees, and the one to list.
+        self.set_folder(
+            form.folder.clone(),
+            Some(form.folder.clone()),
+            Some(form.executable.clone()),
+        );
+    }
+
+    fn is_windows(&self) -> bool {
+        self.imp().kind_row.selected() == WINDOWS
+    }
+
+    /// Native and Windows games list different programs and have different options.
+    fn kind_changed(&self) {
+        let imp = self.imp();
+        imp.windows_group.set_visible(self.is_windows());
+        let local = imp.local_folder.borrow().clone();
+        if let Some(local) = local {
+            self.list_programs(local, self.selected_executable());
+        }
+        self.read_program();
+        self.update_save_button();
     }
 
     fn choose_folder(&self) {
@@ -243,60 +338,334 @@ impl GameDialog {
             if dialog.imp().title_row.text().is_empty()
                 && let Some(name) = host.file_name()
             {
-                dialog.imp().title_row.set_text(&name.to_string_lossy());
+                dialog.set_auto_title(&name.to_string_lossy());
             }
-            dialog.set_folder_scanning(host, folder.path());
+            dialog.set_folder(host, folder.path(), None);
         });
     }
 
-    /// Records the folder and lists its programs; `keep` is the program to keep selected.
-    fn set_folder(&self, host: PathBuf, keep: Option<String>) {
-        let local = Some(host.clone());
-        self.set_folder_with(host, local, keep);
-    }
-
-    fn set_folder_scanning(&self, host: PathBuf, local: Option<PathBuf>) {
-        self.set_folder_with(host, local, None);
-    }
-
-    fn set_folder_with(&self, host: PathBuf, local: Option<PathBuf>, keep: Option<String>) {
+    /// Records the folder as the host and the sandbox see it, and lists its programs;
+    /// `keep` is the program to keep selected.
+    fn set_folder(&self, host: PathBuf, local: Option<PathBuf>, keep: Option<String>) {
         let imp = self.imp();
         imp.folder_row.set_subtitle(&host.to_string_lossy());
         imp.folder.replace(Some(host));
+        imp.local_folder.replace(local.clone());
+        match local {
+            Some(local) => self.list_programs(local, keep),
+            None => self.show_programs(Vec::new(), keep),
+        }
+    }
+
+    /// Lists the programs in a folder: `.exe` files for Windows games, files with an
+    /// execute bit for native ones.
+    fn list_programs(&self, folder: PathBuf, keep: Option<String>) {
+        let windows = self.is_windows();
         let dialog = self.downgrade();
         glib::spawn_future_local(async move {
-            let found = match local {
-                Some(local) => gio::spawn_blocking(move || manual::find_executables(&local))
+            let found = gio::spawn_blocking(move || {
+                if windows {
+                    manual::find_windows_executables(&folder)
+                } else {
+                    manual::find_executables(&folder)
+                }
+            })
+            .await
+            .unwrap_or_default();
+            if let Some(dialog) = dialog.upgrade() {
+                dialog.show_programs(found, keep);
+            }
+        });
+    }
+
+    fn show_programs(&self, found: Vec<PathBuf>, keep: Option<String>) {
+        let imp = self.imp();
+        let mut names: Vec<String> = found
+            .iter()
+            .map(|path| path.to_string_lossy().into_owned())
+            .collect();
+        if let Some(keep) = &keep
+            && !names.contains(keep)
+        {
+            names.insert(0, keep.clone());
+        }
+        let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+        imp.executables.splice(0, imp.executables.n_items(), &refs);
+        let selected = keep
+            .and_then(|keep| names.iter().position(|name| *name == keep))
+            .unwrap_or(0);
+        imp.executable_row.set_selected(selected as u32);
+        imp.executable_row.set_sensitive(!names.is_empty());
+        imp.executable_row.set_subtitle(&if names.is_empty() {
+            gettext("No programs found in this folder")
+        } else {
+            String::new()
+        });
+        self.update_save_button();
+    }
+
+    /// A title the dialog fills in itself, until the user types their own.
+    fn set_auto_title(&self, title: &str) {
+        let imp = self.imp();
+        imp.auto_title.replace(Some(title.to_owned()));
+        imp.title_row.set_text(title);
+    }
+
+    /// Reads the selected Windows program's own title and icon, off the main thread: the
+    /// title replaces one the dialog filled in, the icon becomes the game's.
+    fn read_program(&self) {
+        let imp = self.imp();
+        imp.exe_icon.replace(None);
+        if imp.program_icon.parent().is_some() {
+            imp.executable_row.remove(&imp.program_icon);
+        }
+        let folder = imp.local_folder.borrow().clone();
+        let (true, Some(folder), Some(program)) =
+            (self.is_windows(), folder, self.selected_executable())
+        else {
+            return;
+        };
+        let dialog = self.downgrade();
+        glib::spawn_future_local(async move {
+            let path = folder.join(&program);
+            let info = gio::spawn_blocking(move || pe::read_exe(&path))
+                .await
+                .unwrap_or_default();
+            let texture = match &info.icon {
+                Some(icon) => crate::widgets::textures::decode_bytes(&icon.bytes)
                     .await
-                    .unwrap_or_default(),
-                None => Vec::new(),
+                    .inspect_err(|error| {
+                        glib::g_debug!("pindu", "Could not read the icon of {program}: {error}")
+                    })
+                    .ok(),
+                None => None,
             };
             let Some(dialog) = dialog.upgrade() else {
                 return;
             };
-            let imp = dialog.imp();
-            let mut names: Vec<String> = found
-                .iter()
-                .map(|path| path.to_string_lossy().into_owned())
-                .collect();
-            if let Some(keep) = &keep
-                && !names.contains(keep)
-            {
-                names.insert(0, keep.clone());
+            if !dialog.is_windows() || dialog.selected_executable().as_ref() != Some(&program) {
+                return;
             }
-            let refs: Vec<&str> = names.iter().map(String::as_str).collect();
-            imp.executables.splice(0, imp.executables.n_items(), &refs);
-            let selected = keep
-                .and_then(|keep| names.iter().position(|name| *name == keep))
-                .unwrap_or(0);
-            imp.executable_row.set_selected(selected as u32);
-            imp.executable_row.set_sensitive(!names.is_empty());
-            imp.executable_row.set_subtitle(&if names.is_empty() {
-                gettext("No programs found in this folder")
+            let imp = dialog.imp();
+            if let Some(title) = &info.title {
+                let current = imp.title_row.text();
+                if current.is_empty()
+                    || imp.auto_title.borrow().as_deref() == Some(current.as_str())
+                {
+                    dialog.set_auto_title(title);
+                }
+            }
+            if let Some(texture) = texture {
+                imp.program_icon.set_paintable(Some(&texture));
+                imp.program_icon.set_pixel_size(32);
+                if imp.program_icon.parent().is_none() {
+                    imp.executable_row.add_prefix(&imp.program_icon);
+                }
+                imp.exe_icon.replace(info.icon);
+            }
+        });
+    }
+
+    /// Lists the Proton builds on this machine, newest first, after "the newest".
+    fn load_builds(&self) {
+        let dialog = self.downgrade();
+        glib::spawn_future_local(async move {
+            let builds = gio::spawn_blocking(proton_launch::builds)
+                .await
+                .unwrap_or_default();
+            let Some(dialog) = dialog.upgrade() else {
+                return;
+            };
+            let imp = dialog.imp();
+            let newest = match builds.first() {
+                Some(build) => {
+                    gettext("Newest ({proton})").replace("{proton}", &build.display_name)
+                }
+                None => gettext("Newest"),
+            };
+            let mut labels = vec![newest];
+            let mut names = vec![None];
+            for build in builds {
+                labels.push(build.display_name);
+                names.push(Some(build.name));
+            }
+            let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+            imp.proton_builds
+                .splice(0, imp.proton_builds.n_items(), &refs);
+            imp.proton_names.replace(names);
+            imp.proton_row.set_subtitle(&if labels.len() == 1 {
+                gettext("No Proton found. Install one, for example through Steam.")
             } else {
                 String::new()
             });
-            dialog.update_save_button();
+            dialog.select_proton();
+        });
+    }
+
+    /// Selects the build a game being edited uses, once the list is read; a build that
+    /// is gone stays listed, so saving keeps it.
+    fn select_proton(&self) {
+        let imp = self.imp();
+        if imp.proton_names.borrow().is_empty() {
+            return;
+        }
+        let Some(wanted) = imp.pending_proton.take() else {
+            return;
+        };
+        let found = imp
+            .proton_names
+            .borrow()
+            .iter()
+            .position(|name| name.as_deref() == Some(wanted.as_str()));
+        let index = found.unwrap_or_else(|| {
+            imp.proton_builds
+                .append(&gettext("{proton} (not installed)").replace("{proton}", &wanted));
+            imp.proton_names.borrow_mut().push(Some(wanted));
+            imp.proton_names.borrow().len() - 1
+        });
+        imp.proton_row.set_selected(index as u32);
+    }
+
+    fn selected_proton(&self) -> Option<String> {
+        let imp = self.imp();
+        let names = imp.proton_names.borrow();
+        match names.get(imp.proton_row.selected() as usize) {
+            Some(name) => name.clone(),
+            // The list is not read yet: keep the build being edited.
+            None => imp.pending_proton.borrow().clone(),
+        }
+    }
+
+    /// Shows the prefix the game gets: the one chosen, or a new one of its own.
+    fn set_prefix(&self, prefix: Option<PathBuf>) {
+        let imp = self.imp();
+        imp.prefix_row.set_subtitle(&match &prefix {
+            Some(prefix) => prefix.to_string_lossy().into_owned(),
+            None => gettext("A new folder in {folder}")
+                .replace("{folder}", &default_prefixes_dir().to_string_lossy()),
+        });
+        imp.reset_prefix_button.set_visible(prefix.is_some());
+        imp.prefix.replace(prefix);
+    }
+
+    fn choose_prefix(&self) {
+        let chooser = gtk::FileDialog::builder()
+            .title(gettext("Choose the Game's Prefix"))
+            .modal(true)
+            .initial_folder(&gio::File::for_path(default_prefixes_dir()))
+            .build();
+        let root = self.root().and_downcast::<gtk::Window>();
+        let dialog = self.downgrade();
+        glib::spawn_future_local(async move {
+            let Ok(folder) = chooser.select_folder_future(root.as_ref()).await else {
+                return;
+            };
+            // umu runs inside the sandbox, so the path the sandbox sees is the one kept.
+            if let (Some(dialog), Some(path)) = (dialog.upgrade(), folder.path()) {
+                dialog.set_prefix(Some(path));
+            }
+        });
+    }
+
+    /// Runs an installer the user picks in the game's prefix, then lists the programs it
+    /// installed, in the folder they share, for the user to pick the game's.
+    fn run_installer(&self) {
+        let filter = gtk::FileFilter::new();
+        filter.set_name(Some(&gettext("Windows Programs")));
+        filter.add_suffix("exe");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&filter);
+        let chooser = gtk::FileDialog::builder()
+            .title(gettext("Choose the Game's Installer"))
+            .modal(true)
+            .filters(&filters)
+            .build();
+        let root = self.root().and_downcast::<gtk::Window>();
+        let dialog = self.downgrade();
+        glib::spawn_future_local(async move {
+            let Ok(file) = chooser.open_future(root.as_ref()).await else {
+                return;
+            };
+            let (Some(dialog), Some(installer)) = (dialog.upgrade(), file.path()) else {
+                return;
+            };
+            let Some(app) = root.as_ref().and_then(|root| root.application()) else {
+                return;
+            };
+            let imp = dialog.imp();
+            // The installer and the game share the prefix, so it is fixed now.
+            let prefix = imp.prefix.borrow().clone().unwrap_or_else(|| {
+                manual::new_prefix(&default_prefixes_dir(), imp.title_row.text().trim())
+            });
+            dialog.set_prefix(Some(prefix.clone()));
+            dialog.set_installing(true);
+            let before = {
+                let prefix = prefix.clone();
+                gio::spawn_blocking(move || manual::prefix_programs(&prefix))
+                    .await
+                    .unwrap_or_default()
+            };
+            let toast = {
+                let dialog = dialog.downgrade();
+                move |toast: adw::Toast| {
+                    if let Some(dialog) = dialog.upgrade() {
+                        dialog.imp().toast_overlay.add_toast(toast);
+                    }
+                }
+            };
+            let ran = proton_launch::run_installer(
+                &app,
+                root,
+                installer,
+                dialog.selected_proton(),
+                prefix.clone(),
+                toast,
+            )
+            .await;
+            let installed = gio::spawn_blocking(move || {
+                manual::installed_programs(&before, &manual::prefix_programs(&prefix))
+            })
+            .await
+            .ok()
+            .flatten();
+            dialog.set_installing(false);
+            match installed {
+                Some((folder, programs)) => {
+                    if dialog.imp().title_row.text().is_empty()
+                        && let Some(name) = folder.file_name()
+                    {
+                        dialog.set_auto_title(&name.to_string_lossy());
+                    }
+                    // Prefixes are in the games folder, which host and sandbox see alike.
+                    let imp = dialog.imp();
+                    imp.folder_row.set_subtitle(&folder.to_string_lossy());
+                    imp.folder.replace(Some(folder.clone()));
+                    imp.local_folder.replace(Some(folder));
+                    dialog.show_programs(programs, None);
+                    dialog.toast(&gettext("Installed. Pick the game's program."));
+                }
+                None if ran => {
+                    dialog.toast(&gettext(
+                        "The installer added no programs. Choose the game's folder instead.",
+                    ));
+                }
+                None => {}
+            }
+        });
+    }
+
+    /// While an installer runs, the row says so and cannot start another.
+    fn set_installing(&self, installing: bool) {
+        let imp = self.imp();
+        imp.installing.set(installing);
+        imp.installer_spinner.set_visible(installing);
+        imp.installer_button.set_sensitive(!installing);
+        imp.kind_row.set_sensitive(!installing);
+        self.update_save_button();
+        imp.installer_row.set_subtitle(&if installing {
+            gettext("Installing… Finish the installer to go on.")
+        } else {
+            gettext("Run the game's installer in its prefix, then pick the program it installed")
         });
     }
 
@@ -310,24 +679,39 @@ impl GameDialog {
 
     fn form(&self) -> Option<ManualGame> {
         let imp = self.imp();
+        let windows = self.is_windows();
+        let folder = if windows {
+            imp.local_folder.borrow().clone()?
+        } else {
+            imp.folder.borrow().clone()?
+        };
         Some(ManualGame {
             title: imp.title_row.text().to_string(),
-            folder: imp.folder.borrow().clone()?,
+            folder,
             executable: self.selected_executable()?,
             arguments: imp.arguments_row.text().to_string(),
             working_dir: imp.working_dir_row.text().to_string(),
+            windows: windows.then(|| WindowsOptions {
+                proton_version: self.selected_proton(),
+                prefix: imp.prefix.borrow().clone(),
+            }),
         })
     }
 
-    fn update_save_button(&self) {
+    fn is_ready(&self) -> bool {
         let imp = self.imp();
-        let ready = match &*imp.mode.borrow() {
+        match &*imp.mode.borrow() {
             Mode::Add | Mode::Edit { manual: true, .. } => self
                 .form()
                 .is_some_and(|form| !form.title.trim().is_empty()),
             Mode::Edit { manual: false, .. } => !imp.art.borrow().is_empty(),
-        };
-        imp.save_button.set_sensitive(ready);
+        }
+    }
+
+    fn update_save_button(&self) {
+        let imp = self.imp();
+        imp.save_button
+            .set_sensitive(!imp.installing.get() && self.is_ready());
     }
 
     fn art_row(&self, layout: ArtLayout) -> adw::ActionRow {
@@ -512,11 +896,16 @@ impl GameDialog {
         let mode = imp.mode.borrow().clone();
         let form = self.form();
         let art: Vec<(ArtLayout, ArtChange)> = imp.art.borrow().clone().into_iter().collect();
+        // A program's icon is only kept for Windows games, whose programs carry one.
+        let icon = form
+            .as_ref()
+            .and_then(|form| form.windows.as_ref())
+            .and_then(|_| imp.exe_icon.borrow().clone());
         let title = imp.title_row.text().to_string();
         imp.save_button.set_sensitive(false);
         let dialog = self.downgrade();
         glib::spawn_future_local(async move {
-            let saved = gio::spawn_blocking(move || save_to_store(mode, form, art)).await;
+            let saved = gio::spawn_blocking(move || save_to_store(mode, form, icon, art)).await;
             let Some(dialog) = dialog.upgrade() else {
                 return;
             };
@@ -544,25 +933,30 @@ impl GameDialog {
 fn save_to_store(
     mode: Mode,
     form: Option<ManualGame>,
+    icon: Option<Icon>,
     art: Vec<(ArtLayout, ArtChange)>,
 ) -> Result<bool, String> {
     let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |elapsed| elapsed.as_secs() as i64);
+    let prefixes = default_prefixes_dir();
     let (id, added) = match (mode, form) {
         (Mode::Add, Some(form)) => (
-            manual::add_game(&store, &form, now).map_err(|e| e.to_string())?,
+            manual::add_game(&store, &form, &prefixes, now).map_err(|e| e.to_string())?,
             true,
         ),
         (Mode::Edit { id, manual: true }, Some(form)) => {
-            manual::update_game(&store, &id, &form).map_err(|e| e.to_string())?;
+            manual::update_game(&store, &id, &form, &prefixes).map_err(|e| e.to_string())?;
             (id, false)
         }
         (Mode::Edit { id, manual: false }, _) => (id, false),
         (_, None) => return Err(gettext("Choose a folder and a program first")),
     };
     let art_dir = default_user_art_dir();
+    if let Some(icon) = icon {
+        manual::set_exe_icon(&store, &art_dir, &id, &icon).map_err(|error| error.to_string())?;
+    }
     for (layout, change) in art {
         match change {
             ArtChange::Set(image) => manual::set_user_art(

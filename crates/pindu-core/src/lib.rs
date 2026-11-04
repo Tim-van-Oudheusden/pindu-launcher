@@ -13,6 +13,7 @@ pub mod library;
 pub mod manual;
 pub mod model;
 pub mod paths;
+pub mod pe;
 pub mod permissions;
 pub mod proton;
 pub mod search;

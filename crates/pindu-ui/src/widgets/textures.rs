@@ -38,7 +38,15 @@ pub async fn load(path: &Path) -> Result<gdk::Texture, String> {
 }
 
 async fn decode(path: &Path) -> Result<gdk::Texture, String> {
-    let loader = glycin::Loader::new(gio::File::for_path(path));
+    first_frame(glycin::Loader::new(gio::File::for_path(path))).await
+}
+
+/// Decodes an image held in memory, such as a program's icon; not kept.
+pub async fn decode_bytes(bytes: &[u8]) -> Result<gdk::Texture, String> {
+    first_frame(glycin::Loader::new_bytes(glib::Bytes::from(bytes))).await
+}
+
+async fn first_frame(loader: glycin::Loader) -> Result<gdk::Texture, String> {
     let mut image = loader.load().await.map_err(|error| error.to_string())?;
     let frame = image
         .next_frame()
