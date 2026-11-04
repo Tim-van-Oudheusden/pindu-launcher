@@ -204,7 +204,9 @@ impl CoverTile {
         let actions = gio::Menu::new();
         actions.append_item(&item(gettext("_Play"), "app.play"));
         actions.append_item(&item(gettext("_Details"), "win.show-details"));
-        actions.append_item(&item(gettext("_Open in Launcher"), "app.open-in-launcher"));
+        if pindu_core::launch::launcher_uri(&game.game()).is_some() {
+            actions.append_item(&item(gettext("_Open in Launcher"), "app.open-in-launcher"));
+        }
         menu.append_section(None, &actions);
         let manage = gio::Menu::new();
         manage.append_item(&item(gettext("_Hide"), "win.hide-game"));
