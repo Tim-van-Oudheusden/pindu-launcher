@@ -62,6 +62,12 @@ impl LibraryService {
         self.spawn_edit(id, move |game| game.hidden = hidden);
     }
 
+    /// Removes a game from the library (it stays out while its source lists it), or brings
+    /// it back.
+    pub fn set_removed(&self, id: &GameId, removed: bool) {
+        self.spawn_edit(id, move |game| game.user_removed = removed);
+    }
+
     /// Adds a game to Favourites or takes it out.
     pub fn set_favourite(&self, id: &GameId, favourite: bool) {
         self.spawn_edit(id, move |game| game.favourite = favourite);

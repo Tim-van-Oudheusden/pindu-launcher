@@ -255,9 +255,9 @@ impl CoverTile {
                 &crate::collection_actions::collection_menu(&game, &collections),
             );
         }
-        let (favourite, pinned) = {
+        let (favourite, pinned, hidden) = {
             let game = game.game();
-            (game.favourite, game.pin_order.is_some())
+            (game.favourite, game.pin_order.is_some(), game.hidden)
         };
         let keep = gio::Menu::new();
         keep.append_item(&item(
@@ -279,7 +279,12 @@ impl CoverTile {
         menu.append_section(None, &keep);
         let manage = gio::Menu::new();
         manage.append_item(&item(gettext("_Edit…"), "app.edit-game"));
-        manage.append_item(&item(gettext("_Hide"), "win.hide-game"));
+        if hidden {
+            manage.append_item(&item(gettext("_Unhide"), "win.unhide-game"));
+        } else {
+            manage.append_item(&item(gettext("_Hide"), "win.hide-game"));
+        }
+        manage.append_item(&item(gettext("_Remove"), "win.remove-game"));
         menu.append_section(None, &manage);
 
         let popover = self.imp().menu.get().expect("constructed");

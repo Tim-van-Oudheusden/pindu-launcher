@@ -50,6 +50,7 @@ mod imp {
             obj.set_accels_for_action("win.back", &["<alt>Left", "Back"]);
             obj.set_accels_for_action("app.preferences", &["<primary>comma"]);
             obj.set_accels_for_action("app.add-game", &["<primary>n"]);
+            obj.set_accels_for_action("win.show-hidden", &["<primary>h"]);
             glib::g_info!(
                 "pindu",
                 "Host spawn {}",

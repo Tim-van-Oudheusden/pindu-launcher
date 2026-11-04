@@ -196,6 +196,21 @@ impl PinduWindow {
         self.add_action(&sort_mode);
 
         self.add_game_action("hide-game", Self::hide_game);
+        self.add_game_action("unhide-game", Self::unhide_game);
+        self.add_game_action("remove-game", Self::remove_game);
+        let show_hidden = gio::SimpleAction::new_stateful("show-hidden", None, &false.to_variant());
+        show_hidden.connect_change_state(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |action, state| {
+                let Some(show) = state.and_then(bool::from_variant) else {
+                    return;
+                };
+                action.set_state(&show.to_variant());
+                window.show_hidden_games(show);
+            }
+        ));
+        self.add_action(&show_hidden);
         self.add_game_action("toggle-favourite", Self::toggle_favourite);
         self.add_game_action("toggle-pin", Self::toggle_pin);
         self.add_game_action("show-details", Self::show_details);
@@ -349,6 +364,8 @@ impl PinduWindow {
         } else if matches!(library.view(), View::Collection(id) if library.counts().get(View::Collection(id)) == 0)
         {
             "empty-collection"
+        } else if library.view() == View::Hidden && library.counts().get(View::Hidden) == 0 {
+            "no-hidden"
         } else {
             "no-results"
         };
@@ -479,6 +496,41 @@ impl PinduWindow {
     }
 
     /// Hides a game, with a toast to undo it.
+    /// Shows the hidden games (Ctrl+H), or goes back to All Games.
+    fn show_hidden_games(&self, show: bool) {
+        let imp = self.imp();
+        if show {
+            self.library().set_view(View::Hidden);
+            imp.library_page.set_title(&gettext("Hidden Games"));
+            imp.sidebar.set_selected(gtk::INVALID_LIST_POSITION);
+            imp.navigation_view.pop_to_tag("library");
+            self.update_jump_back_in();
+        } else if self.library().view() == View::Hidden {
+            self.select_view(View::All);
+            self.show_view_of(&imp.all_item);
+        }
+    }
+
+    fn unhide_game(&self, id: &GameId) {
+        self.library_service().set_hidden(id, false);
+    }
+
+    /// Removes a game from the library, with a toast to undo it. It stays out while its
+    /// launcher lists it.
+    fn remove_game(&self, id: &GameId) {
+        let service = self.library_service();
+        let title = self.library().game_title(id).unwrap_or_default();
+        service.set_removed(id, true);
+        let toast = adw::Toast::builder()
+            .title(gettext("“{title}” removed").replace("{title}", &title))
+            .button_label(gettext("_Undo"))
+            .use_markup(false)
+            .build();
+        let id = id.clone();
+        toast.connect_button_clicked(move |_| service.set_removed(&id, false));
+        self.imp().toast_overlay.add_toast(toast);
+    }
+
     fn hide_game(&self, id: &GameId) {
         let service = self.library_service();
         let title = self.library().game_title(id).unwrap_or_default();
@@ -597,6 +649,9 @@ impl PinduWindow {
             return;
         };
         self.library().set_view(view);
+        if let Some(action) = self.lookup_action("show-hidden") {
+            action.change_state(&false.to_variant());
+        }
         self.update_jump_back_in();
         imp.library_page
             .set_title(&item.title().unwrap_or_default());
@@ -687,7 +742,7 @@ impl PinduWindow {
                     let Some(game) = tile.game() else {
                         return glib::Propagation::Proceed;
                     };
-                    window.hide_game(&game.id());
+                    window.remove_game(&game.id());
                 } else {
                     return glib::Propagation::Proceed;
                 }

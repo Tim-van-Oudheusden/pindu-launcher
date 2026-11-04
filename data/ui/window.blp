@@ -291,6 +291,16 @@ template $PinduWindow: Adw.ApplicationWindow {
                 }
 
                 StackPage {
+                  name: "no-hidden";
+
+                  child: Adw.StatusPage {
+                    icon-name: "view-reveal-symbolic";
+                    title: _("No Hidden Games");
+                    description: _("Games you hide show here, to unhide them");
+                  };
+                }
+
+                StackPage {
                   name: "empty-collection";
 
                   child: Adw.StatusPage {
@@ -383,6 +393,13 @@ menu sort_menu {
 }
 
 menu primary_menu {
+  section {
+    item {
+      label: _("Show _Hidden Games");
+      action: "win.show-hidden";
+    }
+  }
+
   section {
     item {
       label: _("_Preferences");
