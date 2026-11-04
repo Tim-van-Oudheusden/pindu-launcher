@@ -37,9 +37,11 @@ jobs:
           key: checks-${{ hashFiles('Cargo.lock') }}
           restore-keys: checks-
 
-      # Everything runs in the GNOME 51 SDK, as local builds do.
+      # Everything runs in the GNOME 51 SDK, as local builds do. Inside its sandbox root
+      # can only write files root owns, and the checkout belongs to the runner's user.
       - name: rustfmt, clippy, unit tests and Meson tests
         run: |
+          chown -R "$(id -u):$(id -g)" "$PWD"
           flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
             --env=CARGO_HOME="$PWD/.cargo-home" \
             --env=CARGO_TARGET_DIR="$PWD/_build/cargo-target" \
