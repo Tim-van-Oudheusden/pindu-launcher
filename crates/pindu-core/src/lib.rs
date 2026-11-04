@@ -9,6 +9,7 @@ pub mod backup;
 pub mod focus;
 pub mod gamepad;
 pub mod grid;
+pub mod hints;
 pub mod launch;
 pub mod library;
 pub mod manual;

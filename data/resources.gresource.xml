@@ -9,5 +9,33 @@
     <file preprocess="xml-stripblanks" alias="shortcuts-dialog.ui">ui/shortcuts-dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/window.ui</file>
     <file compressed="true">style.css</file>
+    <!-- Controller glyphs for the hint bar; GtkApplication adds icons/ to the icon theme. -->
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-dpad-down-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-dpad-left-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-dpad-right-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-dpad-up-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-east-a-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-east-b-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-east-circle-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-home-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-l-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-l1-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-lb-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-menu-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-minus-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-north-triangle-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-north-x-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-north-y-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-plus-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-r-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-r1-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-rb-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-south-a-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-south-b-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-south-cross-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-view-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-west-square-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-west-x-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-west-y-symbolic.svg</file>
   </gresource>
 </gresources>
