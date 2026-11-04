@@ -3,6 +3,7 @@
 //! An importer reads one source's files, read-only, into a [`Snapshot`]; syncing that
 //! snapshot with the library is a separate step.
 
+pub mod bottles;
 pub mod heroic;
 pub mod location;
 pub mod lutris;
@@ -49,6 +50,8 @@ pub struct ImportedGame {
     /// Total playtime the source tracks itself, in seconds.
     pub playtime_secs: Option<i64>,
     pub launch_kind: LaunchKind,
+    /// A launch URI the source gives, when the URI cannot be built from the native ID.
+    pub launch_uri: Option<String>,
     pub genres: Vec<String>,
     pub description: Option<String>,
     /// The source's own art, at most one per layout.
@@ -83,6 +86,7 @@ impl ImportedGame {
             last_played_at: None,
             playtime_secs: None,
             launch_kind,
+            launch_uri: None,
             genres: Vec::new(),
             description: None,
             artwork: Vec::new(),

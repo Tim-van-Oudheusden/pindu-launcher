@@ -23,6 +23,7 @@ use crate::model::{ArtLayout, ArtOrigin, GameId, LaunchKind, Platform, Source};
 const MIGRATIONS: &[&str] = &[
     include_str!("store/migrations/0001_initial.sql"),
     include_str!("store/migrations/0002_steam_launch_dialog.sql"),
+    include_str!("store/migrations/0003_launch_uri.sql"),
 ];
 
 /// The schema version a freshly opened store is at.

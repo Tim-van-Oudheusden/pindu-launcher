@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use super::location::{self, HostDirs, ResolveError};
-use super::{ImportError, ImportedGame, Snapshot, heroic, lutris, steam};
+use super::{ImportError, ImportedGame, Snapshot, bottles, heroic, lutris, steam};
 use crate::model::{
     ArtOrigin, Artwork, Game, GameId, ImportedPlaytime, Source, SourceState, Timestamp,
 };
@@ -18,6 +18,7 @@ pub const IMPORTED_SOURCES: &[Source] = &[
     Source::HeroicAmazon,
     Source::HeroicSideload,
     Source::Lutris,
+    Source::Bottles,
 ];
 
 /// What a sync of every source could not read, by source.
@@ -78,6 +79,7 @@ fn import(source: Source, root: &Path) -> Result<Snapshot, ImportError> {
     match source {
         Source::Steam => steam::import(root),
         Source::Lutris => lutris::import(root),
+        Source::Bottles => bottles::import(root),
         _ => heroic::import(root, source),
     }
 }
@@ -150,6 +152,7 @@ fn refresh(game: &mut Game, imported: &ImportedGame) {
     game.size_bytes = imported.size_bytes;
     game.last_played_at = game.last_played_at.max(imported.last_played_at);
     game.launch_kind = imported.launch_kind;
+    game.launch_uri.clone_from(&imported.launch_uri);
     game.genres.clone_from(&imported.genres);
     game.description.clone_from(&imported.description);
 }
@@ -263,12 +266,17 @@ mod tests {
         let mut renamed = flagged(false, false, &[]);
         renamed.title = "UT2004".into();
         renamed.installed = true;
+        renamed.launch_uri = Some("heroic://launch?appName=UT2004".into());
 
         apply_snapshot(&store, &snapshot(vec![renamed]), 200).unwrap();
 
         let game = store.game(&id()).unwrap().unwrap();
         assert_eq!(game.title, "UT2004");
         assert!(game.installed);
+        assert_eq!(
+            game.launch_uri.as_deref(),
+            Some("heroic://launch?appName=UT2004")
+        );
     }
 
     #[test]

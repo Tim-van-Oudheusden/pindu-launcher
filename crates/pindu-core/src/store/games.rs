@@ -6,7 +6,7 @@ use crate::model::{Game, GameId, Source};
 
 const COLUMNS: &str = "id, title, sort_title, developer, platform, installed, install_path, \
     size_bytes, added_at, last_played_at, favourite, hidden, pin_order, user_removed, \
-    missing_since, launch_kind, genres, description, steam_launch_dialog";
+    missing_since, launch_kind, launch_uri, genres, description, steam_launch_dialog";
 
 impl Store {
     pub fn insert_game(&self, game: &Game) -> Result<()> {
@@ -14,12 +14,12 @@ impl Store {
             game,
             "INSERT INTO games (id, source, native_id, title, sort_title, developer, platform,
                 installed, install_path, size_bytes, added_at, last_played_at, favourite, hidden,
-                pin_order, user_removed, missing_since, launch_kind, genres, description,
-                steam_launch_dialog)
+                pin_order, user_removed, missing_since, launch_kind, launch_uri, genres,
+                description, steam_launch_dialog)
              VALUES (:id, :source, :native_id, :title, :sort_title, :developer, :platform,
                 :installed, :install_path, :size_bytes, :added_at, :last_played_at, :favourite,
-                :hidden, :pin_order, :user_removed, :missing_since, :launch_kind, :genres,
-                :description, :steam_launch_dialog)",
+                :hidden, :pin_order, :user_removed, :missing_since, :launch_kind, :launch_uri,
+                :genres, :description, :steam_launch_dialog)",
         )?;
         Ok(())
     }
@@ -33,7 +33,8 @@ impl Store {
                 size_bytes = :size_bytes, added_at = :added_at, last_played_at = :last_played_at,
                 favourite = :favourite, hidden = :hidden, pin_order = :pin_order,
                 user_removed = :user_removed, missing_since = :missing_since,
-                launch_kind = :launch_kind, genres = :genres, description = :description,
+                launch_kind = :launch_kind, launch_uri = :launch_uri, genres = :genres,
+                description = :description,
                 steam_launch_dialog = :steam_launch_dialog
              WHERE id = :id AND source = :source AND native_id = :native_id",
         )?;
@@ -65,6 +66,7 @@ impl Store {
             (":user_removed", &game.user_removed),
             (":missing_since", &game.missing_since),
             (":launch_kind", &game.launch_kind),
+            (":launch_uri", &game.launch_uri),
             (":genres", &genres),
             (":description", &game.description),
             (":steam_launch_dialog", &game.steam_launch_dialog),
@@ -131,6 +133,7 @@ fn game_from_row(row: &Row<'_>) -> rusqlite::Result<Game> {
         user_removed: row.get("user_removed")?,
         missing_since: row.get("missing_since")?,
         launch_kind: row.get("launch_kind")?,
+        launch_uri: row.get("launch_uri")?,
         genres: json_column(row, "genres")?,
         description: row.get("description")?,
         steam_launch_dialog: row.get("steam_launch_dialog")?,

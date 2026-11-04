@@ -1,0 +1,46 @@
+0b3c9f8e-6a1d-4c2e-9d5f-1a2b3c4d5e6f:
+  bottle:
+    name: Gaming
+    path: Gaming
+  icon: '@ROOT@/bottles/Gaming/icons/Celeste.png'
+  id: 7f1e2d3c-1111-4a4a-8b8b-000000000001
+  name: Celeste
+  thumbnail: grid:Gaming_Celeste.png
+2c4d6e8f-0000-4000-8000-000000000002:
+  bottle:
+    name: My Apps
+    path: My-Apps
+  id: 7f1e2d3c-2222-4a4a-8b8b-000000000002
+  name: Epic Games Launcher
+  thumbnail: ''
+3d5e7f90-0000-4000-8000-000000000003:
+  bottle:
+    name: Gaming
+    path: Gaming
+  id: 7f1e2d3c-3333-4a4a-8b8b-000000000003
+  name: 'Half-Life 2: Episode One'
+  thumbnail: grid:missing.png
+4e6f8091-0000-4000-8000-000000000004:
+  bottle:
+    name: '2050'
+    path: '2050'
+  id: '4000'
+  name: Steam Game In A Proton Prefix
+  steam: true
+5f708192-0000-4000-8000-000000000005:
+  id: 5f708192-0000-4000-8000-000000000005
+  name: A umu game
+  source: umu
+  source_id: '42'
+  store: none
+60718293-0000-4000-8000-000000000006:
+  bottle:
+    name: Gaming
+    path: Gaming
+  id: 7f1e2d3c-6666-4a4a-8b8b-000000000006
+71829304-0000-4000-8000-000000000007:
+  bottle:
+    name: Gaming
+    path: Gaming
+  id: 7f1e2d3c-7777-4a4a-8b8b-000000000007
+  name: AC/DC Live
