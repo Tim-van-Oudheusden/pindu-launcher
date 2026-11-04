@@ -2,6 +2,7 @@
 //! gettext and resources and runs [`application::PinduApplication`].
 
 pub mod application;
+pub mod collection_actions;
 pub mod config;
 pub mod file_service;
 pub mod game_dialog;

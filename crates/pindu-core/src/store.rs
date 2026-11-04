@@ -109,8 +109,13 @@ impl Store {
             .pragma_query_value(None, "user_version", |row| row.get(0))?)
     }
 
-    /// Runs `work` in one transaction: every write lands, or none does.
+    /// Runs `work` in one transaction: every write lands, or none does. Inside another
+    /// transaction, `work` becomes part of it.
     pub fn in_transaction<T>(&self, work: impl FnOnce(&Self) -> Result<T>) -> Result<T> {
+        // Inside another transaction, the work joins it: SQLite does not nest them.
+        if !self.conn.is_autocommit() {
+            return work(self);
+        }
         let transaction = self.conn.unchecked_transaction()?;
         let value = work(self)?;
         transaction.commit()?;

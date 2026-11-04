@@ -248,6 +248,13 @@ impl CoverTile {
             actions.append_item(&item(gettext("_Open in Launcher"), "app.open-in-launcher"));
         }
         menu.append_section(None, &actions);
+        if let Some(window) = self.root().and_downcast::<crate::window::PinduWindow>() {
+            let collections = window.library().collections();
+            menu.append_section(
+                None,
+                &crate::collection_actions::collection_menu(&game, &collections),
+            );
+        }
         let manage = gio::Menu::new();
         manage.append_item(&item(gettext("_Edit…"), "app.edit-game"));
         manage.append_item(&item(gettext("_Hide"), "win.hide-game"));

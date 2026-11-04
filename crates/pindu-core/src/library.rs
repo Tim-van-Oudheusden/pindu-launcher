@@ -37,6 +37,8 @@ pub struct LibraryEntry {
     pub game: Game,
     pub art: ArtSet,
     pub playtime_secs: i64,
+    /// IDs of the collections holding the game, ascending.
+    pub collections: Vec<i64>,
 }
 
 /// Every stored game with its best art per layout and its playtime: the source's own
@@ -48,6 +50,7 @@ pub fn load(store: &Store) -> store::Result<Vec<LibraryEntry>> {
     }
     let session_totals = store.session_totals()?;
     let imported_totals = store.imported_totals()?;
+    let mut memberships = store.collection_memberships()?;
     Ok(store
         .games()?
         .into_iter()
@@ -61,6 +64,7 @@ pub fn load(store: &Store) -> store::Result<Vec<LibraryEntry>> {
                 .copied()
                 .unwrap_or_default();
             LibraryEntry {
+                collections: memberships.remove(&game.id).unwrap_or_default(),
                 game,
                 art,
                 playtime_secs,
@@ -152,16 +156,19 @@ pub enum View {
     /// Games that have been played.
     PlayHistory,
     Source(Source),
+    /// A user collection, by ID.
+    Collection(i64),
 }
 
 impl View {
-    fn includes(self, game: &Game) -> bool {
+    fn includes(self, game: &Game, collections: &[i64]) -> bool {
         match self {
             Self::All => true,
             Self::Installed => game.installed,
             Self::Favourites => game.favourite,
             Self::PlayHistory => game.last_played_at.is_some(),
             Self::Source(source) => game.source() == source,
+            Self::Collection(id) => collections.contains(&id),
         }
     }
 }
@@ -205,6 +212,11 @@ pub struct LibraryFilter {
 }
 
 impl LibraryFilter {
+    /// The sidebar view shown.
+    pub fn view(&self) -> View {
+        self.view
+    }
+
     /// Shows only the games of `view`.
     pub fn set_view(&mut self, view: View) -> FilterChange {
         let change = match (self.view, view) {
@@ -246,11 +258,12 @@ impl LibraryFilter {
     }
 
     /// Whether a game shows: in the library, not hidden, in the view, allowed by the
-    /// toggles and matching the search.
-    pub fn matches(&self, game: &Game, key: &SearchKey) -> bool {
+    /// toggles and matching the search. `collections` are the IDs of the collections
+    /// holding the game.
+    pub fn matches(&self, game: &Game, collections: &[i64], key: &SearchKey) -> bool {
         game.in_library()
             && !game.hidden
-            && self.view.includes(game)
+            && self.view.includes(game, collections)
             && self.filters.includes(game)
             && self.search.matches(&key.0)
     }
@@ -261,11 +274,12 @@ impl LibraryFilter {
 pub struct Counts(HashMap<View, u32>);
 
 impl Counts {
-    pub fn of<'a>(games: impl IntoIterator<Item = &'a Game>) -> Self {
+    /// Counts games, each with the IDs of the collections holding it.
+    pub fn of<'a>(games: impl IntoIterator<Item = (&'a Game, &'a [i64])>) -> Self {
         let mut counts = HashMap::new();
-        for game in games
+        for (game, collections) in games
             .into_iter()
-            .filter(|game| game.in_library() && !game.hidden)
+            .filter(|(game, _)| game.in_library() && !game.hidden)
         {
             let views = [
                 View::All,
@@ -273,8 +287,10 @@ impl Counts {
                 View::Favourites,
                 View::PlayHistory,
                 View::Source(game.source()),
-            ];
-            for view in views.into_iter().filter(|view| view.includes(game)) {
+            ]
+            .into_iter()
+            .chain(collections.iter().map(|&id| View::Collection(id)));
+            for view in views.filter(|view| view.includes(game, collections)) {
                 *counts.entry(view).or_default() += 1;
             }
         }
@@ -365,7 +381,7 @@ mod tests {
     }
 
     fn shows(filter: &LibraryFilter, game: &Game) -> bool {
-        filter.matches(game, &SearchKey::new(&game.title))
+        filter.matches(game, &[], &SearchKey::new(&game.title))
     }
 
     #[test]
@@ -457,7 +473,8 @@ mod tests {
 
     #[test]
     fn counts_cover_only_games_the_views_show() {
-        let counts = Counts::of(&sample());
+        let games = sample();
+        let counts = Counts::of(games.iter().map(|game| (game, &[][..])));
 
         assert_eq!(counts.get(View::All), 3);
         assert_eq!(counts.get(View::Installed), 2);
@@ -466,6 +483,58 @@ mod tests {
         assert_eq!(counts.get(View::Source(Source::Steam)), 2);
         assert_eq!(counts.get(View::Source(Source::HeroicGog)), 1);
         assert_eq!(counts.get(View::Source(Source::Lutris)), 0);
+    }
+
+    #[test]
+    fn a_collection_view_shows_only_its_members() {
+        let mut filter = LibraryFilter::default();
+        filter.set_view(View::Collection(7));
+        let member = game("1", "Member", None, 0);
+        let other = game("2", "Other", None, 0);
+
+        assert!(filter.matches(&member, &[3, 7], &SearchKey::new("member")));
+        assert!(!filter.matches(&other, &[3], &SearchKey::new("other")));
+    }
+
+    #[test]
+    fn counts_cover_each_collection() {
+        let games = sample();
+        let collections: [&[i64]; 5] = [&[1], &[1, 2], &[2], &[1], &[1]];
+
+        let counts = Counts::of(games.iter().zip(collections));
+
+        // Hidden and missing games do not count, in collections either.
+        assert_eq!(counts.get(View::Collection(1)), 2);
+        assert_eq!(counts.get(View::Collection(2)), 2);
+        assert_eq!(counts.get(View::Collection(3)), 0);
+    }
+
+    #[test]
+    fn loading_lists_each_games_collections() {
+        use crate::store::Store;
+
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::open(&dir.path().join("library.db")).unwrap();
+        let member = game("1", "Member", None, 0);
+        let loner = game("2", "Loner", None, 0);
+        store.insert_game(&member).unwrap();
+        store.insert_game(&loner).unwrap();
+        let first = store.create_collection("First").unwrap();
+        let second = store.create_collection("Second").unwrap();
+        store.add_to_collection(second.id, &member.id).unwrap();
+        store.add_to_collection(first.id, &member.id).unwrap();
+
+        let entries = load(&store).unwrap();
+
+        let collections = |id: &GameId| {
+            entries
+                .iter()
+                .find(|entry| entry.game.id == *id)
+                .map(|entry| entry.collections.clone())
+                .unwrap()
+        };
+        assert_eq!(collections(&member.id), [first.id, second.id]);
+        assert!(collections(&loner.id).is_empty());
     }
 
     #[test]
