@@ -7,6 +7,8 @@ pub mod game_page;
 pub mod launch_service;
 pub mod library_service;
 pub mod models;
+pub mod permission_service;
+pub mod preferences;
 pub mod sources;
 pub mod sync_service;
 pub mod widgets;

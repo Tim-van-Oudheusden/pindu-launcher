@@ -1,0 +1,47 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PinduPreferencesDialog: Adw.PreferencesDialog {
+  Adw.PreferencesPage {
+    title: _("General");
+    icon-name: "preferences-system-symbolic";
+
+    Adw.PreferencesGroup {
+      title: _("Permissions");
+      description: _("Store games start through their launcher and always work. Desktop entries, Flatpak games and games added by hand start on this computer, outside the sandbox, which needs your permission.");
+
+      Adw.ActionRow {
+        title: _("Start Games on This Computer");
+
+        [suffix]
+        Label host_status {
+          styles [
+            "dim-label",
+          ]
+        }
+      }
+
+      Adw.ActionRow command_row {
+        title: _("Run This Command, Then Restart Pindu launcher");
+        subtitle-selectable: true;
+
+        styles [
+          "property",
+          "command",
+        ]
+
+        [suffix]
+        Button {
+          icon-name: "edit-copy-symbolic";
+          tooltip-text: _("Copy Command");
+          valign: center;
+          clicked => $copy_command() swapped;
+
+          styles [
+            "flat",
+          ]
+        }
+      }
+    }
+  }
+}

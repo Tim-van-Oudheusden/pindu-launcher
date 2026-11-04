@@ -7,6 +7,8 @@ use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
 use crate::launch_service;
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
+use crate::permission_service;
+use crate::preferences::PreferencesDialog;
 use crate::sync_service::SyncService;
 use crate::window::PinduWindow;
 
@@ -39,6 +41,16 @@ mod imp {
             obj.set_accels_for_action("win.show-sidebar", &["F9"]);
             obj.set_accels_for_action("win.search", &["<primary>f"]);
             obj.set_accels_for_action("win.back", &["<alt>Left", "Back"]);
+            obj.set_accels_for_action("app.preferences", &["<primary>comma"]);
+            glib::g_info!(
+                "pindu",
+                "Host spawn {}",
+                if permission_service::host_spawn_allowed() {
+                    "allowed"
+                } else {
+                    "not allowed"
+                }
+            );
         }
     }
 
@@ -106,6 +118,11 @@ impl PinduApplication {
         let about_action = gio::ActionEntry::builder("about")
             .activate(move |app: &Self, _, _| app.show_about())
             .build();
+        let preferences_action = gio::ActionEntry::builder("preferences")
+            .activate(move |app: &Self, _, _| {
+                PreferencesDialog::new().present(app.active_window().as_ref());
+            })
+            .build();
         let import_action = gio::ActionEntry::builder("import")
             .activate(move |app: &Self, _, _| app.imp().sync_service.sync())
             .build();
@@ -124,6 +141,7 @@ impl PinduApplication {
         self.add_action_entries([
             quit_action,
             about_action,
+            preferences_action,
             import_action,
             play_action,
             open_action,

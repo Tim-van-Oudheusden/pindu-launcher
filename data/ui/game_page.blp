@@ -12,6 +12,13 @@ template $PinduGamePage: Adw.NavigationPage {
       show-title: false;
     }
 
+    [top]
+    Adw.Banner permission_banner {
+      title: _("Starting this game needs your permission");
+      button-label: _("How to Enable");
+      action-name: "app.preferences";
+    }
+
     content: ScrolledWindow {
       hscrollbar-policy: never;
 

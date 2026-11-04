@@ -58,3 +58,8 @@ gridview.library > child {
 .game-hero .hero-gradient {
   background-image: linear-gradient(to bottom, alpha(var(--window-bg-color), 0.1) 40%, var(--window-bg-color));
 }
+
+/* The flatpak override command in Preferences. */
+.command .subtitle {
+  font-family: monospace;
+}

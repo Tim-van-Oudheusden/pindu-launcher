@@ -2,6 +2,7 @@
 blueprint_names = [
   'cover_tile',
   'game_page',
+  'preferences',
   'window',
 ]
 
