@@ -6,6 +6,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
+use gtk::glib::{self, prelude::*};
 use pindu_core::gamepad::{Axis, Button, DeviceId, DeviceKind, GamepadBackend, GamepadEvent};
 
 /// Linux input codes libmanette maps buttons and axes to.
@@ -30,12 +31,14 @@ mod code {
 }
 
 /// Controllers through libmanette's monitor. Nothing is opened until [`start`]: libmanette
-/// takes over a Steam Deck's controls (its "lizard mode") as soon as it opens them.
+/// takes over a Steam Deck's controls (its "lizard mode") as soon as it opens them, and
+/// [`stop`] lets go of them again.
 ///
 /// [`start`]: GamepadBackend::start
+/// [`stop`]: GamepadBackend::stop
 #[derive(Default)]
 pub struct ManetteBackend {
-    monitor: Option<manette::Monitor>,
+    running: Option<(manette::Monitor, Rc<Devices>)>,
 }
 
 impl ManetteBackend {
@@ -46,10 +49,11 @@ impl ManetteBackend {
 
 impl GamepadBackend for ManetteBackend {
     fn start(&mut self, sink: Box<dyn Fn(GamepadEvent)>) {
+        self.stop();
         let monitor = manette::Monitor::new();
         let devices = Rc::new(Devices {
             sink,
-            ids: RefCell::new(Vec::new()),
+            attached: RefCell::new(Vec::new()),
             next_id: Cell::new(1),
         });
         for device in monitor.devices() {
@@ -59,51 +63,88 @@ impl GamepadBackend for ManetteBackend {
             let devices = devices.clone();
             move |_, device| devices.attach(device)
         });
-        monitor.connect_device_disconnected(move |_, device| devices.detach(device));
-        self.monitor = Some(monitor);
+        monitor.connect_device_disconnected({
+            let devices = devices.clone();
+            move |_, device| devices.detach(device)
+        });
+        self.running = Some((monitor, devices));
+    }
+
+    fn stop(&mut self) {
+        if let Some((monitor, devices)) = self.running.take() {
+            // The devices' handlers hold `devices`; without them the monitor is the last
+            // owner of each device, and dropping it closes them.
+            for attached in devices.attached.take() {
+                attached.disconnect();
+            }
+            drop(monitor);
+        }
     }
 }
 
 /// The devices seen so far, numbered as they appear.
 struct Devices {
     sink: Box<dyn Fn(GamepadEvent)>,
-    ids: RefCell<Vec<(manette::Device, DeviceId)>>,
+    attached: RefCell<Vec<Attached>>,
     next_id: Cell<u64>,
+}
+
+/// A device we listen to, with its number and our handlers on it.
+struct Attached {
+    device: manette::Device,
+    id: DeviceId,
+    handlers: Vec<glib::SignalHandlerId>,
+}
+
+impl Attached {
+    fn disconnect(self) {
+        for handler in self.handlers {
+            self.device.disconnect(handler);
+        }
+    }
 }
 
 impl Devices {
     fn attach(self: &Rc<Self>, device: &manette::Device) {
         let id = DeviceId(self.next_id.replace(self.next_id.get() + 1));
-        self.ids.borrow_mut().push((device.clone(), id));
         let steam_deck = device.device_type() == manette::DeviceType::SteamDeck;
         (self.sink)(GamepadEvent::Connected {
             device: id,
             name: device.name().map(Into::into).unwrap_or_default(),
             kind: DeviceKind::detect(device.guid().as_deref(), steam_deck),
         });
-        device.connect_button_press_event({
-            let devices = self.clone();
-            move |_, event| devices.button(id, event, true)
-        });
-        device.connect_button_release_event({
-            let devices = self.clone();
-            move |_, event| devices.button(id, event, false)
-        });
-        device.connect_absolute_axis_event({
-            let devices = self.clone();
-            move |_, event| devices.axis(id, event)
-        });
-        device.connect_hat_axis_event({
-            let devices = self.clone();
-            move |_, event| devices.hat(id, event)
+        let handlers = vec![
+            device.connect_button_press_event({
+                let devices = self.clone();
+                move |_, event| devices.button(id, event, true)
+            }),
+            device.connect_button_release_event({
+                let devices = self.clone();
+                move |_, event| devices.button(id, event, false)
+            }),
+            device.connect_absolute_axis_event({
+                let devices = self.clone();
+                move |_, event| devices.axis(id, event)
+            }),
+            device.connect_hat_axis_event({
+                let devices = self.clone();
+                move |_, event| devices.hat(id, event)
+            }),
+        ];
+        self.attached.borrow_mut().push(Attached {
+            device: device.clone(),
+            id,
+            handlers,
         });
     }
 
     fn detach(&self, device: &manette::Device) {
-        let mut ids = self.ids.borrow_mut();
-        if let Some(index) = ids.iter().position(|(known, _)| known == device) {
-            let (_, id) = ids.remove(index);
-            drop(ids);
+        let mut attached = self.attached.borrow_mut();
+        if let Some(index) = attached.iter().position(|known| known.device == *device) {
+            let known = attached.remove(index);
+            drop(attached);
+            let id = known.id;
+            known.disconnect();
             (self.sink)(GamepadEvent::Disconnected { device: id });
         }
     }

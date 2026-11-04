@@ -47,5 +47,10 @@
       <default>true</default>
       <summary>Show titles below covers</summary>
     </key>
+    <key name="controller-navigation" type="b">
+      <default>false</default>
+      <summary>Navigate the window with a controller</summary>
+      <description>Move focus with the D-pad or left stick, open with A and go back with B. Controllers are only opened while this is on.</description>
+    </key>
   </schema>
 </schemalist>
