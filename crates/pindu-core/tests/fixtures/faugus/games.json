@@ -1,0 +1,50 @@
+[
+    {
+        "gameid": "hades",
+        "title": "Hades",
+        "path": "/home/me/Games/Hades/x64/Hades.exe",
+        "prefix": "/home/me/Faugus/hades",
+        "launch_arguments": "PROTON_ENABLE_WAYLAND=1",
+        "game_arguments": "",
+        "mangohud": true,
+        "gamemode": "",
+        "disable_umu": "",
+        "runner": "Proton-CachyOS",
+        "playtime": 7260,
+        "hidden": false,
+        "category": [
+            "Roguelikes",
+            "Favorites Of 2020"
+        ],
+        "cover": "@ROOT@/covers/hades.png",
+        "icon": "@ROOT@/icons/hades.png",
+        "last_played": "2026-03-01T12:34:56.123456"
+    },
+    {
+        "gameid": "celeste",
+        "title": "Celeste",
+        "path": "/home/me/Games/Celeste/Celeste",
+        "runner": "Linux-Native",
+        "mangohud": "",
+        "gamemode": "",
+        "playtime": "120",
+        "hidden": "True",
+        "category": "Platformers",
+        "cover": "",
+        "icon": ""
+    },
+    {
+        "gameid": "stardew-valley",
+        "title": "Stardew Valley",
+        "path": "/home/me/Games/Stardew/Stardew Valley.exe",
+        "runner": "GE-Proton",
+        "playtime": 0,
+        "hidden": "False",
+        "category": false,
+        "last_played": "2024-02-29T23:59:59+00:00"
+    },
+    {
+        "gameid": "no-title",
+        "path": "/home/me/Games/x.exe"
+    }
+]
