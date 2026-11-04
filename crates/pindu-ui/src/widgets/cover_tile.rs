@@ -238,9 +238,15 @@ impl CoverTile {
             (art.cover.clone(), art.icon.clone())
         };
         imp.placeholder.set_visible(false);
+        // Covers are stored at the tile's size in device pixels, so they stay sharp on
+        // scaled displays.
+        let (width, height) = imp.cover.size_request();
+        let scale = self.scale_factor().max(1);
+        let size = ((width * scale) as u32, (height * scale) as u32);
         imp.cover.show(
             cover,
             icon,
+            size,
             glib::clone!(
                 #[weak(rename_to = tile)]
                 self,

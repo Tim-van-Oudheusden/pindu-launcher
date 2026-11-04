@@ -5,7 +5,7 @@
 
 pub mod heroic;
 pub mod location;
-mod sha256;
+pub(crate) mod sha256;
 pub mod steam;
 pub mod sync;
 pub mod vdf;
