@@ -3,7 +3,8 @@
 //! A session is written when the game starts, its end moved forward every 30 s, and
 //! finished when the game exits, so a crash loses at most 30 s. While a game runs the
 //! application holds itself and asks the Background portal, so closing the window never
-//! ends the game or its session.
+//! ends the game or its session. Host games are tracked from their spawn; Windows games
+//! from the moment umu starts them (see `proton_launch`).
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -25,12 +26,18 @@ use crate::permission_service;
 const FLUSH_INTERVAL: Duration = Duration::from_secs(30);
 
 /// The signal Stop sends, which games handle as "quit".
-const SIGTERM: i32 = 15;
+pub const SIGTERM: i32 = 15;
 
-#[derive(Debug)]
 struct Running {
-    child: gio::Subprocess,
+    /// What Stop does for this game.
+    stop: Rc<dyn Fn()>,
     _hold: gio::ApplicationHoldGuard,
+}
+
+impl std::fmt::Debug for Running {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Running").finish_non_exhaustive()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -65,11 +72,25 @@ impl SessionService {
         command: &Command,
     ) -> Result<(), glib::Error> {
         let child = spawn(command)?;
+        let signalled = child.clone();
+        self.track(app, id, &child, move || signalled.send_signal(SIGTERM));
+        Ok(())
+    }
+
+    /// Tracks the session of a game that runs as our child, from now until the child
+    /// exits. `stop` is what Stop does to end the game.
+    pub fn track(
+        &self,
+        app: &gio::Application,
+        id: &GameId,
+        child: &gio::Subprocess,
+        stop: impl Fn() + 'static,
+    ) {
         let first = self.running.borrow().is_empty();
         self.running.borrow_mut().insert(
             id.clone(),
             Running {
-                child: child.clone(),
+                stop: Rc::new(stop),
                 _hold: app.hold(),
             },
         );
@@ -77,27 +98,30 @@ impl SessionService {
             request_background();
         }
         self.set_playing(id, true);
-        let service = self.clone();
-        let id = id.clone();
+        let (service, id, child) = (self.clone(), id.clone(), child.clone());
         glib::spawn_future_local(async move {
-            service.track(&id, &child).await;
+            service.record(&id, &child).await;
             service.running.borrow_mut().remove(&id);
             service.set_playing(&id, false);
             service.library.reload();
         });
-        Ok(())
     }
 
-    /// Asks a running game to quit. Inside Flatpak, `flatpak-spawn` passes the signal on
-    /// to the game on the host.
+    /// Ends a running game: a host game is asked to quit (inside Flatpak, `flatpak-spawn`
+    /// passes the signal on to the game on the host); a Windows game's prefix is ended.
     pub fn stop(&self, id: &GameId) {
-        if let Some(running) = self.running.borrow().get(id) {
-            running.child.send_signal(SIGTERM);
+        let stop = self
+            .running
+            .borrow()
+            .get(id)
+            .map(|running| running.stop.clone());
+        if let Some(stop) = stop {
+            stop();
         }
     }
 
     /// Writes the session as it goes and once more when the child exits.
-    async fn track(&self, id: &GameId, child: &gio::Subprocess) {
+    async fn record(&self, id: &GameId, child: &gio::Subprocess) {
         let started_at = now();
         let session = write(
             move |store, id| {
@@ -206,7 +230,11 @@ fn request_background() {
             "/org/freedesktop/portal/desktop",
             "org.freedesktop.portal.Background",
             "RequestBackground",
-            Some(&("", options.end()).to_variant()),
+            // `(sa{sv})`: a plain tuple would wrap the options in a variant, `(sv)`.
+            Some(&glib::Variant::tuple_from_iter([
+                "".to_variant(),
+                options.end(),
+            ])),
             None,
             gio::DBusCallFlags::NONE,
             -1,

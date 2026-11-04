@@ -2,6 +2,11 @@
 //! read as it comes, so a first start, which downloads the Steam Linux Runtime, shows its
 //! progress, and a missing internet connection is said plainly instead of the game
 //! silently not starting.
+//!
+//! A game's play session runs from umu reporting the game starting until umu exits: umu
+//! waits for its container, whose `pv-adverb` reaps every process of the prefix, so a
+//! game that starts another program and exits keeps its session until that one ends
+//! too. Stop ends every process in the game's prefix with its build's `wineserver -k`.
 
 use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
@@ -12,7 +17,7 @@ use std::time::Duration;
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
-use pindu_core::launch::Command;
+use pindu_core::launch::{self, Command};
 use pindu_core::model::{Game, LaunchConfig};
 use pindu_core::paths::{default_prefixes_dir, default_tools_dir};
 use pindu_core::proton::{self, ProtonError};
@@ -22,19 +27,21 @@ use pindu_core::umu::{self, RuntimeSetup};
 use crate::config::APP_ID;
 use crate::launch_service::now;
 use crate::library_service::LibraryService;
+use crate::session_service::{SIGTERM, SessionService};
 
 /// How often the setup dialog's progress moves.
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(250);
 
 /// Starts a Windows game with the Proton build and prefix its launch config names, or the
-/// defaults from Preferences. The app stays up while the game runs, since the game writes
-/// its log to us.
+/// defaults from Preferences, and tracks its session from the moment umu starts it. The
+/// app stays up while the game runs, since the game writes its log to us.
 pub fn play(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
     game: Game,
     config: LaunchConfig,
     library: LibraryService,
+    sessions: SessionService,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
     let (app, window) = (app.clone(), window.cloned());
@@ -43,11 +50,18 @@ pub fn play(
     glib::spawn_future_local(async move {
         let found = {
             let game = game.clone();
-            gio::spawn_blocking(move || proton::command(&game, &config, &builds(), &defaults)).await
+            gio::spawn_blocking(move || {
+                let builds = builds();
+                proton::command(&game, &config, &builds, &defaults).map(|command| {
+                    let end_prefix = proton::stop_command(&command, &builds);
+                    (command, end_prefix)
+                })
+            })
+            .await
         };
         let title = game.title.clone();
-        let command = match found {
-            Ok(Ok(command)) => command,
+        let (command, end_prefix) = match found {
+            Ok(Ok(found)) => found,
             Ok(Err(error)) => {
                 toast(adw::Toast::new(&cannot_start_message(&title, &error)));
                 return;
@@ -59,8 +73,12 @@ pub fn play(
         };
         let toast = Rc::new(toast);
         let started = {
-            let (toast, title) = (toast.clone(), title.clone());
-            move || {
+            let (app, toast, title) = (app.clone(), toast.clone(), title.clone());
+            move |umu: &gio::Subprocess| {
+                if launch::tracks_sessions(&game) {
+                    let stop = stopper(umu.clone(), end_prefix);
+                    sessions.track(app.upcast_ref(), &game.id, umu, stop);
+                }
                 let (library, id) = (library.clone(), game.id.clone());
                 glib::spawn_future_local(async move { library.mark_played(&id, now()).await });
                 toast(adw::Toast::new(
@@ -71,6 +89,38 @@ pub fn play(
         run(&app, window, &title, &command, &*toast, started).await;
         drop(hold);
     });
+}
+
+/// What Stop does for a Windows game: end every process in its prefix, then umu, if it is
+/// still there. Without the build's wineserver, umu alone is asked to quit; it passes the
+/// signal on to the processes it started.
+fn stopper(umu: gio::Subprocess, end_prefix: Option<Command>) -> impl Fn() {
+    move || {
+        let Some(end_prefix) = &end_prefix else {
+            umu.send_signal(SIGTERM);
+            return;
+        };
+        let launcher = gio::SubprocessLauncher::new(gio::SubprocessFlags::NONE);
+        for (key, value) in &end_prefix.environment {
+            launcher.setenv(key, value, true);
+        }
+        let argv: Vec<&OsStr> = end_prefix.argv.iter().map(OsStr::new).collect();
+        let umu = umu.clone();
+        match launcher.spawn(&argv) {
+            Ok(wineserver) => {
+                glib::spawn_future_local(async move {
+                    if let Err(error) = wineserver.wait_future().await {
+                        glib::g_warning!("pindu", "Lost track of wineserver: {error}");
+                    }
+                    umu.send_signal(SIGTERM);
+                });
+            }
+            Err(error) => {
+                glib::g_warning!("pindu", "Could not run {:?}: {error}", end_prefix.argv);
+                umu.send_signal(SIGTERM);
+            }
+        }
+    }
 }
 
 /// Runs a game's installer through umu in the prefix the game will use, with the named
@@ -99,7 +149,7 @@ pub async fn run_installer(
     })
     .await;
     match found {
-        Ok(Ok(command)) => run(app, window, &title, &command, &toast, || {}).await,
+        Ok(Ok(command)) => run(app, window, &title, &command, &toast, |_| {}).await,
         Ok(Err(error)) => {
             toast(adw::Toast::new(&cannot_start_message(&title, &error)));
             false
@@ -138,7 +188,7 @@ pub fn defaults() -> proton::Defaults {
 }
 
 /// Runs a program through umu as our child and follows its log until umu exits. The
-/// Steam Linux Runtime setup shows in a dialog; `started` runs once umu reports the
+/// Steam Linux Runtime setup shows in a dialog; `started` gets umu once it reports the
 /// program starting. Returns whether it started; when it did not, the dialog or a toast
 /// says so.
 async fn run(
@@ -147,7 +197,7 @@ async fn run(
     title: &str,
     command: &Command,
     toast: &dyn Fn(adw::Toast),
-    started: impl FnOnce(),
+    started: impl FnOnce(&gio::Subprocess),
 ) -> bool {
     let child = match spawn(command) {
         Ok(child) => child,
@@ -175,7 +225,7 @@ async fn run(
             Some(RuntimeSetup::Ready) => {
                 if let Some(started) = started.take() {
                     setup.close();
-                    started();
+                    started(&child);
                 }
             }
             Some(RuntimeSetup::Offline) => setup.show_offline(),

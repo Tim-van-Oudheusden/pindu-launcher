@@ -27,6 +27,8 @@ pub struct ProtonBuild {
     pub display_name: String,
     /// The build's folder, which umu takes as `PROTONPATH`.
     pub path: PathBuf,
+    /// Its `wineserver`, which ends every process in a prefix.
+    pub wineserver: PathBuf,
     /// When it was built, from the timestamp its `version` file starts with.
     built_at: Option<i64>,
 }
@@ -82,10 +84,17 @@ fn read_build(path: &Path) -> Option<ProtonBuild> {
     let built_at = std::fs::read_to_string(path.join("version"))
         .ok()
         .and_then(|text| text.split_whitespace().next()?.parse().ok());
+    // Older builds unpack their Wine into `dist` instead of shipping `files`.
+    let wine = if !path.join("files").exists() && path.join("dist").exists() {
+        "dist"
+    } else {
+        "files"
+    };
     Some(ProtonBuild {
         name,
         display_name,
         path: path.to_owned(),
+        wineserver: path.join(wine).join("bin/wineserver"),
         built_at,
     })
 }
@@ -220,6 +229,21 @@ pub fn installer_command(
     })
 }
 
+/// The command that ends every process in a Windows game's prefix, the game's own among
+/// them: `wineserver -k` from the build the game runs with, given its prefix. It runs in
+/// our sandbox, whose processes and `/tmp`, where Wine keeps the server's socket, the
+/// game's container shares. `None` when the launch names no build on this machine.
+pub fn stop_command(launch: &Command, builds: &[ProtonBuild]) -> Option<Command> {
+    let build_path = Path::new(launch.environment.get("PROTONPATH")?);
+    let build = builds.iter().find(|build| build.path == build_path)?;
+    let prefix = launch.environment.get("WINEPREFIX")?;
+    Some(Command {
+        argv: vec![path_text(&build.wineserver), "-k".to_owned()],
+        environment: [("WINEPREFIX".to_owned(), prefix.clone())].into(),
+        working_dir: None,
+    })
+}
+
 /// The build named, or the newest one when none is.
 fn pick_build<'a>(
     name: Option<&str>,
@@ -246,10 +270,12 @@ mod tests {
     const PREFIXES: &str = "/home/me/Games/pindu-launcher/prefixes";
 
     fn build(name: &str) -> ProtonBuild {
+        let path = Path::new("/tools").join(name);
         ProtonBuild {
             name: name.to_owned(),
             display_name: name.to_owned(),
-            path: Path::new("/tools").join(name),
+            wineserver: path.join("files/bin/wineserver"),
+            path,
             built_at: None,
         }
     }
@@ -301,6 +327,28 @@ mod tests {
         assert!(command.environment["GAMEID"].starts_with("umu-pindu-"));
         assert_eq!(command.environment["DXVK_HUD"], "fps");
         assert_eq!(command.working_dir, Some("/games/Celeste".into()));
+    }
+
+    #[test]
+    fn each_game_gets_a_game_id_and_prefix_of_its_own() {
+        let builds = [build("GE-Proton11-3")];
+        let other = Game::new(
+            GameId::new(Source::Manual, "hades-3c4d"),
+            "Hades",
+            LaunchKind::Proton,
+            0,
+        );
+
+        let celeste = command(&game(), &config(), &builds, &defaults()).unwrap();
+        let hades = command(&other, &config(), &builds, &defaults()).unwrap();
+        let again = command(&game(), &config(), &builds, &defaults()).unwrap();
+
+        assert_ne!(celeste.environment["GAMEID"], hades.environment["GAMEID"]);
+        assert_ne!(
+            celeste.environment["WINEPREFIX"],
+            hades.environment["WINEPREFIX"]
+        );
+        assert_eq!(celeste.environment, again.environment);
     }
 
     #[test]
@@ -401,12 +449,7 @@ mod tests {
             proton_version: Some("GE-Proton9-1".into()),
             ..LaunchConfig::default()
         };
-        let other = ProtonBuild {
-            name: "GE-Proton11-3".into(),
-            display_name: "GE-Proton11-3".into(),
-            path: "/tools/GE-Proton11-3".into(),
-            built_at: None,
-        };
+        let other = build("GE-Proton11-3");
         let defaults = Defaults {
             prefixes: "/prefixes".into(),
             ..defaults()
@@ -456,5 +499,29 @@ mod tests {
             by_default.environment["PROTONPATH"],
             "/tools/GE-Proton10-34"
         );
+    }
+
+    #[test]
+    fn stop_ends_the_games_prefix_with_the_wineserver_of_its_own_build() {
+        let builds = [build("GE-Proton11-3"), build("GE-Proton10-34")];
+        let config = LaunchConfig {
+            proton_version: Some("GE-Proton10-34".into()),
+            ..config()
+        };
+        let launch = command(&game(), &config, &builds, &defaults()).unwrap();
+
+        let stop = stop_command(&launch, &builds).unwrap();
+
+        assert_eq!(
+            stop.argv,
+            ["/tools/GE-Proton10-34/files/bin/wineserver", "-k"]
+        );
+        assert_eq!(
+            stop.environment,
+            [("WINEPREFIX".to_owned(), format!("{PREFIXES}/celeste-1a2b"))].into()
+        );
+        assert_eq!(stop.working_dir, None);
+        // A build that is gone since the start has no wineserver to ask.
+        assert_eq!(stop_command(&launch, &builds[..1]), None);
     }
 }
