@@ -17,3 +17,12 @@ pub fn source_name(source: Source) -> String {
         Source::Manual => gettext("Added by Hand"),
     }
 }
+
+/// A symbolic icon for a source's sidebar row.
+pub fn source_icon(source: Source) -> &'static str {
+    match source {
+        Source::Desktop => "computer-symbolic",
+        Source::Manual => "document-edit-symbolic",
+        _ => "applications-games-symbolic",
+    }
+}

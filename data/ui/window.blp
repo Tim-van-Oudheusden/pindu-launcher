@@ -6,35 +6,147 @@ template $PinduWindow: Adw.ApplicationWindow {
   width-request: 360;
   height-request: 294;
 
+  Adw.Breakpoint {
+    condition ("max-width: 730sp")
+
+    setters {
+      split_view.collapsed: true;
+    }
+  }
+
   content: Adw.ToastOverlay toast_overlay {
-    child: Adw.ToolbarView {
-      [top]
-      Adw.HeaderBar {
-        [start]
-        MenuButton {
-          icon-name: "list-add-symbolic";
-          tooltip-text: _("Add");
-          menu-model: add_menu;
+    child: Adw.OverlaySplitView split_view {
+      sidebar: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {
+          title-widget: Adw.WindowTitle {
+            title: _("Pindu launcher");
+          };
         }
 
-        [start]
-        Adw.Spinner sync_spinner {
-          visible: false;
-          tooltip-text: _("Importing Games…");
-        }
+        content: Adw.Sidebar sidebar {
+          Adw.SidebarSection {
+            title: _("Library");
 
-        [end]
-        MenuButton {
-          primary: true;
-          icon-name: "open-menu-symbolic";
-          tooltip-text: _("Main Menu");
-          menu-model: primary_menu;
-        }
-      }
+            Adw.SidebarItem all_item {
+              title: _("All Games");
+              icon-name: "view-grid-symbolic";
 
-      content: Adw.StatusPage {
-        icon-name: "io.github.tim_van_oudheusden.pindu-launcher";
-        title: _("Pindu launcher");
+              suffix: Label all_count {
+                styles [
+                  "dimmed",
+                  "numeric",
+                ]
+              };
+            }
+
+            Adw.SidebarItem installed_item {
+              title: _("Installed");
+              icon-name: "drive-harddisk-symbolic";
+
+              suffix: Label installed_count {
+                styles [
+                  "dimmed",
+                  "numeric",
+                ]
+              };
+            }
+
+            Adw.SidebarItem favourites_item {
+              title: _("Favourites");
+              icon-name: "starred-symbolic";
+
+              suffix: Label favourites_count {
+                styles [
+                  "dimmed",
+                  "numeric",
+                ]
+              };
+            }
+
+            Adw.SidebarItem history_item {
+              title: _("Play History");
+              icon-name: "document-open-recent-symbolic";
+
+              suffix: Label history_count {
+                styles [
+                  "dimmed",
+                  "numeric",
+                ]
+              };
+            }
+          }
+
+          Adw.SidebarSection sources_section {
+            title: _("Sources");
+          }
+        };
+      };
+
+      content: Adw.NavigationView navigation_view {
+        Adw.NavigationPage library_page {
+          title: _("All Games");
+          tag: "library";
+
+          child: Adw.ToolbarView {
+            [top]
+            Adw.HeaderBar {
+              [start]
+              ToggleButton sidebar_toggle {
+                icon-name: "sidebar-show-symbolic";
+                tooltip-text: _("Toggle Sidebar");
+                active: bind split_view.show-sidebar bidirectional;
+              }
+
+              [start]
+              MenuButton {
+                icon-name: "list-add-symbolic";
+                tooltip-text: _("Add");
+                menu-model: add_menu;
+              }
+
+              [start]
+              Adw.Spinner sync_spinner {
+                visible: false;
+                tooltip-text: _("Importing Games…");
+              }
+
+              title-widget: SearchEntry search_entry {
+                placeholder-text: _("Search games");
+                hexpand: true;
+                max-width-chars: 32;
+              };
+
+              [end]
+              MenuButton {
+                primary: true;
+                icon-name: "open-menu-symbolic";
+                tooltip-text: _("Main Menu");
+                menu-model: primary_menu;
+              }
+
+              [end]
+              MenuButton {
+                icon-name: "view-sort-descending-symbolic";
+                tooltip-text: _("Sort");
+                menu-model: sort_menu;
+              }
+            }
+
+            content: ScrolledWindow {
+              hscrollbar-policy: never;
+
+              child: GridView grid {
+                max-columns: 12;
+                single-click-activate: true;
+
+                styles [
+                  "navigation-sidebar",
+                ]
+              };
+            };
+          };
+        }
       };
     };
   };
@@ -45,6 +157,34 @@ menu add_menu {
     item {
       label: _("_Import Now");
       action: "app.import";
+    }
+  }
+}
+
+menu sort_menu {
+  section {
+    item {
+      label: _("_Last Played");
+      action: "win.sort-mode";
+      target: "last-played";
+    }
+
+    item {
+      label: _("Name _A–Z");
+      action: "win.sort-mode";
+      target: "name-ascending";
+    }
+
+    item {
+      label: _("Name _Z–A");
+      action: "win.sort-mode";
+      target: "name-descending";
+    }
+
+    item {
+      label: _("_Recently Added");
+      action: "win.sort-mode";
+      target: "recently-added";
     }
   }
 }
