@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use rusqlite::{OptionalExtension, params};
 
 use super::{Result, Store, StoreError};
@@ -90,5 +92,29 @@ impl Store {
                 },
             )
             .optional()?)
+    }
+}
+
+impl Store {
+    /// Total seconds of our own sessions per game.
+    pub fn session_totals(&self) -> Result<HashMap<GameId, i64>> {
+        let mut statement = self
+            .conn
+            .prepare("SELECT game_id, SUM(duration_secs) FROM play_sessions GROUP BY game_id")?;
+        let totals = statement
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<rusqlite::Result<_>>()?;
+        Ok(totals)
+    }
+
+    /// Imported playtime totals per game.
+    pub fn imported_totals(&self) -> Result<HashMap<GameId, i64>> {
+        let mut statement = self
+            .conn
+            .prepare("SELECT game_id, total_secs FROM imported_playtime")?;
+        let totals = statement
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<rusqlite::Result<_>>()?;
+        Ok(totals)
     }
 }
