@@ -35,7 +35,17 @@ install_data(
   install_dir: datadir / 'glib-2.0' / 'schemas',
 )
 
-install_subdir('icons', install_dir: datadir, strip_directory: false)
+# The nightly icon (striped base) marks development builds.
+app_icon = get_option('profile') == 'development' ? application_id + '.Devel.svg' : application_id + '.svg'
+install_data(
+  'icons' / app_icon,
+  rename: application_id + '.svg',
+  install_dir: datadir / 'icons' / 'hicolor' / 'scalable' / 'apps',
+)
+install_data(
+  'icons' / application_id + '-symbolic.svg',
+  install_dir: datadir / 'icons' / 'hicolor' / 'symbolic' / 'apps',
+)
 
 subdir('ui')
 
