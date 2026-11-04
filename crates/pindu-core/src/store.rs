@@ -104,6 +104,14 @@ impl Store {
             .conn
             .pragma_query_value(None, "user_version", |row| row.get(0))?)
     }
+
+    /// Runs `work` in one transaction: every write lands, or none does.
+    pub fn in_transaction<T>(&self, work: impl FnOnce(&Self) -> Result<T>) -> Result<T> {
+        let transaction = self.conn.unchecked_transaction()?;
+        let value = work(self)?;
+        transaction.commit()?;
+        Ok(value)
+    }
 }
 
 fn migrate(conn: &mut Connection) -> Result<()> {

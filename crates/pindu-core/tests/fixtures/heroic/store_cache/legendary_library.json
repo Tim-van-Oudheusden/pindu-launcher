@@ -1,0 +1,41 @@
+{
+  "library": [
+    {
+      "runner": "legendary",
+      "app_name": "Sugar",
+      "title": "Rocket Racing",
+      "developer": "Psyonix",
+      "art_square": "https://cdn1.epicgames.com/sugar-tall.jpg",
+      "art_cover": "https://cdn1.epicgames.com/sugar-wide.jpg",
+      "art_logo": "https://cdn1.epicgames.com/sugar-logo.png",
+      "extra": {
+        "about": { "description": "Arcade racing.", "shortDescription": "Racing." },
+        "reqs": [],
+        "genres": ["Racing", "Sports"]
+      },
+      "install": {},
+      "is_installed": true,
+      "canRunOffline": false
+    },
+    {
+      "runner": "legendary",
+      "app_name": "Kinglet",
+      "title": "Not Installed Epic Game",
+      "art_square": "https://cdn1.epicgames.com/kinglet-tall.jpg",
+      "art_cover": "",
+      "install": {},
+      "is_installed": false,
+      "canRunOffline": true
+    },
+    {
+      "runner": "legendary",
+      "app_name": "SugarDlc",
+      "title": "Rocket Racing Season Pass",
+      "art_square": "",
+      "art_cover": "",
+      "install": { "is_dlc": true },
+      "is_installed": false,
+      "canRunOffline": false
+    }
+  ]
+}

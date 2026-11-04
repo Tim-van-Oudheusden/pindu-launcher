@@ -3,8 +3,11 @@
 //! An importer reads one source's files, read-only, into a [`Snapshot`]; syncing that
 //! snapshot with the library is a separate step.
 
+pub mod heroic;
 pub mod location;
+mod sha256;
 pub mod steam;
+pub mod sync;
 pub mod vdf;
 
 use std::fmt;
@@ -47,6 +50,17 @@ pub struct ImportedGame {
     pub description: Option<String>,
     /// The source's own art, at most one per layout.
     pub artwork: Vec<(ArtLayout, PathBuf)>,
+    /// Flags the source keeps itself; applied once, when the game first enters the library.
+    pub source_flags: SourceFlags,
+}
+
+/// Hidden, favourite and category flags a launcher keeps for a game.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SourceFlags {
+    pub hidden: bool,
+    pub favourite: bool,
+    /// Names of the launcher's categories that hold the game; imported as collections.
+    pub categories: Vec<String>,
 }
 
 impl ImportedGame {
@@ -68,6 +82,7 @@ impl ImportedGame {
             genres: Vec::new(),
             description: None,
             artwork: Vec::new(),
+            source_flags: SourceFlags::default(),
         }
     }
 }

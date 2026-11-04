@@ -1,0 +1,11 @@
+{
+  "Sugar": {
+    "app_name": "Sugar",
+    "title": "Rocket Racing",
+    "install_path": "/games/Heroic/RocketRacing",
+    "install_size": 2147483648,
+    "is_dlc": false,
+    "platform": "Windows",
+    "version": "1.0"
+  }
+}
