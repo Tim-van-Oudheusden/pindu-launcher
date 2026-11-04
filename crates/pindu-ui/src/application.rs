@@ -4,16 +4,21 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
+use crate::library_service::LibraryService;
 use crate::sync_service::SyncService;
 use crate::window::PinduWindow;
 
 mod imp {
+    use std::cell::OnceCell;
+
     use super::*;
 
     #[derive(Debug, Default)]
     pub struct PinduApplication {
         /// Shared by every shell, so there is one import at a time.
         pub sync_service: SyncService,
+        /// The library every shell shows; created at start-up, once GTK is initialised.
+        pub library_service: OnceCell<LibraryService>,
     }
 
     #[glib::object_subclass]
@@ -33,6 +38,19 @@ mod imp {
     }
 
     impl ApplicationImpl for PinduApplication {
+        fn startup(&self) {
+            self.parent_startup();
+            let library = LibraryService::new();
+            self.sync_service.connect_finished(glib::clone!(
+                #[weak]
+                library,
+                move |_| library.reload()
+            ));
+            self.library_service
+                .set(library)
+                .expect("start-up runs once");
+        }
+
         fn activate(&self) {
             let application = self.obj();
             let window = application.active_window().unwrap_or_else(|| {
@@ -40,7 +58,8 @@ mod imp {
                     application.upcast_ref::<adw::Application>(),
                     &self.sync_service,
                 );
-                // The first window of a run syncs every source.
+                // Show the stored library at once, then sync every source.
+                application.library_service().reload();
                 self.sync_service.sync();
                 window.upcast()
             });
@@ -64,6 +83,14 @@ impl PinduApplication {
             .property("application-id", APP_ID)
             .property("resource-base-path", RESOURCE_BASE_PATH)
             .build()
+    }
+
+    /// The library every shell shows.
+    pub fn library_service(&self) -> &LibraryService {
+        self.imp()
+            .library_service
+            .get()
+            .expect("the application has started")
     }
 
     fn setup_actions(&self) {
