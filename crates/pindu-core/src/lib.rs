@@ -5,4 +5,5 @@
 
 pub mod model;
 pub mod paths;
+pub mod sources;
 pub mod store;
