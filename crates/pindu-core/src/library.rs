@@ -20,8 +20,9 @@ pub struct ArtSet {
 }
 
 impl ArtSet {
-    fn from(artwork: &[Artwork]) -> Self {
-        let path = |layout| art::best(artwork, layout).map(|art| art.path.clone());
+    fn from(artwork: &[Artwork], prefer_steamgriddb: bool) -> Self {
+        let path =
+            |layout| art::best(artwork, layout, prefer_steamgriddb).map(|art| art.path.clone());
         Self {
             cover: path(ArtLayout::Cover),
             hero: path(ArtLayout::Hero),
@@ -50,9 +51,9 @@ pub enum PlaytimeOrigin {
     Sessions,
 }
 
-/// Every stored game with its best art per layout and its playtime: the source's own
-/// total when it tracks one, else the sum of our sessions.
-pub fn load(store: &Store) -> store::Result<Vec<LibraryEntry>> {
+/// Every stored game with its best art per layout (see [`art::best`]) and its playtime:
+/// the source's own total when it tracks one, else the sum of our sessions.
+pub fn load(store: &Store, prefer_steamgriddb: bool) -> store::Result<Vec<LibraryEntry>> {
     let mut artwork: HashMap<GameId, Vec<Artwork>> = HashMap::new();
     for art in store.all_artwork()? {
         artwork.entry(art.game_id.clone()).or_default().push(art);
@@ -66,7 +67,7 @@ pub fn load(store: &Store) -> store::Result<Vec<LibraryEntry>> {
         .map(|game| {
             let art = artwork
                 .get(&game.id)
-                .map_or_else(ArtSet::default, |art| ArtSet::from(art));
+                .map_or_else(ArtSet::default, |art| ArtSet::from(art, prefer_steamgriddb));
             let (playtime_secs, playtime_origin) =
                 match (imported_totals.get(&game.id), session_totals.get(&game.id)) {
                     (Some(&total), _) => (total, Some(PlaytimeOrigin::Source(game.source()))),
@@ -702,7 +703,7 @@ mod tests {
             .unwrap();
         store.add_play_session(&ours.id, 10, 70).unwrap();
 
-        let entries = load(&store).unwrap();
+        let entries = load(&store, false).unwrap();
 
         let origin = |id: &GameId| {
             entries
@@ -758,7 +759,7 @@ mod tests {
         store.add_to_collection(second.id, &member.id).unwrap();
         store.add_to_collection(first.id, &member.id).unwrap();
 
-        let entries = load(&store).unwrap();
+        let entries = load(&store, false).unwrap();
 
         let collections = |id: &GameId| {
             entries
@@ -796,7 +797,7 @@ mod tests {
         set(ArtLayout::Cover, ArtOrigin::User, "/user-cover.png");
         set(ArtLayout::Icon, ArtOrigin::Source, "/icon.jpg");
 
-        let entries = load(&store).unwrap();
+        let entries = load(&store, false).unwrap();
 
         assert_eq!(entries.len(), 2);
         let first = entries
@@ -965,7 +966,7 @@ mod tests {
         store.add_play_session(&tracked.id, 0, 600).unwrap();
         store.add_play_session(&tracked.id, 1_000, 1_900).unwrap();
 
-        let entries = load(&store).unwrap();
+        let entries = load(&store, false).unwrap();
 
         let playtime = |id: &GameId| {
             entries

@@ -28,6 +28,21 @@
       <summary>Exit after launching a store game</summary>
       <description>Quit once a store game is handed to its launcher. Games Pindu launcher starts itself keep it running, as it records their play sessions.</description>
     </key>
+    <key name="show-badges" type="b">
+      <default>true</default>
+      <summary>Show badges on covers</summary>
+      <description>The launcher badge top left and the state badge top right.</description>
+    </key>
+    <key name="hidden-sources" type="as">
+      <default>[]</default>
+      <summary>Sources left out of the sidebar</summary>
+      <description>Source IDs whose sidebar rows are hidden; their games still import.</description>
+    </key>
+    <key name="prefer-steamgriddb" type="b">
+      <default>false</default>
+      <summary>Prefer SteamGridDB art</summary>
+      <description>Show SteamGridDB art before the launcher's own; art you pick always comes first.</description>
+    </key>
     <key name="show-titles" type="b">
       <default>true</default>
       <summary>Show titles below covers</summary>

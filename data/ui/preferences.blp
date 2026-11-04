@@ -7,6 +7,32 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
     icon-name: "preferences-system-symbolic";
 
     Adw.PreferencesGroup {
+      title: _("Library");
+
+      Adw.ComboRow tile_size_row {
+        title: _("Cover Size");
+
+        model: StringList {
+          strings [
+            _("Small"),
+            _("Medium"),
+            _("Large"),
+          ]
+        };
+      }
+
+      Adw.SwitchRow titles_row {
+        title: _("Show Titles");
+        subtitle: _("The game's name below its cover");
+      }
+
+      Adw.SwitchRow badges_row {
+        title: _("Show Badges");
+        subtitle: _("The launcher and state badges on covers");
+      }
+    }
+
+    Adw.PreferencesGroup {
       title: _("Launching");
 
       Adw.SwitchRow exit_row {
@@ -50,6 +76,41 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
             "flat",
           ]
         }
+      }
+    }
+  }
+
+  Adw.PreferencesPage {
+    title: _("Sources");
+    icon-name: "folder-symbolic";
+
+    Adw.PreferencesGroup sources_group {
+      title: _("Sources");
+      description: _("Where games come from. A source that is off is no longer imported; one left out of the sidebar still is.");
+    }
+  }
+
+  Adw.PreferencesPage {
+    title: _("Artwork");
+    icon-name: "image-x-generic-symbolic";
+
+    Adw.PreferencesGroup {
+      title: _("SteamGridDB");
+      description: _("Art from SteamGridDB needs your own API key, which is kept in your keyring.");
+
+      Adw.PasswordEntryRow key_row {
+        title: _("API Key");
+        show-apply-button: true;
+        apply => $save_key() swapped;
+      }
+
+      Adw.ActionRow key_status_row {
+        title: _("Stored Key");
+      }
+
+      Adw.SwitchRow prefer_row {
+        title: _("Prefer SteamGridDB Art");
+        subtitle: _("Show it before the launcher's own art; art you pick always comes first");
       }
     }
   }

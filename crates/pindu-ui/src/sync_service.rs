@@ -1,6 +1,7 @@
 //! Runs the importers off the main thread and reports progress and problems to the shells.
 
 use std::cell::{Cell, RefCell};
+use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gettextrs::gettext;
@@ -8,8 +9,9 @@ use gtk::glib;
 use gtk::glib::subclass::Signal;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
+use pindu_core::model::{Source, SourceState};
 use pindu_core::paths::default_library_db_path;
-use pindu_core::sources::location::HostDirs;
+use pindu_core::sources::location::{self, HostDirs};
 use pindu_core::sources::sync::sync_all;
 use pindu_core::store::Store;
 
@@ -58,6 +60,52 @@ impl SyncService {
     /// Problems of the last sync, one line per problem.
     pub fn problems(&self) -> Vec<String> {
         self.imp().problems.borrow().clone()
+    }
+
+    /// Each source's stored state: enabled, override, where it was last found.
+    pub async fn source_states(&self) -> Vec<SourceState> {
+        gtk::gio::spawn_blocking(|| {
+            Store::open(&default_library_db_path())
+                .and_then(|store| store.source_states())
+                .unwrap_or_default()
+        })
+        .await
+        .unwrap_or_default()
+    }
+
+    /// Turns a source's import on or off, then syncs.
+    pub fn set_source_enabled(&self, source: Source, enabled: bool) {
+        self.change_source(move |store| {
+            let mut state = store
+                .source_state(source)?
+                .unwrap_or_else(|| SourceState::new(source));
+            state.enabled = enabled;
+            store.set_source_state(&state)
+        });
+    }
+
+    /// Sets (or with `None` clears) the folder a source is read from, then syncs.
+    pub fn set_source_override(&self, source: Source, folder: Option<PathBuf>) {
+        self.change_source(move |store| {
+            location::set_user_override(store, source, folder.as_deref())
+        });
+    }
+
+    fn change_source(
+        &self,
+        change: impl FnOnce(&Store) -> pindu_core::store::Result<()> + Send + 'static,
+    ) {
+        let service = self.clone();
+        glib::spawn_future_local(async move {
+            let changed =
+                gtk::gio::spawn_blocking(move || change(&Store::open(&default_library_db_path())?))
+                    .await;
+            match changed {
+                Ok(Ok(())) => service.sync(),
+                Ok(Err(error)) => glib::g_warning!("pindu", "Could not change a source: {error}"),
+                Err(_) => {}
+            }
+        });
     }
 
     /// Syncs every source on a worker thread; a call while syncing is ignored.

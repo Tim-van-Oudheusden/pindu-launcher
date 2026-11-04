@@ -1,7 +1,7 @@
 //! The library's cover tile: 2:3 art with a launcher badge top left, a state badge top
 //! right, a Play button on hover and keyboard focus, and the title below.
 
-use std::cell::{OnceCell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 
 use gettextrs::gettext;
 use gtk::prelude::*;
@@ -61,6 +61,8 @@ mod imp {
         pub title: TemplateChild<gtk::Label>,
         /// The shown game and the handler that follows its art.
         pub bound: RefCell<Option<(GameObject, Vec<glib::SignalHandlerId>)>>,
+        /// From the `show-badges` setting.
+        pub show_badges: Cell<bool>,
         pub menu: OnceCell<gtk::PopoverMenu>,
     }
 
@@ -131,12 +133,14 @@ glib::wrapper! {
 }
 
 impl CoverTile {
-    pub fn new(size: TileSize, show_title: bool) -> Self {
+    pub fn new(size: TileSize, show_title: bool, show_badges: bool) -> Self {
         let tile: Self = glib::Object::new();
         let (width, height) = size.cover_size();
         let imp = tile.imp();
         imp.cover.set_size_request(width, height);
         imp.title.set_visible(show_title);
+        imp.show_badges.set(show_badges);
+        imp.source_badge.set_visible(show_badges);
         tile
     }
 
@@ -196,7 +200,8 @@ impl CoverTile {
         } else {
             None
         };
-        imp.state_badge.set_visible(state.is_some());
+        imp.state_badge
+            .set_visible(state.is_some() && imp.show_badges.get());
         if let Some((icon, tooltip)) = state {
             imp.state_badge.set_icon_name(Some(icon));
             imp.state_badge.set_tooltip_text(Some(&tooltip));
