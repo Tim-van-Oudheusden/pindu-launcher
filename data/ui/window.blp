@@ -190,6 +190,34 @@ template $PinduWindow: Adw.ApplicationWindow {
                 }
               }
 
+              Box jump_back_in {
+                orientation: vertical;
+                spacing: 6;
+                visible: false;
+                margin-start: 18;
+                margin-end: 18;
+                margin-bottom: 6;
+
+                Label {
+                  label: _("Jump Back In");
+                  xalign: 0;
+
+                  styles [
+                    "heading",
+                  ]
+                }
+
+                ScrolledWindow {
+                  vscrollbar-policy: never;
+                  propagate-natural-height: true;
+
+                  child: Box jump_cards {
+                    spacing: 12;
+                    margin-bottom: 6;
+                  };
+                }
+              }
+
               Stack content_stack {
                 vexpand: true;
 

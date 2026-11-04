@@ -255,6 +255,28 @@ impl CoverTile {
                 &crate::collection_actions::collection_menu(&game, &collections),
             );
         }
+        let (favourite, pinned) = {
+            let game = game.game();
+            (game.favourite, game.pin_order.is_some())
+        };
+        let keep = gio::Menu::new();
+        keep.append_item(&item(
+            if favourite {
+                gettext("Remove from _Favourites")
+            } else {
+                gettext("Add to _Favourites")
+            },
+            "win.toggle-favourite",
+        ));
+        keep.append_item(&item(
+            if pinned {
+                gettext("Un_pin from Jump Back In")
+            } else {
+                gettext("_Pin to Jump Back In")
+            },
+            "win.toggle-pin",
+        ));
+        menu.append_section(None, &keep);
         let manage = gio::Menu::new();
         manage.append_item(&item(gettext("_Edit…"), "app.edit-game"));
         manage.append_item(&item(gettext("_Hide"), "win.hide-game"));

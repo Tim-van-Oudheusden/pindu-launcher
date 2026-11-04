@@ -12,7 +12,7 @@ use pindu_core::library::{
     Counts, FilterChange, Filters, LibraryEntry, LibraryFilter, SortMode, View, compare,
 };
 
-use pindu_core::model::Collection;
+use pindu_core::model::{Collection, GameId};
 
 use super::GameObject;
 
@@ -145,7 +145,8 @@ impl LibraryModel {
         self.imp().counts.borrow().clone()
     }
 
-    /// Calls `callback` whenever the games change and so may the [`Self::counts`].
+    /// Calls `callback` whenever the games change and so may the [`Self::counts`]; the
+    /// games are updated by then.
     pub fn connect_counts_changed<F: Fn(&Self) + 'static>(
         &self,
         callback: F,
@@ -166,7 +167,6 @@ impl LibraryModel {
                 .iter()
                 .map(|entry| (&entry.game, entry.collections.as_slice())),
         ));
-        self.emit_by_name::<()>("counts-changed", &[]);
         let mut existing: HashMap<String, GameObject> = (0..imp.games.n_items())
             .filter_map(|position| imp.games.item(position).and_downcast::<GameObject>())
             .map(|object| (object.id().as_str().to_owned(), object))
@@ -185,6 +185,7 @@ impl LibraryModel {
                 imp.filter.changed(gtk::FilterChange::Different);
                 imp.sorter.changed(gtk::SorterChange::Different);
             }
+            self.emit_by_name::<()>("counts-changed", &[]);
             return;
         }
         let objects: Vec<GameObject> = entries
@@ -198,6 +199,26 @@ impl LibraryModel {
             })
             .collect();
         imp.games.splice(0, imp.games.n_items(), &objects);
+        // Observers read the games too, so they hear of new counts once the games are in.
+        self.emit_by_name::<()>("counts-changed", &[]);
+    }
+
+    /// The "Jump back in" games: pins first, then the most recently played.
+    pub fn jump_back_in(&self) -> Vec<GameObject> {
+        let games = &self.imp().games;
+        let objects: Vec<GameObject> = (0..games.n_items())
+            .filter_map(|position| games.item(position).and_downcast::<GameObject>())
+            .collect();
+        let entries: Vec<_> = objects.iter().map(|object| object.game()).collect();
+        let chosen: Vec<GameId> = pindu_core::library::jump_back_in(entries.iter().map(|g| &**g))
+            .into_iter()
+            .map(|game| game.id.clone())
+            .collect();
+        drop(entries);
+        chosen
+            .iter()
+            .filter_map(|id| objects.iter().find(|object| object.id() == *id).cloned())
+            .collect()
     }
 
     /// The user's collections, in their order.

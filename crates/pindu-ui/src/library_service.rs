@@ -62,6 +62,36 @@ impl LibraryService {
         self.spawn_edit(id, move |game| game.hidden = hidden);
     }
 
+    /// Adds a game to Favourites or takes it out.
+    pub fn set_favourite(&self, id: &GameId, favourite: bool) {
+        self.spawn_edit(id, move |game| game.favourite = favourite);
+    }
+
+    /// Pins a game to "Jump back in" at the first free place; `false` when every place
+    /// is taken.
+    pub async fn pin(&self, id: &GameId) -> bool {
+        let id = id.clone();
+        self.write(move |store| {
+            store.in_transaction(|store| {
+                let Some(place) = library::next_pin(&store.games()?) else {
+                    return Ok(false);
+                };
+                let Some(mut game) = store.game(&id)? else {
+                    return Ok(false);
+                };
+                game.pin_order = Some(place);
+                store.update_game(&game)?;
+                Ok(true)
+            })
+        })
+        .await
+        .unwrap_or(false)
+    }
+
+    pub fn unpin(&self, id: &GameId) {
+        self.spawn_edit(id, |game| game.pin_order = None);
+    }
+
     /// Records that a game was just started; done once the store has it.
     pub async fn mark_played(&self, id: &GameId, now: Timestamp) {
         self.edit_game(id, move |game| game.last_played_at = Some(now))

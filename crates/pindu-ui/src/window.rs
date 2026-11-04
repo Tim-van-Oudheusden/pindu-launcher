@@ -14,7 +14,7 @@ use crate::library_service::LibraryService;
 use crate::models::{GameObject, LibraryModel};
 use crate::sources::{source_icon, source_name};
 use crate::sync_service::SyncService;
-use crate::widgets::{CoverTile, TileSize};
+use crate::widgets::{CoverArt, CoverTile, TileSize};
 
 mod imp {
     use std::cell::OnceCell;
@@ -52,6 +52,10 @@ mod imp {
         pub sources_section: TemplateChild<adw::SidebarSection>,
         #[template_child]
         pub collections_section: TemplateChild<adw::SidebarSection>,
+        #[template_child]
+        pub jump_back_in: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub jump_cards: TemplateChild<gtk::Box>,
         #[template_child]
         pub new_collection_item: TemplateChild<adw::SidebarItem>,
         #[template_child]
@@ -188,6 +192,8 @@ impl PinduWindow {
         self.add_action(&sort_mode);
 
         self.add_game_action("hide-game", Self::hide_game);
+        self.add_game_action("toggle-favourite", Self::toggle_favourite);
+        self.add_game_action("toggle-pin", Self::toggle_pin);
         self.add_game_action("show-details", Self::show_details);
         self.add_game_action("open-install-folder", Self::open_install_folder);
 
@@ -250,7 +256,10 @@ impl PinduWindow {
         imp.search_entry.connect_search_changed(glib::clone!(
             #[weak(rename_to = window)]
             self,
-            move |entry| window.library().set_search(&entry.text())
+            move |entry| {
+                window.library().set_search(&entry.text());
+                window.update_jump_back_in();
+            }
         ));
 
         let toggles = [
@@ -298,7 +307,10 @@ impl PinduWindow {
         library.connect_counts_changed(glib::clone!(
             #[weak(rename_to = window)]
             self,
-            move |_| window.update_content_page()
+            move |_| {
+                window.update_content_page();
+                window.update_jump_back_in();
+            }
         ));
         self.update_content_page();
     }
@@ -314,6 +326,7 @@ impl PinduWindow {
         };
         imp.clear_filters.set_visible(filters.any());
         self.library().set_filters(filters);
+        self.update_jump_back_in();
     }
 
     /// The grid when it has games; otherwise, once filtering is done, the first-run page
@@ -341,6 +354,55 @@ impl PinduWindow {
             .expect("windows belong to the application")
             .library_service()
             .clone()
+    }
+
+    /// The "Jump back in" row: shown in All Games while no search or filter is active.
+    fn update_jump_back_in(&self) {
+        let imp = self.imp();
+        let games = self.library().jump_back_in();
+        let quiet = self.library().view() == View::All
+            && imp.search_entry.text().is_empty()
+            && !imp.clear_filters.is_visible();
+        imp.jump_back_in.set_visible(quiet && !games.is_empty());
+        while let Some(card) = imp.jump_cards.first_child() {
+            imp.jump_cards.remove(&card);
+        }
+        if quiet {
+            for game in &games {
+                imp.jump_cards.append(&jump_card(game));
+            }
+        }
+    }
+
+    fn toggle_favourite(&self, id: &GameId) {
+        let Some(game) = self.library().game_object(id) else {
+            return;
+        };
+        let favourite = !game.game().favourite;
+        self.library_service().set_favourite(id, favourite);
+    }
+
+    /// Pins a game to "Jump back in", or unpins it; says so when every place is taken.
+    fn toggle_pin(&self, id: &GameId) {
+        let Some(game) = self.library().game_object(id) else {
+            return;
+        };
+        let service = self.library_service();
+        if game.game().pin_order.is_some() {
+            service.unpin(id);
+            return;
+        }
+        let (window, id) = (self.downgrade(), id.clone());
+        glib::spawn_future_local(async move {
+            let pinned = service.pin(&id).await;
+            if let Some(window) = window.upgrade()
+                && !pinned
+            {
+                window.add_toast(adw::Toast::new(&gettext(
+                    "Three games are pinned already; unpin one first",
+                )));
+            }
+        });
     }
 
     /// Hides a game, with a toast to undo it.
@@ -462,6 +524,7 @@ impl PinduWindow {
             return;
         };
         self.library().set_view(view);
+        self.update_jump_back_in();
         imp.library_page
             .set_title(&item.title().unwrap_or_default());
         // Choosing a view from a game page goes back to the library.
@@ -696,6 +759,61 @@ const SORT_MODES: [(SortMode, &str); 5] = [
     (SortMode::RecentlyAdded, "recently-added"),
     (SortMode::Playtime, "playtime"),
 ];
+
+/// A landscape card for "Jump back in": the game's banner (or cover) with its title.
+fn jump_card(game: &GameObject) -> gtk::Button {
+    const WIDTH: i32 = 240;
+    const HEIGHT: i32 = 112;
+    let (title, pinned, art, icon) = {
+        let entry = game.entry();
+        let art = entry.art.hero.clone().or_else(|| entry.art.cover.clone());
+        (
+            entry.game.title.clone(),
+            entry.game.pin_order.is_some(),
+            art,
+            entry.art.icon.clone(),
+        )
+    };
+    // Cover art draws at its own fixed size, whatever the image's size.
+    let picture = CoverArt::new();
+    picture.set_size_request(WIDTH, HEIGHT);
+    let label = gtk::Label::builder()
+        .label(&title)
+        .xalign(0.0)
+        .ellipsize(gtk::pango::EllipsizeMode::End)
+        .valign(gtk::Align::End)
+        .css_classes(["jump-title"])
+        .build();
+    let overlay = gtk::Overlay::builder().child(&picture).build();
+    overlay.add_overlay(&label);
+    if pinned {
+        let pin = gtk::Image::builder()
+            .icon_name("view-pin-symbolic")
+            .tooltip_text(gettext("Pinned"))
+            .halign(gtk::Align::End)
+            .valign(gtk::Align::Start)
+            .margin_top(6)
+            .margin_end(6)
+            .css_classes(["badge"])
+            .build();
+        overlay.add_overlay(&pin);
+    }
+    let card = gtk::Button::builder()
+        .child(&overlay)
+        .tooltip_text(&title)
+        .action_name("win.show-details")
+        .action_target(&game.id().as_str().to_variant())
+        .css_classes(["jump-card", "card"])
+        .build();
+    let scale = card.scale_factor().max(1);
+    picture.show(
+        art,
+        icon,
+        ((WIDTH * scale) as u32, (HEIGHT * scale) as u32),
+        |_| {},
+    );
+    card
+}
 
 fn sort_mode_name(mode: SortMode) -> &'static str {
     SORT_MODES
