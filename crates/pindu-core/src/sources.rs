@@ -14,6 +14,7 @@ pub(crate) mod sha256;
 pub mod steam;
 pub mod sync;
 pub mod vdf;
+pub mod watch;
 
 use std::fmt;
 use std::path::PathBuf;

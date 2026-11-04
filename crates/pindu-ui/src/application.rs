@@ -12,6 +12,7 @@ use crate::permission_service;
 use crate::preferences::PreferencesDialog;
 use crate::session_service::SessionService;
 use crate::sync_service::SyncService;
+use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
 
 mod imp {
@@ -27,6 +28,8 @@ mod imp {
         pub library_service: OnceCell<LibraryService>,
         /// The games we started that are running.
         pub session_service: OnceCell<SessionService>,
+        /// Resyncs when a launcher changes its files.
+        pub watch_service: OnceCell<WatchService>,
     }
 
     #[glib::object_subclass]
@@ -70,6 +73,9 @@ mod imp {
             ));
             self.session_service
                 .set(SessionService::new(&library))
+                .expect("start-up runs once");
+            self.watch_service
+                .set(WatchService::new(&self.sync_service))
                 .expect("start-up runs once");
             self.library_service
                 .set(library)
