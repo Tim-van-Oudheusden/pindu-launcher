@@ -1,0 +1,67 @@
+using Gtk 4.0;
+using Adw 1;
+
+Adw.ShortcutsDialog shortcuts_dialog {
+  Adw.ShortcutsSection {
+    title: _("General");
+
+    Adw.ShortcutsItem {
+      title: _("Search");
+      accelerator: "<primary>f";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Add Game");
+      accelerator: "<primary>n";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Preferences");
+      accelerator: "<primary>comma";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Keyboard Shortcuts");
+      accelerator: "<primary>question";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Quit");
+      accelerator: "<primary>q";
+    }
+  }
+
+  Adw.ShortcutsSection {
+    title: _("Library");
+
+    Adw.ShortcutsItem {
+      title: _("Toggle Sidebar");
+      accelerator: "F9";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Show Hidden Games");
+      accelerator: "<primary>h";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Play or Open the Focused Game");
+      accelerator: "Return";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Remove the Focused Game");
+      accelerator: "Delete";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Back");
+      accelerator: "<alt>Left";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Fullscreen Mode");
+      accelerator: "F11";
+    }
+  }
+}
