@@ -262,3 +262,30 @@ fn native_and_flatpak_heroic_both_import() {
         assert!(game(&snapshot, "1207658924").installed, "{at}");
     }
 }
+
+#[test]
+fn playtime_and_last_played_come_from_timestamp_json() {
+    let (_dir, _home, root) = heroic_home(".config/heroic");
+
+    let gog = import(&root, Source::HeroicGog);
+    let epic = import(&root, Source::HeroicEpic);
+
+    let ut2004 = game(&gog, "1207658924");
+    // Heroic keeps minutes.
+    assert_eq!(ut2004.playtime_secs, Some(125 * 60));
+    assert_eq!(ut2004.last_played_at, Some(1_709_251_199));
+    let sugar = game(&epic, "Sugar");
+    assert_eq!(sugar.playtime_secs, None);
+    assert_eq!(sugar.last_played_at, Some(1_704_104_400));
+}
+
+#[test]
+fn a_broken_timestamp_file_only_loses_playtime() {
+    let (_dir, _home, root) = heroic_home(".config/heroic");
+    std::fs::write(root.join("store/timestamp.json"), "{ broken").unwrap();
+
+    let gog = import(&root, Source::HeroicGog);
+
+    assert_eq!(game(&gog, "1207658924").playtime_secs, None);
+    assert!(!gog.errors.is_empty());
+}

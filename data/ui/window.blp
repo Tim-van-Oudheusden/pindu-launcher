@@ -271,6 +271,26 @@ template $PinduWindow: Adw.ApplicationWindow {
                 }
 
                 StackPage {
+                  name: "history";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Adw.Clamp {
+                      margin-top: 12;
+                      margin-bottom: 24;
+                      margin-start: 12;
+                      margin-end: 12;
+
+                      child: Box history_groups {
+                        orientation: vertical;
+                        spacing: 24;
+                      };
+                    };
+                  };
+                }
+
+                StackPage {
                   name: "empty-collection";
 
                   child: Adw.StatusPage {

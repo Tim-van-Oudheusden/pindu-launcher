@@ -1,6 +1,8 @@
 //! Steam: libraries from `libraryfolders.vdf`, install state from `appmanifest_*.acf`,
-//! type, platform and developer from the binary `appinfo.vdf`, art from `librarycache`.
-//! Everything is read offline; nothing is written.
+//! type, platform and developer from the binary `appinfo.vdf`, art from `librarycache`,
+//! and playtime from the most recently used account's
+//! `userdata/<account>/config/localconfig.vdf`. Everything is read offline; nothing is
+//! written.
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -36,15 +38,66 @@ pub fn import(root: &Path) -> Result<Snapshot, ImportError> {
     }
 
     let appinfo = read_appinfo(root, &seen, &mut snapshot.errors);
+    let playtime = read_playtime(root);
     let cache = root.join("appcache/librarycache");
     snapshot.games = apps
         .into_iter()
         .filter_map(|app| {
             let info = appinfo.get(&app.app_id);
-            imported_game(app, info, &cache)
+            let played = playtime.get(&app.app_id).copied().unwrap_or_default();
+            let mut game = imported_game(app, info, &cache)?;
+            game.playtime_secs = played.minutes.filter(|m| *m > 0).map(|m| m * 60);
+            game.last_played_at = game.last_played_at.max(played.last_played_at);
+            Some(game)
         })
         .collect();
     Ok(snapshot)
+}
+
+/// What an account's `localconfig.vdf` records about an app.
+#[derive(Debug, Clone, Copy, Default)]
+struct Played {
+    minutes: Option<i64>,
+    last_played_at: Option<i64>,
+}
+
+/// Playtime per app from the account used last: the `userdata` folder whose
+/// `localconfig.vdf` changed last (Steam rewrites it while that account is signed in).
+/// Account `0` is Steam's anonymous one. A missing or broken file means no playtime.
+fn read_playtime(root: &Path) -> HashMap<u32, Played> {
+    let newest = fs::read_dir(root.join("userdata"))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|entry| entry.file_name() != "0")
+        .map(|entry| entry.path().join("config/localconfig.vdf"))
+        .filter_map(|path| Some((fs::metadata(&path).ok()?.modified().ok()?, path)))
+        .max_by_key(|(modified, _)| *modified);
+    let Some((_, path)) = newest else {
+        return HashMap::new();
+    };
+    let Some(config) = fs::read_to_string(path)
+        .ok()
+        .and_then(|text| vdf::parse_text(&text).ok())
+    else {
+        return HashMap::new();
+    };
+    let apps = config
+        .path(&["UserLocalConfigStore", "Software", "Valve", "Steam", "apps"])
+        .map(Value::entries)
+        .unwrap_or_default();
+    apps.iter()
+        .filter_map(|(id, app)| {
+            let played = Played {
+                minutes: app.get("Playtime").and_then(Value::as_i64),
+                last_played_at: app
+                    .get("LastPlayed")
+                    .and_then(Value::as_i64)
+                    .filter(|time| *time > 0),
+            };
+            Some((id.parse().ok()?, played))
+        })
+        .collect()
 }
 
 /// One library folder and the apps `libraryfolders.vdf` says it holds.
