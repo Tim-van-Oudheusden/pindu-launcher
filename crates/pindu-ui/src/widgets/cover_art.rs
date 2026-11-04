@@ -3,6 +3,7 @@
 //! glycin's sandboxed loaders.
 
 use std::cell::{Cell, RefCell};
+use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 
 use gtk::prelude::*;
@@ -127,6 +128,12 @@ impl CoverArt {
                 return;
             }
         };
+        imp.is_icon.set(is_icon);
+        if let Some(texture) = cached_texture(&path) {
+            imp.texture.replace(Some(texture));
+            on_loaded(self);
+            return;
+        }
         let art = self.downgrade();
         glib::spawn_future_local(async move {
             let texture = load_texture(&path).await;
@@ -137,8 +144,8 @@ impl CoverArt {
             }
             match texture {
                 Ok(texture) => {
+                    cache_texture(path, texture.clone());
                     imp.texture.replace(Some(texture));
-                    imp.is_icon.set(is_icon);
                 }
                 Err(error) => glib::g_debug!("pindu", "Could not load {}: {error}", path.display()),
             }
@@ -171,4 +178,30 @@ async fn load_texture(path: &Path) -> Result<gdk::Texture, String> {
         .await
         .map_err(|error| error.to_string())?;
     Ok(frame.texture())
+}
+
+/// Decoded art kept in memory, so tiles that rebind or scroll back draw at once.
+const TEXTURE_CACHE_SIZE: usize = 256;
+
+thread_local! {
+    static TEXTURES: RefCell<(HashMap<PathBuf, gdk::Texture>, VecDeque<PathBuf>)> =
+        RefCell::default();
+}
+
+fn cached_texture(path: &Path) -> Option<gdk::Texture> {
+    TEXTURES.with_borrow(|(textures, _)| textures.get(path).cloned())
+}
+
+/// Keeps a texture, dropping the oldest once the cache is full.
+fn cache_texture(path: PathBuf, texture: gdk::Texture) {
+    TEXTURES.with_borrow_mut(|(textures, order)| {
+        if textures.insert(path.clone(), texture).is_none() {
+            order.push_back(path);
+        }
+        while order.len() > TEXTURE_CACHE_SIZE {
+            if let Some(oldest) = order.pop_front() {
+                textures.remove(&oldest);
+            }
+        }
+    });
 }

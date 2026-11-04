@@ -1,12 +1,12 @@
 //! The library's cover tile: 2:3 art with a launcher badge top left, a state badge top
 //! right, a Play button on hover and keyboard focus, and the title below.
 
-use std::cell::RefCell;
+use std::cell::{OnceCell, RefCell};
 
 use gettextrs::gettext;
-use gtk::glib;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
+use gtk::{gdk, gio, glib};
 
 use super::CoverArt;
 use crate::models::GameObject;
@@ -60,6 +60,7 @@ mod imp {
         pub title: TemplateChild<gtk::Label>,
         /// The shown game and the handler that follows its art.
         pub bound: RefCell<Option<(GameObject, glib::SignalHandlerId)>>,
+        pub menu: OnceCell<gtk::PopoverMenu>,
     }
 
     #[glib::object_subclass]
@@ -78,7 +79,46 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for CoverTile {}
+    impl ObjectImpl for CoverTile {
+        fn constructed(&self) {
+            self.parent_constructed();
+            let tile = self.obj();
+            let menu = gtk::PopoverMenu::from_model(None::<&gio::MenuModel>);
+            menu.set_has_arrow(true);
+            menu.set_parent(&*tile);
+            self.menu.set(menu).expect("constructed once");
+
+            let right_click = gtk::GestureClick::builder()
+                .button(gdk::BUTTON_SECONDARY)
+                .build();
+            right_click.connect_pressed(glib::clone!(
+                #[weak]
+                tile,
+                move |gesture, _, x, y| {
+                    gesture.set_state(gtk::EventSequenceState::Claimed);
+                    tile.popup_menu_at(Some((x, y)));
+                }
+            ));
+            tile.add_controller(right_click);
+
+            let long_press = gtk::GestureLongPress::builder().touch_only(true).build();
+            long_press.connect_pressed(glib::clone!(
+                #[weak]
+                tile,
+                move |gesture, x, y| {
+                    gesture.set_state(gtk::EventSequenceState::Claimed);
+                    tile.popup_menu_at(Some((x, y)));
+                }
+            ));
+            tile.add_controller(long_press);
+        }
+
+        fn dispose(&self) {
+            if let Some(menu) = self.menu.get() {
+                menu.unparent();
+            }
+        }
+    }
     impl WidgetImpl for CoverTile {}
     impl BoxImpl for CoverTile {}
 }
@@ -138,6 +178,46 @@ impl CoverTile {
             game.disconnect(handler);
         }
         imp.cover.clear();
+    }
+
+    /// The game this tile shows, if bound.
+    pub fn game(&self) -> Option<GameObject> {
+        self.imp()
+            .bound
+            .borrow()
+            .as_ref()
+            .map(|(game, _)| game.clone())
+    }
+
+    /// Opens the tile's context menu, pointing at `position` or, from the keyboard, at the
+    /// whole tile.
+    pub fn popup_menu_at(&self, position: Option<(f64, f64)>) {
+        let Some(game) = self.game() else { return };
+        let id = game.id();
+        let target = id.as_str().to_variant();
+        let item = |label: String, action: &str| {
+            let item = gio::MenuItem::new(Some(&label), None);
+            item.set_action_and_target_value(Some(action), Some(&target));
+            item
+        };
+        let menu = gio::Menu::new();
+        let actions = gio::Menu::new();
+        actions.append_item(&item(gettext("_Play"), "app.play"));
+        actions.append_item(&item(gettext("_Details"), "win.show-details"));
+        actions.append_item(&item(gettext("_Open in Launcher"), "app.open-in-launcher"));
+        menu.append_section(None, &actions);
+        let manage = gio::Menu::new();
+        manage.append_item(&item(gettext("_Hide"), "win.hide-game"));
+        menu.append_section(None, &manage);
+
+        let popover = self.imp().menu.get().expect("constructed");
+        popover.set_menu_model(Some(&menu));
+        let rect = match position {
+            Some((x, y)) => gdk::Rectangle::new(x as i32, y as i32, 1, 1),
+            None => gdk::Rectangle::new(0, 0, self.width(), self.height()),
+        };
+        popover.set_pointing_to(Some(&rect));
+        popover.popup();
     }
 
     /// What a screen reader says for the tile: title, launcher and state.
