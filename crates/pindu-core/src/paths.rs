@@ -1,6 +1,6 @@
 //! Where the app keeps its own files.
 
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 /// Folder name under the XDG base directories.
 pub const APP_DIR: &str = "pindu-launcher";
@@ -21,6 +21,16 @@ pub fn library_db_path(xdg_data_home: Option<&Path>, home: &Path) -> PathBuf {
         .join("library.db")
 }
 
+/// `$XDG_DATA_HOME/pindu-launcher/art`: art the user picked, which unlike the art cache
+/// cannot be rebuilt.
+pub fn default_user_art_dir() -> PathBuf {
+    let xdg_data_home = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from);
+    let home = std::env::home_dir().unwrap_or_default();
+    data_home(xdg_data_home.as_deref(), &home)
+        .join(APP_DIR)
+        .join("art")
+}
+
 /// The library path for the current process environment.
 pub fn default_library_db_path() -> PathBuf {
     let xdg_data_home = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from);
@@ -28,9 +38,49 @@ pub fn default_library_db_path() -> PathBuf {
     library_db_path(xdg_data_home.as_deref(), &home)
 }
 
+/// Splits a document portal path, `/run/user/<uid>/doc/<id>/<name>/<rest…>`, into the
+/// document ID and the parts below the document itself; `None` for any other path.
+pub fn document_portal_parts(path: &Path) -> Option<(String, Vec<PathBuf>)> {
+    let mut parts = path.components();
+    let mut next = || match parts.next()? {
+        Component::RootDir => Some(String::new()),
+        Component::Normal(part) => Some(part.to_string_lossy().into_owned()),
+        _ => None,
+    };
+    let (root, run, user, _uid, doc) = (next()?, next()?, next()?, next()?, next()?);
+    if !root.is_empty() || run != "run" || user != "user" || doc != "doc" {
+        return None;
+    }
+    let id = next()?;
+    // The document's own name, which its host path already ends with.
+    next()?;
+    let rest = std::iter::from_fn(next).map(PathBuf::from).collect();
+    Some((id, rest))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn document_portal_paths_split_into_id_and_rest() {
+        assert_eq!(
+            document_portal_parts(Path::new("/run/user/1000/doc/a1b2c3/Celeste")),
+            Some(("a1b2c3".to_owned(), vec![]))
+        );
+        assert_eq!(
+            document_portal_parts(Path::new("/run/user/1000/doc/a1b2c3/Celeste/bin/run")),
+            Some(("a1b2c3".to_owned(), vec!["bin".into(), "run".into()]))
+        );
+        assert_eq!(
+            document_portal_parts(Path::new("/home/me/Games/Celeste")),
+            None
+        );
+        assert_eq!(
+            document_portal_parts(Path::new("/run/user/1000/doc/a1b2c3")),
+            None
+        );
+    }
 
     #[test]
     fn the_library_lives_in_xdg_data_home() {
