@@ -688,6 +688,7 @@ dependencies = [
  "gettext-rs",
  "gtk4",
  "libadwaita",
+ "pindu-core",
 ]
 
 [[package]]

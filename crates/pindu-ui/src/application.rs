@@ -4,13 +4,17 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
+use crate::sync_service::SyncService;
 use crate::window::PinduWindow;
 
 mod imp {
     use super::*;
 
     #[derive(Debug, Default)]
-    pub struct PinduApplication;
+    pub struct PinduApplication {
+        /// Shared by every shell, so there is one import at a time.
+        pub sync_service: SyncService,
+    }
 
     #[glib::object_subclass]
     impl ObjectSubclass for PinduApplication {
@@ -32,7 +36,13 @@ mod imp {
         fn activate(&self) {
             let application = self.obj();
             let window = application.active_window().unwrap_or_else(|| {
-                PinduWindow::new(application.upcast_ref::<adw::Application>()).upcast()
+                let window = PinduWindow::new(
+                    application.upcast_ref::<adw::Application>(),
+                    &self.sync_service,
+                );
+                // The first window of a run syncs every source.
+                self.sync_service.sync();
+                window.upcast()
             });
             window.present();
         }
@@ -63,7 +73,10 @@ impl PinduApplication {
         let about_action = gio::ActionEntry::builder("about")
             .activate(move |app: &Self, _, _| app.show_about())
             .build();
-        self.add_action_entries([quit_action, about_action]);
+        let import_action = gio::ActionEntry::builder("import")
+            .activate(move |app: &Self, _, _| app.imp().sync_service.sync())
+            .build();
+        self.add_action_entries([quit_action, about_action, import_action]);
     }
 
     fn show_about(&self) {

@@ -6,23 +6,47 @@ template $PinduWindow: Adw.ApplicationWindow {
   width-request: 360;
   height-request: 294;
 
-  content: Adw.ToolbarView {
-    [top]
-    Adw.HeaderBar {
-      [end]
-      MenuButton {
-        primary: true;
-        icon-name: "open-menu-symbolic";
-        tooltip-text: _("Main Menu");
-        menu-model: primary_menu;
-      }
-    }
+  content: Adw.ToastOverlay toast_overlay {
+    child: Adw.ToolbarView {
+      [top]
+      Adw.HeaderBar {
+        [start]
+        MenuButton {
+          icon-name: "list-add-symbolic";
+          tooltip-text: _("Add");
+          menu-model: add_menu;
+        }
 
-    content: Adw.StatusPage {
-      icon-name: "io.github.tim_van_oudheusden.pindu-launcher";
-      title: _("Pindu launcher");
+        [start]
+        Adw.Spinner sync_spinner {
+          visible: false;
+          tooltip-text: _("Importing Games…");
+        }
+
+        [end]
+        MenuButton {
+          primary: true;
+          icon-name: "open-menu-symbolic";
+          tooltip-text: _("Main Menu");
+          menu-model: primary_menu;
+        }
+      }
+
+      content: Adw.StatusPage {
+        icon-name: "io.github.tim_van_oudheusden.pindu-launcher";
+        title: _("Pindu launcher");
+      };
     };
   };
+}
+
+menu add_menu {
+  section {
+    item {
+      label: _("_Import Now");
+      action: "app.import";
+    }
+  }
 }
 
 menu primary_menu {

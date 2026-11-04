@@ -1,8 +1,10 @@
 use adw::prelude::*;
 use adw::subclass::prelude::*;
+use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
 
 use crate::config::APP_ID;
+use crate::sync_service::SyncService;
 
 mod imp {
     use std::cell::OnceCell;
@@ -12,6 +14,10 @@ mod imp {
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/io/github/tim_van_oudheusden/pindu-launcher/ui/window.ui")]
     pub struct PinduWindow {
+        #[template_child]
+        pub toast_overlay: TemplateChild<adw::ToastOverlay>,
+        #[template_child]
+        pub sync_spinner: TemplateChild<adw::Spinner>,
         pub settings: OnceCell<gio::Settings>,
     }
 
@@ -58,10 +64,58 @@ glib::wrapper! {
 }
 
 impl PinduWindow {
-    pub fn new(application: &adw::Application) -> Self {
-        glib::Object::builder()
+    pub fn new(application: &adw::Application, sync_service: &SyncService) -> Self {
+        let window: Self = glib::Object::builder()
             .property("application", application)
-            .build()
+            .build();
+        window.observe_sync(sync_service);
+        window
+    }
+
+    /// Shows a header spinner while importing, and one toast summarising any problems.
+    fn observe_sync(&self, sync_service: &SyncService) {
+        sync_service
+            .bind_property("syncing", &*self.imp().sync_spinner, "visible")
+            .sync_create()
+            .build();
+        sync_service.connect_finished(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |service| window.report_problems(&service.problems())
+        ));
+    }
+
+    fn report_problems(&self, problems: &[String]) {
+        if problems.is_empty() {
+            return;
+        }
+        let count = problems.len() as u32;
+        let toast = adw::Toast::builder()
+            .title(
+                ngettext("One import problem", "{count} import problems", count)
+                    .replace("{count}", &count.to_string()),
+            )
+            .button_label(gettext("Details"))
+            .timeout(10)
+            .build();
+        let problems = problems.to_vec();
+        toast.connect_button_clicked(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.show_problems(&problems)
+        ));
+        self.imp().toast_overlay.add_toast(toast);
+    }
+
+    /// One dialog listing every problem of the last import.
+    fn show_problems(&self, problems: &[String]) {
+        let dialog = adw::AlertDialog::builder()
+            .heading(gettext("Some Games Could Not Be Imported"))
+            .body(problems.join("\n"))
+            .build();
+        dialog.add_response("close", &gettext("_Close"));
+        dialog.set_default_response(Some("close"));
+        dialog.present(Some(self));
     }
 
     fn settings(&self) -> &gio::Settings {

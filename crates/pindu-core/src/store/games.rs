@@ -2,7 +2,7 @@ use rusqlite::types::ToSql;
 use rusqlite::{OptionalExtension, Row};
 
 use super::{Result, Store, StoreError, json_column, path_column, path_to_sql, to_json};
-use crate::model::{Game, GameId};
+use crate::model::{Game, GameId, Source};
 
 const COLUMNS: &str = "id, title, sort_title, developer, platform, installed, install_path, \
     size_bytes, added_at, last_played_at, favourite, hidden, pin_order, user_removed, \
@@ -87,6 +87,17 @@ impl Store {
             .prepare(&format!("SELECT {COLUMNS} FROM games ORDER BY id"))?;
         let games = statement
             .query_map([], game_from_row)?
+            .collect::<rusqlite::Result<_>>()?;
+        Ok(games)
+    }
+
+    /// Every stored game of one source, ordered by ID.
+    pub fn games_from(&self, source: Source) -> Result<Vec<Game>> {
+        let mut statement = self.conn.prepare(&format!(
+            "SELECT {COLUMNS} FROM games WHERE source = ?1 ORDER BY id"
+        ))?;
+        let games = statement
+            .query_map([source], game_from_row)?
             .collect::<rusqlite::Result<_>>()?;
         Ok(games)
     }

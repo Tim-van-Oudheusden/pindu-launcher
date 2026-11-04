@@ -1,5 +1,7 @@
 mod application;
 mod config;
+mod sources;
+mod sync_service;
 mod window;
 
 use gettextrs::{LocaleCategory, bind_textdomain_codeset, bindtextdomain, setlocale, textdomain};

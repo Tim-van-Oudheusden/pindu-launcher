@@ -237,6 +237,12 @@ impl Game {
     pub fn source(&self) -> Source {
         self.id.source()
     }
+
+    /// Whether the game belongs in the library views: still listed by its source and not
+    /// removed by the user. Hidden games count; the views filter them separately.
+    pub fn in_library(&self) -> bool {
+        self.missing_since.is_none() && !self.user_removed
+    }
 }
 
 /// How we start a game that has no launcher of its own.
