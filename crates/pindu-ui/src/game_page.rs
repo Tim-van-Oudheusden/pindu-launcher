@@ -1,6 +1,8 @@
 //! The game page: hero art with the logo or title, Play with default focus, a ⋮ menu, a
 //! facts row, the About group and, for store games, a read-only launch summary.
 
+use std::cell::RefCell;
+
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
@@ -50,6 +52,8 @@ mod imp {
         pub steam_dialog_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub permission_banner: TemplateChild<adw::Banner>,
+        /// The shown game and its `notify::playing` handler.
+        pub playing_handler: RefCell<Option<(GameObject, glib::SignalHandlerId)>>,
     }
 
     #[glib::object_subclass]
@@ -67,7 +71,13 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for GamePage {}
+    impl ObjectImpl for GamePage {
+        fn dispose(&self) {
+            if let Some((object, handler)) = self.playing_handler.take() {
+                object.disconnect(handler);
+            }
+        }
+    }
     impl WidgetImpl for GamePage {}
 
     impl NavigationPageImpl for GamePage {
@@ -100,6 +110,16 @@ impl GamePage {
         self.set_title(&game.title);
         imp.title.set_label(&game.title);
         imp.play_button.set_action_target_value(Some(&target));
+        let handler = object.connect_notify_local(
+            Some("playing"),
+            glib::clone!(
+                #[weak(rename_to = page)]
+                self,
+                move |object, _| page.show_playing(object.is_playing())
+            ),
+        );
+        imp.playing_handler.replace(Some((object.clone(), handler)));
+        self.show_playing(object.is_playing());
         imp.open_in_launcher.set_action_target_value(Some(&target));
         imp.more_button.set_menu_model(Some(&more_menu(game)));
 
@@ -166,6 +186,32 @@ impl GamePage {
                 imp.title.set_visible(false);
             }
         });
+    }
+}
+
+impl GamePage {
+    /// Play turns into Stop while a game we started runs.
+    fn show_playing(&self, playing: bool) {
+        let button = &self.imp().play_button;
+        let (label, action, style, old_style) = if playing {
+            (
+                gettext("_Stop"),
+                "app.stop",
+                "destructive-action",
+                "suggested-action",
+            )
+        } else {
+            (
+                gettext("_Play"),
+                "app.play",
+                "suggested-action",
+                "destructive-action",
+            )
+        };
+        button.set_label(&label);
+        button.set_action_name(Some(action));
+        button.remove_css_class(old_style);
+        button.add_css_class(style);
     }
 }
 
