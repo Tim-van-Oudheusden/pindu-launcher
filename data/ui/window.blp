@@ -1,0 +1,35 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PinduWindow: Adw.ApplicationWindow {
+  title: _("Pindu launcher");
+  width-request: 360;
+  height-request: 294;
+
+  content: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      [end]
+      MenuButton {
+        primary: true;
+        icon-name: "open-menu-symbolic";
+        tooltip-text: _("Main Menu");
+        menu-model: primary_menu;
+      }
+    }
+
+    content: Adw.StatusPage {
+      icon-name: "io.github.tim_van_oudheusden.pindu-launcher";
+      title: _("Pindu launcher");
+    };
+  };
+}
+
+menu primary_menu {
+  section {
+    item {
+      label: _("_About Pindu launcher");
+      action: "app.about";
+    }
+  }
+}

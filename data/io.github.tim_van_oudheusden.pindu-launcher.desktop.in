@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Pindu launcher
+Comment=Browse and start the games on this computer
+Exec=pindu-launcher
+Icon=io.github.tim_van_oudheusden.pindu-launcher
+Terminal=false
+Type=Application
+Categories=Game;
+# Translators: Search terms to find this application. Do NOT translate or localize the semicolons! The list MUST also end with a semicolon!
+Keywords=games;library;launcher;steam;heroic;
+StartupNotify=true
+DBusActivatable=true

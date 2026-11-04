@@ -1,0 +1,16 @@
+[workspace]
+resolver = "3"
+members = ["crates/pindu-core", "crates/pindu-ui"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/Tim-van-Oudheusden/pindu-launcher"
+
+[workspace.dependencies]
+pindu-core = { path = "crates/pindu-core" }
+
+[profile.release]
+lto = "thin"
