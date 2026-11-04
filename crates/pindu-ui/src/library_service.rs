@@ -3,7 +3,7 @@
 use gtk::glib;
 use gtk::subclass::prelude::*;
 use pindu_core::library::{self, LibraryEntry};
-use pindu_core::model::{Game, GameId, Timestamp};
+use pindu_core::model::{Game, GameId, LaunchConfig, Timestamp};
 use pindu_core::paths::default_library_db_path;
 use pindu_core::store::{self, Store};
 
@@ -66,6 +66,24 @@ impl LibraryService {
     /// Whether a Steam game starts through Steam's launch-options dialog.
     pub fn set_steam_launch_dialog(&self, id: &GameId, dialog: bool) {
         self.edit_game(id, move |game| game.steam_launch_dialog = dialog);
+    }
+
+    /// The game's launch config, read on a worker thread; `None` when there is none or
+    /// the store cannot be read.
+    pub async fn launch_config(&self, id: &GameId) -> Option<LaunchConfig> {
+        let id = id.clone();
+        let read = gtk::gio::spawn_blocking(move || {
+            Store::open(&default_library_db_path())?.launch_config(&id)
+        })
+        .await;
+        match read {
+            Ok(Ok(config)) => config,
+            Ok(Err(error)) => {
+                glib::g_warning!("pindu", "Could not read a launch config: {error}");
+                None
+            }
+            Err(_) => None,
+        }
     }
 
     /// Changes one stored game on a worker thread, then reloads the model.
