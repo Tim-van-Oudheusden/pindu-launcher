@@ -1,6 +1,6 @@
 //! Games added by hand: a folder the user granted, a program in it, a title and options.
 //! They start through host spawn and record their own sessions. Art the user picks for
-//! any game is kept here too, in the data folder.
+//! any game, and art fetched from SteamGridDB, is kept here too, in the data folder.
 
 use std::fmt;
 use std::os::unix::fs::PermissionsExt;
@@ -266,31 +266,85 @@ pub fn set_user_art(
     extension: &str,
     bytes: &[u8],
 ) -> Result<PathBuf, ManualError> {
+    store_art(
+        store,
+        art_dir,
+        id,
+        layout,
+        ArtOrigin::User,
+        extension,
+        bytes,
+    )
+}
+
+/// Removes the user's art of a game in `layout`, file and record.
+pub fn remove_user_art(store: &Store, id: &GameId, layout: ArtLayout) -> Result<(), ManualError> {
+    remove_art(store, id, layout, ArtOrigin::User)
+}
+
+/// Stores art fetched from SteamGridDB, beside user art in `art_dir` (not in a cache
+/// that may be cleared). Replaces art fetched earlier in that layout.
+pub fn set_steamgriddb_art(
+    store: &Store,
+    art_dir: &Path,
+    id: &GameId,
+    layout: ArtLayout,
+    extension: &str,
+    bytes: &[u8],
+) -> Result<PathBuf, ManualError> {
+    store_art(
+        store,
+        art_dir,
+        id,
+        layout,
+        ArtOrigin::SteamGridDb,
+        extension,
+        bytes,
+    )
+}
+
+fn store_art(
+    store: &Store,
+    art_dir: &Path,
+    id: &GameId,
+    layout: ArtLayout,
+    origin: ArtOrigin,
+    extension: &str,
+    bytes: &[u8],
+) -> Result<PathBuf, ManualError> {
     let folder = art_dir.join(&sha256_hex(id.as_str().as_bytes())[..16]);
-    let path = folder.join(format!("{layout}.{extension}"));
+    let name = match origin {
+        ArtOrigin::User => format!("{layout}.{extension}"),
+        _ => format!("{layout}-{origin}.{extension}"),
+    };
+    let path = folder.join(name);
     std::fs::create_dir_all(&folder)?;
-    remove_user_art(store, id, layout)?;
+    remove_art(store, id, layout, origin)?;
     std::fs::write(&path, bytes)?;
     store.set_artwork(&Artwork {
         game_id: id.clone(),
         layout,
-        origin: ArtOrigin::User,
+        origin,
         path: path.clone(),
     })?;
     Ok(path)
 }
 
-/// Removes the user's art of a game in `layout`, file and record.
-pub fn remove_user_art(store: &Store, id: &GameId, layout: ArtLayout) -> Result<(), ManualError> {
+fn remove_art(
+    store: &Store,
+    id: &GameId,
+    layout: ArtLayout,
+    origin: ArtOrigin,
+) -> Result<(), ManualError> {
     for art in store.artwork(id)? {
-        if art.layout == layout && art.origin == ArtOrigin::User {
+        if art.layout == layout && art.origin == origin {
             match std::fs::remove_file(&art.path) {
                 Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
                     return Err(error.into());
                 }
                 _ => {}
             }
-            store.delete_artwork(id, layout, ArtOrigin::User)?;
+            store.delete_artwork(id, layout, origin)?;
         }
     }
     Ok(())
@@ -502,5 +556,33 @@ mod tests {
 
         assert!(store.artwork(&id).unwrap().is_empty());
         assert!(!path.exists());
+    }
+
+    #[test]
+    fn steamgriddb_art_is_kept_beside_user_art_and_replaced_when_fetched_again() {
+        let (dir, store) = temp_store();
+        let id = add_game(&store, &form(), 100).unwrap();
+        let art_dir = dir.path().join("art");
+        let user = set_user_art(&store, &art_dir, &id, ArtLayout::Cover, "png", b"mine").unwrap();
+        let first =
+            set_steamgriddb_art(&store, &art_dir, &id, ArtLayout::Cover, "jpg", b"one").unwrap();
+
+        let second =
+            set_steamgriddb_art(&store, &art_dir, &id, ArtLayout::Cover, "png", b"two").unwrap();
+
+        assert_eq!(std::fs::read(&second).unwrap(), b"two");
+        assert!(!first.exists());
+        assert_eq!(std::fs::read(&user).unwrap(), b"mine");
+        let mut origins: Vec<_> = store
+            .artwork(&id)
+            .unwrap()
+            .into_iter()
+            .map(|art| (art.origin, art.path))
+            .collect();
+        origins.sort();
+        assert_eq!(
+            origins,
+            [(ArtOrigin::SteamGridDb, second), (ArtOrigin::User, user)]
+        );
     }
 }

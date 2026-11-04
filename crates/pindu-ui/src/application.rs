@@ -12,6 +12,7 @@ use crate::permission_service;
 use crate::preferences::PreferencesDialog;
 use crate::search_provider;
 use crate::session_service::SessionService;
+use crate::steamgriddb_service;
 use crate::sync_service::SyncService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
@@ -35,6 +36,8 @@ mod imp {
         pub watch_service: OnceCell<WatchService>,
         /// The GNOME Shell search provider's registration.
         pub search_provider: RefCell<Option<gio::RegistrationId>>,
+        /// Whether SteamGridDB art is being fetched.
+        pub fetching_art: std::cell::Cell<bool>,
         /// A game `--launch` asked for when this is the first instance.
         pub pending_launch: RefCell<Option<String>>,
     }
@@ -83,9 +86,14 @@ mod imp {
             self.parent_startup();
             let library = LibraryService::new();
             self.sync_service.connect_finished(glib::clone!(
+                #[weak(rename_to = app)]
+                self.obj(),
                 #[weak]
                 library,
-                move |_| library.reload()
+                move |_| {
+                    library.reload();
+                    app.fetch_missing_art();
+                }
             ));
             self.session_service
                 .set(SessionService::new(&library))
@@ -316,6 +324,22 @@ impl PinduApplication {
 
     /// Runs `work` for the game an action names, in the active window, with a way to
     /// show a toast there.
+    /// Fetches SteamGridDB art for games without their own, once at a time, and shows it.
+    fn fetch_missing_art(&self) {
+        if self.imp().fetching_art.replace(true) {
+            return;
+        }
+        let prefer = gio::Settings::new(APP_ID).boolean("prefer-steamgriddb");
+        let app = self.clone();
+        glib::spawn_future_local(async move {
+            let stored = steamgriddb_service::fetch_missing_art(prefer).await;
+            app.imp().fetching_art.set(false);
+            if stored > 0 {
+                app.library_service().reload();
+            }
+        });
+    }
+
     /// Saves a backup of collections, favourites, hidden games, games added by hand and
     /// tracked playtime to a file the user picks.
     fn export_library(&self) {
