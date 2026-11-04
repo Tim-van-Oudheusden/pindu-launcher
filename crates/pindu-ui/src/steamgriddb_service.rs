@@ -3,13 +3,19 @@
 //! so a picker that was opened once works offline.
 
 use std::cell::Cell;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use gtk::glib;
+use gtk::{gio, glib};
 use pindu_core::art_cache::default_cache_dir;
-use pindu_core::model::ArtLayout;
-use pindu_core::steamgriddb::{self, GameRef, Image, SearchHit, retry_delay};
+use pindu_core::manual;
+use pindu_core::model::{ArtLayout, Artwork, Game, GameId, Source};
+use pindu_core::paths::{default_library_db_path, default_user_art_dir};
+use pindu_core::steamgriddb::{
+    self, GameRef, Image, SearchHit, layouts_to_fetch, matching_hit, retry_delay,
+};
+use pindu_core::store::Store;
 use soup::prelude::*;
 
 use crate::file_service::PickedImage;
@@ -53,6 +59,111 @@ pub async fn set_api_key(key: &str) -> Result<(), String> {
         )
         .await
         .map_err(|error| error.to_string())
+}
+
+/// Fetches SteamGridDB art for the games in the library that lack it (see
+/// [`layouts_to_fetch`]), the top image per layout, and returns how many were stored.
+/// Without a stored key nothing is requested. Steam games are looked up by app ID, others
+/// by a search that must find their exact title. A failed request ends the run (offline,
+/// key rejected, rate limit given up); answers already fetched come from the cache.
+pub async fn fetch_missing_art(prefer_steamgriddb: bool) -> usize {
+    let Ok(Some(key)) = api_key().await else {
+        return 0;
+    };
+    let wanted = gio::spawn_blocking(move || games_wanting_art(prefer_steamgriddb))
+        .await
+        .unwrap_or_else(|_| Err("the library read stopped unexpectedly".into()));
+    let wanted = match wanted {
+        Ok(wanted) => wanted,
+        Err(error) => {
+            glib::g_warning!(
+                "pindu",
+                "Could not read the library for SteamGridDB art: {error}"
+            );
+            return 0;
+        }
+    };
+    let client = SteamGridDb::new(key);
+    let mut stored = 0;
+    for (game, layouts) in wanted {
+        let game_ref = match steam_app_id(&game) {
+            Some(app_id) => GameRef::Steam(app_id),
+            None => match client.search(&game.title).await {
+                Ok(hits) => match matching_hit(&game.title, &hits) {
+                    Some(id) => GameRef::Grid(id),
+                    None => continue,
+                },
+                Err(error) => {
+                    glib::g_debug!("pindu", "SteamGridDB art stopped: {error}");
+                    return stored;
+                }
+            },
+        };
+        for layout in layouts {
+            let image = match client.images(layout, &game_ref).await {
+                Ok(images) => images.into_iter().next(),
+                Err(error) => {
+                    glib::g_debug!("pindu", "SteamGridDB art stopped: {error}");
+                    return stored;
+                }
+            };
+            let Some(image) = image else { continue };
+            let picked = match client.image(&image.url).await {
+                Ok(picked) => picked,
+                Err(error) => {
+                    glib::g_debug!("pindu", "Could not fetch {}: {error}", image.url);
+                    continue;
+                }
+            };
+            let id = game.id.clone();
+            let saved = gio::spawn_blocking(move || {
+                let store = Store::open(&default_library_db_path()).map_err(|e| e.to_string())?;
+                manual::set_steamgriddb_art(
+                    &store,
+                    &default_user_art_dir(),
+                    &id,
+                    layout,
+                    &picked.extension,
+                    &picked.bytes,
+                )
+                .map_err(|error| error.to_string())
+            })
+            .await;
+            match saved {
+                Ok(Ok(_)) => stored += 1,
+                Ok(Err(error)) => {
+                    glib::g_warning!("pindu", "Could not store SteamGridDB art: {error}")
+                }
+                Err(_) => {}
+            }
+        }
+    }
+    stored
+}
+
+/// Games in the library, not hidden, with the layouts they want art for.
+fn games_wanting_art(prefer_steamgriddb: bool) -> Result<Vec<(Game, Vec<ArtLayout>)>, String> {
+    let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
+    let mut artwork: HashMap<GameId, Vec<Artwork>> = HashMap::new();
+    for art in store.all_artwork().map_err(|error| error.to_string())? {
+        artwork.entry(art.game_id.clone()).or_default().push(art);
+    }
+    let games = store.games().map_err(|error| error.to_string())?;
+    Ok(games
+        .into_iter()
+        .filter(|game| game.in_library() && !game.hidden)
+        .filter_map(|game| {
+            let art = artwork.get(&game.id).map_or(&[][..], Vec::as_slice);
+            let layouts = layouts_to_fetch(art, prefer_steamgriddb);
+            (!layouts.is_empty()).then_some((game, layouts))
+        })
+        .collect())
+}
+
+fn steam_app_id(game: &Game) -> Option<u32> {
+    (game.id.source() == Source::Steam)
+        .then(|| game.id.native_id().parse().ok())
+        .flatten()
 }
 
 /// A SteamGridDB client sharing one request slot.

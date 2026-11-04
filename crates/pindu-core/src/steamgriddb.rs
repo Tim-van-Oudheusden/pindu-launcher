@@ -7,7 +7,8 @@ use std::time::Duration;
 use serde_json::Value as Json;
 
 use crate::launch::percent_encode;
-use crate::model::ArtLayout;
+use crate::model::{ArtLayout, ArtOrigin, Artwork};
+use crate::search::normalize;
 use crate::sources::sha256::sha256_hex;
 
 const API: &str = "https://www.steamgriddb.com/api/v2";
@@ -61,6 +62,35 @@ pub fn images_url(layout: ArtLayout, game: &GameRef) -> String {
         ""
     };
     format!("{API}/{kind}/{by}{query}")
+}
+
+/// The layouts to fetch for a game: those with no art yet, and, when SteamGridDB art is
+/// preferred, those with only the source's. Art the user picked or fetched before stays.
+pub fn layouts_to_fetch(artwork: &[Artwork], prefer_steamgriddb: bool) -> Vec<ArtLayout> {
+    ArtLayout::ALL
+        .iter()
+        .copied()
+        .filter(|layout| {
+            !artwork.iter().any(|art| {
+                art.layout == *layout
+                    && match art.origin {
+                        ArtOrigin::User | ArtOrigin::SteamGridDb => true,
+                        ArtOrigin::Source => !prefer_steamgriddb,
+                        ArtOrigin::Generated => false,
+                    }
+            })
+        })
+        .collect()
+}
+
+/// The SteamGridDB game a title search means: the first hit with the same name, letter
+/// case, accents and punctuation aside. A near miss is no match, so a game never gets
+/// another game's art.
+pub fn matching_hit(title: &str, hits: &[SearchHit]) -> Option<u64> {
+    let title = normalize(title);
+    hits.iter()
+        .find(|hit| normalize(&hit.name) == title)
+        .map(|hit| hit.id)
 }
 
 /// A title search.
@@ -137,6 +167,59 @@ pub fn cache_path(cache_dir: &Path, url: &str) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::{GameId, Source};
+
+    fn art(layout: ArtLayout, origin: ArtOrigin) -> Artwork {
+        Artwork {
+            game_id: GameId::new(Source::Desktop, "game"),
+            layout,
+            origin,
+            path: "/art.png".into(),
+        }
+    }
+
+    #[test]
+    fn a_search_hit_is_used_only_when_its_name_is_the_title() {
+        let hit = |id, name: &str| SearchHit {
+            id,
+            name: name.into(),
+        };
+        let hits = [hit(1, "Hades II"), hit(2, "Hades"), hit(3, "HADES")];
+
+        assert_eq!(matching_hit("Hades", &hits), Some(2));
+        assert_eq!(
+            matching_hit("the witcher 3", &[hit(7, "The Witcher 3")]),
+            Some(7)
+        );
+        assert_eq!(
+            matching_hit("Pokemon Puzzle", &[hit(9, "Pokémon Puzzle")]),
+            Some(9)
+        );
+        assert_eq!(matching_hit("Hades III", &hits), None);
+    }
+
+    #[test]
+    fn art_is_fetched_for_layouts_nobody_filled_or_also_over_source_art_when_preferred() {
+        let artwork = [
+            art(ArtLayout::Cover, ArtOrigin::Source),
+            art(ArtLayout::Hero, ArtOrigin::User),
+            art(ArtLayout::Logo, ArtOrigin::Generated),
+        ];
+
+        assert_eq!(
+            layouts_to_fetch(&artwork, false),
+            [ArtLayout::Logo, ArtLayout::Icon]
+        );
+        assert_eq!(
+            layouts_to_fetch(&artwork, true),
+            [ArtLayout::Cover, ArtLayout::Logo, ArtLayout::Icon]
+        );
+        assert!(
+            layouts_to_fetch(&[art(ArtLayout::Cover, ArtOrigin::SteamGridDb)], true)
+                .iter()
+                .all(|layout| *layout != ArtLayout::Cover)
+        );
+    }
 
     #[test]
     fn requests_go_by_steam_app_id_when_there_is_one() {
