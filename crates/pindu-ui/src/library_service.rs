@@ -1,8 +1,11 @@
 //! Loads the library from the store into the shared [`LibraryModel`], off the main thread.
 
+use std::path::PathBuf;
+
 use crate::config::APP_ID;
 use gtk::glib;
 use gtk::subclass::prelude::*;
+use pindu_core::backup::{self, BackupError, ImportSummary};
 use pindu_core::library::{self, LibraryEntry};
 use pindu_core::model::{Collection, Game, GameId, LaunchConfig, Timestamp};
 use pindu_core::paths::default_library_db_path;
@@ -254,6 +257,45 @@ impl LibraryService {
         .await;
     }
 
+    /// Writes a backup of what the user made here to `path`.
+    pub async fn export_backup(&self, path: PathBuf, now: Timestamp) -> Result<(), String> {
+        gtk::gio::spawn_blocking(move || {
+            let store =
+                Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
+            let text = backup::export(&store, now).map_err(|error| error.to_string())?;
+            std::fs::write(&path, text).map_err(|error| error.to_string())
+        })
+        .await
+        .unwrap_or_else(|_| Err("the export stopped unexpectedly".into()))
+    }
+
+    /// Restores the backup at `path` into the library, then reloads the model.
+    pub async fn import_backup(&self, path: PathBuf) -> Result<ImportSummary, ImportFailure> {
+        let imported = gtk::gio::spawn_blocking(move || {
+            let text = std::fs::read_to_string(&path).map_err(|error| match error.kind() {
+                std::io::ErrorKind::InvalidData => ImportFailure::NotABackup,
+                _ => ImportFailure::Failed(error.to_string()),
+            })?;
+            let store = Store::open(&default_library_db_path())
+                .map_err(|error| ImportFailure::Failed(error.to_string()))?;
+            backup::import(&store, &text).map_err(|error| match error {
+                BackupError::NotABackup => ImportFailure::NotABackup,
+                BackupError::TooNew { .. } => ImportFailure::TooNew,
+                BackupError::Store(error) => ImportFailure::Failed(error.to_string()),
+            })
+        })
+        .await
+        .unwrap_or_else(|_| {
+            Err(ImportFailure::Failed(
+                "the import stopped unexpectedly".into(),
+            ))
+        });
+        if imported.is_ok() {
+            self.reload();
+        }
+        imported
+    }
+
     /// Runs a store write in the background, then reloads the model.
     fn spawn_write(&self, work: impl FnOnce(&Store) -> store::Result<()> + Send + 'static) {
         let service = self.clone();
@@ -310,4 +352,14 @@ fn read_games(prefer_steamgriddb: bool) -> Result<(Vec<LibraryEntry>, Vec<Collec
     let games = library::load(&store, prefer_steamgriddb).map_err(|error| error.to_string())?;
     let collections = store.collections().map_err(|error| error.to_string())?;
     Ok((games, collections))
+}
+
+/// Why a backup could not be imported.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ImportFailure {
+    /// The file is not a backup of ours (or not text at all).
+    NotABackup,
+    /// Written by a newer version of the app.
+    TooNew,
+    Failed(String),
 }
