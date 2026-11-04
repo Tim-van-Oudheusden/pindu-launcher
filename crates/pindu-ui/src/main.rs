@@ -1,15 +1,8 @@
-mod application;
-mod config;
-mod sources;
-mod sync_service;
-mod window;
-
 use gettextrs::{LocaleCategory, bind_textdomain_codeset, bindtextdomain, setlocale, textdomain};
 use gtk::prelude::*;
 use gtk::{gio, glib};
-
-use self::application::PinduApplication;
-use self::config::{GETTEXT_PACKAGE, LOCALEDIR, PKGDATADIR};
+use pindu_ui::application::PinduApplication;
+use pindu_ui::config::{GETTEXT_PACKAGE, LOCALEDIR, PKGDATADIR};
 
 fn main() -> glib::ExitCode {
     // SAFETY: called first thing in main, before any other thread exists.
