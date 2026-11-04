@@ -14,6 +14,17 @@ meson compile -C _build
 meson test -C _build
 ```
 
+## Translating
+
+Translations are gettext `.po` files in `po/`, one per language listed in `po/LINGUAS`, made from the template
+`po/pindu-launcher.pot`. After changing translatable strings, refresh the template:
+
+```sh
+meson compile -C _build pindu-launcher-pot
+```
+
+Every file with translatable strings must be listed in `po/POTFILES.in`; `meson test` checks that.
+
 ## Licence
 
 GPL-3.0-or-later; see [LICENSE](LICENSE).

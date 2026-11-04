@@ -1,0 +1,1083 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the pindu-launcher package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: pindu-launcher\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-04 17:44+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: crates/pindu-ui/src/application.rs:65
+msgid "Start a game by its ID, without opening the window"
+msgstr ""
+
+#: crates/pindu-ui/src/application.rs:336
+#: data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in:2
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:8
+#: data/ui/window.blp:5 data/ui/window.blp:23
+msgid "Pindu launcher"
+msgstr ""
+
+#. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
+#: crates/pindu-ui/src/application.rs:344
+msgid "translator-credits"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:27
+msgid "_New Collection…"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:34
+msgid "_Add to Collection"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:36
+#, rust-format
+msgid "Remove from “{collection}”"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:109 data/ui/window.blp:91
+msgid "New Collection"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:110
+msgid "_Create"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:122
+#, rust-format
+msgid "Created “{collection}”"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:135
+msgid "Rename Collection"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:136
+msgid "_Rename"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:164
+#, rust-format
+msgid "Deleted “{collection}”"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:165
+#: crates/pindu-ui/src/collection_actions.rs:190
+#: crates/pindu-ui/src/window.rs:526 crates/pindu-ui/src/window.rs:540
+msgid "_Undo"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:184
+#, rust-format
+msgid "Added to “{collection}”"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:186
+#, rust-format
+msgid "Removed from “{collection}”"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:210
+msgid "Name"
+msgstr ""
+
+#: crates/pindu-ui/src/collection_actions.rs:219
+#: crates/pindu-ui/src/game_dialog.rs:453 data/ui/game_dialog.blp:16
+msgid "_Cancel"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:146 data/ui/shortcuts-dialog.blp:14
+msgid "Add Game"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:147
+msgid "_Add"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:162
+#, rust-format
+msgid "Edit “{title}”"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:164
+msgid "_Save"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:227
+msgid "Choose the Game's Folder"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:240
+msgid "This folder cannot be used"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:295
+msgid "No programs found in this folder"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:355
+msgid "Choose an Image File"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:356
+#: crates/pindu-ui/src/game_dialog.rs:444
+msgid "Use a Web Address"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:357
+msgid "Choose From SteamGridDB"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:358
+msgid "Remove Your Image"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:387
+msgid "Images"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:392
+msgid "Choose an Image"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:446
+msgid "The image is downloaded once and kept with your library."
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:453
+msgid "_Use"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:467
+#, rust-format
+msgid "Could not use the address: {error}"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:494
+#, rust-format
+msgid "New image ({extension})"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:497
+msgid "Your image will be removed"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:498
+msgid "Your image"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:499
+msgid "None"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:500
+msgid "From the launcher, if it has one"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:528
+#, rust-format
+msgid "Added “{title}”"
+msgstr ""
+
+#: crates/pindu-ui/src/game_dialog.rs:563
+msgid "Choose a folder and a program first"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:174
+#, rust-format
+msgid "{launcher} starts the game, keeps its settings and tracks its playtime"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:178
+#, rust-format
+msgid "Open in {launcher}"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:223
+msgid "Remove from Favourites"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:225 data/ui/game_page.blp:102
+msgid "Add to Favourites"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:236
+msgid "_Stop"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:243
+#: crates/pindu-ui/src/widgets/cover_tile.rs:250 data/ui/game_page.blp:90
+msgid "_Play"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:269
+#: crates/pindu-ui/src/widgets/cover_tile.rs:286
+msgid "_Edit…"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:271
+#: crates/pindu-ui/src/widgets/cover_tile.rs:288
+msgid "_Unhide"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:273
+#: crates/pindu-ui/src/widgets/cover_tile.rs:290
+msgid "_Hide"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:275
+#: crates/pindu-ui/src/widgets/cover_tile.rs:292
+msgid "_Remove"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:277
+#: crates/pindu-ui/src/widgets/cover_tile.rs:253
+msgid "_Open in Launcher"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:281
+msgid "Open _Install Folder"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:292
+msgid "Launcher"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:295
+msgid "Last Played"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:296
+msgid "Never"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:298
+msgid "Added"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:301
+msgid "Size"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:329
+#, rust-format
+msgid "Playtime · {source}"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:331
+msgid "Playtime · Tracked Here"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:332
+msgid "Playtime"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:340 crates/pindu-ui/src/preferences.rs:316
+msgid "None yet"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:341
+#, rust-format
+msgid "{n} minute"
+msgid_plural "{n} minutes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/pindu-ui/src/game_page.rs:344
+#, rust-format
+msgid "{n} hour"
+msgid_plural "{n} hours"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/pindu-ui/src/launch_service.rs:74
+#, rust-format
+msgid "Starting “{title}”"
+msgstr ""
+
+#: crates/pindu-ui/src/launch_service.rs:78
+#, rust-format
+msgid "Could not start “{title}”"
+msgstr ""
+
+#: crates/pindu-ui/src/launch_service.rs:83
+msgid "This game cannot be started yet"
+msgstr ""
+
+#: crates/pindu-ui/src/launch_service.rs:116
+#, rust-format
+msgid "Starting “{title}” in {launcher}"
+msgstr ""
+
+#: crates/pindu-ui/src/launch_service.rs:120
+#: crates/pindu-ui/src/launch_service.rs:175
+#, rust-format
+msgid "Could not open {launcher}"
+msgstr ""
+
+#: crates/pindu-ui/src/launch_service.rs:134
+msgid "Permission Needed"
+msgstr ""
+
+#: crates/pindu-ui/src/launch_service.rs:137
+#, rust-format
+msgid ""
+"“{title}” starts on this computer, outside the sandbox. Allow that in "
+"Preferences, then restart Pindu launcher."
+msgstr ""
+
+#: crates/pindu-ui/src/launch_service.rs:144 crates/pindu-ui/src/window.rs:884
+msgid "_Close"
+msgstr ""
+
+#: crates/pindu-ui/src/launch_service.rs:145
+msgid "_How to Enable"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:79
+msgid "Command copied"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:121
+msgid "Allowed"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:123
+msgid "Not allowed"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:177
+msgid "Not found on this computer"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:188
+msgid "Import"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:200
+msgid "Folder"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:202
+msgid "Found automatically"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:207 data/ui/game_dialog.blp:45
+msgid "_Choose…"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:213
+msgid "Find Automatically"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:244
+msgid "Show in Sidebar"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:261
+#, rust-format
+msgid "Choose the Folder of {source}"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:315
+msgid "A key is stored in your keyring"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:318
+#, rust-format
+msgid "The keyring cannot be used: {error}"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:341
+msgid "Key saved"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:345
+#, rust-format
+msgid "The key was not saved: {error}"
+msgstr ""
+
+#: crates/pindu-ui/src/search_provider.rs:156
+#, rust-format
+msgid "Game in {launcher}"
+msgstr ""
+
+#: crates/pindu-ui/src/session_service.rs:201
+msgid "A game you started is running"
+msgstr ""
+
+#: crates/pindu-ui/src/sources.rs:9
+msgid "Heroic: Epic"
+msgstr ""
+
+#: crates/pindu-ui/src/sources.rs:10
+msgid "Heroic: GOG"
+msgstr ""
+
+#: crates/pindu-ui/src/sources.rs:11
+msgid "Heroic: Amazon"
+msgstr ""
+
+#: crates/pindu-ui/src/sources.rs:12
+msgid "Heroic: Sideloaded"
+msgstr ""
+
+#: crates/pindu-ui/src/sources.rs:16
+msgid "Desktop"
+msgstr ""
+
+#: crates/pindu-ui/src/sources.rs:17
+msgid "Added by Hand"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:44 data/ui/game_dialog.blp:80
+msgid "Cover"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:45 data/ui/game_dialog.blp:84
+msgid "Banner"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:46 data/ui/game_dialog.blp:88
+msgid "Logo"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:47
+msgid "Icon"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:83
+#, rust-format
+msgid "SteamGridDB: {layout}"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:102
+msgid "The Keyring Cannot Be Used"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:119 data/ui/preferences.blp:102
+msgid "API Key"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:127
+msgid "_Save Key"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:132
+msgid "Get a Key on SteamGridDB"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:143
+msgid "SteamGridDB Needs Your API Key"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:145
+msgid "The key is kept in your keyring, never in plain settings."
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:160
+msgid "The Key Was Not Saved"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:184
+msgid "No Images Found"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:185
+msgid "SteamGridDB has no images of this kind for the game"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:194
+msgid ""
+"SteamGridDB did not accept the stored key. Enter a valid one; it is kept in "
+"your keyring."
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:199
+msgid "SteamGridDB Cannot Be Reached"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:235
+msgid "The Image Cannot Be Downloaded"
+msgstr ""
+
+#: crates/pindu-ui/src/sync_service.rs:121
+msgid "The import stopped unexpectedly"
+msgstr ""
+
+#: crates/pindu-ui/src/widgets/cover_tile.rs:195
+#: crates/pindu-ui/src/widgets/cover_tile.rs:309
+msgid "Playing"
+msgstr ""
+
+#: crates/pindu-ui/src/widgets/cover_tile.rs:197
+#: crates/pindu-ui/src/widgets/cover_tile.rs:311
+msgid "Needs permission"
+msgstr ""
+
+#: crates/pindu-ui/src/widgets/cover_tile.rs:199
+#: crates/pindu-ui/src/widgets/cover_tile.rs:315
+msgid "Not installed"
+msgstr ""
+
+#: crates/pindu-ui/src/widgets/cover_tile.rs:210
+msgid "Stop"
+msgstr ""
+
+#: crates/pindu-ui/src/widgets/cover_tile.rs:212 data/ui/cover_tile.blp:60
+msgid "Play"
+msgstr ""
+
+#: crates/pindu-ui/src/widgets/cover_tile.rs:251
+msgid "_Details"
+msgstr ""
+
+#: crates/pindu-ui/src/widgets/cover_tile.rs:270
+msgid "Remove from _Favourites"
+msgstr ""
+
+#: crates/pindu-ui/src/widgets/cover_tile.rs:272
+msgid "Add to _Favourites"
+msgstr ""
+
+#: crates/pindu-ui/src/widgets/cover_tile.rs:278
+msgid "Un_pin from Jump Back In"
+msgstr ""
+
+#: crates/pindu-ui/src/widgets/cover_tile.rs:280
+msgid "_Pin to Jump Back In"
+msgstr ""
+
+#: crates/pindu-ui/src/widgets/cover_tile.rs:313 data/ui/window.blp:44
+#: data/ui/window.blp:164
+msgid "Installed"
+msgstr ""
+
+#: crates/pindu-ui/src/window.rs:415
+msgid "Today"
+msgstr ""
+
+#: crates/pindu-ui/src/window.rs:416
+msgid "This Week"
+msgstr ""
+
+#: crates/pindu-ui/src/window.rs:417
+msgid "Earlier"
+msgstr ""
+
+#: crates/pindu-ui/src/window.rs:425
+#, rust-format
+msgid "{time} in {source}"
+msgstr ""
+
+#: crates/pindu-ui/src/window.rs:429
+#, rust-format
+msgid "{time}, tracked here"
+msgstr ""
+
+#: crates/pindu-ui/src/window.rs:492
+msgid "Three games are pinned already; unpin one first"
+msgstr ""
+
+#: crates/pindu-ui/src/window.rs:504
+msgid "Hidden Games"
+msgstr ""
+
+#: crates/pindu-ui/src/window.rs:525
+#, rust-format
+msgid "“{title}” removed"
+msgstr ""
+
+#: crates/pindu-ui/src/window.rs:539
+#, rust-format
+msgid "“{title}” hidden"
+msgstr ""
+
+#: crates/pindu-ui/src/window.rs:863
+#, rust-format
+msgid "One import problem"
+msgid_plural "{count} import problems"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/pindu-ui/src/window.rs:866
+msgid "Details"
+msgstr ""
+
+#: crates/pindu-ui/src/window.rs:881
+msgid "Some Games Could Not Be Imported"
+msgstr ""
+
+#: crates/pindu-ui/src/window.rs:950
+msgid "Pinned"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in:3
+msgid "Browse and start the games on this computer"
+msgstr ""
+
+#. Translators: Search terms to find this application. Do NOT translate or localize the semicolons! The list MUST also end with a semicolon!
+#: data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in:10
+msgid "games;library;launcher;steam;heroic;"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:6
+msgid "Window width"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:10
+msgid "Window height"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:14
+msgid "Window maximized"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:23
+msgid "Cover tile size"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:24
+msgid "Small is 150×225, medium 200×300 and large 250×375 pixels."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:28
+msgid "Exit after launching a store game"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:29
+msgid ""
+"Quit once a store game is handed to its launcher. Games Pindu launcher "
+"starts itself keep it running, as it records their play sessions."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:33
+msgid "Show badges on covers"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:34
+msgid "The launcher badge top left and the state badge top right."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:38
+msgid "Sources left out of the sidebar"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:39
+msgid "Source IDs whose sidebar rows are hidden; their games still import."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:43
+msgid "Prefer SteamGridDB art"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:44
+msgid ""
+"Show SteamGridDB art before the launcher's own; art you pick always comes "
+"first."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml:48
+msgid "Show titles below covers"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:9
+msgid "Browse and start your games"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:11
+msgid ""
+"Pindu launcher gathers the games from Steam, Heroic and your other launchers "
+"into one library."
+msgstr ""
+
+#: data/ui/game_dialog.blp:36
+msgid "Game"
+msgstr ""
+
+#: data/ui/game_dialog.blp:37
+msgid "Choose the game's folder; its program, title and options come next."
+msgstr ""
+
+#: data/ui/game_dialog.blp:40
+msgid "Game Folder"
+msgstr ""
+
+#: data/ui/game_dialog.blp:41
+msgid "None chosen"
+msgstr ""
+
+#: data/ui/game_dialog.blp:53
+msgid "Program"
+msgstr ""
+
+#: data/ui/game_dialog.blp:60
+msgid "Title"
+msgstr ""
+
+#: data/ui/game_dialog.blp:65
+msgid "Arguments"
+msgstr ""
+
+#: data/ui/game_dialog.blp:70
+msgid "Working Folder (empty for the program's folder)"
+msgstr ""
+
+#: data/ui/game_dialog.blp:76 data/ui/preferences.blp:94
+msgid "Artwork"
+msgstr ""
+
+#: data/ui/game_dialog.blp:77
+msgid ""
+"Pick an image file or paste a web address. Art you pick is used instead of "
+"the launcher's."
+msgstr ""
+
+#: data/ui/game_page.blp:17
+msgid "Starting this game needs your permission"
+msgstr ""
+
+#: data/ui/game_page.blp:18
+msgid "How to Enable"
+msgstr ""
+
+#: data/ui/game_page.blp:113
+msgid "More Actions"
+msgstr ""
+
+#: data/ui/game_page.blp:128
+msgid "About"
+msgstr ""
+
+#: data/ui/game_page.blp:131
+msgid "Developer"
+msgstr ""
+
+#: data/ui/game_page.blp:140
+msgid "Genres"
+msgstr ""
+
+#: data/ui/game_page.blp:155
+msgid "Launch"
+msgstr ""
+
+#: data/ui/game_page.blp:158
+msgid "Started by the launcher"
+msgstr ""
+
+#: data/ui/game_page.blp:168
+msgid "Choose Launch Options"
+msgstr ""
+
+#: data/ui/game_page.blp:169
+msgid "Ask Steam which of the game’s launch options to use"
+msgstr ""
+
+#: data/ui/preferences.blp:6 data/ui/shortcuts-dialog.blp:6
+msgid "General"
+msgstr ""
+
+#: data/ui/preferences.blp:10 data/ui/shortcuts-dialog.blp:35
+#: data/ui/window.blp:29
+msgid "Library"
+msgstr ""
+
+#: data/ui/preferences.blp:13
+msgid "Cover Size"
+msgstr ""
+
+#: data/ui/preferences.blp:17
+msgid "Small"
+msgstr ""
+
+#: data/ui/preferences.blp:18
+msgid "Medium"
+msgstr ""
+
+#: data/ui/preferences.blp:19
+msgid "Large"
+msgstr ""
+
+#: data/ui/preferences.blp:25
+msgid "Show Titles"
+msgstr ""
+
+#: data/ui/preferences.blp:26
+msgid "The game's name below its cover"
+msgstr ""
+
+#: data/ui/preferences.blp:30
+msgid "Show Badges"
+msgstr ""
+
+#: data/ui/preferences.blp:31
+msgid "The launcher and state badges on covers"
+msgstr ""
+
+#: data/ui/preferences.blp:36
+msgid "Launching"
+msgstr ""
+
+#: data/ui/preferences.blp:39
+msgid "Exit After Launching"
+msgstr ""
+
+#: data/ui/preferences.blp:40
+msgid ""
+"Quit once a store game is handed to its launcher. Games Pindu launcher "
+"starts itself keep it running, to record their playtime."
+msgstr ""
+
+#: data/ui/preferences.blp:45
+msgid "Permissions"
+msgstr ""
+
+#: data/ui/preferences.blp:46
+msgid ""
+"Store games start through their launcher and always work. Desktop entries, "
+"Flatpak games and games added by hand start on this computer, outside the "
+"sandbox, which needs your permission."
+msgstr ""
+
+#: data/ui/preferences.blp:49
+msgid "Start Games on This Computer"
+msgstr ""
+
+#: data/ui/preferences.blp:60
+msgid "Run This Command, Then Restart Pindu launcher"
+msgstr ""
+
+#: data/ui/preferences.blp:71
+msgid "Copy Command"
+msgstr ""
+
+#: data/ui/preferences.blp:84 data/ui/preferences.blp:88 data/ui/window.blp:81
+msgid "Sources"
+msgstr ""
+
+#: data/ui/preferences.blp:89
+msgid ""
+"Where games come from. A source that is off is no longer imported; one left "
+"out of the sidebar still is."
+msgstr ""
+
+#: data/ui/preferences.blp:98
+msgid "SteamGridDB"
+msgstr ""
+
+#: data/ui/preferences.blp:99
+msgid ""
+"Art from SteamGridDB needs your own API key, which is kept in your keyring."
+msgstr ""
+
+#: data/ui/preferences.blp:108
+msgid "Stored Key"
+msgstr ""
+
+#: data/ui/preferences.blp:112
+msgid "Prefer SteamGridDB Art"
+msgstr ""
+
+#: data/ui/preferences.blp:113
+msgid "Show it before the launcher's own art; art you pick always comes first"
+msgstr ""
+
+#: data/ui/shortcuts-dialog.blp:9
+msgid "Search"
+msgstr ""
+
+#: data/ui/shortcuts-dialog.blp:19
+msgid "Preferences"
+msgstr ""
+
+#: data/ui/shortcuts-dialog.blp:24
+msgid "Keyboard Shortcuts"
+msgstr ""
+
+#: data/ui/shortcuts-dialog.blp:29
+msgid "Quit"
+msgstr ""
+
+#: data/ui/shortcuts-dialog.blp:38 data/ui/window.blp:109
+msgid "Toggle Sidebar"
+msgstr ""
+
+#: data/ui/shortcuts-dialog.blp:43
+msgid "Show Hidden Games"
+msgstr ""
+
+#: data/ui/shortcuts-dialog.blp:48
+msgid "Play or Open the Focused Game"
+msgstr ""
+
+#: data/ui/shortcuts-dialog.blp:53
+msgid "Remove the Focused Game"
+msgstr ""
+
+#: data/ui/shortcuts-dialog.blp:58
+msgid "Back"
+msgstr ""
+
+#: data/ui/shortcuts-dialog.blp:63
+msgid "Fullscreen Mode"
+msgstr ""
+
+#: data/ui/window.blp:32 data/ui/window.blp:100
+msgid "All Games"
+msgstr ""
+
+#: data/ui/window.blp:56 data/ui/window.blp:172
+msgid "Favourites"
+msgstr ""
+
+#: data/ui/window.blp:68
+msgid "Play History"
+msgstr ""
+
+#: data/ui/window.blp:85
+msgid "Collections"
+msgstr ""
+
+#: data/ui/window.blp:116
+msgid "Add"
+msgstr ""
+
+#: data/ui/window.blp:123
+msgid "Importing Games…"
+msgstr ""
+
+#: data/ui/window.blp:127
+msgid "Search games"
+msgstr ""
+
+#: data/ui/window.blp:136
+msgid "Main Menu"
+msgstr ""
+
+#: data/ui/window.blp:143
+msgid "Sort"
+msgstr ""
+
+#: data/ui/window.blp:168
+msgid "Not Installed"
+msgstr ""
+
+#: data/ui/window.blp:176
+msgid "Windows"
+msgstr ""
+
+#: data/ui/window.blp:180
+msgid "Native"
+msgstr ""
+
+#: data/ui/window.blp:184
+msgid "Clear"
+msgstr ""
+
+#: data/ui/window.blp:202
+msgid "Jump Back In"
+msgstr ""
+
+#: data/ui/window.blp:246
+msgid "No Games Yet"
+msgstr ""
+
+#: data/ui/window.blp:247
+msgid "Games from your launchers appear here once they are imported"
+msgstr ""
+
+#: data/ui/window.blp:250 data/ui/window.blp:355
+msgid "_Import Now"
+msgstr ""
+
+#: data/ui/window.blp:268
+msgid "No Results Found"
+msgstr ""
+
+#: data/ui/window.blp:269
+msgid "Try a different search or filter"
+msgstr ""
+
+#: data/ui/window.blp:298
+msgid "No Hidden Games"
+msgstr ""
+
+#: data/ui/window.blp:299
+msgid "Games you hide show here, to unhide them"
+msgstr ""
+
+#: data/ui/window.blp:308
+msgid "Empty Collection"
+msgstr ""
+
+#: data/ui/window.blp:309
+msgid "Add games with “Add to Collection” in their menu"
+msgstr ""
+
+#: data/ui/window.blp:324
+msgid "_Rename…"
+msgstr ""
+
+#: data/ui/window.blp:329
+msgid "Move _Up"
+msgstr ""
+
+#: data/ui/window.blp:334
+msgid "Move _Down"
+msgstr ""
+
+#: data/ui/window.blp:341
+msgid "_Delete"
+msgstr ""
+
+#: data/ui/window.blp:350
+msgid "_Add Game…"
+msgstr ""
+
+#: data/ui/window.blp:364
+msgid "_Last Played"
+msgstr ""
+
+#: data/ui/window.blp:370
+msgid "Name _A–Z"
+msgstr ""
+
+#: data/ui/window.blp:376
+msgid "Name _Z–A"
+msgstr ""
+
+#: data/ui/window.blp:382
+msgid "_Recently Added"
+msgstr ""
+
+#: data/ui/window.blp:388
+msgid "_Playtime"
+msgstr ""
+
+#: data/ui/window.blp:398
+msgid "Show _Hidden Games"
+msgstr ""
+
+#: data/ui/window.blp:405
+msgid "_Preferences"
+msgstr ""
+
+#: data/ui/window.blp:410
+msgid "_Keyboard Shortcuts"
+msgstr ""
+
+#: data/ui/window.blp:415
+msgid "_About Pindu launcher"
+msgstr ""
