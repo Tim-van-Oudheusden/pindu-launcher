@@ -1,0 +1,32 @@
+"libraryfolders"
+{
+	"0"
+	{
+		"path"		"@ROOT@/home/.local/share/Steam"
+		"label"		""
+		"apps"
+		{
+			"570"		"40000000000"
+			"1091500"		"66818683782"
+			"1493710"		"1537210305"
+		}
+	}
+	"1"
+	{
+		"path"		"@ROOT@/games/SteamLibrary"
+		"label"		"Games"
+		"apps"
+		{
+			"1245620"		"60000000000"
+		}
+	}
+	"2"
+	{
+		"path"		"/run/media/me/Outside/SteamLibrary"
+		"label"		"USB"
+		"apps"
+		{
+			"292030"		"50000000000"
+		}
+	}
+}
