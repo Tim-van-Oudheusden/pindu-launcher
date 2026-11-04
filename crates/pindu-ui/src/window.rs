@@ -5,7 +5,9 @@ use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gdk, gio, glib};
 use pindu_core::focus::FocusMemory;
+use pindu_core::gamepad::DeviceKind;
 use pindu_core::grid;
+use pindu_core::hints::Hint;
 use pindu_core::library::{
     Counts, Filters, HistoryGroup, PlaytimeOrigin, SortMode, View, history_group,
 };
@@ -29,6 +31,10 @@ mod imp {
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/io/github/tim_van_oudheusden/pindu-launcher/ui/window.ui")]
     pub struct PinduWindow {
+        #[template_child]
+        pub hint_toolbar: TemplateChild<adw::ToolbarView>,
+        #[template_child]
+        pub hint_bar: TemplateChild<gtk::Box>,
         #[template_child]
         pub toast_overlay: TemplateChild<adw::ToastOverlay>,
         #[template_child]
@@ -105,6 +111,8 @@ mod imp {
         pub focus_memory: RefCell<FocusMemory<View, GameId>>,
         /// Fullscreen mode's navigation sounds, made on entering the mode with them on.
         pub sounds: OnceCell<NavigationSounds>,
+        /// The hints the hint bar shows, and for which kind of controller.
+        pub hints: RefCell<Option<(DeviceKind, Vec<Hint>)>>,
     }
 
     #[glib::object_subclass]
@@ -173,6 +181,7 @@ impl PinduWindow {
         window.setup_fullscreen();
         if let Some(application) = application.downcast_ref::<PinduApplication>() {
             window.setup_controller_navigation(application);
+            window.setup_hint_bar(application);
         }
         window
     }

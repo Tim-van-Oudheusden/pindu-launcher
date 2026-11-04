@@ -102,3 +102,9 @@ window.fullscreen-mode gridview.library > child:focus-within {
     transition: none;
   }
 }
+
+/* Fullscreen mode's hint bar: each controller glyph with what its button does. */
+.hint-bar {
+  padding: 12px 36px;
+  font-weight: bold;
+}
