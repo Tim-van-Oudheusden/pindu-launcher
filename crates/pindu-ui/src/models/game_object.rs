@@ -1,6 +1,6 @@
 //! A library game as a GObject, so list models and widgets can observe it.
 
-use std::cell::{Ref, RefCell};
+use std::cell::{Cell, Ref, RefCell};
 use std::sync::LazyLock;
 
 use gtk::glib;
@@ -39,6 +39,8 @@ mod imp {
     #[derive(Debug, Default)]
     pub struct GameObject {
         pub entry: RefCell<Option<Entry>>,
+        /// A game we started is running.
+        pub playing: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -62,6 +64,9 @@ mod imp {
                     glib::ParamSpecBoolean::builder("hidden")
                         .read_only()
                         .build(),
+                    glib::ParamSpecBoolean::builder("playing")
+                        .read_only()
+                        .build(),
                 ]
             });
             PROPERTIES.as_ref()
@@ -76,6 +81,7 @@ mod imp {
                 "installed" => game.installed.to_value(),
                 "favourite" => game.favourite.to_value(),
                 "hidden" => game.hidden.to_value(),
+                "playing" => self.playing.get().to_value(),
                 name => unreachable!("unknown property {name}"),
             }
         }
@@ -116,6 +122,17 @@ impl GameObject {
 
     pub fn id(&self) -> GameId {
         self.game().id.clone()
+    }
+
+    /// Whether a game we started is running.
+    pub fn is_playing(&self) -> bool {
+        self.imp().playing.get()
+    }
+
+    pub fn set_playing(&self, playing: bool) {
+        if self.imp().playing.replace(playing) != playing {
+            self.notify("playing");
+        }
     }
 
     /// Calls `callback` when the game's art changes.

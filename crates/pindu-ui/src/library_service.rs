@@ -55,17 +55,18 @@ impl LibraryService {
 
     /// Hides or shows a game in the library views.
     pub fn set_hidden(&self, id: &GameId, hidden: bool) {
-        self.edit_game(id, move |game| game.hidden = hidden);
+        self.spawn_edit(id, move |game| game.hidden = hidden);
     }
 
-    /// Records that a game was just started.
-    pub fn mark_played(&self, id: &GameId, now: Timestamp) {
-        self.edit_game(id, move |game| game.last_played_at = Some(now));
+    /// Records that a game was just started; done once the store has it.
+    pub async fn mark_played(&self, id: &GameId, now: Timestamp) {
+        self.edit_game(id, move |game| game.last_played_at = Some(now))
+            .await;
     }
 
     /// Whether a Steam game starts through Steam's launch-options dialog.
     pub fn set_steam_launch_dialog(&self, id: &GameId, dialog: bool) {
-        self.edit_game(id, move |game| game.steam_launch_dialog = dialog);
+        self.spawn_edit(id, move |game| game.steam_launch_dialog = dialog);
     }
 
     /// The game's launch config, read on a worker thread; `None` when there is none or
@@ -86,8 +87,14 @@ impl LibraryService {
         }
     }
 
+    /// Changes one stored game in the background.
+    fn spawn_edit(&self, id: &GameId, edit: impl FnOnce(&mut Game) + Send + 'static) {
+        let (service, id) = (self.clone(), id.clone());
+        glib::spawn_future_local(async move { service.edit_game(&id, edit).await });
+    }
+
     /// Changes one stored game on a worker thread, then reloads the model.
-    fn edit_game(&self, id: &GameId, edit: impl FnOnce(&mut Game) + Send + 'static) {
+    async fn edit_game(&self, id: &GameId, edit: impl FnOnce(&mut Game) + Send + 'static) {
         let id = id.clone();
         self.change(move |store| {
             let Some(mut game) = store.game(&id)? else {
@@ -95,27 +102,23 @@ impl LibraryService {
             };
             edit(&mut game);
             store.update_game(&game)
-        });
+        })
+        .await;
     }
 
     /// Writes to the store on a worker thread, then reloads the model.
-    fn change(&self, work: impl FnOnce(&Store) -> store::Result<()> + Send + 'static) {
-        let service = self.clone();
-        glib::spawn_future_local(async move {
-            let written = gtk::gio::spawn_blocking(move || {
-                let store =
-                    Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
-                work(&store).map_err(|error| error.to_string())
-            })
-            .await;
-            match written {
-                Ok(Ok(())) => service.reload(),
-                Ok(Err(error)) => {
-                    glib::g_warning!("pindu", "Could not change the library: {error}")
-                }
-                Err(_) => glib::g_warning!("pindu", "Changing the library stopped unexpectedly"),
-            }
-        });
+    async fn change(&self, work: impl FnOnce(&Store) -> store::Result<()> + Send + 'static) {
+        let written = gtk::gio::spawn_blocking(move || {
+            let store =
+                Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
+            work(&store).map_err(|error| error.to_string())
+        })
+        .await;
+        match written {
+            Ok(Ok(())) => self.reload(),
+            Ok(Err(error)) => glib::g_warning!("pindu", "Could not change the library: {error}"),
+            Err(_) => glib::g_warning!("pindu", "Changing the library stopped unexpectedly"),
+        }
     }
 }
 

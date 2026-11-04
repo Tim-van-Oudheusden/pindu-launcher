@@ -3,8 +3,9 @@
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
-use gtk::glib;
+use gtk::{gio, glib};
 
+use crate::config::APP_ID;
 use crate::permission_service;
 
 mod imp {
@@ -17,6 +18,8 @@ mod imp {
         pub host_status: TemplateChild<gtk::Label>,
         #[template_child]
         pub command_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub exit_row: TemplateChild<adw::SwitchRow>,
     }
 
     #[glib::object_subclass]
@@ -50,6 +53,10 @@ mod imp {
     impl ObjectImpl for PreferencesDialog {
         fn constructed(&self) {
             self.parent_constructed();
+            let settings = gio::Settings::new(APP_ID);
+            settings
+                .bind("exit-after-launch", &*self.exit_row, "active")
+                .build();
             let allowed = permission_service::host_spawn_allowed();
             self.host_status.set_label(&if allowed {
                 gettext("Allowed")

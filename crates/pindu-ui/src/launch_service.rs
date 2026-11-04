@@ -7,12 +7,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
-use pindu_core::launch::{self, HostCommand, Route};
+use pindu_core::launch::{self, Route};
 use pindu_core::model::{Game, Source};
 
+use crate::config::APP_ID;
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
 use crate::permission_service;
+use crate::session_service::{self, SessionService};
 
 /// The app that owns a store game's source, as named in toasts and buttons.
 pub fn launcher_name(source: Source) -> Option<&'static str> {
@@ -28,12 +30,14 @@ pub fn launcher_name(source: Source) -> Option<&'static str> {
 }
 
 /// Starts a game. A store launch hands the game to its launcher; a host launch runs the
-/// game as our child. Either saves the last-played time, and the toast says what
-/// happened, or why the game could not start.
+/// game as our child, tracking its session unless its launcher tracks playtime itself.
+/// Either saves the last-played time, and the toast says what happened, or why the game
+/// could not start.
 pub fn play(
     window: &impl IsA<gtk::Window>,
     game: &GameObject,
     library: &LibraryService,
+    sessions: &SessionService,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
     let game = game.game().clone();
@@ -42,15 +46,28 @@ pub fn play(
         return;
     }
     let window = window.upcast_ref::<gtk::Window>().clone();
-    let library = library.clone();
+    let (library, sessions) = (library.clone(), sessions.clone());
     glib::spawn_future_local(async move {
         let config = library.launch_config(&game.id).await;
         match launch::route(&game, config.as_ref()) {
-            Some(Route::StoreUri(uri)) => open_store_uri(&window, &game, &uri, library, toast),
+            Some(Route::StoreUri(uri)) => {
+                open_store_uri(&window, &game, &uri, library, sessions, toast);
+            }
             Some(Route::HostSpawn(command)) => {
-                let message = match spawn_on_host(&command, &game.title) {
+                let started = if launch::tracks_sessions(&game) {
+                    let Some(app) = window.application() else {
+                        return;
+                    };
+                    sessions.start(app.upcast_ref(), &game.id, &command)
+                } else {
+                    session_service::spawn(&command).map(drop)
+                };
+                let message = match started {
                     Ok(()) => {
-                        library.mark_played(&game.id, now());
+                        let (library, id) = (library.clone(), game.id.clone());
+                        glib::spawn_future_local(async move {
+                            library.mark_played(&id, now()).await;
+                        });
                         gettext("Starting “{title}”")
                     }
                     Err(error) => {
@@ -65,20 +82,34 @@ pub fn play(
     });
 }
 
-/// Hands a store game to its launcher.
+/// Hands a store game to its launcher, then quits when the user asked for that and no
+/// game we started is running.
 fn open_store_uri(
     window: &gtk::Window,
     game: &Game,
     uri: &str,
     library: LibraryService,
+    sessions: SessionService,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
     let launcher = launcher_name(game.source()).unwrap_or_default();
     let (id, title, uri) = (game.id.clone(), game.title.clone(), uri.to_owned());
+    let app = window.application();
     gtk::UriLauncher::new(&uri).launch(Some(window), gio::Cancellable::NONE, move |result| {
         let message = match result {
             Ok(()) => {
-                library.mark_played(&id, now());
+                let exit = gio::Settings::new(APP_ID).boolean("exit-after-launch")
+                    && !sessions.any_playing();
+                let app = app.filter(|_| exit);
+                // Hold on until the last-played time is stored, then quit if asked to.
+                let hold = app.as_ref().map(|app| app.hold());
+                glib::spawn_future_local(async move {
+                    library.mark_played(&id, now()).await;
+                    drop(hold);
+                    if let Some(app) = app {
+                        app.quit();
+                    }
+                });
                 gettext("Starting “{title}” in {launcher}")
             }
             Err(error) => {
@@ -92,41 +123,6 @@ fn open_store_uri(
                 .replace("{launcher}", launcher),
         ));
     });
-}
-
-/// Runs a game on the host as our direct child: through `flatpak-spawn --host` inside
-/// Flatpak, directly outside it. The child is watched until it exits, so its status is
-/// known; tracking the session is a separate step.
-fn spawn_on_host(command: &HostCommand, title: &str) -> Result<(), glib::Error> {
-    let launcher = gio::SubprocessLauncher::new(gio::SubprocessFlags::NONE);
-    let argv = if permission_service::in_flatpak() {
-        command.flatpak_spawn_argv()
-    } else {
-        for (key, value) in &command.environment {
-            launcher.setenv(key, value, true);
-        }
-        if let Some(dir) = &command.working_dir {
-            launcher.set_cwd(dir);
-        }
-        command.argv.clone()
-    };
-    let argv: Vec<&std::ffi::OsStr> = argv.iter().map(std::ffi::OsStr::new).collect();
-    let child = launcher.spawn(&argv)?;
-    let title = title.to_owned();
-    glib::spawn_future_local(async move {
-        match child.wait_future().await {
-            Ok(()) if child.is_successful() => {
-                glib::g_info!("pindu", "“{title}” exited");
-            }
-            Ok(()) => glib::g_warning!(
-                "pindu",
-                "“{title}” exited with status {}",
-                child.exit_status()
-            ),
-            Err(error) => glib::g_warning!("pindu", "Lost track of “{title}”: {error}"),
-        }
-    });
-    Ok(())
 }
 
 /// Explains, instead of failing, that a game needs the host-spawn permission.

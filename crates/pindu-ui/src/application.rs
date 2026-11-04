@@ -9,6 +9,7 @@ use crate::library_service::LibraryService;
 use crate::models::GameObject;
 use crate::permission_service;
 use crate::preferences::PreferencesDialog;
+use crate::session_service::SessionService;
 use crate::sync_service::SyncService;
 use crate::window::PinduWindow;
 
@@ -23,6 +24,8 @@ mod imp {
         pub sync_service: SyncService,
         /// The library every shell shows; created at start-up, once GTK is initialised.
         pub library_service: OnceCell<LibraryService>,
+        /// The games we started that are running.
+        pub session_service: OnceCell<SessionService>,
     }
 
     #[glib::object_subclass]
@@ -63,6 +66,9 @@ mod imp {
                 library,
                 move |_| library.reload()
             ));
+            self.session_service
+                .set(SessionService::new(&library))
+                .expect("start-up runs once");
             self.library_service
                 .set(library)
                 .expect("start-up runs once");
@@ -111,6 +117,14 @@ impl PinduApplication {
             .expect("the application has started")
     }
 
+    /// The games we started that are running.
+    pub fn session_service(&self) -> &SessionService {
+        self.imp()
+            .session_service
+            .get()
+            .expect("the application has started")
+    }
+
     fn setup_actions(&self) {
         let quit_action = gio::ActionEntry::builder("quit")
             .activate(move |app: &Self, _, _| app.quit())
@@ -128,7 +142,20 @@ impl PinduApplication {
             .build();
         let play_action = gio::ActionEntry::builder("play")
             .parameter_type(Some(glib::VariantTy::STRING))
-            .activate(move |app: &Self, _, id| app.with_game(id, launch_service::play))
+            .activate(move |app: &Self, _, id| {
+                let sessions = app.session_service().clone();
+                app.with_game(id, move |window, game, library, toast| {
+                    launch_service::play(window, game, library, &sessions, toast);
+                });
+            })
+            .build();
+        let stop_action = gio::ActionEntry::builder("stop")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                if let Some(id) = id.and_then(|id| id.str()).and_then(|id| id.parse().ok()) {
+                    app.session_service().stop(&id);
+                }
+            })
             .build();
         let open_action = gio::ActionEntry::builder("open-in-launcher")
             .parameter_type(Some(glib::VariantTy::STRING))
@@ -144,6 +171,7 @@ impl PinduApplication {
             preferences_action,
             import_action,
             play_action,
+            stop_action,
             open_action,
         ]);
     }

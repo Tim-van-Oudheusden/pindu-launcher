@@ -23,6 +23,11 @@
       <summary>Cover tile size</summary>
       <description>Small is 150×225, medium 200×300 and large 250×375 pixels.</description>
     </key>
+    <key name="exit-after-launch" type="b">
+      <default>false</default>
+      <summary>Exit after launching a store game</summary>
+      <description>Quit once a store game is handed to its launcher. Games Pindu launcher starts itself keep it running, as it records their play sessions.</description>
+    </key>
     <key name="show-titles" type="b">
       <default>true</default>
       <summary>Show titles below covers</summary>

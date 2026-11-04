@@ -9,6 +9,7 @@ pub mod library_service;
 pub mod models;
 pub mod permission_service;
 pub mod preferences;
+pub mod session_service;
 pub mod sources;
 pub mod sync_service;
 pub mod widgets;
