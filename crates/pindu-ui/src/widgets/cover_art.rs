@@ -108,12 +108,14 @@ impl CoverArt {
         self.imp().texture.borrow().is_some()
     }
 
-    /// Shows `cover`, or `icon` when there is no cover, loading it in the background.
-    /// `on_loaded` runs once the art for this call is shown (or failed to load).
+    /// Shows `cover`, resized for a tile of `size` device pixels, or `icon` when there is
+    /// no cover, loading it in the background. `on_loaded` runs once the art for this call
+    /// is shown (or failed to load).
     pub fn show(
         &self,
         cover: Option<PathBuf>,
         icon: Option<PathBuf>,
+        size: (u32, u32),
         on_loaded: impl FnOnce(&Self) + 'static,
     ) {
         let imp = self.imp();
@@ -130,14 +132,24 @@ impl CoverArt {
             }
         };
         imp.is_icon.set(is_icon);
-        if let Some(texture) = textures::cached(&path) {
+        let (width, height) = size;
+        let in_memory = if is_icon {
+            textures::cached(&path)
+        } else {
+            textures::cached_cover(&path, width, height)
+        };
+        if let Some(texture) = in_memory {
             imp.texture.replace(Some(texture));
             on_loaded(self);
             return;
         }
         let art = self.downgrade();
         glib::spawn_future_local(async move {
-            let texture = textures::load(&path).await;
+            let texture = if is_icon {
+                textures::load(&path).await
+            } else {
+                textures::load_cover(&path, width, height).await
+            };
             let Some(art) = art.upgrade() else { return };
             let imp = art.imp();
             if imp.generation.get() != generation {
