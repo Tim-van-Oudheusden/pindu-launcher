@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use crate::model::{Game, LaunchConfig, LaunchKind, Source};
+use crate::sources::sha256::sha256_hex;
 
 /// The way to start a game.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,11 +50,39 @@ impl HostCommand {
 pub fn route(game: &Game, config: Option<&LaunchConfig>) -> Option<Route> {
     match game.launch_kind {
         LaunchKind::StoreUri => store_uri(game).map(Route::StoreUri),
-        LaunchKind::HostCommand | LaunchKind::DesktopEntry => {
-            config.map(|config| Route::HostSpawn(host_command(config)))
-        }
+        LaunchKind::HostCommand | LaunchKind::DesktopEntry => config.map(|config| {
+            let mut command = host_command(config);
+            if tracks_sessions(game) {
+                // Ours first, so the user's own variables win.
+                let mut environment = session_environment(game);
+                environment.append(&mut command.environment);
+                command.environment = environment;
+            }
+            Route::HostSpawn(command)
+        }),
         LaunchKind::Proton | LaunchKind::RuntimeNative => None,
     }
+}
+
+/// Whether we record play sessions for a game: every game we start ourselves, except
+/// Faugus's, whose launcher tracks playtime and which we import instead.
+pub fn tracks_sessions(game: &Game) -> bool {
+    matches!(
+        game.launch_kind,
+        LaunchKind::HostCommand | LaunchKind::DesktopEntry
+    ) && game.source() != Source::Faugus
+}
+
+/// A game ID and window class of the game's own, so umu, the compositor and the shell
+/// tell our games apart: `pindu-<hash>` from the game's ID.
+fn session_environment(game: &Game) -> BTreeMap<String, String> {
+    let hash = sha256_hex(game.id.as_str().as_bytes());
+    let class = format!("pindu-{}", &hash[..12]);
+    BTreeMap::from([
+        ("GAMEID".to_owned(), format!("umu-{class}")),
+        ("SDL_VIDEO_WAYLAND_WMCLASS".to_owned(), class.clone()),
+        ("SDL_VIDEO_X11_WMCLASS".to_owned(), class),
+    ])
 }
 
 /// The command for a launch config: the wrappers (outermost first), then `gamemoderun`
@@ -130,6 +159,8 @@ fn percent_encode(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
+
     use crate::model::{Game, GameId, LaunchConfig, LaunchKind, Source};
 
     fn host_game(kind: LaunchKind) -> Game {
@@ -149,16 +180,77 @@ mod tests {
     #[test]
     fn desktop_entries_and_host_commands_spawn_their_argv_on_the_host() {
         for kind in [LaunchKind::DesktopEntry, LaunchKind::HostCommand] {
+            let Some(Route::HostSpawn(command)) = route(&host_game(kind), Some(&config())) else {
+                panic!("no host route for {kind}");
+            };
+
+            assert_eq!(command.argv, ["/opt/Celeste Game/Celeste", "--fullscreen"]);
             assert_eq!(
-                route(&host_game(kind), Some(&config())),
-                Some(Route::HostSpawn(HostCommand {
-                    argv: vec!["/opt/Celeste Game/Celeste".into(), "--fullscreen".into()],
-                    environment: [("SDL_VIDEODRIVER".to_owned(), "wayland".to_owned())].into(),
-                    working_dir: Some("/opt/Celeste Game".into()),
-                })),
-                "{kind}"
+                command.working_dir.as_deref(),
+                Some(Path::new("/opt/Celeste Game"))
             );
+            assert_eq!(command.environment["SDL_VIDEODRIVER"], "wayland");
         }
+    }
+
+    #[test]
+    fn tracked_games_get_their_own_game_id_and_window_class() {
+        let environment = |native_id: &str| {
+            let game = Game::new(
+                GameId::new(Source::Desktop, native_id),
+                "Game",
+                LaunchKind::DesktopEntry,
+                0,
+            );
+            match route(&game, Some(&config())) {
+                Some(Route::HostSpawn(command)) => command.environment,
+                other => panic!("{other:?}"),
+            }
+        };
+
+        let celeste = environment("celeste");
+        let other = environment("neverball");
+
+        let class = celeste["SDL_VIDEO_WAYLAND_WMCLASS"].clone();
+        assert!(class.starts_with("pindu-"), "{class}");
+        assert_eq!(celeste["SDL_VIDEO_X11_WMCLASS"], class);
+        assert_eq!(celeste["GAMEID"], format!("umu-{class}"));
+        assert_ne!(other["SDL_VIDEO_WAYLAND_WMCLASS"], class);
+        assert_eq!(environment("celeste"), celeste);
+    }
+
+    #[test]
+    fn the_users_environment_wins_over_ours() {
+        let mut config = config();
+        config
+            .environment
+            .insert("SDL_VIDEO_WAYLAND_WMCLASS".into(), "mine".into());
+
+        let Some(Route::HostSpawn(command)) =
+            route(&host_game(LaunchKind::DesktopEntry), Some(&config))
+        else {
+            panic!("no host route");
+        };
+
+        assert_eq!(command.environment["SDL_VIDEO_WAYLAND_WMCLASS"], "mine");
+    }
+
+    #[test]
+    fn faugus_games_keep_their_own_tracking() {
+        let faugus = Game::new(
+            GameId::new(Source::Faugus, "hades"),
+            "Hades",
+            LaunchKind::HostCommand,
+            0,
+        );
+
+        assert!(!tracks_sessions(&faugus));
+        assert!(tracks_sessions(&host_game(LaunchKind::DesktopEntry)));
+        assert!(!tracks_sessions(&store_game(Source::Steam, "570")));
+        let Some(Route::HostSpawn(command)) = route(&faugus, Some(&config())) else {
+            panic!("no host route");
+        };
+        assert!(!command.environment.contains_key("GAMEID"));
     }
 
     #[test]

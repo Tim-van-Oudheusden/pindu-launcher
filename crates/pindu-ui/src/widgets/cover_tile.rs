@@ -60,7 +60,7 @@ mod imp {
         #[template_child]
         pub title: TemplateChild<gtk::Label>,
         /// The shown game and the handler that follows its art.
-        pub bound: RefCell<Option<(GameObject, glib::SignalHandlerId)>>,
+        pub bound: RefCell<Option<(GameObject, Vec<glib::SignalHandlerId>)>>,
         pub menu: OnceCell<gtk::PopoverMenu>,
     }
 
@@ -144,29 +144,29 @@ impl CoverTile {
     pub fn bind(&self, game: &GameObject) {
         self.unbind();
         let imp = self.imp();
-        let handler = game.connect_art_changed(glib::clone!(
-            #[weak(rename_to = tile)]
-            self,
-            move |game| tile.show_art(game)
-        ));
-        imp.bound.replace(Some((game.clone(), handler)));
+        let handlers = vec![
+            game.connect_art_changed(glib::clone!(
+                #[weak(rename_to = tile)]
+                self,
+                move |game| tile.show_art(game)
+            )),
+            game.connect_notify_local(
+                Some("playing"),
+                glib::clone!(
+                    #[weak(rename_to = tile)]
+                    self,
+                    move |game, _| tile.show_state(game)
+                ),
+            ),
+        ];
+        imp.bound.replace(Some((game.clone(), handlers)));
         let entry = game.entry();
         let source = entry.game.source();
         imp.title.set_label(&entry.game.title);
         imp.source_badge.set_icon_name(Some(source_icon(source)));
         imp.source_badge
             .set_tooltip_text(Some(&source_name(source)));
-        let installed = entry.game.installed;
-        let needs_permission = permission_service::needs_permission(&entry.game);
-        imp.state_badge.set_visible(!installed || needs_permission);
-        let (icon, tooltip) = if needs_permission {
-            ("changes-prevent-symbolic", gettext("Needs permission"))
-        } else {
-            ("folder-download-symbolic", gettext("Not installed"))
-        };
-        imp.state_badge.set_icon_name(Some(icon));
-        imp.state_badge.set_tooltip_text(Some(&tooltip));
-        if installed {
+        if entry.game.installed {
             imp.cover.remove_css_class("not-installed");
         } else {
             imp.cover.add_css_class("not-installed");
@@ -174,13 +174,48 @@ impl CoverTile {
         imp.play_button
             .set_action_target_value(Some(&entry.game.id.as_str().to_variant()));
         drop(entry);
+        self.show_state(game);
         self.show_art(game);
+    }
+
+    /// The state badge and the Play or Stop button: playing first, then needing
+    /// permission, then not installed.
+    fn show_state(&self, game: &GameObject) {
+        let imp = self.imp();
+        let playing = game.is_playing();
+        let (installed, needs_permission) = {
+            let game = game.game();
+            (game.installed, permission_service::needs_permission(&game))
+        };
+        let state = if playing {
+            Some(("media-playback-start-symbolic", gettext("Playing")))
+        } else if needs_permission {
+            Some(("changes-prevent-symbolic", gettext("Needs permission")))
+        } else if !installed {
+            Some(("folder-download-symbolic", gettext("Not installed")))
+        } else {
+            None
+        };
+        imp.state_badge.set_visible(state.is_some());
+        if let Some((icon, tooltip)) = state {
+            imp.state_badge.set_icon_name(Some(icon));
+            imp.state_badge.set_tooltip_text(Some(&tooltip));
+        }
+        let (label, action) = if playing {
+            (gettext("Stop"), "app.stop")
+        } else {
+            (gettext("Play"), "app.play")
+        };
+        imp.play_button.set_label(&label);
+        imp.play_button.set_action_name(Some(action));
     }
 
     pub fn unbind(&self) {
         let imp = self.imp();
-        if let Some((game, handler)) = imp.bound.take() {
-            game.disconnect(handler);
+        if let Some((game, handlers)) = imp.bound.take() {
+            for handler in handlers {
+                game.disconnect(handler);
+            }
         }
         imp.cover.clear();
     }
@@ -228,9 +263,11 @@ impl CoverTile {
     }
 
     /// What a screen reader says for the tile: title, launcher and state.
-    pub fn accessible_label(game: &GameObject) -> String {
-        let game = game.game();
-        let state = if permission_service::needs_permission(&game) {
+    pub fn accessible_label(game_object: &GameObject) -> String {
+        let game = game_object.game();
+        let state = if game_object.is_playing() {
+            gettext("Playing")
+        } else if permission_service::needs_permission(&game) {
             gettext("Needs permission")
         } else if game.installed {
             gettext("Installed")

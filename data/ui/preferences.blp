@@ -7,6 +7,15 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
     icon-name: "preferences-system-symbolic";
 
     Adw.PreferencesGroup {
+      title: _("Launching");
+
+      Adw.SwitchRow exit_row {
+        title: _("Exit After Launching");
+        subtitle: _("Quit once a store game is handed to its launcher. Games Pindu launcher starts itself keep it running, to record their playtime.");
+      }
+    }
+
+    Adw.PreferencesGroup {
       title: _("Permissions");
       description: _("Store games start through their launcher and always work. Desktop entries, Flatpak games and games added by hand start on this computer, outside the sandbox, which needs your permission.");
 
