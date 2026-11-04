@@ -2,5 +2,6 @@
 
 mod appinfo;
 mod heroic;
+mod lutris;
 mod steam;
 mod support;
