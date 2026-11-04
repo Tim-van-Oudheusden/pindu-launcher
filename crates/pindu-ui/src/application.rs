@@ -42,6 +42,8 @@ mod imp {
         pub fetching_art: std::cell::Cell<bool>,
         /// A game `--launch` asked for when this is the first instance.
         pub pending_launch: RefCell<Option<String>>,
+        /// Whether `--fullscreen` asked for the window in fullscreen mode.
+        pub pending_fullscreen: std::cell::Cell<bool>,
         /// Controller input for every shell; it opens controllers only when one listens.
         pub gamepad_service: OnceCell<GamepadService>,
     }
@@ -65,6 +67,7 @@ mod imp {
             obj.set_accels_for_action("app.preferences", &["<primary>comma"]);
             obj.set_accels_for_action("app.add-game", &["<primary>n"]);
             obj.set_accels_for_action("win.show-hidden", &["<primary>h"]);
+            obj.set_accels_for_action("win.fullscreen-mode", &["F11"]);
             obj.add_main_option(
                 "launch",
                 glib::Char::from(b'l'),
@@ -72,6 +75,14 @@ mod imp {
                 glib::OptionArg::String,
                 &gettext("Start a game by its ID, without opening the window"),
                 Some("GAME-ID"),
+            );
+            obj.add_main_option(
+                "fullscreen",
+                glib::Char::from(b'f'),
+                glib::OptionFlags::NONE,
+                glib::OptionArg::None,
+                &gettext("Open the window in fullscreen mode"),
+                None,
             );
             glib::g_info!(
                 "pindu",
@@ -118,6 +129,9 @@ mod imp {
 
         fn handle_local_options(&self, options: &glib::VariantDict) -> ControlFlow<glib::ExitCode> {
             let Some(id) = options.lookup::<String>("launch").ok().flatten() else {
+                if options.contains("fullscreen") {
+                    return self.request_fullscreen();
+                }
                 return self.parent_handle_local_options(options);
             };
             // Hand the ID to the running instance (or this one, if it is the first).
@@ -167,11 +181,34 @@ mod imp {
                     &self.sync_service,
                     &application.library_service().model(),
                 );
+                if window.settings().boolean("start-in-fullscreen") {
+                    window.enter_fullscreen();
+                }
                 // The stored library is loaded at start-up; sync every source now.
                 self.sync_service.sync();
                 window.upcast()
             });
+            if self.pending_fullscreen.take()
+                && let Some(window) = window.downcast_ref::<PinduWindow>()
+            {
+                window.enter_fullscreen();
+            }
             window.present();
+        }
+    }
+
+    impl PinduApplication {
+        /// Has the window open in fullscreen mode: this instance's, or the running one's.
+        fn request_fullscreen(&self) -> ControlFlow<glib::ExitCode> {
+            let app = self.obj();
+            if let Err(error) = app.register(gio::Cancellable::NONE) {
+                glib::g_warning!("pindu", "Could not start: {error}");
+                return ControlFlow::Break(glib::ExitCode::FAILURE);
+            }
+            // The running instance gets the request first, then the activation that
+            // presents its window.
+            app.activate_action("fullscreen", None);
+            ControlFlow::Continue(())
         }
     }
 
@@ -327,6 +364,10 @@ impl PinduApplication {
                 });
             })
             .build();
+        // `--fullscreen`: the activation that follows opens the window in fullscreen mode.
+        let fullscreen_action = gio::ActionEntry::builder("fullscreen")
+            .activate(move |app: &Self, _, _| app.imp().pending_fullscreen.set(true))
+            .build();
         self.add_action_entries([
             quit_action,
             about_action,
@@ -340,6 +381,7 @@ impl PinduApplication {
             launch_action,
             stop_action,
             open_action,
+            fullscreen_action,
         ]);
     }
 

@@ -93,6 +93,25 @@ impl DeviceKind {
             _ => Self::Generic,
         }
     }
+
+    /// The button that asks for `intent` on this kind of pad, for hints: a Nintendo pad
+    /// confirms with its east button.
+    pub fn button(self, intent: Intent) -> Button {
+        BUTTONS
+            .into_iter()
+            .find(|&button| button_intent(self.xbox_position(button)) == intent)
+            .expect("every intent has a button")
+    }
+
+    /// Where an Xbox pad has the button that does what `button` does on this kind: a
+    /// Nintendo pad's A (east) confirms and its B (south) goes back.
+    fn xbox_position(self, button: Button) -> Button {
+        match (self, button) {
+            (Self::Nintendo, Button::East) => Button::South,
+            (Self::Nintendo, Button::South) => Button::East,
+            _ => button,
+        }
+    }
 }
 
 /// The USB vendor and product IDs in an SDL GUID.
@@ -286,13 +305,11 @@ impl Intents {
         self.kinds.get(&self.active?).copied()
     }
 
-    /// The button as an Xbox pad would place it: Nintendo pads' A (east) confirms and their
-    /// B (south) goes back.
+    /// The button as an Xbox pad would place it, after the device kind's A/B swap.
     fn confirm_and_back_swapped(&self, device: DeviceId, button: Button) -> Button {
-        match (self.kinds.get(&device), button) {
-            (Some(DeviceKind::Nintendo), Button::East) => Button::South,
-            (Some(DeviceKind::Nintendo), Button::South) => Button::East,
-            _ => button,
+        match self.kinds.get(&device) {
+            Some(kind) => kind.xbox_position(button),
+            None => button,
         }
     }
 }
@@ -314,6 +331,24 @@ fn stick_direction([x, y]: [f64; 2]) -> Option<Direction> {
         Direction::Up
     })
 }
+
+/// Every button, in the order hints prefer them when two do the same: options show on
+/// View, which the spec names for it, rather than on the west face button.
+pub(crate) const BUTTONS: [Button; 13] = [
+    Button::South,
+    Button::East,
+    Button::North,
+    Button::Select,
+    Button::West,
+    Button::Start,
+    Button::Guide,
+    Button::LeftShoulder,
+    Button::RightShoulder,
+    Button::DpadUp,
+    Button::DpadDown,
+    Button::DpadLeft,
+    Button::DpadRight,
+];
 
 fn button_intent(button: Button) -> Intent {
     match button {
