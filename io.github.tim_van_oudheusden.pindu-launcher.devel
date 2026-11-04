@@ -1,0 +1,96 @@
+# Development manifest for Pindu: local builds and GNOME Builder only.
+# Not for Flathub: it allows network access during the build.
+#
+# Put this file in build-aux/flatpak/ and build from the repo root:
+#   flatpak-builder --user --install --force-clean build-dir \
+#     build-aux/flatpak/io.github.Tim_van_Oudheusden.Pindu.Devel.yml
+#   flatpak run io.github.Tim_van_Oudheusden.Pindu.Devel
+
+id: io.github.Tim_van_Oudheusden.Pindu.Devel
+runtime: org.gnome.Platform
+runtime-version: '51'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: pindu
+
+finish-args:
+  # Display and GPU
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+  # Cover art and metadata downloads
+  - --share=network
+
+  # Read-only access to other launchers' libraries, for the importers
+  # Steam (native, then Flatpak)
+  - --filesystem=~/.steam:ro
+  - --filesystem=xdg-data/Steam:ro
+  - --filesystem=~/.var/app/com.valvesoftware.Steam/data/Steam:ro
+  # Heroic
+  - --filesystem=xdg-config/heroic:ro
+  - --filesystem=~/.var/app/com.heroicgameslauncher.hgl/config/heroic:ro
+  # Lutris
+  - --filesystem=xdg-data/lutris:ro
+  - --filesystem=~/.var/app/net.lutris.Lutris/data/lutris:ro
+  # Bottles
+  - --filesystem=xdg-data/bottles:ro
+  - --filesystem=~/.var/app/com.usebottles.bottles/data/bottles:ro
+  # Faugus
+  - --filesystem=xdg-data/faugus-launcher:ro
+  - --filesystem=~/.var/app/io.github.Faugus.faugus-launcher/data/faugus-launcher:ro
+  # Desktop entries and installed Flatpaks
+  - --filesystem=xdg-data/applications:ro
+  - --filesystem=host-os:ro
+  - --filesystem=/var/lib/flatpak/exports:ro
+  - --filesystem=xdg-data/flatpak/exports:ro
+
+  # Gamepad navigation for the fullscreen mode; uncomment when you get there
+  # - --device=input
+  # - --device-if=all:!has-input-device
+
+  # Debug output (use your crate name in RUST_LOG)
+  - --env=RUST_LOG=pindu=debug
+  - --env=RUST_BACKTRACE=1
+
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  # Lets cargo download crates during local builds. A Flathub build has no
+  # network and needs vendored crates (cargo-sources.json) instead.
+  build-args:
+    - --share=network
+  env:
+    RUST_BACKTRACE: '1'
+  test-args:
+    - --socket=x11
+    - --share=network
+
+modules:
+  - name: pindu
+    buildsystem: meson
+    run-tests: true
+    config-opts:
+      # Needs a `profile` option in meson_options.txt; the development
+      # profile should give the app the .Devel ID and the striped header.
+      - -Dprofile=development
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - target
+          - build-dir
+          - _build
+          - .flatpak-builder
+
+  # Cargo-only alternative while there is no meson.build yet
+  # (no desktop file, icon or GSettings schema gets installed this way):
+  # - name: pindu
+  #   buildsystem: simple
+  #   build-commands:
+  #     - cargo build --release
+  #     - install -Dm755 target/release/pindu -t /app/bin/
+  #   sources:
+  #     - type: dir
+  #       path: ../..
+  #       skip: [target, build-dir, .flatpak-builder]
