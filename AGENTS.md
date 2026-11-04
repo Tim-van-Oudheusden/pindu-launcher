@@ -1,12 +1,13 @@
 # Agent Instructions
 
-Pindu (working title; the final name, app ID and licence are decided in #1) is a native GNOME game library. It gathers
-every PC game on the machine into one Xbox-style library, with a fullscreen controller mode over the same data. Rust on
-GTK4 and libadwaita (gtk4 0.11, libadwaita 0.9 with `v1_10`), Blueprint, Meson driving cargo, shipped as a Flatpak on
-`org.gnome.Platform//51` and aimed at Flathub.
+Pindu launcher (app ID `io.github.tim_van_oudheusden.pindu-launcher`, GPL-3.0-or-later, fixed in #1) is a native GNOME
+game library. It gathers every PC game on the machine into one Xbox-style library, with a fullscreen controller mode over
+the same data. Rust on GTK4 and libadwaita (gtk4 0.11, libadwaita 0.9 with `v1_10`), Blueprint, Meson driving cargo,
+shipped as a Flatpak on `org.gnome.Platform//51` and aimed at Flathub.
 
-The repository holds only docs and assets for now; code arrives with #3, the development manifest with #4 and CI with
-#5. Commands below that need those files apply from then on.
+`crates/pindu-core` is the GTK-free core, `crates/pindu-ui` the GTK shells (binary `pindu-launcher`); `data/` holds the
+Blueprint files, GSettings schema, desktop file, MetaInfo and icons. The development manifest arrives with #4 and CI with
+#5; commands below that need those files apply from then on.
 
 ## Spec and Research
 
