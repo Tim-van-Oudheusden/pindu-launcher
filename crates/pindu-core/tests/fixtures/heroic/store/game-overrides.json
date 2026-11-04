@@ -1,0 +1,5 @@
+{
+  "overrides": {
+    "Sugar": { "title": "Rocket Racing (renamed)", "art_square": "@ROOT@/game_overrides_images/Sugar-square.png" }
+  }
+}

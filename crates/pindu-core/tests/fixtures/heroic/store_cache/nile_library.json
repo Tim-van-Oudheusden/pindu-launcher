@@ -1,0 +1,14 @@
+{
+  "library": [
+    {
+      "runner": "nile",
+      "app_name": "amzn1.adg.product.0001",
+      "title": "Amazon Prime Game",
+      "art_square": "",
+      "art_cover": "",
+      "install": {},
+      "is_installed": true,
+      "canRunOffline": true
+    }
+  ]
+}

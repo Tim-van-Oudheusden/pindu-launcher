@@ -32,24 +32,13 @@ install_data(
 
 install_subdir('icons', install_dir: datadir, strip_directory: false)
 
-blueprints = custom_target(
-  'blueprints',
-  input: files('ui/window.blp'),
-  output: '.',
-  command: [
-    blueprint_compiler,
-    'batch-compile',
-    '@OUTPUT@',
-    '@CURRENT_SOURCE_DIR@',
-    '@INPUT@',
-  ],
-)
+subdir('ui')
 
 resources = gnome.compile_resources(
   'resources',
   'resources.gresource.xml',
   gresource_bundle: true,
-  source_dir: meson.current_build_dir(),
+  source_dir: [meson.current_build_dir(), meson.current_source_dir()],
   dependencies: blueprints,
   install: true,
   install_dir: pkgdatadir,

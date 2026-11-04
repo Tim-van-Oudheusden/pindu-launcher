@@ -1,0 +1,12 @@
+{
+  "userInfo": { "displayName": "player" },
+  "games": {
+    "recent": [],
+    "hidden": [{ "appName": "Kinglet", "title": "Not Installed Epic Game" }],
+    "favourites": [{ "appName": "1207658924", "title": "Unreal Tournament 2004" }],
+    "customCategories": {
+      "Shooters": ["1207658924_gog", "Sugar_legendary"],
+      "Racing": ["Sugar_legendary"]
+    }
+  }
+}

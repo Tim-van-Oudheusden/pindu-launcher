@@ -1,0 +1,15 @@
+{
+  "games": [
+    {
+      "runner": "sideload",
+      "app_name": "aB3dE",
+      "title": "Sideloaded Game",
+      "art_square": "@ROOT@/sideload_square.png",
+      "art_cover": "",
+      "install": { "platform": "linux", "executable": "/games/side/run.sh" },
+      "folder_name": "/games/side",
+      "is_installed": true,
+      "canRunOffline": true
+    }
+  ]
+}

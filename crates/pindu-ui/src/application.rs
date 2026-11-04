@@ -4,13 +4,24 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
+use crate::launch_service;
+use crate::library_service::LibraryService;
+use crate::models::GameObject;
+use crate::sync_service::SyncService;
 use crate::window::PinduWindow;
 
 mod imp {
+    use std::cell::OnceCell;
+
     use super::*;
 
     #[derive(Debug, Default)]
-    pub struct PinduApplication;
+    pub struct PinduApplication {
+        /// Shared by every shell, so there is one import at a time.
+        pub sync_service: SyncService,
+        /// The library every shell shows; created at start-up, once GTK is initialised.
+        pub library_service: OnceCell<LibraryService>,
+    }
 
     #[glib::object_subclass]
     impl ObjectSubclass for PinduApplication {
@@ -25,14 +36,38 @@ mod imp {
             let obj = self.obj();
             obj.setup_actions();
             obj.set_accels_for_action("app.quit", &["<primary>q"]);
+            obj.set_accels_for_action("win.show-sidebar", &["F9"]);
+            obj.set_accels_for_action("win.search", &["<primary>f"]);
+            obj.set_accels_for_action("win.back", &["<alt>Left", "Back"]);
         }
     }
 
     impl ApplicationImpl for PinduApplication {
+        fn startup(&self) {
+            self.parent_startup();
+            let library = LibraryService::new();
+            self.sync_service.connect_finished(glib::clone!(
+                #[weak]
+                library,
+                move |_| library.reload()
+            ));
+            self.library_service
+                .set(library)
+                .expect("start-up runs once");
+        }
+
         fn activate(&self) {
             let application = self.obj();
             let window = application.active_window().unwrap_or_else(|| {
-                PinduWindow::new(application.upcast_ref::<adw::Application>()).upcast()
+                let window = PinduWindow::new(
+                    application.upcast_ref::<adw::Application>(),
+                    &self.sync_service,
+                    &application.library_service().model(),
+                );
+                // Show the stored library at once, then sync every source.
+                application.library_service().reload();
+                self.sync_service.sync();
+                window.upcast()
             });
             window.present();
         }
@@ -56,6 +91,14 @@ impl PinduApplication {
             .build()
     }
 
+    /// The library every shell shows.
+    pub fn library_service(&self) -> &LibraryService {
+        self.imp()
+            .library_service
+            .get()
+            .expect("the application has started")
+    }
+
     fn setup_actions(&self) {
         let quit_action = gio::ActionEntry::builder("quit")
             .activate(move |app: &Self, _, _| app.quit())
@@ -63,7 +106,54 @@ impl PinduApplication {
         let about_action = gio::ActionEntry::builder("about")
             .activate(move |app: &Self, _, _| app.show_about())
             .build();
-        self.add_action_entries([quit_action, about_action]);
+        let import_action = gio::ActionEntry::builder("import")
+            .activate(move |app: &Self, _, _| app.imp().sync_service.sync())
+            .build();
+        let play_action = gio::ActionEntry::builder("play")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| app.with_game(id, launch_service::play))
+            .build();
+        let open_action = gio::ActionEntry::builder("open-in-launcher")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                app.with_game(id, |window, game, _, toast| {
+                    launch_service::open_in_launcher(window, game, toast)
+                });
+            })
+            .build();
+        self.add_action_entries([
+            quit_action,
+            about_action,
+            import_action,
+            play_action,
+            open_action,
+        ]);
+    }
+
+    /// Runs `work` for the game an action names, in the active window, with a way to
+    /// show a toast there.
+    fn with_game(
+        &self,
+        id: Option<&glib::Variant>,
+        work: impl FnOnce(&PinduWindow, &GameObject, &LibraryService, Box<dyn Fn(adw::Toast)>),
+    ) {
+        let Some(id) = id.and_then(|id| id.str()).and_then(|id| id.parse().ok()) else {
+            return;
+        };
+        let Some(window) = self.active_window().and_downcast::<PinduWindow>() else {
+            return;
+        };
+        let library = self.library_service();
+        let Some(game) = library.model().game_object(&id) else {
+            return;
+        };
+        let toast_window = window.downgrade();
+        let toast = Box::new(move |toast: adw::Toast| {
+            if let Some(window) = toast_window.upgrade() {
+                window.add_toast(toast);
+            }
+        });
+        work(&window, &game, library, toast);
     }
 
     fn show_about(&self) {

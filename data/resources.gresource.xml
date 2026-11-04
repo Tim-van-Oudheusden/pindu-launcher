@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="/io/github/tim_van_oudheusden/pindu-launcher">
+    <file preprocess="xml-stripblanks">ui/cover_tile.ui</file>
+    <file preprocess="xml-stripblanks">ui/game_page.ui</file>
     <file preprocess="xml-stripblanks">ui/window.ui</file>
+    <file compressed="true">style.css</file>
   </gresource>
 </gresources>
