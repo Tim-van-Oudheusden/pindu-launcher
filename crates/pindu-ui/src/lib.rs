@@ -7,6 +7,7 @@ pub mod config;
 pub mod controller_navigation;
 pub mod file_service;
 pub mod fullscreen;
+pub mod fullscreen_library;
 pub mod game_dialog;
 pub mod game_page;
 pub mod gamepad_service;

@@ -60,14 +60,16 @@ impl PinduWindow {
             imp.hint_bar.remove(&child);
         }
         for hint in shown.iter().flat_map(|(_, hints)| hints) {
-            let glyph = gtk::Image::builder()
-                .icon_name(hints::glyph(kind, hint.button))
-                .pixel_size(GLYPH_SIZE)
-                .accessible_role(gtk::AccessibleRole::Presentation)
-                .build();
-            let label = gtk::Label::new(Some(&action_label(hint.action)));
             let item = gtk::Box::builder().spacing(8).build();
-            item.append(&glyph);
+            for button in std::iter::once(hint.button).chain(hint.pair) {
+                let glyph = gtk::Image::builder()
+                    .icon_name(hints::glyph(kind, button))
+                    .pixel_size(GLYPH_SIZE)
+                    .accessible_role(gtk::AccessibleRole::Presentation)
+                    .build();
+                item.append(&glyph);
+            }
+            let label = gtk::Label::new(Some(&action_label(hint.action)));
             item.append(&label);
             imp.hint_bar.append(&item);
         }
@@ -75,7 +77,8 @@ impl PinduWindow {
     }
 
     /// Where the user is, for the hints: the focused widget, an open dialog, whether a
-    /// page lies below the shown one and whether it searches (Home and the library).
+    /// page lies below the shown one, whether it searches (Home and the library) and
+    /// whether it has tabs (the library in fullscreen mode).
     fn hint_context(&self) -> Context {
         let imp = self.imp();
         let navigation_view = &imp.navigation_view;
@@ -84,14 +87,14 @@ impl PinduWindow {
             .as_ref()
             .and_then(|page| navigation_view.previous_page(page))
             .is_some();
-        let search = page.is_some_and(|page| {
-            page == *imp.library_page || page == *imp.home_page.upcast_ref::<adw::NavigationPage>()
-        });
+        let library = page.as_ref() == Some(&*imp.library_page);
+        let home = page.as_ref() == Some(imp.home_page.upcast_ref::<adw::NavigationPage>());
         Context {
             focus: self.hint_focus(),
             dialog: self.visible_dialog().is_some(),
             page_below,
-            search,
+            search: library || home,
+            tabs: library && self.is_fullscreen(),
         }
     }
 
@@ -139,5 +142,7 @@ fn action_label(action: Action) -> String {
         Action::Back => gettext("Back"),
         Action::Close => gettext("Close"),
         Action::Search => gettext("Search"),
+        Action::Tabs => gettext("Tabs"),
+        Action::Sort => gettext("Sort"),
     }
 }

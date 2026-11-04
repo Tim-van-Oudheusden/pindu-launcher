@@ -103,6 +103,18 @@ window.fullscreen-mode gridview.library > child:focus-within {
   }
 }
 
+/* Fullscreen mode's library tabs: the shown tab filled with the accent colour. */
+.library-tabs button {
+  border-radius: 999px;
+  padding: 6px 20px;
+  font-weight: bold;
+}
+
+.library-tabs button:checked {
+  background-color: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+}
+
 /* Fullscreen mode's hint bar: each controller glyph with what its button does. */
 .hint-bar {
   padding: 12px 36px;
