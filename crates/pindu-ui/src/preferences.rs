@@ -1,7 +1,7 @@
-//! The Preferences dialog: General (covers, launching, controller, permissions), Sources (import,
-//! folder, sidebar) and Artwork (SteamGridDB). Everything is GSettings, except the
-//! SteamGridDB key, which lives in the keyring, and each source's import switch and
-//! folder, which live with the library's other source state.
+//! The Preferences dialog: General (covers, launching, controller, permissions), Sources
+//! (import, folder, sidebar), Artwork (SteamGridDB) and Fullscreen (start-up, sounds).
+//! Everything is GSettings, except the SteamGridDB key, which lives in the keyring, and each
+//! source's import switch and folder, which live with the library's other source state.
 
 use std::cell::OnceCell;
 
@@ -36,6 +36,10 @@ mod imp {
         pub exit_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub controller_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub start_fullscreen_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub sounds_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub tile_size_row: TemplateChild<adw::ComboRow>,
         #[template_child]
@@ -96,6 +100,12 @@ mod imp {
                 .build();
             settings
                 .bind("controller-navigation", &*self.controller_row, "active")
+                .build();
+            settings
+                .bind("start-in-fullscreen", &*self.start_fullscreen_row, "active")
+                .build();
+            settings
+                .bind("navigation-sounds", &*self.sounds_row, "active")
                 .build();
             settings
                 .bind("show-titles", &*self.titles_row, "active")

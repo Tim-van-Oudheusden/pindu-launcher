@@ -80,3 +80,25 @@ gridview.library > child {
   color: white;
   background-image: linear-gradient(to bottom, transparent, rgb(0 0 0 / 70%));
 }
+
+/* Fullscreen mode: type a step larger for a screen across the room, and the focused cover
+   lifted a little with a ring around it. */
+window.fullscreen-mode {
+  font-size: 1.35em;
+}
+
+window.fullscreen-mode gridview.library > child {
+  transition: transform 120ms ease-out;
+}
+
+window.fullscreen-mode gridview.library > child:focus-within {
+  transform: scale(1.05);
+  outline: 3px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  window.fullscreen-mode gridview.library > child {
+    transition: none;
+  }
+}

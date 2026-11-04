@@ -6,6 +6,7 @@
 pub mod art;
 pub mod art_cache;
 pub mod backup;
+pub mod focus;
 pub mod gamepad;
 pub mod grid;
 pub mod launch;
@@ -16,6 +17,7 @@ pub mod paths;
 pub mod permissions;
 pub mod proton;
 pub mod search;
+pub mod sound;
 pub mod sources;
 pub mod steamgriddb;
 pub mod store;
