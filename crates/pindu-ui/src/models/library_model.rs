@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib};
-use pindu_core::library::{FilterChange, LibraryFilter, SortMode, compare};
+use pindu_core::library::{Counts, FilterChange, LibraryFilter, SortMode, View, compare};
 use pindu_core::model::Game;
 
 use super::GameObject;
@@ -25,6 +25,7 @@ mod imp {
         pub sorted: gtk::SortListModel,
         pub library_filter: RefCell<LibraryFilter>,
         pub sort_mode: Cell<SortMode>,
+        pub counts: RefCell<Counts>,
     }
 
     impl Default for LibraryModel {
@@ -50,6 +51,7 @@ mod imp {
                 sorted,
                 library_filter: RefCell::default(),
                 sort_mode: Cell::default(),
+                counts: RefCell::default(),
             }
         }
     }
@@ -61,6 +63,14 @@ mod imp {
     }
 
     impl ObjectImpl for LibraryModel {
+        fn signals() -> &'static [glib::subclass::Signal] {
+            static SIGNALS: std::sync::LazyLock<Vec<glib::subclass::Signal>> =
+                std::sync::LazyLock::new(|| {
+                    vec![glib::subclass::Signal::builder("counts-changed").build()]
+                });
+            SIGNALS.as_ref()
+        }
+
         fn constructed(&self) {
             self.parent_constructed();
             let model = self.obj().downgrade();
@@ -121,10 +131,29 @@ impl LibraryModel {
         self.imp().sorted.clone()
     }
 
+    /// How many games each view shows, before any search.
+    pub fn counts(&self) -> Counts {
+        self.imp().counts.borrow().clone()
+    }
+
+    /// Calls `callback` whenever the games change and so may the [`Self::counts`].
+    pub fn connect_counts_changed<F: Fn(&Self) + 'static>(
+        &self,
+        callback: F,
+    ) -> glib::SignalHandlerId {
+        self.connect_local("counts-changed", false, move |values| {
+            let model = values[0].get::<Self>().expect("emitted by the model");
+            callback(&model);
+            None
+        })
+    }
+
     /// Replaces the games. Objects of games that stay are kept and updated in place, so
     /// widgets bound to them stay put.
     pub fn set_games(&self, games: Vec<Game>) {
         let imp = self.imp();
+        imp.counts.replace(Counts::of(&games));
+        self.emit_by_name::<()>("counts-changed", &[]);
         let mut existing: HashMap<String, GameObject> = (0..imp.games.n_items())
             .filter_map(|position| imp.games.item(position).and_downcast::<GameObject>())
             .map(|object| (object.id().as_str().to_owned(), object))
@@ -158,17 +187,26 @@ impl LibraryModel {
         imp.games.splice(0, imp.games.n_items(), &objects);
     }
 
+    /// Shows only the games of a sidebar view.
+    pub fn set_view(&self, view: View) {
+        let change = self.imp().library_filter.borrow_mut().set_view(view);
+        self.apply_filter_change(change);
+    }
+
     /// Shows only games whose title contains `text`, ignoring case.
     pub fn set_search(&self, text: &str) {
-        let imp = self.imp();
-        let change = imp.library_filter.borrow_mut().set_search(text);
+        let change = self.imp().library_filter.borrow_mut().set_search(text);
+        self.apply_filter_change(change);
+    }
+
+    fn apply_filter_change(&self, change: FilterChange) {
         let change = match change {
             FilterChange::Unchanged => return,
             FilterChange::MoreStrict => gtk::FilterChange::MoreStrict,
             FilterChange::LessStrict => gtk::FilterChange::LessStrict,
             FilterChange::Different => gtk::FilterChange::Different,
         };
-        imp.filter.changed(change);
+        self.imp().filter.changed(change);
     }
 
     pub fn set_sort_mode(&self, mode: SortMode) {

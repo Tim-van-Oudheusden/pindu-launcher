@@ -2,7 +2,9 @@
 
 use std::cmp::{Ordering, Reverse};
 
-use crate::model::{Game, Timestamp};
+use std::collections::HashMap;
+
+use crate::model::{Game, Source, Timestamp};
 
 /// The library sort orders, as offered in the sort menu.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -72,13 +74,50 @@ pub enum FilterChange {
     Different,
 }
 
+/// The library views of the sidebar.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub enum View {
+    #[default]
+    All,
+    Installed,
+    Favourites,
+    /// Games that have been played.
+    PlayHistory,
+    Source(Source),
+}
+
+impl View {
+    fn includes(self, game: &Game) -> bool {
+        match self {
+            Self::All => true,
+            Self::Installed => game.installed,
+            Self::Favourites => game.favourite,
+            Self::PlayHistory => game.last_played_at.is_some(),
+            Self::Source(source) => game.source() == source,
+        }
+    }
+}
+
 /// Which games the library views show.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct LibraryFilter {
+    view: View,
     search: String,
 }
 
 impl LibraryFilter {
+    /// Shows only the games of `view`.
+    pub fn set_view(&mut self, view: View) -> FilterChange {
+        let change = match (self.view, view) {
+            (old, new) if old == new => FilterChange::Unchanged,
+            (View::All, _) => FilterChange::MoreStrict,
+            (_, View::All) => FilterChange::LessStrict,
+            _ => FilterChange::Different,
+        };
+        self.view = view;
+        change
+    }
+
     /// Shows only games whose title contains `text`, ignoring case; empty shows all.
     pub fn set_search(&mut self, text: &str) -> FilterChange {
         let text = text.to_lowercase();
@@ -95,9 +134,43 @@ impl LibraryFilter {
         change
     }
 
-    /// Whether a game shows: in the library, not hidden, and matching the search.
+    /// Whether a game shows: in the library, not hidden, in the view and matching the
+    /// search.
     pub fn matches(&self, game: &Game, key: &SearchKey) -> bool {
-        game.in_library() && !game.hidden && key.0.contains(&self.search)
+        game.in_library()
+            && !game.hidden
+            && self.view.includes(game)
+            && key.0.contains(&self.search)
+    }
+}
+
+/// How many games each view shows, before any search.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Counts(HashMap<View, u32>);
+
+impl Counts {
+    pub fn of<'a>(games: impl IntoIterator<Item = &'a Game>) -> Self {
+        let mut counts = HashMap::new();
+        for game in games
+            .into_iter()
+            .filter(|game| game.in_library() && !game.hidden)
+        {
+            let views = [
+                View::All,
+                View::Installed,
+                View::Favourites,
+                View::PlayHistory,
+                View::Source(game.source()),
+            ];
+            for view in views.into_iter().filter(|view| view.includes(game)) {
+                *counts.entry(view).or_default() += 1;
+            }
+        }
+        Self(counts)
+    }
+
+    pub fn get(&self, view: View) -> u32 {
+        self.0.get(&view).copied().unwrap_or_default()
     }
 }
 
@@ -218,5 +291,68 @@ mod tests {
         assert_eq!(filter.set_search("rin"), FilterChange::Unchanged);
         assert_eq!(filter.set_search("r"), FilterChange::LessStrict);
         assert_eq!(filter.set_search("dota"), FilterChange::Different);
+    }
+
+    fn sample() -> Vec<Game> {
+        let mut installed = game("1", "Installed", Some(10), 0);
+        installed.installed = true;
+        let mut favourite = game("2", "Favourite", None, 0);
+        favourite.favourite = true;
+        let mut heroic = Game::new(
+            GameId::new(Source::HeroicGog, "3"),
+            "Heroic",
+            LaunchKind::StoreUri,
+            0,
+        );
+        heroic.installed = true;
+        let mut hidden = game("4", "Hidden", Some(20), 0);
+        hidden.hidden = true;
+        hidden.installed = true;
+        let mut missing = game("5", "Missing", None, 0);
+        missing.missing_since = Some(1);
+        vec![installed, favourite, heroic, hidden, missing]
+    }
+
+    fn shown(view: View) -> Vec<String> {
+        let mut filter = LibraryFilter::default();
+        filter.set_view(view);
+        sample()
+            .into_iter()
+            .filter(|game| shows(&filter, game))
+            .map(|game| game.title)
+            .collect()
+    }
+
+    #[test]
+    fn each_view_shows_its_games() {
+        assert_eq!(shown(View::All), ["Installed", "Favourite", "Heroic"]);
+        assert_eq!(shown(View::Installed), ["Installed", "Heroic"]);
+        assert_eq!(shown(View::Favourites), ["Favourite"]);
+        assert_eq!(shown(View::PlayHistory), ["Installed"]);
+        assert_eq!(shown(View::Source(Source::HeroicGog)), ["Heroic"]);
+    }
+
+    #[test]
+    fn changing_the_view_is_reported() {
+        let mut filter = LibraryFilter::default();
+
+        assert_eq!(filter.set_view(View::All), FilterChange::Unchanged);
+        assert_eq!(filter.set_view(View::Installed), FilterChange::MoreStrict);
+        assert_eq!(filter.set_view(View::All), FilterChange::LessStrict);
+        filter.set_view(View::Installed);
+        assert_eq!(filter.set_view(View::Favourites), FilterChange::Different);
+    }
+
+    #[test]
+    fn counts_cover_only_games_the_views_show() {
+        let counts = Counts::of(&sample());
+
+        assert_eq!(counts.get(View::All), 3);
+        assert_eq!(counts.get(View::Installed), 2);
+        assert_eq!(counts.get(View::Favourites), 1);
+        assert_eq!(counts.get(View::PlayHistory), 1);
+        assert_eq!(counts.get(View::Source(Source::Steam)), 2);
+        assert_eq!(counts.get(View::Source(Source::HeroicGog)), 1);
+        assert_eq!(counts.get(View::Source(Source::Lutris)), 0);
     }
 }

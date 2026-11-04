@@ -1,9 +1,15 @@
+use std::cell::RefCell;
+
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
+use pindu_core::library::{Counts, SortMode, View};
+use pindu_core::model::Source;
 
 use crate::config::APP_ID;
+use crate::models::{GameObject, LibraryModel};
+use crate::sources::{source_icon, source_name};
 use crate::sync_service::SyncService;
 
 mod imp {
@@ -17,8 +23,39 @@ mod imp {
         #[template_child]
         pub toast_overlay: TemplateChild<adw::ToastOverlay>,
         #[template_child]
+        pub split_view: TemplateChild<adw::OverlaySplitView>,
+        #[template_child]
+        pub sidebar: TemplateChild<adw::Sidebar>,
+        #[template_child]
+        pub all_item: TemplateChild<adw::SidebarItem>,
+        #[template_child]
+        pub installed_item: TemplateChild<adw::SidebarItem>,
+        #[template_child]
+        pub favourites_item: TemplateChild<adw::SidebarItem>,
+        #[template_child]
+        pub history_item: TemplateChild<adw::SidebarItem>,
+        #[template_child]
+        pub all_count: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub installed_count: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub favourites_count: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub history_count: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub sources_section: TemplateChild<adw::SidebarSection>,
+        #[template_child]
+        pub library_page: TemplateChild<adw::NavigationPage>,
+        #[template_child]
         pub sync_spinner: TemplateChild<adw::Spinner>,
+        #[template_child]
+        pub search_entry: TemplateChild<gtk::SearchEntry>,
+        #[template_child]
+        pub grid: TemplateChild<gtk::GridView>,
         pub settings: OnceCell<gio::Settings>,
+        pub library: OnceCell<LibraryModel>,
+        /// Every sidebar row with the view it selects and, for sources, its count label.
+        pub views: RefCell<Vec<(adw::SidebarItem, View, gtk::Label)>>,
     }
 
     #[glib::object_subclass]
@@ -64,12 +101,173 @@ glib::wrapper! {
 }
 
 impl PinduWindow {
-    pub fn new(application: &adw::Application, sync_service: &SyncService) -> Self {
+    pub fn new(
+        application: &adw::Application,
+        sync_service: &SyncService,
+        library: &LibraryModel,
+    ) -> Self {
         let window: Self = glib::Object::builder()
             .property("application", application)
             .build();
+        window
+            .imp()
+            .library
+            .set(library.clone())
+            .expect("a new window has no library");
+        window.setup_actions();
+        window.setup_sidebar();
+        window.setup_grid();
         window.observe_sync(sync_service);
         window
+    }
+
+    fn library(&self) -> &LibraryModel {
+        self.imp().library.get().expect("set on construction")
+    }
+
+    fn setup_actions(&self) {
+        let imp = self.imp();
+        let show_sidebar =
+            gio::PropertyAction::new("show-sidebar", &*imp.split_view, "show-sidebar");
+        self.add_action(&show_sidebar);
+
+        let sort_mode = gio::SimpleAction::new_stateful(
+            "sort-mode",
+            Some(glib::VariantTy::STRING),
+            &sort_mode_name(SortMode::default()).to_variant(),
+        );
+        sort_mode.connect_change_state(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |action, state| {
+                let Some(mode) = state
+                    .and_then(|state| state.str())
+                    .and_then(sort_mode_from_name)
+                else {
+                    return;
+                };
+                window.library().set_sort_mode(mode);
+                action.set_state(&sort_mode_name(mode).to_variant());
+            }
+        ));
+        self.add_action(&sort_mode);
+
+        imp.search_entry.connect_search_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |entry| window.library().set_search(&entry.text())
+        ));
+    }
+
+    /// Library rows and one row per source, with counts; sources without games are hidden.
+    fn setup_sidebar(&self) {
+        let imp = self.imp();
+        let mut views = vec![
+            (imp.all_item.get(), View::All, imp.all_count.get()),
+            (
+                imp.installed_item.get(),
+                View::Installed,
+                imp.installed_count.get(),
+            ),
+            (
+                imp.favourites_item.get(),
+                View::Favourites,
+                imp.favourites_count.get(),
+            ),
+            (
+                imp.history_item.get(),
+                View::PlayHistory,
+                imp.history_count.get(),
+            ),
+        ];
+        for &source in Source::ALL {
+            let count = gtk::Label::builder()
+                .css_classes(["dimmed", "numeric"])
+                .build();
+            let item = adw::SidebarItem::builder()
+                .title(source_name(source))
+                .icon_name(source_icon(source))
+                .suffix(&count)
+                .visible(false)
+                .build();
+            imp.sources_section.append(item.clone());
+            views.push((item, View::Source(source), count));
+        }
+        imp.views.replace(views);
+
+        imp.sidebar.connect_activated(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |sidebar, _| {
+                if let Some(item) = sidebar.selected_item() {
+                    window.show_view_of(&item);
+                }
+            }
+        ));
+        self.library().connect_counts_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |library| window.show_counts(&library.counts())
+        ));
+        self.show_counts(&self.library().counts());
+    }
+
+    fn show_view_of(&self, item: &adw::SidebarItem) {
+        let imp = self.imp();
+        let Some(view) = imp
+            .views
+            .borrow()
+            .iter()
+            .find(|(candidate, _, _)| candidate == item)
+            .map(|(_, view, _)| *view)
+        else {
+            return;
+        };
+        self.library().set_view(view);
+        imp.library_page
+            .set_title(&item.title().unwrap_or_default());
+        if imp.split_view.is_collapsed() {
+            imp.split_view.set_show_sidebar(false);
+        }
+    }
+
+    fn show_counts(&self, counts: &Counts) {
+        for (item, view, label) in self.imp().views.borrow().iter() {
+            let count = counts.get(*view);
+            label.set_label(&count.to_string());
+            if let View::Source(_) = view {
+                item.set_visible(count > 0);
+            }
+        }
+    }
+
+    /// Until the cover tile lands, each game is a card with its title.
+    fn setup_grid(&self) {
+        let factory = gtk::SignalListItemFactory::new();
+        factory.connect_setup(|_, item| {
+            let item = item.downcast_ref::<gtk::ListItem>().expect("a list item");
+            let label = gtk::Label::builder()
+                .wrap(true)
+                .justify(gtk::Justification::Center)
+                .width_request(150)
+                .height_request(225)
+                .css_classes(["card"])
+                .build();
+            item.set_child(Some(&label));
+        });
+        factory.connect_bind(|_, item| {
+            let item = item.downcast_ref::<gtk::ListItem>().expect("a list item");
+            let (Some(game), Some(label)) = (
+                item.item().and_downcast::<GameObject>(),
+                item.child().and_downcast::<gtk::Label>(),
+            ) else {
+                return;
+            };
+            label.set_label(&game.game().title);
+        });
+        let grid = &self.imp().grid;
+        grid.set_factory(Some(&factory));
+        grid.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
     }
 
     /// Shows a header spinner while importing, and one toast summarising any problems.
@@ -140,4 +338,24 @@ impl PinduWindow {
         let _ = settings.set_int("window-height", height);
         let _ = settings.set_boolean("window-maximized", self.is_maximized());
     }
+}
+
+fn sort_mode_name(mode: SortMode) -> &'static str {
+    match mode {
+        SortMode::LastPlayed => "last-played",
+        SortMode::NameAscending => "name-ascending",
+        SortMode::NameDescending => "name-descending",
+        SortMode::RecentlyAdded => "recently-added",
+    }
+}
+
+fn sort_mode_from_name(name: &str) -> Option<SortMode> {
+    [
+        SortMode::LastPlayed,
+        SortMode::NameAscending,
+        SortMode::NameDescending,
+        SortMode::RecentlyAdded,
+    ]
+    .into_iter()
+    .find(|mode| sort_mode_name(*mode) == name)
 }

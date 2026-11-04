@@ -34,6 +34,7 @@ mod imp {
             let obj = self.obj();
             obj.setup_actions();
             obj.set_accels_for_action("app.quit", &["<primary>q"]);
+            obj.set_accels_for_action("win.show-sidebar", &["F9"]);
         }
     }
 
@@ -57,6 +58,7 @@ mod imp {
                 let window = PinduWindow::new(
                     application.upcast_ref::<adw::Application>(),
                     &self.sync_service,
+                    &application.library_service().model(),
                 );
                 // Show the stored library at once, then sync every source.
                 application.library_service().reload();
