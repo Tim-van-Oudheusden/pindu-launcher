@@ -9,6 +9,7 @@ use pindu_core::model::{GameId, Source};
 
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
+use crate::game_page::GamePage;
 use crate::library_service::LibraryService;
 use crate::models::{GameObject, LibraryModel};
 use crate::sources::{source_icon, source_name};
@@ -27,6 +28,8 @@ mod imp {
         pub toast_overlay: TemplateChild<adw::ToastOverlay>,
         #[template_child]
         pub split_view: TemplateChild<adw::OverlaySplitView>,
+        #[template_child]
+        pub navigation_view: TemplateChild<adw::NavigationView>,
         #[template_child]
         pub sidebar: TemplateChild<adw::Sidebar>,
         #[template_child]
@@ -149,6 +152,14 @@ impl PinduWindow {
             gio::PropertyAction::new("show-sidebar", &*imp.split_view, "show-sidebar");
         self.add_action(&show_sidebar);
 
+        // Alt+Left (and the Back key) leave a game page for the library.
+        let back = gio::ActionEntry::builder("back")
+            .activate(|window: &Self, _, _| {
+                window.imp().navigation_view.pop();
+            })
+            .build();
+        self.add_action_entries([back]);
+
         let sort_mode = gio::SimpleAction::new_stateful(
             "sort-mode",
             Some(glib::VariantTy::STRING),
@@ -170,17 +181,9 @@ impl PinduWindow {
         ));
         self.add_action(&sort_mode);
 
-        let hide_game = gio::SimpleAction::new("hide-game", Some(glib::VariantTy::STRING));
-        hide_game.connect_activate(glib::clone!(
-            #[weak(rename_to = window)]
-            self,
-            move |_, id| {
-                if let Some(id) = id.and_then(|id| id.str()).and_then(|id| id.parse().ok()) {
-                    window.hide_game(&id);
-                }
-            }
-        ));
-        self.add_action(&hide_game);
+        self.add_game_action("hide-game", Self::hide_game);
+        self.add_game_action("show-details", Self::show_details);
+        self.add_game_action("open-install-folder", Self::open_install_folder);
 
         let search = gio::ActionEntry::builder("search")
             .activate(|window: &Self, _, _| {
@@ -188,6 +191,45 @@ impl PinduWindow {
             })
             .build();
         self.add_action_entries([search]);
+    }
+
+    /// Adds a `win.<name>` action that takes a game ID.
+    fn add_game_action(&self, name: &str, activate: fn(&Self, &GameId)) {
+        let action = gio::SimpleAction::new(name, Some(glib::VariantTy::STRING));
+        action.connect_activate(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, id| {
+                if let Some(id) = id.and_then(|id| id.str()).and_then(|id| id.parse().ok()) {
+                    activate(&window, &id);
+                }
+            }
+        ));
+        self.add_action(&action);
+    }
+
+    /// Pushes the game's page.
+    fn show_details(&self, id: &GameId) {
+        if let Some(game) = self.library().game_object(id) {
+            self.imp().navigation_view.push(&GamePage::new(&game));
+        }
+    }
+
+    /// Opens the game's install folder in the file manager.
+    fn open_install_folder(&self, id: &GameId) {
+        let Some(path) = self
+            .library()
+            .game_object(id)
+            .and_then(|game| game.game().install_path.clone())
+        else {
+            return;
+        };
+        let launcher = gtk::FileLauncher::new(Some(&gio::File::for_path(path)));
+        launcher.launch(Some(self), gio::Cancellable::NONE, |result| {
+            if let Err(error) = result {
+                glib::g_warning!("pindu", "Could not open the install folder: {error}");
+            }
+        });
     }
 
     /// Search (Ctrl+F, or typing anywhere in the library), the filter toggles, and the
@@ -427,6 +469,20 @@ impl PinduWindow {
             }
         ));
         grid.add_controller(keys);
+        // Activating a tile opens its game page.
+        grid.connect_activate(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |grid, position| {
+                let game = grid
+                    .model()
+                    .and_then(|model| model.item(position))
+                    .and_downcast::<GameObject>();
+                if let Some(game) = game {
+                    window.show_details(&game.id());
+                }
+            }
+        ));
         for key in ["tile-size", "show-titles"] {
             self.settings().connect_changed(
                 Some(key),

@@ -189,13 +189,17 @@ impl LibraryModel {
         imp.games.splice(0, imp.games.n_items(), &objects);
     }
 
-    /// The title of a game in the library, shown or not.
-    pub fn game_title(&self, id: &pindu_core::model::GameId) -> Option<String> {
+    /// A game in the library by ID, shown or not.
+    pub fn game_object(&self, id: &pindu_core::model::GameId) -> Option<GameObject> {
         let games = &self.imp().games;
         (0..games.n_items())
             .filter_map(|position| games.item(position).and_downcast::<GameObject>())
             .find(|game| game.game().id == *id)
-            .map(|game| game.game().title.clone())
+    }
+
+    /// The title of a game in the library, shown or not.
+    pub fn game_title(&self, id: &pindu_core::model::GameId) -> Option<String> {
+        self.game_object(id).map(|game| game.game().title.clone())
     }
 
     /// Shows only the games of a sidebar view.

@@ -1,0 +1,154 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PinduGamePage: Adw.NavigationPage {
+  tag: "game";
+
+  child: Adw.ToolbarView {
+    extend-content-to-top-edge: true;
+
+    [top]
+    Adw.HeaderBar {
+      show-title: false;
+    }
+
+    content: ScrolledWindow {
+      hscrollbar-policy: never;
+
+      child: Box {
+        orientation: vertical;
+
+        Overlay {
+          styles [
+            "game-hero",
+          ]
+
+          child: Picture hero {
+            content-fit: cover;
+            height-request: 320;
+            can-shrink: true;
+          };
+
+          [overlay]
+          Box {
+            can-target: false;
+
+            styles [
+              "hero-gradient",
+            ]
+          }
+
+          [overlay]
+          Box {
+            halign: start;
+            valign: end;
+            margin-start: 32;
+            margin-end: 32;
+            margin-bottom: 24;
+
+            Picture logo {
+              visible: false;
+              content-fit: contain;
+              width-request: 320;
+              height-request: 120;
+              can-shrink: true;
+              halign: start;
+            }
+
+            Label title {
+              wrap: true;
+              xalign: 0;
+
+              styles [
+                "title-1",
+              ]
+            }
+          }
+        }
+
+        Adw.Clamp {
+          maximum-size: 900;
+          margin-start: 24;
+          margin-end: 24;
+          margin-bottom: 32;
+
+          child: Box {
+            orientation: vertical;
+            spacing: 24;
+
+            Box {
+              spacing: 12;
+
+              Button play_button {
+                label: _("_Play");
+                use-underline: true;
+                action-name: "app.play";
+
+                styles [
+                  "pill",
+                  "suggested-action",
+                ]
+              }
+
+              MenuButton more_button {
+                icon-name: "view-more-symbolic";
+                tooltip-text: _("More Actions");
+                valign: center;
+
+                styles [
+                  "circular",
+                ]
+              }
+            }
+
+            Adw.WrapBox facts {
+              child-spacing: 32;
+              line-spacing: 12;
+            }
+
+            Adw.PreferencesGroup about_group {
+              title: _("About");
+
+              Adw.ActionRow developer_row {
+                title: _("Developer");
+                subtitle-selectable: true;
+
+                styles [
+                  "property",
+                ]
+              }
+
+              Adw.ActionRow genres_row {
+                title: _("Genres");
+
+                styles [
+                  "property",
+                ]
+              }
+            }
+
+            Label description {
+              wrap: true;
+              xalign: 0;
+              selectable: true;
+            }
+
+            Adw.PreferencesGroup launch_group {
+              title: _("Launch");
+
+              Adw.ActionRow launch_row {
+                title: _("Started by the launcher");
+
+                [suffix]
+                Button open_in_launcher {
+                  valign: center;
+                  action-name: "app.open-in-launcher";
+                }
+              }
+            }
+          };
+        }
+      };
+    };
+  };
+}

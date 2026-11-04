@@ -36,6 +36,7 @@ mod imp {
             obj.set_accels_for_action("app.quit", &["<primary>q"]);
             obj.set_accels_for_action("win.show-sidebar", &["F9"]);
             obj.set_accels_for_action("win.search", &["<primary>f"]);
+            obj.set_accels_for_action("win.back", &["<alt>Left", "Back"]);
         }
     }
 

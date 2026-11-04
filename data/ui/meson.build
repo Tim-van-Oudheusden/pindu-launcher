@@ -1,6 +1,7 @@
 # Every Blueprint file, without extension; each compiles to <name>.ui next to it.
 blueprint_names = [
   'cover_tile',
+  'game_page',
   'window',
 ]
 

@@ -3,13 +3,14 @@
 //! glycin's sandboxed loaders.
 
 use std::cell::{Cell, RefCell};
-use std::collections::{HashMap, VecDeque};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{gdk, gio, glib, graphene, gsk};
+use gtk::{gdk, glib, graphene, gsk};
 use pindu_core::art::{Placement, Rect, place};
+
+use super::textures;
 
 /// Blur radius of the background copy behind art that does not fill the cover.
 const BLUR_RADIUS: f64 = 24.0;
@@ -129,25 +130,21 @@ impl CoverArt {
             }
         };
         imp.is_icon.set(is_icon);
-        if let Some(texture) = cached_texture(&path) {
+        if let Some(texture) = textures::cached(&path) {
             imp.texture.replace(Some(texture));
             on_loaded(self);
             return;
         }
         let art = self.downgrade();
         glib::spawn_future_local(async move {
-            let texture = load_texture(&path).await;
+            let texture = textures::load(&path).await;
             let Some(art) = art.upgrade() else { return };
             let imp = art.imp();
             if imp.generation.get() != generation {
                 return;
             }
-            match texture {
-                Ok(texture) => {
-                    cache_texture(path, texture.clone());
-                    imp.texture.replace(Some(texture));
-                }
-                Err(error) => glib::g_debug!("pindu", "Could not load {}: {error}", path.display()),
+            if let Ok(texture) = texture {
+                imp.texture.replace(Some(texture));
             }
             art.queue_draw();
             on_loaded(&art);
@@ -167,41 +164,4 @@ impl Default for CoverArt {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// Decodes an image file in glycin's sandboxed loaders.
-async fn load_texture(path: &Path) -> Result<gdk::Texture, String> {
-    let loader = glycin::Loader::new(gio::File::for_path(path));
-    let mut image = loader.load().await.map_err(|error| error.to_string())?;
-    let frame = image
-        .next_frame()
-        .await
-        .map_err(|error| error.to_string())?;
-    Ok(frame.texture())
-}
-
-/// Decoded art kept in memory, so tiles that rebind or scroll back draw at once.
-const TEXTURE_CACHE_SIZE: usize = 256;
-
-thread_local! {
-    static TEXTURES: RefCell<(HashMap<PathBuf, gdk::Texture>, VecDeque<PathBuf>)> =
-        RefCell::default();
-}
-
-fn cached_texture(path: &Path) -> Option<gdk::Texture> {
-    TEXTURES.with_borrow(|(textures, _)| textures.get(path).cloned())
-}
-
-/// Keeps a texture, dropping the oldest once the cache is full.
-fn cache_texture(path: PathBuf, texture: gdk::Texture) {
-    TEXTURES.with_borrow_mut(|(textures, order)| {
-        if textures.insert(path.clone(), texture).is_none() {
-            order.push_back(path);
-        }
-        while order.len() > TEXTURE_CACHE_SIZE {
-            if let Some(oldest) = order.pop_front() {
-                textures.remove(&oldest);
-            }
-        }
-    });
 }

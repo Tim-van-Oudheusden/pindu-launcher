@@ -1,4 +1,5 @@
 crates/pindu-ui/src/application.rs
+crates/pindu-ui/src/game_page.rs
 crates/pindu-ui/src/sources.rs
 crates/pindu-ui/src/sync_service.rs
 crates/pindu-ui/src/widgets/cover_tile.rs
@@ -7,4 +8,5 @@ data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in
 data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml
 data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in
 data/ui/cover_tile.blp
+data/ui/game_page.blp
 data/ui/window.blp
