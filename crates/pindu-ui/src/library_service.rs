@@ -3,7 +3,7 @@
 use gtk::glib;
 use gtk::subclass::prelude::*;
 use pindu_core::library::{self, LibraryEntry};
-use pindu_core::model::GameId;
+use pindu_core::model::{Game, GameId, Timestamp};
 use pindu_core::paths::default_library_db_path;
 use pindu_core::store::{self, Store};
 
@@ -55,12 +55,27 @@ impl LibraryService {
 
     /// Hides or shows a game in the library views.
     pub fn set_hidden(&self, id: &GameId, hidden: bool) {
+        self.edit_game(id, move |game| game.hidden = hidden);
+    }
+
+    /// Records that a game was just started.
+    pub fn mark_played(&self, id: &GameId, now: Timestamp) {
+        self.edit_game(id, move |game| game.last_played_at = Some(now));
+    }
+
+    /// Whether a Steam game starts through Steam's launch-options dialog.
+    pub fn set_steam_launch_dialog(&self, id: &GameId, dialog: bool) {
+        self.edit_game(id, move |game| game.steam_launch_dialog = dialog);
+    }
+
+    /// Changes one stored game on a worker thread, then reloads the model.
+    fn edit_game(&self, id: &GameId, edit: impl FnOnce(&mut Game) + Send + 'static) {
         let id = id.clone();
         self.change(move |store| {
             let Some(mut game) = store.game(&id)? else {
                 return Ok(());
             };
-            game.hidden = hidden;
+            edit(&mut game);
             store.update_game(&game)
         });
     }

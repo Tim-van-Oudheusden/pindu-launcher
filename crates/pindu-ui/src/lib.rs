@@ -4,6 +4,7 @@
 pub mod application;
 pub mod config;
 pub mod game_page;
+pub mod launch_service;
 pub mod library_service;
 pub mod models;
 pub mod sources;

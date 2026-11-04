@@ -4,7 +4,9 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
+use crate::launch_service;
 use crate::library_service::LibraryService;
+use crate::models::GameObject;
 use crate::sync_service::SyncService;
 use crate::window::PinduWindow;
 
@@ -107,7 +109,51 @@ impl PinduApplication {
         let import_action = gio::ActionEntry::builder("import")
             .activate(move |app: &Self, _, _| app.imp().sync_service.sync())
             .build();
-        self.add_action_entries([quit_action, about_action, import_action]);
+        let play_action = gio::ActionEntry::builder("play")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| app.with_game(id, launch_service::play))
+            .build();
+        let open_action = gio::ActionEntry::builder("open-in-launcher")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                app.with_game(id, |window, game, _, toast| {
+                    launch_service::open_in_launcher(window, game, toast)
+                });
+            })
+            .build();
+        self.add_action_entries([
+            quit_action,
+            about_action,
+            import_action,
+            play_action,
+            open_action,
+        ]);
+    }
+
+    /// Runs `work` for the game an action names, in the active window, with a way to
+    /// show a toast there.
+    fn with_game(
+        &self,
+        id: Option<&glib::Variant>,
+        work: impl FnOnce(&PinduWindow, &GameObject, &LibraryService, Box<dyn Fn(adw::Toast)>),
+    ) {
+        let Some(id) = id.and_then(|id| id.str()).and_then(|id| id.parse().ok()) else {
+            return;
+        };
+        let Some(window) = self.active_window().and_downcast::<PinduWindow>() else {
+            return;
+        };
+        let library = self.library_service();
+        let Some(game) = library.model().game_object(&id) else {
+            return;
+        };
+        let toast_window = window.downgrade();
+        let toast = Box::new(move |toast: adw::Toast| {
+            if let Some(window) = toast_window.upgrade() {
+                window.add_toast(toast);
+            }
+        });
+        work(&window, &game, library, toast);
     }
 
     fn show_about(&self) {

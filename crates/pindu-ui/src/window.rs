@@ -142,7 +142,7 @@ impl PinduWindow {
         window
     }
 
-    fn library(&self) -> &LibraryModel {
+    pub fn library(&self) -> &LibraryModel {
         self.imp().library.get().expect("set on construction")
     }
 
@@ -211,7 +211,8 @@ impl PinduWindow {
     /// Pushes the game's page.
     fn show_details(&self, id: &GameId) {
         if let Some(game) = self.library().game_object(id) {
-            self.imp().navigation_view.push(&GamePage::new(&game));
+            let page = GamePage::new(&game, &self.library_service());
+            self.imp().navigation_view.push(&page);
         }
     }
 
@@ -422,6 +423,8 @@ impl PinduWindow {
         self.library().set_view(view);
         imp.library_page
             .set_title(&item.title().unwrap_or_default());
+        // Choosing a view from a game page goes back to the library.
+        imp.navigation_view.pop_to_tag("library");
         if imp.split_view.is_collapsed() {
             imp.split_view.set_show_sidebar(false);
         }
@@ -535,6 +538,11 @@ impl PinduWindow {
             self,
             move |service| window.report_problems(&service.problems())
         ));
+    }
+
+    /// Shows a toast over the window.
+    pub fn add_toast(&self, toast: adw::Toast) {
+        self.imp().toast_overlay.add_toast(toast);
     }
 
     fn report_problems(&self, problems: &[String]) {

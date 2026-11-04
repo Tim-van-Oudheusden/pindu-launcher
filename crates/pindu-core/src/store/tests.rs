@@ -59,10 +59,38 @@ fn a_game_round_trips_with_every_field() {
     game.missing_since = Some(1_700_000_900);
     game.genres = vec!["Strategy".into(), "MOBA".into()];
     game.description = Some("Every day, millions of players".into());
+    game.steam_launch_dialog = true;
 
     store.insert_game(&game).unwrap();
 
     assert_eq!(store.game(&game.id).unwrap(), Some(game));
+}
+
+#[test]
+fn a_database_from_the_first_release_is_migrated_with_its_games() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("library.db");
+    let conn = rusqlite::Connection::open(&path).unwrap();
+    conn.execute_batch(include_str!("migrations/0001_initial.sql"))
+        .unwrap();
+    conn.pragma_update(None, "user_version", 1).unwrap();
+    conn.execute(
+        "INSERT INTO games (id, source, native_id, title, sort_title, added_at, launch_kind)
+         VALUES ('steam:570', 'steam', '570', 'Dota 2', 'Dota 2', 1, 'store-uri')",
+        [],
+    )
+    .unwrap();
+    drop(conn);
+
+    let store = Store::open(&path).unwrap();
+
+    assert_eq!(store.schema_version().unwrap(), LATEST_SCHEMA_VERSION);
+    let game = store
+        .game(&GameId::new(Source::Steam, "570"))
+        .unwrap()
+        .unwrap();
+    assert_eq!(game.title, "Dota 2");
+    assert!(!game.steam_launch_dialog);
 }
 
 #[test]

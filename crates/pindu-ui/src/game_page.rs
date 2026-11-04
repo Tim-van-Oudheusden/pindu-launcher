@@ -7,6 +7,8 @@ use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
 use pindu_core::model::{Game, LaunchKind, Source, Timestamp};
 
+use crate::launch_service::launcher_name;
+use crate::library_service::LibraryService;
 use crate::models::GameObject;
 use crate::sources::source_name;
 use crate::widgets::textures;
@@ -43,6 +45,8 @@ mod imp {
         pub launch_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub open_in_launcher: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub steam_dialog_row: TemplateChild<adw::SwitchRow>,
     }
 
     #[glib::object_subclass]
@@ -79,13 +83,13 @@ glib::wrapper! {
 }
 
 impl GamePage {
-    pub fn new(object: &GameObject) -> Self {
+    pub fn new(object: &GameObject, library: &LibraryService) -> Self {
         let page: Self = glib::Object::new();
-        page.show(object);
+        page.show(object, library);
         page
     }
 
-    fn show(&self, object: &GameObject) {
+    fn show(&self, object: &GameObject, library: &LibraryService) {
         let imp = self.imp();
         let entry = object.entry();
         let game = &entry.game;
@@ -111,7 +115,7 @@ impl GamePage {
         imp.description
             .set_label(game.description.as_deref().unwrap_or_default());
 
-        let store_launcher = launcher_app(game.source());
+        let store_launcher = launcher_name(game.source());
         imp.launch_group
             .set_visible(game.launch_kind == LaunchKind::StoreUri && store_launcher.is_some());
         if let Some(launcher) = store_launcher {
@@ -121,6 +125,15 @@ impl GamePage {
             );
             imp.open_in_launcher
                 .set_label(&gettext("Open in {launcher}").replace("{launcher}", launcher));
+        }
+        if game.source() == Source::Steam {
+            let row = &imp.steam_dialog_row;
+            row.set_visible(true);
+            row.set_active(game.steam_launch_dialog);
+            let (library, id) = (library.clone(), game.id.clone());
+            row.connect_active_notify(move |row| {
+                library.set_steam_launch_dialog(&id, row.is_active())
+            });
         }
 
         let (hero, cover, logo) = (
@@ -146,19 +159,6 @@ impl GamePage {
                 imp.title.set_visible(false);
             }
         });
-    }
-}
-
-/// The app that owns a store game, as named in "Open in …".
-fn launcher_app(source: Source) -> Option<&'static str> {
-    match source {
-        Source::Steam => Some("Steam"),
-        Source::HeroicEpic | Source::HeroicGog | Source::HeroicAmazon | Source::HeroicSideload => {
-            Some("Heroic")
-        }
-        Source::Lutris => Some("Lutris"),
-        Source::Bottles => Some("Bottles"),
-        Source::Faugus | Source::Desktop | Source::Manual => None,
     }
 }
 

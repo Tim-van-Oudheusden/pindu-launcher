@@ -1,0 +1,1 @@
+ALTER TABLE games ADD COLUMN steam_launch_dialog INTEGER NOT NULL DEFAULT 0;

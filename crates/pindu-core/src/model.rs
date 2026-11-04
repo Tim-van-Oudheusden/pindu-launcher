@@ -201,6 +201,9 @@ pub struct Game {
     pub launch_kind: LaunchKind,
     pub genres: Vec<String>,
     pub description: Option<String>,
+    /// Start a Steam game through Steam's launch-options dialog
+    /// (`steam://launch/<id>/dialog`), which honours the user's launch-option choice.
+    pub steam_launch_dialog: bool,
 }
 
 impl Game {
@@ -231,6 +234,7 @@ impl Game {
             launch_kind,
             genres: Vec::new(),
             description: None,
+            steam_launch_dialog: false,
         }
     }
 

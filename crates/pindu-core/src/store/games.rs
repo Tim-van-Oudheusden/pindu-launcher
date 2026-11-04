@@ -6,7 +6,7 @@ use crate::model::{Game, GameId, Source};
 
 const COLUMNS: &str = "id, title, sort_title, developer, platform, installed, install_path, \
     size_bytes, added_at, last_played_at, favourite, hidden, pin_order, user_removed, \
-    missing_since, launch_kind, genres, description";
+    missing_since, launch_kind, genres, description, steam_launch_dialog";
 
 impl Store {
     pub fn insert_game(&self, game: &Game) -> Result<()> {
@@ -14,11 +14,12 @@ impl Store {
             game,
             "INSERT INTO games (id, source, native_id, title, sort_title, developer, platform,
                 installed, install_path, size_bytes, added_at, last_played_at, favourite, hidden,
-                pin_order, user_removed, missing_since, launch_kind, genres, description)
+                pin_order, user_removed, missing_since, launch_kind, genres, description,
+                steam_launch_dialog)
              VALUES (:id, :source, :native_id, :title, :sort_title, :developer, :platform,
                 :installed, :install_path, :size_bytes, :added_at, :last_played_at, :favourite,
                 :hidden, :pin_order, :user_removed, :missing_since, :launch_kind, :genres,
-                :description)",
+                :description, :steam_launch_dialog)",
         )?;
         Ok(())
     }
@@ -32,7 +33,8 @@ impl Store {
                 size_bytes = :size_bytes, added_at = :added_at, last_played_at = :last_played_at,
                 favourite = :favourite, hidden = :hidden, pin_order = :pin_order,
                 user_removed = :user_removed, missing_since = :missing_since,
-                launch_kind = :launch_kind, genres = :genres, description = :description
+                launch_kind = :launch_kind, genres = :genres, description = :description,
+                steam_launch_dialog = :steam_launch_dialog
              WHERE id = :id AND source = :source AND native_id = :native_id",
         )?;
         if changed == 0 {
@@ -65,6 +67,7 @@ impl Store {
             (":launch_kind", &game.launch_kind),
             (":genres", &genres),
             (":description", &game.description),
+            (":steam_launch_dialog", &game.steam_launch_dialog),
         ];
         Ok(self.conn.execute(sql, params)?)
     }
@@ -130,5 +133,6 @@ fn game_from_row(row: &Row<'_>) -> rusqlite::Result<Game> {
         launch_kind: row.get("launch_kind")?,
         genres: json_column(row, "genres")?,
         description: row.get("description")?,
+        steam_launch_dialog: row.get("steam_launch_dialog")?,
     })
 }
