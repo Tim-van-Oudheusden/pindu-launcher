@@ -22,6 +22,9 @@ pub fn route(game: &Game) -> Option<Route> {
 }
 
 fn store_uri(game: &Game) -> Option<String> {
+    if let Some(uri) = &game.launch_uri {
+        return Some(uri.clone());
+    }
     let id = game.id.native_id();
     match game.source() {
         Source::Steam if game.steam_launch_dialog => Some(format!("steam://launch/{id}/dialog")),
@@ -133,6 +136,20 @@ mod tests {
             Some(Route::StoreUri("lutris:rungameid/42".into()))
         );
         // Lutris has no URI that only opens it.
+        assert_eq!(launcher_uri(&game), None);
+    }
+
+    #[test]
+    fn bottles_programs_start_by_the_uri_their_source_gave() {
+        let mut game = store_game(Source::Bottles, "7f1e2d3c");
+        assert_eq!(route(&game), None);
+
+        game.launch_uri = Some("bottles:run/Gaming/Celeste".into());
+
+        assert_eq!(
+            route(&game),
+            Some(Route::StoreUri("bottles:run/Gaming/Celeste".into()))
+        );
         assert_eq!(launcher_uri(&game), None);
     }
 
