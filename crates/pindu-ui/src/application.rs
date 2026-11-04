@@ -143,7 +143,8 @@ impl PinduApplication {
             .build();
         let preferences_action = gio::ActionEntry::builder("preferences")
             .activate(move |app: &Self, _, _| {
-                PreferencesDialog::new().present(app.active_window().as_ref());
+                PreferencesDialog::new(&app.imp().sync_service)
+                    .present(app.active_window().as_ref());
             })
             .build();
         let add_game_action = gio::ActionEntry::builder("add-game")

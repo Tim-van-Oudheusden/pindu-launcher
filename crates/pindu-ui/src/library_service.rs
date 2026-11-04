@@ -1,5 +1,6 @@
 //! Loads the library from the store into the shared [`LibraryModel`], off the main thread.
 
+use crate::config::APP_ID;
 use gtk::glib;
 use gtk::subclass::prelude::*;
 use pindu_core::library::{self, LibraryEntry};
@@ -44,8 +45,12 @@ impl LibraryService {
     /// that cannot be read leaves the model as it was.
     pub fn reload(&self) {
         let service = self.clone();
+        let prefer_steamgriddb = gtk::gio::prelude::SettingsExt::boolean(
+            &gtk::gio::Settings::new(APP_ID),
+            "prefer-steamgriddb",
+        );
         glib::spawn_future_local(async move {
-            match gtk::gio::spawn_blocking(read_games).await {
+            match gtk::gio::spawn_blocking(move || read_games(prefer_steamgriddb)).await {
                 Ok(Ok((games, collections))) => {
                     let model = &service.imp().model;
                     model.set_collections(collections);
@@ -287,9 +292,9 @@ impl Default for LibraryService {
     }
 }
 
-fn read_games() -> Result<(Vec<LibraryEntry>, Vec<Collection>), String> {
+fn read_games(prefer_steamgriddb: bool) -> Result<(Vec<LibraryEntry>, Vec<Collection>), String> {
     let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
-    let games = library::load(&store).map_err(|error| error.to_string())?;
+    let games = library::load(&store, prefer_steamgriddb).map_err(|error| error.to_string())?;
     let collections = store.collections().map_err(|error| error.to_string())?;
     Ok((games, collections))
 }

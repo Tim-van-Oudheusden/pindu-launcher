@@ -8,11 +8,14 @@ pub const COVER_RATIO: f32 = 2.0 / 3.0;
 pub const FILL_TOLERANCE: f32 = 0.1;
 
 /// The image to show for a layout: the user's choice, then the source's own art, then
-/// SteamGridDB, then a generated placeholder.
-pub fn best(artwork: &[Artwork], layout: ArtLayout) -> Option<&Artwork> {
+/// SteamGridDB, then a generated placeholder. `prefer_steamgriddb` puts SteamGridDB before
+/// the source's art; the user's choice always comes first.
+pub fn best(artwork: &[Artwork], layout: ArtLayout, prefer_steamgriddb: bool) -> Option<&Artwork> {
     let rank = |origin| match origin {
         ArtOrigin::User => 0,
+        ArtOrigin::Source if prefer_steamgriddb => 2,
         ArtOrigin::Source => 1,
+        ArtOrigin::SteamGridDb if prefer_steamgriddb => 1,
         ArtOrigin::SteamGridDb => 2,
         ArtOrigin::Generated => 3,
     };
@@ -87,6 +90,27 @@ mod tests {
     }
 
     #[test]
+    fn steamgriddb_can_come_before_source_art_but_never_before_the_users_choice() {
+        let all = [
+            art(ArtLayout::Cover, ArtOrigin::Source, "/source"),
+            art(ArtLayout::Cover, ArtOrigin::SteamGridDb, "/sgdb"),
+            art(ArtLayout::Cover, ArtOrigin::User, "/user"),
+        ];
+
+        assert_eq!(
+            best(&all[..2], ArtLayout::Cover, true)
+                .unwrap()
+                .path
+                .to_str(),
+            Some("/sgdb")
+        );
+        assert_eq!(
+            best(&all, ArtLayout::Cover, true).unwrap().path.to_str(),
+            Some("/user")
+        );
+    }
+
+    #[test]
     fn the_users_choice_wins_then_source_art_then_steamgriddb_then_generated() {
         let all = [
             art(ArtLayout::Cover, ArtOrigin::Generated, "/generated"),
@@ -97,22 +121,31 @@ mod tests {
         ];
 
         assert_eq!(
-            best(&all, ArtLayout::Cover).unwrap().path.to_str(),
+            best(&all, ArtLayout::Cover, false).unwrap().path.to_str(),
             Some("/user")
         );
         assert_eq!(
-            best(&all[..3], ArtLayout::Cover).unwrap().path.to_str(),
+            best(&all[..3], ArtLayout::Cover, false)
+                .unwrap()
+                .path
+                .to_str(),
             Some("/source")
         );
         assert_eq!(
-            best(&all[..2], ArtLayout::Cover).unwrap().path.to_str(),
+            best(&all[..2], ArtLayout::Cover, false)
+                .unwrap()
+                .path
+                .to_str(),
             Some("/sgdb")
         );
         assert_eq!(
-            best(&all[..1], ArtLayout::Cover).unwrap().path.to_str(),
+            best(&all[..1], ArtLayout::Cover, false)
+                .unwrap()
+                .path
+                .to_str(),
             Some("/generated")
         );
-        assert!(best(&all, ArtLayout::Logo).is_none());
+        assert!(best(&all, ArtLayout::Logo, false).is_none());
     }
 
     #[test]

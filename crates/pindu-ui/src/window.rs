@@ -712,8 +712,13 @@ impl PinduWindow {
         for (item, view, label) in self.imp().views.borrow().iter() {
             let count = counts.get(*view);
             label.set_label(&count.to_string());
-            if let View::Source(_) = view {
-                item.set_visible(count > 0);
+            if let View::Source(source) = view {
+                let shown = !self
+                    .settings()
+                    .strv("hidden-sources")
+                    .iter()
+                    .any(|hidden| hidden.as_str() == source.as_str());
+                item.set_visible(count > 0 && shown);
             }
         }
     }
@@ -764,7 +769,7 @@ impl PinduWindow {
                 }
             }
         ));
-        for key in ["tile-size", "show-titles"] {
+        for key in ["tile-size", "show-titles", "show-badges"] {
             self.settings().connect_changed(
                 Some(key),
                 glib::clone!(
@@ -774,16 +779,33 @@ impl PinduWindow {
                 ),
             );
         }
+        self.settings().connect_changed(
+            Some("prefer-steamgriddb"),
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_, _| window.library_service().reload()
+            ),
+        );
+        self.settings().connect_changed(
+            Some("hidden-sources"),
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_, _| window.show_counts(&window.library().counts())
+            ),
+        );
     }
 
     fn update_tile_factory(&self) {
         let settings = self.settings();
         let size = TileSize::from_setting(&settings.string("tile-size"));
         let show_titles = settings.boolean("show-titles");
+        let show_badges = settings.boolean("show-badges");
         let factory = gtk::SignalListItemFactory::new();
         factory.connect_setup(move |_, item| {
             let item = item.downcast_ref::<gtk::ListItem>().expect("a list item");
-            item.set_child(Some(&CoverTile::new(size, show_titles)));
+            item.set_child(Some(&CoverTile::new(size, show_titles, show_badges)));
         });
         factory.connect_bind(|_, item| {
             let item = item.downcast_ref::<gtk::ListItem>().expect("a list item");
