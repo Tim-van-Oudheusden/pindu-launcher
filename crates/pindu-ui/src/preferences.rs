@@ -1,8 +1,8 @@
 //! The Preferences dialog: General (covers, launching, controller, permissions), Sources (import,
 //! folder, sidebar), Artwork (SteamGridDB), Windows games (default Proton, prefix folder and
-//! tools) and Fullscreen (start-up, sounds). Everything is GSettings, except the SteamGridDB key,
-//! which lives in the keyring, and each source's import switch and folder, which live with the
-//! library's other source state.
+//! tools) and Fullscreen (start-up, sounds). Everything is GSettings, except the SteamGridDB
+//! key, which lives in the keyring, and each source's import switch and folder, which live with
+//! the library's other source state.
 
 use std::cell::OnceCell;
 use std::rc::Rc;
