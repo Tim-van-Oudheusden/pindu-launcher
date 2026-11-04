@@ -2,7 +2,7 @@
 
 use gtk::glib;
 use gtk::subclass::prelude::*;
-use pindu_core::model::Game;
+use pindu_core::library::{self, LibraryEntry};
 use pindu_core::paths::default_library_db_path;
 use pindu_core::store::Store;
 
@@ -59,7 +59,7 @@ impl Default for LibraryService {
     }
 }
 
-fn read_games() -> Result<Vec<Game>, String> {
+fn read_games() -> Result<Vec<LibraryEntry>, String> {
     let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
-    store.games().map_err(|error| error.to_string())
+    library::load(&store).map_err(|error| error.to_string())
 }

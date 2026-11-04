@@ -13,5 +13,19 @@
       <default>false</default>
       <summary>Window maximized</summary>
     </key>
+    <key name="tile-size" type="s">
+      <choices>
+        <choice value="small"/>
+        <choice value="medium"/>
+        <choice value="large"/>
+      </choices>
+      <default>'medium'</default>
+      <summary>Cover tile size</summary>
+      <description>Small is 150×225, medium 200×300 and large 250×375 pixels.</description>
+    </key>
+    <key name="show-titles" type="b">
+      <default>true</default>
+      <summary>Show titles below covers</summary>
+    </key>
   </schema>
 </schemalist>

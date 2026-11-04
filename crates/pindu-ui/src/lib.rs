@@ -7,4 +7,5 @@ pub mod library_service;
 pub mod models;
 pub mod sources;
 pub mod sync_service;
+pub mod widgets;
 pub mod window;

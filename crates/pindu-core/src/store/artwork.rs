@@ -25,14 +25,18 @@ impl Store {
              ORDER BY layout, origin",
         )?;
         let artwork = statement
-            .query_map([game_id], |row| {
-                Ok(Artwork {
-                    game_id: row.get("game_id")?,
-                    layout: row.get("layout")?,
-                    origin: row.get("origin")?,
-                    path: row.get::<_, String>("path")?.into(),
-                })
-            })?
+            .query_map([game_id], artwork_from_row)?
+            .collect::<rusqlite::Result<_>>()?;
+        Ok(artwork)
+    }
+
+    /// Every stored image of every game, ordered by game, layout and origin.
+    pub fn all_artwork(&self) -> Result<Vec<Artwork>> {
+        let mut statement = self.conn.prepare(
+            "SELECT game_id, layout, origin, path FROM artwork ORDER BY game_id, layout, origin",
+        )?;
+        let artwork = statement
+            .query_map([], artwork_from_row)?
             .collect::<rusqlite::Result<_>>()?;
         Ok(artwork)
     }
@@ -49,4 +53,13 @@ impl Store {
         )?;
         Ok(())
     }
+}
+
+fn artwork_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Artwork> {
+    Ok(Artwork {
+        game_id: row.get("game_id")?,
+        layout: row.get("layout")?,
+        origin: row.get("origin")?,
+        path: row.get::<_, String>("path")?.into(),
+    })
 }

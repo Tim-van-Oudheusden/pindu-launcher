@@ -11,6 +11,7 @@ use crate::config::APP_ID;
 use crate::models::{GameObject, LibraryModel};
 use crate::sources::{source_icon, source_name};
 use crate::sync_service::SyncService;
+use crate::widgets::{CoverTile, TileSize};
 
 mod imp {
     use std::cell::OnceCell;
@@ -241,33 +242,50 @@ impl PinduWindow {
         }
     }
 
-    /// Until the cover tile lands, each game is a card with its title.
+    /// The cover grid; tiles follow the `tile-size` and `show-titles` settings.
     fn setup_grid(&self) {
+        let grid = &self.imp().grid;
+        grid.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
+        self.update_tile_factory();
+        for key in ["tile-size", "show-titles"] {
+            self.settings().connect_changed(
+                Some(key),
+                glib::clone!(
+                    #[weak(rename_to = window)]
+                    self,
+                    move |_, _| window.update_tile_factory()
+                ),
+            );
+        }
+    }
+
+    fn update_tile_factory(&self) {
+        let settings = self.settings();
+        let size = TileSize::from_setting(&settings.string("tile-size"));
+        let show_titles = settings.boolean("show-titles");
         let factory = gtk::SignalListItemFactory::new();
-        factory.connect_setup(|_, item| {
+        factory.connect_setup(move |_, item| {
             let item = item.downcast_ref::<gtk::ListItem>().expect("a list item");
-            let label = gtk::Label::builder()
-                .wrap(true)
-                .justify(gtk::Justification::Center)
-                .width_request(150)
-                .height_request(225)
-                .css_classes(["card"])
-                .build();
-            item.set_child(Some(&label));
+            item.set_child(Some(&CoverTile::new(size, show_titles)));
         });
         factory.connect_bind(|_, item| {
             let item = item.downcast_ref::<gtk::ListItem>().expect("a list item");
-            let (Some(game), Some(label)) = (
+            let (Some(game), Some(tile)) = (
                 item.item().and_downcast::<GameObject>(),
-                item.child().and_downcast::<gtk::Label>(),
+                item.child().and_downcast::<CoverTile>(),
             ) else {
                 return;
             };
-            label.set_label(&game.game().title);
+            tile.bind(&game);
+            item.set_accessible_label(&CoverTile::accessible_label(&game));
         });
-        let grid = &self.imp().grid;
-        grid.set_factory(Some(&factory));
-        grid.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
+        factory.connect_unbind(|_, item| {
+            let item = item.downcast_ref::<gtk::ListItem>().expect("a list item");
+            if let Some(tile) = item.child().and_downcast::<CoverTile>() {
+                tile.unbind();
+            }
+        });
+        self.imp().grid.set_factory(Some(&factory));
     }
 
     /// Shows a header spinner while importing, and one toast summarising any problems.

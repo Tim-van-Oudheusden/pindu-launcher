@@ -247,46 +247,47 @@ fn platform(oslist: &str) -> Option<Platform> {
 }
 
 /// The app's `librarycache` images. Current Steam keeps them in `<app id>/`, sometimes
-/// one folder deeper; older Steam kept flat `<app id>_<name>` files.
+/// one folder deeper, and newer apps only have a 300×450 `library_capsule.jpg` cover;
+/// older Steam kept flat `<app id>_<name>` files.
 fn artwork(cache: &Path, app_id: u32, icon: Option<&str>) -> Vec<(ArtLayout, PathBuf)> {
     let app_dir = cache.join(app_id.to_string());
-    let mut subdirs: Vec<PathBuf> = fs::read_dir(&app_dir)
+    let mut dirs: Vec<PathBuf> = fs::read_dir(&app_dir)
         .into_iter()
         .flatten()
         .filter_map(|entry| entry.ok())
         .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_dir()))
         .map(|entry| entry.path())
         .collect();
-    subdirs.sort();
-    let find = |name: &str, legacy: String| {
-        std::iter::once(&app_dir)
-            .chain(&subdirs)
-            .map(|dir| dir.join(name))
-            .chain([cache.join(legacy)])
-            .find(|path| path.is_file())
-    };
+    dirs.sort();
+    dirs.insert(0, app_dir);
     let icon_name = icon.map(|hash| format!("{hash}.jpg"));
-    [
+    let layouts: [(ArtLayout, Vec<&str>, &str); 4] = [
         (
             ArtLayout::Cover,
-            Some("library_600x900.jpg"),
+            vec!["library_600x900.jpg", "library_capsule.jpg"],
             "library_600x900.jpg",
         ),
         (
             ArtLayout::Hero,
-            Some("library_hero.jpg"),
+            vec!["library_hero.jpg"],
             "library_hero.jpg",
         ),
-        (ArtLayout::Logo, Some("logo.png"), "logo.png"),
-        (ArtLayout::Icon, icon_name.as_deref(), "icon.jpg"),
-    ]
-    .into_iter()
-    .filter_map(|(layout, name, legacy)| {
-        let path = match name {
-            Some(name) => find(name, format!("{app_id}_{legacy}")),
-            None => Some(cache.join(format!("{app_id}_{legacy}"))).filter(|path| path.is_file()),
-        };
-        path.map(|path| (layout, path))
-    })
-    .collect()
+        (ArtLayout::Logo, vec!["logo.png"], "logo.png"),
+        (
+            ArtLayout::Icon,
+            icon_name.as_deref().into_iter().collect(),
+            "icon.jpg",
+        ),
+    ];
+    layouts
+        .into_iter()
+        .filter_map(|(layout, names, legacy)| {
+            names
+                .iter()
+                .flat_map(|name| dirs.iter().map(move |dir| dir.join(name)))
+                .chain([cache.join(format!("{app_id}_{legacy}"))])
+                .find(|path| path.is_file())
+                .map(|path| (layout, path))
+        })
+        .collect()
 }

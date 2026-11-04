@@ -8,8 +8,9 @@ use std::collections::HashMap;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib};
-use pindu_core::library::{Counts, FilterChange, LibraryFilter, SortMode, View, compare};
-use pindu_core::model::Game;
+use pindu_core::library::{
+    Counts, FilterChange, LibraryEntry, LibraryFilter, SortMode, View, compare,
+};
 
 use super::GameObject;
 
@@ -150,23 +151,24 @@ impl LibraryModel {
 
     /// Replaces the games. Objects of games that stay are kept and updated in place, so
     /// widgets bound to them stay put.
-    pub fn set_games(&self, games: Vec<Game>) {
+    pub fn set_games(&self, entries: Vec<LibraryEntry>) {
         let imp = self.imp();
-        imp.counts.replace(Counts::of(&games));
+        imp.counts
+            .replace(Counts::of(entries.iter().map(|entry| &entry.game)));
         self.emit_by_name::<()>("counts-changed", &[]);
         let mut existing: HashMap<String, GameObject> = (0..imp.games.n_items())
             .filter_map(|position| imp.games.item(position).and_downcast::<GameObject>())
             .map(|object| (object.id().as_str().to_owned(), object))
             .collect();
-        let same_games = existing.len() == games.len()
-            && games
+        let same_games = existing.len() == entries.len()
+            && entries
                 .iter()
-                .all(|game| existing.contains_key(game.id.as_str()));
+                .all(|entry| existing.contains_key(entry.game.id.as_str()));
         if same_games {
             let mut changed = false;
-            for game in games {
-                let object = &existing[game.id.as_str()];
-                changed |= object.update(game);
+            for entry in entries {
+                let object = &existing[entry.game.id.as_str()];
+                changed |= object.update(entry);
             }
             if changed {
                 imp.filter.changed(gtk::FilterChange::Different);
@@ -174,14 +176,14 @@ impl LibraryModel {
             }
             return;
         }
-        let objects: Vec<GameObject> = games
+        let objects: Vec<GameObject> = entries
             .into_iter()
-            .map(|game| match existing.remove(game.id.as_str()) {
+            .map(|entry| match existing.remove(entry.game.id.as_str()) {
                 Some(object) => {
-                    object.update(game);
+                    object.update(entry);
                     object
                 }
-                None => GameObject::new(game),
+                None => GameObject::new(entry),
             })
             .collect();
         imp.games.splice(0, imp.games.n_items(), &objects);

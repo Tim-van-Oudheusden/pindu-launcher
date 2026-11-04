@@ -238,3 +238,20 @@ fn flatpak_steam_imports_its_main_library_whatever_path_it_records() {
         )]
     );
 }
+
+#[test]
+fn a_portrait_capsule_is_the_cover_when_there_is_no_600x900_art() {
+    let (_dir, root) = fixture("steam");
+    let steam_root = root.join("home/.local/share/Steam");
+    write_appinfo(&steam_root);
+    let capsule = steam_root.join("appcache/librarycache/292030/9f2c/library_capsule.jpg");
+    std::fs::create_dir_all(capsule.parent().unwrap()).unwrap();
+    std::fs::write(&capsule, "capsule").unwrap();
+
+    let snapshot = steam::import(&steam_root).unwrap();
+
+    assert_eq!(
+        game(&snapshot, "292030").artwork,
+        [(ArtLayout::Cover, capsule)]
+    );
+}

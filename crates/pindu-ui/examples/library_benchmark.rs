@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
+use pindu_core::library::LibraryEntry;
 use pindu_core::model::{Game, GameId, LaunchKind, Source};
 use pindu_ui::models::{GameObject, LibraryModel};
 
@@ -19,7 +20,7 @@ const WORDS: &[&str] = &[
     "Rogue", "Legacy", "Tower", "Crown", "Shadow", "Ember", "Frost", "River", "Ocean", "Dream",
 ];
 
-fn generated_games() -> Vec<Game> {
+fn generated_games() -> Vec<LibraryEntry> {
     let mut seed: u64 = 0x2545_f491_4f6c_dd1d;
     let mut next = move || {
         seed ^= seed << 13;
@@ -41,7 +42,10 @@ fn generated_games() -> Vec<Game> {
             );
             game.last_played_at = (n % 3 == 0).then(|| next() as i64 % 1_700_000_000);
             game.installed = n % 2 == 0;
-            game
+            LibraryEntry {
+                game,
+                art: Default::default(),
+            }
         })
         .collect()
 }
