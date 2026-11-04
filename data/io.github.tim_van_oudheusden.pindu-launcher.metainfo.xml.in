@@ -1,14 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Stub MetaInfo; the final text and screenshots come with #58. -->
 <component type="desktop-application">
   <id>@APP_ID@</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
 
   <name>Pindu launcher</name>
-  <summary>Browse and start your games</summary>
+  <summary>Play all your games</summary>
   <description>
-    <p>Pindu launcher gathers the games from Steam, Heroic and your other launchers into one library.</p>
+    <p>
+      Pindu launcher gathers every game on your computer into one library, whichever launcher
+      installed it. Browse your covers, pick up where you left off and start any game with one
+      click.
+    </p>
+    <p>Games come from:</p>
+    <ul>
+      <li>Steam, native or Flatpak</li>
+      <li>Heroic: Epic Games, GOG, Amazon and sideloaded games</li>
+      <li>Lutris, Bottles and Faugus</li>
+      <li>Games installed as apps, including Flatpaks</li>
+      <li>Games you add yourself</li>
+    </ul>
+    <p>Keep your library tidy:</p>
+    <ul>
+      <li>Search, sort and filter by installed, favourite, Windows or native</li>
+      <li>Group games into your own collections</li>
+      <li>Jump back into recent and pinned games</li>
+      <li>See when you played and for how long, including playtime from your launchers</li>
+      <li>Hide games you never play</li>
+      <li>Choose your own artwork, or find it on SteamGridDB with your own key</li>
+    </ul>
+    <p>
+      Store games start through their own launcher, which keeps their settings, updates and
+      playtime. Your library works offline, and nothing leaves your computer unless you ask
+      for artwork.
+    </p>
   </description>
 
   <developer id="io.github.tim_van_oudheusden">
@@ -26,6 +51,29 @@
     <color type="primary" scheme_preference="light">#9bd8fb</color>
     <color type="primary" scheme_preference="dark">#174c8c</color>
   </branding>
+  
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/Tim-van-Oudheusden/pindu-launcher/v0.1.0/data/screenshots/1-library.png</image>
+      <caption>All your games in one library</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/Tim-van-Oudheusden/pindu-launcher/v0.1.0/data/screenshots/2-game-page.png</image>
+      <caption>Details and launch options for each game</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/Tim-van-Oudheusden/pindu-launcher/v0.1.0/data/screenshots/3-play-history.png</image>
+      <caption>See what you played and for how long</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/Tim-van-Oudheusden/pindu-launcher/v0.1.0/data/screenshots/4-collection.png</image>
+      <caption>Group games into your own collections</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/Tim-van-Oudheusden/pindu-launcher/v0.1.0/data/screenshots/5-game-page-dark.png</image>
+      <caption>Light and dark style</caption>
+    </screenshot>
+  </screenshots>
 
   <content_rating type="oars-1.1" />
 
@@ -35,9 +83,20 @@
   <supports>
     <control>keyboard</control>
     <control>pointing</control>
+    <control>gamepad</control>
   </supports>
 
   <releases>
-    <release version="0.1.0" date="2026-11-04" />
+    <release version="0.1.0" date="2026-11-04">
+      <description>
+        <p>The first release.</p>
+        <ul>
+          <li>One library for Steam, Heroic, Lutris, Bottles, Faugus, installed apps and games you add yourself</li>
+          <li>Collections, favourites, Jump Back In and play history</li>
+          <li>Artwork from your launchers, your own files or SteamGridDB</li>
+          <li>Search from GNOME Shell</li>
+        </ul>
+      </description>
+    </release>
   </releases>
 </component>
