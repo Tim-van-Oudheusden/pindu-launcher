@@ -14,6 +14,8 @@ pub mod permission_service;
 pub mod preferences;
 pub mod session_service;
 pub mod sources;
+pub mod steamgriddb_picker;
+pub mod steamgriddb_service;
 pub mod sync_service;
 pub mod widgets;
 pub mod window;
