@@ -1,12 +1,12 @@
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use gettextrs::gettext;
+use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
 
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
 use crate::game_dialog::GameDialog;
 use crate::launch_service;
-use crate::library_service::LibraryService;
+use crate::library_service::{ImportFailure, LibraryService};
 use crate::models::GameObject;
 use crate::permission_service;
 use crate::preferences::PreferencesDialog;
@@ -15,6 +15,7 @@ use crate::session_service::SessionService;
 use crate::sync_service::SyncService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
+use pindu_core::backup::ImportSummary;
 
 mod imp {
     use std::cell::{OnceCell, RefCell};
@@ -223,6 +224,12 @@ impl PinduApplication {
         let import_action = gio::ActionEntry::builder("import")
             .activate(move |app: &Self, _, _| app.imp().sync_service.sync())
             .build();
+        let export_library_action = gio::ActionEntry::builder("export-library")
+            .activate(move |app: &Self, _, _| app.export_library())
+            .build();
+        let import_backup_action = gio::ActionEntry::builder("import-backup")
+            .activate(move |app: &Self, _, _| app.import_backup())
+            .build();
         let play_action = gio::ActionEntry::builder("play")
             .parameter_type(Some(glib::VariantTy::STRING))
             .activate(move |app: &Self, _, id| {
@@ -298,6 +305,8 @@ impl PinduApplication {
             add_game_action,
             edit_game_action,
             import_action,
+            export_library_action,
+            import_backup_action,
             play_action,
             launch_action,
             stop_action,
@@ -307,6 +316,79 @@ impl PinduApplication {
 
     /// Runs `work` for the game an action names, in the active window, with a way to
     /// show a toast there.
+    /// Saves a backup of collections, favourites, hidden games, games added by hand and
+    /// tracked playtime to a file the user picks.
+    fn export_library(&self) {
+        let window = self.active_window().and_downcast::<PinduWindow>();
+        let date = glib::DateTime::now_local()
+            .and_then(|now| now.format("%F"))
+            .map(|date| date.to_string())
+            .unwrap_or_default();
+        let chooser = gtk::FileDialog::builder()
+            .title(gettext("Export Library"))
+            .initial_name(format!("pindu-launcher-backup-{date}.json"))
+            .modal(true)
+            .build();
+        let library = self.library_service().clone();
+        let parent = window.clone();
+        chooser.save(parent.as_ref(), gio::Cancellable::NONE, move |file| {
+            let Some(path) = file.ok().and_then(|file| file.path()) else {
+                return;
+            };
+            glib::spawn_future_local(async move {
+                let message = match library
+                    .export_backup(path, glib::real_time() / 1_000_000)
+                    .await
+                {
+                    Ok(()) => gettext("Library exported"),
+                    Err(error) => {
+                        gettext("Could not export the library: {error}").replace("{error}", &error)
+                    }
+                };
+                if let Some(window) = window {
+                    window.add_toast(adw::Toast::new(&message));
+                }
+            });
+        });
+    }
+
+    /// Restores a backup the user picks; it adds to the library and never removes.
+    fn import_backup(&self) {
+        let window = self.active_window().and_downcast::<PinduWindow>();
+        let filter = gtk::FileFilter::new();
+        filter.set_name(Some(&gettext("Library Backups")));
+        filter.add_suffix("json");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&filter);
+        let chooser = gtk::FileDialog::builder()
+            .title(gettext("Import Backup"))
+            .filters(&filters)
+            .modal(true)
+            .build();
+        let library = self.library_service().clone();
+        let parent = window.clone();
+        chooser.open(parent.as_ref(), gio::Cancellable::NONE, move |file| {
+            let Some(path) = file.ok().and_then(|file| file.path()) else {
+                return;
+            };
+            glib::spawn_future_local(async move {
+                let message = match library.import_backup(path).await {
+                    Ok(summary) => import_message(&summary),
+                    Err(ImportFailure::NotABackup) => gettext("This file is not a library backup"),
+                    Err(ImportFailure::TooNew) => {
+                        gettext("This backup is from a newer version of Pindu launcher")
+                    }
+                    Err(ImportFailure::Failed(error)) => {
+                        gettext("Could not import the backup: {error}").replace("{error}", &error)
+                    }
+                };
+                if let Some(window) = window {
+                    window.add_toast(adw::Toast::new(&message));
+                }
+            });
+        });
+    }
+
     fn with_game(
         &self,
         id: Option<&glib::Variant>,
@@ -351,5 +433,33 @@ impl PinduApplication {
 impl Default for PinduApplication {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// What an import restored, and how many of its games this library lacks.
+fn import_message(summary: &ImportSummary) -> String {
+    let restored = summary.manual_games
+        + summary.favourites
+        + summary.hidden
+        + summary.collections
+        + summary.sessions;
+    let done = if restored == 0 {
+        gettext("Nothing new to restore")
+    } else {
+        gettext("Backup restored")
+    };
+    match summary.missing_games {
+        0 => done,
+        missing => {
+            let note = ngettext(
+                "one game in it is not in this library",
+                "{count} games in it are not in this library",
+                missing as u32,
+            )
+            .replace("{count}", &missing.to_string());
+            gettext("{result}; {note}")
+                .replace("{result}", &done)
+                .replace("{note}", &note)
+        }
     }
 }
