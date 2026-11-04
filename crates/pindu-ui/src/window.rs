@@ -3,11 +3,13 @@ use std::cell::RefCell;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
-use gtk::{gio, glib};
+use gtk::{gdk, gio, glib};
 use pindu_core::library::{Counts, SortMode, View};
-use pindu_core::model::Source;
+use pindu_core::model::{GameId, Source};
 
+use crate::application::PinduApplication;
 use crate::config::APP_ID;
+use crate::library_service::LibraryService;
 use crate::models::{GameObject, LibraryModel};
 use crate::sources::{source_icon, source_name};
 use crate::sync_service::SyncService;
@@ -153,11 +155,55 @@ impl PinduWindow {
         ));
         self.add_action(&sort_mode);
 
+        let hide_game = gio::SimpleAction::new("hide-game", Some(glib::VariantTy::STRING));
+        hide_game.connect_activate(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, id| {
+                if let Some(id) = id.and_then(|id| id.str()).and_then(|id| id.parse().ok()) {
+                    window.hide_game(&id);
+                }
+            }
+        ));
+        self.add_action(&hide_game);
+
         imp.search_entry.connect_search_changed(glib::clone!(
             #[weak(rename_to = window)]
             self,
             move |entry| window.library().set_search(&entry.text())
         ));
+    }
+
+    fn library_service(&self) -> LibraryService {
+        self.application()
+            .and_downcast::<PinduApplication>()
+            .expect("windows belong to the application")
+            .library_service()
+            .clone()
+    }
+
+    /// Hides a game, with a toast to undo it.
+    fn hide_game(&self, id: &GameId) {
+        let service = self.library_service();
+        let title = self.library().game_title(id).unwrap_or_default();
+        service.set_hidden(id, true);
+        let toast = adw::Toast::builder()
+            .title(gettext("“{title}” hidden").replace("{title}", &title))
+            .button_label(gettext("_Undo"))
+            .use_markup(false)
+            .build();
+        let id = id.clone();
+        toast.connect_button_clicked(move |_| service.set_hidden(&id, false));
+        self.imp().toast_overlay.add_toast(toast);
+    }
+
+    /// The tile that has keyboard focus, if any.
+    fn focused_tile(&self) -> Option<CoverTile> {
+        let focus = gtk::prelude::GtkWindowExt::focus(self)?;
+        if !focus.is_ancestor(&*self.imp().grid) {
+            return None;
+        }
+        focus.first_child().and_downcast::<CoverTile>()
     }
 
     /// Library rows and one row per source, with counts; sources without games are hidden.
@@ -247,6 +293,33 @@ impl PinduWindow {
         let grid = &self.imp().grid;
         grid.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
         self.update_tile_factory();
+        // Delete and the Menu key act on the focused tile only, so typing elsewhere is safe.
+        let keys = gtk::EventControllerKey::new();
+        keys.connect_key_pressed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or]
+            glib::Propagation::Proceed,
+            move |_, key, _, modifiers| {
+                let Some(tile) = window.focused_tile() else {
+                    return glib::Propagation::Proceed;
+                };
+                let menu_key = key == gdk::Key::Menu
+                    || (key == gdk::Key::F10 && modifiers.contains(gdk::ModifierType::SHIFT_MASK));
+                if menu_key {
+                    tile.popup_menu_at(None);
+                } else if key == gdk::Key::Delete && modifiers.is_empty() {
+                    let Some(game) = tile.game() else {
+                        return glib::Propagation::Proceed;
+                    };
+                    window.hide_game(&game.id());
+                } else {
+                    return glib::Propagation::Proceed;
+                }
+                glib::Propagation::Stop
+            }
+        ));
+        grid.add_controller(keys);
         for key in ["tile-size", "show-titles"] {
             self.settings().connect_changed(
                 Some(key),

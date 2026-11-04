@@ -189,6 +189,15 @@ impl LibraryModel {
         imp.games.splice(0, imp.games.n_items(), &objects);
     }
 
+    /// The title of a game in the library, shown or not.
+    pub fn game_title(&self, id: &pindu_core::model::GameId) -> Option<String> {
+        let games = &self.imp().games;
+        (0..games.n_items())
+            .filter_map(|position| games.item(position).and_downcast::<GameObject>())
+            .find(|game| game.game().id == *id)
+            .map(|game| game.game().title.clone())
+    }
+
     /// Shows only the games of a sidebar view.
     pub fn set_view(&self, view: View) {
         let change = self.imp().library_filter.borrow_mut().set_view(view);
