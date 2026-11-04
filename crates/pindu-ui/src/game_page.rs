@@ -126,6 +126,8 @@ impl GamePage {
             imp.open_in_launcher
                 .set_label(&gettext("Open in {launcher}").replace("{launcher}", launcher));
         }
+        imp.open_in_launcher
+            .set_visible(pindu_core::launch::launcher_uri(game).is_some());
         if game.source() == Source::Steam {
             let row = &imp.steam_dialog_row;
             row.set_visible(true);
@@ -171,7 +173,9 @@ fn more_menu(game: &Game) -> gio::Menu {
     };
     let menu = gio::Menu::new();
     menu.append_item(&item(gettext("_Hide"), "win.hide-game"));
-    menu.append_item(&item(gettext("_Open in Launcher"), "app.open-in-launcher"));
+    if pindu_core::launch::launcher_uri(game).is_some() {
+        menu.append_item(&item(gettext("_Open in Launcher"), "app.open-in-launcher"));
+    }
     if game.install_path.is_some() {
         menu.append_item(&item(
             gettext("Open _Install Folder"),

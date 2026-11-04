@@ -26,6 +26,7 @@ fn store_uri(game: &Game) -> Option<String> {
     match game.source() {
         Source::Steam if game.steam_launch_dialog => Some(format!("steam://launch/{id}/dialog")),
         Source::Steam => Some(format!("steam://rungameid/{id}")),
+        Source::Lutris => Some(format!("lutris:rungameid/{id}")),
         source => {
             let runner = heroic_runner(source)?;
             Some(format!(
@@ -121,6 +122,18 @@ mod tests {
                 "{source}"
             );
         }
+    }
+
+    #[test]
+    fn lutris_games_start_by_their_lutris_id() {
+        let game = store_game(Source::Lutris, "42");
+
+        assert_eq!(
+            route(&game),
+            Some(Route::StoreUri("lutris:rungameid/42".into()))
+        );
+        // Lutris has no URI that only opens it.
+        assert_eq!(launcher_uri(&game), None);
     }
 
     #[test]

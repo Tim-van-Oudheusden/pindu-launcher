@@ -5,6 +5,7 @@
 
 pub mod heroic;
 pub mod location;
+pub mod lutris;
 pub(crate) mod sha256;
 pub mod steam;
 pub mod sync;
@@ -45,6 +46,8 @@ pub struct ImportedGame {
     pub install_path: Option<PathBuf>,
     pub size_bytes: Option<i64>,
     pub last_played_at: Option<Timestamp>,
+    /// Total playtime the source tracks itself, in seconds.
+    pub playtime_secs: Option<i64>,
     pub launch_kind: LaunchKind,
     pub genres: Vec<String>,
     pub description: Option<String>,
@@ -78,6 +81,7 @@ impl ImportedGame {
             install_path: None,
             size_bytes: None,
             last_played_at: None,
+            playtime_secs: None,
             launch_kind,
             genres: Vec::new(),
             description: None,

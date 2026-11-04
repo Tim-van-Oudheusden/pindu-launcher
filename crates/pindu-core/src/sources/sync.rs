@@ -4,8 +4,10 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use super::location::{self, HostDirs, ResolveError};
-use super::{ImportError, ImportedGame, Snapshot, heroic, steam};
-use crate::model::{ArtOrigin, Artwork, Game, GameId, Source, SourceState, Timestamp};
+use super::{ImportError, ImportedGame, Snapshot, heroic, lutris, steam};
+use crate::model::{
+    ArtOrigin, Artwork, Game, GameId, ImportedPlaytime, Source, SourceState, Timestamp,
+};
 use crate::store::{self, Store};
 
 /// Sources that have an importer, in sync order.
@@ -15,6 +17,7 @@ pub const IMPORTED_SOURCES: &[Source] = &[
     Source::HeroicGog,
     Source::HeroicAmazon,
     Source::HeroicSideload,
+    Source::Lutris,
 ];
 
 /// What a sync of every source could not read, by source.
@@ -74,6 +77,7 @@ pub fn sync_source(
 fn import(source: Source, root: &Path) -> Result<Snapshot, ImportError> {
     match source {
         Source::Steam => steam::import(root),
+        Source::Lutris => lutris::import(root),
         _ => heroic::import(root, source),
     }
 }
@@ -112,6 +116,14 @@ pub fn apply_snapshot(store: &Store, snapshot: &Snapshot, now: Timestamp) -> sto
                 }
             }
             replace_source_art(store, &id, imported)?;
+            if let Some(total_secs) = imported.playtime_secs {
+                store.set_imported_playtime(&ImportedPlaytime {
+                    game_id: id.clone(),
+                    source: snapshot.source,
+                    total_secs,
+                    last_played_at: imported.last_played_at,
+                })?;
+            }
             present.insert(id);
         }
         for mut game in store.games_from(snapshot.source)? {
@@ -257,6 +269,37 @@ mod tests {
         let game = store.game(&id()).unwrap().unwrap();
         assert_eq!(game.title, "UT2004");
         assert!(game.installed);
+    }
+
+    #[test]
+    fn the_sources_playtime_is_stored_and_refreshed() {
+        let (_dir, store) = temp_store();
+        let mut game = flagged(false, false, &[]);
+        game.playtime_secs = Some(3_600);
+        game.last_played_at = Some(150);
+        apply_snapshot(&store, &snapshot(vec![game.clone()]), 100).unwrap();
+        game.playtime_secs = Some(7_200);
+
+        apply_snapshot(&store, &snapshot(vec![game]), 200).unwrap();
+
+        assert_eq!(
+            store.imported_playtime(&id()).unwrap(),
+            Some(ImportedPlaytime {
+                game_id: id(),
+                source: Source::HeroicGog,
+                total_secs: 7_200,
+                last_played_at: Some(150),
+            })
+        );
+    }
+
+    #[test]
+    fn a_game_without_source_playtime_stores_none() {
+        let (_dir, store) = temp_store();
+
+        apply_snapshot(&store, &snapshot(vec![flagged(false, false, &[])]), 100).unwrap();
+
+        assert_eq!(store.imported_playtime(&id()).unwrap(), None);
     }
 
     #[test]
