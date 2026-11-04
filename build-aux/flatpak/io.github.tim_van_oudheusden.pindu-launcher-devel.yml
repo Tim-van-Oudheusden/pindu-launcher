@@ -18,11 +18,15 @@ sdk-extensions:
 command: pindu-launcher
 
 finish-args:
-  # Display and GPU
+  # Display: Wayland, plus X11 through Xwayland, which most Windows games need
   - --socket=wayland
-  - --socket=fallback-x11
+  - --socket=x11
   - --share=ipc
-  - --device=dri
+  # All devices: the GPU, controllers (also through hidraw, as on the Steam
+  # Deck) for games and for the fullscreen mode's navigation
+  - --device=all
+  # Game sound
+  - --socket=pulseaudio
   # Cover art and metadata downloads
   - --share=network
 
@@ -49,13 +53,46 @@ finish-args:
   - --filesystem=/var/lib/flatpak/exports:ro
   - --filesystem=xdg-data/flatpak/exports:ro
 
-  # Gamepad navigation for the fullscreen mode; uncomment when you get there
-  # - --device=input
-  # - --device-if=all:!has-input-device
+  # Running Windows games with Proton through umu
+  # 32-bit programs: many Windows games and parts of Wine are 32-bit
+  - --allow=multiarch
+  # Debugging system calls such as ptrace, which some games and anti-cheat use
+  - --allow=devel
+  # One /dev/shm for all of the app's sandboxes, which Proton's Steam Runtime
+  # container needs for shared memory
+  - --allow=per-app-dev-shm
+  # umu keeps the Steam Runtime here, shared with a umu outside the sandbox
+  - --filesystem=xdg-data/umu:create
+  # Wine prefixes, and games added from an installer
+  - --filesystem=~/Games:create
 
   # Debug output
   - --env=G_MESSAGES_DEBUG=pindu
   - --env=RUST_BACKTRACE=1
+
+add-extensions:
+  # 32-bit runtime libraries, for Proton and 32-bit games
+  org.freedesktop.Platform.Compat.i386:
+    directory: lib/i386-linux-gnu
+    version: '26.08'
+  # 32-bit graphics drivers, matching the host's GL driver
+  org.freedesktop.Platform.GL32:
+    directory: lib/i386-linux-gnu/GL
+    version: '1.4'
+    versions: 26.08;26.08-extra;1.4
+    subdirectories: true
+    no-autodownload: true
+    autodelete: false
+    add-ld-path: lib
+    merge-dirs: vulkan/icd.d;glvnd/egl_vendor.d;egl/egl_external_platform.d;OpenCL/vendors;lib/dri;lib/d3d;lib/gbm;vulkan/explicit_layer.d;vulkan/implicit_layer.d;vdpau
+    download-if: active-gl-driver
+    enable-if: active-gl-driver
+    autoprune-unless: active-gl-driver
+  # The MangoHud performance overlay, for the per-game setting
+  org.freedesktop.Platform.VulkanLayer.MangoHud:
+    directory: lib/extensions/vulkan/MangoHud
+    version: '26.08'
+    autodelete: false
 
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin
@@ -70,6 +107,40 @@ build-options:
     - --share=network
 
 modules:
+  # Mount points for the extensions above, and the 32-bit library path
+  - name: extension-mount-points
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/lib/i386-linux-gnu/GL /app/lib/extensions/vulkan/MangoHud
+      - install -Dm644 ld.so.conf -t /app/etc/
+    sources:
+      - type: inline
+        dest-filename: ld.so.conf
+        contents: |
+          /app/lib/i386-linux-gnu
+
+  # umu-launcher runs Windows games with Proton. Its zipapp release runs on the
+  # runtime's Python, so Python needn't be bundled.
+  - name: umu-launcher
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 umu-run /app/bin/umu-run
+      - install -Dm644 LICENSE /app/share/licenses/umu-launcher/LICENSE
+    sources:
+      - type: archive
+        url: https://github.com/Open-Wine-Components/umu-launcher/releases/download/1.4.4/umu-launcher-1.4.4-zipapp.tar
+        sha256: eb590691841f7fad3fc3ad8fd5db4ccb87849fe7948e62b28ece7a4ee48cc851
+        strip-components: 1
+        x-checker-data:
+          type: json
+          is-important: true
+          url: https://api.github.com/repos/Open-Wine-Components/umu-launcher/releases/latest
+          version-query: .tag_name
+          url-query: '"https://github.com/Open-Wine-Components/umu-launcher/releases/download/" + $version + "/umu-launcher-" + $version + "-zipapp.tar"'
+      - type: file
+        url: https://raw.githubusercontent.com/Open-Wine-Components/umu-launcher/cf3d1b107147480c447ffbfb3f789dc74335074c/LICENSE
+        sha256: 3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986
+
   - name: pindu-launcher
     buildsystem: meson
     run-tests: true
