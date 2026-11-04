@@ -12,6 +12,7 @@ pub mod library_service;
 pub mod models;
 pub mod permission_service;
 pub mod preferences;
+pub mod proton_launch;
 pub mod search_provider;
 pub mod session_service;
 pub mod sources;

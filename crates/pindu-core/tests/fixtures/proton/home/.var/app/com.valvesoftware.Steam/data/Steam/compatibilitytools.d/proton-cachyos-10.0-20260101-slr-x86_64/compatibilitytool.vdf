@@ -1,0 +1,13 @@
+"compatibilitytools"
+{
+  "compat_tools"
+  {
+    "proton-cachyos-10.0-20260101-slr-x86_64" // Internal name of this tool
+    {
+      "install_path" "."
+      "display_name" "Proton-CachyOS 10.0 (2026-01-01)"
+      "from_oslist"  "windows"
+      "to_oslist"    "linux"
+    }
+  }
+}

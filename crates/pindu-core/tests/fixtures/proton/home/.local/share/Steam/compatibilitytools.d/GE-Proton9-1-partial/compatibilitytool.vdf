@@ -1,0 +1,13 @@
+"compatibilitytools"
+{
+  "compat_tools"
+  {
+    "GE-Proton9-1-partial" // Internal name of this tool
+    {
+      "install_path" "."
+      "display_name" "GE-Proton9-1"
+      "from_oslist"  "windows"
+      "to_oslist"    "linux"
+    }
+  }
+}

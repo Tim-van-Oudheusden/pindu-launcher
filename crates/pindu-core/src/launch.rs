@@ -14,18 +14,22 @@ pub enum Route {
     StoreUri(String),
     /// Run a command on the host as our child (through `flatpak-spawn --host` in the
     /// sandbox), which needs the host-spawn permission.
-    HostSpawn(HostCommand),
+    HostSpawn(Command),
+    /// Run a Windows game through umu and Proton inside our sandbox; the build and
+    /// prefix are picked by [`crate::proton::command`].
+    Proton(LaunchConfig),
 }
 
-/// A command to run on the host: an argument list, never a shell string.
+/// A command to run: an argument list, never a shell string, with the environment and
+/// folder it runs in.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct HostCommand {
+pub struct Command {
     pub argv: Vec<String>,
     pub environment: BTreeMap<String, String>,
     pub working_dir: Option<PathBuf>,
 }
 
-impl HostCommand {
+impl Command {
     /// The argument list that runs this command on the host from inside Flatpak. The
     /// environment and folder go as options, since `flatpak-spawn` does not forward ours;
     /// there is no `--watch-bus`, so the game stays our child until it exits.
@@ -60,7 +64,8 @@ pub fn route(game: &Game, config: Option<&LaunchConfig>) -> Option<Route> {
             }
             Route::HostSpawn(command)
         }),
-        LaunchKind::Proton | LaunchKind::RuntimeNative => None,
+        LaunchKind::Proton => config.cloned().map(Route::Proton),
+        LaunchKind::RuntimeNative => None,
     }
 }
 
@@ -75,7 +80,7 @@ pub fn tracks_sessions(game: &Game) -> bool {
 
 /// A game ID and window class of the game's own, so umu, the compositor and the shell
 /// tell our games apart: `pindu-<hash>` from the game's ID.
-fn session_environment(game: &Game) -> BTreeMap<String, String> {
+pub(crate) fn session_environment(game: &Game) -> BTreeMap<String, String> {
     let hash = sha256_hex(game.id.as_str().as_bytes());
     let class = format!("pindu-{}", &hash[..12]);
     BTreeMap::from([
@@ -87,7 +92,7 @@ fn session_environment(game: &Game) -> BTreeMap<String, String> {
 
 /// The command for a launch config: the wrappers (outermost first), then `gamemoderun`
 /// and `mangohud` when switched on, then the game. Each wrapper is one argument.
-fn host_command(config: &LaunchConfig) -> HostCommand {
+fn host_command(config: &LaunchConfig) -> Command {
     let mut argv: Vec<String> = config.wrappers.clone();
     if config.gamemode {
         argv.push("gamemoderun".to_owned());
@@ -97,7 +102,7 @@ fn host_command(config: &LaunchConfig) -> HostCommand {
     }
     argv.push(config.executable.to_string_lossy().into_owned());
     argv.extend(config.arguments.iter().cloned());
-    HostCommand {
+    Command {
         argv,
         environment: config.environment.clone(),
         working_dir: config.working_dir.clone(),
@@ -259,6 +264,14 @@ mod tests {
     }
 
     #[test]
+    fn proton_games_run_through_umu_with_their_launch_config() {
+        let game = host_game(LaunchKind::Proton);
+
+        assert_eq!(route(&game, Some(&config())), Some(Route::Proton(config())));
+        assert_eq!(route(&game, None), None);
+    }
+
+    #[test]
     fn wrappers_go_around_the_game_outermost_first() {
         let config = LaunchConfig {
             wrappers: vec!["gamescope".into(), "obs-gamecapture".into()],
@@ -288,7 +301,7 @@ mod tests {
 
     #[test]
     fn flatpak_spawn_passes_the_folder_and_environment_as_options() {
-        let command = HostCommand {
+        let command = Command {
             argv: vec![
                 "/usr/bin/flatpak".into(),
                 "run".into(),
@@ -327,7 +340,7 @@ mod tests {
 
     #[test]
     fn flatpak_spawn_without_a_folder_or_environment_only_wraps_the_argv() {
-        let command = HostCommand {
+        let command = Command {
             argv: vec!["neverball".into()],
             environment: Default::default(),
             working_dir: None,

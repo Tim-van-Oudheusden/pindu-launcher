@@ -38,6 +38,25 @@ pub fn default_library_db_path() -> PathBuf {
     library_db_path(xdg_data_home.as_deref(), &home)
 }
 
+/// `$XDG_DATA_HOME/pindu-launcher/compatibilitytools.d`: our own Proton builds.
+pub fn default_tools_dir() -> PathBuf {
+    let xdg_data_home = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from);
+    let home = std::env::home_dir().unwrap_or_default();
+    data_home(xdg_data_home.as_deref(), &home)
+        .join(APP_DIR)
+        .join("compatibilitytools.d")
+}
+
+/// `~/Games/pindu-launcher/prefixes`: the Wine prefixes of Windows games without one of
+/// their own, in the games folder the sandbox may write to.
+pub fn default_prefixes_dir() -> PathBuf {
+    std::env::home_dir()
+        .unwrap_or_default()
+        .join("Games")
+        .join(APP_DIR)
+        .join("prefixes")
+}
+
 /// Splits a document portal path, `/run/user/<uid>/doc/<id>/<name>/<rest…>`, into the
 /// document ID and the parts below the document itself; `None` for any other path.
 pub fn document_portal_parts(path: &Path) -> Option<(String, Vec<PathBuf>)> {

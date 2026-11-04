@@ -14,6 +14,7 @@ use crate::config::APP_ID;
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
 use crate::permission_service;
+use crate::proton_launch;
 use crate::session_service::{self, SessionService};
 
 /// The app that owns a store game's source, as named in toasts and buttons.
@@ -79,6 +80,9 @@ pub fn play(
                     }
                 };
                 toast(adw::Toast::new(&message.replace("{title}", &game.title)));
+            }
+            Some(Route::Proton(config)) => {
+                proton_launch::play(&app, window.as_ref(), game, config, library, toast);
             }
             None => toast(adw::Toast::new(&gettext("This game cannot be started yet"))),
         }
@@ -178,7 +182,7 @@ pub fn open_in_launcher(
     });
 }
 
-fn now() -> i64 {
+pub(crate) fn now() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |elapsed| elapsed.as_secs() as i64)
