@@ -4,6 +4,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gdk, gio, glib};
+use pindu_core::focus::FocusMemory;
 use pindu_core::grid;
 use pindu_core::library::{
     Counts, Filters, HistoryGroup, PlaytimeOrigin, SortMode, View, history_group,
@@ -12,6 +13,7 @@ use pindu_core::model::{GameId, Source};
 
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
+use crate::fullscreen::NavigationSounds;
 use crate::game_page::GamePage;
 use crate::library_service::LibraryService;
 use crate::models::{GameObject, LibraryModel};
@@ -31,6 +33,8 @@ mod imp {
         pub toast_overlay: TemplateChild<adw::ToastOverlay>,
         #[template_child]
         pub split_view: TemplateChild<adw::OverlaySplitView>,
+        #[template_child]
+        pub sidebar_toolbar: TemplateChild<adw::ToolbarView>,
         #[template_child]
         pub navigation_view: TemplateChild<adw::NavigationView>,
         #[template_child]
@@ -97,6 +101,10 @@ mod imp {
         pub grid_at_top: Cell<bool>,
         /// The cover the controller was last on, where it comes back into the grid.
         pub grid_cursor: Cell<u32>,
+        /// The cover the controller was last on in each view, for fullscreen mode's tabs.
+        pub focus_memory: RefCell<FocusMemory<View, GameId>>,
+        /// Fullscreen mode's navigation sounds, made on entering the mode with them on.
+        pub sounds: OnceCell<NavigationSounds>,
     }
 
     #[glib::object_subclass]
@@ -162,6 +170,7 @@ impl PinduWindow {
         window.setup_grid();
         window.setup_search_and_filters();
         window.observe_sync(sync_service);
+        window.setup_fullscreen();
         if let Some(application) = application.downcast_ref::<PinduApplication>() {
             window.setup_controller_navigation(application);
         }
@@ -514,6 +523,7 @@ impl PinduWindow {
         if show {
             self.scroll_grid_to_top();
             self.library().set_view(View::Hidden);
+            imp.grid_cursor.set(self.recall_cover());
             imp.library_page.set_title(&gettext("Hidden Games"));
             imp.sidebar.set_selected(gtk::INVALID_LIST_POSITION);
             imp.navigation_view.pop_to_tag("library");
@@ -663,6 +673,8 @@ impl PinduWindow {
         };
         self.scroll_grid_to_top();
         self.library().set_view(view);
+        // The controller comes back into the grid on the cover it was last on in this view.
+        imp.grid_cursor.set(self.recall_cover());
         if let Some(action) = self.lookup_action("show-hidden") {
             action.change_state(&false.to_variant());
         }

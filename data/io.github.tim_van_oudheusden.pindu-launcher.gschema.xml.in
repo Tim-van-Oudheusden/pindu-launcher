@@ -52,5 +52,15 @@
       <summary>Navigate the window with a controller</summary>
       <description>Move focus with the D-pad or left stick, open with A and go back with B. Controllers are only opened while this is on.</description>
     </key>
+    <key name="start-in-fullscreen" type="b">
+      <default>false</default>
+      <summary>Start in fullscreen mode</summary>
+      <description>Open the window in fullscreen mode, the controller-driven presentation of the library.</description>
+    </key>
+    <key name="navigation-sounds" type="b">
+      <default>false</default>
+      <summary>Navigation sounds</summary>
+      <description>Play a soft sound in fullscreen mode when the controller moves focus, selects or goes back.</description>
+    </key>
   </schema>
 </schemalist>

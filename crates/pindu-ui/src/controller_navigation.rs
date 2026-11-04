@@ -1,7 +1,8 @@
 //! Controller navigation in the main window: directions move focus the way the arrow keys
 //! do (`move-focus` on the window), the cover grid steps through its covers with
-//! `scroll_to`, A activates the focused widget and B closes a dialog or goes back. Intents
-//! never become synthetic key events, and only the active window acts on them.
+//! `scroll_to`, A activates the focused widget, B closes a dialog or goes back and Guide
+//! enters fullscreen mode. Intents never become synthetic key events, and only the active
+//! window acts on them.
 
 use std::collections::BTreeSet;
 
@@ -12,42 +13,63 @@ use pindu_core::gamepad::{Direction, Intent};
 use pindu_core::grid;
 
 use crate::application::PinduApplication;
+use crate::fullscreen::Sound;
 use crate::models::GameObject;
 use crate::window::PinduWindow;
 
 impl PinduWindow {
-    /// Listens to controllers while the `controller-navigation` setting is on.
+    /// Acts on controller intents while controllers are listened to.
     pub(crate) fn setup_controller_navigation(&self, application: &PinduApplication) {
-        let gamepad = application.gamepad_service().clone();
-        gamepad.connect_intent(glib::clone!(
+        application.gamepad_service().connect_intent(glib::clone!(
             #[weak(rename_to = window)]
             self,
             move |intent| window.handle_intent(intent)
         ));
-        let settings = self.settings();
-        let update = glib::clone!(
-            #[strong]
-            gamepad,
-            move |settings: &gtk::gio::Settings| {
-                gamepad.set_listening(settings.boolean("controller-navigation"));
-            }
+        self.update_listening();
+        self.settings().connect_changed(
+            Some("controller-navigation"),
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_, _| window.update_listening()
+            ),
         );
-        update(settings);
-        settings.connect_changed(Some("controller-navigation"), move |settings, _| {
-            update(settings)
-        });
+    }
+
+    /// Opens the controllers while the `controller-navigation` setting is on or the window
+    /// is in fullscreen mode, and lets go of them otherwise.
+    pub(crate) fn update_listening(&self) {
+        if let Some(application) = self.application().and_downcast::<PinduApplication>() {
+            application
+                .gamepad_service()
+                .set_listening(self.listens_to_controllers());
+        }
+    }
+
+    fn listens_to_controllers(&self) -> bool {
+        self.is_fullscreen() || self.settings().boolean("controller-navigation")
     }
 
     fn handle_intent(&self, intent: Intent) {
-        if !self.has_toplevel_focus() || !self.settings().boolean("controller-navigation") {
+        if !self.has_toplevel_focus() || !self.listens_to_controllers() {
             return;
         }
         // As with the keyboard, focus shows once the controller moves it.
         self.set_focus_visible(true);
         match intent {
-            Intent::Navigate(direction) => self.navigate(direction),
-            Intent::Activate => self.activate_focus(),
-            Intent::Back => self.go_back(),
+            Intent::Navigate(direction) => {
+                self.navigate(direction);
+                self.play_sound(Sound::Move);
+            }
+            Intent::Activate => {
+                self.activate_focus();
+                self.play_sound(Sound::Select);
+            }
+            Intent::Back => {
+                self.go_back();
+                self.play_sound(Sound::Back);
+            }
+            Intent::Home => self.enter_fullscreen(),
             _ => {}
         }
     }
@@ -103,9 +125,10 @@ impl PinduWindow {
         }
     }
 
-    /// Scrolls to the cover at `position` and focuses it.
-    fn focus_cover(&self, position: u32) {
+    /// Scrolls to the cover at `position` and focuses it, remembering it for the shown view.
+    pub(crate) fn focus_cover(&self, position: u32) {
         self.imp().grid_cursor.set(position);
+        self.remember_cover(position);
         self.imp().grid.scroll_to(
             position,
             gtk::ListScrollFlags::FOCUS | gtk::ListScrollFlags::SELECT,

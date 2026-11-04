@@ -16,7 +16,7 @@ template $PinduWindow: Adw.ApplicationWindow {
 
   content: Adw.ToastOverlay toast_overlay {
     child: Adw.OverlaySplitView split_view {
-      sidebar: Adw.ToolbarView {
+      sidebar: Adw.ToolbarView sidebar_toolbar {
         [top]
         Adw.HeaderBar {
           title-widget: Adw.WindowTitle {
@@ -395,6 +395,11 @@ menu primary_menu {
     item {
       label: _("Show _Hidden Games");
       action: "win.show-hidden";
+    }
+
+    item {
+      label: _("_Fullscreen Mode");
+      action: "win.fullscreen-mode";
     }
   }
 
