@@ -17,6 +17,12 @@ pub fn host_spawn_allowed() -> bool {
     })
 }
 
+/// Whether we run inside Flatpak, where host commands go through `flatpak-spawn --host`.
+pub fn in_flatpak() -> bool {
+    static IN_FLATPAK: OnceLock<bool> = OnceLock::new();
+    *IN_FLATPAK.get_or_init(|| std::path::Path::new("/.flatpak-info").exists())
+}
+
 /// Whether starting `game` needs a permission the sandbox lacks.
 pub fn needs_permission(game: &Game) -> bool {
     permissions::needs_host_spawn(game.launch_kind) && !host_spawn_allowed()
