@@ -6,5 +6,6 @@ mod desktop;
 mod faugus;
 mod heroic;
 mod lutris;
+mod proton;
 mod steam;
 mod support;

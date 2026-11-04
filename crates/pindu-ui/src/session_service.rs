@@ -13,7 +13,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
-use pindu_core::launch::HostCommand;
+use pindu_core::launch::Command;
 use pindu_core::model::{GameId, Timestamp};
 use pindu_core::paths::default_library_db_path;
 use pindu_core::store::Store;
@@ -62,7 +62,7 @@ impl SessionService {
         &self,
         app: &gio::Application,
         id: &GameId,
-        command: &HostCommand,
+        command: &Command,
     ) -> Result<(), glib::Error> {
         let child = spawn(command)?;
         let first = self.running.borrow().is_empty();
@@ -162,7 +162,7 @@ async fn write<T: Send + 'static>(
 
 /// Spawns the command on the host: through `flatpak-spawn --host` inside Flatpak (never
 /// `--watch-bus`), directly outside it.
-pub fn spawn(command: &HostCommand) -> Result<gio::Subprocess, glib::Error> {
+pub fn spawn(command: &Command) -> Result<gio::Subprocess, glib::Error> {
     let launcher = gio::SubprocessLauncher::new(gio::SubprocessFlags::NONE);
     let argv = if permission_service::in_flatpak() {
         command.flatpak_spawn_argv()
