@@ -1,0 +1,43 @@
+/* Cover tiles: rounded art, badges clear of the bottom third, Play on hover or focus. */
+
+.cover-tile cover-art {
+  border-radius: 12px;
+}
+
+/* A dashed cover marks a game that is not installed. */
+.cover-tile cover-art.not-installed {
+  outline: 2px dashed alpha(currentColor, 0.45);
+  outline-offset: -2px;
+}
+
+.cover-tile .badge {
+  margin: 8px;
+  padding: 5px;
+  border-radius: 999px;
+}
+
+.cover-tile .play-button {
+  margin-bottom: 12px;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+gridview > child:hover .cover-tile .play-button,
+gridview > child:focus-within .cover-tile .play-button {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cover-tile .play-button {
+    transition: none;
+  }
+}
+
+gridview.library {
+  padding: 12px;
+}
+
+gridview.library > child {
+  padding: 6px;
+  border-radius: 16px;
+}

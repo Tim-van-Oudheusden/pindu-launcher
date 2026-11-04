@@ -7,23 +7,25 @@ use gtk::glib;
 use gtk::glib::ParamSpec;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use pindu_core::library::{SearchKey, SortKey};
+use pindu_core::library::{ArtSet, LibraryEntry, SearchKey, SortKey};
 use pindu_core::model::{Game, GameId};
 
-/// The game plus the keys filtering and sorting need, recomputed when the game changes.
+/// The game, its art, and the keys filtering and sorting need, recomputed when it changes.
 #[derive(Debug)]
 pub struct Entry {
     pub game: Game,
+    pub art: ArtSet,
     pub search_key: SearchKey,
     pub sort_key: SortKey,
 }
 
 impl Entry {
-    fn new(game: Game) -> Self {
+    fn new(entry: LibraryEntry) -> Self {
         Self {
-            search_key: SearchKey::new(&game.title),
-            sort_key: SortKey::new(&game),
-            game,
+            search_key: SearchKey::new(&entry.game.title),
+            sort_key: SortKey::new(&entry.game),
+            game: entry.game,
+            art: entry.art,
         }
     }
 }
@@ -74,6 +76,12 @@ mod imp {
                 name => unreachable!("unknown property {name}"),
             }
         }
+
+        fn signals() -> &'static [glib::subclass::Signal] {
+            static SIGNALS: LazyLock<Vec<glib::subclass::Signal>> =
+                LazyLock::new(|| vec![glib::subclass::Signal::builder("art-changed").build()]);
+            SIGNALS.as_ref()
+        }
     }
 }
 
@@ -82,13 +90,13 @@ glib::wrapper! {
 }
 
 impl GameObject {
-    pub fn new(game: Game) -> Self {
+    pub fn new(entry: LibraryEntry) -> Self {
         let object: Self = glib::Object::new();
-        object.imp().entry.replace(Some(Entry::new(game)));
+        object.imp().entry.replace(Some(Entry::new(entry)));
         object
     }
 
-    /// The game with its search and sort keys.
+    /// The game with its art and its search and sort keys.
     pub fn entry(&self) -> Ref<'_, Entry> {
         Ref::map(self.imp().entry.borrow(), |entry| {
             entry.as_ref().expect("constructed with a game")
@@ -99,31 +107,51 @@ impl GameObject {
         Ref::map(self.entry(), |entry| &entry.game)
     }
 
+    pub fn art(&self) -> Ref<'_, ArtSet> {
+        Ref::map(self.entry(), |entry| &entry.art)
+    }
+
     pub fn id(&self) -> GameId {
         self.game().id.clone()
     }
 
-    /// Replaces the game's data and notifies the properties that changed. Returns whether
-    /// anything changed.
-    pub fn update(&self, game: Game) -> bool {
-        let changed: Vec<&str> = {
-            let old = self.game();
-            if *old == game {
+    /// Calls `callback` when the game's art changes.
+    pub fn connect_art_changed<F: Fn(&Self) + 'static>(
+        &self,
+        callback: F,
+    ) -> glib::SignalHandlerId {
+        self.connect_local("art-changed", false, move |values| {
+            let object = values[0].get::<Self>().expect("emitted by the game");
+            callback(&object);
+            None
+        })
+    }
+
+    /// Replaces the game's data and notifies what changed. Returns whether anything did.
+    pub fn update(&self, entry: LibraryEntry) -> bool {
+        let (changed, art_changed): (Vec<&str>, bool) = {
+            let old = self.entry();
+            let (game, art) = (&entry.game, &entry.art);
+            if old.game == *game && old.art == *art {
                 return false;
             }
-            [
-                ("title", old.title != game.title),
-                ("installed", old.installed != game.installed),
-                ("favourite", old.favourite != game.favourite),
-                ("hidden", old.hidden != game.hidden),
+            let changed = [
+                ("title", old.game.title != game.title),
+                ("installed", old.game.installed != game.installed),
+                ("favourite", old.game.favourite != game.favourite),
+                ("hidden", old.game.hidden != game.hidden),
             ]
             .into_iter()
             .filter_map(|(name, changed)| changed.then_some(name))
-            .collect()
+            .collect();
+            (changed, old.art != *art)
         };
-        self.imp().entry.replace(Some(Entry::new(game)));
+        self.imp().entry.replace(Some(Entry::new(entry)));
         for name in changed {
             self.notify(name);
+        }
+        if art_changed {
+            self.emit_by_name::<()>("art-changed", &[]);
         }
         true
     }

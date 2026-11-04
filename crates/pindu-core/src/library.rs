@@ -1,10 +1,59 @@
-//! Ordering and matching of library games, shared by both shells' list models.
+//! The library as the shells see it: games with their art, and their ordering and
+//! matching, shared by both shells' list models.
 
 use std::cmp::{Ordering, Reverse};
-
 use std::collections::HashMap;
+use std::path::PathBuf;
 
-use crate::model::{Game, Source, Timestamp};
+use crate::art;
+use crate::model::{ArtLayout, Artwork, Game, GameId, Source, Timestamp};
+use crate::store::{self, Store};
+
+/// The image chosen for each layout of a game.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ArtSet {
+    pub cover: Option<PathBuf>,
+    pub hero: Option<PathBuf>,
+    pub logo: Option<PathBuf>,
+    pub icon: Option<PathBuf>,
+}
+
+impl ArtSet {
+    fn from(artwork: &[Artwork]) -> Self {
+        let path = |layout| art::best(artwork, layout).map(|art| art.path.clone());
+        Self {
+            cover: path(ArtLayout::Cover),
+            hero: path(ArtLayout::Hero),
+            logo: path(ArtLayout::Logo),
+            icon: path(ArtLayout::Icon),
+        }
+    }
+}
+
+/// A game with its art, as the library views show it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LibraryEntry {
+    pub game: Game,
+    pub art: ArtSet,
+}
+
+/// Every stored game with its best art per layout.
+pub fn load(store: &Store) -> store::Result<Vec<LibraryEntry>> {
+    let mut artwork: HashMap<GameId, Vec<Artwork>> = HashMap::new();
+    for art in store.all_artwork()? {
+        artwork.entry(art.game_id.clone()).or_default().push(art);
+    }
+    Ok(store
+        .games()?
+        .into_iter()
+        .map(|game| {
+            let art = artwork
+                .get(&game.id)
+                .map_or_else(ArtSet::default, |art| ArtSet::from(art));
+            LibraryEntry { game, art }
+        })
+        .collect())
+}
 
 /// The library sort orders, as offered in the sort menu.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -354,5 +403,53 @@ mod tests {
         assert_eq!(counts.get(View::Source(Source::Steam)), 2);
         assert_eq!(counts.get(View::Source(Source::HeroicGog)), 1);
         assert_eq!(counts.get(View::Source(Source::Lutris)), 0);
+    }
+
+    #[test]
+    fn loading_pairs_each_game_with_its_best_art() {
+        use crate::model::{ArtLayout, ArtOrigin, Artwork};
+        use crate::store::Store;
+
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::open(&dir.path().join("library.db")).unwrap();
+        let with_art = game("1", "With Art", None, 0);
+        let without_art = game("2", "Without Art", None, 0);
+        store.insert_game(&with_art).unwrap();
+        store.insert_game(&without_art).unwrap();
+        let set = |layout, origin, path: &str| {
+            store
+                .set_artwork(&Artwork {
+                    game_id: with_art.id.clone(),
+                    layout,
+                    origin,
+                    path: path.into(),
+                })
+                .unwrap();
+        };
+        set(ArtLayout::Cover, ArtOrigin::Source, "/source-cover.jpg");
+        set(ArtLayout::Cover, ArtOrigin::User, "/user-cover.png");
+        set(ArtLayout::Icon, ArtOrigin::Source, "/icon.jpg");
+
+        let entries = load(&store).unwrap();
+
+        assert_eq!(entries.len(), 2);
+        let first = entries
+            .iter()
+            .find(|entry| entry.game.id == with_art.id)
+            .unwrap();
+        assert_eq!(
+            first.art.cover.as_deref(),
+            Some(std::path::Path::new("/user-cover.png"))
+        );
+        assert_eq!(
+            first.art.icon.as_deref(),
+            Some(std::path::Path::new("/icon.jpg"))
+        );
+        assert_eq!(first.art.hero, None);
+        let second = entries
+            .iter()
+            .find(|entry| entry.game.id == without_art.id)
+            .unwrap();
+        assert_eq!(second.art, ArtSet::default());
     }
 }

@@ -1,0 +1,79 @@
+using Gtk 4.0;
+
+template $PinduCoverTile: Box {
+  orientation: vertical;
+  spacing: 6;
+  halign: center;
+  valign: start;
+
+  styles [
+    "cover-tile",
+  ]
+
+  Overlay {
+    child: $PinduCoverArt cover {
+      styles [
+        "card",
+      ]
+    };
+
+    [overlay]
+    Image placeholder {
+      icon-name: "applications-games-symbolic";
+      pixel-size: 64;
+      halign: center;
+      valign: center;
+      can-target: false;
+
+      styles [
+        "dimmed",
+      ]
+    }
+
+    [overlay]
+    Image source_badge {
+      halign: start;
+      valign: start;
+      can-target: false;
+
+      styles [
+        "badge",
+        "osd",
+      ]
+    }
+
+    [overlay]
+    Image state_badge {
+      halign: end;
+      valign: start;
+      can-target: false;
+      visible: false;
+
+      styles [
+        "badge",
+        "osd",
+      ]
+    }
+
+    [overlay]
+    Button play_button {
+      label: _("Play");
+      halign: center;
+      valign: end;
+      can-focus: false;
+      action-name: "app.play";
+
+      styles [
+        "play-button",
+        "pill",
+        "suggested-action",
+      ]
+    }
+  }
+
+  Label title {
+    ellipsize: end;
+    xalign: 0;
+    max-width-chars: 1;
+  }
+}
