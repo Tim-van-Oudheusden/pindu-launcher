@@ -5,6 +5,7 @@
 
 pub mod art;
 pub mod art_cache;
+pub mod grid;
 pub mod launch;
 pub mod library;
 pub mod manual;

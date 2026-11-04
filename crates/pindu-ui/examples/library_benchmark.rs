@@ -53,9 +53,9 @@ fn generated_games() -> Vec<LibraryEntry> {
         .collect()
 }
 
-/// Waits on the main loop until the incremental filter and sort have finished.
+/// Waits on the main loop until the incremental sort has finished.
 async fn settled(library: &LibraryModel) {
-    while library.filter_model().pending() > 0 || library.sort_model().pending() > 0 {
+    while library.sort_model().pending() > 0 {
         glib::timeout_future(Duration::from_millis(1)).await;
     }
 }

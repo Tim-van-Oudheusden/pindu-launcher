@@ -58,11 +58,13 @@ mod imp {
         #[template_child]
         pub play_button: TemplateChild<gtk::Button>,
         #[template_child]
-        pub title: TemplateChild<gtk::Label>,
+        pub title: TemplateChild<gtk::Inscription>,
         /// The shown game and the handler that follows its art.
         pub bound: RefCell<Option<(GameObject, Vec<glib::SignalHandlerId>)>>,
         /// From the `show-badges` setting.
         pub show_badges: Cell<bool>,
+        /// The context menu, made on first use: a grid makes and drops tiles by the
+        /// hundred while searching, and most never open their menu.
         pub menu: OnceCell<gtk::PopoverMenu>,
     }
 
@@ -86,11 +88,6 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
             let tile = self.obj();
-            let menu = gtk::PopoverMenu::from_model(None::<&gio::MenuModel>);
-            menu.set_has_arrow(true);
-            menu.set_parent(&*tile);
-            self.menu.set(menu).expect("constructed once");
-
             let right_click = gtk::GestureClick::builder()
                 .button(gdk::BUTTON_SECONDARY)
                 .build();
@@ -166,7 +163,7 @@ impl CoverTile {
         imp.bound.replace(Some((game.clone(), handlers)));
         let entry = game.entry();
         let source = entry.game.source();
-        imp.title.set_label(&entry.game.title);
+        imp.title.set_text(Some(&entry.game.title));
         imp.source_badge.set_icon_name(Some(source_icon(source)));
         imp.source_badge
             .set_tooltip_text(Some(&source_name(source)));
@@ -292,7 +289,12 @@ impl CoverTile {
         manage.append_item(&item(gettext("_Remove"), "win.remove-game"));
         menu.append_section(None, &manage);
 
-        let popover = self.imp().menu.get().expect("constructed");
+        let popover = self.imp().menu.get_or_init(|| {
+            let popover = gtk::PopoverMenu::from_model(None::<&gio::MenuModel>);
+            popover.set_has_arrow(true);
+            popover.set_parent(self);
+            popover
+        });
         popover.set_menu_model(Some(&menu));
         let rect = match position {
             Some((x, y)) => gdk::Rectangle::new(x as i32, y as i32, 1, 1),
