@@ -10,13 +10,15 @@ use crate::library_service::LibraryService;
 use crate::models::GameObject;
 use crate::permission_service;
 use crate::preferences::PreferencesDialog;
+use crate::search_provider;
 use crate::session_service::SessionService;
 use crate::sync_service::SyncService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
 
 mod imp {
-    use std::cell::OnceCell;
+    use std::cell::{OnceCell, RefCell};
+    use std::ops::ControlFlow;
 
     use super::*;
 
@@ -30,6 +32,10 @@ mod imp {
         pub session_service: OnceCell<SessionService>,
         /// Resyncs when a launcher changes its files.
         pub watch_service: OnceCell<WatchService>,
+        /// The GNOME Shell search provider's registration.
+        pub search_provider: RefCell<Option<gio::RegistrationId>>,
+        /// A game `--launch` asked for when this is the first instance.
+        pub pending_launch: RefCell<Option<String>>,
     }
 
     #[glib::object_subclass]
@@ -51,6 +57,14 @@ mod imp {
             obj.set_accels_for_action("app.preferences", &["<primary>comma"]);
             obj.set_accels_for_action("app.add-game", &["<primary>n"]);
             obj.set_accels_for_action("win.show-hidden", &["<primary>h"]);
+            obj.add_main_option(
+                "launch",
+                glib::Char::from(b'l'),
+                glib::OptionFlags::NONE,
+                glib::OptionArg::String,
+                &gettext("Start a game by its ID, without opening the window"),
+                Some("GAME-ID"),
+            );
             glib::g_info!(
                 "pindu",
                 "Host spawn {}",
@@ -78,21 +92,66 @@ mod imp {
             self.watch_service
                 .set(WatchService::new(&self.sync_service))
                 .expect("start-up runs once");
+            // Loaded here, not on the first window: Shell search and --launch need the
+            // library when no window opens.
+            library.reload();
             self.library_service
                 .set(library)
                 .expect("start-up runs once");
         }
 
+        fn handle_local_options(&self, options: &glib::VariantDict) -> ControlFlow<glib::ExitCode> {
+            let Some(id) = options.lookup::<String>("launch").ok().flatten() else {
+                return self.parent_handle_local_options(options);
+            };
+            // Hand the ID to the running instance (or this one, if it is the first).
+            let app = self.obj();
+            if let Err(error) = app.register(gio::Cancellable::NONE) {
+                glib::g_warning!("pindu", "Could not start: {error}");
+                return ControlFlow::Break(glib::ExitCode::FAILURE);
+            }
+            if app.is_remote() {
+                app.activate_action("launch-game", Some(&id.to_variant()));
+                ControlFlow::Break(glib::ExitCode::SUCCESS)
+            } else {
+                // The first instance runs for the launch, and `activate` starts the game
+                // instead of opening the window.
+                self.pending_launch.replace(Some(id));
+                ControlFlow::Continue(())
+            }
+        }
+
+        fn dbus_register(
+            &self,
+            connection: &gio::DBusConnection,
+            path: &str,
+        ) -> Result<(), glib::Error> {
+            self.parent_dbus_register(connection, path)?;
+            let id = search_provider::register(&self.obj(), connection)?;
+            self.search_provider.replace(Some(id));
+            Ok(())
+        }
+
+        fn dbus_unregister(&self, connection: &gio::DBusConnection, path: &str) {
+            if let Some(id) = self.search_provider.take() {
+                let _ = connection.unregister_object(id);
+            }
+            self.parent_dbus_unregister(connection, path);
+        }
+
         fn activate(&self) {
             let application = self.obj();
+            if let Some(id) = self.pending_launch.take() {
+                application.activate_action("launch-game", Some(&id.to_variant()));
+                return;
+            }
             let window = application.active_window().unwrap_or_else(|| {
                 let window = PinduWindow::new(
                     application.upcast_ref::<adw::Application>(),
                     &self.sync_service,
                     &application.library_service().model(),
                 );
-                // Show the stored library at once, then sync every source.
-                application.library_service().reload();
+                // The stored library is loaded at start-up; sync every source now.
                 self.sync_service.sync();
                 window.upcast()
             });
@@ -168,8 +227,51 @@ impl PinduApplication {
             .parameter_type(Some(glib::VariantTy::STRING))
             .activate(move |app: &Self, _, id| {
                 let sessions = app.session_service().clone();
+                let app_ref = app.clone();
                 app.with_game(id, move |window, game, library, toast| {
-                    launch_service::play(window, game, library, &sessions, toast);
+                    launch_service::play(
+                        app_ref.upcast_ref(),
+                        Some(window.upcast_ref()),
+                        game,
+                        library,
+                        &sessions,
+                        toast,
+                    );
+                });
+            })
+            .build();
+        // Starts a game without needing a window: `--launch <id>` and Shell search.
+        let launch_action = gio::ActionEntry::builder("launch-game")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                let Some(id) = id.and_then(|id| id.str()).and_then(|id| id.parse().ok()) else {
+                    return;
+                };
+                let app = app.clone();
+                let hold = app.hold();
+                glib::spawn_future_local(async move {
+                    let library = app.library_service().clone();
+                    library.wait_loaded().await;
+                    match library.model().game_object(&id) {
+                        Some(game) => {
+                            let window = app.active_window();
+                            let toast_window = window.clone().and_downcast::<PinduWindow>();
+                            launch_service::play(
+                                app.upcast_ref(),
+                                window.as_ref(),
+                                &game,
+                                &library,
+                                app.session_service(),
+                                move |toast| {
+                                    if let Some(window) = &toast_window {
+                                        window.add_toast(toast);
+                                    }
+                                },
+                            );
+                        }
+                        None => glib::g_warning!("pindu", "No game {id} in the library"),
+                    }
+                    drop(hold);
                 });
             })
             .build();
@@ -197,6 +299,7 @@ impl PinduApplication {
             edit_game_action,
             import_action,
             play_action,
+            launch_action,
             stop_action,
             open_action,
         ]);

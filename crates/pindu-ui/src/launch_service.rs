@@ -32,9 +32,11 @@ pub fn launcher_name(source: Source) -> Option<&'static str> {
 /// Starts a game. A store launch hands the game to its launcher; a host launch runs the
 /// game as our child, tracking its session unless its launcher tracks playtime itself.
 /// Either saves the last-played time, and the toast says what happened, or why the game
-/// could not start.
+/// could not start. Without a window (`--launch`, Shell search) nothing is shown, unless
+/// the game needs a permission: then the window opens to explain it.
 pub fn play(
-    window: &impl IsA<gtk::Window>,
+    app: &gtk::Application,
+    window: Option<&gtk::Window>,
     game: &GameObject,
     library: &LibraryService,
     sessions: &SessionService,
@@ -42,32 +44,33 @@ pub fn play(
 ) {
     let game = game.game().clone();
     if permission_service::needs_permission(&game) {
-        explain_permission(window, &game.title);
+        if window.is_none() {
+            app.activate();
+        }
+        if let Some(window) = window.cloned().or_else(|| app.active_window()) {
+            explain_permission(&window, &game.title);
+        }
         return;
     }
-    let window = window.upcast_ref::<gtk::Window>().clone();
+    let (app, window) = (app.clone(), window.cloned());
     let (library, sessions) = (library.clone(), sessions.clone());
+    // The app stays up until the launch is through, even with no window.
+    let hold = app.hold();
     glib::spawn_future_local(async move {
         let config = library.launch_config(&game.id).await;
         match launch::route(&game, config.as_ref()) {
             Some(Route::StoreUri(uri)) => {
-                open_store_uri(&window, &game, &uri, library, sessions, toast);
+                open_store_uri(&app, window.as_ref(), &game, &uri, library, sessions, toast);
             }
             Some(Route::HostSpawn(command)) => {
                 let started = if launch::tracks_sessions(&game) {
-                    let Some(app) = window.application() else {
-                        return;
-                    };
                     sessions.start(app.upcast_ref(), &game.id, &command)
                 } else {
                     session_service::spawn(&command).map(drop)
                 };
                 let message = match started {
                     Ok(()) => {
-                        let (library, id) = (library.clone(), game.id.clone());
-                        glib::spawn_future_local(async move {
-                            library.mark_played(&id, now()).await;
-                        });
+                        library.mark_played(&game.id, now()).await;
                         gettext("Starting “{title}”")
                     }
                     Err(error) => {
@@ -79,13 +82,15 @@ pub fn play(
             }
             None => toast(adw::Toast::new(&gettext("This game cannot be started yet"))),
         }
+        drop(hold);
     });
 }
 
 /// Hands a store game to its launcher, then quits when the user asked for that and no
 /// game we started is running.
 fn open_store_uri(
-    window: &gtk::Window,
+    app: &gtk::Application,
+    window: Option<&gtk::Window>,
     game: &Game,
     uri: &str,
     library: LibraryService,
@@ -94,19 +99,17 @@ fn open_store_uri(
 ) {
     let launcher = launcher_name(game.source()).unwrap_or_default();
     let (id, title, uri) = (game.id.clone(), game.title.clone(), uri.to_owned());
-    let app = window.application();
-    gtk::UriLauncher::new(&uri).launch(Some(window), gio::Cancellable::NONE, move |result| {
+    let (app, hold) = (app.clone(), app.hold());
+    gtk::UriLauncher::new(&uri).launch(window, gio::Cancellable::NONE, move |result| {
         let message = match result {
             Ok(()) => {
                 let exit = gio::Settings::new(APP_ID).boolean("exit-after-launch")
                     && !sessions.any_playing();
-                let app = app.filter(|_| exit);
                 // Hold on until the last-played time is stored, then quit if asked to.
-                let hold = app.as_ref().map(|app| app.hold());
                 glib::spawn_future_local(async move {
                     library.mark_played(&id, now()).await;
                     drop(hold);
-                    if let Some(app) = app {
+                    if exit {
                         app.quit();
                     }
                 });

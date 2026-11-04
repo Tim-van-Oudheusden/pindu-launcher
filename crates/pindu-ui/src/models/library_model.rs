@@ -247,6 +247,14 @@ impl LibraryModel {
         })
     }
 
+    /// Every game object, shown or not.
+    pub fn all_games(&self) -> Vec<GameObject> {
+        let games = &self.imp().games;
+        (0..games.n_items())
+            .filter_map(|position| games.item(position).and_downcast::<GameObject>())
+            .collect()
+    }
+
     /// A game in the library by ID, shown or not.
     pub fn game_object(&self, id: &pindu_core::model::GameId) -> Option<GameObject> {
         let games = &self.imp().games;
