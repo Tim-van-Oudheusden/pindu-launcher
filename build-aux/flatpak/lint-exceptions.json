@@ -16,6 +16,7 @@
     "finish-args-unnecessary-xdg-data-flatpak-ro-access": "Desktop-entry importer: reads the desktop entries of user Flatpaks, read-only (spec: permission tiers, base tier)",
     "appid-url-not-reachable": "The repository is private for now, and the -devel ID has no page of its own",
     "appstream-screenshots-not-mirrored-in-ostree": "Screenshots are mirrored by Flathub's builders, not by this CI",
-    "finish-args-contains-both-x11-and-wayland": "Proton tier: most Windows games need X11 through Xwayland while the app itself uses Wayland, as in Bottles, Lutris and Heroic (spec: permission tiers, Proton tier)"
+    "finish-args-contains-both-x11-and-wayland": "Proton tier: most Windows games need X11 through Xwayland while the app itself uses Wayland, as in Bottles, Lutris and Heroic (spec: permission tiers, Proton tier)",
+    "finish-args-unnecessary-xdg-data-umu-create-access": "Proton tier: umu installs the Steam Linux Runtime in the host's xdg-data/umu, shared with umu outside the sandbox, as in Bottles and Lutris (spec: permission tiers, Proton tier)"
   }
 }
