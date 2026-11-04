@@ -1,0 +1,5 @@
+[Shell Search Provider]
+DesktopId=@APP_ID@.desktop
+BusName=@APP_ID@
+ObjectPath=/io/github/tim_van_oudheusden/pindu_launcher/SearchProvider
+Version=2

@@ -3,5 +3,5 @@ option(
   type: 'combo',
   choices: ['default', 'development'],
   value: 'default',
-  description: 'Development builds use the nightly app icon',
+  description: 'Development builds get the -devel app ID and the nightly app icon',
 )

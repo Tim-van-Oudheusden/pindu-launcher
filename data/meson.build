@@ -1,5 +1,15 @@
+# The data files name the app by `@APP_ID@`, filled in per profile.
+id_conf = configuration_data()
+id_conf.set('APP_ID', application_id)
+id_conf.set('SCHEMA_PATH', '/' + application_id.replace('.', '/') + '/')
+id_conf.set('bindir', bindir)
+
 desktop_file = i18n.merge_file(
-  input: application_id + '.desktop.in',
+  input: configure_file(
+    input: base_id + '.desktop.in',
+    output: application_id + '.desktop.in',
+    configuration: id_conf,
+  ),
   output: application_id + '.desktop',
   type: 'desktop',
   po_dir: '../po',
@@ -8,42 +18,51 @@ desktop_file = i18n.merge_file(
 )
 
 metainfo_file = i18n.merge_file(
-  input: application_id + '.metainfo.xml.in',
+  input: configure_file(
+    input: base_id + '.metainfo.xml.in',
+    output: application_id + '.metainfo.xml.in',
+    configuration: id_conf,
+  ),
   output: application_id + '.metainfo.xml',
   po_dir: '../po',
   install: true,
   install_dir: datadir / 'metainfo',
 )
 
-service_conf = configuration_data()
-service_conf.set('bindir', bindir)
 configure_file(
-  input: application_id + '.service.in',
+  input: base_id + '.service.in',
   output: application_id + '.service',
-  configuration: service_conf,
+  configuration: id_conf,
   install: true,
   install_dir: datadir / 'dbus-1' / 'services',
 )
 
-install_data(
-  application_id + '.search-provider.ini',
+configure_file(
+  input: base_id + '.search-provider.ini.in',
+  output: application_id + '.search-provider.ini',
+  configuration: id_conf,
+  install: true,
   install_dir: datadir / 'gnome-shell' / 'search-providers',
 )
 
-install_data(
-  application_id + '.gschema.xml',
+configure_file(
+  input: base_id + '.gschema.xml.in',
+  output: application_id + '.gschema.xml',
+  configuration: id_conf,
+  install: true,
   install_dir: datadir / 'glib-2.0' / 'schemas',
 )
 
 # The nightly icon (striped base) marks development builds.
-app_icon = get_option('profile') == 'development' ? application_id + '.Devel.svg' : application_id + '.svg'
+app_icon = get_option('profile') == 'development' ? base_id + '.Devel.svg' : base_id + '.svg'
 install_data(
   'icons' / app_icon,
   rename: application_id + '.svg',
   install_dir: datadir / 'icons' / 'hicolor' / 'scalable' / 'apps',
 )
 install_data(
-  'icons' / application_id + '-symbolic.svg',
+  'icons' / base_id + '-symbolic.svg',
+  rename: application_id + '-symbolic.svg',
   install_dir: datadir / 'icons' / 'hicolor' / 'symbolic' / 'apps',
 )
 
@@ -76,6 +95,6 @@ test(
 test(
   'validate-schema',
   find_program('glib-compile-schemas'),
-  args: ['--strict', '--dry-run', meson.current_source_dir()],
+  args: ['--strict', '--dry-run', meson.current_build_dir()],
   suite: 'data',
 )

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="pindu-launcher">
-  <schema id="io.github.tim_van_oudheusden.pindu-launcher" path="/io/github/tim_van_oudheusden/pindu-launcher/">
+  <schema id="@APP_ID@" path="@SCHEMA_PATH@">
     <key name="window-width" type="i">
       <default>1024</default>
       <summary>Window width</summary>

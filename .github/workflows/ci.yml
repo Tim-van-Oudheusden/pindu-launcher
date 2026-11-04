@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  MANIFEST: build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher-devel.yml
+  LINT_EXCEPTIONS: build-aux/flatpak/lint-exceptions.json
+
+jobs:
+  checks:
+    name: Rust and Meson checks
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the Rust SDK extension
+        run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .cargo-home
+            _build/cargo-target
+          key: checks-${{ hashFiles('Cargo.lock') }}
+          restore-keys: checks-
+
+      # Everything runs in the GNOME 51 SDK, as local builds do. Inside its sandbox root
+      # can only write files root owns, and the checkout belongs to the runner's user.
+      - name: rustfmt, clippy, unit tests and Meson tests
+        run: |
+          chown -R "$(id -u):$(id -g)" "$PWD"
+          flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
+            --env=CARGO_HOME="$PWD/.cargo-home" \
+            --env=CARGO_TARGET_DIR="$PWD/_build/cargo-target" \
+            --env=PATH=/usr/lib/sdk/rust-stable/bin:/usr/bin \
+            --command=sh org.gnome.Sdk//51 -c '
+              set -e
+              cargo fmt --all --check
+              cargo clippy --workspace --all-targets -- -D warnings
+              cargo test --workspace
+              meson setup --reconfigure _build || meson setup _build
+              meson test -C _build --print-errorlogs
+            '
+
+  flatpak:
+    name: Flatpak build, UI smoke test and lint
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+      # The runner's preinstalled SDKs, mounted so the build can delete them: the image
+      # and a release build of the app do not fit in the disk space left otherwise.
+      volumes:
+        - /usr/local/lib/android:/runner-sdks/android
+        - /usr/share/dotnet:/runner-sdks/dotnet
+        - /opt/hostedtoolcache:/runner-sdks/toolcache
+        - /usr/local/.ghcup:/runner-sdks/ghcup
+    steps:
+      - name: Free disk space
+        run: |
+          df -h / | tail -1
+          rm -rf /runner-sdks/*/*
+          df -h / | tail -1
+
+      - uses: actions/checkout@v4
+
+      # Runs `meson test` inside the build, under xvfb, after the install: this is
+      # where the UI smoke test runs. The bundle is uploaded as an artifact.
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: ${{ env.MANIFEST }}
+          bundle: pindu-launcher-devel.flatpak
+          run-tests: true
+          cache-key: flatpak-builder-${{ github.sha }}
+
+      # Blocking. The local exceptions only cover the importers' read-only access to
+      # other launchers' data, which the spec needs, and what a private dev build
+      # cannot satisfy; each one says why.
+      - name: Lint the manifest
+        run: flatpak-builder-lint --gha-format --exceptions --user-exceptions "$LINT_EXCEPTIONS" manifest "$MANIFEST"
+
+      - name: Lint the build (MetaInfo, desktop file, icons)
+        run: flatpak-builder-lint --gha-format --exceptions --user-exceptions "$LINT_EXCEPTIONS" repo repo

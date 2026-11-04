@@ -2,7 +2,7 @@
 Name=Pindu launcher
 Comment=Browse and start the games on this computer
 Exec=pindu-launcher
-Icon=io.github.tim_van_oudheusden.pindu-launcher
+Icon=@APP_ID@
 Terminal=false
 Type=Application
 Categories=Game;

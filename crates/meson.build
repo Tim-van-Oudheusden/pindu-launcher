@@ -11,11 +11,12 @@ else
 endif
 
 cargo_env = [
+  'PINDU_APP_ID=' + application_id,
   'PINDU_LOCALEDIR=' + localedir,
   'PINDU_PKGDATADIR=' + pkgdatadir,
 ]
 
-custom_target(
+app_binary = custom_target(
   'cargo-build',
   build_by_default: true,
   build_always_stale: true,

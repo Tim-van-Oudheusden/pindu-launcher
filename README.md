@@ -14,6 +14,22 @@ meson compile -C _build
 meson test -C _build
 ```
 
+### Development Flatpak
+
+The development manifest builds the app with the `development` profile, which installs
+it as `io.github.tim_van_oudheusden.pindu-launcher-devel` beside the stable app, with the
+nightly icon:
+
+```sh
+flatpak-builder --user --install --force-clean _flatpak \
+  build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher-devel.yml
+flatpak run io.github.tim_van_oudheusden.pindu-launcher-devel
+```
+
+CI builds the same manifest, runs the tests in it (including a UI smoke test under
+xvfb), lints the manifest and the build with `flatpak-builder-lint`, and uploads the
+bundle. The lint exceptions in `build-aux/flatpak/lint-exceptions.json` each say why.
+
 ## Translating
 
 Translations are gettext `.po` files in `po/`, one per language listed in `po/LINGUAS`, made from the template

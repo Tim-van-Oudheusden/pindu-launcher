@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Stub MetaInfo; the final text and screenshots come with #58. -->
 <component type="desktop-application">
-  <id>io.github.tim_van_oudheusden.pindu-launcher</id>
+  <id>@APP_ID@</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
 
@@ -15,7 +15,7 @@
     <name translate="no">Tim van Oudheusden</name>
   </developer>
 
-  <launchable type="desktop-id">io.github.tim_van_oudheusden.pindu-launcher.desktop</launchable>
+  <launchable type="desktop-id">@APP_ID@.desktop</launchable>
   <translation type="gettext">pindu-launcher</translation>
 
   <url type="homepage">https://github.com/Tim-van-Oudheusden/pindu-launcher</url>

@@ -9,7 +9,10 @@ project(
 i18n = import('i18n')
 gnome = import('gnome')
 
-application_id = 'io.github.tim_van_oudheusden.pindu-launcher'
+# Development builds get their own ID, so they install beside the stable app. Not
+# `.Devel`: Flatpak and AppStream only allow a hyphen in the last segment.
+base_id = 'io.github.tim_van_oudheusden.pindu-launcher'
+application_id = get_option('profile') == 'development' ? base_id + '-devel' : base_id
 gettext_package = meson.project_name()
 
 prefix = get_option('prefix')
@@ -27,6 +30,14 @@ blueprint_compiler = find_program('blueprint-compiler')
 subdir('data')
 subdir('crates')
 subdir('po')
+
+test(
+  'ui-smoke',
+  find_program('build-aux/ui-smoke.sh'),
+  args: [app_binary, pkgdatadir / 'resources.gresource'],
+  timeout: 60,
+  suite: 'ui',
+)
 
 gnome.post_install(
   glib_compile_schemas: true,

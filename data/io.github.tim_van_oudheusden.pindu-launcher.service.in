@@ -1,3 +1,3 @@
 [D-BUS Service]
-Name=io.github.tim_van_oudheusden.pindu-launcher
+Name=@APP_ID@
 Exec=@bindir@/pindu-launcher --gapplication-service

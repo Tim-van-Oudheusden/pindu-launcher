@@ -1,0 +1,20 @@
+{
+  "io.github.tim_van_oudheusden.pindu-launcher-devel": {
+    "finish-args-unnecessary-xdg-data-Steam-ro-access": "Steam importer: reads the native Steam library, read-only (spec: permission tiers, base tier)",
+    "finish-args-flatpak-appdata-folder-com.valvesoftware.Steam-data-Steam-ro-access": "Steam importer: reads the Flatpak Steam library, read-only (spec: permission tiers, base tier)",
+    "finish-args-unnecessary-xdg-config-heroic-ro-access": "Heroic importer: reads the native Heroic library, read-only (spec: permission tiers, base tier)",
+    "finish-args-flatpak-appdata-folder-com.heroicgameslauncher.hgl-config-heroic-ro-access": "Heroic importer: reads the Flatpak Heroic library, read-only (spec: permission tiers, base tier)",
+    "finish-args-unnecessary-xdg-data-lutris-ro-access": "Lutris importer: reads the native Lutris library, read-only (spec: permission tiers, base tier)",
+    "finish-args-flatpak-appdata-folder-net.lutris.Lutris-data-lutris-ro-access": "Lutris importer: reads the Flatpak Lutris library, read-only (spec: permission tiers, base tier)",
+    "finish-args-unnecessary-xdg-data-bottles-ro-access": "Bottles importer: reads the native Bottles library, read-only (spec: permission tiers, base tier)",
+    "finish-args-flatpak-appdata-folder-com.usebottles.bottles-data-bottles-ro-access": "Bottles importer: reads the Flatpak Bottles library, read-only (spec: permission tiers, base tier)",
+    "finish-args-unnecessary-xdg-data-faugus-launcher-ro-access": "Faugus importer: reads the native Faugus library, read-only (spec: permission tiers, base tier)",
+    "finish-args-flatpak-appdata-folder-io.github.Faugus.faugus-launcher-data-faugus-launcher-ro-access": "Faugus importer: reads the Flatpak Faugus library, read-only (spec: permission tiers, base tier)",
+    "finish-args-unnecessary-xdg-data-applications-ro-access": "Desktop-entry importer: reads the user's desktop entries, read-only (spec: permission tiers, base tier)",
+    "finish-args-host-os-ro-filesystem-access": "Desktop-entry importer: reads the system's desktop entries, read-only (spec: permission tiers, base tier)",
+    "finish-args-flatpak-system-folder-exports-ro-access": "Desktop-entry importer: reads the desktop entries of system Flatpaks, read-only (spec: permission tiers, base tier)",
+    "finish-args-unnecessary-xdg-data-flatpak-ro-access": "Desktop-entry importer: reads the desktop entries of user Flatpaks, read-only (spec: permission tiers, base tier)",
+    "appid-url-not-reachable": "The repository is private for now, and the -devel ID has no page of its own",
+    "appstream-screenshots-not-mirrored-in-ostree": "Screenshots are mirrored by Flathub's builders, not by this CI"
+  }
+}

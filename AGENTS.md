@@ -68,8 +68,9 @@ Work is NOT complete until the issue branch is pushed and its pull request is op
    meson setup _build && meson test -C _build
    ```
    `meson setup` refuses an existing `_build`; use `meson setup --reconfigure _build` after the first time. Once #4 has
-   landed, also build the development manifest with `flatpak-builder --user --install --force-clean _flatpak <manifest>`
-   and run `flatpak-builder-lint` on it
+   landed, also build the development manifest with `flatpak-builder --user --install --force-clean _flatpak
+   build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher-devel.yml` and run `flatpak-builder-lint --exceptions
+   --user-exceptions build-aux/flatpak/lint-exceptions.json` on it; CI (`.github/workflows/ci.yml`) runs the same
 3. **Update issue status** — comment progress on the GitHub issue
 4. **Push the branch and open a PR**:
    ```bash
