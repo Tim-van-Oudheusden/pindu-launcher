@@ -7,6 +7,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
+use pindu_core::library::PlaytimeOrigin;
 use pindu_core::model::{Collection, Game, LaunchKind, Source, Timestamp};
 
 use crate::collection_actions::collection_menu;
@@ -148,7 +149,7 @@ impl GamePage {
             }
         ));
 
-        for (caption, value) in facts(game, entry.playtime_secs) {
+        for (caption, value) in facts(game, entry.playtime_secs, entry.playtime_origin) {
             imp.facts.append(&fact(&caption, &value));
         }
 
@@ -280,10 +281,10 @@ fn more_menu(object: &GameObject, collections: &[Collection]) -> gio::Menu {
 }
 
 /// The facts row: launcher, playtime, last played, date added and, when known, install size.
-fn facts(game: &Game, playtime_secs: i64) -> Vec<(String, String)> {
+fn facts(game: &Game, playtime_secs: i64, origin: Option<PlaytimeOrigin>) -> Vec<(String, String)> {
     let mut facts = vec![
         (gettext("Launcher"), source_name(game.source())),
-        (gettext("Playtime"), playtime(playtime_secs)),
+        (playtime_caption(origin), playtime(playtime_secs)),
         (
             gettext("Last Played"),
             game.last_played_at.map_or_else(|| gettext("Never"), date),
@@ -315,7 +316,18 @@ fn fact(caption: &str, value: &str) -> gtk::Box {
     fact
 }
 
-fn playtime(secs: i64) -> String {
+/// "Playtime", with where it comes from: the launcher, or our own sessions.
+pub(crate) fn playtime_caption(origin: Option<PlaytimeOrigin>) -> String {
+    match origin {
+        Some(PlaytimeOrigin::Source(source)) => {
+            gettext("Playtime · {source}").replace("{source}", &source_name(source))
+        }
+        Some(PlaytimeOrigin::Sessions) => gettext("Playtime · Tracked Here"),
+        None => gettext("Playtime"),
+    }
+}
+
+pub(crate) fn playtime(secs: i64) -> String {
     let minutes = secs / 60;
     let (hours, minutes) = (minutes / 60, minutes % 60);
     match (hours, minutes) {
@@ -328,7 +340,7 @@ fn playtime(secs: i64) -> String {
     }
 }
 
-fn date(timestamp: Timestamp) -> String {
+pub(crate) fn date(timestamp: Timestamp) -> String {
     glib::DateTime::from_unix_local(timestamp)
         .and_then(|date| date.format("%x"))
         .map(|text| text.to_string())

@@ -7,6 +7,7 @@ pub mod bottles;
 pub mod desktop;
 pub mod faugus;
 pub mod heroic;
+mod iso_time;
 pub mod location;
 pub mod lutris;
 pub(crate) mod sha256;

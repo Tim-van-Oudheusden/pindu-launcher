@@ -4,7 +4,9 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gdk, gio, glib};
-use pindu_core::library::{Counts, Filters, SortMode, View};
+use pindu_core::library::{
+    Counts, Filters, HistoryGroup, PlaytimeOrigin, SortMode, View, history_group,
+};
 use pindu_core::model::{GameId, Source};
 
 use crate::application::PinduApplication;
@@ -54,6 +56,8 @@ mod imp {
         pub collections_section: TemplateChild<adw::SidebarSection>,
         #[template_child]
         pub jump_back_in: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub history_groups: TemplateChild<gtk::Box>,
         #[template_child]
         pub jump_cards: TemplateChild<gtk::Box>,
         #[template_child]
@@ -333,7 +337,10 @@ impl PinduWindow {
     /// for an empty library or the no-results page.
     fn update_content_page(&self) {
         let library = self.library();
-        let page = if library.model().n_items() > 0 {
+        let page = if library.model().n_items() > 0 && library.view() == View::PlayHistory {
+            self.show_history();
+            "history"
+        } else if library.model().n_items() > 0 {
             "grid"
         } else if library.filter_model().pending() > 0 {
             return;
@@ -354,6 +361,72 @@ impl PinduWindow {
             .expect("windows belong to the application")
             .library_service()
             .clone()
+    }
+
+    /// Play history: the shown games, most recent first, grouped by Today, This week and
+    /// Earlier, each with its playtime and where that comes from.
+    fn show_history(&self) {
+        let imp = self.imp();
+        while let Some(group) = imp.history_groups.first_child() {
+            imp.history_groups.remove(&group);
+        }
+        let model = self.library().model();
+        let mut games: Vec<GameObject> = (0..model.n_items())
+            .filter_map(|position| model.item(position).and_downcast::<GameObject>())
+            .collect();
+        games.sort_by_key(|game| std::cmp::Reverse(game.game().last_played_at));
+        let now = glib::DateTime::now_local().ok();
+        let (now_secs, offset) =
+            now.map_or((0, 0), |now| (now.to_unix(), now.utc_offset().as_seconds()));
+        let mut groups: Vec<(HistoryGroup, adw::PreferencesGroup)> = Vec::new();
+        for game in &games {
+            let (title, last_played, playtime, origin) = {
+                let entry = game.entry();
+                (
+                    entry.game.title.clone(),
+                    entry.game.last_played_at,
+                    entry.playtime_secs,
+                    entry.playtime_origin,
+                )
+            };
+            let Some(last_played) = last_played else {
+                continue;
+            };
+            let group = history_group(last_played, now_secs, offset);
+            if groups.last().is_none_or(|(last, _)| *last != group) {
+                let title = match group {
+                    HistoryGroup::Today => gettext("Today"),
+                    HistoryGroup::ThisWeek => gettext("This Week"),
+                    HistoryGroup::Earlier => gettext("Earlier"),
+                };
+                let widget = adw::PreferencesGroup::builder().title(title).build();
+                imp.history_groups.append(&widget);
+                groups.push((group, widget));
+            }
+            let played = crate::game_page::playtime(playtime);
+            let played = match origin {
+                Some(PlaytimeOrigin::Source(source)) => gettext("{time} in {source}")
+                    .replace("{time}", &played)
+                    .replace("{source}", &source_name(source)),
+                Some(PlaytimeOrigin::Sessions) => {
+                    gettext("{time}, tracked here").replace("{time}", &played)
+                }
+                None => played,
+            };
+            let subtitle = format!("{} · {played}", crate::game_page::date(last_played));
+            let row = adw::ActionRow::builder()
+                .title(&title)
+                .subtitle(&subtitle)
+                .activatable(true)
+                .use_markup(false)
+                .build();
+            row.set_action_name(Some("win.show-details"));
+            row.set_action_target_value(Some(&game.id().as_str().to_variant()));
+            row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+            if let Some((_, widget)) = groups.last() {
+                widget.add(&row);
+            }
+        }
     }
 
     /// The "Jump back in" row: shown in All Games while no search or filter is active.

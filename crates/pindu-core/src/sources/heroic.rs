@@ -2,9 +2,10 @@
 //!
 //! Each store's `store_cache/*_library.json` is joined with that store's installed file,
 //! then `store/game-overrides.json` and the hidden, favourite and category lists in
-//! `store/config.json` are applied. Art comes from Heroic's `images-cache`. Credential files
-//! (`gog_store/auth.json`, `legendaryConfig/legendary/user.json`,
-//! `nile_config/nile/user.json`) are never opened, and nothing is written.
+//! `store/config.json` are applied; playtime comes from `store/timestamp.json`. Art comes
+//! from Heroic's `images-cache`. Credential files (`gog_store/auth.json`,
+//! `legendaryConfig/legendary/user.json`, `nile_config/nile/user.json`) are never opened,
+//! and nothing is written.
 
 use std::collections::HashMap;
 use std::fs;
@@ -12,6 +13,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value as Json;
 
+use super::iso_time::parse_iso_timestamp;
 use super::sha256::sha256_hex;
 use super::{ImportError, ImportedGame, Snapshot, SourceFlags};
 use crate::model::{ArtLayout, LaunchKind, Platform, Source};
@@ -67,6 +69,7 @@ pub fn import(root: &Path, source: Source) -> Result<Snapshot, ImportError> {
     );
     let config = read_optional(&root.join("store/config.json"), &mut snapshot.errors);
     let flags = Flags::from_config(&config);
+    let timestamps = read_optional(&root.join("store/timestamp.json"), &mut snapshot.errors);
 
     let entries = library
         .get("library")
@@ -149,6 +152,16 @@ pub fn import(root: &Path, source: Source) -> Result<Snapshot, ImportError> {
 
         game.artwork = artwork(root, info, game_override);
         game.source_flags = flags.for_game(app_name, store.runner);
+        if let Some(played) = timestamps.get(app_name) {
+            // Heroic keeps minutes.
+            game.playtime_secs = played
+                .get("totalPlayed")
+                .and_then(Json::as_f64)
+                .map(|minutes| (minutes * 60.0).round() as i64)
+                .filter(|secs| *secs > 0);
+            game.last_played_at =
+                text(played, "lastPlayed").and_then(|time| parse_iso_timestamp(time, 0));
+        }
         snapshot.games.push(game);
     }
     Ok(snapshot)

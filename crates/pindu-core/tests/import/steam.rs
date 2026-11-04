@@ -257,3 +257,52 @@ fn a_portrait_capsule_is_the_cover_when_there_is_no_600x900_art() {
         [(ArtLayout::Cover, capsule)]
     );
 }
+
+/// Makes the account folder `id` the most recently written one.
+fn touch_account(steam_root: &Path, id: &str, age_secs: u64) {
+    let config = steam_root.join(format!("userdata/{id}/config/localconfig.vdf"));
+    let time = std::time::SystemTime::now() - std::time::Duration::from_secs(age_secs);
+    std::fs::File::options()
+        .write(true)
+        .open(config)
+        .unwrap()
+        .set_modified(time)
+        .unwrap();
+}
+
+#[test]
+fn playtime_comes_from_the_most_recent_accounts_localconfig() {
+    let (_dir, root) = fixture("steam");
+    let steam_root = root.join("home/.local/share/Steam");
+    touch_account(&steam_root, "111", 3600);
+    touch_account(&steam_root, "222", 60);
+    touch_account(&steam_root, "0", 0);
+    write_appinfo(&steam_root);
+
+    let snapshot = steam::import(&steam_root).unwrap();
+
+    let dota = game(&snapshot, "570");
+    // Steam keeps minutes.
+    assert_eq!(dota.playtime_secs, Some(574 * 60));
+    // The newer of the manifest's and the account's last-played times.
+    assert_eq!(dota.last_played_at, Some(1_757_613_311));
+    assert_eq!(
+        game(&snapshot, "1245620").last_played_at,
+        Some(1_800_000_000)
+    );
+    // Listed without any playtime.
+    assert_eq!(game(&snapshot, "1091500").playtime_secs, None);
+}
+
+#[test]
+fn the_other_account_counts_when_it_was_used_last() {
+    let (_dir, root) = fixture("steam");
+    let steam_root = root.join("home/.local/share/Steam");
+    touch_account(&steam_root, "111", 60);
+    touch_account(&steam_root, "222", 3600);
+    write_appinfo(&steam_root);
+
+    let snapshot = steam::import(&steam_root).unwrap();
+
+    assert_eq!(game(&snapshot, "570").playtime_secs, Some(10 * 60));
+}

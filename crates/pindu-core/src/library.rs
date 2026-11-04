@@ -37,8 +37,17 @@ pub struct LibraryEntry {
     pub game: Game,
     pub art: ArtSet,
     pub playtime_secs: i64,
+    /// Where the playtime comes from; `None` when the game was never played.
+    pub playtime_origin: Option<PlaytimeOrigin>,
     /// IDs of the collections holding the game, ascending.
     pub collections: Vec<i64>,
+}
+
+/// Whose playtime a game shows: its source's own total, or our sessions. Never both.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlaytimeOrigin {
+    Source(Source),
+    Sessions,
 }
 
 /// Every stored game with its best art per layout and its playtime: the source's own
@@ -58,19 +67,40 @@ pub fn load(store: &Store) -> store::Result<Vec<LibraryEntry>> {
             let art = artwork
                 .get(&game.id)
                 .map_or_else(ArtSet::default, |art| ArtSet::from(art));
-            let playtime_secs = imported_totals
-                .get(&game.id)
-                .or_else(|| session_totals.get(&game.id))
-                .copied()
-                .unwrap_or_default();
+            let (playtime_secs, playtime_origin) =
+                match (imported_totals.get(&game.id), session_totals.get(&game.id)) {
+                    (Some(&total), _) => (total, Some(PlaytimeOrigin::Source(game.source()))),
+                    (None, Some(&total)) => (total, Some(PlaytimeOrigin::Sessions)),
+                    (None, None) => (0, None),
+                };
             LibraryEntry {
                 collections: memberships.remove(&game.id).unwrap_or_default(),
                 game,
                 art,
                 playtime_secs,
+                playtime_origin,
             }
         })
         .collect())
+}
+
+/// The groups of the Play history page.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum HistoryGroup {
+    Today,
+    ThisWeek,
+    Earlier,
+}
+
+/// The Play history group of a game last played at `last_played`: by local calendar
+/// day, with `utc_offset` seconds east of UTC. This week is the six days before today.
+pub fn history_group(last_played: Timestamp, now: Timestamp, utc_offset: i64) -> HistoryGroup {
+    let day = |time: Timestamp| (time + utc_offset).div_euclid(86_400);
+    match day(now) - day(last_played) {
+        ..=0 => HistoryGroup::Today,
+        1..=6 => HistoryGroup::ThisWeek,
+        _ => HistoryGroup::Earlier,
+    }
 }
 
 /// How many games the "Jump back in" row shows, and how many of them can be pinned.
@@ -577,6 +607,80 @@ mod tests {
 
         games[2].pin_order = Some(2);
         assert_eq!(next_pin(&games), None);
+    }
+
+    #[test]
+    fn history_groups_by_local_day() {
+        // Wednesday 2024-03-06 12:00 UTC; the local time zone is UTC+1.
+        let now = 1_709_726_400;
+        let offset = 3600;
+        let hours = |h: i64| now - h * 3600;
+
+        assert_eq!(history_group(hours(1), now, offset), HistoryGroup::Today);
+        // 23:30 local yesterday: another day, so this week.
+        assert_eq!(
+            history_group(hours(13) - 1800, now, offset),
+            HistoryGroup::ThisWeek
+        );
+        // Six days back is still this week, seven is not.
+        assert_eq!(
+            history_group(hours(6 * 24), now, offset),
+            HistoryGroup::ThisWeek
+        );
+        assert_eq!(
+            history_group(hours(7 * 24), now, offset),
+            HistoryGroup::Earlier
+        );
+        // 00:30 local today counts as today, though it is still yesterday in UTC.
+        assert_eq!(
+            history_group(hours(13) + 1800, now, offset),
+            HistoryGroup::Today
+        );
+    }
+
+    #[test]
+    fn loading_names_where_playtime_comes_from() {
+        use crate::model::ImportedPlaytime;
+        use crate::store::Store;
+
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::open(&dir.path().join("library.db")).unwrap();
+        let imported = game("1", "Imported", None, 0);
+        let ours = Game::new(
+            GameId::new(Source::Desktop, "ours"),
+            "Ours",
+            LaunchKind::DesktopEntry,
+            0,
+        );
+        let never = game("3", "Never", None, 0);
+        for game in [&imported, &ours, &never] {
+            store.insert_game(game).unwrap();
+        }
+        store
+            .set_imported_playtime(&ImportedPlaytime {
+                game_id: imported.id.clone(),
+                source: Source::Steam,
+                total_secs: 60,
+                last_played_at: None,
+            })
+            .unwrap();
+        store.add_play_session(&ours.id, 10, 70).unwrap();
+
+        let entries = load(&store).unwrap();
+
+        let origin = |id: &GameId| {
+            entries
+                .iter()
+                .find(|entry| entry.game.id == *id)
+                .unwrap()
+                .playtime_origin
+        };
+        assert_eq!(
+            origin(&imported.id),
+            Some(PlaytimeOrigin::Source(Source::Steam))
+        );
+        assert_eq!(origin(&ours.id), Some(PlaytimeOrigin::Sessions));
+        assert_eq!(origin(&never.id), None);
     }
 
     #[test]
