@@ -5,6 +5,7 @@
 
 pub mod bottles;
 pub mod desktop;
+pub mod faugus;
 pub mod heroic;
 pub mod location;
 pub mod lutris;

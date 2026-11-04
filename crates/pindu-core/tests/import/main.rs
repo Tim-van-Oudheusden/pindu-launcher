@@ -3,6 +3,7 @@
 mod appinfo;
 mod bottles;
 mod desktop;
+mod faugus;
 mod heroic;
 mod lutris;
 mod steam;

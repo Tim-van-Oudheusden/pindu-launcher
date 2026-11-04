@@ -106,8 +106,10 @@ fn run_sync() -> Result<Vec<String>, String> {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |elapsed| elapsed.as_secs() as i64);
-    let summary =
-        sync_all(&store, &HostDirs::from_env(), now).map_err(|error| error.to_string())?;
+    // GLib reads the local time zone; the core has none of its own.
+    let utc_offset = glib::DateTime::now_local().map_or(0, |local| local.utc_offset().as_seconds());
+    let summary = sync_all(&store, &HostDirs::from_env(), now, utc_offset)
+        .map_err(|error| error.to_string())?;
     Ok(summary
         .problems
         .into_iter()
