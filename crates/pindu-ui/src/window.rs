@@ -95,6 +95,8 @@ mod imp {
         pub menu_collection: Cell<Option<i64>>,
         /// Whether the grid was scrolled to the top when the current re-sort began.
         pub grid_at_top: Cell<bool>,
+        /// The cover the controller was last on, where it comes back into the grid.
+        pub grid_cursor: Cell<u32>,
     }
 
     #[glib::object_subclass]
@@ -160,6 +162,9 @@ impl PinduWindow {
         window.setup_grid();
         window.setup_search_and_filters();
         window.observe_sync(sync_service);
+        if let Some(application) = application.downcast_ref::<PinduApplication>() {
+            window.setup_controller_navigation(application);
+        }
         window
     }
 
@@ -554,7 +559,7 @@ impl PinduWindow {
     }
 
     /// The tile that has keyboard focus, if any.
-    fn focused_tile(&self) -> Option<CoverTile> {
+    pub(crate) fn focused_tile(&self) -> Option<CoverTile> {
         let focus = gtk::prelude::GtkWindowExt::focus(self)?;
         if !focus.is_ancestor(&*self.imp().grid) {
             return None;
@@ -876,6 +881,7 @@ impl PinduWindow {
     /// list shrinks under a scroll still in motion.
     fn scroll_grid_to_top(&self) {
         let grid = &self.imp().grid;
+        self.imp().grid_cursor.set(0);
         if let Some(scrolled) = grid.parent().and_downcast::<gtk::ScrolledWindow>() {
             // Turning kinetic scrolling off ends any deceleration in progress.
             scrolled.set_kinetic_scrolling(false);
@@ -956,7 +962,7 @@ impl PinduWindow {
         dialog.present(Some(self));
     }
 
-    fn settings(&self) -> &gio::Settings {
+    pub(crate) fn settings(&self) -> &gio::Settings {
         self.imp()
             .settings
             .get_or_init(|| gio::Settings::new(APP_ID))

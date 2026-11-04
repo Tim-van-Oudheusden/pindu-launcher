@@ -42,6 +42,15 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
     }
 
     Adw.PreferencesGroup {
+      title: _("Controller");
+
+      Adw.SwitchRow controller_row {
+        title: _("Navigate With a Controller");
+        subtitle: _("Move with the D-pad or left stick, open with A and go back with B. While this is on, a Steam Deck's own controls work only as a controller.");
+      }
+    }
+
+    Adw.PreferencesGroup {
       title: _("Permissions");
       description: _("Store games start through their launcher and always work. Desktop entries, Flatpak games and games added by hand start on this computer, outside the sandbox, which needs your permission.");
 
