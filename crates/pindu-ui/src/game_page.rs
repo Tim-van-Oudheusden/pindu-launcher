@@ -1,20 +1,27 @@
 //! The game page: hero art with the logo or title, Play with default focus, a ⋮ menu, a
-//! facts row, the About group and, for store games, a read-only launch summary.
+//! facts row, the About group and the Launch group: for games we run, their launch
+//! settings; for store games, a read-only summary.
 
-use std::cell::RefCell;
+use std::cell::{Cell, OnceCell, RefCell};
+use std::path::PathBuf;
+use std::rc::Rc;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
+use pindu_core::launch::{self, LaunchSettings};
 use pindu_core::library::PlaytimeOrigin;
-use pindu_core::model::{Collection, Game, LaunchKind, Source, Timestamp};
+use pindu_core::manual;
+use pindu_core::model::{Collection, Game, GameId, LaunchConfig, LaunchKind, Source, Timestamp};
 
 use crate::collection_actions::collection_menu;
 use crate::launch_service::launcher_name;
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
 use crate::permission_service;
+use crate::proton_choice::{FirstChoice, ProtonChoice};
+use crate::proton_launch;
 use crate::sources::source_name;
 use crate::widgets::textures;
 
@@ -56,8 +63,32 @@ mod imp {
         pub steam_dialog_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub permission_banner: TemplateChild<adw::Banner>,
+        #[template_child]
+        pub settings_group: TemplateChild<adw::PreferencesGroup>,
+        #[template_child]
+        pub proton_row: TemplateChild<adw::ComboRow>,
+        #[template_child]
+        pub prefix_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub arguments_row: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub environment_row: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub mangohud_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub gamemode_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub wrappers_row: TemplateChild<adw::EntryRow>,
         /// The shown game and its `notify::playing` handler.
         pub playing_handler: RefCell<Option<(GameObject, Vec<glib::SignalHandlerId>)>>,
+        /// The game whose launch settings are shown, and where they are stored.
+        pub launch_target: RefCell<Option<(LibraryService, GameId)>>,
+        /// The Proton row's builds, for Windows games.
+        pub proton: OnceCell<Rc<ProtonChoice>>,
+        /// The shown prefix, where the folder chooser starts.
+        pub prefix: RefCell<Option<PathBuf>>,
+        /// Set while the rows show stored settings, so only the user's changes are saved.
+        pub filling: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -68,10 +99,46 @@ mod imp {
 
         fn class_init(klass: &mut Self::Class) {
             klass.bind_template();
+            klass.bind_template_callbacks();
         }
 
         fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
             obj.init_template();
+        }
+    }
+
+    #[gtk::template_callbacks]
+    impl GamePage {
+        #[template_callback]
+        fn choose_prefix(&self) {
+            self.obj().choose_prefix();
+        }
+
+        #[template_callback]
+        fn apply_arguments(&self) {
+            let row = &self.arguments_row;
+            if let Some(arguments) = parsed(row, manual::split_arguments) {
+                self.obj()
+                    .edit_launch(move |config| config.arguments = arguments);
+            }
+        }
+
+        #[template_callback]
+        fn apply_environment(&self) {
+            let row = &self.environment_row;
+            if let Some(environment) = parsed(row, launch::parse_environment) {
+                self.obj()
+                    .edit_launch(move |config| config.environment = environment);
+            }
+        }
+
+        #[template_callback]
+        fn apply_wrappers(&self) {
+            let row = &self.wrappers_row;
+            if let Some(wrappers) = parsed(row, manual::split_arguments) {
+                self.obj()
+                    .edit_launch(move |config| config.wrappers = wrappers);
+            }
         }
     }
 
@@ -188,6 +255,12 @@ impl GamePage {
                 library.set_steam_launch_dialog(&id, row.is_active())
             });
         }
+        if let Some(settings) = launch::launch_settings(game) {
+            imp.launch_target
+                .replace(Some((library.clone(), game.id.clone())));
+            self.connect_launch_settings(settings);
+            self.load_launch_settings();
+        }
 
         let (hero, cover, logo) = (
             entry.art.hero.clone(),
@@ -250,6 +323,131 @@ impl GamePage {
         button.set_action_name(Some(action));
         button.remove_css_class(old_style);
         button.add_css_class(style);
+    }
+
+    /// Shows the rows a game's settings have and saves what the user changes.
+    fn connect_launch_settings(&self, settings: LaunchSettings) {
+        let imp = self.imp();
+        imp.proton_row.set_visible(settings.proton);
+        imp.prefix_row.set_visible(settings.proton);
+        imp.arguments_row.set_visible(settings.arguments);
+        if settings.proton {
+            let choice = ProtonChoice::new(&imp.proton_row, FirstChoice::Default, None);
+            choice.connect_changed(glib::clone!(
+                #[weak(rename_to = page)]
+                self,
+                move |name| page.edit_launch(move |config| config.proton_version = name)
+            ));
+            imp.proton.set(choice).expect("connected once");
+        }
+        for (row, set) in [
+            (
+                &*imp.mangohud_row,
+                (|config, on| config.mangohud = on) as fn(&mut LaunchConfig, bool),
+            ),
+            (&*imp.gamemode_row, |config, on| config.gamemode = on),
+        ] {
+            row.connect_active_notify(glib::clone!(
+                #[weak(rename_to = page)]
+                self,
+                move |row| {
+                    if !page.imp().filling.get() {
+                        let on = row.is_active();
+                        page.edit_launch(move |config| set(config, on));
+                    }
+                }
+            ));
+        }
+        for row in [&imp.arguments_row, &imp.environment_row, &imp.wrappers_row] {
+            row.connect_changed(|row| row.remove_css_class("error"));
+        }
+    }
+
+    /// Reads the game's launch settings again and shows them; the Edit dialog may have
+    /// changed them.
+    pub fn load_launch_settings(&self) {
+        let Some((library, id)) = self.imp().launch_target.borrow().clone() else {
+            return;
+        };
+        let page = self.downgrade();
+        glib::spawn_future_local(async move {
+            let config = library.launch_config(&id).await;
+            if let Some(page) = page.upgrade() {
+                page.show_launch_settings(&id, config);
+            }
+        });
+    }
+
+    fn show_launch_settings(&self, id: &GameId, config: Option<LaunchConfig>) {
+        let imp = self.imp();
+        let Some(config) = config else {
+            imp.settings_group.set_visible(false);
+            return;
+        };
+        imp.filling.set(true);
+        if let Some(proton) = imp.proton.get() {
+            proton.select(config.proton_version.clone());
+        }
+        let prefix = config
+            .prefix_path
+            .clone()
+            .unwrap_or_else(|| proton_launch::defaults().prefixes.join(id.native_id()));
+        imp.prefix_row.set_subtitle(&prefix.to_string_lossy());
+        imp.prefix.replace(Some(prefix));
+        imp.arguments_row
+            .set_text(&manual::join_arguments(&config.arguments));
+        imp.environment_row
+            .set_text(&launch::join_environment(&config.environment));
+        imp.mangohud_row.set_active(config.mangohud);
+        imp.gamemode_row.set_active(config.gamemode);
+        imp.wrappers_row
+            .set_text(&manual::join_arguments(&config.wrappers));
+        imp.filling.set(false);
+        imp.settings_group.set_visible(true);
+    }
+
+    /// Saves a change to the game's launch config.
+    fn edit_launch(&self, edit: impl FnOnce(&mut LaunchConfig) + Send + 'static) {
+        if let Some((library, id)) = &*self.imp().launch_target.borrow() {
+            library.edit_launch_config(id, edit);
+        }
+    }
+
+    /// Picks the game's prefix. umu runs inside the sandbox, so the path the sandbox sees
+    /// is the one kept.
+    fn choose_prefix(&self) {
+        let mut chooser = gtk::FileDialog::builder()
+            .title(gettext("Choose the Game's Prefix"))
+            .modal(true);
+        if let Some(prefix) = &*self.imp().prefix.borrow() {
+            chooser = chooser.initial_folder(&gio::File::for_path(prefix));
+        }
+        let chooser = chooser.build();
+        let root = self.root().and_downcast::<gtk::Window>();
+        let page = self.downgrade();
+        glib::spawn_future_local(async move {
+            let Ok(folder) = chooser.select_folder_future(root.as_ref()).await else {
+                return;
+            };
+            if let (Some(page), Some(path)) = (page.upgrade(), folder.path()) {
+                let imp = page.imp();
+                imp.prefix_row.set_subtitle(&path.to_string_lossy());
+                imp.prefix.replace(Some(path.clone()));
+                page.edit_launch(move |config| config.prefix_path = Some(path));
+            }
+        });
+    }
+}
+
+/// The row's text read by `parse`; marks the row when the text cannot be read.
+fn parsed<T>(row: &adw::EntryRow, parse: impl Fn(&str) -> Result<T, String>) -> Option<T> {
+    match parse(&row.text()) {
+        Ok(value) => Some(value),
+        Err(error) => {
+            glib::g_debug!("pindu", "Not saved: {error}");
+            row.add_css_class("error");
+            None
+        }
     }
 }
 

@@ -240,7 +240,13 @@ impl PinduApplication {
             .activate(move |app: &Self, _, id| {
                 app.with_game(id, |window, game, library, _| {
                     let (id, title) = (game.id(), game.game().title.clone());
-                    GameDialog::edit(library, &id, &title).present(Some(window));
+                    let dialog = GameDialog::edit(library, &id, &title);
+                    dialog.connect_closed(glib::clone!(
+                        #[weak]
+                        window,
+                        move |_| window.refresh_game_page()
+                    ));
+                    dialog.present(Some(window));
                 });
             })
             .build();
