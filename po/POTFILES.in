@@ -1,5 +1,6 @@
 crates/pindu-ui/src/application.rs
 crates/pindu-ui/src/game_page.rs
+crates/pindu-ui/src/launch_service.rs
 crates/pindu-ui/src/sources.rs
 crates/pindu-ui/src/sync_service.rs
 crates/pindu-ui/src/widgets/cover_tile.rs

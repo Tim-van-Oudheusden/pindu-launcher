@@ -20,7 +20,10 @@ use rusqlite::{Connection, Row};
 use crate::model::{ArtLayout, ArtOrigin, GameId, LaunchKind, Platform, Source};
 
 /// Schema migrations in order; entry `n` takes the database from version `n` to `n + 1`.
-const MIGRATIONS: &[&str] = &[include_str!("store/migrations/0001_initial.sql")];
+const MIGRATIONS: &[&str] = &[
+    include_str!("store/migrations/0001_initial.sql"),
+    include_str!("store/migrations/0002_steam_launch_dialog.sql"),
+];
 
 /// The schema version a freshly opened store is at.
 pub const LATEST_SCHEMA_VERSION: u32 = MIGRATIONS.len() as u32;

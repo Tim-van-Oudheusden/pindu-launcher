@@ -145,6 +145,12 @@ template $PinduGamePage: Adw.NavigationPage {
                   action-name: "app.open-in-launcher";
                 }
               }
+
+              Adw.SwitchRow steam_dialog_row {
+                title: _("Choose Launch Options");
+                subtitle: _("Ask Steam which of the game’s launch options to use");
+                visible: false;
+              }
             }
           };
         }

@@ -4,6 +4,7 @@
 //! `cargo test` against fixture trees, without a display.
 
 pub mod art;
+pub mod launch;
 pub mod library;
 pub mod model;
 pub mod paths;
