@@ -73,6 +73,45 @@ pub fn load(store: &Store) -> store::Result<Vec<LibraryEntry>> {
         .collect())
 }
 
+/// How many games the "Jump back in" row shows, and how many of them can be pinned.
+pub const JUMP_BACK_IN_SIZE: usize = 6;
+pub const MAX_PINS: u8 = 3;
+
+/// The "Jump back in" row: pinned games in their pin order, then the most recently
+/// played, up to [`JUMP_BACK_IN_SIZE`]. Hidden and missing games never show.
+pub fn jump_back_in<'a>(games: impl IntoIterator<Item = &'a Game>) -> Vec<&'a Game> {
+    let shown: Vec<&Game> = games
+        .into_iter()
+        .filter(|game| game.in_library() && !game.hidden)
+        .collect();
+    let mut pinned: Vec<&Game> = shown
+        .iter()
+        .copied()
+        .filter(|game| game.pin_order.is_some())
+        .collect();
+    pinned.sort_by_key(|game| game.pin_order);
+    let mut recent: Vec<&Game> = shown
+        .into_iter()
+        .filter(|game| game.pin_order.is_none() && game.last_played_at.is_some())
+        .collect();
+    recent.sort_by_key(|game| Reverse(game.last_played_at));
+    pinned
+        .into_iter()
+        .chain(recent)
+        .take(JUMP_BACK_IN_SIZE)
+        .collect()
+}
+
+/// The first free pin place, or `None` when [`MAX_PINS`] games are pinned already.
+pub fn next_pin<'a>(games: impl IntoIterator<Item = &'a Game>) -> Option<u8> {
+    let taken: Vec<u8> = games
+        .into_iter()
+        .filter(|game| game.in_library())
+        .filter_map(|game| game.pin_order)
+        .collect();
+    (1..=MAX_PINS).find(|place| !taken.contains(place))
+}
+
 /// The library sort orders, as offered in the sort menu.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum SortMode {
@@ -483,6 +522,61 @@ mod tests {
         assert_eq!(counts.get(View::Source(Source::Steam)), 2);
         assert_eq!(counts.get(View::Source(Source::HeroicGog)), 1);
         assert_eq!(counts.get(View::Source(Source::Lutris)), 0);
+    }
+
+    fn played(id: &str, at: i64) -> Game {
+        game(id, id, Some(at), 0)
+    }
+
+    fn ids(games: &[&Game]) -> Vec<String> {
+        games
+            .iter()
+            .map(|game| game.id.native_id().to_owned())
+            .collect()
+    }
+
+    #[test]
+    fn jump_back_in_shows_pins_first_then_the_most_recently_played() {
+        let mut pinned_second = played("p2", 1);
+        pinned_second.pin_order = Some(2);
+        let mut pinned_first = game("p1", "p1", None, 0);
+        pinned_first.pin_order = Some(1);
+        let games = [
+            played("old", 10),
+            played("new", 30),
+            pinned_second,
+            game("never", "never", None, 0),
+            played("mid", 20),
+            pinned_first,
+        ];
+
+        let row = jump_back_in(games.iter());
+
+        assert_eq!(ids(&row), ["p1", "p2", "new", "mid", "old"]);
+    }
+
+    #[test]
+    fn jump_back_in_holds_six_games_and_skips_hidden_or_missing_ones() {
+        let mut games: Vec<Game> = (0..8).map(|n| played(&format!("g{n}"), n)).collect();
+        games[7].hidden = true;
+        games[6].missing_since = Some(1);
+
+        let row = jump_back_in(games.iter());
+
+        assert_eq!(ids(&row), ["g5", "g4", "g3", "g2", "g1", "g0"]);
+    }
+
+    #[test]
+    fn a_new_pin_takes_the_first_free_place_of_three() {
+        let mut games: Vec<Game> = (0..4).map(|n| played(&format!("g{n}"), n)).collect();
+        assert_eq!(next_pin(&games), Some(1));
+
+        games[0].pin_order = Some(1);
+        games[1].pin_order = Some(3);
+        assert_eq!(next_pin(&games), Some(2));
+
+        games[2].pin_order = Some(2);
+        assert_eq!(next_pin(&games), None);
     }
 
     #[test]

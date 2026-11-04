@@ -97,6 +97,17 @@ template $PinduGamePage: Adw.NavigationPage {
                 ]
               }
 
+              Button favourite_button {
+                icon-name: "non-starred-symbolic";
+                tooltip-text: _("Add to Favourites");
+                valign: center;
+                action-name: "win.toggle-favourite";
+
+                styles [
+                  "circular",
+                ]
+              }
+
               MenuButton more_button {
                 icon-name: "view-more-symbolic";
                 tooltip-text: _("More Actions");

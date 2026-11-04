@@ -63,3 +63,20 @@ gridview.library > child {
 .command .subtitle {
   font-family: monospace;
 }
+
+/* "Jump back in" cards: landscape art with the title on a gradient. */
+.jump-card {
+  padding: 0;
+  border-radius: 12px;
+}
+
+.jump-card picture {
+  border-radius: 12px;
+}
+
+.jump-card .jump-title {
+  padding: 6px 10px;
+  border-radius: 0 0 12px 12px;
+  color: white;
+  background-image: linear-gradient(to bottom, transparent, rgb(0 0 0 / 70%));
+}

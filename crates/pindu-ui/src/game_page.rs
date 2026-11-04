@@ -34,6 +34,8 @@ mod imp {
         #[template_child]
         pub more_button: TemplateChild<gtk::MenuButton>,
         #[template_child]
+        pub favourite_button: TemplateChild<gtk::Button>,
+        #[template_child]
         pub facts: TemplateChild<adw::WrapBox>,
         #[template_child]
         pub about_group: TemplateChild<adw::PreferencesGroup>,
@@ -54,7 +56,7 @@ mod imp {
         #[template_child]
         pub permission_banner: TemplateChild<adw::Banner>,
         /// The shown game and its `notify::playing` handler.
-        pub playing_handler: RefCell<Option<(GameObject, glib::SignalHandlerId)>>,
+        pub playing_handler: RefCell<Option<(GameObject, Vec<glib::SignalHandlerId>)>>,
     }
 
     #[glib::object_subclass]
@@ -74,8 +76,10 @@ mod imp {
 
     impl ObjectImpl for GamePage {
         fn dispose(&self) {
-            if let Some((object, handler)) = self.playing_handler.take() {
-                object.disconnect(handler);
+            if let Some((object, handlers)) = self.playing_handler.take() {
+                for handler in handlers {
+                    object.disconnect(handler);
+                }
             }
         }
     }
@@ -119,8 +123,19 @@ impl GamePage {
                 move |object, _| page.show_playing(object.is_playing())
             ),
         );
-        imp.playing_handler.replace(Some((object.clone(), handler)));
+        let favourite_handler = object.connect_notify_local(
+            Some("favourite"),
+            glib::clone!(
+                #[weak(rename_to = page)]
+                self,
+                move |object, _| page.show_favourite(object.game().favourite)
+            ),
+        );
+        imp.playing_handler
+            .replace(Some((object.clone(), vec![handler, favourite_handler])));
         self.show_playing(object.is_playing());
+        imp.favourite_button.set_action_target_value(Some(&target));
+        self.show_favourite(game.favourite);
         imp.open_in_launcher.set_action_target_value(Some(&target));
         imp.more_button.set_create_popup_func(glib::clone!(
             #[weak]
@@ -200,6 +215,18 @@ impl GamePage {
 }
 
 impl GamePage {
+    /// The star shows whether the game is a favourite.
+    fn show_favourite(&self, favourite: bool) {
+        let button = &self.imp().favourite_button;
+        let (icon, tooltip) = if favourite {
+            ("starred-symbolic", gettext("Remove from Favourites"))
+        } else {
+            ("non-starred-symbolic", gettext("Add to Favourites"))
+        };
+        button.set_icon_name(icon);
+        button.set_tooltip_text(Some(&tooltip));
+    }
+
     /// Play turns into Stop while a game we started runs.
     fn show_playing(&self, playing: bool) {
         let button = &self.imp().play_button;
