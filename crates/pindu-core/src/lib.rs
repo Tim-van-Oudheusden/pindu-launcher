@@ -9,6 +9,7 @@ pub mod launch;
 pub mod library;
 pub mod model;
 pub mod paths;
+pub mod permissions;
 pub mod search;
 pub mod sources;
 pub mod store;
