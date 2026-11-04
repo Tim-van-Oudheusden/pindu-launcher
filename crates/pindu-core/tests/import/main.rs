@@ -2,6 +2,7 @@
 
 mod appinfo;
 mod bottles;
+mod desktop;
 mod heroic;
 mod lutris;
 mod steam;

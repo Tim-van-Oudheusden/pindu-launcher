@@ -4,6 +4,7 @@
 //! snapshot with the library is a separate step.
 
 pub mod bottles;
+pub mod desktop;
 pub mod heroic;
 pub mod location;
 pub mod lutris;
@@ -15,7 +16,7 @@ pub mod vdf;
 use std::fmt;
 use std::path::PathBuf;
 
-use crate::model::{ArtLayout, LaunchKind, Platform, Source, Timestamp};
+use crate::model::{ArtLayout, LaunchConfig, LaunchKind, Platform, Source, Timestamp};
 
 /// Everything one import run found in a source.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,6 +53,8 @@ pub struct ImportedGame {
     pub launch_kind: LaunchKind,
     /// A launch URI the source gives, when the URI cannot be built from the native ID.
     pub launch_uri: Option<String>,
+    /// The command the source gives for starting the game ourselves.
+    pub launch_config: Option<LaunchConfig>,
     pub genres: Vec<String>,
     pub description: Option<String>,
     /// The source's own art, at most one per layout.
@@ -87,6 +90,7 @@ impl ImportedGame {
             playtime_secs: None,
             launch_kind,
             launch_uri: None,
+            launch_config: None,
             genres: Vec::new(),
             description: None,
             artwork: Vec::new(),

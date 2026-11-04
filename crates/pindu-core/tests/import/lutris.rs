@@ -26,6 +26,8 @@ fn lutris_home(data: &str) -> (tempfile::TempDir, PathBuf) {
         home: home.clone(),
         data_home: home.join(".local/share"),
         config_home: home.join(".config"),
+        host_usr: home.join("usr"),
+        system_flatpak: home.join("var/lib/flatpak"),
     };
     let root = Location::of(Source::Lutris, &dirs)
         .unwrap()

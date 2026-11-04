@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=SuperTux
+Name[de]=SuperTux DE
+GenericName=Jump'n Run Game
+Exec=supertux2
+Icon=supertux2
+Categories=Game;ArcadeGame;

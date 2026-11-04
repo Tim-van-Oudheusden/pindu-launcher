@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Heroic Games Launcher
+Exec=/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=heroic-run --file-forwarding com.heroicgameslauncher.hgl @@u %u @@
+Terminal=false
+Type=Application
+Icon=com.heroicgameslauncher.hgl
+Categories=Game;
+X-Flatpak=com.heroicgameslauncher.hgl
