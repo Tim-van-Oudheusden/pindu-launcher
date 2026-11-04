@@ -11,6 +11,7 @@ pub mod game_dialog;
 pub mod game_page;
 pub mod gamepad_service;
 pub mod hint_bar;
+pub mod home_page;
 pub mod launch_service;
 pub mod library_service;
 pub mod manette_backend;

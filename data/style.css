@@ -108,3 +108,29 @@ window.fullscreen-mode gridview.library > child:focus-within {
   padding: 12px 36px;
   font-weight: bold;
 }
+
+/* Fullscreen Home: the focused game's hero fills the page and fades into the window
+   behind the carousel; the focused card is lifted a little with a ring around it. */
+.home .hero-gradient {
+  background-image: linear-gradient(to bottom, alpha(var(--window-bg-color), 0.05) 30%, alpha(var(--window-bg-color), 0.85) 70%, var(--window-bg-color));
+}
+
+.home-carousel > button {
+  transition: transform 120ms ease-out;
+}
+
+.home-carousel > button:focus-visible {
+  transform: scale(1.05);
+  outline: 3px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.home-carousel > .library-tile {
+  border-radius: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-carousel > button {
+    transition: none;
+  }
+}

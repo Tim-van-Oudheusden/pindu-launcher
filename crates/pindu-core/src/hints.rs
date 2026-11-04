@@ -20,7 +20,8 @@ pub enum Focus {
     Other,
 }
 
-/// Where the user is: the focused widget, an open dialog and a page to go back to.
+/// Where the user is: the focused widget, an open dialog, a page to go back to and
+/// whether the page searches.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Context {
     pub focus: Focus,
@@ -28,6 +29,8 @@ pub struct Context {
     pub dialog: bool,
     /// A page lies below the shown one, which B goes back to.
     pub page_below: bool,
+    /// The page searches the library (Home and the library), which Y starts.
+    pub search: bool,
 }
 
 /// What a button does, as the hint bar names it.
@@ -40,6 +43,7 @@ pub enum Action {
     Select,
     Back,
     Close,
+    Search,
 }
 
 /// One hint: the button, by its position on the pad, and what it does.
@@ -64,15 +68,21 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
     } else {
         context.page_below.then_some(Action::Back)
     };
-    [(Intent::Activate, activate), (Intent::Back, back)]
-        .into_iter()
-        .filter_map(|(intent, action)| {
-            Some(Hint {
-                button: kind.button(intent),
-                action: action?,
-            })
+    // Y searches the page under a dialog, so it waits for the dialog to close.
+    let search = (context.search && !context.dialog).then_some(Action::Search);
+    [
+        (Intent::Activate, activate),
+        (Intent::Back, back),
+        (Intent::Search, search),
+    ]
+    .into_iter()
+    .filter_map(|(intent, action)| {
+        Some(Hint {
+            button: kind.button(intent),
+            action: action?,
         })
-        .collect()
+    })
+    .collect()
 }
 
 /// The icon name of the glyph for `button` on a controller of `kind`: the layout's own
@@ -120,6 +130,7 @@ mod tests {
             focus,
             dialog: false,
             page_below: false,
+            search: false,
         }
     }
 
@@ -175,6 +186,49 @@ mod tests {
         assert_eq!(
             actions(game_page, DeviceKind::Nintendo),
             [(Button::East, Action::Play), (Button::South, Action::Back)]
+        );
+    }
+
+    #[test]
+    fn home_and_the_library_search_with_the_north_button() {
+        let home = Context {
+            search: true,
+            ..context(Focus::Game)
+        };
+        assert_eq!(
+            actions(home, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Open),
+                (Button::North, Action::Search)
+            ]
+        );
+        let library = Context {
+            page_below: true,
+            ..home
+        };
+        assert_eq!(
+            actions(library, DeviceKind::Nintendo),
+            [
+                (Button::East, Action::Open),
+                (Button::South, Action::Back),
+                (Button::North, Action::Search)
+            ]
+        );
+    }
+
+    #[test]
+    fn an_open_dialog_keeps_y_from_searching() {
+        let preferences_over_home = Context {
+            dialog: true,
+            search: true,
+            ..context(Focus::Toggle)
+        };
+        assert_eq!(
+            actions(preferences_over_home, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Toggle),
+                (Button::East, Action::Close)
+            ]
         );
     }
 

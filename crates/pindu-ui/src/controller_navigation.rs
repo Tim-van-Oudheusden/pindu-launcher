@@ -1,8 +1,8 @@
 //! Controller navigation in the main window: directions move focus the way the arrow keys
 //! do (`move-focus` on the window), the cover grid steps through its covers with
-//! `scroll_to`, A activates the focused widget, B closes a dialog or goes back and Guide
-//! enters fullscreen mode. Intents never become synthetic key events, and only the active
-//! window acts on them.
+//! `scroll_to`, A activates the focused widget, B closes a dialog or goes back, Y searches
+//! from Home or the library and Guide enters fullscreen mode. Intents never become
+//! synthetic key events, and only the active window acts on them.
 
 use std::collections::BTreeSet;
 
@@ -70,6 +70,10 @@ impl PinduWindow {
                 self.play_sound(Sound::Back);
             }
             Intent::Home => self.enter_fullscreen(),
+            Intent::Search => {
+                self.start_search();
+                self.play_sound(Sound::Select);
+            }
             _ => {}
         }
     }
