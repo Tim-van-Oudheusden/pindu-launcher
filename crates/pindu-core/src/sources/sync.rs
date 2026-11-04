@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use super::location::{self, HostDirs, ResolveError};
-use super::{ImportError, ImportedGame, Snapshot, bottles, heroic, lutris, steam};
+use super::{ImportError, ImportedGame, Snapshot, bottles, desktop, heroic, lutris, steam};
 use crate::model::{
     ArtOrigin, Artwork, Game, GameId, ImportedPlaytime, Source, SourceState, Timestamp,
 };
@@ -19,6 +19,7 @@ pub const IMPORTED_SOURCES: &[Source] = &[
     Source::HeroicSideload,
     Source::Lutris,
     Source::Bottles,
+    Source::Desktop,
 ];
 
 /// What a sync of every source could not read, by source.
@@ -54,10 +55,15 @@ pub fn sync_source(
     dirs: &HostDirs,
     now: Timestamp,
 ) -> store::Result<Vec<String>> {
-    let snapshot = match location::resolve_and_record(store, source, dirs)? {
-        Ok(root) => import(source, &root).map_err(|error| error.to_string()),
-        Err(ResolveError::NotFound) => Ok(Snapshot::new(source)),
-        Err(error) => Err(error.to_string()),
+    let snapshot = if source == Source::Desktop {
+        // Desktop entries come from the host's application folders, not one source folder.
+        Ok(desktop::import(dirs))
+    } else {
+        match location::resolve_and_record(store, source, dirs)? {
+            Ok(root) => import(source, &root).map_err(|error| error.to_string()),
+            Err(ResolveError::NotFound) => Ok(Snapshot::new(source)),
+            Err(error) => Err(error.to_string()),
+        }
     };
     let problems = match snapshot {
         Ok(snapshot) => {
@@ -118,6 +124,14 @@ pub fn apply_snapshot(store: &Store, snapshot: &Snapshot, now: Timestamp) -> sto
                 }
             }
             replace_source_art(store, &id, imported)?;
+            if let Some(command) = &imported.launch_config {
+                // The source owns the command; options the user set on top are kept.
+                let mut config = store.launch_config(&id)?.unwrap_or_default();
+                config.executable.clone_from(&command.executable);
+                config.arguments.clone_from(&command.arguments);
+                config.working_dir.clone_from(&command.working_dir);
+                store.set_launch_config(&id, &config)?;
+            }
             if let Some(total_secs) = imported.playtime_secs {
                 store.set_imported_playtime(&ImportedPlaytime {
                     game_id: id.clone(),
@@ -181,7 +195,7 @@ fn replace_source_art(store: &Store, id: &GameId, imported: &ImportedGame) -> st
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{ArtLayout, LaunchKind, Source};
+    use crate::model::{ArtLayout, LaunchConfig, LaunchKind, Source};
     use crate::sources::SourceFlags;
 
     fn temp_store() -> (tempfile::TempDir, Store) {
@@ -298,6 +312,43 @@ mod tests {
                 total_secs: 7_200,
                 last_played_at: Some(150),
             })
+        );
+    }
+
+    #[test]
+    fn the_sources_command_is_stored_and_our_own_options_kept() {
+        let (_dir, store) = temp_store();
+        let mut game = flagged(false, false, &[]);
+        game.launch_config = Some(LaunchConfig {
+            executable: "/opt/game/run".into(),
+            arguments: vec!["--old".into()],
+            ..LaunchConfig::default()
+        });
+        apply_snapshot(&store, &snapshot(vec![game.clone()]), 100).unwrap();
+        let mut ours = store.launch_config(&id()).unwrap().unwrap();
+        ours.gamemode = true;
+        ours.environment.insert("DXVK_HUD".into(), "1".into());
+        store.set_launch_config(&id(), &ours).unwrap();
+        game.launch_config = Some(LaunchConfig {
+            executable: "/opt/game/run2".into(),
+            arguments: vec!["--new".into()],
+            working_dir: Some("/opt/game".into()),
+            ..LaunchConfig::default()
+        });
+
+        apply_snapshot(&store, &snapshot(vec![game]), 200).unwrap();
+
+        let config = store.launch_config(&id()).unwrap().unwrap();
+        assert_eq!(config.executable, std::path::Path::new("/opt/game/run2"));
+        assert_eq!(config.arguments, ["--new"]);
+        assert_eq!(
+            config.working_dir.as_deref(),
+            Some(std::path::Path::new("/opt/game"))
+        );
+        assert!(config.gamemode);
+        assert_eq!(
+            config.environment.get("DXVK_HUD").map(String::as_str),
+            Some("1")
         );
     }
 
@@ -496,6 +547,8 @@ mod tests {
             home: home.to_owned(),
             data_home: home.join(".local/share"),
             config_home: home.join(".config"),
+            host_usr: home.join("usr"),
+            system_flatpak: home.join("var/lib/flatpak"),
         }
     }
 
@@ -565,6 +618,28 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(game.missing_since, Some(200));
+    }
+
+    #[test]
+    fn desktop_entries_sync_without_a_source_folder() {
+        let (dir, store) = temp_store();
+        let applications = dir.path().join("usr/share/applications");
+        std::fs::create_dir_all(&applications).unwrap();
+        std::fs::write(
+            applications.join("neverball.desktop"),
+            "[Desktop Entry]\nType=Application\nName=Neverball\nExec=neverball -f\nCategories=Game;\n",
+        )
+        .unwrap();
+
+        let problems = sync_source(&store, Source::Desktop, &host_dirs(dir.path()), 100).unwrap();
+
+        assert!(problems.is_empty(), "{problems:?}");
+        let id = GameId::new(Source::Desktop, "neverball");
+        let game = store.game(&id).unwrap().unwrap();
+        assert_eq!(game.launch_kind, LaunchKind::DesktopEntry);
+        let config = store.launch_config(&id).unwrap().unwrap();
+        assert_eq!(config.executable, std::path::Path::new("neverball"));
+        assert_eq!(config.arguments, ["-f"]);
     }
 
     #[test]

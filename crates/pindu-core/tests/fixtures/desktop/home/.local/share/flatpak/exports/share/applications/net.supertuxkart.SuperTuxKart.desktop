@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=SuperTuxKart
+Exec=/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=supertuxkart net.supertuxkart.SuperTuxKart
+Icon=net.supertuxkart.SuperTuxKart
+Categories=Game;ArcadeGame;
+X-Flatpak=net.supertuxkart.SuperTuxKart

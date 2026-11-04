@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Epic Games Launcher
+Exec=bottles-cli run -p 'Epic Games Launcher' -b 'My Apps' -- %u
+Type=Application
+Terminal=false
+Categories=Application;
+Icon=/home/me/.local/share/bottles/bottles/My-Apps/icons/Epic.png
+Comment=Launch Epic Games Launcher using Bottles.
+StartupWMClass=Epic Games Launcher

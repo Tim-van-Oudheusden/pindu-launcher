@@ -24,6 +24,8 @@ fn bottles_home(at: &str) -> (tempfile::TempDir, PathBuf) {
         home: home.clone(),
         data_home: home.join(".local/share"),
         config_home: home.join(".config"),
+        host_usr: home.join("usr"),
+        system_flatpak: home.join("var/lib/flatpak"),
     };
     let root = Location::of(Source::Bottles, &dirs)
         .unwrap()

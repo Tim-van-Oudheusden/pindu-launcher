@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Airshipper
+Exec=/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=airshipper net.veloren.airshipper
+Icon=net.veloren.airshipper
+Categories=Game;
+X-Flatpak=net.veloren.airshipper
