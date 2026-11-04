@@ -1,0 +1,37 @@
+# Bindings for libmanette 0.2, from the GNOME 51 SDK's Manette-0.2.gir (libmanette 0.2.13).
+# Regenerate with gir ece6e68 and gtk-rs/gir-files 675e208, which match glib 0.22:
+#   gir -c Gir.toml -d <gir-files> -d gir
+# ManetteEvent is a boxed union and ManetteMonitorIter is not introspectable, so both are
+# written by hand: src/event.rs and Monitor::devices in src/monitor.rs.
+[options]
+library = "Manette"
+version = "0.2"
+min_cfg_version = "0.2"
+target_path = "."
+girs_directories = ["gir"]
+work_mode = "normal"
+single_version_file = true
+deprecate_by_min_version = true
+
+generate = [
+    "Manette.DeviceType",
+    "Manette.EventType",
+]
+
+manual = [
+    "GLib.Error",
+    "GObject.Object",
+    "Gio.AsyncResult",
+]
+
+[[object]]
+name = "Manette.Monitor"
+status = "generate"
+
+[[object]]
+name = "Manette.Device"
+status = "generate"
+
+[[object]]
+name = "Manette.Event"
+status = "manual"

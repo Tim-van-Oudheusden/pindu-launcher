@@ -1689,6 +1689,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "manette"
+version = "0.1.0"
+dependencies = [
+ "glib",
+ "libc",
+ "manette-sys",
+]
+
+[[package]]
+name = "manette-sys"
+version = "0.1.0"
+dependencies = [
+ "gio-sys",
+ "glib-sys",
+ "gobject-sys",
+ "libc",
+]
+
+[[package]]
 name = "md-5"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2034,6 +2053,7 @@ dependencies = [
  "glycin",
  "gtk4",
  "libadwaita",
+ "manette",
  "oo7",
  "pindu-core",
  "soup3",

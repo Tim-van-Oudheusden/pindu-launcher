@@ -15,6 +15,7 @@ path = "src/main.rs"
 adw = { package = "libadwaita", version = "0.9", features = ["v1_10"] }
 gettext-rs = { version = "0.8", features = ["gettext-system"] }
 gtk = { package = "gtk4", version = "0.11", features = ["v4_24"] }
+manette = { path = "../manette", features = ["v0_2_10"] }
 pindu-core.workspace = true
 glycin = { version = "4", features = ["gdk4"] }
 soup = { package = "soup3", version = "0.9" }
