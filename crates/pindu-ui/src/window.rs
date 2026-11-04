@@ -91,6 +91,8 @@ mod imp {
         pub views: RefCell<Vec<(adw::SidebarItem, View, gtk::Label)>>,
         /// The collection whose sidebar menu is open.
         pub menu_collection: Cell<Option<i64>>,
+        /// Whether the grid was scrolled to the top when the current re-sort began.
+        pub grid_at_top: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -732,12 +734,39 @@ impl PinduWindow {
         grid.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
         self.update_tile_factory();
         if let Some(width) = grid.hadjustment() {
+            // The page size changes while the grid allocates its size, when a new column
+            // cap would not take effect until the next resize: apply it right after.
             width.connect_page_size_notify(glib::clone!(
                 #[weak(rename_to = window)]
                 self,
-                move |_| window.update_grid_columns()
+                move |_| {
+                    glib::idle_add_local_once(glib::clone!(
+                        #[weak]
+                        window,
+                        move || window.update_grid_columns()
+                    ));
+                }
             ));
         }
+        // While the sort runs, GTK's grid keeps the item at its top-left corner in view,
+        // so a grid at the top would end up scrolled to wherever that item sorts to.
+        // One that was at the top before the sort goes back to the top after it.
+        let sorted = self.library().sort_model();
+        sorted.connect_pending_notify(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |sorted| {
+                let imp = window.imp();
+                let at_top = || imp.grid.vadjustment().is_none_or(|v| v.value() < 1.0);
+                if sorted.pending() == 0 {
+                    if imp.grid_at_top.replace(false) {
+                        window.scroll_grid_to_top();
+                    }
+                } else if !imp.grid_at_top.get() {
+                    imp.grid_at_top.set(at_top());
+                }
+            }
+        ));
         // Delete and the Menu key act on the focused tile only, so typing elsewhere is safe.
         let keys = gtk::EventControllerKey::new();
         keys.connect_key_pressed(glib::clone!(
