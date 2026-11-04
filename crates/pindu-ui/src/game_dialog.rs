@@ -16,6 +16,7 @@ use pindu_core::store::Store;
 
 use crate::file_service::{self, PickedImage};
 use crate::library_service::LibraryService;
+use crate::steamgriddb_picker::{self, PickerGame};
 use crate::window::PinduWindow;
 
 /// What the dialog is for.
@@ -74,6 +75,8 @@ mod imp {
         /// Layouts that already have art the user picked.
         pub user_art: RefCell<Vec<ArtLayout>>,
         pub remove_buttons: RefCell<HashMap<ArtLayout, gtk::Button>>,
+        /// The title of the game being edited.
+        pub game_title: RefCell<String>,
     }
 
     #[glib::object_subclass]
@@ -157,6 +160,7 @@ impl GameDialog {
             manual,
         });
         dialog.set_title(&gettext("Edit “{title}”").replace("{title}", title));
+        imp.game_title.replace(title.to_owned());
         imp.save_button.set_label(&gettext("_Save"));
         imp.game_group.set_visible(manual);
         dialog.load(id.clone(), manual);
@@ -350,6 +354,7 @@ impl GameDialog {
         };
         let from_file = button("document-open-symbolic", gettext("Choose an Image File"));
         let from_web = button("web-browser-symbolic", gettext("Use a Web Address"));
+        let from_grid = button("system-search-symbolic", gettext("Choose From SteamGridDB"));
         let remove = button("user-trash-symbolic", gettext("Remove Your Image"));
         from_file.connect_clicked(glib::clone!(
             #[weak(rename_to = dialog)]
@@ -360,6 +365,11 @@ impl GameDialog {
             #[weak(rename_to = dialog)]
             self,
             move |_| dialog.ask_art_address(layout)
+        ));
+        from_grid.connect_clicked(glib::clone!(
+            #[weak(rename_to = dialog)]
+            self,
+            move |_| dialog.pick_from_steamgriddb(layout)
         ));
         remove.connect_clicked(glib::clone!(
             #[weak(rename_to = dialog)]
@@ -396,6 +406,30 @@ impl GameDialog {
             match read {
                 Ok(image) => dialog.set_art(layout, ArtChange::Set(image)),
                 Err(error) => dialog.toast(&error),
+            }
+        });
+    }
+
+    /// Opens the SteamGridDB picker for the game: by Steam app ID for Steam games, else
+    /// by the title.
+    fn pick_from_steamgriddb(&self, layout: ArtLayout) {
+        let imp = self.imp();
+        let steam_app_id = match &*imp.mode.borrow() {
+            Mode::Edit { id, .. } if id.source() == Source::Steam => id.native_id().parse().ok(),
+            _ => None,
+        };
+        let title = match imp.title_row.text().trim() {
+            "" => imp.game_title.borrow().clone(),
+            title => title.to_owned(),
+        };
+        let game = PickerGame {
+            steam_app_id,
+            title,
+        };
+        let dialog = self.downgrade();
+        steamgriddb_picker::pick(self, layout, game, move |image| {
+            if let Some(dialog) = dialog.upgrade() {
+                dialog.set_art(layout, ArtChange::Set(image));
             }
         });
     }

@@ -13,4 +13,5 @@ pub mod paths;
 pub mod permissions;
 pub mod search;
 pub mod sources;
+pub mod steamgriddb;
 pub mod store;
