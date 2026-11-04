@@ -1,15 +1,92 @@
-//! Reconciles an importer's [`Snapshot`] with the library.
+//! Reconciles an importer's [`Snapshot`] with the library, and runs the importers.
 
-use super::{ImportedGame, Snapshot};
-use crate::model::{ArtOrigin, Artwork, Game, GameId, Timestamp};
+use std::collections::HashSet;
+use std::path::Path;
+
+use super::location::{self, HostDirs, ResolveError};
+use super::{ImportError, ImportedGame, Snapshot, heroic, steam};
+use crate::model::{ArtOrigin, Artwork, Game, GameId, Source, SourceState, Timestamp};
 use crate::store::{self, Store};
+
+/// Sources that have an importer, in sync order.
+pub const IMPORTED_SOURCES: &[Source] = &[
+    Source::Steam,
+    Source::HeroicEpic,
+    Source::HeroicGog,
+    Source::HeroicAmazon,
+    Source::HeroicSideload,
+];
+
+/// What a sync of every source could not read, by source.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SyncSummary {
+    pub problems: Vec<(Source, String)>,
+}
+
+/// Syncs every enabled source with an importer.
+pub fn sync_all(store: &Store, dirs: &HostDirs, now: Timestamp) -> store::Result<SyncSummary> {
+    let mut summary = SyncSummary::default();
+    for &source in IMPORTED_SOURCES {
+        let enabled = store
+            .source_state(source)?
+            .is_none_or(|state| state.enabled);
+        if enabled {
+            let problems = sync_source(store, source, dirs, now)?;
+            summary
+                .problems
+                .extend(problems.into_iter().map(|problem| (source, problem)));
+        }
+    }
+    Ok(summary)
+}
+
+/// Resolves, imports and applies one source, and records the outcome in its
+/// [`SourceState`]. Returns the source's problems: unreadable entries, an incomplete
+/// override, or a source that could not be read at all (whose games are then left as
+/// they were). A source no longer on the machine is an empty source.
+pub fn sync_source(
+    store: &Store,
+    source: Source,
+    dirs: &HostDirs,
+    now: Timestamp,
+) -> store::Result<Vec<String>> {
+    let snapshot = match location::resolve_and_record(store, source, dirs)? {
+        Ok(root) => import(source, &root).map_err(|error| error.to_string()),
+        Err(ResolveError::NotFound) => Ok(Snapshot::new(source)),
+        Err(error) => Err(error.to_string()),
+    };
+    let problems = match snapshot {
+        Ok(snapshot) => {
+            apply_snapshot(store, &snapshot, now)?;
+            snapshot.errors
+        }
+        Err(problem) => vec![problem],
+    };
+    let mut state = store
+        .source_state(source)?
+        .unwrap_or_else(|| SourceState::new(source));
+    state.last_sync = Some(now);
+    state.errors.clone_from(&problems);
+    store.set_source_state(&state)?;
+    Ok(problems)
+}
+
+fn import(source: Source, root: &Path) -> Result<Snapshot, ImportError> {
+    match source {
+        Source::Steam => steam::import(root),
+        _ => heroic::import(root, source),
+    }
+}
 
 /// Writes a snapshot into the library in one transaction.
 ///
 /// New games take the source's hidden, favourite and category flags; for games already in
-/// the library those flags are ours and only the source's own fields are refreshed.
+/// the library those flags are ours and only the source's own fields are refreshed. Games
+/// of the source that the snapshot lacks get `missing_since`, keeping all their data for
+/// when they return; a user-removed game stays removed only while its source lists it.
 pub fn apply_snapshot(store: &Store, snapshot: &Snapshot, now: Timestamp) -> store::Result<()> {
     store.in_transaction(|store| {
+        let mut present = HashSet::new();
         for imported in &snapshot.games {
             let id = GameId::new(snapshot.source, &imported.native_id);
             match store.game(&id)? {
@@ -35,13 +112,23 @@ pub fn apply_snapshot(store: &Store, snapshot: &Snapshot, now: Timestamp) -> sto
                 }
             }
             replace_source_art(store, &id, imported)?;
+            present.insert(id);
+        }
+        for mut game in store.games_from(snapshot.source)? {
+            if present.contains(&game.id) || game.missing_since.is_some() && !game.user_removed {
+                continue;
+            }
+            game.missing_since.get_or_insert(now);
+            game.user_removed = false;
+            store.update_game(&game)?;
         }
         Ok(())
     })
 }
 
-/// Copies the fields the source owns onto a game.
+/// Copies the fields the source owns onto a game, which the source currently lists.
 fn refresh(game: &mut Game, imported: &ImportedGame) {
+    game.missing_since = None;
     game.title.clone_from(&imported.title);
     game.sort_title.clone_from(&imported.title);
     game.developer.clone_from(&imported.developer);
@@ -234,5 +321,221 @@ mod tests {
             store.game(&id()).unwrap().unwrap().last_played_at,
             Some(500)
         );
+    }
+
+    fn other_game(native_id: &str) -> ImportedGame {
+        ImportedGame::new(native_id, native_id, LaunchKind::StoreUri)
+    }
+
+    #[test]
+    fn a_game_gone_from_its_source_gets_missing_since_and_leaves_the_library() {
+        let (_dir, store) = temp_store();
+        apply_snapshot(
+            &store,
+            &snapshot(vec![flagged(false, false, &[]), other_game("2")]),
+            100,
+        )
+        .unwrap();
+
+        apply_snapshot(&store, &snapshot(vec![other_game("2")]), 200).unwrap();
+
+        let gone = store.game(&id()).unwrap().unwrap();
+        assert_eq!(gone.missing_since, Some(200));
+        assert!(!gone.in_library());
+        assert!(
+            store
+                .game(&GameId::new(Source::HeroicGog, "2"))
+                .unwrap()
+                .unwrap()
+                .in_library()
+        );
+    }
+
+    #[test]
+    fn missing_since_keeps_the_first_time_the_game_was_missed() {
+        let (_dir, store) = temp_store();
+        apply_snapshot(&store, &snapshot(vec![flagged(false, false, &[])]), 100).unwrap();
+        apply_snapshot(&store, &snapshot(vec![]), 200).unwrap();
+
+        apply_snapshot(&store, &snapshot(vec![]), 300).unwrap();
+
+        assert_eq!(store.game(&id()).unwrap().unwrap().missing_since, Some(200));
+    }
+
+    #[test]
+    fn a_returning_game_comes_back_with_its_user_data() {
+        let (_dir, store) = temp_store();
+        apply_snapshot(&store, &snapshot(vec![flagged(false, false, &[])]), 100).unwrap();
+        let mut game = store.game(&id()).unwrap().unwrap();
+        game.favourite = true;
+        store.update_game(&game).unwrap();
+        let collection = store.create_collection("Mine").unwrap();
+        store.add_to_collection(collection.id, &id()).unwrap();
+        apply_snapshot(&store, &snapshot(vec![]), 200).unwrap();
+
+        apply_snapshot(&store, &snapshot(vec![flagged(true, false, &[])]), 300).unwrap();
+
+        let game = store.game(&id()).unwrap().unwrap();
+        assert!(game.in_library());
+        assert!(game.favourite);
+        assert!(!game.hidden);
+        assert_eq!(store.collection_members(collection.id).unwrap(), vec![id()]);
+    }
+
+    #[test]
+    fn a_user_removed_game_stays_removed_while_its_source_lists_it() {
+        let (_dir, store) = temp_store();
+        apply_snapshot(&store, &snapshot(vec![flagged(false, false, &[])]), 100).unwrap();
+        let mut game = store.game(&id()).unwrap().unwrap();
+        game.user_removed = true;
+        store.update_game(&game).unwrap();
+
+        apply_snapshot(&store, &snapshot(vec![flagged(false, false, &[])]), 200).unwrap();
+
+        let game = store.game(&id()).unwrap().unwrap();
+        assert!(game.user_removed);
+        assert!(!game.in_library());
+    }
+
+    #[test]
+    fn a_user_removed_game_that_leaves_its_source_returns_when_it_comes_back() {
+        let (_dir, store) = temp_store();
+        apply_snapshot(&store, &snapshot(vec![flagged(false, false, &[])]), 100).unwrap();
+        let mut game = store.game(&id()).unwrap().unwrap();
+        game.user_removed = true;
+        store.update_game(&game).unwrap();
+        apply_snapshot(&store, &snapshot(vec![]), 200).unwrap();
+
+        apply_snapshot(&store, &snapshot(vec![flagged(false, false, &[])]), 300).unwrap();
+
+        assert!(store.game(&id()).unwrap().unwrap().in_library());
+    }
+
+    #[test]
+    fn games_of_other_sources_are_left_alone() {
+        let (_dir, store) = temp_store();
+        let steam = Snapshot {
+            source: Source::Steam,
+            games: vec![other_game("570")],
+            errors: Vec::new(),
+        };
+        apply_snapshot(&store, &steam, 100).unwrap();
+
+        apply_snapshot(&store, &snapshot(vec![]), 200).unwrap();
+
+        let dota = store
+            .game(&GameId::new(Source::Steam, "570"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(dota.missing_since, None);
+    }
+
+    fn sideload_home(home: &std::path::Path, games: &str) {
+        let dir = home.join(".config/heroic/sideload_apps");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("library.json"),
+            format!(r#"{{"games": [{games}]}}"#),
+        )
+        .unwrap();
+    }
+
+    fn host_dirs(home: &std::path::Path) -> HostDirs {
+        HostDirs {
+            home: home.to_owned(),
+            data_home: home.join(".local/share"),
+            config_home: home.join(".config"),
+        }
+    }
+
+    const SIDELOADED: &str = r#"{"app_name": "side", "title": "Side", "is_installed": true}"#;
+
+    #[test]
+    fn syncing_a_source_imports_it_and_records_its_state() {
+        let (dir, store) = temp_store();
+        sideload_home(dir.path(), SIDELOADED);
+
+        let problems =
+            sync_source(&store, Source::HeroicSideload, &host_dirs(dir.path()), 100).unwrap();
+
+        assert!(problems.is_empty(), "{problems:?}");
+        assert!(
+            store
+                .game(&GameId::new(Source::HeroicSideload, "side"))
+                .unwrap()
+                .is_some()
+        );
+        let state = store.source_state(Source::HeroicSideload).unwrap().unwrap();
+        assert_eq!(state.last_sync, Some(100));
+        assert_eq!(
+            state.resolved_location,
+            Some(dir.path().join(".config/heroic"))
+        );
+        assert!(state.errors.is_empty());
+    }
+
+    #[test]
+    fn a_source_that_cannot_be_read_keeps_its_games_and_reports_why() {
+        let (dir, store) = temp_store();
+        sideload_home(dir.path(), SIDELOADED);
+        sync_source(&store, Source::HeroicSideload, &host_dirs(dir.path()), 100).unwrap();
+        std::fs::write(
+            dir.path().join(".config/heroic/sideload_apps/library.json"),
+            "{ broken",
+        )
+        .unwrap();
+
+        let problems =
+            sync_source(&store, Source::HeroicSideload, &host_dirs(dir.path()), 200).unwrap();
+
+        assert_eq!(problems.len(), 1);
+        let game = store
+            .game(&GameId::new(Source::HeroicSideload, "side"))
+            .unwrap()
+            .unwrap();
+        assert!(game.in_library());
+        let state = store.source_state(Source::HeroicSideload).unwrap().unwrap();
+        assert_eq!(state.errors, problems);
+    }
+
+    #[test]
+    fn a_source_no_longer_on_the_machine_has_its_games_marked_missing() {
+        let (dir, store) = temp_store();
+        sideload_home(dir.path(), SIDELOADED);
+        sync_source(&store, Source::HeroicSideload, &host_dirs(dir.path()), 100).unwrap();
+        std::fs::remove_dir_all(dir.path().join(".config/heroic")).unwrap();
+
+        let problems =
+            sync_source(&store, Source::HeroicSideload, &host_dirs(dir.path()), 200).unwrap();
+
+        assert!(problems.is_empty());
+        let game = store
+            .game(&GameId::new(Source::HeroicSideload, "side"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(game.missing_since, Some(200));
+    }
+
+    #[test]
+    fn sync_all_skips_disabled_sources_and_collects_problems_per_source() {
+        let (dir, store) = temp_store();
+        sideload_home(dir.path(), SIDELOADED);
+        let gog_cache = dir.path().join(".config/heroic/store_cache");
+        std::fs::create_dir_all(&gog_cache).unwrap();
+        std::fs::write(gog_cache.join("gog_library.json"), "{ broken").unwrap();
+        let mut disabled = SourceState::new(Source::HeroicSideload);
+        disabled.enabled = false;
+        store.set_source_state(&disabled).unwrap();
+
+        let summary = sync_all(&store, &host_dirs(dir.path()), 100).unwrap();
+
+        assert!(
+            store
+                .game(&GameId::new(Source::HeroicSideload, "side"))
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(summary.problems.len(), 1);
+        assert_eq!(summary.problems[0].0, Source::HeroicGog);
     }
 }
