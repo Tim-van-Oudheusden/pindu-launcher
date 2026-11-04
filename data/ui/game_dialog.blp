@@ -36,6 +36,17 @@ template $PinduGameDialog: Adw.Dialog {
           title: _("Game");
           description: _("Choose the game's folder; its program, title and options come next.");
 
+          Adw.ComboRow kind_row {
+            title: _("Type");
+
+            model: StringList {
+              strings [
+                _("Native"),
+                _("Windows"),
+              ]
+            };
+          }
+
           Adw.ActionRow folder_row {
             title: _("Game Folder");
             subtitle: _("None chosen");
@@ -69,6 +80,61 @@ template $PinduGameDialog: Adw.Dialog {
           Adw.EntryRow working_dir_row {
             title: _("Working Folder (empty for the program's folder)");
             changed => $form_changed() swapped;
+          }
+        }
+
+        Adw.PreferencesGroup windows_group {
+          title: _("Windows");
+          description: _("Windows games run through Proton, each in a prefix: a folder that holds its Windows files and saves.");
+          visible: false;
+
+          Adw.ComboRow proton_row {
+            title: _("Proton");
+
+            model: StringList proton_builds {};
+          }
+
+          Adw.ActionRow prefix_row {
+            title: _("Prefix");
+
+            [suffix]
+            Button reset_prefix_button {
+              icon-name: "edit-undo-symbolic";
+              tooltip-text: _("Use a New Prefix");
+              valign: center;
+              visible: false;
+              clicked => $reset_prefix() swapped;
+
+              styles [
+                "flat",
+              ]
+            }
+
+            [suffix]
+            Button {
+              label: _("C_hoose…");
+              use-underline: true;
+              valign: center;
+              clicked => $choose_prefix() swapped;
+            }
+          }
+
+          Adw.ActionRow installer_row {
+            title: _("Installer");
+            subtitle: _("Run the game's installer in its prefix, then pick the program it installed");
+
+            [suffix]
+            Adw.Spinner installer_spinner {
+              visible: false;
+            }
+
+            [suffix]
+            Button installer_button {
+              label: _("_Run Installer…");
+              use-underline: true;
+              valign: center;
+              clicked => $run_installer() swapped;
+            }
           }
         }
 
