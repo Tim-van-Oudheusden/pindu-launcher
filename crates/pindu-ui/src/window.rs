@@ -4,7 +4,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gdk, gio, glib};
-use pindu_core::library::{Counts, SortMode, View};
+use pindu_core::library::{Counts, Filters, SortMode, View};
 use pindu_core::model::{GameId, Source};
 
 use crate::application::PinduApplication;
@@ -55,6 +55,20 @@ mod imp {
         pub search_entry: TemplateChild<gtk::SearchEntry>,
         #[template_child]
         pub grid: TemplateChild<gtk::GridView>,
+        #[template_child]
+        pub content_stack: TemplateChild<gtk::Stack>,
+        #[template_child]
+        pub installed_filter: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
+        pub not_installed_filter: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
+        pub favourites_filter: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
+        pub windows_filter: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
+        pub native_filter: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
+        pub clear_filters: TemplateChild<gtk::Button>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
         /// Every sidebar row with the view it selects and, for sources, its count label.
@@ -120,6 +134,7 @@ impl PinduWindow {
         window.setup_actions();
         window.setup_sidebar();
         window.setup_grid();
+        window.setup_search_and_filters();
         window.observe_sync(sync_service);
         window
     }
@@ -167,11 +182,103 @@ impl PinduWindow {
         ));
         self.add_action(&hide_game);
 
+        let search = gio::ActionEntry::builder("search")
+            .activate(|window: &Self, _, _| {
+                window.imp().search_entry.grab_focus();
+            })
+            .build();
+        self.add_action_entries([search]);
+    }
+
+    /// Search (Ctrl+F, or typing anywhere in the library), the filter toggles, and the
+    /// status pages for an empty library and for no results.
+    fn setup_search_and_filters(&self) {
+        let imp = self.imp();
+        imp.search_entry
+            .set_key_capture_widget(Some(&*imp.content_stack));
         imp.search_entry.connect_search_changed(glib::clone!(
             #[weak(rename_to = window)]
             self,
             move |entry| window.library().set_search(&entry.text())
         ));
+
+        let toggles = [
+            &*imp.installed_filter,
+            &*imp.not_installed_filter,
+            &*imp.favourites_filter,
+            &*imp.windows_filter,
+            &*imp.native_filter,
+        ];
+        for toggle in toggles {
+            toggle.connect_toggled(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_| window.apply_filters()
+            ));
+        }
+        imp.clear_filters.connect_clicked(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| {
+                let imp = window.imp();
+                for toggle in [
+                    &*imp.installed_filter,
+                    &*imp.not_installed_filter,
+                    &*imp.favourites_filter,
+                    &*imp.windows_filter,
+                    &*imp.native_filter,
+                ] {
+                    toggle.set_active(false);
+                }
+            }
+        ));
+
+        let library = self.library();
+        library.model().connect_items_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, _, _, _| window.update_content_page()
+        ));
+        library.filter_model().connect_pending_notify(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.update_content_page()
+        ));
+        library.connect_counts_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.update_content_page()
+        ));
+        self.update_content_page();
+    }
+
+    fn apply_filters(&self) {
+        let imp = self.imp();
+        let filters = Filters {
+            installed: imp.installed_filter.is_active(),
+            not_installed: imp.not_installed_filter.is_active(),
+            favourites: imp.favourites_filter.is_active(),
+            windows: imp.windows_filter.is_active(),
+            native: imp.native_filter.is_active(),
+        };
+        imp.clear_filters.set_visible(filters.any());
+        self.library().set_filters(filters);
+    }
+
+    /// The grid when it has games; otherwise, once filtering is done, the first-run page
+    /// for an empty library or the no-results page.
+    fn update_content_page(&self) {
+        let library = self.library();
+        let page = if library.model().n_items() > 0 {
+            "grid"
+        } else if library.filter_model().pending() > 0 {
+            return;
+        } else if library.counts().get(View::All) == 0 {
+            "empty"
+        } else {
+            "no-results"
+        };
+        self.imp().content_stack.set_visible_child_name(page);
     }
 
     fn library_service(&self) -> LibraryService {
@@ -431,22 +538,25 @@ impl PinduWindow {
     }
 }
 
+const SORT_MODES: [(SortMode, &str); 5] = [
+    (SortMode::LastPlayed, "last-played"),
+    (SortMode::NameAscending, "name-ascending"),
+    (SortMode::NameDescending, "name-descending"),
+    (SortMode::RecentlyAdded, "recently-added"),
+    (SortMode::Playtime, "playtime"),
+];
+
 fn sort_mode_name(mode: SortMode) -> &'static str {
-    match mode {
-        SortMode::LastPlayed => "last-played",
-        SortMode::NameAscending => "name-ascending",
-        SortMode::NameDescending => "name-descending",
-        SortMode::RecentlyAdded => "recently-added",
-    }
+    SORT_MODES
+        .iter()
+        .find(|(candidate, _)| *candidate == mode)
+        .map(|(_, name)| *name)
+        .expect("every sort mode has a name")
 }
 
 fn sort_mode_from_name(name: &str) -> Option<SortMode> {
-    [
-        SortMode::LastPlayed,
-        SortMode::NameAscending,
-        SortMode::NameDescending,
-        SortMode::RecentlyAdded,
-    ]
-    .into_iter()
-    .find(|mode| sort_mode_name(*mode) == name)
+    SORT_MODES
+        .iter()
+        .find(|(_, candidate)| *candidate == name)
+        .map(|(mode, _)| *mode)
 }

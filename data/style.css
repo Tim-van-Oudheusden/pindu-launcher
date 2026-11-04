@@ -41,3 +41,15 @@ gridview.library > child {
   padding: 6px;
   border-radius: 16px;
 }
+
+/* Filter chips: compact, round toggles that stack. */
+.filter-row > togglebutton,
+.filter-row > button {
+  border-radius: 999px;
+  padding: 4px 14px;
+}
+
+.filter-row > togglebutton:checked {
+  background-color: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+}

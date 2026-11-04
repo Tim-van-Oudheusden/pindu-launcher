@@ -6,7 +6,8 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::art;
-use crate::model::{ArtLayout, Artwork, Game, GameId, Source, Timestamp};
+use crate::model::{ArtLayout, Artwork, Game, GameId, Platform, Source, Timestamp};
+use crate::search::{self, Query};
 use crate::store::{self, Store};
 
 /// The image chosen for each layout of a game.
@@ -30,19 +31,23 @@ impl ArtSet {
     }
 }
 
-/// A game with its art, as the library views show it.
+/// A game with its art and total playtime, as the library views show it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LibraryEntry {
     pub game: Game,
     pub art: ArtSet,
+    pub playtime_secs: i64,
 }
 
-/// Every stored game with its best art per layout.
+/// Every stored game with its best art per layout and its playtime: the source's own
+/// total when it tracks one, else the sum of our sessions.
 pub fn load(store: &Store) -> store::Result<Vec<LibraryEntry>> {
     let mut artwork: HashMap<GameId, Vec<Artwork>> = HashMap::new();
     for art in store.all_artwork()? {
         artwork.entry(art.game_id.clone()).or_default().push(art);
     }
+    let session_totals = store.session_totals()?;
+    let imported_totals = store.imported_totals()?;
     Ok(store
         .games()?
         .into_iter()
@@ -50,7 +55,16 @@ pub fn load(store: &Store) -> store::Result<Vec<LibraryEntry>> {
             let art = artwork
                 .get(&game.id)
                 .map_or_else(ArtSet::default, |art| ArtSet::from(art));
-            LibraryEntry { game, art }
+            let playtime_secs = imported_totals
+                .get(&game.id)
+                .or_else(|| session_totals.get(&game.id))
+                .copied()
+                .unwrap_or_default();
+            LibraryEntry {
+                game,
+                art,
+                playtime_secs,
+            }
         })
         .collect())
 }
@@ -65,6 +79,8 @@ pub enum SortMode {
     NameDescending,
     /// Newest first.
     RecentlyAdded,
+    /// Most played first.
+    Playtime,
 }
 
 /// What sorting needs from a game, computed once so comparisons stay cheap in big
@@ -74,15 +90,17 @@ pub struct SortKey {
     name: String,
     last_played_at: Option<Timestamp>,
     added_at: Timestamp,
+    playtime_secs: i64,
     id: String,
 }
 
 impl SortKey {
-    pub fn new(game: &Game) -> Self {
+    pub fn new(game: &Game, playtime_secs: i64) -> Self {
         Self {
-            name: game.sort_title.to_lowercase(),
+            name: search::sort_name(&game.sort_title),
             last_played_at: game.last_played_at,
             added_at: game.added_at,
+            playtime_secs,
             id: game.id.as_str().to_owned(),
         }
     }
@@ -99,6 +117,7 @@ pub fn compare(mode: SortMode, a: &SortKey, b: &SortKey) -> Ordering {
         SortMode::NameAscending => by_name(),
         SortMode::NameDescending => b.name.cmp(&a.name).then_with(|| a.id.cmp(&b.id)),
         SortMode::RecentlyAdded => b.added_at.cmp(&a.added_at).then_with(by_name),
+        SortMode::Playtime => b.playtime_secs.cmp(&a.playtime_secs).then_with(by_name),
     }
 }
 
@@ -108,7 +127,7 @@ pub struct SearchKey(String);
 
 impl SearchKey {
     pub fn new(title: &str) -> Self {
-        Self(title.to_lowercase())
+        Self(search::normalize(title))
     }
 }
 
@@ -147,11 +166,42 @@ impl View {
     }
 }
 
+/// The stacking filter toggles of the library page. Toggles of one kind widen each other
+/// (Installed and Not installed together show both); kinds narrow each other.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Filters {
+    pub installed: bool,
+    pub not_installed: bool,
+    pub favourites: bool,
+    /// Windows games, run through Proton.
+    pub windows: bool,
+    /// Native Linux games.
+    pub native: bool,
+}
+
+impl Filters {
+    /// Whether any toggle is on.
+    pub fn any(self) -> bool {
+        self != Self::default()
+    }
+
+    fn includes(self, game: &Game) -> bool {
+        let install_state = (!self.installed && !self.not_installed)
+            || (self.installed && game.installed)
+            || (self.not_installed && !game.installed);
+        let platform = (!self.windows && !self.native)
+            || (self.windows && game.platform == Some(Platform::Windows))
+            || (self.native && game.platform == Some(Platform::Linux));
+        install_state && platform && (!self.favourites || game.favourite)
+    }
+}
+
 /// Which games the library views show.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct LibraryFilter {
     view: View,
-    search: String,
+    filters: Filters,
+    search: Query,
 }
 
 impl LibraryFilter {
@@ -167,29 +217,42 @@ impl LibraryFilter {
         change
     }
 
-    /// Shows only games whose title contains `text`, ignoring case; empty shows all.
-    pub fn set_search(&mut self, text: &str) -> FilterChange {
-        let text = text.to_lowercase();
-        let change = if text == self.search {
+    /// Shows only the games the toggles allow.
+    pub fn set_filters(&mut self, filters: Filters) -> FilterChange {
+        let change = if filters == self.filters {
             FilterChange::Unchanged
-        } else if text.contains(&self.search) {
+        } else {
+            FilterChange::Different
+        };
+        self.filters = filters;
+        change
+    }
+
+    /// Shows only games matching `text` (see [`search`]); empty shows all.
+    pub fn set_search(&mut self, text: &str) -> FilterChange {
+        let query = Query::new(text);
+        let (old, new) = (self.search.as_str(), query.as_str());
+        let change = if new == old {
+            FilterChange::Unchanged
+        } else if new.contains(old) {
             FilterChange::MoreStrict
-        } else if self.search.contains(&text) {
+        } else if old.contains(new) {
             FilterChange::LessStrict
         } else {
             FilterChange::Different
         };
-        self.search = text;
+        self.search = query;
         change
     }
 
-    /// Whether a game shows: in the library, not hidden, in the view and matching the
-    /// search.
+    /// Whether a game shows: in the library, not hidden, in the view, allowed by the
+    /// toggles and matching the search.
     pub fn matches(&self, game: &Game, key: &SearchKey) -> bool {
         game.in_library()
             && !game.hidden
             && self.view.includes(game)
-            && key.0.contains(&self.search)
+            && self.filters.includes(game)
+            && self.search.matches(&key.0)
     }
 }
 
@@ -244,7 +307,7 @@ mod tests {
     fn sorted(mode: SortMode, games: Vec<Game>) -> Vec<String> {
         let mut keyed: Vec<_> = games
             .into_iter()
-            .map(|game| (SortKey::new(&game), game.title))
+            .map(|game| (SortKey::new(&game, 0), game.title))
             .collect();
         keyed.sort_by(|(a, _), (b, _)| compare(mode, a, b));
         keyed.into_iter().map(|(_, title)| title).collect()
@@ -294,8 +357,8 @@ mod tests {
 
     #[test]
     fn equal_games_fall_back_to_their_id_so_the_order_is_stable() {
-        let a = SortKey::new(&game("1", "Same", None, 0));
-        let b = SortKey::new(&game("2", "Same", None, 0));
+        let a = SortKey::new(&game("1", "Same", None, 0), 0);
+        let b = SortKey::new(&game("2", "Same", None, 0), 0);
 
         assert_eq!(compare(SortMode::NameAscending, &a, &b), Ordering::Less);
         assert_eq!(compare(SortMode::NameAscending, &b, &a), Ordering::Greater);
@@ -451,5 +514,165 @@ mod tests {
             .find(|entry| entry.game.id == without_art.id)
             .unwrap();
         assert_eq!(second.art, ArtSet::default());
+    }
+
+    fn shown_with(filters: Filters, games: &[Game]) -> Vec<String> {
+        let mut filter = LibraryFilter::default();
+        filter.set_filters(filters);
+        games
+            .iter()
+            .filter(|game| shows(&filter, game))
+            .map(|game| game.title.clone())
+            .collect()
+    }
+
+    fn platform_games() -> Vec<Game> {
+        use crate::model::Platform;
+        let mut native = game("1", "Native Installed", None, 0);
+        native.platform = Some(Platform::Linux);
+        native.installed = true;
+        let mut windows = game("2", "Windows Favourite", None, 0);
+        windows.platform = Some(Platform::Windows);
+        windows.favourite = true;
+        let mut both = game("3", "Windows Installed Favourite", None, 0);
+        both.platform = Some(Platform::Windows);
+        both.installed = true;
+        both.favourite = true;
+        vec![native, windows, both]
+    }
+
+    #[test]
+    fn filters_of_different_kinds_narrow_together() {
+        let games = platform_games();
+        let filters = Filters {
+            installed: true,
+            favourites: true,
+            ..Filters::default()
+        };
+
+        assert_eq!(shown_with(filters, &games), ["Windows Installed Favourite"]);
+    }
+
+    #[test]
+    fn filters_of_the_same_kind_widen_each_other() {
+        let games = platform_games();
+        let both_states = Filters {
+            installed: true,
+            not_installed: true,
+            ..Filters::default()
+        };
+        let both_platforms = Filters {
+            windows: true,
+            native: true,
+            ..Filters::default()
+        };
+        let windows = Filters {
+            windows: true,
+            ..Filters::default()
+        };
+        let not_installed = Filters {
+            not_installed: true,
+            ..Filters::default()
+        };
+
+        assert_eq!(shown_with(both_states, &games).len(), 3);
+        assert_eq!(shown_with(both_platforms, &games).len(), 3);
+        assert_eq!(
+            shown_with(windows, &games),
+            ["Windows Favourite", "Windows Installed Favourite"]
+        );
+        assert_eq!(shown_with(not_installed, &games), ["Windows Favourite"]);
+    }
+
+    #[test]
+    fn no_filters_means_no_filtering() {
+        assert!(!Filters::default().any());
+        assert!(
+            Filters {
+                native: true,
+                ..Filters::default()
+            }
+            .any()
+        );
+        assert_eq!(shown_with(Filters::default(), &platform_games()).len(), 3);
+    }
+
+    #[test]
+    fn search_ignores_accents_and_a_leading_the() {
+        let mut filter = LibraryFilter::default();
+        filter.set_search("witcher wild");
+
+        assert!(shows(
+            &filter,
+            &game("1", "The Witcher 3: Wild Hunt", None, 0)
+        ));
+        filter.set_search("pokemon");
+        assert!(shows(&filter, &game("2", "Pokémon Snap", None, 0)));
+    }
+
+    #[test]
+    fn playtime_sorts_the_most_played_first() {
+        let keys = [
+            SortKey::new(&game("1", "Little", None, 0), 60),
+            SortKey::new(&game("2", "Lots", None, 0), 36_000),
+            SortKey::new(&game("3", "None", None, 0), 0),
+        ];
+        let mut order: Vec<_> = keys.iter().collect();
+        order.sort_by(|a, b| compare(SortMode::Playtime, a, b));
+
+        let ids: Vec<_> = order.iter().map(|key| key.id.as_str()).collect();
+        assert_eq!(ids, ["steam:2", "steam:1", "steam:3"]);
+    }
+
+    #[test]
+    fn name_sorts_ignore_a_leading_the() {
+        let games = vec![
+            game("1", "The Witcher", None, 0),
+            game("2", "Valheim", None, 0),
+            game("3", "Abzu", None, 0),
+        ];
+
+        assert_eq!(
+            sorted(SortMode::NameAscending, games),
+            ["Abzu", "Valheim", "The Witcher"]
+        );
+    }
+
+    #[test]
+    fn loading_totals_playtime_from_the_source_or_from_sessions() {
+        use crate::model::ImportedPlaytime;
+        use crate::store::Store;
+
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::open(&dir.path().join("library.db")).unwrap();
+        let imported = game("1", "Imported", None, 0);
+        let tracked = game("2", "Tracked", None, 0);
+        let unplayed = game("3", "Unplayed", None, 0);
+        for game in [&imported, &tracked, &unplayed] {
+            store.insert_game(game).unwrap();
+        }
+        store
+            .set_imported_playtime(&ImportedPlaytime {
+                game_id: imported.id.clone(),
+                source: Source::Steam,
+                total_secs: 7_200,
+                last_played_at: None,
+            })
+            .unwrap();
+        store.add_play_session(&tracked.id, 0, 600).unwrap();
+        store.add_play_session(&tracked.id, 1_000, 1_900).unwrap();
+
+        let entries = load(&store).unwrap();
+
+        let playtime = |id: &GameId| {
+            entries
+                .iter()
+                .find(|entry| entry.game.id == *id)
+                .unwrap()
+                .playtime_secs
+        };
+        assert_eq!(playtime(&imported.id), 7_200);
+        assert_eq!(playtime(&tracked.id), 1_500);
+        assert_eq!(playtime(&unplayed.id), 0);
     }
 }

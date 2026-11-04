@@ -10,11 +10,13 @@ use gtk::subclass::prelude::*;
 use pindu_core::library::{ArtSet, LibraryEntry, SearchKey, SortKey};
 use pindu_core::model::{Game, GameId};
 
-/// The game, its art, and the keys filtering and sorting need, recomputed when it changes.
+/// The game, its art and playtime, and the keys filtering and sorting need, recomputed
+/// when it changes.
 #[derive(Debug)]
 pub struct Entry {
     pub game: Game,
     pub art: ArtSet,
+    pub playtime_secs: i64,
     pub search_key: SearchKey,
     pub sort_key: SortKey,
 }
@@ -23,9 +25,10 @@ impl Entry {
     fn new(entry: LibraryEntry) -> Self {
         Self {
             search_key: SearchKey::new(&entry.game.title),
-            sort_key: SortKey::new(&entry.game),
+            sort_key: SortKey::new(&entry.game, entry.playtime_secs),
             game: entry.game,
             art: entry.art,
+            playtime_secs: entry.playtime_secs,
         }
     }
 }
@@ -132,7 +135,7 @@ impl GameObject {
         let (changed, art_changed): (Vec<&str>, bool) = {
             let old = self.entry();
             let (game, art) = (&entry.game, &entry.art);
-            if old.game == *game && old.art == *art {
+            if old.game == *game && old.art == *art && old.playtime_secs == entry.playtime_secs {
                 return false;
             }
             let changed = [

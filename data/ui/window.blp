@@ -133,17 +133,103 @@ template $PinduWindow: Adw.ApplicationWindow {
               }
             }
 
-            content: ScrolledWindow {
-              hscrollbar-policy: never;
+            content: Box {
+              orientation: vertical;
 
-              child: GridView grid {
-                max-columns: 12;
-                single-click-activate: true;
+              Adw.WrapBox filter_row {
+                child-spacing: 6;
+                line-spacing: 6;
+                margin-top: 6;
+                margin-bottom: 6;
+                margin-start: 18;
+                margin-end: 18;
 
                 styles [
-                  "library",
+                  "filter-row",
                 ]
-              };
+
+                ToggleButton installed_filter {
+                  label: _("Installed");
+                }
+
+                ToggleButton not_installed_filter {
+                  label: _("Not Installed");
+                }
+
+                ToggleButton favourites_filter {
+                  label: _("Favourites");
+                }
+
+                ToggleButton windows_filter {
+                  label: _("Windows");
+                }
+
+                ToggleButton native_filter {
+                  label: _("Native");
+                }
+
+                Button clear_filters {
+                  label: _("Clear");
+                  visible: false;
+
+                  styles [
+                    "flat",
+                  ]
+                }
+              }
+
+              Stack content_stack {
+                vexpand: true;
+
+                StackPage {
+                  name: "grid";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: GridView grid {
+                      max-columns: 12;
+                      single-click-activate: true;
+
+                      styles [
+                        "library",
+                      ]
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "empty";
+
+                  child: Adw.StatusPage {
+                    icon-name: "io.github.tim_van_oudheusden.pindu-launcher";
+                    title: _("No Games Yet");
+                    description: _("Games from your launchers appear here once they are imported");
+
+                    child: Button {
+                      label: _("_Import Now");
+                      use-underline: true;
+                      halign: center;
+                      action-name: "app.import";
+
+                      styles [
+                        "pill",
+                        "suggested-action",
+                      ]
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "no-results";
+
+                  child: Adw.StatusPage {
+                    icon-name: "edit-find-symbolic";
+                    title: _("No Results Found");
+                    description: _("Try a different search or filter");
+                  };
+                }
+              }
             };
           };
         }
@@ -185,6 +271,12 @@ menu sort_menu {
       label: _("_Recently Added");
       action: "win.sort-mode";
       target: "recently-added";
+    }
+
+    item {
+      label: _("_Playtime");
+      action: "win.sort-mode";
+      target: "playtime";
     }
   }
 }

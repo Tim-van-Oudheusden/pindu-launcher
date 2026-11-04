@@ -9,7 +9,7 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib};
 use pindu_core::library::{
-    Counts, FilterChange, LibraryEntry, LibraryFilter, SortMode, View, compare,
+    Counts, FilterChange, Filters, LibraryEntry, LibraryFilter, SortMode, View, compare,
 };
 
 use super::GameObject;
@@ -201,6 +201,12 @@ impl LibraryModel {
     /// Shows only the games of a sidebar view.
     pub fn set_view(&self, view: View) {
         let change = self.imp().library_filter.borrow_mut().set_view(view);
+        self.apply_filter_change(change);
+    }
+
+    /// Shows only the games the filter toggles allow.
+    pub fn set_filters(&self, filters: Filters) {
+        let change = self.imp().library_filter.borrow_mut().set_filters(filters);
         self.apply_filter_change(change);
     }
 
