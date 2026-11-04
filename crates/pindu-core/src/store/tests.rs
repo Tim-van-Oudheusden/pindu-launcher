@@ -60,6 +60,7 @@ fn a_game_round_trips_with_every_field() {
     game.genres = vec!["Strategy".into(), "MOBA".into()];
     game.description = Some("Every day, millions of players".into());
     game.steam_launch_dialog = true;
+    game.launch_uri = Some("steam://rungameid/570".into());
 
     store.insert_game(&game).unwrap();
 
@@ -91,6 +92,7 @@ fn a_database_from_the_first_release_is_migrated_with_its_games() {
         .unwrap();
     assert_eq!(game.title, "Dota 2");
     assert!(!game.steam_launch_dialog);
+    assert_eq!(game.launch_uri, None);
 }
 
 #[test]

@@ -199,6 +199,9 @@ pub struct Game {
     /// Set when the source stopped listing the game; cleared when it returns.
     pub missing_since: Option<Timestamp>,
     pub launch_kind: LaunchKind,
+    /// The URI its source gives for starting the game, for sources whose URI cannot be
+    /// built from the game ID (Bottles needs the bottle and program names).
+    pub launch_uri: Option<String>,
     pub genres: Vec<String>,
     pub description: Option<String>,
     /// Start a Steam game through Steam's launch-options dialog
@@ -232,6 +235,7 @@ impl Game {
             user_removed: false,
             missing_since: None,
             launch_kind,
+            launch_uri: None,
             genres: Vec::new(),
             description: None,
             steam_launch_dialog: false,
