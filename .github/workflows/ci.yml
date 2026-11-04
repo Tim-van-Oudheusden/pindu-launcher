@@ -61,7 +61,20 @@ jobs:
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
+      # The runner's preinstalled SDKs, mounted so the build can delete them: the image
+      # and a release build of the app do not fit in the disk space left otherwise.
+      volumes:
+        - /usr/local/lib/android:/runner-sdks/android
+        - /usr/share/dotnet:/runner-sdks/dotnet
+        - /opt/hostedtoolcache:/runner-sdks/toolcache
+        - /usr/local/.ghcup:/runner-sdks/ghcup
     steps:
+      - name: Free disk space
+        run: |
+          df -h / | tail -1
+          rm -rf /runner-sdks/*/*
+          df -h / | tail -1
+
       - uses: actions/checkout@v4
 
       # Runs `meson test` inside the build, under xvfb, after the install: this is
