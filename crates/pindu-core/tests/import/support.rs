@@ -2,16 +2,23 @@
 
 use std::path::{Path, PathBuf};
 
+use pindu_core::sources::vdf::Value;
+
 /// Copies `tests/fixtures/<name>` into a fresh temporary folder, replacing `@ROOT@` in
 /// every text file with the copy's path so absolute paths in launcher files point inside it.
 pub fn fixture(name: &str) -> (tempfile::TempDir, PathBuf) {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().to_owned();
+    fixture_into(name, &root);
+    (dir, root)
+}
+
+/// Copies `tests/fixtures/<name>` into `dest`, replacing `@ROOT@` with `dest`.
+pub fn fixture_into(name: &str, dest: &Path) {
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/fixtures")
         .join(name);
-    let dir = tempfile::tempdir().unwrap();
-    let root = dir.path().to_owned();
-    copy_tree(&source, &root, &root);
-    (dir, root)
+    copy_tree(&source, dest, dest);
 }
 
 fn copy_tree(from: &Path, to: &Path, root: &Path) {
@@ -31,8 +38,6 @@ fn copy_tree(from: &Path, to: &Path, root: &Path) {
         }
     }
 }
-
-use pindu_core::sources::vdf::Value;
 
 /// Encodes apps as a Steam `appinfo.vdf` of format version 28 or 29 (29 keeps keys in a
 /// string table at the end of the file).
