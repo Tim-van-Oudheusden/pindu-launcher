@@ -26,6 +26,11 @@ configure_file(
 )
 
 install_data(
+  application_id + '.search-provider.ini',
+  install_dir: datadir / 'gnome-shell' / 'search-providers',
+)
+
+install_data(
   application_id + '.gschema.xml',
   install_dir: datadir / 'glib-2.0' / 'schemas',
 )

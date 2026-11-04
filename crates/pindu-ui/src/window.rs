@@ -840,6 +840,14 @@ impl PinduWindow {
         ));
     }
 
+    /// Searches the library for `text`, as typing it in the search entry would.
+    pub fn search_for(&self, text: &str) {
+        let imp = self.imp();
+        imp.navigation_view.pop_to_tag("library");
+        imp.search_entry.set_text(text);
+        imp.search_entry.grab_focus();
+    }
+
     /// Shows a toast over the window.
     pub fn add_toast(&self, toast: adw::Toast) {
         self.imp().toast_overlay.add_toast(toast);

@@ -16,6 +16,8 @@ mod imp {
     #[derive(Debug, Default)]
     pub struct LibraryService {
         pub model: LibraryModel,
+        /// Whether the library was read once.
+        pub loaded: std::cell::Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -41,6 +43,16 @@ impl LibraryService {
         self.imp().model.clone()
     }
 
+    /// Waits until the library was read once (at most a few seconds).
+    pub async fn wait_loaded(&self) {
+        for _ in 0..100 {
+            if self.imp().loaded.get() {
+                return;
+            }
+            glib::timeout_future(std::time::Duration::from_millis(50)).await;
+        }
+    }
+
     /// Reads every game from the store on a worker thread and updates the model. A store
     /// that cannot be read leaves the model as it was.
     pub fn reload(&self) {
@@ -55,6 +67,7 @@ impl LibraryService {
                     let model = &service.imp().model;
                     model.set_collections(collections);
                     model.set_games(games);
+                    service.imp().loaded.set(true);
                 }
                 Ok(Err(error)) => glib::g_warning!("pindu", "Could not read the library: {error}"),
                 Err(_) => glib::g_warning!("pindu", "Reading the library stopped unexpectedly"),

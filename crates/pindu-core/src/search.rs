@@ -71,6 +71,13 @@ impl Query {
     }
 }
 
+/// Whether GNOME Shell's search terms match a title, as the same words typed in the
+/// search entry would. No terms match nothing.
+pub fn matches_terms(terms: &[String], title: &str) -> bool {
+    let query = Query::new(&terms.join(" "));
+    !query.is_empty() && query.matches(&normalize(title))
+}
+
 /// The plain letters of a lowercase accented Latin letter.
 fn fold(c: char) -> Option<&'static str> {
     Some(match c {
@@ -108,6 +115,17 @@ mod tests {
 
     fn matches(query: &str, title: &str) -> bool {
         Query::new(query).matches(&normalize(title))
+    }
+
+    #[test]
+    fn shell_search_terms_match_like_typed_words() {
+        let terms = |words: &[&str]| words.iter().map(|w| w.to_string()).collect::<Vec<_>>();
+
+        assert!(matches_terms(&terms(&["half", "life"]), "Half-Life 2"));
+        assert!(matches_terms(&terms(&["life", "HALF"]), "Half-Life 2"));
+        assert!(matches_terms(&terms(&["poke"]), "Pokémon"));
+        assert!(!matches_terms(&terms(&["portal"]), "Half-Life 2"));
+        assert!(!matches_terms(&terms(&[]), "Half-Life 2"));
     }
 
     #[test]
