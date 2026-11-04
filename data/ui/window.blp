@@ -241,6 +241,11 @@ template $PinduWindow: Adw.ApplicationWindow {
 menu add_menu {
   section {
     item {
+      label: _("_Add Game…");
+      action: "app.add-game";
+    }
+
+    item {
       label: _("_Import Now");
       action: "app.import";
     }

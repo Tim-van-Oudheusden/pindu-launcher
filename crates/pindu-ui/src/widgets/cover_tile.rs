@@ -249,6 +249,7 @@ impl CoverTile {
         }
         menu.append_section(None, &actions);
         let manage = gio::Menu::new();
+        manage.append_item(&item(gettext("_Edit…"), "app.edit-game"));
         manage.append_item(&item(gettext("_Hide"), "win.hide-game"));
         menu.append_section(None, &manage);
 

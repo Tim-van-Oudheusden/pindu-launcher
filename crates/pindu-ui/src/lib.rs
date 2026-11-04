@@ -3,6 +3,8 @@
 
 pub mod application;
 pub mod config;
+pub mod file_service;
+pub mod game_dialog;
 pub mod game_page;
 pub mod launch_service;
 pub mod library_service;

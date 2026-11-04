@@ -223,6 +223,7 @@ fn more_menu(game: &Game) -> gio::Menu {
         item
     };
     let menu = gio::Menu::new();
+    menu.append_item(&item(gettext("_Edit…"), "app.edit-game"));
     menu.append_item(&item(gettext("_Hide"), "win.hide-game"));
     if pindu_core::launch::launcher_uri(game).is_some() {
         menu.append_item(&item(gettext("_Open in Launcher"), "app.open-in-launcher"));

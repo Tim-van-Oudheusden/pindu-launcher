@@ -7,6 +7,7 @@ pub mod art;
 pub mod art_cache;
 pub mod launch;
 pub mod library;
+pub mod manual;
 pub mod model;
 pub mod paths;
 pub mod permissions;

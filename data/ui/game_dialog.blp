@@ -1,0 +1,94 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PinduGameDialog: Adw.Dialog {
+  content-width: 560;
+  content-height: 680;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-start-title-buttons: false;
+      show-end-title-buttons: false;
+
+      [start]
+      Button {
+        label: _("_Cancel");
+        use-underline: true;
+        action-name: "window.close";
+      }
+
+      [end]
+      Button save_button {
+        use-underline: true;
+        sensitive: false;
+        clicked => $save() swapped;
+
+        styles [
+          "suggested-action",
+        ]
+      }
+    }
+
+    content: Adw.ToastOverlay toast_overlay {
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup game_group {
+          title: _("Game");
+          description: _("Choose the game's folder; its program, title and options come next.");
+
+          Adw.ActionRow folder_row {
+            title: _("Game Folder");
+            subtitle: _("None chosen");
+
+            [suffix]
+            Button {
+              label: _("_Choose…");
+              use-underline: true;
+              valign: center;
+              clicked => $choose_folder() swapped;
+            }
+          }
+
+          Adw.ComboRow executable_row {
+            title: _("Program");
+            sensitive: false;
+
+            model: StringList executables {};
+          }
+
+          Adw.EntryRow title_row {
+            title: _("Title");
+            changed => $form_changed() swapped;
+          }
+
+          Adw.EntryRow arguments_row {
+            title: _("Arguments");
+            changed => $form_changed() swapped;
+          }
+
+          Adw.EntryRow working_dir_row {
+            title: _("Working Folder (empty for the program's folder)");
+            changed => $form_changed() swapped;
+          }
+        }
+
+        Adw.PreferencesGroup {
+          title: _("Artwork");
+          description: _("Pick an image file or paste a web address. Art you pick is used instead of the launcher's.");
+
+          Adw.ActionRow cover_row {
+            title: _("Cover");
+          }
+
+          Adw.ActionRow hero_row {
+            title: _("Banner");
+          }
+
+          Adw.ActionRow logo_row {
+            title: _("Logo");
+          }
+        }
+      };
+    };
+  };
+}

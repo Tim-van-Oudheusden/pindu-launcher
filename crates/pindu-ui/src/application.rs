@@ -4,6 +4,7 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
+use crate::game_dialog::GameDialog;
 use crate::launch_service;
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
@@ -45,6 +46,7 @@ mod imp {
             obj.set_accels_for_action("win.search", &["<primary>f"]);
             obj.set_accels_for_action("win.back", &["<alt>Left", "Back"]);
             obj.set_accels_for_action("app.preferences", &["<primary>comma"]);
+            obj.set_accels_for_action("app.add-game", &["<primary>n"]);
             glib::g_info!(
                 "pindu",
                 "Host spawn {}",
@@ -137,6 +139,20 @@ impl PinduApplication {
                 PreferencesDialog::new().present(app.active_window().as_ref());
             })
             .build();
+        let add_game_action = gio::ActionEntry::builder("add-game")
+            .activate(move |app: &Self, _, _| {
+                GameDialog::add(app.library_service()).present(app.active_window().as_ref());
+            })
+            .build();
+        let edit_game_action = gio::ActionEntry::builder("edit-game")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                app.with_game(id, |window, game, library, _| {
+                    let (id, title) = (game.id(), game.game().title.clone());
+                    GameDialog::edit(library, &id, &title).present(Some(window));
+                });
+            })
+            .build();
         let import_action = gio::ActionEntry::builder("import")
             .activate(move |app: &Self, _, _| app.imp().sync_service.sync())
             .build();
@@ -169,6 +185,8 @@ impl PinduApplication {
             quit_action,
             about_action,
             preferences_action,
+            add_game_action,
+            edit_game_action,
             import_action,
             play_action,
             stop_action,
