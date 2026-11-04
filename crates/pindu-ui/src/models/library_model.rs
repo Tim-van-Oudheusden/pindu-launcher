@@ -1,9 +1,13 @@
-//! The library pipeline both shells observe: game objects → incremental filter → incremental
-//! sort. Filtering and sorting work in chunks on the main loop, so a big library never
-//! blocks a frame.
+//! The library pipeline both shells observe: game objects → incremental sort → filter.
+//! Sorting works in chunks on the main loop, so loading a big library never blocks a frame.
+//! It comes first, so a search or a filter toggle, the frequent changes, only re-checks the
+//! filter and never re-sorts. The filter runs in one go: an incremental filter empties the
+//! grid on every keystroke and refills it chunk by chunk, which costs far more than checking
+//! a few thousand precomputed search keys.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
@@ -26,8 +30,10 @@ mod imp {
         pub filtered: gtk::FilterListModel,
         pub sorter: gtk::CustomSorter,
         pub sorted: gtk::SortListModel,
-        pub library_filter: RefCell<LibraryFilter>,
-        pub sort_mode: Cell<SortMode>,
+        /// Shared with the filter and sort functions, which run for every game on every
+        /// change, so they need no model lookup.
+        pub library_filter: Rc<RefCell<LibraryFilter>>,
+        pub sort_mode: Rc<Cell<SortMode>>,
         pub counts: RefCell<Counts>,
         /// The user's collections, in their order.
         pub collections: RefCell<Vec<Collection>>,
@@ -36,17 +42,16 @@ mod imp {
     impl Default for LibraryModel {
         fn default() -> Self {
             let games = gio::ListStore::new::<GameObject>();
-            let filter = gtk::CustomFilter::default();
-            let filtered = gtk::FilterListModel::builder()
-                .model(&games)
-                .filter(&filter)
-                .incremental(true)
-                .build();
             let sorter = gtk::CustomSorter::default();
             let sorted = gtk::SortListModel::builder()
-                .model(&filtered)
+                .model(&games)
                 .sorter(&sorter)
                 .incremental(true)
+                .build();
+            let filter = gtk::CustomFilter::default();
+            let filtered = gtk::FilterListModel::builder()
+                .model(&sorted)
+                .filter(&filter)
                 .build();
             Self {
                 games,
@@ -54,8 +59,8 @@ mod imp {
                 filtered,
                 sorter,
                 sorted,
-                library_filter: RefCell::default(),
-                sort_mode: Cell::default(),
+                library_filter: Rc::default(),
+                sort_mode: Rc::default(),
                 counts: RefCell::default(),
                 collections: RefCell::default(),
             }
@@ -82,35 +87,25 @@ mod imp {
 
         fn constructed(&self) {
             self.parent_constructed();
-            let model = self.obj().downgrade();
+            let library_filter = self.library_filter.clone();
             self.filter.set_filter_func(move |item| {
-                let (Some(model), Some(game)) =
-                    (model.upgrade(), item.downcast_ref::<GameObject>())
-                else {
+                let Some(game) = item.downcast_ref::<GameObject>() else {
                     return false;
                 };
                 let entry = game.entry();
-                model.imp().library_filter.borrow().matches(
-                    &entry.game,
-                    &entry.collections,
-                    &entry.search_key,
-                )
+                library_filter
+                    .borrow()
+                    .matches(&entry.game, &entry.collections, &entry.search_key)
             });
-            let model = self.obj().downgrade();
+            let sort_mode = self.sort_mode.clone();
             self.sorter.set_sort_func(move |a, b| {
-                let (Some(model), Some(a), Some(b)) = (
-                    model.upgrade(),
+                let (Some(a), Some(b)) = (
                     a.downcast_ref::<GameObject>(),
                     b.downcast_ref::<GameObject>(),
                 ) else {
                     return gtk::Ordering::Equal;
                 };
-                compare(
-                    model.imp().sort_mode.get(),
-                    &a.entry().sort_key,
-                    &b.entry().sort_key,
-                )
-                .into()
+                compare(sort_mode.get(), &a.entry().sort_key, &b.entry().sort_key).into()
             });
         }
     }
@@ -125,14 +120,9 @@ impl LibraryModel {
         glib::Object::new()
     }
 
-    /// The filtered, sorted games; a `GListModel` of [`GameObject`].
+    /// The sorted, filtered games; a `GListModel` of [`GameObject`].
     pub fn model(&self) -> gio::ListModel {
-        self.imp().sorted.clone().upcast()
-    }
-
-    /// The filter stage, whose `pending` count shows an incremental filter at work.
-    pub fn filter_model(&self) -> gtk::FilterListModel {
-        self.imp().filtered.clone()
+        self.imp().filtered.clone().upcast()
     }
 
     /// The sort stage, whose `pending` count shows an incremental sort at work.

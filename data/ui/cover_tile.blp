@@ -71,9 +71,10 @@ template $PinduCoverTile: Box {
     }
   }
 
-  Label title {
-    ellipsize: end;
+  // An inscription, not a label: it never measures its text, which keeps binding
+  // tiles cheap while a big grid scrolls.
+  Inscription title {
+    text-overflow: ellipsize_end;
     xalign: 0;
-    max-width-chars: 1;
   }
 }

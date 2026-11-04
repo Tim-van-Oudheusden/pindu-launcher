@@ -16,6 +16,37 @@ fn open_creates_the_database_in_wal_mode_with_the_latest_schema() {
     assert_eq!(store.schema_version().unwrap(), LATEST_SCHEMA_VERSION);
 }
 
+#[test]
+fn a_new_database_opened_from_several_threads_at_once_opens_everywhere() {
+    // The app loads the library and syncs on two threads right at start-up, so on a
+    // first run both create the database at the same time.
+    // A race shows up only sometimes, so try a few fresh databases.
+    for _ in 0..20 {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("pindu-launcher/library.db");
+        let barrier = std::sync::Barrier::new(8);
+
+        let results: Vec<_> = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..8)
+                .map(|_| {
+                    scope.spawn(|| {
+                        barrier.wait();
+                        Store::open(&path).map(|store| store.schema_version().unwrap())
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|handle| handle.join().unwrap())
+                .collect()
+        });
+
+        for result in results {
+            assert_eq!(result.unwrap(), LATEST_SCHEMA_VERSION);
+        }
+    }
+}
+
 fn steam_game(native_id: &str, title: &str) -> Game {
     Game::new(
         GameId::new(Source::Steam, native_id),

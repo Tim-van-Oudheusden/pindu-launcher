@@ -15,7 +15,7 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
-use rusqlite::{Connection, Row};
+use rusqlite::{Connection, Row, TransactionBehavior};
 
 use crate::model::{ArtLayout, ArtOrigin, GameId, LaunchKind, Platform, Source};
 
@@ -28,6 +28,9 @@ const MIGRATIONS: &[&str] = &[
 
 /// The schema version a freshly opened store is at.
 pub const LATEST_SCHEMA_VERSION: u32 = MIGRATIONS.len() as u32;
+
+/// How long a connection waits for another one's lock before giving up.
+const BUSY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
 #[derive(Debug)]
 pub enum StoreError {
@@ -87,7 +90,10 @@ impl Store {
             std::fs::create_dir_all(parent).map_err(StoreError::Io)?;
         }
         let conn = Connection::open(path)?;
-        conn.pragma_update(None, "journal_mode", "wal")?;
+        // Another thread or process may hold the database for a moment (start-up loads
+        // the library while the sync writes): wait for it instead of failing.
+        conn.busy_timeout(BUSY_TIMEOUT)?;
+        use_wal(&conn)?;
         Self::init(conn)
     }
 
@@ -123,18 +129,46 @@ impl Store {
     }
 }
 
+/// Switches to write-ahead logging. The switch needs the database to itself, and while
+/// another connection is setting up a new database SQLite fails it at once instead of
+/// waiting, so it is retried until `BUSY_TIMEOUT`.
+fn use_wal(conn: &Connection) -> Result<()> {
+    let started = std::time::Instant::now();
+    loop {
+        match conn.pragma_update(None, "journal_mode", "wal") {
+            Err(rusqlite::Error::SqliteFailure(error, _))
+                if error.code == rusqlite::ErrorCode::DatabaseBusy
+                    && started.elapsed() < BUSY_TIMEOUT =>
+            {
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+            result => return Ok(result?),
+        }
+    }
+}
+
+/// Brings the schema up to date, one migration per transaction. Each step takes the
+/// write lock before reading the version, so connections opening a new database at the
+/// same time apply every migration once between them.
 fn migrate(conn: &mut Connection) -> Result<()> {
-    let version: u32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
+    let version = schema_version(conn)?;
     if version > LATEST_SCHEMA_VERSION {
         return Err(StoreError::TooNew { version });
     }
-    for (index, migration) in MIGRATIONS.iter().enumerate().skip(version as usize) {
-        let tx = conn.transaction()?;
-        tx.execute_batch(migration)?;
-        tx.pragma_update(None, "user_version", index as u32 + 1)?;
+    while schema_version(conn)? < LATEST_SCHEMA_VERSION {
+        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let version = schema_version(&tx)?;
+        if let Some(migration) = MIGRATIONS.get(version as usize) {
+            tx.execute_batch(migration)?;
+            tx.pragma_update(None, "user_version", version + 1)?;
+        }
         tx.commit()?;
     }
     Ok(())
+}
+
+fn schema_version(conn: &Connection) -> Result<u32> {
+    Ok(conn.pragma_query_value(None, "user_version", |row| row.get(0))?)
 }
 
 /// Stores the text form of model values and parses it back on read.

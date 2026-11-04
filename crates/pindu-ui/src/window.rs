@@ -4,6 +4,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gdk, gio, glib};
+use pindu_core::grid;
 use pindu_core::library::{
     Counts, Filters, HistoryGroup, PlaytimeOrigin, SortMode, View, history_group,
 };
@@ -156,6 +157,10 @@ impl PinduWindow {
         window
     }
 
+    pub fn search_entry(&self) -> gtk::SearchEntry {
+        self.imp().search_entry.get()
+    }
+
     pub fn library(&self) -> &LibraryModel {
         self.imp().library.get().expect("set on construction")
     }
@@ -189,6 +194,7 @@ impl PinduWindow {
                 else {
                     return;
                 };
+                window.scroll_grid_to_top();
                 window.library().set_sort_mode(mode);
                 action.set_state(&sort_mode_name(mode).to_variant());
             }
@@ -276,6 +282,7 @@ impl PinduWindow {
             #[weak(rename_to = window)]
             self,
             move |entry| {
+                window.scroll_grid_to_top();
                 window.library().set_search(&entry.text());
                 window.update_jump_back_in();
             }
@@ -318,11 +325,6 @@ impl PinduWindow {
             self,
             move |_, _, _, _| window.update_content_page()
         ));
-        library.filter_model().connect_pending_notify(glib::clone!(
-            #[weak(rename_to = window)]
-            self,
-            move |_| window.update_content_page()
-        ));
         library.connect_counts_changed(glib::clone!(
             #[weak(rename_to = window)]
             self,
@@ -344,12 +346,13 @@ impl PinduWindow {
             native: imp.native_filter.is_active(),
         };
         imp.clear_filters.set_visible(filters.any());
+        self.scroll_grid_to_top();
         self.library().set_filters(filters);
         self.update_jump_back_in();
     }
 
-    /// The grid when it has games; otherwise, once filtering is done, the first-run page
-    /// for an empty library or the no-results page.
+    /// The grid when it has games; otherwise the first-run page for an empty library or
+    /// the no-results page.
     fn update_content_page(&self) {
         let library = self.library();
         let page = if library.model().n_items() > 0 && library.view() == View::PlayHistory {
@@ -357,8 +360,6 @@ impl PinduWindow {
             "history"
         } else if library.model().n_items() > 0 {
             "grid"
-        } else if library.filter_model().pending() > 0 {
-            return;
         } else if library.counts().get(View::All) == 0 {
             "empty"
         } else if matches!(library.view(), View::Collection(id) if library.counts().get(View::Collection(id)) == 0)
@@ -500,6 +501,7 @@ impl PinduWindow {
     fn show_hidden_games(&self, show: bool) {
         let imp = self.imp();
         if show {
+            self.scroll_grid_to_top();
             self.library().set_view(View::Hidden);
             imp.library_page.set_title(&gettext("Hidden Games"));
             imp.sidebar.set_selected(gtk::INVALID_LIST_POSITION);
@@ -648,6 +650,7 @@ impl PinduWindow {
         else {
             return;
         };
+        self.scroll_grid_to_top();
         self.library().set_view(view);
         if let Some(action) = self.lookup_action("show-hidden") {
             action.change_state(&false.to_variant());
@@ -728,6 +731,13 @@ impl PinduWindow {
         let grid = &self.imp().grid;
         grid.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
         self.update_tile_factory();
+        if let Some(width) = grid.hadjustment() {
+            width.connect_page_size_notify(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_| window.update_grid_columns()
+            ));
+        }
         // Delete and the Menu key act on the focused tile only, so typing elsewhere is safe.
         let keys = gtk::EventControllerKey::new();
         keys.connect_key_pressed(glib::clone!(
@@ -825,6 +835,33 @@ impl PinduWindow {
             }
         });
         self.imp().grid.set_factory(Some(&factory));
+        self.update_grid_columns();
+    }
+
+    /// A new search, filter, view or order starts at the top. Going there before the
+    /// change, and stopping a fling, also keeps GTK's grid from drawing nothing when the
+    /// list shrinks under a scroll still in motion.
+    fn scroll_grid_to_top(&self) {
+        let grid = &self.imp().grid;
+        if let Some(scrolled) = grid.parent().and_downcast::<gtk::ScrolledWindow>() {
+            // Turning kinetic scrolling off ends any deceleration in progress.
+            scrolled.set_kinetic_scrolling(false);
+            scrolled.set_kinetic_scrolling(true);
+        }
+        if grid.model().is_some_and(|model| model.n_items() > 0) {
+            grid.scroll_to(0, gtk::ListScrollFlags::NONE, None);
+        }
+    }
+
+    /// Caps the grid's columns at what fits its width (see [`grid::max_columns`]).
+    fn update_grid_columns(&self) {
+        let grid = &self.imp().grid;
+        let Some(width) = grid.hadjustment() else {
+            return;
+        };
+        let size = TileSize::from_setting(&self.settings().string("tile-size"));
+        let column = size.cover_size().0 + GRID_CHILD_PADDING;
+        grid.set_max_columns(grid::max_columns(width.page_size() - GRID_PADDING, column));
     }
 
     /// Shows a header spinner while importing, and one toast summarising any problems.
@@ -909,6 +946,10 @@ impl PinduWindow {
         let _ = settings.set_boolean("window-maximized", self.is_maximized());
     }
 }
+
+/// Horizontal padding around the cover grid and around each tile, as in `style.css`.
+const GRID_PADDING: f64 = 24.0;
+const GRID_CHILD_PADDING: i32 = 12;
 
 const SORT_MODES: [(SortMode, &str); 5] = [
     (SortMode::LastPlayed, "last-played"),
