@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Celeste
+Exec="/opt/Celeste Game/Celeste" %U
+Path=/opt/Celeste Game
+Icon=celeste
+Categories=Game;ArcadeGame;

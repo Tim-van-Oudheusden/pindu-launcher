@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Pindu launcher
+Exec=pindu-launcher
+Icon=io.github.tim_van_oudheusden.pindu-launcher
+Terminal=false
+Type=Application
+Categories=Game;
+DBusActivatable=true

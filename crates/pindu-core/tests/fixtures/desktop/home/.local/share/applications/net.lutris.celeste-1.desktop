@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Celeste
+Icon=lutris_celeste
+Exec=env LUTRIS_SKIP_INIT=1 lutris lutris:rungameid/1
+Categories=Game

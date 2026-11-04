@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Unreal Tournament 2004
+Exec=xdg-open heroic://launch/gog/1207658924
+Terminal=false
+Type=Application
+Icon=/home/me/.config/heroic/icons/1207658924.png
+Categories=Game;

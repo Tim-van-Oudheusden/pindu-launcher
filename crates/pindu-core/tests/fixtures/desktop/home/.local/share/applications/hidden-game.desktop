@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Hidden Game
+Exec=hidden-game
+Categories=Game;
+NoDisplay=true

@@ -12,12 +12,16 @@ use crate::model::{Source, SourceState};
 use crate::paths::data_home;
 use crate::store::{self, Store};
 
-/// The host's home and XDG folders, as seen from inside or outside the sandbox.
+/// The host's home, XDG and system folders, as seen from inside or outside the sandbox.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HostDirs {
     pub home: PathBuf,
     pub data_home: PathBuf,
     pub config_home: PathBuf,
+    /// The host's `/usr`: `/run/host/usr` inside Flatpak (`host-os:ro`).
+    pub host_usr: PathBuf,
+    /// The system Flatpak installation, whose `exports` the sandbox can read.
+    pub system_flatpak: PathBuf,
 }
 
 impl HostDirs {
@@ -49,6 +53,8 @@ impl HostDirs {
             home: home.to_owned(),
             data_home: data_home(host_dir("XDG_DATA_HOME").as_deref(), home),
             config_home,
+            host_usr: PathBuf::from(if in_flatpak { "/run/host/usr" } else { "/usr" }),
+            system_flatpak: PathBuf::from("/var/lib/flatpak"),
         }
     }
 }
@@ -206,6 +212,8 @@ mod tests {
             home: home.to_owned(),
             data_home: home.join(".local/share"),
             config_home: home.join(".config"),
+            host_usr: home.join("usr"),
+            system_flatpak: home.join("var/lib/flatpak"),
         }
     }
 
@@ -343,6 +351,8 @@ mod tests {
 
         assert_eq!(dirs.data_home, Path::new("/host/data"));
         assert_eq!(dirs.config_home, Path::new("/home/me/.config"));
+        assert_eq!(dirs.host_usr, Path::new("/run/host/usr"));
+        assert_eq!(dirs.system_flatpak, Path::new("/var/lib/flatpak"));
     }
 
     #[test]
@@ -357,6 +367,8 @@ mod tests {
 
         assert_eq!(dirs.data_home, Path::new("/data"));
         assert_eq!(dirs.config_home, Path::new("/home/me/.config"));
+        assert_eq!(dirs.host_usr, Path::new("/usr"));
+        assert_eq!(dirs.system_flatpak, Path::new("/var/lib/flatpak"));
     }
 
     #[test]
