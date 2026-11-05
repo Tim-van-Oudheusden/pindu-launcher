@@ -115,13 +115,28 @@ template $PinduGamePage: Adw.NavigationPage {
                   ]
                 }
 
-                // Fullscreen mode has "Add to Collection" beside Favourite; the desktop
-                // window has it in the ⋮ menu.
-                MenuButton collection_button {
+                // Fullscreen mode has "Add to Collection" beside Favourite and Options in
+                // place of the ⋮ menu: both open the options sheet rather than a popover
+                // menu, which a controller press would dismiss. The desktop window has
+                // them in the ⋮ menu.
+                Button collection_button {
                   icon-name: "list-add-symbolic";
                   tooltip-text: _("Add to Collection");
                   valign: center;
                   visible: false;
+                  action-name: "win.game-collections";
+
+                  styles [
+                    "circular",
+                  ]
+                }
+
+                Button options_button {
+                  icon-name: "view-more-symbolic";
+                  tooltip-text: _("Options");
+                  valign: center;
+                  visible: false;
+                  action-name: "win.game-options";
 
                   styles [
                     "circular",

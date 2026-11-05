@@ -13,6 +13,7 @@ use pindu_core::library::{
     Counts, Filters, HistoryGroup, PlaytimeOrigin, SortMode, View, history_group,
 };
 use pindu_core::model::{GameId, Source};
+use pindu_core::panels::{GameOption, Panels};
 
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
@@ -111,6 +112,48 @@ mod imp {
         pub native_filter: TemplateChild<gtk::ToggleButton>,
         #[template_child]
         pub clear_filters: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub options_sheet: TemplateChild<adw::BottomSheet>,
+        #[template_child]
+        pub drawer: TemplateChild<adw::OverlaySplitView>,
+        #[template_child]
+        pub drawer_panel: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub drawer_stack: TemplateChild<gtk::Stack>,
+        #[template_child]
+        pub playing_cards: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub drawer_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub drawer_collections_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub drawer_collections: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub drawer_settings_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub tile_small: TemplateChild<gtk::CheckButton>,
+        #[template_child]
+        pub tile_medium: TemplateChild<gtk::CheckButton>,
+        #[template_child]
+        pub tile_large: TemplateChild<gtk::CheckButton>,
+        #[template_child]
+        pub drawer_sizes: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub drawer_switches: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub drawer_sounds_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub drawer_exit_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub options_panel: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub options_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub options_stack: TemplateChild<gtk::Stack>,
+        #[template_child]
+        pub options_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub options_collections: TemplateChild<gtk::ListBox>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
         /// Every sidebar row with the view it selects and, for sources, its count label.
@@ -140,6 +183,14 @@ mod imp {
         pub launch_linger: RefCell<Option<glib::SourceId>>,
         /// The launched game and its `notify::playing` handler.
         pub launch_game: RefCell<Option<(GameObject, glib::SignalHandlerId)>>,
+        /// Fullscreen mode's menu drawer or options sheet, whichever is open.
+        pub panels: Cell<Panels>,
+        /// The game the options sheet is for.
+        pub options_game: RefCell<Option<GameObject>>,
+        /// The options the sheet lists for that game, in its rows' order.
+        pub game_options: RefCell<Vec<GameOption>>,
+        /// The widget that had focus before a panel opened, to give it back after.
+        pub focus_before_panel: glib::WeakRef<gtk::Widget>,
     }
 
     #[glib::object_subclass]
@@ -210,6 +261,7 @@ impl PinduWindow {
         window.setup_fullscreen_library();
         window.setup_fullscreen();
         window.setup_fullscreen_game();
+        window.setup_panels();
         if let Some(application) = application.downcast_ref::<PinduApplication>() {
             window.setup_controller_navigation(application);
             window.setup_hint_bar(application);
@@ -297,7 +349,7 @@ impl PinduWindow {
     }
 
     /// Adds a `win.<name>` action that takes a game ID.
-    fn add_game_action(&self, name: &str, activate: fn(&Self, &GameId)) {
+    pub(crate) fn add_game_action(&self, name: &str, activate: fn(&Self, &GameId)) {
         let action = gio::SimpleAction::new(name, Some(glib::VariantTy::STRING));
         action.connect_activate(glib::clone!(
             #[weak(rename_to = window)]

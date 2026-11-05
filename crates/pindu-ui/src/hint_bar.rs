@@ -78,8 +78,8 @@ impl PinduWindow {
 
     /// Where the user is, for the hints: the focused widget, an open dialog, whether a
     /// page lies below the shown one, whether it searches (Home and the library), whether
-    /// it has tabs (the library in fullscreen mode), whether it is a game's (with
-    /// options), and whether the launch overlay is up.
+    /// it has tabs (the library in fullscreen mode), whether a game has options, whether
+    /// Start opens the menu drawer, an open panel, and whether the launch overlay is up.
     fn hint_context(&self) -> Context {
         let imp = self.imp();
         let navigation_view = &imp.navigation_view;
@@ -97,7 +97,9 @@ impl PinduWindow {
             page_below,
             search: library || home,
             tabs: library && self.is_fullscreen(),
-            options: self.visible_game_page().is_some(),
+            options: self.focused_game().is_some(),
+            menu: self.is_fullscreen(),
+            panel: self.open_panel(),
             launching: self.launching(),
         }
     }
@@ -150,5 +152,6 @@ fn action_label(action: Action) -> String {
         Action::Sort => gettext("Sort"),
         Action::Options => gettext("Options"),
         Action::HoldToCancel => gettext("Hold to Cancel"),
+        Action::Menu => gettext("Menu"),
     }
 }

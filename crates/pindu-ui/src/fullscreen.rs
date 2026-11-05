@@ -90,6 +90,10 @@ impl PinduWindow {
     /// Shows the window in fullscreen mode or as the desktop window, as it is fullscreen.
     fn show_fullscreen_mode(&self) {
         let fullscreen = self.is_fullscreen();
+        // The panels belong to the mode they were opened in.
+        if self.open_panel().is_some() {
+            self.close_panel();
+        }
         if fullscreen {
             self.add_css_class(STYLE_CLASS);
         } else {
@@ -273,10 +277,14 @@ impl PinduWindow {
         }
     }
 
-    /// Gives focus to the shown page: Home's card that had focus last, the library's grid
-    /// on the cover the controller was last on, a game page's Play, or else the first item
-    /// that takes focus.
+    /// Gives focus to the open panel, or to the shown page: Home's card that had focus
+    /// last, the library's grid on the cover the controller was last on, a game page's
+    /// Play, or else the first item that takes focus.
     pub(crate) fn focus_page(&self) {
+        if self.open_panel().is_some() {
+            self.focus_panel(None);
+            return;
+        }
         let imp = self.imp();
         let Some(page) = imp.navigation_view.visible_page() else {
             return;

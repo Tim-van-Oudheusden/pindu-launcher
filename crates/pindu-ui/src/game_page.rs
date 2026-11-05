@@ -1,7 +1,8 @@
 //! The game page: hero art with the logo or title, Play with default focus, a ⋮ menu, a
 //! facts row, the About group and the Launch group: for games we run, their launch
 //! settings; for store games, a read-only summary. In fullscreen mode it shows hero, logo,
-//! a large Play, Favourite, Add to Collection, a Playing Now card while the game runs, and
+//! a large Play, Favourite, Add to Collection and Options (both opening the options
+//! sheet), a Playing Now card while the game runs, and
 //! a launch summary, with the launch overlay over the page while Play starts the game.
 
 use std::cell::{Cell, OnceCell, RefCell};
@@ -17,7 +18,7 @@ use pindu_core::library::PlaytimeOrigin;
 use pindu_core::manual;
 use pindu_core::model::{Collection, Game, GameId, LaunchConfig, LaunchKind, Source, Timestamp};
 
-use crate::collection_actions::{collection_button_menu, collection_menu};
+use crate::collection_actions::collection_menu;
 use crate::launch_service::launcher_name;
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
@@ -44,7 +45,9 @@ mod imp {
         #[template_child]
         pub more_button: TemplateChild<gtk::MenuButton>,
         #[template_child]
-        pub collection_button: TemplateChild<gtk::MenuButton>,
+        pub collection_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub options_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub playing_card: TemplateChild<gtk::Box>,
         #[template_child]
@@ -222,8 +225,6 @@ impl GamePage {
         self.show_favourite(game.favourite);
         imp.open_in_launcher.set_action_target_value(Some(&target));
         imp.more_button.set_create_popup_func(glib::clone!(
-            #[weak(rename_to = page)]
-            self,
             #[weak]
             object,
             #[weak]
@@ -231,20 +232,6 @@ impl GamePage {
             move |button| {
                 let collections = library.model().collections();
                 button.set_menu_model(Some(&more_menu(&object, &collections)));
-                page.open_without_grab(button);
-            }
-        ));
-        imp.collection_button.set_create_popup_func(glib::clone!(
-            #[weak(rename_to = page)]
-            self,
-            #[weak]
-            object,
-            #[weak]
-            library,
-            move |button| {
-                let collections = library.model().collections();
-                button.set_menu_model(Some(&collection_button_menu(&object, &collections)));
-                page.open_without_grab(button);
             }
         ));
         imp.launch_summary.set_label(&launch_summary(game));
@@ -328,9 +315,9 @@ impl GamePage {
         handler.as_ref().map(|(object, _)| object.clone())
     }
 
-    /// Shows fullscreen mode's presentation: larger art, Add to Collection beside
-    /// Favourite, the Playing Now card and the launch summary instead of the About and
-    /// Launch groups; or the desktop page.
+    /// Shows fullscreen mode's presentation: larger art, Add to Collection and Options
+    /// beside Favourite instead of the ⋮ menu, the Playing Now card and the launch summary
+    /// instead of the About and Launch groups; or the desktop page.
     pub fn set_fullscreen(&self, fullscreen: bool) {
         let imp = self.imp();
         let was_fullscreen = imp.fullscreen.replace(fullscreen);
@@ -341,6 +328,8 @@ impl GamePage {
             if fullscreen { 180 } else { 120 },
         );
         imp.collection_button.set_visible(fullscreen);
+        imp.options_button.set_visible(fullscreen);
+        imp.more_button.set_visible(!fullscreen);
         imp.launch_summary.set_visible(fullscreen);
         imp.about_group.set_visible(!fullscreen && self.has_about());
         let description = self
@@ -382,28 +371,6 @@ impl GamePage {
     /// Gives focus to Play, or to Stop while the game runs.
     pub fn focus_play(&self) {
         self.imp().play_button.grab_focus();
-    }
-
-    /// Opens the game's options: the ⋮ menu, until the options sheet replaces it.
-    pub fn show_options(&self) {
-        self.imp().more_button.popup();
-    }
-
-    /// In fullscreen mode a menu opens without grabbing input: the compositor lets a menu
-    /// grab only right after a key or pointer press, which a controller press is not, and
-    /// dismisses it at once otherwise. The menu takes focus itself instead, and B or Escape
-    /// closes it.
-    fn open_without_grab(&self, button: &gtk::MenuButton) {
-        let Some(popover) = button.popover() else {
-            return;
-        };
-        let fullscreen = self.imp().fullscreen.get();
-        popover.set_autohide(!fullscreen);
-        if fullscreen {
-            popover.connect_map(|popover| {
-                popover.child_focus(gtk::DirectionType::TabForward);
-            });
-        }
     }
 
     /// The star shows whether the game is a favourite.

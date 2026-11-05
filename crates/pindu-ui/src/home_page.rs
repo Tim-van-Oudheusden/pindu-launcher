@@ -184,6 +184,15 @@ impl HomePage {
         }
     }
 
+    /// The game of the card with focus, if a game's card has it.
+    pub fn focused_game(&self) -> Option<GameObject> {
+        let cards = self.imp().cards.borrow();
+        cards
+            .iter()
+            .find(|(card, _)| card.has_focus())
+            .map(|(_, game)| game.clone())
+    }
+
     fn carousel_has_focus(&self) -> bool {
         self.imp()
             .carousel
