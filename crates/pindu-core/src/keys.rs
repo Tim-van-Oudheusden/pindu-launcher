@@ -1,8 +1,9 @@
 //! Fullscreen mode's keyboard shortcuts for what a controller does beyond moving and
-//! activating, so the mode works without one: F10 opens the menu drawer like Start, the
-//! Menu key or Shift+F10 opens the focused game's options like View, Ctrl+Page Up and
-//! Ctrl+Page Down switch the library's tabs like LB and RB, and with Shift held too they
-//! cycle its sort order like LT and RT.
+//! activating, so the mode works without one: F10 opens the menu drawer like Start,
+//! Ctrl+2 (Big Picture's key) opens Quick Access like R3, the Menu key or Shift+F10 opens
+//! the focused game's options like View, Ctrl+Page Up and Ctrl+Page Down switch the
+//! library's tabs like LB and RB, and with Shift held too they cycle its sort order like
+//! LT and RT.
 
 use crate::gamepad::Intent;
 
@@ -27,6 +28,7 @@ pub fn fullscreen_intent(key: &str, modifiers: Modifiers) -> Option<Intent> {
     }
     match (key, control, shift) {
         ("F10", false, false) => Some(Intent::Menu),
+        ("2", true, false) => Some(Intent::QuickAccess),
         ("Menu", false, false) | ("F10", false, true) => Some(Intent::Options),
         ("Page_Up", true, false) => Some(Intent::PreviousTab),
         ("Page_Down", true, false) => Some(Intent::NextTab),
@@ -49,6 +51,16 @@ mod tests {
     #[test]
     fn f10_opens_the_menu_drawer() {
         assert_eq!(fullscreen_intent("F10", NONE), Some(Intent::Menu));
+    }
+
+    #[test]
+    fn control_2_opens_quick_access() {
+        let control = Modifiers {
+            control: true,
+            ..NONE
+        };
+        assert_eq!(fullscreen_intent("2", control), Some(Intent::QuickAccess));
+        assert_eq!(fullscreen_intent("2", NONE), None, "typing a 2");
     }
 
     #[test]

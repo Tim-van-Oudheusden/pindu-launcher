@@ -1,10 +1,10 @@
-//! Fullscreen mode's panels over the pages: the menu drawer on the left (Start or Guide)
-//! and the options sheet at the bottom (View or X, or a game page's Options and Add to
-//! Collection buttons). Which panel is open, at which level, and what the controller does
-//! to them is `pindu_core::panels`; this fills them, shows them, keeps focus inside the
-//! open one and gives it back after, and does what their entries say. They are widgets
-//! in the window rather than popover menus, which the compositor dismisses on a
-//! controller press.
+//! Fullscreen mode's panels over the pages: the menu drawer on the left (Start or Guide),
+//! Quick Access on the right (R3 or the Steam Deck's "…" button) and the options sheet at
+//! the bottom (View or X, or a game page's Options and Add to Collection buttons). Which
+//! panel is open, at which level, and what the controller does to them is
+//! `pindu_core::panels`; this fills them, shows them, keeps focus inside the open one and
+//! gives it back after, and does what their entries say. They are widgets in the window
+//! rather than popover menus, which the compositor dismisses on a controller press.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -13,10 +13,11 @@ use gtk::{gio, glib};
 use pindu_core::gamepad::Intent;
 use pindu_core::library::View;
 use pindu_core::panels::{
-    DrawerEntry, DrawerLevel, GameOption, OptionsLevel, Panel, Panels, Under, drawer_entries,
-    game_options,
+    DrawerEntry, DrawerLevel, GameOption, OptionsLevel, Panel, Panels, QuickAccessLevel, Under,
+    design_choices, drawer_entries, game_options,
 };
 
+use crate::application::PinduApplication;
 use crate::launch_service::launcher_name;
 use crate::models::GameObject;
 use crate::preferences::TILE_SIZES;
@@ -67,6 +68,17 @@ impl PinduWindow {
         let game_collections = gio::ActionEntry::builder("game-collections")
             .activate(|window: &Self, _, _| window.open_options(OptionsLevel::Collections))
             .build();
+        // R3 and Ctrl+2 without a controller or keyboard: the pointer, or a test.
+        let quick_access = gio::ActionEntry::builder("quick-access")
+            .activate(|window: &Self, _, _| {
+                window.handle_panel_intent(Intent::QuickAccess);
+            })
+            .build();
+        let designs = gio::ActionEntry::builder("quick-access-designs")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Designs));
+            })
+            .build();
         self.add_action_entries([
             close,
             home,
@@ -76,6 +88,8 @@ impl PinduWindow {
             collection,
             options,
             game_collections,
+            quick_access,
+            designs,
         ]);
         // The drawer's Return and Stop: game IDs.
         self.add_game_action("drawer-return", |window, id| {
@@ -115,7 +129,11 @@ impl PinduWindow {
             });
         }
         // Escape closes a panel rather than leaving fullscreen mode.
-        for panel in [imp.drawer_panel.get(), imp.options_panel.get()] {
+        for panel in [
+            imp.drawer_panel.get(),
+            imp.quick_access_panel.get(),
+            imp.options_panel.get(),
+        ] {
             let escape = gtk::ShortcutController::new();
             escape.add_shortcut(gtk::Shortcut::new(
                 gtk::ShortcutTrigger::parse_string("Escape"),
@@ -130,6 +148,16 @@ impl PinduWindow {
             move |drawer| {
                 let open = window.imp().panels.get().open();
                 if !drawer.shows_sidebar() && matches!(open, Some(Panel::Drawer(_))) {
+                    window.close_panel();
+                }
+            }
+        ));
+        imp.quick_access.connect_show_sidebar_notify(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |quick_access| {
+                let open = window.imp().panels.get().open();
+                if !quick_access.shows_sidebar() && matches!(open, Some(Panel::QuickAccess(_))) {
                     window.close_panel();
                 }
             }
@@ -167,6 +195,7 @@ impl PinduWindow {
             }
         ));
         self.setup_drawer_settings();
+        self.setup_quick_access();
         self.fill_drawer();
     }
 
@@ -207,11 +236,48 @@ impl PinduWindow {
         settings.connect_changed(Some("tile-size"), move |settings, _| show_size(settings));
     }
 
-    /// Acts on a controller intent for the panels; says whether they took it. Start and
-    /// Guide toggle the drawer in fullscreen mode only: in the desktop window Guide enters
+    /// Quick Access's designs choose through `win.design`, whose state is the design in
+    /// force: it checks the matching row, and follows the setting, which Preferences can
+    /// change too.
+    fn setup_quick_access(&self) {
+        let design = gio::SimpleAction::new_stateful(
+            "design",
+            Some(glib::VariantTy::STRING),
+            &self.design_in_force().unwrap_or_default().to_variant(),
+        );
+        design.connect_change_state(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, state| {
+                if let Some(id) = state.and_then(String::from_variant) {
+                    window.choose_design(&id);
+                }
+            }
+        ));
+        self.add_action(&design);
+        if let Some(application) = self.application().and_downcast::<PinduApplication>() {
+            application
+                .style_service()
+                .connect_design_changed(glib::clone!(
+                    #[weak]
+                    design,
+                    #[weak(rename_to = window)]
+                    self,
+                    move || {
+                        design
+                            .set_state(&window.design_in_force().unwrap_or_default().to_variant());
+                    }
+                ));
+        }
+    }
+
+    /// Acts on a controller intent for the panels; says whether they took it. Start, Guide
+    /// and R3 open their panels in fullscreen mode only: in the desktop window Guide enters
     /// fullscreen mode.
     pub(crate) fn handle_panel_intent(&self, intent: Intent) -> bool {
-        if matches!(intent, Intent::Menu | Intent::Home) && !self.is_fullscreen() {
+        if matches!(intent, Intent::Menu | Intent::Home | Intent::QuickAccess)
+            && !self.is_fullscreen()
+        {
             return false;
         }
         let game = self.focused_game();
@@ -277,8 +343,9 @@ impl PinduWindow {
         self.set_panels(panels);
     }
 
-    /// Shows `panels` as they now are: the drawer or the sheet, at its level, with focus
-    /// inside the open one and the page under it out of focus's way, or back on the page.
+    /// Shows `panels` as they now are: the drawer, Quick Access or the sheet, at its level,
+    /// with focus inside the open one and the page under it out of focus's way, or back on
+    /// the page.
     fn set_panels(&self, panels: Panels) {
         let imp = self.imp();
         let before = imp.panels.replace(panels).open();
@@ -293,12 +360,18 @@ impl PinduWindow {
         if matches!(open, Some(Panel::Drawer(_))) && !matches!(before, Some(Panel::Drawer(_))) {
             self.fill_drawer();
         }
+        if open == Some(Panel::QuickAccess(QuickAccessLevel::Designs)) {
+            self.fill_designs();
+        }
         let drawer = matches!(open, Some(Panel::Drawer(_)));
+        let quick_access = matches!(open, Some(Panel::QuickAccess(_)));
         let sheet = matches!(open, Some(Panel::Options(_)));
         // Directions stay inside the open panel.
-        imp.split_view.set_can_focus(!drawer && !sheet);
+        imp.split_view
+            .set_can_focus(!drawer && !quick_access && !sheet);
         imp.drawer.set_can_focus(!sheet);
         imp.drawer.set_show_sidebar(drawer);
+        imp.quick_access.set_show_sidebar(quick_access);
         imp.options_sheet.set_open(sheet);
         match open {
             Some(Panel::Drawer(level)) => imp.drawer_stack.set_visible_child_name(match level {
@@ -310,6 +383,12 @@ impl PinduWindow {
                 OptionsLevel::Main => "main",
                 OptionsLevel::Collections => "collections",
             }),
+            Some(Panel::QuickAccess(level)) => {
+                imp.quick_access_stack.set_visible_child_name(match level {
+                    QuickAccessLevel::Main => "main",
+                    QuickAccessLevel::Designs => "designs",
+                });
+            }
             None => {
                 imp.options_game.take();
                 let previous = imp.focus_before_panel.upgrade();
@@ -344,6 +423,25 @@ impl PinduWindow {
                 Some(Panel::Drawer(DrawerLevel::Main)),
                 Some(Panel::Drawer(DrawerLevel::Settings)),
             ) => Some(imp.drawer_settings_row.get().upcast()),
+            (Some(Panel::QuickAccess(QuickAccessLevel::Main)), _) => {
+                Some(imp.quick_access_design_row.get().upcast())
+            }
+            // The design in force.
+            (Some(Panel::QuickAccess(QuickAccessLevel::Designs)), _) => {
+                let checked = self.action_state("design");
+                let mut rows =
+                    std::iter::successors(imp.quick_access_designs.first_child(), |row| {
+                        row.next_sibling()
+                    });
+                rows.find(|row| {
+                    row.downcast_ref::<adw::ActionRow>()
+                        .and_then(adw::ActionRow::activatable_widget)
+                        .and_downcast::<gtk::CheckButton>()
+                        .and_then(|check| check.action_target_value())
+                        == checked
+                })
+                .or_else(|| first_row(&imp.quick_access_designs))
+            }
             (
                 Some(Panel::Options(OptionsLevel::Main)),
                 Some(Panel::Options(OptionsLevel::Collections)),
@@ -410,6 +508,60 @@ impl PinduWindow {
             row.set_action_target_value(Some(&collection.id.to_variant()));
             imp.drawer_collections.append(&row);
         }
+    }
+
+    /// Quick Access's designs: Default, then each installed design, with a check on the
+    /// one in force. A design for a newer Pindu launcher shows but cannot be chosen.
+    fn fill_designs(&self) {
+        let imp = self.imp();
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return;
+        };
+        let service = application.style_service();
+        imp.quick_access_designs.remove_all();
+        for choice in design_choices(&service.designs(), &service.design()) {
+            let check = gtk::CheckButton::builder()
+                .action_name("win.design")
+                .action_target(&choice.id.to_variant())
+                .can_focus(false)
+                .build();
+            let subtitle = if choice.available {
+                choice.description
+            } else {
+                needs_newer_launcher()
+            };
+            let row = adw::ActionRow::builder()
+                .title(choice.name.unwrap_or_else(default_design_name))
+                .subtitle(subtitle)
+                .use_markup(false)
+                .activatable_widget(&check)
+                .sensitive(choice.available)
+                .build();
+            row.add_prefix(&check);
+            imp.quick_access_designs.append(&row);
+        }
+    }
+
+    /// Applies the design `id` (Default for an empty one) unless it is in force already;
+    /// Quick Access stays open.
+    fn choose_design(&self, id: &str) {
+        if self.design_in_force().as_deref() == Some(id) {
+            return;
+        }
+        if let Some(application) = self.application().and_downcast::<PinduApplication>() {
+            application.style_service().set_design(id);
+        }
+    }
+
+    /// The id of the design Quick Access checks: the chosen one if it can apply, or empty
+    /// for Default.
+    fn design_in_force(&self) -> Option<String> {
+        let application = self.application().and_downcast::<PinduApplication>()?;
+        let service = application.style_service();
+        design_choices(&service.designs(), &service.design())
+            .into_iter()
+            .find(|choice| choice.active)
+            .map(|choice| choice.id)
     }
 
     /// The sheet's title and actions for `game`, and its collections.
@@ -499,6 +651,16 @@ impl PinduWindow {
             ActionGroupExt::activate_action(self, action, Some(&target));
         }
     }
+}
+
+/// What Quick Access calls the choice of no design: the stock look.
+fn default_design_name() -> String {
+    gettext("Default")
+}
+
+/// Why Quick Access cannot apply a design written for a newer style contract.
+fn needs_newer_launcher() -> String {
+    gettext("Needs a newer Pindu launcher")
 }
 
 /// The icon and label of an options sheet entry for `game`.
