@@ -1,17 +1,20 @@
 //! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go, a
-//! few settings, leaving) and the options sheet at the bottom (what to do with one game).
-//! This decides which one is open and at which level, what Start, Guide, View or X and B
-//! do to them, and what each lists.
+//! few settings, leaving), the Quick Access panel on the right (the design) and the
+//! options sheet at the bottom (what to do with one game). This decides which one is
+//! open and at which level, what Start, Guide, R3, View or X and B do to them, and what
+//! each lists.
 
 use crate::gamepad::Intent;
 use crate::launch;
 use crate::model::Game;
+use crate::themes::Theme;
 
 /// A panel over the page, at one of its levels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Panel {
     Drawer(DrawerLevel),
     Options(OptionsLevel),
+    QuickAccess(QuickAccessLevel),
 }
 
 /// What the drawer shows: its entries, or the list one of them leads to.
@@ -30,6 +33,13 @@ pub enum DrawerLevel {
 pub enum OptionsLevel {
     Main,
     Collections,
+}
+
+/// What the Quick Access panel shows: its entries, or the designs to pick from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QuickAccessLevel {
+    Main,
+    Designs,
 }
 
 /// What lies under the panels when an intent comes in.
@@ -58,9 +68,10 @@ impl Panels {
     }
 
     /// Acts on a controller intent and says whether the panels took it, so the page does
-    /// not act on it too. Start and Guide toggle the drawer, View or X opens the options
-    /// for a game, and B steps back a level or closes. While a panel is open the page's
-    /// own buttons (search, tabs, sort) wait; directions and A move and act inside it.
+    /// not act on it too. Start and Guide toggle the drawer, R3 toggles Quick Access, View
+    /// or X opens the options for a game, and B steps back a level or closes. Opening one
+    /// panel closes the other. While a panel is open the page's own buttons (search, tabs,
+    /// sort) wait; directions and A move and act inside it.
     pub fn handle(&mut self, intent: Intent, under: Under) -> bool {
         if under.dialog {
             return false;
@@ -68,12 +79,20 @@ impl Panels {
         match (intent, self.open) {
             (Intent::Menu | Intent::Home, Some(Panel::Drawer(_))) => self.open = None,
             (Intent::Menu | Intent::Home, _) => self.open = Some(Panel::Drawer(DrawerLevel::Main)),
+            (Intent::QuickAccess, Some(Panel::QuickAccess(_))) => self.open = None,
+            (Intent::QuickAccess, _) => {
+                self.open = Some(Panel::QuickAccess(QuickAccessLevel::Main));
+            }
             (Intent::Options, None) if under.game => {
                 self.open = Some(Panel::Options(OptionsLevel::Main));
             }
             (
                 Intent::Back,
-                Some(Panel::Drawer(DrawerLevel::Main) | Panel::Options(OptionsLevel::Main)),
+                Some(
+                    Panel::Drawer(DrawerLevel::Main)
+                    | Panel::Options(OptionsLevel::Main)
+                    | Panel::QuickAccess(QuickAccessLevel::Main),
+                ),
             ) => {
                 self.open = None;
             }
@@ -82,6 +101,9 @@ impl Panels {
             }
             (Intent::Back, Some(Panel::Options(_))) => {
                 self.open = Some(Panel::Options(OptionsLevel::Main));
+            }
+            (Intent::Back, Some(Panel::QuickAccess(_))) => {
+                self.open = Some(Panel::QuickAccess(QuickAccessLevel::Main));
             }
             (Intent::Navigate(_) | Intent::Activate, _) | (_, None) => return false,
             (_, Some(_)) => {}
@@ -171,6 +193,44 @@ pub fn game_options(game: &Game, playing: bool) -> Vec<GameOption> {
     .collect()
 }
 
+/// A design the Quick Access panel offers, or Default (no design, `id` empty).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DesignChoice {
+    /// What the `fullscreen-design` setting holds for it; empty for Default.
+    pub id: String,
+    /// The theme's name; `None` for Default, which the shell names.
+    pub name: Option<String>,
+    pub description: String,
+    /// The design in force, which the panel checks.
+    pub active: bool,
+    /// Whether this Pindu launcher can apply it.
+    pub available: bool,
+}
+
+/// What the Quick Access panel's Designs level lists: Default first, then `themes` in
+/// their order, with the one in force checked. `active` is the setting's id; Default is
+/// in force when it names no design this Pindu launcher can apply.
+pub fn design_choices(themes: &[Theme], active: &str) -> Vec<DesignChoice> {
+    let applies = themes
+        .iter()
+        .any(|theme| theme.id == active && theme.supported());
+    let default = DesignChoice {
+        id: String::new(),
+        name: None,
+        description: String::new(),
+        active: !applies,
+        available: true,
+    };
+    let designs = themes.iter().map(|theme| DesignChoice {
+        id: theme.id.clone(),
+        name: Some(theme.name.clone()),
+        description: theme.description.clone(),
+        active: applies && theme.id == active,
+        available: theme.supported(),
+    });
+    std::iter::once(default).chain(designs).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -196,6 +256,52 @@ mod tests {
 
     fn options() -> Option<Panel> {
         Some(Panel::Options(OptionsLevel::Main))
+    }
+
+    fn quick_access() -> Option<Panel> {
+        Some(Panel::QuickAccess(QuickAccessLevel::Main))
+    }
+
+    #[test]
+    fn quick_access_toggles_its_panel() {
+        let mut panels = Panels::new();
+        assert!(panels.handle(Intent::QuickAccess, PAGE));
+        assert_eq!(panels.open(), quick_access());
+        assert!(panels.handle(Intent::QuickAccess, PAGE));
+        assert_eq!(panels.open(), None);
+    }
+
+    #[test]
+    fn b_steps_back_from_the_designs_and_then_closes_quick_access() {
+        let mut panels = Panels::new();
+        panels.handle(Intent::QuickAccess, PAGE);
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Designs));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), quick_access());
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), None);
+    }
+
+    #[test]
+    fn quick_access_and_the_other_panels_take_each_other_s_place() {
+        let mut panels = Panels::new();
+        panels.handle(Intent::Menu, PAGE);
+        assert!(panels.handle(Intent::QuickAccess, PAGE));
+        assert_eq!(panels.open(), quick_access(), "it replaces the drawer");
+        assert!(panels.handle(Intent::Menu, PAGE));
+        assert_eq!(panels.open(), drawer(), "the drawer replaces it");
+
+        let mut panels = Panels::new();
+        panels.handle(Intent::Options, GAME);
+        assert!(panels.handle(Intent::QuickAccess, GAME));
+        assert_eq!(panels.open(), quick_access(), "it replaces the options");
+        assert!(panels.handle(Intent::Options, GAME), "taken, not acted on");
+        assert_eq!(panels.open(), quick_access());
+        for intent in [Intent::Activate, Intent::Navigate(Direction::Up)] {
+            assert!(!panels.handle(intent, GAME), "{intent:?} goes to the panel");
+        }
+        assert!(!panels.handle(Intent::QuickAccess, DIALOG));
+        assert_eq!(panels.open(), quick_access(), "a dialog takes it first");
     }
 
     #[test]
@@ -358,5 +464,48 @@ mod tests {
             game_options(&manual, true),
             [Stop, RemoveFromFavourites, Collections, Unhide]
         );
+    }
+
+    fn theme(id: &str, name: &str, contract: u64) -> Theme {
+        Theme {
+            id: id.into(),
+            name: name.into(),
+            description: String::new(),
+            dir: format!("/themes/{id}").into(),
+            contract,
+            layout: Default::default(),
+        }
+    }
+
+    fn shown(choices: &[DesignChoice]) -> Vec<(&str, bool, bool)> {
+        choices
+            .iter()
+            .map(|choice| (choice.id.as_str(), choice.active, choice.available))
+            .collect()
+    }
+
+    #[test]
+    fn the_designs_list_default_first_and_check_the_active_one() {
+        let themes = [theme("mango", "Mango", 1), theme("future", "Future", 99)];
+        let choices = design_choices(&themes, "mango");
+        assert_eq!(
+            shown(&choices),
+            [
+                ("", false, true),
+                ("mango", true, true),
+                ("future", false, false)
+            ]
+        );
+        assert_eq!(choices[0].name, None, "the shell names Default");
+        assert_eq!(choices[1].name.as_deref(), Some("Mango"));
+        for active in ["", "gone", "future"] {
+            let choices = design_choices(&themes, active);
+            assert!(choices[0].active, "{active:?} leaves Default in force");
+            assert_eq!(
+                choices.iter().filter(|choice| choice.active).count(),
+                1,
+                "{active:?}"
+            );
+        }
     }
 }

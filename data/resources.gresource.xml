@@ -26,6 +26,7 @@
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-lt-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-menu-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-minus-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-more-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-north-triangle-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-north-x-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-north-y-symbolic.svg</file>
@@ -33,7 +34,9 @@
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-r-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-r1-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-r2-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-r3-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-rb-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-rs-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-rt-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-south-a-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-south-b-symbolic.svg</file>

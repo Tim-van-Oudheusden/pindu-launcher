@@ -23,10 +23,13 @@ mod code {
     pub const BTN_SELECT: u16 = 0x13a;
     pub const BTN_START: u16 = 0x13b;
     pub const BTN_MODE: u16 = 0x13c;
+    pub const BTN_THUMBR: u16 = 0x13e;
     pub const BTN_DPAD_UP: u16 = 0x220;
     pub const BTN_DPAD_DOWN: u16 = 0x221;
     pub const BTN_DPAD_LEFT: u16 = 0x222;
     pub const BTN_DPAD_RIGHT: u16 = 0x223;
+    /// What libmanette maps `misc1` to, and its Steam Deck driver the "…" button.
+    pub const BTN_TRIGGER_HAPPY5: u16 = 0x2c4;
     pub const ABS_X: u16 = 0x00;
     pub const ABS_Y: u16 = 0x01;
     pub const ABS_HAT0X: u16 = 0x10;
@@ -206,6 +209,8 @@ fn button(code: u16) -> Option<Button> {
         code::BTN_SELECT => Button::Select,
         code::BTN_START => Button::Start,
         code::BTN_MODE => Button::Guide,
+        code::BTN_THUMBR => Button::RightStick,
+        code::BTN_TRIGGER_HAPPY5 => Button::Misc1,
         code::BTN_DPAD_UP => Button::DpadUp,
         code::BTN_DPAD_DOWN => Button::DpadDown,
         code::BTN_DPAD_LEFT => Button::DpadLeft,

@@ -295,6 +295,33 @@ impl StyleService {
         self.update();
     }
 
+    /// The installed designs, found afresh and sorted by name.
+    pub fn designs(&self) -> Vec<themes::Theme> {
+        let folders = self.theme_folders.each_ref().map(PathBuf::as_path);
+        themes::discover(&folders).themes
+    }
+
+    /// The chosen design's id; empty for none.
+    pub fn design(&self) -> String {
+        self.settings.string(DESIGN).into()
+    }
+
+    /// Chooses the design `id`, or none for an empty id; it applies at once.
+    pub fn set_design(&self, id: &str) {
+        if let Err(error) = self.settings.set_string(DESIGN, id) {
+            glib::g_warning!(
+                "pindu",
+                "Cannot choose the fullscreen design “{id}”: {error}"
+            );
+        }
+    }
+
+    /// Calls `handler` whenever the chosen design changes.
+    pub fn connect_design_changed(&self, handler: impl Fn() + 'static) {
+        self.settings
+            .connect_changed(Some(DESIGN), move |_, _| handler());
+    }
+
     fn sheets(&self) -> [&Sheet; 2] {
         [&self.custom, &self.design]
     }

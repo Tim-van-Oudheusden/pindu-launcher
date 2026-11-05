@@ -98,8 +98,8 @@ pub struct Discovery {
     pub skipped: Vec<(PathBuf, String)>,
 }
 
-/// Finds the themes in `folders`, each a folder of theme folders; a later folder's theme
-/// replaces an earlier one with the same id.
+/// Finds the themes in `folders`, each a folder of theme folders, sorted by name; a later
+/// folder's theme replaces an earlier one with the same id.
 pub fn discover(folders: &[&Path]) -> Discovery {
     let mut found = Discovery::default();
     for folder in folders {
@@ -120,6 +120,9 @@ pub fn discover(folders: &[&Path]) -> Discovery {
             }
         }
     }
+    found
+        .themes
+        .sort_by_cached_key(|theme| (theme.name.to_lowercase(), theme.id.clone()));
     found
 }
 
@@ -235,6 +238,20 @@ mod tests {
             .collect();
         skipped.sort();
         assert_eq!(skipped, ["Bad Id", "broken", "no-css"]);
+    }
+
+    #[test]
+    fn themes_come_sorted_by_name() {
+        let bundled = tempfile::tempdir().unwrap();
+        let user = tempfile::tempdir().unwrap();
+        write_theme(bundled.path(), "a", r#"{"contract": 1, "name": "Zebra"}"#);
+        write_theme(bundled.path(), "b", r#"{"contract": 1, "name": "apple"}"#);
+        write_theme(user.path(), "c", r#"{"contract": 1, "name": "Mango"}"#);
+
+        let found = discover(&[bundled.path(), user.path()]);
+
+        let names: Vec<_> = found.themes.iter().map(|theme| &theme.name).collect();
+        assert_eq!(names, ["apple", "Mango", "Zebra"]);
     }
 
     #[test]
