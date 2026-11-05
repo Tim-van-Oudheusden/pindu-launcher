@@ -10,6 +10,20 @@
     <file preprocess="xml-stripblanks" alias="shortcuts-dialog.ui">ui/shortcuts-dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/window.ui</file>
     <file compressed="true">style.css</file>
+    <!-- The art of fullscreen Home's section tiles, by section name (`SectionId::name`). -->
+    <file preprocess="xml-stripblanks">home/bottles.svg</file>
+    <file preprocess="xml-stripblanks">home/desktop.svg</file>
+    <file preprocess="xml-stripblanks">home/faugus.svg</file>
+    <file preprocess="xml-stripblanks">home/favourites.svg</file>
+    <file preprocess="xml-stripblanks">home/heroic-amazon.svg</file>
+    <file preprocess="xml-stripblanks">home/heroic-epic.svg</file>
+    <file preprocess="xml-stripblanks">home/heroic-gog.svg</file>
+    <file preprocess="xml-stripblanks">home/heroic-sideload.svg</file>
+    <file preprocess="xml-stripblanks">home/installed.svg</file>
+    <file preprocess="xml-stripblanks">home/lutris.svg</file>
+    <file preprocess="xml-stripblanks">home/manual.svg</file>
+    <file preprocess="xml-stripblanks">home/recently-played.svg</file>
+    <file preprocess="xml-stripblanks">home/steam.svg</file>
     <!-- Controller glyphs for the hint bar; GtkApplication adds icons/ to the icon theme. -->
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-dpad-down-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-dpad-left-symbolic.svg</file>

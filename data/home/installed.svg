@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder art for Home's "installed" section; the maintainer replaces it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1c1d21"/>
+  <path d="M256 150v130m-52-50l52 52 52-52" fill="none" stroke="#c0c4cc" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/><path d="M156 300v44h200v-44" fill="none" stroke="#c0c4cc" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

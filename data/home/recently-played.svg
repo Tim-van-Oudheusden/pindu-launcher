@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder art for Home's "recently-played" section; the maintainer replaces it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1c1d21"/>
+  <circle cx="256" cy="256" r="104" fill="none" stroke="#c0c4cc" stroke-width="20"/><path d="M256 196v66l44 30" fill="none" stroke="#c0c4cc" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

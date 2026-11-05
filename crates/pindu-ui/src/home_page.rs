@@ -1,21 +1,26 @@
-//! Fullscreen mode's Home page, where the mode opens: the hero of the focused game over a
-//! carousel of the pinned and recently played games (the "Jump back in" games), with a
-//! Library tile at the end. Focus comes back to the card that last had it. A fullscreen
-//! design can choose the cards' shape and size (`pindu_core::home`) and crossfade the hero
-//! (`.shown`, `.no-art`).
+//! Fullscreen mode's Home page, where the mode opens, in two screens. The first lists
+//! Home's sections (`pindu_core::sections`), a tile each, then the Library tile, over a
+//! black backdrop, with the focused section's name and game count. Activating a section
+//! (`win.home-section`) opens the second screen: its games, with the focused game's hero
+//! behind them. B goes back to the first screen, on the section it came from. Each screen
+//! comes back to the tile or card that last had focus. The page carries `.home-sections`
+//! or `.home-games` for designs, which can choose the tiles' shape and size
+//! (`pindu_core::home`) and crossfade the hero (`.shown`, `.no-art`).
 
 use std::cell::{Cell, RefCell};
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use gettextrs::gettext;
+use gettextrs::{gettext, ngettext};
 use gtk::glib;
 use pindu_core::focus::FocusMemory;
 use pindu_core::home::{self, CardArt, Detail};
 use pindu_core::library::{ArtSet, HistoryGroup};
 use pindu_core::model::GameId;
+use pindu_core::sections::{Section, SectionId};
 use pindu_core::themes::{HomeLayout, ThemeLayout, TileShape};
 
+use crate::config::RESOURCE_BASE_PATH;
 use crate::game_page::{date, playtime};
 use crate::models::GameObject;
 use crate::sources::{source_icon, source_name};
@@ -48,6 +53,7 @@ fn detail_item(detail: Detail) -> gtk::Box {
             source_name(source),
             gettext("Launcher"),
         ),
+        Detail::Games(count) => ("view-grid-symbolic", game_count(count), gettext("Games")),
     };
     let item = gtk::Box::builder()
         .spacing(6)
@@ -65,12 +71,97 @@ fn detail_item(detail: Detail) -> gtk::Box {
     item
 }
 
+/// How many games a section holds, as its details row says it.
+fn game_count(count: u32) -> String {
+    ngettext("{count} game", "{count} games", count).replace("{count}", &count.to_string())
+}
+
+/// A section's name: the user's for a collection, else Home's own.
+fn section_title(section: &Section) -> String {
+    match (section.id, &section.title) {
+        (_, Some(title)) => title.clone(),
+        (SectionId::RecentlyPlayed, None) => gettext("Recently Played"),
+        (SectionId::Favourites, None) => gettext("Favourites"),
+        (SectionId::Installed, None) => gettext("Installed"),
+        (SectionId::Source(source), None) => source_name(source),
+        (SectionId::Collection(_), None) => String::new(),
+    }
+}
+
+/// A section's tile (`.home-section-tile`), which opens it through `win.home-section`:
+/// its art (`data/home/<name>.svg`) filling the tile, or for a collection, which has
+/// none, an icon over its name (`.home-collection-tile`). The tile keeps its size
+/// whatever the art's: the art is an overlay, which does not size it.
+fn section_tile(section: &Section, title: &str, (width, height): (i32, i32)) -> gtk::Button {
+    let frame = gtk::Overlay::builder()
+        .child(
+            &gtk::Box::builder()
+                .width_request(width)
+                .height_request(height)
+                .build(),
+        )
+        .build();
+    let tile = gtk::Button::builder()
+        .child(&frame)
+        .overflow(gtk::Overflow::Hidden)
+        .tooltip_text(title)
+        .action_name("win.home-section")
+        .action_target(&section.id.name().to_variant())
+        .css_classes(["card", "home-section-tile"])
+        .build();
+    if let SectionId::Collection(_) = section.id {
+        tile.add_css_class("home-collection-tile");
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(12)
+            .valign(gtk::Align::Center)
+            .margin_start(12)
+            .margin_end(12)
+            .build();
+        content.append(
+            &gtk::Image::builder()
+                .icon_name("folder-symbolic")
+                .pixel_size(48)
+                .accessible_role(gtk::AccessibleRole::Presentation)
+                .build(),
+        );
+        content.append(
+            &gtk::Label::builder()
+                .label(title)
+                .ellipsize(gtk::pango::EllipsizeMode::End)
+                .css_classes(["heading"])
+                .build(),
+        );
+        frame.add_overlay(&content);
+    } else {
+        let resource = format!("{RESOURCE_BASE_PATH}/home/{}.svg", section.id.name());
+        let art = gtk::Picture::for_resource(&resource);
+        art.set_content_fit(gtk::ContentFit::Cover);
+        art.set_can_shrink(true);
+        art.set_accessible_role(gtk::AccessibleRole::Presentation);
+        frame.add_overlay(&art);
+    }
+    tile.update_property(&[gtk::accessible::Property::Label(title)]);
+    tile
+}
+
 /// Room kept beside the focused card when the carousel scrolls, as wide as its margins;
 /// padding a design gives the carousel, for a focused card it scales up, adds to it.
 const SCROLL_MARGIN: f64 = 48.0;
 
-/// What a card shows of its game, to rebuild the carousel only when that changes.
+/// What a card shows of its game, to rebuild the cards only when that changes.
 type CardKey = (GameId, String, Option<u8>, ArtSet);
+
+/// What a section's tile shows, to rebuild the tiles only when that changes.
+type TileKey = (SectionId, String);
+
+/// What has focus on Home, which the title, details and hero show.
+#[derive(Debug, Clone)]
+enum Focused {
+    Section(SectionId),
+    Game(GameObject),
+    Library,
+}
 
 mod imp {
     use super::*;
@@ -102,12 +193,23 @@ mod imp {
         pub carousel: TemplateChild<gtk::Box>,
         #[template_child]
         pub library_tile: TemplateChild<gtk::Button>,
-        /// What the cards show, in carousel order.
+        /// Home's sections, in order, each with its games.
+        pub sections: RefCell<Vec<(Section, Vec<GameObject>)>>,
+        /// The section whose games the second screen shows; `None` on the first screen.
+        pub open: Cell<Option<SectionId>>,
+        /// What the section tiles show, in carousel order.
+        pub tiles_shown: RefCell<Vec<TileKey>>,
+        /// The section tiles in the carousel, each with its section.
+        pub tiles: RefCell<Vec<(gtk::Button, SectionId)>>,
+        /// What the game cards show, in carousel order.
         pub shown: RefCell<Vec<CardKey>>,
-        /// The game cards, in carousel order, each with its game.
+        /// The game cards in the carousel, each with its game.
         pub cards: RefCell<Vec<(gtk::Button, GameObject)>>,
-        /// The card that last had focus: its game, or `None` for the Library tile.
-        pub focus_memory: RefCell<FocusMemory<(), Option<GameId>>>,
+        /// The tile that last had focus on the first screen: its section, or `None` for
+        /// the Library tile.
+        pub section_focus: RefCell<FocusMemory<(), Option<SectionId>>>,
+        /// The card that last had focus in each section's games.
+        pub game_focus: RefCell<FocusMemory<SectionId, GameId>>,
         /// Bumped for every hero shown, so art that loads late for an earlier one is dropped.
         pub hero_generation: Cell<u64>,
         /// The layout of the design in force.
@@ -138,7 +240,7 @@ mod imp {
                 page,
                 move |tile| {
                     if tile.has_focus() {
-                        page.card_focused(tile, None);
+                        page.card_focused(tile, Focused::Library);
                     }
                 }
             ));
@@ -148,7 +250,8 @@ mod imp {
             }
             page.show_home_layout(HomeLayout::default());
             page.show_tile_shape(TileShape::default(), None);
-            page.show_hero(None);
+            page.show_screen_class();
+            page.show_focused(&Focused::Library);
         }
     }
 
@@ -171,27 +274,24 @@ glib::wrapper! {
 
 impl HomePage {
     /// Follows the layout of the design in force: where the carousel sits, the shape and
-    /// size its cards take, and whether the focused game's details show.
+    /// size its tiles take, and whether the focused item's details show.
     pub fn set_layout(&self, layout: ThemeLayout) {
         let imp = self.imp();
         let old = imp.layout.replace(layout);
         if old.home != layout.home {
             self.show_home_layout(layout.home);
         }
-        if old.home_details != layout.home_details {
-            self.show_details(self.remembered().1.as_ref());
+        if old.home_details != layout.home_details
+            && let Some((_, focused)) = self.remembered()
+        {
+            self.show_details(&focused);
         }
         if (old.home_tile, old.home_tile_size) != (layout.home_tile, layout.home_tile_size) {
             self.show_tile_shape(layout.home_tile, layout.home_tile_size);
             let had_focus = self.carousel_has_focus();
-            let games: Vec<GameObject> = imp
-                .cards
-                .borrow()
-                .iter()
-                .map(|(_, game)| game.clone())
-                .collect();
+            imp.tiles_shown.replace(Vec::new());
             imp.shown.replace(Vec::new());
-            self.set_games(&games);
+            self.refresh();
             if had_focus {
                 self.focus_remembered();
             }
@@ -241,9 +341,154 @@ impl HomePage {
         imp.library_tile.set_size_request(width, height);
     }
 
-    /// Shows `games` in the carousel, before the Library tile, rebuilding the cards only
-    /// when what they show changed.
-    pub fn set_games(&self, games: &[GameObject]) {
+    /// Names the screen shown on the page for designs: `.home-sections` for the first,
+    /// `.home-games` for a section's games.
+    fn show_screen_class(&self) {
+        let home = &self.imp().home;
+        let games = self.imp().open.get().is_some();
+        home.remove_css_class(if games { "home-sections" } else { "home-games" });
+        home.add_css_class(if games { "home-games" } else { "home-sections" });
+    }
+
+    /// Takes Home's sections, each with its games, and shows them on the screen shown. A
+    /// section whose games show and that is gone now goes back to the first screen.
+    pub fn set_sections(&self, sections: Vec<(Section, Vec<GameObject>)>) {
+        self.imp().sections.replace(sections);
+        self.refresh();
+    }
+
+    /// Shows the shown screen's tiles or cards again, after the sections or the tiles'
+    /// shape changed.
+    fn refresh(&self) {
+        let imp = self.imp();
+        let Some(open) = imp.open.get() else {
+            self.show_tiles();
+            return;
+        };
+        let games = imp
+            .sections
+            .borrow()
+            .iter()
+            .find(|(section, _)| section.id == open)
+            .map(|(_, games)| games.clone());
+        match games {
+            Some(games) if !games.is_empty() => self.show_cards(&games),
+            _ => self.show_sections(),
+        }
+    }
+
+    /// Whether the second screen, a section's games, shows.
+    pub fn shows_section(&self) -> bool {
+        self.imp().open.get().is_some()
+    }
+
+    /// Shows the first screen, focused on the tile that last had focus there: the
+    /// section whose games showed, when coming back from them.
+    pub fn show_sections(&self) {
+        let imp = self.imp();
+        if imp.open.take().is_none() {
+            return;
+        }
+        for (card, _) in imp.cards.take() {
+            imp.carousel.remove(&card);
+        }
+        imp.shown.replace(Vec::new());
+        imp.library_tile.set_visible(true);
+        self.show_screen_class();
+        self.show_tiles();
+        self.focus_remembered();
+    }
+
+    /// Shows the second screen with the games of the section named `name`
+    /// (`SectionId::name`), focused on the one that last had focus there; `false` when
+    /// Home has no such section.
+    pub fn show_section(&self, name: &str) -> bool {
+        let imp = self.imp();
+        let Some(id) = SectionId::from_name(name) else {
+            return false;
+        };
+        let games = imp
+            .sections
+            .borrow()
+            .iter()
+            .find(|(section, _)| section.id == id)
+            .map(|(_, games)| games.clone());
+        let Some(games) = games.filter(|games| !games.is_empty()) else {
+            return false;
+        };
+        imp.section_focus.borrow_mut().remember((), Some(id));
+        for (tile, _) in imp.tiles.take() {
+            imp.carousel.remove(&tile);
+        }
+        imp.tiles_shown.replace(Vec::new());
+        for (card, _) in imp.cards.take() {
+            imp.carousel.remove(&card);
+        }
+        imp.shown.replace(Vec::new());
+        imp.open.set(Some(id));
+        imp.library_tile.set_visible(false);
+        self.show_screen_class();
+        self.show_cards(&games);
+        self.focus_remembered();
+        true
+    }
+
+    /// Shows a tile for each section, before the Library tile, rebuilding them only when
+    /// what they show changed.
+    fn show_tiles(&self) {
+        let imp = self.imp();
+        let sections = imp.sections.borrow().clone();
+        let keys: Vec<TileKey> = sections
+            .iter()
+            .map(|(section, _)| (section.id, section_title(section)))
+            .collect();
+        if *imp.tiles_shown.borrow() != keys {
+            // Focus that went to the Library tile only because no sections were shown yet
+            // goes to the first section once they are.
+            let first_tiles = imp.tiles.borrow().is_empty() && imp.library_tile.is_focus();
+            for (tile, _) in imp.tiles.take() {
+                imp.carousel.remove(&tile);
+            }
+            let layout = imp.layout.get();
+            let size = home::card_size(layout.home_tile, layout.home_tile_size);
+            let mut tiles: Vec<(gtk::Button, SectionId)> = Vec::with_capacity(sections.len());
+            for ((section, _), (_, title)) in sections.iter().zip(&keys) {
+                let tile = section_tile(section, title, size);
+                let id = section.id;
+                tile.connect_has_focus_notify(glib::clone!(
+                    #[weak(rename_to = page)]
+                    self,
+                    move |tile| {
+                        if tile.has_focus() {
+                            page.card_focused(tile, Focused::Section(id));
+                        }
+                    }
+                ));
+                imp.carousel
+                    .insert_child_after(&tile, tiles.last().map(|(tile, _)| tile));
+                tiles.push((tile, id));
+            }
+            imp.tiles.replace(tiles);
+            imp.tiles_shown.replace(keys);
+            if first_tiles && let Some((section, _)) = sections.first() {
+                imp.section_focus
+                    .borrow_mut()
+                    .remember((), Some(section.id));
+                self.focus_remembered();
+                return;
+            }
+        }
+        if !self.carousel_has_focus()
+            && let Some((_, focused)) = self.remembered()
+        {
+            // The title and details follow the tile that focus comes back to.
+            self.show_focused(&focused);
+        }
+    }
+
+    /// Shows the cards of `games`, the open section's, rebuilding them only when what
+    /// they show changed.
+    fn show_cards(&self, games: &[GameObject]) {
         let imp = self.imp();
         let keys: Vec<CardKey> = games
             .iter()
@@ -260,10 +505,8 @@ impl HomePage {
         if *imp.shown.borrow() == keys {
             return;
         }
+        let had_focus = self.carousel_has_focus();
         imp.shown.replace(keys);
-        // Focus that went to the Library tile only because no games were shown yet goes
-        // to the first game once they are.
-        let first_games = imp.cards.borrow().is_empty() && imp.library_tile.is_focus();
         for (card, _) in imp.cards.take() {
             imp.carousel.remove(&card);
         }
@@ -282,7 +525,7 @@ impl HomePage {
                 game,
                 move |card| {
                     if card.has_focus() {
-                        page.card_focused(card, Some(&game));
+                        page.card_focused(card, Focused::Game(game));
                     }
                 }
             ));
@@ -291,38 +534,49 @@ impl HomePage {
             cards.push((card, game.clone()));
         }
         imp.cards.replace(cards);
-        if first_games && !games.is_empty() {
-            imp.focus_memory
-                .borrow_mut()
-                .remember((), Some(games[0].id()));
+        if had_focus {
+            // The focused card was rebuilt: focus its game's new card.
             self.focus_remembered();
-        } else if !self.carousel_has_focus() {
+        } else if let Some((_, focused)) = self.remembered() {
             // The hero follows the card that focus comes back to.
-            self.show_hero(self.remembered().1.as_ref());
+            self.show_focused(&focused);
         }
     }
 
-    /// Focuses the card that last had focus, wherever it moved to, or the first card when
-    /// it is gone.
+    /// Focuses the tile or card that last had focus on the screen shown, wherever it
+    /// moved to, or the first one when it is gone.
     pub fn focus_remembered(&self) {
-        let (card, game) = self.remembered();
-        card.grab_focus();
-        self.show_hero(game.as_ref());
+        if let Some((card, focused)) = self.remembered() {
+            card.grab_focus();
+            self.show_focused(&focused);
+        }
     }
 
-    /// The card that last had focus, with its game (`None` for the Library tile).
-    fn remembered(&self) -> (gtk::Button, Option<GameObject>) {
+    /// The tile or card that last had focus on the screen shown, with what it shows.
+    fn remembered(&self) -> Option<(gtk::Button, Focused)> {
         let imp = self.imp();
-        let cards = imp.cards.borrow();
-        let items: Vec<Option<GameId>> = cards
-            .iter()
-            .map(|(_, game)| Some(game.id()))
-            .chain([None])
-            .collect();
-        let position = imp.focus_memory.borrow().position(&(), &items);
-        match cards.get(position) {
-            Some((card, game)) => (card.clone(), Some(game.clone())),
-            None => (imp.library_tile.get(), None),
+        match imp.open.get() {
+            None => {
+                let tiles = imp.tiles.borrow();
+                let items: Vec<Option<SectionId>> = tiles
+                    .iter()
+                    .map(|(_, id)| Some(*id))
+                    .chain([None])
+                    .collect();
+                let position = imp.section_focus.borrow().position(&(), &items);
+                Some(match tiles.get(position) {
+                    Some((tile, id)) => (tile.clone(), Focused::Section(*id)),
+                    None => (imp.library_tile.get(), Focused::Library),
+                })
+            }
+            Some(open) => {
+                let cards = imp.cards.borrow();
+                let items: Vec<GameId> = cards.iter().map(|(_, game)| game.id()).collect();
+                let position = imp.game_focus.borrow().position(&open, &items);
+                cards
+                    .get(position)
+                    .map(|(card, game)| (card.clone(), Focused::Game(game.clone())))
+            }
         }
     }
 
@@ -342,12 +596,17 @@ impl HomePage {
             .contains(gtk::StateFlags::FOCUS_WITHIN)
     }
 
-    /// Notes the focused card, scrolls it into view and shows its game in the hero.
-    fn card_focused(&self, card: &gtk::Button, game: Option<&GameObject>) {
+    /// Notes the focused tile or card, scrolls it into view and shows what it stands for.
+    fn card_focused(&self, card: &gtk::Button, focused: Focused) {
         let imp = self.imp();
-        imp.focus_memory
-            .borrow_mut()
-            .remember((), game.map(GameObject::id));
+        match (&focused, imp.open.get()) {
+            (Focused::Game(game), Some(open)) => {
+                imp.game_focus.borrow_mut().remember(open, game.id());
+            }
+            (Focused::Section(id), None) => imp.section_focus.borrow_mut().remember((), Some(*id)),
+            (Focused::Library, None) => imp.section_focus.borrow_mut().remember((), None),
+            _ => {}
+        }
         if let Some(viewport) = imp.carousel.parent()
             && let Some(adjustment) = viewport
                 .downcast_ref::<gtk::Viewport>()
@@ -359,7 +618,7 @@ impl HomePage {
             let margin = SCROLL_MARGIN + self.carousel_padding();
             adjustment.clamp_page(start - margin, end + margin);
         }
-        self.show_hero(game);
+        self.show_focused(&focused);
     }
 
     /// The carousel's padding on each side, which only a design gives it: its width less
@@ -380,27 +639,80 @@ impl HomePage {
         f64::from((width - gaps).max(0)) / 2.0
     }
 
-    /// Fills the `.home-details` row with the game's `.detail` items, while the design
-    /// asks for them; the row hides without a game or details.
-    fn show_details(&self, game: Option<&GameObject>) {
-        let imp = self.imp();
-        while let Some(item) = imp.details.first_child() {
-            imp.details.remove(&item);
+    /// Shows what has focus: a game's hero, logo or title and details; a section's name
+    /// and details without art; the title "Library" without art for the Library tile.
+    fn show_focused(&self, focused: &Focused) {
+        match focused {
+            Focused::Game(game) => self.show_hero(Some(game)),
+            Focused::Library => self.show_hero(None),
+            Focused::Section(id) => {
+                let section = self
+                    .imp()
+                    .sections
+                    .borrow()
+                    .iter()
+                    .find(|(section, _)| section.id == *id)
+                    .map(|(section, _)| section.clone());
+                match section {
+                    Some(section) => self.show_section_info(&section),
+                    None => self.show_hero(None),
+                }
+            }
         }
-        let details = match game.filter(|_| imp.layout.get().home_details) {
-            Some(game) => {
+    }
+
+    /// Shows a section's name with its details, and no art.
+    fn show_section_info(&self, section: &Section) {
+        let imp = self.imp();
+        imp.hero_generation.set(imp.hero_generation.get() + 1);
+        self.hide_hero_art();
+        imp.logo.set_paintable(gtk::gdk::Paintable::NONE);
+        imp.logo.set_visible(false);
+        imp.title.set_visible(true);
+        imp.title.set_label(&section_title(section));
+        self.fill_details(&home::section_details(section));
+    }
+
+    /// Fills the `.home-details` row with the details of what has focus, while the design
+    /// asks for them; the row hides without any.
+    fn show_details(&self, focused: &Focused) {
+        let details = match focused {
+            Focused::Game(game) => {
                 let now = glib::DateTime::now_local().ok();
                 let (now, offset) =
                     now.map_or((0, 0), |now| (now.to_unix(), now.utc_offset().as_seconds()));
                 let entry = game.entry();
                 home::details(&entry.game, entry.playtime_secs, now, offset)
             }
-            None => Vec::new(),
+            Focused::Section(id) => self
+                .imp()
+                .sections
+                .borrow()
+                .iter()
+                .find(|(section, _)| section.id == *id)
+                .map(|(section, _)| home::section_details(section))
+                .unwrap_or_default(),
+            Focused::Library => Vec::new(),
         };
-        for detail in &details {
+        self.fill_details(&details);
+    }
+
+    /// Fills the `.home-details` row with `details` as `.detail` items, while the design
+    /// asks for them; the row hides without any.
+    fn fill_details(&self, details: &[Detail]) {
+        let imp = self.imp();
+        while let Some(item) = imp.details.first_child() {
+            imp.details.remove(&item);
+        }
+        let shown = if imp.layout.get().home_details {
+            details
+        } else {
+            &[]
+        };
+        for detail in shown {
             imp.details.append(&detail_item(*detail));
         }
-        imp.details.set_visible(!details.is_empty());
+        imp.details.set_visible(!shown.is_empty());
     }
 
     /// The two hero pictures: the one with the latest art shown, then the other.
@@ -448,12 +760,13 @@ impl HomePage {
         imp.logo.set_paintable(gtk::gdk::Paintable::NONE);
         imp.logo.set_visible(false);
         imp.title.set_visible(true);
-        self.show_details(game);
         let Some(game) = game else {
+            self.fill_details(&[]);
             self.hide_hero_art();
             imp.title.set_label(&gettext("Library"));
             return;
         };
+        self.show_details(&Focused::Game(game.clone()));
         let (title, art, logo) = {
             let entry = game.entry();
             (

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder art for Home's "steam" section; the maintainer replaces it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1c1d21"/>
+  <path d="M190 196h132c38 0 62 30 70 76l10 54c4 24-26 38-42 20l-38-42H190l-38 42c-16 18-46 4-42-20l10-54c8-46 32-76 70-76z" fill="none" stroke="#c0c4cc" stroke-width="20" stroke-linejoin="round"/><path d="M196 240v40m-20-20h40" stroke="#c0c4cc" stroke-width="16" stroke-linecap="round"/><circle cx="314" cy="248" r="11" fill="#c0c4cc"/><circle cx="342" cy="276" r="11" fill="#c0c4cc"/>
+</svg>

@@ -230,8 +230,9 @@ impl PinduWindow {
         }
     }
 
-    /// Steps out of the open submenu or closes the open menu, closes the open dialog, or
-    /// leaves the shown page for the one before it.
+    /// Steps out of the open submenu or closes the open menu, closes the open dialog,
+    /// goes back from a section's games to Home's first screen, or leaves the shown page
+    /// for the one before it.
     fn go_back(&self) {
         if let Some(menu) = self.open_menu() {
             let submenu = menu
@@ -246,6 +247,8 @@ impl PinduWindow {
             }
         } else if let Some(dialog) = self.visible_dialog() {
             dialog.close();
+        } else if self.shows_home_section() {
+            self.imp().home_page.show_sections();
         } else {
             self.imp().navigation_view.pop();
         }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder art for Home's "manual" section; the maintainer replaces it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1c1d21"/>
+  <path d="M176 336l14-56 128-128 42 42-128 128z" fill="none" stroke="#c0c4cc" stroke-width="20" stroke-linejoin="round"/><path d="M290 180l42 42" stroke="#c0c4cc" stroke-width="20"/>
+</svg>

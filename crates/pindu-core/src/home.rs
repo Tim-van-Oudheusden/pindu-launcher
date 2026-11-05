@@ -1,11 +1,12 @@
-//! Fullscreen Home's cards: their size for each tile shape a design can choose, and the
-//! art each shows.
+//! Fullscreen Home's cards: their size for each tile shape a design can choose, the art
+//! each shows, and the details row of the focused game or section.
 
 use std::path::PathBuf;
 
 use crate::art::ICON_SCALE;
 use crate::library::{ArtSet, HistoryGroup, history_group};
 use crate::model::{Game, Source, Timestamp};
+use crate::sections::Section;
 use crate::themes::TileShape;
 
 /// How far a design may scale a focused card (`transform: scale()`) before its art blurs:
@@ -90,6 +91,8 @@ pub enum Detail {
     LastPlayed { group: HistoryGroup, at: Timestamp },
     /// Where it comes from.
     Source(Source),
+    /// How many games a section of Home's first screen holds.
+    Games(u32),
 }
 
 /// The details of `game` with `playtime_secs` played, at `now` and `utc_offset` seconds
@@ -107,10 +110,17 @@ pub fn details(game: &Game, playtime_secs: i64, now: Timestamp, utc_offset: i64)
         .collect()
 }
 
+/// The details of a section of Home's first screen: how many games it holds.
+pub fn section_details(section: &Section) -> Vec<Detail> {
+    let count = u32::try_from(section.games.len()).unwrap_or(u32::MAX);
+    vec![Detail::Games(count)]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::model::{GameId, LaunchKind};
+    use crate::sections::SectionId;
 
     #[test]
     fn each_shape_has_its_card_size() {
@@ -274,5 +284,18 @@ mod tests {
                 at,
             }
         );
+    }
+
+    #[test]
+    fn a_section_details_how_many_games_it_holds() {
+        let section = Section {
+            id: SectionId::Installed,
+            title: None,
+            games: ["a", "b", "c"]
+                .map(|id| GameId::new(Source::Steam, id))
+                .to_vec(),
+        };
+
+        assert_eq!(section_details(&section), [Detail::Games(3)]);
     }
 }

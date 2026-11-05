@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder art for Home's "favourites" section; the maintainer replaces it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1c1d21"/>
+  <path d="M256 150l31 68 74 8-55 50 15 73-65-37-65 37 15-73-55-50 74-8z" fill="none" stroke="#c0c4cc" stroke-width="20" stroke-linejoin="round"/>
+</svg>

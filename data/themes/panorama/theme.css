@@ -79,9 +79,14 @@ window.fullscreen-mode .home .hero-gradient {
     linear-gradient(to top, rgb(0 0 0 / 85%), rgb(0 0 0 / 40%) 40%, transparent 65%);
 }
 
-/* The title is on the focused tile instead. */
+/* A game's title is on its focused tile instead; a section's tile has none, so the first
+   screen keeps the title. */
 window.fullscreen-mode .home .home-title {
   opacity: 0;
+}
+
+window.fullscreen-mode .home.home-sections .home-title {
+  opacity: 1;
 }
 
 /* The row: square tiles with small corners; the focused one grows from its bottom edge,

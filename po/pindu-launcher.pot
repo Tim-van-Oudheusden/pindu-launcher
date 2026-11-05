@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 18:00+0100\n"
+"POT-Creation-Date: 2026-11-05 20:11+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -139,7 +139,7 @@ msgid "_Add to Collection"
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:39
-#: crates/pindu-ui/src/fullscreen_panels.rs:614
+#: crates/pindu-ui/src/fullscreen_panels.rs:613
 msgid "_New Collection…"
 msgstr ""
 
@@ -201,7 +201,7 @@ msgstr ""
 msgid "_Cancel"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen.rs:435
+#: crates/pindu-ui/src/fullscreen.rs:477
 #, rust-format
 msgid "Your fullscreen style has a problem"
 msgid_plural "Your fullscreen style has {count} problems"
@@ -226,19 +226,21 @@ msgid "All"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:61
+#: crates/pindu-ui/src/home_page.rs:85
 #: crates/pindu-ui/src/proton_downloads_page.rs:338
 #: crates/pindu-ui/src/widgets/cover_tile.rs:329 data/ui/window.blp:452
 #: data/ui/window.blp:667
 msgid "Installed"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_library.rs:62 data/ui/window.blp:464
+#: crates/pindu-ui/src/fullscreen_library.rs:62
+#: crates/pindu-ui/src/home_page.rs:84 data/ui/window.blp:464
 #: data/ui/window.blp:675
 msgid "Favourites"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:188
-#: crates/pindu-ui/src/game_page.rs:621 crates/pindu-ui/src/home_page.rs:43
+#: crates/pindu-ui/src/game_page.rs:621 crates/pindu-ui/src/home_page.rs:48
 msgid "Last Played"
 msgstr ""
 
@@ -255,77 +257,77 @@ msgid "Recently Added"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:192
-#: crates/pindu-ui/src/game_page.rs:658 crates/pindu-ui/src/home_page.rs:32
+#: crates/pindu-ui/src/game_page.rs:658 crates/pindu-ui/src/home_page.rs:37
 msgid "Playtime"
 msgstr ""
 
 #. / What Quick Access calls the choice of no design: the stock look.
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:658
+#: crates/pindu-ui/src/fullscreen_panels.rs:657
 #: crates/pindu-ui/src/proton_choice.rs:101
 msgid "Default"
 msgstr ""
 
 #. / Why Quick Access cannot apply a design written for a newer style contract.
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:663
+#: crates/pindu-ui/src/fullscreen_panels.rs:662
 msgid "Needs a newer Pindu launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:669
-#: crates/pindu-ui/src/hint_bar.rs:153
+#: crates/pindu-ui/src/fullscreen_panels.rs:668
+#: crates/pindu-ui/src/hint_bar.rs:155
 #: crates/pindu-ui/src/widgets/cover_tile.rs:210 data/ui/cover_tile.blp:61
 msgid "Play"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:670
-#: crates/pindu-ui/src/hint_bar.rs:154
+#: crates/pindu-ui/src/fullscreen_panels.rs:669
+#: crates/pindu-ui/src/hint_bar.rs:156
 #: crates/pindu-ui/src/widgets/cover_tile.rs:208
 msgid "Stop"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:671
+#: crates/pindu-ui/src/fullscreen_panels.rs:670
 #: crates/pindu-ui/src/game_page.rs:385 data/ui/game_page.blp:115
 msgid "Add to Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:672
+#: crates/pindu-ui/src/fullscreen_panels.rs:671
 #: crates/pindu-ui/src/game_page.rs:383
 msgid "Remove from Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:673 data/ui/window.blp:123
+#: crates/pindu-ui/src/fullscreen_panels.rs:672 data/ui/window.blp:123
 #: data/ui/window.blp:210 data/ui/window.blp:493
 msgid "Collections"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:674
+#: crates/pindu-ui/src/fullscreen_panels.rs:673
 msgid "Hide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:675
+#: crates/pindu-ui/src/fullscreen_panels.rs:674
 msgid "Unhide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:679
+#: crates/pindu-ui/src/fullscreen_panels.rs:678
 msgid "Open in Launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:680
+#: crates/pindu-ui/src/fullscreen_panels.rs:679
 #: crates/pindu-ui/src/game_page.rs:268
 #, rust-format
 msgid "Open in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:727 data/ui/game_page.blp:188
+#: crates/pindu-ui/src/fullscreen_panels.rs:726 data/ui/game_page.blp:188
 msgid "Playing Now"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:743
+#: crates/pindu-ui/src/fullscreen_panels.rs:742
 msgid "_Return"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:744
+#: crates/pindu-ui/src/fullscreen_panels.rs:743
 #: crates/pindu-ui/src/game_page.rs:396
 msgid "_Stop"
 msgstr ""
@@ -529,7 +531,7 @@ msgstr ""
 msgid "Starts on this computer in the Steam Linux Runtime"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:618 crates/pindu-ui/src/home_page.rs:49
+#: crates/pindu-ui/src/game_page.rs:618 crates/pindu-ui/src/home_page.rs:54
 msgid "Launcher"
 msgstr ""
 
@@ -572,132 +574,149 @@ msgid_plural "{n} hours"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/hint_bar.rs:152
+#: crates/pindu-ui/src/hint_bar.rs:154
 msgid "Open"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:155
+#: crates/pindu-ui/src/hint_bar.rs:157
 msgid "Toggle"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:156
+#: crates/pindu-ui/src/hint_bar.rs:158
 msgid "Select"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:157 data/ui/shortcuts-dialog.blp:58
+#: crates/pindu-ui/src/hint_bar.rs:159 data/ui/shortcuts-dialog.blp:58
 msgid "Back"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:158
+#: crates/pindu-ui/src/hint_bar.rs:160
 msgid "Close"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:159 data/ui/shortcuts-dialog.blp:9
+#: crates/pindu-ui/src/hint_bar.rs:161 data/ui/shortcuts-dialog.blp:9
 msgid "Search"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:160
+#: crates/pindu-ui/src/hint_bar.rs:162
 msgid "Tabs"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:161 data/ui/window.blp:603
+#: crates/pindu-ui/src/hint_bar.rs:163 data/ui/window.blp:603
 msgid "Sort"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:162 data/ui/game_page.blp:142
+#: crates/pindu-ui/src/hint_bar.rs:164 data/ui/game_page.blp:142
 msgid "Options"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:163
+#: crates/pindu-ui/src/hint_bar.rs:165
 msgid "Hold to Cancel"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:164 crates/pindu-ui/src/hint_bar.rs:181
+#: crates/pindu-ui/src/hint_bar.rs:166 crates/pindu-ui/src/hint_bar.rs:183
 #: data/ui/shortcuts-dialog.blp:77 data/ui/window.blp:41
 msgid "Menu"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:165 data/ui/shortcuts-dialog.blp:82
+#: crates/pindu-ui/src/hint_bar.rs:167 data/ui/shortcuts-dialog.blp:82
 #: data/ui/window.blp:327 data/ui/window.blp:349
 msgid "Quick Access"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:166 data/ui/game_dialog.blp:40
+#: crates/pindu-ui/src/hint_bar.rs:168 data/ui/game_dialog.blp:40
 msgid "Type"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:167
+#: crates/pindu-ui/src/hint_bar.rs:169
 #: crates/pindu-ui/src/search_keyboard.rs:167
 msgid "Delete"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:168
+#: crates/pindu-ui/src/hint_bar.rs:170
 #: crates/pindu-ui/src/search_keyboard.rs:168
 msgid "Done"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:176
+#: crates/pindu-ui/src/hint_bar.rs:178
 msgid "Cross"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:177
+#: crates/pindu-ui/src/hint_bar.rs:179
 msgid "Circle"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:178
+#: crates/pindu-ui/src/hint_bar.rs:180
 msgid "Square"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:179
+#: crates/pindu-ui/src/hint_bar.rs:181
 msgid "Triangle"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:180
+#: crates/pindu-ui/src/hint_bar.rs:182
 msgid "View"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:182
+#: crates/pindu-ui/src/hint_bar.rs:184
 msgid "Minus"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:183
+#: crates/pindu-ui/src/hint_bar.rs:185
 msgid "Plus"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:184 data/ui/home_page.blp:5
+#: crates/pindu-ui/src/hint_bar.rs:186 data/ui/home_page.blp:5
 #: data/ui/window.blp:87 data/ui/window.blp:526
 msgid "Home"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:185
+#: crates/pindu-ui/src/hint_bar.rs:187
 msgid "More"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:186
+#: crates/pindu-ui/src/hint_bar.rs:188
 msgid "D-pad Up"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:187
+#: crates/pindu-ui/src/hint_bar.rs:189
 msgid "D-pad Down"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:188
+#: crates/pindu-ui/src/hint_bar.rs:190
 msgid "D-pad Left"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:189
+#: crates/pindu-ui/src/hint_bar.rs:191
 msgid "D-pad Right"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:36 crates/pindu-ui/src/window.rs:617
+#: crates/pindu-ui/src/home_page.rs:41 crates/pindu-ui/src/window.rs:617
 msgid "Today"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:37 crates/pindu-ui/src/window.rs:618
+#: crates/pindu-ui/src/home_page.rs:42 crates/pindu-ui/src/window.rs:618
 msgid "This Week"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:454 data/ui/home_page.blp:154
+#: crates/pindu-ui/src/home_page.rs:56
+msgid "Games"
+msgstr ""
+
+#. / How many games a section holds, as its details row says it.
+
+#: crates/pindu-ui/src/home_page.rs:76
+#, rust-format
+msgid "{count} game"
+msgid_plural "{count} games"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/pindu-ui/src/home_page.rs:83
+msgid "Recently Played"
+msgstr ""
+
+#: crates/pindu-ui/src/home_page.rs:766 data/ui/home_page.blp:154
 #: data/ui/preferences.blp:10 data/ui/shortcuts-dialog.blp:35
 #: data/ui/window.blp:105 data/ui/window.blp:437 data/ui/window.blp:536
 msgid "Library"
