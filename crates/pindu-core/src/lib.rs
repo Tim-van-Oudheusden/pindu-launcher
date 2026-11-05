@@ -19,6 +19,7 @@ pub mod paths;
 pub mod pe;
 pub mod permissions;
 pub mod proton;
+pub mod proton_downloads;
 pub mod search;
 pub mod sound;
 pub mod sources;
