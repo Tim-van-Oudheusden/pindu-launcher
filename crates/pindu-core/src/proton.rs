@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 
 use crate::launch::{self, Command};
 use crate::model::{Game, LaunchConfig, Source};
+use crate::paths::document_root;
 use crate::sources::location::{HostDirs, Location};
 use crate::sources::vdf;
 
@@ -17,6 +18,8 @@ use crate::sources::vdf;
 const COMPAT_TOOLS: &str = "compatibilitytools.d";
 /// The GameMode client library, from the `gamemode` module of our Flatpak.
 const LIBGAMEMODE: &str = "libgamemode.so.0";
+/// Wine's `start`, in every prefix.
+const WINE_START: &str = "C:\\windows\\command\\start.exe";
 
 /// A Proton build on this machine.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -185,24 +188,62 @@ pub fn command(
         };
         environment.insert("LD_PRELOAD".to_owned(), preload);
     }
+    let (target, working_dir) = umu_target(
+        &config.executable,
+        &config.arguments,
+        config.working_dir.as_deref(),
+    );
+    if working_dir != config.working_dir {
+        // Proton's fixes take the game's folder from here, or else from the working folder.
+        if let Some(folder) = config.executable.parent() {
+            environment
+                .entry("STEAM_COMPAT_INSTALL_PATH".to_owned())
+                .or_insert_with(|| path_text(folder));
+        }
+    }
     // The wrappers, outermost first, then `gamemoderun`, wrap umu, which starts the game
     // in the Steam Runtime container through the Flatpak portal.
     let mut argv = config.wrappers.clone();
     if config.gamemode {
         argv.push("gamemoderun".to_owned());
     }
-    argv.extend(["umu-run".to_owned(), path_text(&config.executable)]);
-    argv.extend(config.arguments.iter().cloned());
+    argv.push("umu-run".to_owned());
+    argv.extend(target);
     Ok(Command {
         argv,
         environment,
-        working_dir: config.working_dir.clone(),
+        working_dir,
     })
+}
+
+/// What follows `umu-run` to run a program, and the folder umu runs in.
+///
+/// In a folder below a document portal root, `getcwd()` fails as soon as the portal has
+/// invalidated the folder's entry, which it does shortly after every lookup of it
+/// (xdg-desktop-portal#1812), and umu, Proton and Wine all ask for it. So umu runs from
+/// the document root, which the portal never invalidates, and Wine's `start` gives the
+/// program its own folder as its Windows working folder and waits for it to exit.
+fn umu_target(
+    program: &Path,
+    arguments: &[String],
+    working_dir: Option<&Path>,
+) -> (Vec<String>, Option<PathBuf>) {
+    let mut argv = Vec::new();
+    let mut umu_dir = working_dir.map(Path::to_owned);
+    if let Some((dir, root)) = working_dir.and_then(|dir| Some((dir, document_root(dir)?))) {
+        // Wine's drive Z: is the root folder.
+        let windows_dir = format!("Z:{}", path_text(dir).replace('/', "\\"));
+        argv.extend([WINE_START, "/d", windows_dir.as_str(), "/wait", "/unix"].map(str::to_owned));
+        umu_dir = Some(root);
+    }
+    argv.push(path_text(program));
+    argv.extend(arguments.iter().cloned());
+    (argv, umu_dir)
 }
 
 /// The command that runs a game's installer through umu, in the prefix the game will
 /// use, with the named Proton build or the default one. It runs in the installer's
-/// folder, and with umu's default game ID, as there is no game yet.
+/// folder (see `umu_target`), and with umu's default game ID, as there is no game yet.
 pub fn installer_command(
     installer: &Path,
     proton_version: Option<&str>,
@@ -222,10 +263,11 @@ pub fn installer_command(
     .into_iter()
     .map(|(key, value)| (key.to_owned(), value))
     .collect();
+    let (target, working_dir) = umu_target(installer, &[], installer.parent());
     Ok(Command {
-        argv: vec!["umu-run".to_owned(), path_text(installer)],
+        argv: [vec!["umu-run".to_owned()], target].concat(),
         environment,
-        working_dir: installer.parent().map(Path::to_owned),
+        working_dir,
     })
 }
 
@@ -462,6 +504,59 @@ mod tests {
         assert_eq!(
             command(&game, &chosen, &[other], &defaults),
             Err(ProtonError::Missing("GE-Proton9-1".into()))
+        );
+    }
+
+    #[test]
+    fn a_game_in_a_portal_folder_starts_from_the_document_root_in_its_own_windows_folder() {
+        let builds = [build("GE-Proton11-3")];
+        let folder = "/run/user/1000/doc/a1b2/Games/Notepad Game";
+        let config = LaunchConfig {
+            executable: format!("{folder}/notepad.exe").into(),
+            arguments: vec!["readme.txt".into()],
+            working_dir: Some(folder.into()),
+            ..LaunchConfig::default()
+        };
+
+        let command = command(&game(), &config, &builds, &defaults()).unwrap();
+
+        // getcwd() fails in a folder below a document root (xdg-desktop-portal#1812), so
+        // umu runs from the root and Wine's `start` gives the game its own folder.
+        assert_eq!(command.working_dir, Some("/run/user/1000/doc/a1b2".into()));
+        assert_eq!(
+            command.argv,
+            [
+                "umu-run",
+                "C:\\windows\\command\\start.exe",
+                "/d",
+                "Z:\\run\\user\\1000\\doc\\a1b2\\Games\\Notepad Game",
+                "/wait",
+                "/unix",
+                &format!("{folder}/notepad.exe"),
+                "readme.txt",
+            ]
+        );
+        assert_eq!(command.environment["STEAM_COMPAT_INSTALL_PATH"], folder);
+        // The document itself is below its root too; the root is fine as it is.
+        let at_document = LaunchConfig {
+            working_dir: Some("/run/user/1000/doc/a1b2/Games".into()),
+            ..config.clone()
+        };
+        let at_root = LaunchConfig {
+            working_dir: Some("/run/user/1000/doc/a1b2".into()),
+            ..config
+        };
+        assert_eq!(
+            super::command(&game(), &at_document, &builds, &defaults())
+                .unwrap()
+                .working_dir,
+            Some("/run/user/1000/doc/a1b2".into())
+        );
+        let unchanged = super::command(&game(), &at_root, &builds, &defaults()).unwrap();
+        assert_eq!(unchanged.argv[1], format!("{folder}/notepad.exe"));
+        assert_eq!(
+            unchanged.working_dir,
+            Some("/run/user/1000/doc/a1b2".into())
         );
     }
 
