@@ -47,8 +47,6 @@ gamescope -f -- flatpak run --nosocket=wayland io.github.tim_van_oudheusden.pind
   (`gamescope -W 3840 -H 2160 -w 1920 -h 1080 -f -- …`) or scale the app (`flatpak run --env=GDK_SCALE=2 …`).
 - `--expose-wayland` is not recommended. The app then runs as a Wayland client, but gamescope doesn't make its window
   fullscreen: the window keeps its desktop size, and gamescope scales it up to the screen.
-- Known issue: the controller doesn't move focus in this setup yet; the keyboard works
-  ([#130](https://github.com/Tim-van-Oudheusden/pindu-launcher/issues/130)).
 
 ## Translating
 
