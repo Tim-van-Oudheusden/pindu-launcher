@@ -188,7 +188,7 @@ impl Picker {
             }
             Ok(images) => images,
             // A rejected key is asked for again.
-            Err(error) if error == steamgriddb_service::KEY_REJECTED => {
+            Err(error) if error.key_rejected() => {
                 self.ask_for_key();
                 self.status.set_description(Some(&gettext(
                     "SteamGridDB did not accept the stored key. Enter a valid one; it is kept in your keyring.",
@@ -196,7 +196,10 @@ impl Picker {
                 return;
             }
             Err(error) => {
-                self.show_message(&gettext("SteamGridDB Cannot Be Reached"), &error);
+                self.show_message(
+                    &gettext("SteamGridDB Cannot Be Reached"),
+                    &error.to_string(),
+                );
                 return;
             }
         };
@@ -238,9 +241,10 @@ impl Picker {
                             (picker.done)(image);
                             picker.dialog.close();
                         }
-                        Err(error) => {
-                            picker.show_message(&gettext("The Image Cannot Be Downloaded"), &error)
-                        }
+                        Err(error) => picker.show_message(
+                            &gettext("The Image Cannot Be Downloaded"),
+                            &error.to_string(),
+                        ),
                     }
                 });
             });

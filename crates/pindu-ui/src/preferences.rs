@@ -55,6 +55,8 @@ mod imp {
         #[template_child]
         pub sources_group: TemplateChild<adw::PreferencesGroup>,
         #[template_child]
+        pub artwork_page: TemplateChild<adw::PreferencesPage>,
+        #[template_child]
         pub key_row: TemplateChild<adw::PasswordEntryRow>,
         #[template_child]
         pub key_status_row: TemplateChild<adw::ActionRow>,
@@ -237,6 +239,13 @@ impl PreferencesDialog {
         dialog.imp().sync.set(sync.clone()).expect("new dialog");
         dialog.show_sources();
         dialog
+    }
+
+    /// Shows the Artwork page with focus in the SteamGridDB key field.
+    pub fn show_key_field(&self) {
+        let imp = self.imp();
+        self.set_visible_page(&*imp.artwork_page);
+        imp.key_row.grab_focus();
     }
 
     fn settings(&self) -> &gio::Settings {
@@ -462,8 +471,9 @@ impl PreferencesDialog {
             match saved {
                 Ok(()) => {
                     dialog.imp().key_row.set_text("");
-                    dialog.add_toast(adw::Toast::new(&gettext("Key saved")));
                     dialog.show_key_status();
+                    // The fetch reports in toasts here while the dialog is open.
+                    let _ = dialog.activate_action("app.fetch-art", Some(&true.to_variant()));
                 }
                 Err(error) => dialog.add_toast(adw::Toast::new(
                     &gettext("The key was not saved: {error}").replace("{error}", &error),

@@ -13,15 +13,13 @@ use pindu_core::manual;
 use pindu_core::model::{ArtLayout, Artwork, Game, GameId, Source};
 use pindu_core::paths::{default_library_db_path, default_user_art_dir};
 use pindu_core::steamgriddb::{
-    self, GameRef, Image, SearchHit, layouts_to_fetch, matching_hit, retry_delay,
+    self, ArtRun, GameRef, Image, OnFailure, RequestError, RunEnd, SearchHit, layouts_to_fetch,
+    matching_hit, on_failure, retry_delay,
 };
 use pindu_core::store::Store;
 use soup::prelude::*;
 
 use crate::file_service::PickedImage;
-
-/// The error of a request SteamGridDB refused for its API key.
-pub const KEY_REJECTED: &str = "SteamGridDB did not accept the API key";
 
 /// Where the API key is filed in the keyring.
 const KEY_ATTRIBUTES: [(&str, &str); 1] = [("pindu-launcher", "steamgriddb-api-key")];
@@ -62,13 +60,25 @@ pub async fn set_api_key(key: &str) -> Result<(), String> {
 }
 
 /// Fetches SteamGridDB art for the games in the library that lack it (see
-/// [`layouts_to_fetch`]), the top image per layout, and returns how many were stored.
-/// Without a stored key nothing is requested. Steam games are looked up by app ID, others
-/// by a search that must find their exact title. A failed request ends the run (offline,
-/// key rejected, rate limit given up); answers already fetched come from the cache.
-pub async fn fetch_missing_art(prefer_steamgriddb: bool) -> usize {
-    let Ok(Some(key)) = api_key().await else {
-        return 0;
+/// [`layouts_to_fetch`]), the top image per layout, and says what it did; `on_start` hears
+/// how many games want art before the first request. Without a stored key nothing is
+/// requested and there is no run. Steam games are looked up by app ID, others by a search
+/// that must find their exact title. A game SteamGridDB has nothing for is skipped; a
+/// rejected key or no connection ends the run ([`on_failure`]). Answers already fetched
+/// come from the cache.
+pub async fn fetch_missing_art(
+    prefer_steamgriddb: bool,
+    on_start: impl FnOnce(usize),
+) -> Option<ArtRun> {
+    let key = match api_key().await {
+        Ok(key) => key?,
+        Err(error) => {
+            glib::g_debug!(
+                "pindu",
+                "No SteamGridDB art, the keyring cannot be used: {error}"
+            );
+            return None;
+        }
     };
     let wanted = gio::spawn_blocking(move || games_wanting_art(prefer_steamgriddb))
         .await
@@ -80,65 +90,97 @@ pub async fn fetch_missing_art(prefer_steamgriddb: bool) -> usize {
                 "pindu",
                 "Could not read the library for SteamGridDB art: {error}"
             );
-            return 0;
+            return None;
         }
     };
+    on_start(wanted.len());
     let client = SteamGridDb::new(key);
-    let mut stored = 0;
+    let mut run = ArtRun {
+        stored: 0,
+        games_with_art: 0,
+        tried: 0,
+        end: RunEnd::Done,
+    };
     for (game, layouts) in wanted {
-        let game_ref = match steam_app_id(&game) {
-            Some(app_id) => GameRef::Steam(app_id),
-            None => match client.search(&game.title).await {
-                Ok(hits) => match matching_hit(&game.title, &hits) {
-                    Some(id) => GameRef::Grid(id),
-                    None => continue,
-                },
-                Err(error) => {
-                    glib::g_debug!("pindu", "SteamGridDB art stopped: {error}");
-                    return stored;
-                }
-            },
-        };
-        for layout in layouts {
-            let image = match client.images(layout, &game_ref).await {
-                Ok(images) => images.into_iter().next(),
-                Err(error) => {
-                    glib::g_debug!("pindu", "SteamGridDB art stopped: {error}");
-                    return stored;
-                }
-            };
-            let Some(image) = image else { continue };
-            let picked = match client.image(&image.url).await {
-                Ok(picked) => picked,
-                Err(error) => {
-                    glib::g_debug!("pindu", "Could not fetch {}: {error}", image.url);
-                    continue;
-                }
-            };
-            let id = game.id.clone();
-            let saved = gio::spawn_blocking(move || {
-                let store = Store::open(&default_library_db_path()).map_err(|e| e.to_string())?;
-                manual::set_steamgriddb_art(
-                    &store,
-                    &default_user_art_dir(),
-                    &id,
-                    layout,
-                    &picked.extension,
-                    &picked.bytes,
-                )
-                .map_err(|error| error.to_string())
-            })
-            .await;
-            match saved {
-                Ok(Ok(_)) => stored += 1,
-                Ok(Err(error)) => {
-                    glib::g_warning!("pindu", "Could not store SteamGridDB art: {error}")
-                }
-                Err(_) => {}
+        run.tried += 1;
+        match fetch_game_art(&client, &game, layouts).await {
+            Ok(stored) => {
+                run.stored += stored;
+                run.games_with_art += usize::from(stored > 0);
+            }
+            Err(end) => {
+                run.end = end;
+                break;
             }
         }
     }
-    stored
+    Some(run)
+}
+
+/// Fetches and stores the top image per layout for one game; says how many were stored,
+/// or how the run ends.
+async fn fetch_game_art(
+    client: &SteamGridDb,
+    game: &Game,
+    layouts: Vec<ArtLayout>,
+) -> Result<usize, RunEnd> {
+    // A failure that skips the game ends it with what was stored; one that stops the
+    // run ends the run.
+    let failed = |error: RequestError, stored: usize| {
+        glib::g_debug!("pindu", "SteamGridDB art for {}: {error}", game.id);
+        match on_failure(&error) {
+            OnFailure::SkipGame => Ok(stored),
+            OnFailure::Stop(end) => Err(end),
+        }
+    };
+    let game_ref = match steam_app_id(game) {
+        Some(app_id) => GameRef::Steam(app_id),
+        None => match client.search(&game.title).await {
+            Ok(hits) => match matching_hit(&game.title, &hits) {
+                Some(id) => GameRef::Grid(id),
+                None => return Ok(0),
+            },
+            Err(error) => return failed(error, 0),
+        },
+    };
+    let mut stored = 0;
+    for layout in layouts {
+        let image = match client.images(layout, &game_ref).await {
+            Ok(images) => images.into_iter().next(),
+            Err(error) => return failed(error, stored),
+        };
+        let Some(image) = image else { continue };
+        let picked = match client.image(&image.url).await {
+            Ok(picked) => picked,
+            // An image that cannot be had leaves the game's other layouts to try.
+            Err(error) => {
+                failed(error, stored)?;
+                continue;
+            }
+        };
+        let id = game.id.clone();
+        let saved = gio::spawn_blocking(move || {
+            let store = Store::open(&default_library_db_path()).map_err(|e| e.to_string())?;
+            manual::set_steamgriddb_art(
+                &store,
+                &default_user_art_dir(),
+                &id,
+                layout,
+                &picked.extension,
+                &picked.bytes,
+            )
+            .map_err(|error| error.to_string())
+        })
+        .await;
+        match saved {
+            Ok(Ok(_)) => stored += 1,
+            Ok(Err(error)) => {
+                glib::g_warning!("pindu", "Could not store SteamGridDB art: {error}")
+            }
+            Err(_) => {}
+        }
+    }
+    Ok(stored)
 }
 
 /// Games in the library, not hidden, with the layouts they want art for.
@@ -186,29 +228,33 @@ impl SteamGridDb {
     }
 
     /// Games whose title matches.
-    pub async fn search(&self, title: &str) -> Result<Vec<SearchHit>, String> {
+    pub async fn search(&self, title: &str) -> Result<Vec<SearchHit>, RequestError> {
         let answer = self
             .cached_get(&steamgriddb::search_url(title), true)
             .await?;
-        steamgriddb::parse_search(&String::from_utf8_lossy(&answer))
+        steamgriddb::parse_search(&String::from_utf8_lossy(&answer)).map_err(RequestError::Answer)
     }
 
     /// The images of a game in one layout.
-    pub async fn images(&self, layout: ArtLayout, game: &GameRef) -> Result<Vec<Image>, String> {
+    pub async fn images(
+        &self,
+        layout: ArtLayout,
+        game: &GameRef,
+    ) -> Result<Vec<Image>, RequestError> {
         let answer = self
             .cached_get(&steamgriddb::images_url(layout, game), true)
             .await?;
-        steamgriddb::parse_images(&String::from_utf8_lossy(&answer))
+        steamgriddb::parse_images(&String::from_utf8_lossy(&answer)).map_err(RequestError::Answer)
     }
 
     /// An image or thumbnail as a file in the cache, fetched the first time.
-    pub async fn image_file(&self, url: &str) -> Result<PathBuf, String> {
+    pub async fn image_file(&self, url: &str) -> Result<PathBuf, RequestError> {
         self.cached_get(url, false).await?;
         Ok(cache_file(url))
     }
 
     /// An image to store as a game's art.
-    pub async fn image(&self, url: &str) -> Result<PickedImage, String> {
+    pub async fn image(&self, url: &str) -> Result<PickedImage, RequestError> {
         let bytes = self.cached_get(url, false).await?;
         let extension = url
             .rsplit('.')
@@ -220,7 +266,7 @@ impl SteamGridDb {
     }
 
     /// GETs `url` (with the API key when `api` is set), cache first.
-    async fn cached_get(&self, url: &str, api: bool) -> Result<Vec<u8>, String> {
+    async fn cached_get(&self, url: &str, api: bool) -> Result<Vec<u8>, RequestError> {
         let path = cache_file(url);
         if let Ok(bytes) = std::fs::read(&path) {
             return Ok(bytes);
@@ -237,7 +283,7 @@ impl SteamGridDb {
 
     /// One request at a time: waits for the slot, then retries rate-limited answers after
     /// the delay the policy gives.
-    async fn get(&self, url: &str, api: bool) -> Result<Vec<u8>, String> {
+    async fn get(&self, url: &str, api: bool) -> Result<Vec<u8>, RequestError> {
         while self.busy.replace(true) {
             glib::timeout_future(std::time::Duration::from_millis(100)).await;
         }
@@ -246,10 +292,11 @@ impl SteamGridDb {
         result
     }
 
-    async fn get_with_backoff(&self, url: &str, api: bool) -> Result<Vec<u8>, String> {
+    async fn get_with_backoff(&self, url: &str, api: bool) -> Result<Vec<u8>, RequestError> {
         let mut attempt = 0;
         loop {
-            let message = soup::Message::new("GET", url).map_err(|error| error.to_string())?;
+            let message = soup::Message::new("GET", url)
+                .map_err(|error| RequestError::Answer(error.to_string()))?;
             if api && let Some(headers) = message.request_headers() {
                 headers.append("Authorization", &format!("Bearer {}", self.key));
             }
@@ -257,7 +304,7 @@ impl SteamGridDb {
                 .session
                 .send_and_read_future(&message, glib::Priority::DEFAULT)
                 .await
-                .map_err(|error| error.to_string())?;
+                .map_err(|error| RequestError::Unreachable(error.to_string()))?;
             // libsoup's status enum has no name for 429.
             match message.status_code() {
                 200 => return Ok(bytes.to_vec()),
@@ -267,13 +314,12 @@ impl SteamGridDb {
                         .and_then(|headers| headers.one("Retry-After"))
                         .and_then(|value| value.trim().parse().ok());
                     let Some(delay) = retry_delay(attempt, retry_after) else {
-                        return Err("SteamGridDB is busy; try again later".into());
+                        return Err(RequestError::Busy);
                     };
                     glib::timeout_future(delay).await;
                     attempt += 1;
                 }
-                401 => return Err(KEY_REJECTED.into()),
-                status => return Err(format!("SteamGridDB answered {status}")),
+                status => return Err(RequestError::Status(status as u16)),
             }
         }
     }

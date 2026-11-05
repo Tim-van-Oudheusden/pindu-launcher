@@ -19,6 +19,7 @@ use crate::sync_service::SyncService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
 use pindu_core::backup::ImportSummary;
+use pindu_core::steamgriddb::{self, RunNotice};
 
 mod imp {
     use std::cell::{OnceCell, RefCell};
@@ -40,6 +41,9 @@ mod imp {
         pub search_provider: RefCell<Option<gio::RegistrationId>>,
         /// Whether SteamGridDB art is being fetched.
         pub fetching_art: std::cell::Cell<bool>,
+        /// Another fetch asked for during a run, which follows it; `true` when the user
+        /// asked for it.
+        pub fetch_art_again: std::cell::Cell<Option<bool>>,
         /// A game `--launch` asked for when this is the first instance.
         pub pending_launch: RefCell<Option<String>>,
         /// Whether `--fullscreen` asked for the window in fullscreen mode.
@@ -107,7 +111,7 @@ mod imp {
                 library,
                 move |_| {
                     library.reload();
-                    app.fetch_missing_art();
+                    app.fetch_missing_art(false);
                 }
             ));
             self.session_service
@@ -175,7 +179,9 @@ mod imp {
                 application.activate_action("launch-game", Some(&id.to_variant()));
                 return;
             }
+            let mut new_window = false;
             let window = application.active_window().unwrap_or_else(|| {
+                new_window = true;
                 let window = PinduWindow::new(
                     application.upcast_ref::<adw::Application>(),
                     &self.sync_service,
@@ -188,10 +194,19 @@ mod imp {
                 self.sync_service.sync();
                 window.upcast()
             });
-            if self.pending_fullscreen.take()
-                && let Some(window) = window.downcast_ref::<PinduWindow>()
-            {
-                window.enter_fullscreen();
+            let pending_fullscreen = self.pending_fullscreen.take();
+            if let Some(window) = window.downcast_ref::<PinduWindow>() {
+                if pending_fullscreen {
+                    window.enter_fullscreen();
+                }
+                // Fullscreen mode is not interrupted: the offer waits for a start in the
+                // desktop window.
+                if new_window
+                    && !pending_fullscreen
+                    && !window.settings().boolean("start-in-fullscreen")
+                {
+                    application.offer_steamgriddb_key(window);
+                }
             }
             window.present();
         }
@@ -263,8 +278,7 @@ impl PinduApplication {
             .build();
         let preferences_action = gio::ActionEntry::builder("preferences")
             .activate(move |app: &Self, _, _| {
-                PreferencesDialog::new(&app.imp().sync_service)
-                    .present(app.active_window().as_ref());
+                app.show_preferences();
             })
             .build();
         let add_game_action = gio::ActionEntry::builder("add-game")
@@ -361,6 +375,13 @@ impl PinduApplication {
         let fullscreen_action = gio::ActionEntry::builder("fullscreen")
             .activate(move |app: &Self, _, _| app.imp().pending_fullscreen.set(true))
             .build();
+        // Fetches missing SteamGridDB art; `true` when the user asked (saved a key).
+        let fetch_art_action = gio::ActionEntry::builder("fetch-art")
+            .parameter_type(Some(glib::VariantTy::BOOLEAN))
+            .activate(move |app: &Self, _, asked| {
+                app.fetch_missing_art(asked.and_then(bool::from_variant).unwrap_or(false));
+            })
+            .build();
         self.add_action_entries([
             quit_action,
             about_action,
@@ -376,24 +397,116 @@ impl PinduApplication {
             stop_action,
             open_action,
             fullscreen_action,
+            fetch_art_action,
         ]);
     }
 
-    /// Runs `work` for the game an action names, in the active window, with a way to
-    /// show a toast there.
-    /// Fetches SteamGridDB art for games without their own, once at a time, and shows it.
-    fn fetch_missing_art(&self) {
-        if self.imp().fetching_art.replace(true) {
+    /// Opens Preferences over the active window.
+    fn show_preferences(&self) -> PreferencesDialog {
+        let dialog = PreferencesDialog::new(&self.imp().sync_service);
+        dialog.present(self.active_window().as_ref());
+        dialog
+    }
+
+    /// Fetches SteamGridDB art for games without their own, one run at a time, and shows
+    /// it. A run the user `asked` for (by saving a key) says it started and how it went;
+    /// one after an import speaks only of new art or a refused key
+    /// ([`steamgriddb::run_notice`]). A fetch asked for during a run follows it, so a key
+    /// saved meanwhile is used.
+    fn fetch_missing_art(&self, asked: bool) {
+        let imp = self.imp();
+        if imp.fetching_art.replace(true) {
+            let again = imp.fetch_art_again.get().unwrap_or(false) || asked;
+            imp.fetch_art_again.set(Some(again));
             return;
         }
         let prefer = gio::Settings::new(APP_ID).boolean("prefer-steamgriddb");
         let app = self.clone();
         glib::spawn_future_local(async move {
-            let stored = steamgriddb_service::fetch_missing_art(prefer).await;
-            app.imp().fetching_art.set(false);
-            if stored > 0 {
-                app.library_service().reload();
+            let mut progress = None;
+            let run = steamgriddb_service::fetch_missing_art(prefer, |games| {
+                if steamgriddb::announces_start(games, asked) {
+                    // It stays up until the run ends.
+                    let toast = adw::Toast::builder()
+                        .title(gettext("Getting artwork from SteamGridDB…"))
+                        .timeout(0)
+                        .build();
+                    app.show_art_toast(&toast);
+                    progress = Some(toast);
+                }
+            })
+            .await;
+            if let Some(toast) = progress {
+                toast.dismiss();
             }
+            let imp = app.imp();
+            imp.fetching_art.set(false);
+            if let Some(run) = run {
+                if run.stored > 0 {
+                    app.library_service().reload();
+                }
+                if let Some(notice) = steamgriddb::run_notice(&run, asked) {
+                    app.show_art_toast(&adw::Toast::new(&art_notice_message(notice)));
+                }
+            }
+            if let Some(asked) = imp.fetch_art_again.take() {
+                app.fetch_missing_art(asked);
+            }
+        });
+    }
+
+    /// Shows a toast about SteamGridDB art in Preferences while it is open, as saving a
+    /// key there starts a fetch, or else in the active window.
+    fn show_art_toast(&self, toast: &adw::Toast) {
+        let Some(window) = self.active_window().and_downcast::<PinduWindow>() else {
+            return;
+        };
+        match window.visible_dialog().and_downcast::<PreferencesDialog>() {
+            Some(preferences) => preferences.add_toast(toast.clone()),
+            None => window.add_toast(toast.clone()),
+        }
+    }
+
+    /// Once, on a start in the desktop window without a stored key, explains SteamGridDB
+    /// art and offers to open the key field. Either answer is the last time it is shown;
+    /// a keyring that cannot be read leaves it for another start.
+    fn offer_steamgriddb_key(&self, window: &PinduWindow) {
+        let settings = window.settings().clone();
+        if settings.boolean("steamgriddb-prompt-shown") {
+            return;
+        }
+        let app = self.clone();
+        let window = window.downgrade();
+        glib::spawn_future_local(async move {
+            let Ok(None) = steamgriddb_service::api_key().await else {
+                return;
+            };
+            // The window may have gone fullscreen or closed meanwhile.
+            let Some(window) = window.upgrade().filter(|window| !window.is_fullscreen()) else {
+                return;
+            };
+            let dialog = adw::AlertDialog::builder()
+                .heading(gettext("Game Art From SteamGridDB"))
+                .body(gettext(
+                    "SteamGridDB has covers, banners and logos for games that come without them. To use it, make a free account on steamgriddb.com and add your own API key in Preferences; it is kept in your keyring.",
+                ))
+                .close_response("not-now")
+                .default_response("settings")
+                .build();
+            dialog.add_responses(&[
+                ("not-now", &gettext("_Not Now")),
+                ("settings", &gettext("_Open Settings")),
+            ]);
+            dialog.set_response_appearance("settings", adw::ResponseAppearance::Suggested);
+            dialog.connect_response(None, move |_, response| {
+                if let Err(error) = settings.set_boolean("steamgriddb-prompt-shown", true) {
+                    glib::g_warning!("pindu", "Could not note the SteamGridDB prompt: {error}");
+                }
+                if response == "settings" {
+                    app.show_preferences().show_key_field();
+                }
+            });
+            dialog.present(Some(&window));
         });
     }
 
@@ -496,6 +609,8 @@ impl PinduApplication {
         });
     }
 
+    /// Runs `work` for the game an action names, in the active window, with a way to
+    /// show a toast there.
     fn with_game(
         &self,
         id: Option<&glib::Variant>,
@@ -540,6 +655,21 @@ impl PinduApplication {
 impl Default for PinduApplication {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// What a run fetching SteamGridDB art tells the user.
+fn art_notice_message(notice: RunNotice) -> String {
+    match notice {
+        RunNotice::Added(games) => ngettext(
+            "Added artwork for one game",
+            "Added artwork for {count} games",
+            games as u32,
+        )
+        .replace("{count}", &games.to_string()),
+        RunNotice::NoneFound => gettext("No new artwork found"),
+        RunNotice::KeyRejected => gettext("SteamGridDB did not accept the key"),
+        RunNotice::Unreachable => gettext("Could not reach SteamGridDB"),
     }
 }
 

@@ -1,5 +1,6 @@
-//! SteamGridDB: request addresses, answers and the retry policy. The HTTP calls, the
-//! request queue and the API key (kept with oo7) live in the UI's services.
+//! SteamGridDB: request addresses, answers, the retry policy, and what a run fetching
+//! missing art does after a failure and tells the user. The HTTP calls, the request queue
+//! and the API key (kept with oo7) live in the UI's services.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -155,6 +156,107 @@ pub fn retry_delay(attempt: u32, retry_after_secs: Option<u64>) -> Option<Durati
     }
     let secs = retry_after_secs.unwrap_or(1 << attempt.min(6));
     Some(Duration::from_secs(secs.min(MAX_DELAY_SECS)))
+}
+
+/// Why a SteamGridDB request failed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RequestError {
+    /// No answer came: offline, the name not resolved, the connection refused.
+    Unreachable(String),
+    /// SteamGridDB answered with this HTTP status.
+    Status(u16),
+    /// Still rate limited after [`MAX_ATTEMPTS`] tries.
+    Busy,
+    /// An answer that could not be read, or one with an error message.
+    Answer(String),
+}
+
+impl RequestError {
+    /// Whether SteamGridDB refused the API key.
+    pub fn key_rejected(&self) -> bool {
+        matches!(self, Self::Status(401 | 403))
+    }
+}
+
+impl std::fmt::Display for RequestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            _ if self.key_rejected() => f.write_str("SteamGridDB did not accept the API key"),
+            Self::Unreachable(error) | Self::Answer(error) => f.write_str(error),
+            Self::Status(status) => write!(f, "SteamGridDB answered {status}"),
+            Self::Busy => f.write_str("SteamGridDB is busy; try again later"),
+        }
+    }
+}
+
+/// How a run that fetches art for many games ended.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunEnd {
+    /// Every game was tried.
+    Done,
+    /// SteamGridDB refused the API key.
+    KeyRejected,
+    /// SteamGridDB could not be reached, or kept refusing for a while.
+    Unreachable,
+}
+
+/// What a run does after a failed request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OnFailure {
+    /// Goes on with the next game: SteamGridDB has nothing for this one.
+    SkipGame,
+    /// Stops: the next requests would fail the same way.
+    Stop(RunEnd),
+}
+
+/// What a failed request means for a run over many games.
+pub fn on_failure(error: &RequestError) -> OnFailure {
+    match error {
+        _ if error.key_rejected() => OnFailure::Stop(RunEnd::KeyRejected),
+        RequestError::Status(404) | RequestError::Answer(_) => OnFailure::SkipGame,
+        RequestError::Unreachable(_) | RequestError::Busy | RequestError::Status(_) => {
+            OnFailure::Stop(RunEnd::Unreachable)
+        }
+    }
+}
+
+/// What a run fetching missing art did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ArtRun {
+    /// Images stored.
+    pub stored: usize,
+    /// Games that got at least one image.
+    pub games_with_art: usize,
+    /// Games asked for before the run ended.
+    pub tried: usize,
+    pub end: RunEnd,
+}
+
+/// What the user is told when a run ends.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunNotice {
+    /// This many games got art.
+    Added(usize),
+    NoneFound,
+    KeyRejected,
+    Unreachable,
+}
+
+/// Whether a run for `games` games says it started: only one the user asked for (by
+/// saving a key), with games to fetch.
+pub fn announces_start(games: usize, asked: bool) -> bool {
+    asked && games > 0
+}
+
+/// What a run tells the user. One the user asked for always says how it went; one after
+/// an import only speaks of new art or a refused key, so imports do not pile up notices.
+pub fn run_notice(run: &ArtRun, asked: bool) -> Option<RunNotice> {
+    match run.end {
+        RunEnd::KeyRejected => Some(RunNotice::KeyRejected),
+        RunEnd::Unreachable if asked => Some(RunNotice::Unreachable),
+        RunEnd::Done if asked && run.games_with_art == 0 => Some(RunNotice::NoneFound),
+        _ => (run.games_with_art > 0).then_some(RunNotice::Added(run.games_with_art)),
+    }
 }
 
 /// Where an answer or image fetched from `url` is kept, under the art cache's parent.
@@ -323,5 +425,83 @@ mod tests {
             a,
             cache_path(dir, "https://www.steamgriddb.com/api/v2/grids/steam/570")
         );
+    }
+
+    #[test]
+    fn a_refused_key_or_no_connection_ends_a_run_and_a_missing_game_is_skipped() {
+        use RequestError::*;
+
+        assert_eq!(
+            on_failure(&Status(401)),
+            OnFailure::Stop(RunEnd::KeyRejected)
+        );
+        assert_eq!(
+            on_failure(&Status(403)),
+            OnFailure::Stop(RunEnd::KeyRejected)
+        );
+        assert_eq!(
+            on_failure(&Unreachable("Error resolving host".into())),
+            OnFailure::Stop(RunEnd::Unreachable)
+        );
+        assert_eq!(on_failure(&Busy), OnFailure::Stop(RunEnd::Unreachable));
+        assert_eq!(
+            on_failure(&Status(503)),
+            OnFailure::Stop(RunEnd::Unreachable)
+        );
+        assert_eq!(on_failure(&Status(404)), OnFailure::SkipGame);
+        assert_eq!(
+            on_failure(&Answer("Game not found".into())),
+            OnFailure::SkipGame
+        );
+    }
+
+    fn run(games_with_art: usize, end: RunEnd) -> ArtRun {
+        ArtRun {
+            stored: games_with_art * 2,
+            games_with_art,
+            tried: 3,
+            end,
+        }
+    }
+
+    #[test]
+    fn a_run_the_user_asked_for_says_how_it_went() {
+        assert_eq!(
+            run_notice(&run(2, RunEnd::Done), true),
+            Some(RunNotice::Added(2))
+        );
+        assert_eq!(
+            run_notice(&run(0, RunEnd::Done), true),
+            Some(RunNotice::NoneFound)
+        );
+        assert_eq!(
+            run_notice(&run(0, RunEnd::KeyRejected), true),
+            Some(RunNotice::KeyRejected)
+        );
+        assert_eq!(
+            run_notice(&run(1, RunEnd::Unreachable), true),
+            Some(RunNotice::Unreachable)
+        );
+        assert!(announces_start(3, true));
+        assert!(!announces_start(0, true));
+    }
+
+    #[test]
+    fn a_run_after_an_import_speaks_only_of_new_art_or_a_refused_key() {
+        assert_eq!(
+            run_notice(&run(2, RunEnd::Done), false),
+            Some(RunNotice::Added(2))
+        );
+        assert_eq!(
+            run_notice(&run(1, RunEnd::Unreachable), false),
+            Some(RunNotice::Added(1))
+        );
+        assert_eq!(
+            run_notice(&run(0, RunEnd::KeyRejected), false),
+            Some(RunNotice::KeyRejected)
+        );
+        assert_eq!(run_notice(&run(0, RunEnd::Done), false), None);
+        assert_eq!(run_notice(&run(0, RunEnd::Unreachable), false), None);
+        assert!(!announces_start(3, false));
     }
 }
