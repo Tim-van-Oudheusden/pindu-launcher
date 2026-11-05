@@ -21,6 +21,7 @@ use crate::fullscreen::NavigationSounds;
 use crate::game_page::GamePage;
 use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
+use crate::log_service;
 use crate::models::{GameObject, LibraryModel};
 use crate::sources::{source_icon, source_name};
 use crate::sync_service::SyncService;
@@ -333,6 +334,7 @@ impl PinduWindow {
         self.add_game_action("toggle-pin", Self::toggle_pin);
         self.add_game_action("show-details", Self::show_details);
         self.add_game_action("open-install-folder", Self::open_install_folder);
+        self.add_game_action("open-log", Self::open_log);
 
         self.setup_collection_actions();
 
@@ -398,6 +400,33 @@ impl PinduWindow {
             if let Err(error) = result {
                 glib::g_warning!("pindu", "Could not open the install folder: {error}");
             }
+        });
+    }
+
+    /// Opens the game's newest log from "Play with Logs" in the user's text editor.
+    fn open_log(&self, id: &GameId) {
+        let window = self.downgrade();
+        let id = id.clone();
+        glib::spawn_future_local(async move {
+            let latest = gio::spawn_blocking(move || log_service::latest(&id))
+                .await
+                .ok()
+                .flatten();
+            let Some(window) = window.upgrade() else {
+                return;
+            };
+            let Some(path) = latest else {
+                window.add_toast(adw::Toast::new(&gettext(
+                    "No logs yet: start the game with Play with Logs",
+                )));
+                return;
+            };
+            let launcher = gtk::FileLauncher::new(Some(&gio::File::for_path(path)));
+            launcher.launch(Some(&window), gio::Cancellable::NONE, |result| {
+                if let Err(error) = result {
+                    glib::g_warning!("pindu", "Could not open the log: {error}");
+                }
+            });
         });
     }
 

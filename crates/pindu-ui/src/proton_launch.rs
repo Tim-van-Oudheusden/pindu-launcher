@@ -7,9 +7,13 @@
 //! waits for its container, whose `pv-adverb` reaps every process of the prefix, so a
 //! game that starts another program and exits keeps its session until that one ends
 //! too. Stop ends every process in the game's prefix with its build's `wineserver -k`.
+//!
+//! "Play with Logs" keeps umu's output and Proton's log in the game's log (see
+//! `log_service`).
 
 use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
+use std::fs::File;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
@@ -26,7 +30,7 @@ use pindu_core::umu::{self, RuntimeSetup};
 
 use crate::config::APP_ID;
 use crate::launch_service::now;
-use crate::library_service::LibraryService;
+use crate::log_service::{self, GameLog};
 use crate::session_service::{SIGTERM, SessionService};
 
 /// How often the setup dialog's progress moves.
@@ -34,14 +38,15 @@ const PROGRESS_INTERVAL: Duration = Duration::from_millis(250);
 
 /// Starts a Windows game with the Proton build and prefix its launch config names, or the
 /// defaults from Preferences, and tracks its session from the moment umu starts it. The
-/// app stays up while the game runs, since the game writes its log to us.
+/// app stays up while the game runs, since the game writes its log to us. With `logs`,
+/// umu's output and Proton's log are kept in a new log of the game.
 pub fn play(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
     game: Game,
     config: LaunchConfig,
-    library: LibraryService,
     sessions: SessionService,
+    logs: bool,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
     let (app, window) = (app.clone(), window.cloned());
@@ -60,7 +65,7 @@ pub fn play(
             .await
         };
         let title = game.title.clone();
-        let (command, end_prefix) = match found {
+        let (mut command, end_prefix) = match found {
             Ok(Ok(found)) => found,
             Ok(Err(error)) => {
                 toast(adw::Toast::new(&cannot_start_message(&title, &error)));
@@ -71,6 +76,27 @@ pub fn play(
                 return;
             }
         };
+        let mut log = None;
+        if logs {
+            let (id, log_title) = (game.id.clone(), title.clone());
+            let created = gio::spawn_blocking(move || {
+                let log = GameLog::create(&id, &log_title, &mut command, true);
+                (log, command)
+            })
+            .await;
+            let Ok((created, logged)) = created else {
+                toast(adw::Toast::new(&could_not_start(&title)));
+                return;
+            };
+            command = logged;
+            match created {
+                Ok(created) => log = Some(created),
+                Err(error) => {
+                    glib::g_warning!("pindu", "Could not start a log of “{title}”: {error}");
+                    toast(adw::Toast::new(&log_service::could_not_keep(&title)));
+                }
+            }
+        }
         let toast = Rc::new(toast);
         let started = {
             let (app, toast, title) = (app.clone(), toast.clone(), title.clone());
@@ -79,14 +105,32 @@ pub fn play(
                     let stop = stopper(umu.clone(), end_prefix);
                     sessions.track(app.upcast_ref(), &game.id, umu, stop);
                 }
-                let (library, id) = (library.clone(), game.id.clone());
+                let (library, id) = (sessions.library().clone(), game.id.clone());
                 glib::spawn_future_local(async move { library.mark_played(&id, now()).await });
                 toast(adw::Toast::new(
                     &gettext("Starting “{title}”").replace("{title}", &title),
                 ));
             }
         };
-        run(&app, window, &title, &command, &*toast, started).await;
+        run(
+            &app,
+            window,
+            &title,
+            &command,
+            log.as_mut(),
+            &*toast,
+            started,
+        )
+        .await;
+        if let Some(log) = log {
+            match gio::spawn_blocking(move || log.finish()).await {
+                Ok(Ok(())) => {}
+                Ok(Err(error)) => {
+                    glib::g_warning!("pindu", "Could not add Proton's log of “{title}”: {error}");
+                }
+                Err(_) => glib::g_warning!("pindu", "Could not add Proton's log of “{title}”"),
+            }
+        }
         drop(hold);
     });
 }
@@ -149,7 +193,7 @@ pub async fn run_installer(
     })
     .await;
     match found {
-        Ok(Ok(command)) => run(app, window, &title, &command, &toast, |_| {}).await,
+        Ok(Ok(command)) => run(app, window, &title, &command, None, &toast, |_| {}).await,
         Ok(Err(error)) => {
             toast(adw::Toast::new(&cannot_start_message(&title, &error)));
             false
@@ -187,19 +231,27 @@ pub fn defaults() -> proton::Defaults {
     }
 }
 
-/// Runs a program through umu as our child and follows its log until umu exits. The
-/// Steam Linux Runtime setup shows in a dialog; `started` gets umu once it reports the
-/// program starting. Returns whether it started; when it did not, the dialog or a toast
-/// says so.
+/// Runs a program through umu as our child and follows its log until umu exits, keeping
+/// umu's output in `log` when there is one. The Steam Linux Runtime setup shows in a
+/// dialog; `started` gets umu once it reports the program starting. Returns whether it
+/// started; when it did not, the dialog or a toast says so.
 async fn run(
     app: &gtk::Application,
     window: Option<gtk::Window>,
     title: &str,
     command: &Command,
+    mut game_log: Option<&mut GameLog>,
     toast: &dyn Fn(adw::Toast),
     started: impl FnOnce(&gio::Subprocess),
 ) -> bool {
-    let child = match spawn(command) {
+    let output = match game_log.as_deref().map(GameLog::output).transpose() {
+        Ok(output) => output,
+        Err(error) => {
+            glib::g_warning!("pindu", "Could not open the log of “{title}”: {error}");
+            None
+        }
+    };
+    let child = match spawn(command, output) {
         Ok(child) => child,
         Err(error) => {
             glib::g_warning!("pindu", "Could not start {:?}: {error}", command.argv);
@@ -221,6 +273,9 @@ async fn run(
         };
         // The program's log goes on to ours, as a host game's does.
         eprintln!("{line}");
+        if let Some(game_log) = game_log.as_deref_mut() {
+            game_log.line(&line);
+        }
         match umu::setup_event(&line) {
             Some(RuntimeSetup::Ready) => {
                 if let Some(started) = started.take() {
@@ -247,9 +302,13 @@ async fn run(
     ran
 }
 
-/// Runs the command inside the sandbox, with its log piped to us.
-fn spawn(command: &Command) -> Result<gio::Subprocess, glib::Error> {
+/// Runs the command inside the sandbox, with its log piped to us, and its output written
+/// to `output` when given.
+fn spawn(command: &Command, output: Option<File>) -> Result<gio::Subprocess, glib::Error> {
     let launcher = gio::SubprocessLauncher::new(gio::SubprocessFlags::STDERR_PIPE);
+    if let Some(output) = output {
+        launcher.take_stdout_fd(Some(output.into()));
+    }
     for (key, value) in &command.environment {
         launcher.setenv(key, value, true);
     }

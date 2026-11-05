@@ -17,6 +17,7 @@ pub mod hint_bar;
 pub mod home_page;
 pub mod launch_service;
 pub mod library_service;
+pub mod log_service;
 pub mod manette_backend;
 pub mod models;
 pub mod permission_service;
