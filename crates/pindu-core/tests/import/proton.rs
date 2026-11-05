@@ -51,4 +51,14 @@ fn proton_is_found_in_native_and_flatpak_steam_and_our_tools_folder_newest_first
         builds[0].path,
         home.join(".local/share/Steam/compatibilitytools.d/GE-Proton11-3")
     );
+    // Each build's wineserver, which Stop asks to end a game's prefix: under `files`, or
+    // under `dist` in older builds that unpack there.
+    assert_eq!(
+        builds[0].wineserver,
+        builds[0].path.join("files/bin/wineserver")
+    );
+    assert_eq!(
+        builds[1].wineserver,
+        home.join(OURS).join("Proton-Ours-1/dist/bin/wineserver")
+    );
 }

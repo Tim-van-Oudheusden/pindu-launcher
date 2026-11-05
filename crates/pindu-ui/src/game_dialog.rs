@@ -5,6 +5,7 @@
 use std::cell::{Cell, OnceCell, RefCell};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -12,12 +13,14 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::manual::{self, ManualGame, WindowsOptions};
 use pindu_core::model::{ArtLayout, ArtOrigin, GameId, Source};
-use pindu_core::paths::{default_library_db_path, default_prefixes_dir, default_user_art_dir};
+use pindu_core::paths::{default_library_db_path, default_user_art_dir};
 use pindu_core::pe::{self, Icon};
+use pindu_core::proton::Defaults;
 use pindu_core::store::Store;
 
 use crate::file_service::{self, PickedImage};
 use crate::library_service::LibraryService;
+use crate::proton_choice::{FirstChoice, ProtonChoice};
 use crate::proton_launch;
 use crate::steamgriddb_picker::{self, PickerGame};
 use crate::window::PinduWindow;
@@ -77,8 +80,6 @@ mod imp {
         #[template_child]
         pub proton_row: TemplateChild<adw::ComboRow>,
         #[template_child]
-        pub proton_builds: TemplateChild<gtk::StringList>,
-        #[template_child]
         pub prefix_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub reset_prefix_button: TemplateChild<gtk::Button>,
@@ -101,10 +102,8 @@ mod imp {
         /// The chosen game folder, as the sandbox sees it (for Windows games, which run
         /// inside it), and for listing its programs.
         pub local_folder: RefCell<Option<PathBuf>>,
-        /// The Proton list's builds, by internal name; `None` for "newest".
-        pub proton_names: RefCell<Vec<Option<String>>>,
-        /// The build to select once the list is read, when editing.
-        pub pending_proton: RefCell<Option<String>>,
+        /// The Proton row's builds.
+        pub proton: OnceCell<Rc<ProtonChoice>>,
         /// The Windows game's prefix; `None` for a new one of its own.
         pub prefix: RefCell<Option<PathBuf>>,
         /// The icon of the selected Windows program.
@@ -192,7 +191,13 @@ mod imp {
                 move |_| dialog.kind_changed()
             ));
             dialog.set_prefix(None);
-            dialog.load_builds();
+            self.proton
+                .set(ProtonChoice::new(
+                    &self.proton_row,
+                    FirstChoice::Default,
+                    None,
+                ))
+                .expect("constructed once");
         }
     }
     impl WidgetImpl for GameDialog {}
@@ -288,8 +293,7 @@ impl GameDialog {
         imp.arguments_row.set_text(&form.arguments);
         imp.working_dir_row.set_text(&form.working_dir);
         if let Some(windows) = &form.windows {
-            imp.pending_proton.replace(windows.proton_version.clone());
-            self.select_proton();
+            self.proton().select(windows.proton_version.clone());
             self.set_prefix(windows.prefix.clone());
             imp.kind_row.set_selected(WINDOWS);
         }
@@ -466,74 +470,12 @@ impl GameDialog {
         });
     }
 
-    /// Lists the Proton builds on this machine, newest first, after "the newest".
-    fn load_builds(&self) {
-        let dialog = self.downgrade();
-        glib::spawn_future_local(async move {
-            let builds = gio::spawn_blocking(proton_launch::builds)
-                .await
-                .unwrap_or_default();
-            let Some(dialog) = dialog.upgrade() else {
-                return;
-            };
-            let imp = dialog.imp();
-            let newest = match builds.first() {
-                Some(build) => {
-                    gettext("Newest ({proton})").replace("{proton}", &build.display_name)
-                }
-                None => gettext("Newest"),
-            };
-            let mut labels = vec![newest];
-            let mut names = vec![None];
-            for build in builds {
-                labels.push(build.display_name);
-                names.push(Some(build.name));
-            }
-            let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
-            imp.proton_builds
-                .splice(0, imp.proton_builds.n_items(), &refs);
-            imp.proton_names.replace(names);
-            imp.proton_row.set_subtitle(&if labels.len() == 1 {
-                gettext("No Proton found. Install one, for example through Steam.")
-            } else {
-                String::new()
-            });
-            dialog.select_proton();
-        });
-    }
-
-    /// Selects the build a game being edited uses, once the list is read; a build that
-    /// is gone stays listed, so saving keeps it.
-    fn select_proton(&self) {
-        let imp = self.imp();
-        if imp.proton_names.borrow().is_empty() {
-            return;
-        }
-        let Some(wanted) = imp.pending_proton.take() else {
-            return;
-        };
-        let found = imp
-            .proton_names
-            .borrow()
-            .iter()
-            .position(|name| name.as_deref() == Some(wanted.as_str()));
-        let index = found.unwrap_or_else(|| {
-            imp.proton_builds
-                .append(&gettext("{proton} (not installed)").replace("{proton}", &wanted));
-            imp.proton_names.borrow_mut().push(Some(wanted));
-            imp.proton_names.borrow().len() - 1
-        });
-        imp.proton_row.set_selected(index as u32);
+    fn proton(&self) -> &ProtonChoice {
+        self.imp().proton.get().expect("constructed")
     }
 
     fn selected_proton(&self) -> Option<String> {
-        let imp = self.imp();
-        let names = imp.proton_names.borrow();
-        match names.get(imp.proton_row.selected() as usize) {
-            Some(name) => name.clone(),
-            // The list is not read yet: keep the build being edited.
-            None => imp.pending_proton.borrow().clone(),
-        }
+        self.proton().selected()
     }
 
     /// Shows the prefix the game gets: the one chosen, or a new one of its own.
@@ -541,8 +483,10 @@ impl GameDialog {
         let imp = self.imp();
         imp.prefix_row.set_subtitle(&match &prefix {
             Some(prefix) => prefix.to_string_lossy().into_owned(),
-            None => gettext("A new folder in {folder}")
-                .replace("{folder}", &default_prefixes_dir().to_string_lossy()),
+            None => gettext("A new folder in {folder}").replace(
+                "{folder}",
+                &proton_launch::defaults().prefixes.to_string_lossy(),
+            ),
         });
         imp.reset_prefix_button.set_visible(prefix.is_some());
         imp.prefix.replace(prefix);
@@ -552,7 +496,7 @@ impl GameDialog {
         let chooser = gtk::FileDialog::builder()
             .title(gettext("Choose the Game's Prefix"))
             .modal(true)
-            .initial_folder(&gio::File::for_path(default_prefixes_dir()))
+            .initial_folder(&gio::File::for_path(proton_launch::defaults().prefixes))
             .build();
         let root = self.root().and_downcast::<gtk::Window>();
         let dialog = self.downgrade();
@@ -595,7 +539,10 @@ impl GameDialog {
             let imp = dialog.imp();
             // The installer and the game share the prefix, so it is fixed now.
             let prefix = imp.prefix.borrow().clone().unwrap_or_else(|| {
-                manual::new_prefix(&default_prefixes_dir(), imp.title_row.text().trim())
+                manual::new_prefix(
+                    &proton_launch::defaults().prefixes,
+                    imp.title_row.text().trim(),
+                )
             });
             dialog.set_prefix(Some(prefix.clone()));
             dialog.set_installing(true);
@@ -903,9 +850,11 @@ impl GameDialog {
             .and_then(|_| imp.exe_icon.borrow().clone());
         let title = imp.title_row.text().to_string();
         imp.save_button.set_sensitive(false);
+        let defaults = proton_launch::defaults();
         let dialog = self.downgrade();
         glib::spawn_future_local(async move {
-            let saved = gio::spawn_blocking(move || save_to_store(mode, form, icon, art)).await;
+            let saved =
+                gio::spawn_blocking(move || save_to_store(mode, form, icon, art, defaults)).await;
             let Some(dialog) = dialog.upgrade() else {
                 return;
             };
@@ -935,19 +884,20 @@ fn save_to_store(
     form: Option<ManualGame>,
     icon: Option<Icon>,
     art: Vec<(ArtLayout, ArtChange)>,
+    defaults: Defaults,
 ) -> Result<bool, String> {
     let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |elapsed| elapsed.as_secs() as i64);
-    let prefixes = default_prefixes_dir();
     let (id, added) = match (mode, form) {
         (Mode::Add, Some(form)) => (
-            manual::add_game(&store, &form, &prefixes, now).map_err(|e| e.to_string())?,
+            manual::add_game(&store, &form, &defaults, now).map_err(|e| e.to_string())?,
             true,
         ),
         (Mode::Edit { id, manual: true }, Some(form)) => {
-            manual::update_game(&store, &id, &form, &prefixes).map_err(|e| e.to_string())?;
+            manual::update_game(&store, &id, &form, &defaults.prefixes)
+                .map_err(|e| e.to_string())?;
             (id, false)
         }
         (Mode::Edit { id, manual: false }, _) => (id, false),

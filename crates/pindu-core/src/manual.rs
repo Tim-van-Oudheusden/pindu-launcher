@@ -14,6 +14,7 @@ use crate::model::{
     Timestamp,
 };
 use crate::pe::Icon;
+use crate::proton::Defaults;
 use crate::sources::sha256::sha256_hex;
 use crate::store::{self, Store};
 
@@ -85,16 +86,20 @@ impl From<std::io::Error> for ManualError {
 }
 
 /// Adds a game by hand and returns its new ID. A Windows game without a prefix gets a
-/// new one of its own in `prefixes`.
+/// new one of its own in the default prefixes folder, and starts with the default tools.
 pub fn add_game(
     store: &Store,
     form: &ManualGame,
-    prefixes: &Path,
+    defaults: &Defaults,
     now: Timestamp,
 ) -> Result<GameId, ManualError> {
     let mut config = launch_config(form)?;
     let id = GameId::new(Source::Manual, &new_native_id(&form.title));
-    set_runner(&mut config, form, || prefixes.join(id.native_id()));
+    set_runner(&mut config, form, || defaults.prefixes.join(id.native_id()));
+    if form.windows.is_some() {
+        config.mangohud = defaults.mangohud;
+        config.gamemode = defaults.gamemode;
+    }
     let mut game = Game::new(id.clone(), form.title.trim(), LaunchKind::HostCommand, now);
     describe(&mut game, form);
     store.in_transaction(|store| {
@@ -548,6 +553,15 @@ mod tests {
         (dir, store)
     }
 
+    fn defaults() -> Defaults {
+        Defaults {
+            proton_version: None,
+            prefixes: PREFIXES.into(),
+            mangohud: false,
+            gamemode: false,
+        }
+    }
+
     fn form() -> ManualGame {
         ManualGame {
             title: "Celeste".into(),
@@ -695,7 +709,7 @@ mod tests {
     fn adding_a_game_stores_it_with_its_command() {
         let (_dir, store) = temp_store();
 
-        let id = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
+        let id = add_game(&store, &form(), &defaults(), 100).unwrap();
 
         assert_eq!(id.source(), Source::Manual);
         let game = store.game(&id).unwrap().unwrap();
@@ -738,7 +752,7 @@ mod tests {
             ..windows_form()
         };
 
-        let id = add_game(&store, &form, Path::new(PREFIXES), 100).unwrap();
+        let id = add_game(&store, &form, &defaults(), 100).unwrap();
 
         let game = store.game(&id).unwrap().unwrap();
         assert_eq!(game.launch_kind, LaunchKind::Proton);
@@ -756,11 +770,31 @@ mod tests {
     }
 
     #[test]
+    fn a_new_windows_game_starts_with_the_default_tools_and_a_native_one_without() {
+        let (_dir, store) = temp_store();
+        let defaults = Defaults {
+            mangohud: true,
+            gamemode: true,
+            ..defaults()
+        };
+
+        let windows = add_game(&store, &windows_form(), &defaults, 100).unwrap();
+        let native = add_game(&store, &form(), &defaults, 100).unwrap();
+
+        let windows = store.launch_config(&windows).unwrap().unwrap();
+        assert!(windows.mangohud && windows.gamemode);
+        // The default stays the default: no build of its own.
+        assert_eq!(windows.proton_version, None);
+        let native = store.launch_config(&native).unwrap().unwrap();
+        assert!(!native.mangohud && !native.gamemode);
+    }
+
+    #[test]
     fn two_games_with_the_same_title_get_their_own_ids() {
         let (_dir, store) = temp_store();
 
-        let first = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
-        let second = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
+        let first = add_game(&store, &form(), &defaults(), 100).unwrap();
+        let second = add_game(&store, &form(), &defaults(), 100).unwrap();
 
         assert_ne!(first, second);
     }
@@ -795,15 +829,15 @@ mod tests {
         };
 
         assert_eq!(
-            add_game(&store, &untitled, Path::new(PREFIXES), 1),
+            add_game(&store, &untitled, &defaults(), 1),
             Err(ManualError::NoTitle)
         );
         assert_eq!(
-            add_game(&store, &no_program, Path::new(PREFIXES), 1),
+            add_game(&store, &no_program, &defaults(), 1),
             Err(ManualError::NoExecutable)
         );
         assert!(matches!(
-            add_game(&store, &broken, Path::new(PREFIXES), 1),
+            add_game(&store, &broken, &defaults(), 1),
             Err(ManualError::Arguments(_))
         ));
         assert!(store.games().unwrap().is_empty());
@@ -812,7 +846,7 @@ mod tests {
     #[test]
     fn editing_keeps_the_options_set_elsewhere() {
         let (_dir, store) = temp_store();
-        let id = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
+        let id = add_game(&store, &form(), &defaults(), 100).unwrap();
         let mut config = store.launch_config(&id).unwrap().unwrap();
         config.gamemode = true;
         store.set_launch_config(&id, &config).unwrap();
@@ -833,7 +867,7 @@ mod tests {
     #[test]
     fn a_stored_game_reads_back_as_its_form() {
         let (_dir, store) = temp_store();
-        let id = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
+        let id = add_game(&store, &form(), &defaults(), 100).unwrap();
 
         let read = read_game(&store, &id).unwrap();
 
@@ -850,7 +884,7 @@ mod tests {
     #[test]
     fn an_edited_windows_game_keeps_its_prefix_and_a_native_one_drops_proton() {
         let (_dir, store) = temp_store();
-        let id = add_game(&store, &windows_form(), Path::new(PREFIXES), 100).unwrap();
+        let id = add_game(&store, &windows_form(), &defaults(), 100).unwrap();
         let prefix = Path::new(PREFIXES).join(id.native_id());
 
         let read = read_game(&store, &id).unwrap().unwrap();
@@ -886,7 +920,7 @@ mod tests {
     #[test]
     fn user_art_lives_in_the_data_folder_and_wins_over_source_art() {
         let (dir, store) = temp_store();
-        let id = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
+        let id = add_game(&store, &form(), &defaults(), 100).unwrap();
         let art_dir = dir.path().join("art");
 
         let path = set_user_art(&store, &art_dir, &id, ArtLayout::Cover, "png", b"bytes").unwrap();
@@ -907,7 +941,7 @@ mod tests {
     #[test]
     fn steamgriddb_art_is_kept_beside_user_art_and_replaced_when_fetched_again() {
         let (dir, store) = temp_store();
-        let id = add_game(&store, &form(), Path::new(PREFIXES), 100).unwrap();
+        let id = add_game(&store, &form(), &defaults(), 100).unwrap();
         let art_dir = dir.path().join("art");
         let user = set_user_art(&store, &art_dir, &id, ArtLayout::Cover, "png", b"mine").unwrap();
         let first =
@@ -935,7 +969,7 @@ mod tests {
     #[test]
     fn the_programs_own_icon_is_kept_as_the_games_icon() {
         let (dir, store) = temp_store();
-        let id = add_game(&store, &windows_form(), Path::new(PREFIXES), 100).unwrap();
+        let id = add_game(&store, &windows_form(), &defaults(), 100).unwrap();
         let icon = Icon {
             bytes: b"\x89PNG icon".to_vec(),
             extension: "png",

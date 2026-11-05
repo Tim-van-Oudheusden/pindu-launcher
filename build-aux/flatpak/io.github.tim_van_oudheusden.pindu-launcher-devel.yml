@@ -141,6 +141,41 @@ modules:
         url: https://raw.githubusercontent.com/Open-Wine-Components/umu-launcher/cf3d1b107147480c447ffbfb3f789dc74335074c/LICENSE
         sha256: 3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986
 
+  # GameMode for the per-game setting: libgamemode, which asks the GameMode portal when
+  # it runs in a sandbox, so no D-Bus talk-name is needed, and gamemoderun, which
+  # preloads it into the game. The daemon runs on the host and is not built.
+  - name: gamemode
+    # Feral's release tarball builds with Meson
+    buildsystem: meson
+    config-opts:
+      # Only the client libraries libgamemode and libgamemodeauto: no daemon, so no
+      # systemd, inih or polkit files either
+      - -Dwith-sd-bus-provider=no-daemon
+      # No sample programs
+      - -Dwith-examples=false
+      # No daemon test utilities
+      - -Dwith-util=false
+    post-install:
+      # Meson installs gamemoderun only with the daemon, so it is installed here
+      - install -Dm755 ../data/gamemoderun -t /app/bin
+      # Its licence, as for umu-launcher
+      - install -Dm644 ../LICENSE.txt /app/share/licenses/gamemode/LICENSE
+    cleanup:
+      # The header and pkg-config files only serve building against libgamemode
+      - /include
+      - /lib/pkgconfig
+    sources:
+      # The official release tarball; the checksum is the one in Feral's sha256sums.txt
+      - type: archive
+        url: https://github.com/FeralInteractive/gamemode/releases/download/1.8.2/gamemode-1.8.2.tar.xz
+        sha256: 98cd1bcf6101c92fe87f974c7776af23c7e18f29ce6ecfe572b1c39dcde5c181
+        # Lets flatpak-external-data-checker offer new releases, as for umu-launcher
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/FeralInteractive/gamemode/releases/latest
+          version-query: .tag_name
+          url-query: '"https://github.com/FeralInteractive/gamemode/releases/download/" + $version + "/gamemode-" + $version + ".tar.xz"'
+
   - name: pindu-launcher
     buildsystem: meson
     run-tests: true
