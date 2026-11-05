@@ -1,10 +1,11 @@
-//! Proton builds, and running Windows games through umu and Proton inside the sandbox.
+//! Proton builds, and running Windows games through umu and Proton, and native games in
+//! the Steam Linux Runtime through umu, inside the sandbox.
 //!
 //! Builds come from Steam's `compatibilitytools.d` folders (native, then Flatpak) and our
 //! own tools folder. Nothing is downloaded here: umu only gets a build that is already on
 //! the machine.
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
@@ -20,6 +21,8 @@ const COMPAT_TOOLS: &str = "compatibilitytools.d";
 const LIBGAMEMODE: &str = "libgamemode.so.0";
 /// Wine's `start`, in every prefix.
 const WINE_START: &str = "C:\\windows\\command\\start.exe";
+/// The runtime's shell script that starts a native program in the folder it is given.
+const NATIVE_START: &str = "cd \"$1\" && shift && exec \"$@\"";
 
 /// A Proton build on this machine.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -170,10 +173,36 @@ pub fn command(
     let mut environment = launch::session_environment(game);
     environment.insert("PROTONPATH".to_owned(), path_text(&build.path));
     environment.insert("WINEPREFIX".to_owned(), path_text(&prefix));
+    Ok(umu_command(environment, config, Program::Windows))
+}
+
+/// The command that runs a native game in the Steam Linux Runtime: `umu-run` with the
+/// game and `UMU_NO_PROTON=1`, so umu runs it as it is, in its default runtime (the one
+/// Proton games use too), inside our sandbox. The user's environment wins over ours.
+pub fn runtime_command(game: &Game, config: &LaunchConfig) -> Command {
+    let mut environment = launch::session_environment(game);
+    environment.insert("UMU_NO_PROTON".to_owned(), "1".to_owned());
+    umu_command(environment, config, Program::Native)
+}
+
+/// What umu runs: a Windows program, through Proton, or a native one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Program {
+    Windows,
+    Native,
+}
+
+/// The command that runs a launch config's program through umu, with umu's `environment`,
+/// the config's tools and environment on top, and its wrappers around umu.
+fn umu_command(
+    mut environment: BTreeMap<String, String>,
+    config: &LaunchConfig,
+    program: Program,
+) -> Command {
     if config.mangohud {
         // The MangoHud Vulkan-layer extension turns on with this inside the Steam Runtime
         // container too; the `mangohud` script is not on our `PATH`, and DXVK and VKD3D
-        // run games on Vulkan anyway.
+        // run Windows games on Vulkan anyway.
         environment.insert("MANGOHUD".to_owned(), "1".to_owned());
     }
     environment.extend(config.environment.clone());
@@ -189,12 +218,14 @@ pub fn command(
         environment.insert("LD_PRELOAD".to_owned(), preload);
     }
     let (target, working_dir) = umu_target(
+        program,
         &config.executable,
         &config.arguments,
         config.working_dir.as_deref(),
     );
     if working_dir != config.working_dir {
-        // Proton's fixes take the game's folder from here, or else from the working folder.
+        // umu and Proton's fixes take the game's folder from here, or else from the
+        // folder of what umu runs: `start` or `sh`.
         if let Some(folder) = config.executable.parent() {
             environment
                 .entry("STEAM_COMPAT_INSTALL_PATH".to_owned())
@@ -209,11 +240,11 @@ pub fn command(
     }
     argv.push("umu-run".to_owned());
     argv.extend(target);
-    Ok(Command {
+    Command {
         argv,
         environment,
         working_dir,
-    })
+    }
 }
 
 /// What follows `umu-run` to run a program, and the folder umu runs in.
@@ -221,22 +252,34 @@ pub fn command(
 /// In a folder below a document portal root, `getcwd()` fails as soon as the portal has
 /// invalidated the folder's entry, which it does shortly after every lookup of it
 /// (xdg-desktop-portal#1812), and umu, Proton and Wine all ask for it. So umu runs from
-/// the document root, which the portal never invalidates, and Wine's `start` gives the
-/// program its own folder as its Windows working folder and waits for it to exit.
+/// the document root, which the portal never invalidates, and the program gets its own
+/// folder from what umu runs instead: Wine's `start`, which also gives a Windows program
+/// its Windows working folder and waits for it to exit, or the runtime's `sh`.
 fn umu_target(
-    program: &Path,
+    program: Program,
+    path: &Path,
     arguments: &[String],
     working_dir: Option<&Path>,
 ) -> (Vec<String>, Option<PathBuf>) {
     let mut argv = Vec::new();
     let mut umu_dir = working_dir.map(Path::to_owned);
     if let Some((dir, root)) = working_dir.and_then(|dir| Some((dir, document_root(dir)?))) {
-        // Wine's drive Z: is the root folder.
-        let windows_dir = format!("Z:{}", path_text(dir).replace('/', "\\"));
-        argv.extend([WINE_START, "/d", windows_dir.as_str(), "/wait", "/unix"].map(str::to_owned));
+        match program {
+            Program::Windows => {
+                // Wine's drive Z: is the root folder.
+                let windows_dir = format!("Z:{}", path_text(dir).replace('/', "\\"));
+                argv.extend(
+                    [WINE_START, "/d", windows_dir.as_str(), "/wait", "/unix"].map(str::to_owned),
+                );
+            }
+            Program::Native => {
+                let dir = path_text(dir);
+                argv.extend(["/bin/sh", "-c", NATIVE_START, "sh", dir.as_str()].map(str::to_owned));
+            }
+        }
         umu_dir = Some(root);
     }
-    argv.push(path_text(program));
+    argv.push(path_text(path));
     argv.extend(arguments.iter().cloned());
     (argv, umu_dir)
 }
@@ -263,7 +306,7 @@ pub fn installer_command(
     .into_iter()
     .map(|(key, value)| (key.to_owned(), value))
     .collect();
-    let (target, working_dir) = umu_target(installer, &[], installer.parent());
+    let (target, working_dir) = umu_target(Program::Windows, installer, &[], installer.parent());
     Ok(Command {
         argv: [vec!["umu-run".to_owned()], target].concat(),
         environment,
@@ -284,6 +327,25 @@ pub fn stop_command(launch: &Command, builds: &[ProtonBuild]) -> Option<Command>
         environment: [("WINEPREFIX".to_owned(), prefix.clone())].into(),
         working_dir: None,
     })
+}
+
+/// Whether a process with this environment, as `/proc/<pid>/environ` has it, is part of
+/// the native game umu runs with `launch`: it has the launch's `GAMEID`, which umu passes on
+/// to the runtime's `pv-adverb` and the game.
+///
+/// Stop needs this because inside a Flatpak, pressure-vessel starts the runtime through
+/// the Flatpak portal, in a sandbox of its own that only shares our processes: umu passes
+/// Stop's signal on to the portal's launch client, which exits without passing it on to
+/// the runtime, so the game would keep running. A Windows game's `wineserver -k` reaches
+/// its prefix's processes instead.
+pub fn runs_for(launch: &Command, environ: &[u8]) -> bool {
+    let Some(game_id) = launch.environment.get("GAMEID") else {
+        return false;
+    };
+    let wanted = format!("GAMEID={game_id}");
+    environ
+        .split(|&byte| byte == 0)
+        .any(|entry| entry == wanted.as_bytes())
 }
 
 /// The build named, or the newest one when none is.
@@ -508,6 +570,69 @@ mod tests {
     }
 
     #[test]
+    fn a_native_game_in_a_portal_folder_starts_from_the_document_root_in_its_own_folder() {
+        let folder = "/run/user/1000/doc/a1b2/Games/Neverball";
+        let config = LaunchConfig {
+            executable: format!("{folder}/neverball").into(),
+            arguments: vec!["--fullscreen".into()],
+            working_dir: Some(folder.into()),
+            ..LaunchConfig::default()
+        };
+
+        let command = runtime_command(&game(), &config);
+
+        assert_eq!(command.working_dir, Some("/run/user/1000/doc/a1b2".into()));
+        assert_eq!(
+            command.argv,
+            [
+                "umu-run",
+                "/bin/sh",
+                "-c",
+                "cd \"$1\" && shift && exec \"$@\"",
+                "sh",
+                folder,
+                &format!("{folder}/neverball"),
+                "--fullscreen",
+            ]
+        );
+        assert_eq!(command.environment["STEAM_COMPAT_INSTALL_PATH"], folder);
+    }
+
+    #[test]
+    fn native_games_in_the_runtime_get_their_tools_and_wrappers_like_windows_games() {
+        let config = LaunchConfig {
+            executable: "/home/me/Games/Neverball/neverball".into(),
+            working_dir: Some("/home/me/Games/Neverball".into()),
+            wrappers: vec!["taskset".into(), "-c".into(), "0-3".into()],
+            gamemode: true,
+            mangohud: true,
+            ..LaunchConfig::default()
+        };
+
+        let command = runtime_command(&game(), &config);
+
+        assert_eq!(
+            command.argv,
+            [
+                "taskset",
+                "-c",
+                "0-3",
+                "gamemoderun",
+                "umu-run",
+                "/home/me/Games/Neverball/neverball"
+            ]
+        );
+        assert_eq!(command.environment["MANGOHUD"], "1");
+        assert_eq!(command.environment["LD_PRELOAD"], "libgamemode.so.0");
+        assert_eq!(command.working_dir, Some("/home/me/Games/Neverball".into()));
+        assert!(
+            !command
+                .environment
+                .contains_key("STEAM_COMPAT_INSTALL_PATH")
+        );
+    }
+
+    #[test]
     fn a_game_in_a_portal_folder_starts_from_the_document_root_in_its_own_windows_folder() {
         let builds = [build("GE-Proton11-3")];
         let folder = "/run/user/1000/doc/a1b2/Games/Notepad Game";
@@ -618,5 +743,39 @@ mod tests {
         assert_eq!(stop.working_dir, None);
         // A build that is gone since the start has no wineserver to ask.
         assert_eq!(stop_command(&launch, &builds[..1]), None);
+    }
+
+    #[test]
+    fn stop_finds_a_native_games_processes_in_the_runtime_by_the_game_id_umu_passes_on() {
+        let launch = runtime_command(&game(), &config());
+        let game_id = &launch.environment["GAMEID"];
+        let environ = |entries: &[&str]| -> Vec<u8> {
+            entries
+                .iter()
+                .flat_map(|entry| [entry.as_bytes(), b"\0"].concat())
+                .collect()
+        };
+
+        // pv-adverb and the game have umu's environment, the game's id among it.
+        assert!(runs_for(
+            &launch,
+            &environ(&[
+                "HOME=/home/me",
+                &format!("GAMEID={game_id}"),
+                "UMU_NO_PROTON=1"
+            ])
+        ));
+        // Another game's, a variable that only starts with the id, our own app's.
+        assert!(!runs_for(&launch, &environ(&["GAMEID=umu-pindu-0000"])));
+        assert!(!runs_for(
+            &launch,
+            &environ(&[&format!("GAMEID={game_id}0")])
+        ));
+        assert!(!runs_for(
+            &launch,
+            &environ(&[&format!("UMU_ID={game_id}")])
+        ));
+        assert!(!runs_for(&launch, &environ(&["HOME=/home/me"])));
+        assert!(!runs_for(&launch, b""));
     }
 }

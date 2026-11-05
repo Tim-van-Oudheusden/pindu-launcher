@@ -1,7 +1,8 @@
 //! Games added by hand: a folder the user granted, a program in it, a title and options.
-//! Native games start through host spawn and record their own sessions; Windows games run
-//! through umu and Proton. Art the user picks for any game, and art fetched from
-//! SteamGridDB, is kept here too, in the data folder.
+//! Native games run in the Steam Linux Runtime through umu, or through host spawn when
+//! the user chooses it, and record their own sessions; Windows games run through umu and
+//! Proton. Art the user picks for any game, and art fetched from SteamGridDB, is kept here
+//! too, in the data folder.
 
 use std::fmt;
 use std::os::unix::fs::PermissionsExt;
@@ -28,7 +29,8 @@ const PREFIX_PROGRAM_DEPTH: usize = 6;
 
 /// The Add or Edit form of a game added by hand. The program and working folder may be
 /// relative to the game folder. Paths are as the game's runner sees them: host paths for
-/// native games (host spawn), paths inside the sandbox for Windows games (umu runs there).
+/// native games run on the host (host spawn), paths inside the sandbox for the others
+/// (umu runs there).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ManualGame {
     pub title: String,
@@ -38,6 +40,9 @@ pub struct ManualGame {
     pub arguments: String,
     /// Empty for the program's own folder.
     pub working_dir: String,
+    /// For a native game: run it on the host through host spawn, instead of in the Steam
+    /// Linux Runtime.
+    pub host: bool,
     /// Set for a Windows game, run through umu and Proton.
     pub windows: Option<WindowsOptions>,
 }
@@ -166,15 +171,17 @@ pub fn read_game(store: &Store, id: &GameId) -> Result<Option<ManualGame>, Manua
         arguments: join_arguments(&config.arguments),
         working_dir,
         folder,
+        host: game.launch_kind == LaunchKind::HostCommand,
         windows,
     }))
 }
 
 fn describe(game: &mut Game, form: &ManualGame) {
     game.installed = true;
-    (game.launch_kind, game.platform) = match form.windows {
-        Some(_) => (LaunchKind::Proton, Some(Platform::Windows)),
-        None => (LaunchKind::HostCommand, Some(Platform::Linux)),
+    (game.launch_kind, game.platform) = match (&form.windows, form.host) {
+        (Some(_), _) => (LaunchKind::Proton, Some(Platform::Windows)),
+        (None, true) => (LaunchKind::HostCommand, Some(Platform::Linux)),
+        (None, false) => (LaunchKind::RuntimeNative, Some(Platform::Linux)),
     };
     game.install_path = Some(form.folder.clone());
 }
@@ -569,6 +576,7 @@ mod tests {
             executable: "bin/Celeste".into(),
             arguments: "--fullscreen \"--save dir\"".into(),
             working_dir: String::new(),
+            host: false,
             windows: None,
         }
     }
@@ -714,7 +722,8 @@ mod tests {
         assert_eq!(id.source(), Source::Manual);
         let game = store.game(&id).unwrap().unwrap();
         assert_eq!(game.title, "Celeste");
-        assert_eq!(game.launch_kind, LaunchKind::HostCommand);
+        // Native games run in the Steam Linux Runtime unless the user picks the host.
+        assert_eq!(game.launch_kind, LaunchKind::RuntimeNative);
         assert_eq!(game.platform, Some(Platform::Linux));
         assert!(game.installed);
         assert_eq!(
@@ -730,6 +739,34 @@ mod tests {
             config.working_dir.as_deref(),
             Some(Path::new("/games/Celeste/bin"))
         );
+    }
+
+    #[test]
+    fn a_native_game_runs_on_the_host_only_when_the_user_chooses_it() {
+        let (_dir, store) = temp_store();
+        let on_host = ManualGame {
+            host: true,
+            ..form()
+        };
+
+        let id = add_game(&store, &on_host, &defaults(), 100).unwrap();
+
+        let game = store.game(&id).unwrap().unwrap();
+        assert_eq!(game.launch_kind, LaunchKind::HostCommand);
+        assert_eq!(game.platform, Some(Platform::Linux));
+        assert_eq!(read_game(&store, &id).unwrap(), read_game_form(on_host));
+        update_game(&store, &id, &form(), Path::new(PREFIXES)).unwrap();
+        let game = store.game(&id).unwrap().unwrap();
+        assert_eq!(game.launch_kind, LaunchKind::RuntimeNative);
+        assert_eq!(read_game(&store, &id).unwrap(), read_game_form(form()));
+    }
+
+    /// A form as it reads back from the store: arguments quoted the way they are joined.
+    fn read_game_form(form: ManualGame) -> Option<ManualGame> {
+        Some(ManualGame {
+            arguments: "--fullscreen '--save dir'".into(),
+            ..form
+        })
     }
 
     fn windows_form() -> ManualGame {
@@ -871,14 +908,7 @@ mod tests {
 
         let read = read_game(&store, &id).unwrap();
 
-        assert_eq!(
-            read,
-            Some(ManualGame {
-                // The same arguments, quoted the way they are joined.
-                arguments: "--fullscreen '--save dir'".into(),
-                ..form()
-            })
-        );
+        assert_eq!(read, read_game_form(form()));
     }
 
     #[test]
@@ -911,7 +941,7 @@ mod tests {
 
         update_game(&store, &id, &form(), Path::new(PREFIXES)).unwrap();
         let game = store.game(&id).unwrap().unwrap();
-        assert_eq!(game.launch_kind, LaunchKind::HostCommand);
+        assert_eq!(game.launch_kind, LaunchKind::RuntimeNative);
         assert_eq!(game.platform, Some(Platform::Linux));
         let config = store.launch_config(&id).unwrap().unwrap();
         assert_eq!((config.proton_version, config.prefix_path), (None, None));

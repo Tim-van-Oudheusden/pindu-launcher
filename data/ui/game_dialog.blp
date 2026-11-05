@@ -47,6 +47,12 @@ template $PinduGameDialog: Adw.Dialog {
             };
           }
 
+          Adw.SwitchRow host_row {
+            title: _("Run on the Host");
+            subtitle: _("Start the game outside the Steam Linux Runtime. This needs permission to run programs on this computer.");
+            notify::active => $form_changed() swapped;
+          }
+
           Adw.ActionRow folder_row {
             title: _("Game Folder");
             subtitle: _("None chosen");

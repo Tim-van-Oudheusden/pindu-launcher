@@ -1,15 +1,17 @@
-//! Runs Windows games through umu and Proton inside the sandbox, as our child. umu's log is
-//! read as it comes, so a first start, which downloads the Steam Linux Runtime, shows its
-//! progress, and a missing internet connection is said plainly instead of the game
-//! silently not starting.
+//! Runs Windows games through umu and Proton, and native games in the Steam Linux Runtime
+//! through umu, inside the sandbox, as our child. umu's log is read as it comes, so a first
+//! start, which downloads the Steam Linux Runtime, shows its progress, and a missing
+//! internet connection is said plainly instead of the game silently not starting.
 //!
 //! A game's play session runs from umu reporting the game starting until umu exits: umu
 //! waits for its container, whose `pv-adverb` reaps every process of the prefix, so a
 //! game that starts another program and exits keeps its session until that one ends
-//! too. Stop ends every process in the game's prefix with its build's `wineserver -k`.
+//! too. Stop ends every process in a Windows game's prefix with its build's
+//! `wineserver -k`; a native game's Stop asks umu to quit, which ends its container, and
+//! pressure-vessel's launch client passes the signal on to the game in it.
 //!
-//! "Play with Logs" keeps umu's output and Proton's log in the game's log (see
-//! `log_service`).
+//! "Play with Logs" keeps umu's output, and a Windows game's Proton log, in the game's log
+//! (see `log_service`).
 
 use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
@@ -65,7 +67,7 @@ pub fn play(
             .await
         };
         let title = game.title.clone();
-        let (mut command, end_prefix) = match found {
+        let (command, end_prefix) = match found {
             Ok(Ok(found)) => found,
             Ok(Err(error)) => {
                 toast(adw::Toast::new(&cannot_start_message(&title, &error)));
@@ -76,93 +78,187 @@ pub fn play(
                 return;
             }
         };
-        let mut log = None;
-        if logs {
-            let (id, log_title) = (game.id.clone(), title.clone());
-            let created = gio::spawn_blocking(move || {
-                let log = GameLog::create(&id, &log_title, &mut command, true);
-                (log, command)
-            })
-            .await;
-            let Ok((created, logged)) = created else {
-                toast(adw::Toast::new(&could_not_start(&title)));
-                return;
-            };
-            command = logged;
-            match created {
-                Ok(created) => log = Some(created),
-                Err(error) => {
-                    glib::g_warning!("pindu", "Could not start a log of “{title}”: {error}");
-                    toast(adw::Toast::new(&log_service::could_not_keep(&title)));
-                }
-            }
-        }
-        let toast = Rc::new(toast);
-        let started = {
-            let (app, toast, title) = (app.clone(), toast.clone(), title.clone());
-            move |umu: &gio::Subprocess| {
-                if launch::tracks_sessions(&game) {
-                    let stop = stopper(umu.clone(), end_prefix);
-                    sessions.track(app.upcast_ref(), &game.id, umu, stop);
-                }
-                let (library, id) = (sessions.library().clone(), game.id.clone());
-                glib::spawn_future_local(async move { library.mark_played(&id, now()).await });
-                toast(adw::Toast::new(
-                    &gettext("Starting “{title}”").replace("{title}", &title),
-                ));
-            }
-        };
-        run(
-            &app,
-            window,
-            &title,
-            &command,
-            log.as_mut(),
-            &*toast,
-            started,
-        )
-        .await;
-        if let Some(log) = log {
-            match gio::spawn_blocking(move || log.finish()).await {
-                Ok(Ok(())) => {}
-                Ok(Err(error)) => {
-                    glib::g_warning!("pindu", "Could not add Proton's log of “{title}”: {error}");
-                }
-                Err(_) => glib::g_warning!("pindu", "Could not add Proton's log of “{title}”"),
-            }
-        }
+        let program = Program::Windows { end_prefix };
+        play_command(&app, window, game, command, program, sessions, logs, toast).await;
         drop(hold);
     });
 }
 
-/// What Stop does for a Windows game: end every process in its prefix, then umu, if it is
-/// still there. Without the build's wineserver, umu alone is asked to quit; it passes the
-/// signal on to the processes it started.
-fn stopper(umu: gio::Subprocess, end_prefix: Option<Command>) -> impl Fn() {
-    move || {
-        let Some(end_prefix) = &end_prefix else {
-            umu.send_signal(SIGTERM);
+/// Starts a native game in the Steam Linux Runtime with umu's `command` (see
+/// [`proton::runtime_command`]), and tracks its session from the moment umu starts it, as
+/// [`play`] does a Windows game's. With `logs`, umu's output, the game's included, is kept
+/// in a new log of the game.
+pub fn play_native(
+    app: &gtk::Application,
+    window: Option<&gtk::Window>,
+    game: Game,
+    command: Command,
+    sessions: SessionService,
+    logs: bool,
+    toast: impl Fn(adw::Toast) + 'static,
+) {
+    let (app, window) = (app.clone(), window.cloned());
+    let hold = app.hold();
+    glib::spawn_future_local(async move {
+        let program = Program::Native {
+            launch: command.clone(),
+        };
+        play_command(&app, window, game, command, program, sessions, logs, toast).await;
+        drop(hold);
+    });
+}
+
+/// What umu runs for a game: a Windows program, ended with its build's `wineserver -k`
+/// when there is one, or a native one, run with `launch`.
+enum Program {
+    Windows { end_prefix: Option<Command> },
+    Native { launch: Command },
+}
+
+/// Runs a game's umu `command` and tracks its session from the moment umu starts it. With
+/// `logs`, umu's output, and a Windows game's Proton log, are kept in a new log of the game.
+#[allow(clippy::too_many_arguments)]
+async fn play_command(
+    app: &gtk::Application,
+    window: Option<gtk::Window>,
+    game: Game,
+    mut command: Command,
+    program: Program,
+    sessions: SessionService,
+    logs: bool,
+    toast: impl Fn(adw::Toast) + 'static,
+) {
+    let title = game.title.clone();
+    let proton_log = matches!(program, Program::Windows { .. });
+    let mut log = None;
+    if logs {
+        let (id, log_title) = (game.id.clone(), title.clone());
+        let created = gio::spawn_blocking(move || {
+            let log = GameLog::create(&id, &log_title, &mut command, proton_log);
+            (log, command)
+        })
+        .await;
+        let Ok((created, logged)) = created else {
+            toast(adw::Toast::new(&could_not_start(&title)));
             return;
         };
-        let launcher = gio::SubprocessLauncher::new(gio::SubprocessFlags::NONE);
-        for (key, value) in &end_prefix.environment {
-            launcher.setenv(key, value, true);
-        }
-        let argv: Vec<&OsStr> = end_prefix.argv.iter().map(OsStr::new).collect();
-        let umu = umu.clone();
-        match launcher.spawn(&argv) {
-            Ok(wineserver) => {
-                glib::spawn_future_local(async move {
-                    if let Err(error) = wineserver.wait_future().await {
-                        glib::g_warning!("pindu", "Lost track of wineserver: {error}");
-                    }
-                    umu.send_signal(SIGTERM);
-                });
-            }
+        command = logged;
+        match created {
+            Ok(created) => log = Some(created),
             Err(error) => {
-                glib::g_warning!("pindu", "Could not run {:?}: {error}", end_prefix.argv);
-                umu.send_signal(SIGTERM);
+                glib::g_warning!("pindu", "Could not start a log of “{title}”: {error}");
+                toast(adw::Toast::new(&log_service::could_not_keep(&title)));
             }
+        }
+    }
+    let toast = Rc::new(toast);
+    let started = {
+        let (app, toast, title) = (app.clone(), toast.clone(), title.clone());
+        move |umu: &gio::Subprocess| {
+            if launch::tracks_sessions(&game) {
+                let stop = stopper(umu.clone(), program);
+                sessions.track(app.upcast_ref(), &game.id, umu, stop);
+            }
+            let (library, id) = (sessions.library().clone(), game.id.clone());
+            glib::spawn_future_local(async move { library.mark_played(&id, now()).await });
+            toast(adw::Toast::new(
+                &gettext("Starting “{title}”").replace("{title}", &title),
+            ));
+        }
+    };
+    run(
+        app,
+        window,
+        &title,
+        &command,
+        log.as_mut(),
+        &*toast,
+        started,
+    )
+    .await;
+    if let Some(log) = log {
+        match gio::spawn_blocking(move || log.finish()).await {
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => {
+                glib::g_warning!("pindu", "Could not add Proton's log of “{title}”: {error}");
+            }
+            Err(_) => glib::g_warning!("pindu", "Could not add Proton's log of “{title}”"),
+        }
+    }
+}
+
+/// What Stop does for a game run through umu: end every process in a Windows game's
+/// prefix, then umu, if it is still there; without the build's wineserver, umu alone is
+/// asked to quit, and it passes the signal on to the processes it started. A native game's
+/// processes in the runtime are asked to quit along with umu, which cannot reach them.
+fn stopper(umu: gio::Subprocess, program: Program) -> impl Fn() {
+    move || match &program {
+        Program::Windows {
+            end_prefix: Some(end_prefix),
+        } => end_prefix_then_umu(end_prefix, umu.clone()),
+        Program::Windows { end_prefix: None } => umu.send_signal(SIGTERM),
+        Program::Native { launch } => {
+            umu.send_signal(SIGTERM);
+            let launch = launch.clone();
+            glib::spawn_future_local(async move {
+                if gio::spawn_blocking(move || end_in_runtime(&launch))
+                    .await
+                    .is_err()
+                {
+                    glib::g_warning!("pindu", "Could not end a game in the runtime");
+                }
+            });
+        }
+    }
+}
+
+/// Runs `wineserver -k` for a Windows game's prefix, then asks umu to quit.
+fn end_prefix_then_umu(end_prefix: &Command, umu: gio::Subprocess) {
+    let launcher = gio::SubprocessLauncher::new(gio::SubprocessFlags::NONE);
+    for (key, value) in &end_prefix.environment {
+        launcher.setenv(key, value, true);
+    }
+    let argv: Vec<&OsStr> = end_prefix.argv.iter().map(OsStr::new).collect();
+    match launcher.spawn(&argv) {
+        Ok(wineserver) => {
+            glib::spawn_future_local(async move {
+                if let Err(error) = wineserver.wait_future().await {
+                    glib::g_warning!("pindu", "Lost track of wineserver: {error}");
+                }
+                umu.send_signal(SIGTERM);
+            });
+        }
+        Err(error) => {
+            glib::g_warning!("pindu", "Could not run {:?}: {error}", end_prefix.argv);
+            umu.send_signal(SIGTERM);
+        }
+    }
+}
+
+unsafe extern "C" {
+    /// libc's `kill(2)`.
+    safe fn kill(pid: i32, signal: i32) -> i32;
+}
+
+/// Asks every process of the native game umu runs with `launch` to quit: those in the
+/// runtime share our processes, so they are in our `/proc` (see [`proton::runs_for`]).
+fn end_in_runtime(launch: &Command) {
+    let Ok(entries) = std::fs::read_dir("/proc") else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let Some(pid) = entry
+            .file_name()
+            .to_str()
+            .and_then(|name| name.parse().ok())
+        else {
+            continue;
+        };
+        let Ok(environ) = std::fs::read(entry.path().join("environ")) else {
+            continue;
+        };
+        if proton::runs_for(launch, &environ) {
+            kill(pid, SIGTERM);
         }
     }
 }

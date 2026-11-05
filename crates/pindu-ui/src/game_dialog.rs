@@ -1,6 +1,7 @@
 //! The Add Game and Edit Game dialog. Games added by hand get their type (native or
-//! Windows), folder, program, title and options here, and Windows games their Proton
-//! build, prefix and installer; every game can get its own cover, banner and logo.
+//! Windows), folder, program, title and options here, native games whether they run on
+//! the host instead of in the Steam Linux Runtime, and Windows games their Proton build,
+//! prefix and installer; every game can get its own cover, banner and logo.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::collections::HashMap;
@@ -72,6 +73,8 @@ mod imp {
         pub working_dir_row: TemplateChild<adw::EntryRow>,
         #[template_child]
         pub kind_row: TemplateChild<adw::ComboRow>,
+        #[template_child]
+        pub host_row: TemplateChild<adw::SwitchRow>,
         /// The selected Windows program's icon, at the start of the Program row while
         /// there is one (an empty prefix would still indent the row).
         pub program_icon: gtk::Image,
@@ -97,10 +100,10 @@ mod imp {
         pub logo_row: TemplateChild<adw::ActionRow>,
         pub mode: RefCell<Mode>,
         pub library: OnceCell<LibraryService>,
-        /// The chosen game folder, as the host sees it (for native games).
+        /// The chosen game folder, as the host sees it (for native games run on the host).
         pub folder: RefCell<Option<PathBuf>>,
-        /// The chosen game folder, as the sandbox sees it (for Windows games, which run
-        /// inside it), and for listing its programs.
+        /// The chosen game folder, as the sandbox sees it (for the games umu runs inside
+        /// it), and for listing its programs.
         pub local_folder: RefCell<Option<PathBuf>>,
         /// The Proton row's builds.
         pub proton: OnceCell<Rc<ProtonChoice>>,
@@ -292,6 +295,7 @@ impl GameDialog {
         imp.title_row.set_text(&form.title);
         imp.arguments_row.set_text(&form.arguments);
         imp.working_dir_row.set_text(&form.working_dir);
+        imp.host_row.set_active(form.host);
         if let Some(windows) = &form.windows {
             self.proton().select(windows.proton_version.clone());
             self.set_prefix(windows.prefix.clone());
@@ -313,6 +317,7 @@ impl GameDialog {
     fn kind_changed(&self) {
         let imp = self.imp();
         imp.windows_group.set_visible(self.is_windows());
+        imp.host_row.set_visible(!self.is_windows());
         let local = imp.local_folder.borrow().clone();
         if let Some(local) = local {
             self.list_programs(local, self.selected_executable());
@@ -627,10 +632,11 @@ impl GameDialog {
     fn form(&self) -> Option<ManualGame> {
         let imp = self.imp();
         let windows = self.is_windows();
-        let folder = if windows {
-            imp.local_folder.borrow().clone()?
-        } else {
+        let host = !windows && imp.host_row.is_active();
+        let folder = if host {
             imp.folder.borrow().clone()?
+        } else {
+            imp.local_folder.borrow().clone()?
         };
         Some(ManualGame {
             title: imp.title_row.text().to_string(),
@@ -638,6 +644,7 @@ impl GameDialog {
             executable: self.selected_executable()?,
             arguments: imp.arguments_row.text().to_string(),
             working_dir: imp.working_dir_row.text().to_string(),
+            host,
             windows: windows.then(|| WindowsOptions {
                 proton_version: self.selected_proton(),
                 prefix: imp.prefix.borrow().clone(),

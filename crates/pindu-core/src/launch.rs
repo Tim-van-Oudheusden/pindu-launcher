@@ -18,6 +18,9 @@ pub enum Route {
     /// Run a Windows game through umu and Proton inside our sandbox; the build and
     /// prefix are picked by [`crate::proton::command`].
     Proton(LaunchConfig),
+    /// Run a native game in the Steam Linux Runtime through umu inside our sandbox, as
+    /// [`crate::proton::runtime_command`] has it.
+    Runtime(Command),
 }
 
 /// A command to run: an argument list, never a shell string, with the environment and
@@ -65,17 +68,22 @@ pub fn route(game: &Game, config: Option<&LaunchConfig>) -> Option<Route> {
             Route::HostSpawn(command)
         }),
         LaunchKind::Proton => config.cloned().map(Route::Proton),
-        LaunchKind::RuntimeNative => None,
+        LaunchKind::RuntimeNative => {
+            config.map(|config| Route::Runtime(crate::proton::runtime_command(game, config)))
+        }
     }
 }
 
 /// Whether we record play sessions for a game: every game we start ourselves, Windows
-/// games included, except Faugus's, whose launcher tracks playtime and which we import
-/// instead.
+/// games and games in the Steam Linux Runtime included, except Faugus's, whose launcher
+/// tracks playtime and which we import instead.
 pub fn tracks_sessions(game: &Game) -> bool {
     matches!(
         game.launch_kind,
-        LaunchKind::HostCommand | LaunchKind::DesktopEntry | LaunchKind::Proton
+        LaunchKind::HostCommand
+            | LaunchKind::DesktopEntry
+            | LaunchKind::Proton
+            | LaunchKind::RuntimeNative
     ) && game.source() != Source::Faugus
 }
 
@@ -91,16 +99,17 @@ pub struct LaunchSettings {
 }
 
 /// The launch settings a game's page offers; `None` for store games, whose launcher
-/// keeps their settings, and games this version cannot start.
+/// keeps their settings.
 pub fn launch_settings(game: &Game) -> Option<LaunchSettings> {
     match game.launch_kind {
-        LaunchKind::StoreUri | LaunchKind::RuntimeNative => None,
-        LaunchKind::HostCommand | LaunchKind::DesktopEntry | LaunchKind::Proton => {
-            Some(LaunchSettings {
-                proton: game.launch_kind == LaunchKind::Proton,
-                arguments: game.source() == Source::Manual,
-            })
-        }
+        LaunchKind::StoreUri => None,
+        LaunchKind::HostCommand
+        | LaunchKind::DesktopEntry
+        | LaunchKind::Proton
+        | LaunchKind::RuntimeNative => Some(LaunchSettings {
+            proton: game.launch_kind == LaunchKind::Proton,
+            arguments: game.source() == Source::Manual,
+        }),
     }
 }
 
@@ -259,6 +268,13 @@ mod tests {
                 arguments: true
             })
         );
+        assert_eq!(
+            launch_settings(&game(Source::Manual, LaunchKind::RuntimeNative)),
+            Some(LaunchSettings {
+                proton: false,
+                arguments: true
+            })
+        );
         // An imported game's command is its source's; options on top are ours.
         assert_eq!(
             launch_settings(&game(Source::Lutris, LaunchKind::HostCommand)),
@@ -395,6 +411,31 @@ mod tests {
     #[test]
     fn proton_games_are_tracked_like_the_games_we_start_on_the_host() {
         assert!(tracks_sessions(&host_game(LaunchKind::Proton)));
+    }
+
+    #[test]
+    fn runtime_native_games_run_in_the_steam_linux_runtime_through_umu() {
+        let game = host_game(LaunchKind::RuntimeNative);
+
+        let Some(Route::Runtime(command)) = route(&game, Some(&config())) else {
+            panic!("no runtime route");
+        };
+
+        assert_eq!(
+            command.argv,
+            ["umu-run", "/opt/Celeste Game/Celeste", "--fullscreen"]
+        );
+        // umu runs the program as it is, in its default runtime, without Proton.
+        assert_eq!(command.environment["UMU_NO_PROTON"], "1");
+        assert!(!command.environment.contains_key("PROTONPATH"));
+        assert!(command.environment["GAMEID"].starts_with("umu-pindu-"));
+        assert_eq!(command.environment["SDL_VIDEODRIVER"], "wayland");
+        assert_eq!(
+            command.working_dir.as_deref(),
+            Some(Path::new("/opt/Celeste Game"))
+        );
+        assert!(tracks_sessions(&game));
+        assert_eq!(route(&game, None), None);
     }
 
     #[test]
