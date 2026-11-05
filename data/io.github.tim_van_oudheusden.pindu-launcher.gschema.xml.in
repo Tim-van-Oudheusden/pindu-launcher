@@ -52,6 +52,26 @@
       <summary>Navigate the window with a controller</summary>
       <description>Move focus with the D-pad or left stick, open with A and go back with B. Controllers are only opened while this is on.</description>
     </key>
+    <key name="default-proton" type="s">
+      <default>''</default>
+      <summary>Default Proton build</summary>
+      <description>The internal name of the Proton build Windows games run with unless they name their own. Empty for the newest build on this computer.</description>
+    </key>
+    <key name="prefix-folder" type="s">
+      <default>''</default>
+      <summary>Prefix folder</summary>
+      <description>The folder new Windows games get their own prefix in. Empty for ~/Games/pindu-launcher/prefixes.</description>
+    </key>
+    <key name="default-mangohud" type="b">
+      <default>false</default>
+      <summary>MangoHud for new Windows games</summary>
+      <description>Whether Windows games added from now on start with the MangoHud performance overlay.</description>
+    </key>
+    <key name="default-gamemode" type="b">
+      <default>false</default>
+      <summary>GameMode for new Windows games</summary>
+      <description>Whether Windows games added from now on start with GameMode.</description>
+    </key>
     <key name="start-in-fullscreen" type="b">
       <default>false</default>
       <summary>Start in fullscreen mode</summary>

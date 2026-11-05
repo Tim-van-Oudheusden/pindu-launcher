@@ -19,6 +19,7 @@ use pindu_core::proton::{self, ProtonError};
 use pindu_core::sources::location::HostDirs;
 use pindu_core::umu::{self, RuntimeSetup};
 
+use crate::config::APP_ID;
 use crate::launch_service::now;
 use crate::library_service::LibraryService;
 
@@ -26,8 +27,8 @@ use crate::library_service::LibraryService;
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(250);
 
 /// Starts a Windows game with the Proton build and prefix its launch config names, or the
-/// newest build and a prefix of its own. The app stays up while the game runs, since the
-/// game writes its log to us.
+/// defaults from Preferences. The app stays up while the game runs, since the game writes
+/// its log to us.
 pub fn play(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
@@ -38,13 +39,11 @@ pub fn play(
 ) {
     let (app, window) = (app.clone(), window.cloned());
     let hold = app.hold();
+    let defaults = defaults();
     glib::spawn_future_local(async move {
         let found = {
             let game = game.clone();
-            gio::spawn_blocking(move || {
-                proton::command(&game, &config, &builds(), &default_prefixes_dir())
-            })
-            .await
+            gio::spawn_blocking(move || proton::command(&game, &config, &builds(), &defaults)).await
         };
         let title = game.title.clone();
         let command = match found {
@@ -75,7 +74,7 @@ pub fn play(
 }
 
 /// Runs a game's installer through umu in the prefix the game will use, with the named
-/// Proton build or the newest one, and waits until it exits. Returns whether it ran.
+/// Proton build or the default one, and waits until it exits. Returns whether it ran.
 pub async fn run_installer(
     app: &gtk::Application,
     window: Option<gtk::Window>,
@@ -88,8 +87,15 @@ pub async fn run_installer(
     let title = installer
         .file_name()
         .map_or_else(String::new, |name| name.to_string_lossy().into_owned());
+    let defaults = defaults();
     let found = gio::spawn_blocking(move || {
-        proton::installer_command(&installer, proton_version.as_deref(), &prefix, &builds())
+        proton::installer_command(
+            &installer,
+            proton_version.as_deref(),
+            &prefix,
+            &builds(),
+            &defaults,
+        )
     })
     .await;
     match found {
@@ -111,6 +117,24 @@ pub fn builds() -> Vec<proton::ProtonBuild> {
         &HostDirs::from_env(),
         &default_tools_dir(),
     ))
+}
+
+/// The Windows games defaults from Preferences. An empty build name stands for the
+/// newest build, an empty folder for `~/Games/pindu-launcher/prefixes`.
+pub fn defaults() -> proton::Defaults {
+    let settings = gio::Settings::new(APP_ID);
+    let proton = settings.string("default-proton");
+    let folder = settings.string("prefix-folder");
+    proton::Defaults {
+        proton_version: (!proton.is_empty()).then(|| proton.to_string()),
+        prefixes: if folder.is_empty() {
+            default_prefixes_dir()
+        } else {
+            PathBuf::from(folder.as_str())
+        },
+        mangohud: settings.boolean("default-mangohud"),
+        gamemode: settings.boolean("default-gamemode"),
+    }
 }
 
 /// Runs a program through umu as our child and follows its log until umu exits. The

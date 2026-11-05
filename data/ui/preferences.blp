@@ -125,6 +125,62 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
   }
 
   Adw.PreferencesPage {
+    title: _("Windows");
+    icon-name: "applications-games-symbolic";
+
+    Adw.PreferencesGroup {
+      title: _("Defaults");
+      description: _("Windows games run with these unless their page says otherwise.");
+
+      Adw.ComboRow default_proton_row {
+        title: _("Proton");
+
+        model: StringList {};
+      }
+
+      Adw.ActionRow prefix_folder_row {
+        title: _("Prefix Folder");
+        subtitle-selectable: true;
+
+        [suffix]
+        Button reset_prefix_folder_button {
+          icon-name: "edit-undo-symbolic";
+          tooltip-text: _("Use the Games Folder");
+          valign: center;
+          clicked => $reset_prefix_folder() swapped;
+
+          styles [
+            "flat",
+          ]
+        }
+
+        [suffix]
+        Button {
+          label: _("_Choose…");
+          use-underline: true;
+          valign: center;
+          clicked => $choose_prefix_folder() swapped;
+        }
+      }
+    }
+
+    Adw.PreferencesGroup {
+      title: _("Tools");
+      description: _("Games added from now on start with these switched on; each game's page can change them.");
+
+      Adw.SwitchRow default_mangohud_row {
+        title: _("MangoHud");
+        subtitle: _("An overlay with the frame rate and how busy the computer is");
+      }
+
+      Adw.SwitchRow default_gamemode_row {
+        title: _("GameMode");
+        subtitle: _("Asks the system to favour the game while it runs");
+      }
+    }
+  }
+
+  Adw.PreferencesPage {
     title: _("Fullscreen");
     icon-name: "view-fullscreen-symbolic";
 

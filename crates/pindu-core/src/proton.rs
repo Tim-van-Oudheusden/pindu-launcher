@@ -15,6 +15,8 @@ use crate::sources::vdf;
 
 /// The folder under a Steam root that holds compatibility tools.
 const COMPAT_TOOLS: &str = "compatibilitytools.d";
+/// The GameMode client library, from the `gamemode` module of our Flatpak.
+const LIBGAMEMODE: &str = "libgamemode.so.0";
 
 /// A Proton build on this machine.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -120,26 +122,67 @@ impl fmt::Display for ProtonError {
 
 impl std::error::Error for ProtonError {}
 
+/// What Windows games get when their launch config names nothing of its own: the
+/// Preferences' Windows games page.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Defaults {
+    /// The Proton build, by its internal name; `None` for the newest one at each start.
+    pub proton_version: Option<String>,
+    /// The folder that holds games' prefixes of their own.
+    pub prefixes: PathBuf,
+    /// Whether new games start with MangoHud on.
+    pub mangohud: bool,
+    /// Whether new games start with GameMode on.
+    pub gamemode: bool,
+}
+
 /// The command that runs a Windows game: `umu-run` with the game, given its Proton build
 /// as `PROTONPATH` and its prefix as `WINEPREFIX`. The build and prefix in its launch
-/// config win; without them it gets the newest build and its own folder under `prefixes`.
-/// The user's environment wins over ours.
+/// config win; without them it gets the default build and its own folder in the default
+/// prefixes folder. The user's environment wins over ours.
 pub fn command(
     game: &Game,
     config: &LaunchConfig,
     builds: &[ProtonBuild],
-    prefixes: &Path,
+    defaults: &Defaults,
 ) -> Result<Command, ProtonError> {
-    let build = pick_build(config.proton_version.as_deref(), builds)?;
+    let chosen = config
+        .proton_version
+        .as_deref()
+        .or(defaults.proton_version.as_deref());
+    let build = pick_build(chosen, builds)?;
     let prefix = config
         .prefix_path
         .clone()
-        .unwrap_or_else(|| prefixes.join(game.id.native_id()));
+        .unwrap_or_else(|| defaults.prefixes.join(game.id.native_id()));
     let mut environment = launch::session_environment(game);
     environment.insert("PROTONPATH".to_owned(), path_text(&build.path));
     environment.insert("WINEPREFIX".to_owned(), path_text(&prefix));
+    if config.mangohud {
+        // The MangoHud Vulkan-layer extension turns on with this inside the Steam Runtime
+        // container too; the `mangohud` script is not on our `PATH`, and DXVK and VKD3D
+        // run games on Vulkan anyway.
+        environment.insert("MANGOHUD".to_owned(), "1".to_owned());
+    }
     environment.extend(config.environment.clone());
-    let mut argv = vec!["umu-run".to_owned(), path_text(&config.executable)];
+    if config.gamemode {
+        // `gamemoderun` preloads libgamemodeauto, which loads libgamemode by name.
+        // pressure-vessel brings only preloaded libraries into the Steam Runtime
+        // container, so libgamemode is preloaded too, or the game itself never asks the
+        // GameMode portal.
+        let preload = match environment.get("LD_PRELOAD") {
+            Some(own) => format!("{LIBGAMEMODE}:{own}"),
+            None => LIBGAMEMODE.to_owned(),
+        };
+        environment.insert("LD_PRELOAD".to_owned(), preload);
+    }
+    // The wrappers, outermost first, then `gamemoderun`, wrap umu, which starts the game
+    // in the Steam Runtime container through the Flatpak portal.
+    let mut argv = config.wrappers.clone();
+    if config.gamemode {
+        argv.push("gamemoderun".to_owned());
+    }
+    argv.extend(["umu-run".to_owned(), path_text(&config.executable)]);
     argv.extend(config.arguments.iter().cloned());
     Ok(Command {
         argv,
@@ -149,15 +192,19 @@ pub fn command(
 }
 
 /// The command that runs a game's installer through umu, in the prefix the game will
-/// use, with the named Proton build or the newest one. It runs in the installer's folder,
-/// and with umu's default game ID, as there is no game yet.
+/// use, with the named Proton build or the default one. It runs in the installer's
+/// folder, and with umu's default game ID, as there is no game yet.
 pub fn installer_command(
     installer: &Path,
     proton_version: Option<&str>,
     prefix: &Path,
     builds: &[ProtonBuild],
+    defaults: &Defaults,
 ) -> Result<Command, ProtonError> {
-    let build = pick_build(proton_version, builds)?;
+    let build = pick_build(
+        proton_version.or(defaults.proton_version.as_deref()),
+        builds,
+    )?;
     let environment = [
         ("GAMEID", "umu-default".to_owned()),
         ("PROTONPATH", path_text(&build.path)),
@@ -226,11 +273,21 @@ mod tests {
         }
     }
 
+    /// Preferences as they ship: the newest build, prefixes in the games folder.
+    fn defaults() -> Defaults {
+        Defaults {
+            proton_version: None,
+            prefixes: PREFIXES.into(),
+            mangohud: false,
+            gamemode: false,
+        }
+    }
+
     #[test]
     fn games_run_umu_with_the_newest_build_and_a_prefix_of_their_own() {
         let builds = [build("GE-Proton11-3"), build("GE-Proton10-34")];
 
-        let command = command(&game(), &config(), &builds, Path::new(PREFIXES)).unwrap();
+        let command = command(&game(), &config(), &builds, &defaults()).unwrap();
 
         assert_eq!(
             command.argv,
@@ -255,10 +312,86 @@ mod tests {
             ..config()
         };
 
-        let command = command(&game(), &config, &builds, Path::new(PREFIXES)).unwrap();
+        let command = command(&game(), &config, &builds, &defaults()).unwrap();
 
         assert_eq!(command.environment["PROTONPATH"], "/tools/GE-Proton10-34");
         assert_eq!(command.environment["WINEPREFIX"], "/games/Celeste/prefix");
+    }
+
+    #[test]
+    fn games_without_a_build_or_prefix_of_their_own_get_the_defaults() {
+        let builds = [build("GE-Proton11-3"), build("GE-Proton10-34")];
+        let defaults = Defaults {
+            proton_version: Some("GE-Proton10-34".into()),
+            prefixes: "/data/prefixes".into(),
+            ..defaults()
+        };
+
+        let command = command(&game(), &config(), &builds, &defaults).unwrap();
+
+        assert_eq!(command.environment["PROTONPATH"], "/tools/GE-Proton10-34");
+        assert_eq!(
+            command.environment["WINEPREFIX"],
+            "/data/prefixes/celeste-1a2b"
+        );
+        let gone = Defaults {
+            proton_version: Some("GE-Proton9-1".into()),
+            ..defaults
+        };
+        assert_eq!(
+            super::command(&game(), &config(), &builds, &gone),
+            Err(ProtonError::Missing("GE-Proton9-1".into()))
+        );
+    }
+
+    #[test]
+    fn wrappers_and_gamemode_go_around_umu_and_mangohud_is_switched_on_for_vulkan() {
+        let builds = [build("GE-Proton11-3")];
+        let config = LaunchConfig {
+            wrappers: vec!["taskset".into(), "-c".into(), "0-3".into()],
+            gamemode: true,
+            mangohud: true,
+            ..config()
+        };
+
+        let command = command(&game(), &config, &builds, &defaults()).unwrap();
+        let plain = super::command(&game(), &self::config(), &builds, &defaults()).unwrap();
+
+        assert_eq!(
+            command.argv,
+            [
+                "taskset",
+                "-c",
+                "0-3",
+                "gamemoderun",
+                "umu-run",
+                "/games/Celeste/Celeste.exe",
+                "--windowed"
+            ]
+        );
+        assert_eq!(command.environment["MANGOHUD"], "1");
+        assert!(!plain.environment.contains_key("MANGOHUD"));
+    }
+
+    #[test]
+    fn gamemode_also_preloads_libgamemode_so_the_game_in_the_runtime_container_finds_it() {
+        let builds = [build("GE-Proton11-3")];
+        let on = LaunchConfig {
+            gamemode: true,
+            ..config()
+        };
+        let with_own_preload = LaunchConfig {
+            environment: [("LD_PRELOAD".to_owned(), "libfoo.so".to_owned())].into(),
+            ..on.clone()
+        };
+
+        let command = command(&game(), &on, &builds, &defaults()).unwrap();
+        let own = super::command(&game(), &with_own_preload, &builds, &defaults()).unwrap();
+        let plain = super::command(&game(), &config(), &builds, &defaults()).unwrap();
+
+        assert_eq!(command.environment["LD_PRELOAD"], "libgamemode.so.0");
+        assert_eq!(own.environment["LD_PRELOAD"], "libgamemode.so.0:libfoo.so");
+        assert!(!plain.environment.contains_key("LD_PRELOAD"));
     }
 
     #[test]
@@ -274,14 +407,17 @@ mod tests {
             path: "/tools/GE-Proton11-3".into(),
             built_at: None,
         };
-        let prefixes = Path::new("/prefixes");
+        let defaults = Defaults {
+            prefixes: "/prefixes".into(),
+            ..defaults()
+        };
 
         assert_eq!(
-            command(&game, &LaunchConfig::default(), &[], prefixes),
+            command(&game, &LaunchConfig::default(), &[], &defaults),
             Err(ProtonError::NoBuilds)
         );
         assert_eq!(
-            command(&game, &chosen, &[other], prefixes),
+            command(&game, &chosen, &[other], &defaults),
             Err(ProtonError::Missing("GE-Proton9-1".into()))
         );
     }
@@ -292,8 +428,14 @@ mod tests {
         let installer = Path::new("/run/user/1000/doc/9f8e/setup_celeste.exe");
         let prefix = Path::new(PREFIXES).join("new-prefix");
 
-        let command =
-            installer_command(installer, Some("GE-Proton10-34"), &prefix, &builds).unwrap();
+        let command = installer_command(
+            installer,
+            Some("GE-Proton10-34"),
+            &prefix,
+            &builds,
+            &defaults(),
+        )
+        .unwrap();
 
         assert_eq!(command.argv, ["umu-run", installer.to_str().unwrap()]);
         assert_eq!(command.environment["PROTONPATH"], "/tools/GE-Proton10-34");
@@ -302,8 +444,17 @@ mod tests {
         assert_eq!(command.environment["GAMEID"], "umu-default");
         assert_eq!(command.working_dir, Some("/run/user/1000/doc/9f8e".into()));
         assert_eq!(
-            installer_command(installer, None, &prefix, &[]),
+            installer_command(installer, None, &prefix, &[], &defaults()),
             Err(ProtonError::NoBuilds)
+        );
+        let pinned = Defaults {
+            proton_version: Some("GE-Proton10-34".into()),
+            ..defaults()
+        };
+        let by_default = installer_command(installer, None, &prefix, &builds, &pinned).unwrap();
+        assert_eq!(
+            by_default.environment["PROTONPATH"],
+            "/tools/GE-Proton10-34"
         );
     }
 }
