@@ -50,7 +50,21 @@ impl ProtonChoice {
             pending: RefCell::new(selected),
             filling: Cell::new(false),
         });
-        let weak = Rc::downgrade(&choice);
+        choice.read_builds();
+        choice
+    }
+
+    /// Reads the builds on this machine again, after one was installed or removed,
+    /// keeping the choice.
+    pub fn reload(self: &Rc<Self>) {
+        let selected = self.selected();
+        self.names.borrow_mut().clear();
+        self.pending.replace(selected);
+        self.read_builds();
+    }
+
+    fn read_builds(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
         glib::spawn_future_local(async move {
             let builds = gio::spawn_blocking(proton_launch::builds)
                 .await
@@ -59,7 +73,6 @@ impl ProtonChoice {
                 choice.fill(builds);
             }
         });
-        choice
     }
 
     fn fill(&self, builds: Vec<ProtonBuild>) {
@@ -88,7 +101,9 @@ impl ProtonChoice {
             (FirstChoice::Default, None) => gettext("Default"),
         };
         self.row.set_subtitle(&if builds.is_empty() {
-            gettext("No Proton found. Install one, for example through Steam.")
+            gettext(
+                "No Proton found. Install one on the Proton page of Preferences, or through Steam.",
+            )
         } else {
             String::new()
         });

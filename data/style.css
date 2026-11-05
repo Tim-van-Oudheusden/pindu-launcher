@@ -121,6 +121,25 @@ window.fullscreen-mode gridview.library > child:focus-within {
   font-weight: bold;
 }
 
+/* Fullscreen mode's search keyboard: a grid of keys, the one under the cursor filled with
+   the accent colour. */
+.search-keyboard {
+  padding: 18px 36px 6px;
+}
+
+.search-keyboard .osk-key {
+  min-width: 56px;
+  min-height: 48px;
+  border-radius: 9px;
+  background-color: var(--card-bg-color);
+  font-weight: bold;
+}
+
+.search-keyboard .osk-key.cursor {
+  background-color: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+}
+
 /* Fullscreen Home: the focused game's hero fills the page and fades into the window
    behind the carousel; the focused card is lifted a little with a ring around it. */
 .home .hero-gradient {

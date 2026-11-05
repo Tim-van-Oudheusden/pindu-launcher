@@ -181,6 +181,32 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
   }
 
   Adw.PreferencesPage {
+    title: _("Proton");
+    icon-name: "folder-download-symbolic";
+
+    Adw.PreferencesGroup downloaded_group {
+      title: _("Downloaded Builds");
+      description: _("Builds installed here can be chosen for any Windows game, like those from Steam.");
+    }
+
+    Adw.PreferencesGroup releases_group {
+      title: _("Releases");
+      description: _("GE-Proton and Proton-CachyOS builds published on GitHub. Pindu launcher only goes online when you check for releases or install one; games never download Proton when they start.");
+
+      header-suffix: Button check_releases_button {
+        label: _("_Check for Releases");
+        use-underline: true;
+        valign: center;
+        clicked => $check_releases() swapped;
+      };
+
+      Adw.ActionRow releases_status_row {
+        title: _("Not Checked Yet");
+      }
+    }
+  }
+
+  Adw.PreferencesPage {
     title: _("Fullscreen");
     icon-name: "view-fullscreen-symbolic";
 

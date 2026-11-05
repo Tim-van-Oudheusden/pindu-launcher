@@ -712,6 +712,24 @@ template $PinduWindow: Adw.ApplicationWindow {
       };
     };
 
+    // Fullscreen mode's search keyboard, which Y opens over the hint bar.
+    [bottom]
+    Revealer keyboard_revealer {
+      transition-type: slide_up;
+
+      child: Grid keyboard_grid {
+        halign: center;
+        row-spacing: 8;
+        column-spacing: 8;
+        column-homogeneous: true;
+        row-homogeneous: true;
+
+        styles [
+          "search-keyboard",
+        ]
+      };
+    }
+
     [bottom]
     Box hint_bar {
       halign: end;

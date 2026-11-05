@@ -2,6 +2,7 @@
 //! widget, with the glyph that shows the button on the active controller.
 
 use crate::gamepad::{Button, DeviceKind, Intent};
+use crate::osk::Key;
 use crate::panels::{DrawerLevel, OptionsLevel, Panel};
 
 /// What kind of widget has focus, as far as the A button is concerned.
@@ -23,8 +24,8 @@ pub enum Focus {
 
 /// Where the user is: the focused widget, an open dialog, a page to go back to, whether
 /// the page searches, whether it has tabs and a sort to step through, whether a game has
-/// options, whether Start opens the menu drawer, an open panel, and whether a launch is
-/// under way.
+/// options, whether Start opens the menu drawer, an open panel, whether a launch is
+/// under way, and the search keyboard while it is open.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Context {
     pub focus: Focus,
@@ -45,6 +46,16 @@ pub struct Context {
     pub panel: Option<Panel>,
     /// The launch overlay is up.
     pub launching: Launching,
+    /// The search keyboard is open, which takes the buttons.
+    pub keyboard: Option<Typing>,
+}
+
+/// The open search keyboard: the key its cursor is on and whether the search field is
+/// empty, which turns B from deleting into closing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Typing {
+    pub key: Key,
+    pub empty: bool,
 }
 
 /// What the launch overlay shows, as far as the buttons are concerned.
@@ -80,6 +91,12 @@ pub enum Action {
     HoldToCancel,
     /// Open the menu drawer.
     Menu,
+    /// Type the key's character into the search field.
+    Type,
+    /// Delete the search field's last character.
+    Delete,
+    /// Confirm the search and go to the results.
+    Done,
 }
 
 /// One hint: the button, by its position on the pad, and what it does. A pair of buttons
@@ -106,6 +123,35 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
             }];
         }
     }
+    let single = |intent, action: Option<Action>| {
+        action.map(|action| Hint {
+            button: kind.button(intent),
+            pair: None,
+            action,
+        })
+    };
+    // The open keyboard takes the buttons: A types its key, B deletes until the field is
+    // empty and then closes it, Start confirms.
+    if let Some(typing) = context.keyboard {
+        let activate = match typing.key {
+            Key::Char(_) | Key::Space => Action::Type,
+            Key::Backspace => Action::Delete,
+            Key::Done => Action::Done,
+        };
+        let back = if typing.empty {
+            Action::Close
+        } else {
+            Action::Delete
+        };
+        return [
+            single(Intent::Activate, Some(activate)),
+            single(Intent::Back, Some(back)),
+            single(Intent::Menu, Some(Action::Done)),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+    }
     let activate = match context.focus {
         Focus::Nothing => None,
         Focus::Game => Some(Action::Open),
@@ -131,13 +177,6 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
     let options = (context.options && page).then_some(Action::Options);
     let menu = (context.menu && page).then_some(Action::Menu);
     let tabs = context.tabs && page;
-    let single = |intent, action: Option<Action>| {
-        action.map(|action| Hint {
-            button: kind.button(intent),
-            pair: None,
-            action,
-        })
-    };
     let pair = |back, forward, action| {
         tabs.then(|| Hint {
             button: kind.button(back),
@@ -212,6 +251,7 @@ mod tests {
             page_below: false,
             search: false,
             tabs: false,
+            keyboard: None,
             options: false,
             menu: false,
             panel: None,
@@ -448,6 +488,42 @@ mod tests {
                 (Button::South, Action::Toggle),
                 (Button::East, Action::Close)
             ]
+        );
+    }
+
+    #[test]
+    fn the_search_keyboard_types_with_a_deletes_or_closes_with_b_and_confirms_with_start() {
+        let typing = |key, empty| Context {
+            search: true,
+            tabs: true,
+            page_below: true,
+            menu: true,
+            keyboard: Some(Typing { key, empty }),
+            ..context(Focus::Other)
+        };
+        assert_eq!(
+            actions(typing(Key::Char('q'), false), DeviceKind::Xbox),
+            [
+                (Button::South, Action::Type),
+                (Button::East, Action::Delete),
+                (Button::Start, Action::Done)
+            ]
+        );
+        assert_eq!(
+            actions(typing(Key::Space, true), DeviceKind::Nintendo),
+            [
+                (Button::East, Action::Type),
+                (Button::South, Action::Close),
+                (Button::Start, Action::Done)
+            ]
+        );
+        assert_eq!(
+            actions(typing(Key::Backspace, false), DeviceKind::Xbox)[0],
+            (Button::South, Action::Delete)
+        );
+        assert_eq!(
+            actions(typing(Key::Done, false), DeviceKind::Xbox)[0],
+            (Button::South, Action::Done)
         );
     }
 

@@ -298,29 +298,12 @@ impl PinduApplication {
             .build();
         let play_action = gio::ActionEntry::builder("play")
             .parameter_type(Some(glib::VariantTy::STRING))
-            .activate(move |app: &Self, _, id| {
-                let sessions = app.session_service().clone();
-                let app_ref = app.clone();
-                app.with_game(id, move |window, game, library, toast| {
-                    // In fullscreen mode the launch overlay follows the launch, which
-                    // reports back through its toast.
-                    window.begin_launch(game);
-                    let reported = window.downgrade();
-                    launch_service::play(
-                        app_ref.upcast_ref(),
-                        Some(window.upcast_ref()),
-                        game,
-                        library,
-                        &sessions,
-                        move |message| {
-                            toast(message);
-                            if let Some(window) = reported.upgrade() {
-                                window.launch_reported();
-                            }
-                        },
-                    );
-                });
-            })
+            .activate(move |app: &Self, _, id| app.play(id, false))
+            .build();
+        // "Play with Logs": the game's output, and Proton's log, kept in a new log.
+        let play_with_logs_action = gio::ActionEntry::builder("play-with-logs")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| app.play(id, true))
             .build();
         // Starts a game without needing a window: `--launch <id>` and Shell search.
         let launch_action = gio::ActionEntry::builder("launch-game")
@@ -344,6 +327,7 @@ impl PinduApplication {
                                 &game,
                                 &library,
                                 app.session_service(),
+                                false,
                                 move |toast| {
                                     if let Some(window) = &toast_window {
                                         window.add_toast(toast);
@@ -387,6 +371,7 @@ impl PinduApplication {
             export_library_action,
             import_backup_action,
             play_action,
+            play_with_logs_action,
             launch_action,
             stop_action,
             open_action,
@@ -482,6 +467,32 @@ impl PinduApplication {
                     window.add_toast(adw::Toast::new(&message));
                 }
             });
+        });
+    }
+
+    /// Starts a game from the window, with or without keeping its log.
+    fn play(&self, id: Option<&glib::Variant>, logs: bool) {
+        let sessions = self.session_service().clone();
+        let app = self.clone();
+        self.with_game(id, move |window, game, library, toast| {
+            // In fullscreen mode the launch overlay follows the launch, which reports
+            // back through its toast.
+            window.begin_launch(game);
+            let reported = window.downgrade();
+            launch_service::play(
+                app.upcast_ref(),
+                Some(window.upcast_ref()),
+                game,
+                library,
+                &sessions,
+                logs,
+                move |message| {
+                    toast(message);
+                    if let Some(window) = reported.upgrade() {
+                        window.launch_reported();
+                    }
+                },
+            );
         });
     }
 

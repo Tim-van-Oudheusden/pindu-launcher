@@ -1,8 +1,9 @@
 //! The Preferences dialog: General (covers, launching, controller, permissions), Sources (import,
 //! folder, sidebar), Artwork (SteamGridDB), Windows games (default Proton, prefix folder and
-//! tools) and Fullscreen (start-up, sounds). Everything is GSettings, except the SteamGridDB
-//! key, which lives in the keyring, and each source's import switch and folder, which live with
-//! the library's other source state.
+//! tools), Proton (downloaded builds and releases to install) and Fullscreen (start-up,
+//! sounds). Everything is GSettings, except the SteamGridDB key, which lives in the keyring,
+//! each source's import switch and folder, which live with the library's other source state,
+//! and the Proton builds, which are folders in our tools folder.
 
 use std::cell::OnceCell;
 use std::rc::Rc;
@@ -18,6 +19,7 @@ use crate::config::APP_ID;
 use crate::file_service;
 use crate::permission_service;
 use crate::proton_choice::{FirstChoice, ProtonChoice};
+use crate::proton_downloads_page::ProtonDownloadsPage;
 use crate::proton_launch;
 use crate::sources::{source_icon, source_name};
 use crate::steamgriddb_service;
@@ -68,9 +70,18 @@ mod imp {
         pub default_mangohud_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub default_gamemode_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub downloaded_group: TemplateChild<adw::PreferencesGroup>,
+        #[template_child]
+        pub releases_group: TemplateChild<adw::PreferencesGroup>,
+        #[template_child]
+        pub releases_status_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub check_releases_button: TemplateChild<gtk::Button>,
         pub settings: OnceCell<gio::Settings>,
         pub sync: OnceCell<SyncService>,
         pub default_proton: OnceCell<Rc<ProtonChoice>>,
+        pub proton_downloads: OnceCell<Rc<ProtonDownloadsPage>>,
     }
 
     #[glib::object_subclass]
@@ -114,6 +125,13 @@ mod imp {
         fn reset_prefix_folder(&self) {
             let _ = self.obj().settings().set_string("prefix-folder", "");
             self.obj().show_prefix_folder();
+        }
+
+        #[template_callback]
+        fn check_releases(&self) {
+            if let Some(page) = self.proton_downloads.get() {
+                page.check_releases();
+            }
         }
     }
 
@@ -174,7 +192,20 @@ mod imp {
                         .set_string("default-proton", name.as_deref().unwrap_or_default());
                 }
             ));
-            self.default_proton.set(choice).expect("constructed once");
+            self.default_proton
+                .set(choice.clone())
+                .expect("constructed once");
+            let downloads = ProtonDownloadsPage::new(
+                self.obj().upcast_ref(),
+                &self.downloaded_group,
+                &self.releases_group,
+                &self.releases_status_row,
+                &self.check_releases_button,
+                choice,
+            );
+            self.proton_downloads
+                .set(downloads)
+                .expect("constructed once");
             self.obj().show_prefix_folder();
 
             let allowed = permission_service::host_spawn_allowed();
