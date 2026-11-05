@@ -1,14 +1,13 @@
-//! Fullscreen mode's game page: its presentation, View opening the game's options
-//! (`win.game-options`), the launch overlay over the page while Play starts the game, and
-//! the return to the page, with focus on Play or Stop, once the game ends or the window
-//! has focus again. What the overlay shows and when to return is
+//! Fullscreen mode's game page: its presentation, the launch overlay over the page while
+//! Play starts the game, and the return to the page, with focus on Play or Stop, once the
+//! game ends or the window has focus again. What the overlay shows and when to return is
 //! `pindu_core::launch_overlay`; this feeds it the window's focus, dialogs, the game's
 //! Playing state and the launch's report (its toast), and does what it says.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
-use gtk::{gio, glib};
+use gtk::glib;
 use pindu_core::hints::Launching;
 use pindu_core::launch_overlay::{Effect, Event, Launch};
 use pindu_core::model::GameId;
@@ -29,10 +28,6 @@ impl PinduWindow {
                 window.follow_launch(Event::Interrupted);
             }
         });
-        let options = gio::ActionEntry::builder("game-options")
-            .activate(|window: &Self, _, _| window.show_game_options())
-            .build();
-        self.add_action_entries([options]);
     }
 
     /// Shows the game pages in fullscreen mode's presentation, or the desktop one; leaving
@@ -89,16 +84,6 @@ impl PinduWindow {
         self.follow_launch(Event::CancelHeld);
     }
 
-    /// View or X on a game page: the game's options.
-    pub(crate) fn show_game_options(&self) {
-        if self.visible_dialog().is_some() {
-            return;
-        }
-        if let Some(page) = self.visible_game_page() {
-            page.show_options();
-        }
-    }
-
     /// The shown page, when it is a game's.
     pub(crate) fn visible_game_page(&self) -> Option<GamePage> {
         self.imp()
@@ -122,6 +107,13 @@ impl PinduWindow {
         }
         self.show_launch();
         self.update_hints();
+        // A game page turns Stop back into Play in its own `playing` handler, which may
+        // run after this one: the hints follow once it has.
+        glib::idle_add_local_once(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move || window.update_hints()
+        ));
     }
 
     /// Lets the overlay linger for `after`, then tells the launch it did.
@@ -176,7 +168,7 @@ impl PinduWindow {
     }
 
     /// Back to the game's page, with focus on Play, or on Stop while the game runs.
-    fn return_to_game(&self, id: &GameId) {
+    pub(crate) fn return_to_game(&self, id: &GameId) {
         let navigation_view = &self.imp().navigation_view;
         match self.game_page(id) {
             Some(page) if self.visible_game_page().as_ref() == Some(&page) => page.focus_play(),

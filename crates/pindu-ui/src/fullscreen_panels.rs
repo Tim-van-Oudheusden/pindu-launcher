@@ -1,0 +1,618 @@
+//! Fullscreen mode's panels over the pages: the menu drawer on the left (Start or Guide)
+//! and the options sheet at the bottom (View or X, or a game page's Options and Add to
+//! Collection buttons). Which panel is open, at which level, and what the controller does
+//! to them is `pindu_core::panels`; this fills them, shows them, keeps focus inside the
+//! open one and gives it back after, and does what their entries say. They are widgets
+//! in the window rather than popover menus, which the compositor dismisses on a
+//! controller press.
+
+use adw::prelude::*;
+use adw::subclass::prelude::*;
+use gettextrs::gettext;
+use gtk::{gio, glib};
+use pindu_core::gamepad::Intent;
+use pindu_core::library::View;
+use pindu_core::panels::{
+    DrawerEntry, DrawerLevel, GameOption, OptionsLevel, Panel, Panels, Under, drawer_entries,
+    game_options,
+};
+
+use crate::launch_service::launcher_name;
+use crate::models::GameObject;
+use crate::preferences::TILE_SIZES;
+use crate::window::PinduWindow;
+
+impl PinduWindow {
+    pub(crate) fn setup_panels(&self) {
+        let imp = self.imp();
+        let close = gio::ActionEntry::builder("close-panel")
+            .activate(|window: &Self, _, _| window.close_panel())
+            .build();
+        let home = gio::ActionEntry::builder("drawer-home")
+            .activate(|window: &Self, _, _| {
+                window.close_panel();
+                let imp = window.imp();
+                imp.navigation_view.pop_to_page(&*imp.home_page);
+            })
+            .build();
+        let library = gio::ActionEntry::builder("drawer-library")
+            .activate(|window: &Self, _, _| {
+                window.close_panel();
+                window.show_library();
+            })
+            .build();
+        let collections = gio::ActionEntry::builder("drawer-collections")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::Drawer(DrawerLevel::Collections));
+            })
+            .build();
+        let settings = gio::ActionEntry::builder("drawer-settings")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::Drawer(DrawerLevel::Settings));
+            })
+            .build();
+        let collection = gio::ActionEntry::builder("drawer-collection")
+            .parameter_type(Some(glib::VariantTy::INT64))
+            .activate(|window: &Self, _, target| {
+                if let Some(id) = target.and_then(i64::from_variant) {
+                    window.close_panel();
+                    window.show_library();
+                    window.show_tab(View::Collection(id));
+                }
+            })
+            .build();
+        let options = gio::ActionEntry::builder("game-options")
+            .activate(|window: &Self, _, _| window.open_options(OptionsLevel::Main))
+            .build();
+        let game_collections = gio::ActionEntry::builder("game-collections")
+            .activate(|window: &Self, _, _| window.open_options(OptionsLevel::Collections))
+            .build();
+        self.add_action_entries([
+            close,
+            home,
+            library,
+            collections,
+            settings,
+            collection,
+            options,
+            game_collections,
+        ]);
+        // The drawer's Return and Stop: game IDs.
+        self.add_game_action("drawer-return", |window, id| {
+            window.close_panel();
+            window.return_to_game(id);
+        });
+        self.add_game_action("drawer-stop", |window, id| {
+            window.close_panel();
+            if let Some(application) = window.application() {
+                application.activate_action("stop", Some(&id.as_str().to_variant()));
+            }
+        });
+
+        // Up and Down stop at a list's ends; in a panel they go on to what lies above or
+        // below it: the next list of settings, or the nearest Playing Now card's Return
+        // (rather than the Stop beside it).
+        imp.drawer_list.connect_keynav_failed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or]
+            glib::Propagation::Stop,
+            move |_, direction| {
+                let cards = &window.imp().playing_cards;
+                if direction == gtk::DirectionType::Up
+                    && cards.is_visible()
+                    && let Some(button) = cards.last_child().as_ref().and_then(card_return)
+                {
+                    button.grab_focus();
+                }
+                glib::Propagation::Stop
+            }
+        ));
+        for list in [imp.drawer_sizes.get(), imp.drawer_switches.get()] {
+            list.connect_keynav_failed(|list, direction| {
+                step_out_of_list(list, direction);
+                glib::Propagation::Stop
+            });
+        }
+        // Escape closes a panel rather than leaving fullscreen mode.
+        for panel in [imp.drawer_panel.get(), imp.options_panel.get()] {
+            let escape = gtk::ShortcutController::new();
+            escape.add_shortcut(gtk::Shortcut::new(
+                gtk::ShortcutTrigger::parse_string("Escape"),
+                Some(gtk::NamedAction::new("win.close-panel")),
+            ));
+            panel.add_controller(escape);
+        }
+        // A click beside a panel closes it.
+        imp.drawer.connect_show_sidebar_notify(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |drawer| {
+                let open = window.imp().panels.get().open();
+                if !drawer.shows_sidebar() && matches!(open, Some(Panel::Drawer(_))) {
+                    window.close_panel();
+                }
+            }
+        ));
+        imp.options_sheet.connect_open_notify(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |sheet| {
+                let open = window.imp().panels.get().open();
+                if !sheet.is_open() && matches!(open, Some(Panel::Options(_))) {
+                    window.close_panel();
+                }
+            }
+        ));
+        imp.options_list.connect_row_activated(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, row| {
+                let option = usize::try_from(row.index())
+                    .ok()
+                    .and_then(|index| window.imp().game_options.borrow().get(index).copied());
+                if let Some(option) = option {
+                    window.choose_option(option);
+                }
+            }
+        ));
+        self.library().connect_collections_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| {
+                window.fill_drawer();
+                if let Some(game) = window.imp().options_game.borrow().as_ref() {
+                    window.fill_options_collections(game);
+                }
+            }
+        ));
+        self.setup_drawer_settings();
+        self.fill_drawer();
+    }
+
+    /// The drawer's settings: cover size, navigation sounds and exiting after a launch,
+    /// the same settings Preferences changes.
+    fn setup_drawer_settings(&self) {
+        let imp = self.imp();
+        let settings = self.settings();
+        settings
+            .bind("navigation-sounds", &*imp.drawer_sounds_row, "active")
+            .build();
+        settings
+            .bind("exit-after-launch", &*imp.drawer_exit_row, "active")
+            .build();
+        let toggles = [
+            imp.tile_small.get(),
+            imp.tile_medium.get(),
+            imp.tile_large.get(),
+        ];
+        for (toggle, size) in toggles.iter().zip(TILE_SIZES) {
+            toggle.connect_toggled(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |toggle| {
+                    if toggle.is_active() && window.settings().string("tile-size") != size {
+                        let _ = window.settings().set_string("tile-size", size);
+                    }
+                }
+            ));
+        }
+        let show_size = move |settings: &gio::Settings| {
+            let size = settings.string("tile-size");
+            for (toggle, name) in toggles.iter().zip(TILE_SIZES) {
+                toggle.set_active(size == name);
+            }
+        };
+        show_size(settings);
+        settings.connect_changed(Some("tile-size"), move |settings, _| show_size(settings));
+    }
+
+    /// Acts on a controller intent for the panels; says whether they took it. Start and
+    /// Guide toggle the drawer in fullscreen mode only: in the desktop window Guide enters
+    /// fullscreen mode.
+    pub(crate) fn handle_panel_intent(&self, intent: Intent) -> bool {
+        if matches!(intent, Intent::Menu | Intent::Home) && !self.is_fullscreen() {
+            return false;
+        }
+        let game = self.focused_game();
+        let under = Under {
+            game: game.is_some(),
+            dialog: self.visible_dialog().is_some(),
+        };
+        let mut panels = self.imp().panels.get();
+        if !panels.handle(intent, under) {
+            return false;
+        }
+        if let (Some(Panel::Options(_)), None) = (panels.open(), self.imp().panels.get().open())
+            && let Some(game) = game
+        {
+            self.fill_options(&game);
+        }
+        self.set_panels(panels);
+        true
+    }
+
+    /// The game a focused cover or card shows, or the shown game page's.
+    pub(crate) fn focused_game(&self) -> Option<GameObject> {
+        if let Some(page) = self.visible_game_page() {
+            return page.game();
+        }
+        if let Some(game) = self.focused_tile().and_then(|tile| tile.game()) {
+            return Some(game);
+        }
+        let imp = self.imp();
+        let home = imp.navigation_view.visible_page().as_ref()
+            == Some(imp.home_page.upcast_ref::<adw::NavigationPage>());
+        home.then(|| imp.home_page.focused_game()).flatten()
+    }
+
+    /// The panel that is open, if any.
+    pub(crate) fn open_panel(&self) -> Option<Panel> {
+        self.imp().panels.get().open()
+    }
+
+    /// Opens the options sheet for the focused game, at `level`: the game page's Options
+    /// and Add to Collection buttons.
+    fn open_options(&self, level: OptionsLevel) {
+        if self.visible_dialog().is_some() {
+            return;
+        }
+        let Some(game) = self.focused_game() else {
+            return;
+        };
+        self.fill_options(&game);
+        self.show_panel(Panel::Options(level));
+    }
+
+    fn show_panel(&self, panel: Panel) {
+        let mut panels = self.imp().panels.get();
+        panels.show(panel);
+        self.set_panels(panels);
+    }
+
+    /// Closes the open panel, giving focus back to where it was.
+    pub(crate) fn close_panel(&self) {
+        let mut panels = self.imp().panels.get();
+        panels.close();
+        self.set_panels(panels);
+    }
+
+    /// Shows `panels` as they now are: the drawer or the sheet, at its level, with focus
+    /// inside the open one and the page under it out of focus's way, or back on the page.
+    fn set_panels(&self, panels: Panels) {
+        let imp = self.imp();
+        let before = imp.panels.replace(panels).open();
+        let open = panels.open();
+        if before == open {
+            return;
+        }
+        if before.is_none() {
+            imp.focus_before_panel
+                .set(gtk::prelude::GtkWindowExt::focus(self).as_ref());
+        }
+        if matches!(open, Some(Panel::Drawer(_))) && !matches!(before, Some(Panel::Drawer(_))) {
+            self.fill_drawer();
+        }
+        let drawer = matches!(open, Some(Panel::Drawer(_)));
+        let sheet = matches!(open, Some(Panel::Options(_)));
+        // Directions stay inside the open panel.
+        imp.split_view.set_can_focus(!drawer && !sheet);
+        imp.drawer.set_can_focus(!sheet);
+        imp.drawer.set_show_sidebar(drawer);
+        imp.options_sheet.set_open(sheet);
+        match open {
+            Some(Panel::Drawer(level)) => imp.drawer_stack.set_visible_child_name(match level {
+                DrawerLevel::Main => "main",
+                DrawerLevel::Collections => "collections",
+                DrawerLevel::Settings => "settings",
+            }),
+            Some(Panel::Options(level)) => imp.options_stack.set_visible_child_name(match level {
+                OptionsLevel::Main => "main",
+                OptionsLevel::Collections => "collections",
+            }),
+            None => {
+                imp.options_game.take();
+                let previous = imp.focus_before_panel.upgrade();
+                imp.focus_before_panel.set(None);
+                if !previous.is_some_and(|widget| widget.is_mapped() && widget.grab_focus()) {
+                    self.focus_page();
+                }
+            }
+        }
+        if open.is_some() {
+            // Once the panel is shown and can take focus.
+            glib::idle_add_local_once(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move || window.focus_panel(before)
+            ));
+        }
+        self.update_hints();
+    }
+
+    /// Focuses the open panel: the entry that led to the list being left, or else its
+    /// first item (a list box would go back to the row it last had focus on).
+    pub(crate) fn focus_panel(&self, left: Option<Panel>) {
+        let imp = self.imp();
+        let first_row = |list: &gtk::ListBox| list.row_at_index(0).map(|row| row.upcast());
+        let target: Option<gtk::Widget> = match (self.open_panel(), left) {
+            (
+                Some(Panel::Drawer(DrawerLevel::Main)),
+                Some(Panel::Drawer(DrawerLevel::Collections)),
+            ) => Some(imp.drawer_collections_row.get().upcast()),
+            (
+                Some(Panel::Drawer(DrawerLevel::Main)),
+                Some(Panel::Drawer(DrawerLevel::Settings)),
+            ) => Some(imp.drawer_settings_row.get().upcast()),
+            (
+                Some(Panel::Options(OptionsLevel::Main)),
+                Some(Panel::Options(OptionsLevel::Collections)),
+            ) => {
+                let index = imp
+                    .game_options
+                    .borrow()
+                    .iter()
+                    .position(|option| *option == GameOption::Collections);
+                index
+                    .and_then(|index| imp.options_list.row_at_index(index as i32))
+                    .map(|row| row.upcast())
+            }
+            // The first Playing Now card's Return comes first.
+            (Some(Panel::Drawer(DrawerLevel::Main)), _) if imp.playing_cards.is_visible() => imp
+                .playing_cards
+                .first_child()
+                .as_ref()
+                .and_then(card_return),
+            (Some(Panel::Drawer(DrawerLevel::Main)), _) => first_row(&imp.drawer_list),
+            (Some(Panel::Drawer(DrawerLevel::Collections)), _) => {
+                first_row(&imp.drawer_collections)
+            }
+            (Some(Panel::Drawer(DrawerLevel::Settings)), _) => {
+                imp.tile_small.ancestor(gtk::ListBoxRow::static_type())
+            }
+            (Some(Panel::Options(OptionsLevel::Main)), _) => first_row(&imp.options_list),
+            (Some(Panel::Options(OptionsLevel::Collections)), _) => {
+                first_row(&imp.options_collections)
+            }
+            (None, _) => None,
+        };
+        if let Some(target) = target {
+            target.grab_focus();
+        }
+    }
+
+    /// The drawer's Playing Now cards, one per game we started that runs, and its
+    /// collections.
+    fn fill_drawer(&self) {
+        let imp = self.imp();
+        let playing: Vec<GameObject> = self
+            .library()
+            .all_games()
+            .into_iter()
+            .filter(GameObject::is_playing)
+            .collect();
+        let collections = self.library().collections();
+        let entries = drawer_entries(!playing.is_empty(), !collections.is_empty());
+        while let Some(card) = imp.playing_cards.first_child() {
+            imp.playing_cards.remove(&card);
+        }
+        for game in &playing {
+            imp.playing_cards.append(&playing_card(game));
+        }
+        imp.playing_cards
+            .set_visible(entries.contains(&DrawerEntry::PlayingNow));
+        imp.drawer_collections_row
+            .set_visible(entries.contains(&DrawerEntry::Collections));
+        imp.drawer_collections.remove_all();
+        for collection in &collections {
+            let row = drawer_row("folder-symbolic", &collection.name);
+            row.set_action_name(Some("win.drawer-collection"));
+            row.set_action_target_value(Some(&collection.id.to_variant()));
+            imp.drawer_collections.append(&row);
+        }
+    }
+
+    /// The sheet's title and actions for `game`, and its collections.
+    fn fill_options(&self, game: &GameObject) {
+        let imp = self.imp();
+        imp.options_game.replace(Some(game.clone()));
+        imp.options_title.set_label(&game.game().title);
+        let options = game_options(&game.game(), game.is_playing());
+        imp.options_list.remove_all();
+        for option in &options {
+            let (icon, label) = option_label(*option, game);
+            let row = drawer_row(icon, &label);
+            if *option == GameOption::Collections {
+                append_next_arrow(&row);
+            }
+            imp.options_list.append(&row);
+        }
+        imp.game_options.replace(options);
+        self.fill_options_collections(game);
+    }
+
+    /// One switch per collection, on while the game is in it, then "New Collection…".
+    fn fill_options_collections(&self, game: &GameObject) {
+        let imp = self.imp();
+        imp.options_collections.remove_all();
+        let id = game.id();
+        let member_of = game.entry().collections.clone();
+        for collection in self.library().collections() {
+            let row = adw::SwitchRow::builder()
+                .title(&collection.name)
+                .use_markup(false)
+                .active(member_of.contains(&collection.id))
+                .build();
+            let target = (id.as_str(), collection.id).to_variant();
+            row.connect_active_notify(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |row| {
+                    let action = if row.is_active() {
+                        "add-to-collection"
+                    } else {
+                        "remove-from-collection"
+                    };
+                    ActionGroupExt::activate_action(&window, action, Some(&target));
+                }
+            ));
+            imp.options_collections.append(&row);
+        }
+        let new = adw::ButtonRow::builder()
+            .title(gettext("_New Collection…"))
+            .use_underline(true)
+            .start_icon_name("list-add-symbolic")
+            .action_name("win.new-collection")
+            .action_target(&id.as_str().to_variant())
+            .build();
+        imp.options_collections.append(&new);
+    }
+
+    /// Does what the sheet's entry says, for its game: Collections leads to the game's
+    /// collections; every other entry closes the sheet first.
+    fn choose_option(&self, option: GameOption) {
+        let Some(game) = self.imp().options_game.borrow().clone() else {
+            return;
+        };
+        if option == GameOption::Collections {
+            self.show_panel(Panel::Options(OptionsLevel::Collections));
+            return;
+        }
+        self.close_panel();
+        let target = game.id().as_str().to_variant();
+        let (group, action) = match option {
+            GameOption::Play => ("app", "play"),
+            GameOption::Stop => ("app", "stop"),
+            GameOption::AddToFavourites | GameOption::RemoveFromFavourites => {
+                ("win", "toggle-favourite")
+            }
+            GameOption::Hide => ("win", "hide-game"),
+            GameOption::Unhide => ("win", "unhide-game"),
+            GameOption::OpenInLauncher => ("app", "open-in-launcher"),
+            GameOption::Collections => return,
+        };
+        if group == "app" {
+            if let Some(application) = self.application() {
+                application.activate_action(action, Some(&target));
+            }
+        } else {
+            ActionGroupExt::activate_action(self, action, Some(&target));
+        }
+    }
+}
+
+/// The icon and label of an options sheet entry for `game`.
+fn option_label(option: GameOption, game: &GameObject) -> (&'static str, String) {
+    match option {
+        GameOption::Play => ("media-playback-start-symbolic", gettext("Play")),
+        GameOption::Stop => ("media-playback-stop-symbolic", gettext("Stop")),
+        GameOption::AddToFavourites => ("non-starred-symbolic", gettext("Add to Favourites")),
+        GameOption::RemoveFromFavourites => ("starred-symbolic", gettext("Remove from Favourites")),
+        GameOption::Collections => ("folder-symbolic", gettext("Collections")),
+        GameOption::Hide => ("view-conceal-symbolic", gettext("Hide")),
+        GameOption::Unhide => ("view-reveal-symbolic", gettext("Unhide")),
+        GameOption::OpenInLauncher => (
+            "send-to-symbolic",
+            launcher_name(game.game().source()).map_or_else(
+                || gettext("Open in Launcher"),
+                |launcher| gettext("Open in {launcher}").replace("{launcher}", launcher),
+            ),
+        ),
+    }
+}
+
+/// A row of the drawer or the sheet: an icon and a label.
+fn drawer_row(icon: &str, label: &str) -> gtk::ListBoxRow {
+    let content = gtk::Box::builder().spacing(16).build();
+    content.append(
+        &gtk::Image::builder()
+            .icon_name(icon)
+            .accessible_role(gtk::AccessibleRole::Presentation)
+            .build(),
+    );
+    content.append(
+        &gtk::Label::builder()
+            .label(label)
+            .xalign(0.0)
+            .hexpand(true)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .build(),
+    );
+    gtk::ListBoxRow::builder().child(&content).build()
+}
+
+/// The arrow of a row that leads to a list.
+fn append_next_arrow(row: &gtk::ListBoxRow) {
+    if let Some(content) = row.child().and_downcast::<gtk::Box>() {
+        content.append(
+            &gtk::Image::builder()
+                .icon_name("go-next-symbolic")
+                .accessible_role(gtk::AccessibleRole::Presentation)
+                .build(),
+        );
+    }
+}
+
+/// The drawer's card for a game we started that runs: Return to its page, or Stop it.
+fn playing_card(game: &GameObject) -> gtk::Box {
+    let card = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(12)
+        .css_classes(["card", "playing-card"])
+        .build();
+    card.append(
+        &gtk::Label::builder()
+            .label(gettext("Playing Now"))
+            .xalign(0.0)
+            .css_classes(["heading", "accent"])
+            .build(),
+    );
+    card.append(
+        &gtk::Label::builder()
+            .label(game.game().title.as_str())
+            .xalign(0.0)
+            .wrap(true)
+            .css_classes(["title-3"])
+            .build(),
+    );
+    let buttons = gtk::Box::builder().spacing(12).homogeneous(true).build();
+    let target = game.id().as_str().to_variant();
+    for (label, action, style) in [
+        (gettext("_Return"), "win.drawer-return", "suggested-action"),
+        (gettext("_Stop"), "win.drawer-stop", "destructive-action"),
+    ] {
+        let button = gtk::Button::builder()
+            .label(label)
+            .use_underline(true)
+            .action_name(action)
+            .action_target(&target)
+            .css_classes(["pill", style])
+            .build();
+        buttons.append(&button);
+    }
+    card.append(&buttons);
+    card
+}
+
+/// Moves focus from the end of `list` to the nearest widget above or below it that takes
+/// focus, as `direction` says: a list box keeps Up and Down to itself, ringing the bell at
+/// its ends.
+fn step_out_of_list(list: &gtk::ListBox, direction: gtk::DirectionType) {
+    let next = |widget: &gtk::Widget| match direction {
+        gtk::DirectionType::Down => widget.next_sibling(),
+        gtk::DirectionType::Up => widget.prev_sibling(),
+        _ => None,
+    };
+    let mut sibling = next(list.upcast_ref());
+    while let Some(widget) = sibling {
+        if widget.is_visible() && widget.child_focus(direction) {
+            return;
+        }
+        sibling = next(&widget);
+    }
+}
+
+/// A Playing Now card's Return button: a card holds its labels, then its buttons.
+fn card_return(card: &gtk::Widget) -> Option<gtk::Widget> {
+    card.last_child()?.first_child()
+}

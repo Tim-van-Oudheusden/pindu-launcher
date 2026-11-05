@@ -3,6 +3,7 @@ crates/pindu-ui/src/collection_actions.rs
 crates/pindu-ui/src/file_service.rs
 crates/pindu-ui/src/fullscreen_game.rs
 crates/pindu-ui/src/fullscreen_library.rs
+crates/pindu-ui/src/fullscreen_panels.rs
 crates/pindu-ui/src/game_dialog.rs
 crates/pindu-ui/src/game_page.rs
 crates/pindu-ui/src/hint_bar.rs

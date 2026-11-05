@@ -1,5 +1,5 @@
 //! Collections in the main window: the sidebar row menu (rename, reorder, delete), the
-//! "Add to Collection" menus of tiles and game pages, and their undo toasts.
+//! "Add to Collection" menus of tiles and the desktop game page, and their undo toasts.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -20,18 +20,6 @@ pub fn collection_menu(game: &GameObject, collections: &[Collection]) -> gio::Me
     for item in remove_items(game, collections) {
         menu.append_item(&item);
     }
-    menu
-}
-
-/// The menu of an "Add to Collection" button: the collections to add to, "New
-/// Collection…", and the "Remove from" items, without a submenu to go through.
-pub fn collection_button_menu(game: &GameObject, collections: &[Collection]) -> gio::Menu {
-    let menu = add_menu(game, collections);
-    let remove = gio::Menu::new();
-    for item in remove_items(game, collections) {
-        remove.append_item(&item);
-    }
-    menu.append_section(None, &remove);
     menu
 }
 

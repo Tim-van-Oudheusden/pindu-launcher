@@ -9,6 +9,7 @@ pub mod file_service;
 pub mod fullscreen;
 pub mod fullscreen_game;
 pub mod fullscreen_library;
+pub mod fullscreen_panels;
 pub mod game_dialog;
 pub mod game_page;
 pub mod gamepad_service;

@@ -15,6 +15,7 @@ pub mod launch_overlay;
 pub mod library;
 pub mod manual;
 pub mod model;
+pub mod panels;
 pub mod paths;
 pub mod pe;
 pub mod permissions;
