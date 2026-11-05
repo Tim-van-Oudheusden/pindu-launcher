@@ -48,6 +48,11 @@ gamescope -f -- flatpak run --nosocket=wayland io.github.tim_van_oudheusden.pind
 - `--expose-wayland` is not recommended. The app then runs as a Wayland client, but gamescope doesn't make its window
   fullscreen: the window keeps its desktop size, and gamescope scales it up to the screen.
 
+## Styling fullscreen mode
+
+Fullscreen mode has switchable designs (Quick Access → Design) and takes your own CSS. Where the files go, the
+`theme.json` fields and the CSS names designs can rely on are in [docs/fullscreen-style.md](docs/fullscreen-style.md).
+
 ## Translating
 
 Translations are gettext `.po` files in `po/`, one per language listed in `po/LINGUAS`, made from the template

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 17:51+0100\n"
+"POT-Creation-Date: 2026-11-05 18:00+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -273,19 +273,19 @@ msgid "Needs a newer Pindu launcher"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:669
-#: crates/pindu-ui/src/hint_bar.rs:148
+#: crates/pindu-ui/src/hint_bar.rs:153
 #: crates/pindu-ui/src/widgets/cover_tile.rs:210 data/ui/cover_tile.blp:61
 msgid "Play"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:670
-#: crates/pindu-ui/src/hint_bar.rs:149
+#: crates/pindu-ui/src/hint_bar.rs:154
 #: crates/pindu-ui/src/widgets/cover_tile.rs:208
 msgid "Stop"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:671
-#: crates/pindu-ui/src/game_page.rs:385 data/ui/game_page.blp:111
+#: crates/pindu-ui/src/game_page.rs:385 data/ui/game_page.blp:115
 msgid "Add to Favourites"
 msgstr ""
 
@@ -317,7 +317,7 @@ msgstr ""
 msgid "Open in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:727 data/ui/game_page.blp:184
+#: crates/pindu-ui/src/fullscreen_panels.rs:727 data/ui/game_page.blp:188
 msgid "Playing Now"
 msgstr ""
 
@@ -467,7 +467,7 @@ msgid "{launcher} starts the game, keeps its settings and tracks its playtime"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:403
-#: crates/pindu-ui/src/widgets/cover_tile.rs:248 data/ui/game_page.blp:98
+#: crates/pindu-ui/src/widgets/cover_tile.rs:248 data/ui/game_page.blp:102
 msgid "_Play"
 msgstr ""
 
@@ -572,120 +572,120 @@ msgid_plural "{n} hours"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/hint_bar.rs:147
+#: crates/pindu-ui/src/hint_bar.rs:152
 msgid "Open"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:150
+#: crates/pindu-ui/src/hint_bar.rs:155
 msgid "Toggle"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:151
+#: crates/pindu-ui/src/hint_bar.rs:156
 msgid "Select"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:152 data/ui/shortcuts-dialog.blp:58
+#: crates/pindu-ui/src/hint_bar.rs:157 data/ui/shortcuts-dialog.blp:58
 msgid "Back"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:153
+#: crates/pindu-ui/src/hint_bar.rs:158
 msgid "Close"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:154 data/ui/shortcuts-dialog.blp:9
+#: crates/pindu-ui/src/hint_bar.rs:159 data/ui/shortcuts-dialog.blp:9
 msgid "Search"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:155
+#: crates/pindu-ui/src/hint_bar.rs:160
 msgid "Tabs"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:156 data/ui/window.blp:603
+#: crates/pindu-ui/src/hint_bar.rs:161 data/ui/window.blp:603
 msgid "Sort"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:157 data/ui/game_page.blp:138
+#: crates/pindu-ui/src/hint_bar.rs:162 data/ui/game_page.blp:142
 msgid "Options"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:158
+#: crates/pindu-ui/src/hint_bar.rs:163
 msgid "Hold to Cancel"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:159 crates/pindu-ui/src/hint_bar.rs:176
+#: crates/pindu-ui/src/hint_bar.rs:164 crates/pindu-ui/src/hint_bar.rs:181
 #: data/ui/shortcuts-dialog.blp:77 data/ui/window.blp:41
 msgid "Menu"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:160 data/ui/shortcuts-dialog.blp:82
+#: crates/pindu-ui/src/hint_bar.rs:165 data/ui/shortcuts-dialog.blp:82
 #: data/ui/window.blp:327 data/ui/window.blp:349
 msgid "Quick Access"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:161 data/ui/game_dialog.blp:40
+#: crates/pindu-ui/src/hint_bar.rs:166 data/ui/game_dialog.blp:40
 msgid "Type"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:162
+#: crates/pindu-ui/src/hint_bar.rs:167
 #: crates/pindu-ui/src/search_keyboard.rs:167
 msgid "Delete"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:163
+#: crates/pindu-ui/src/hint_bar.rs:168
 #: crates/pindu-ui/src/search_keyboard.rs:168
 msgid "Done"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:171
+#: crates/pindu-ui/src/hint_bar.rs:176
 msgid "Cross"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:172
+#: crates/pindu-ui/src/hint_bar.rs:177
 msgid "Circle"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:173
+#: crates/pindu-ui/src/hint_bar.rs:178
 msgid "Square"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:174
+#: crates/pindu-ui/src/hint_bar.rs:179
 msgid "Triangle"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:175
+#: crates/pindu-ui/src/hint_bar.rs:180
 msgid "View"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:177
+#: crates/pindu-ui/src/hint_bar.rs:182
 msgid "Minus"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:178
+#: crates/pindu-ui/src/hint_bar.rs:183
 msgid "Plus"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:179 data/ui/home_page.blp:5
+#: crates/pindu-ui/src/hint_bar.rs:184 data/ui/home_page.blp:5
 #: data/ui/window.blp:87 data/ui/window.blp:526
 msgid "Home"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:180
+#: crates/pindu-ui/src/hint_bar.rs:185
 msgid "More"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:181
+#: crates/pindu-ui/src/hint_bar.rs:186
 msgid "D-pad Up"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:182
+#: crates/pindu-ui/src/hint_bar.rs:187
 msgid "D-pad Down"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:183
+#: crates/pindu-ui/src/hint_bar.rs:188
 msgid "D-pad Left"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:184
+#: crates/pindu-ui/src/hint_bar.rs:189
 msgid "D-pad Right"
 msgstr ""
 
@@ -1551,7 +1551,7 @@ msgstr ""
 msgid "Title"
 msgstr ""
 
-#: data/ui/game_dialog.blp:82 data/ui/game_page.blp:292
+#: data/ui/game_dialog.blp:82 data/ui/game_page.blp:296
 msgid "Arguments"
 msgstr ""
 
@@ -1565,12 +1565,12 @@ msgid ""
 "Windows files and saves."
 msgstr ""
 
-#: data/ui/game_dialog.blp:98 data/ui/game_page.blp:273
+#: data/ui/game_dialog.blp:98 data/ui/game_page.blp:277
 #: data/ui/preferences.blp:136 data/ui/preferences.blp:184
 msgid "Proton"
 msgstr ""
 
-#: data/ui/game_dialog.blp:104 data/ui/game_page.blp:279
+#: data/ui/game_dialog.blp:104 data/ui/game_page.blp:283
 msgid "Prefix"
 msgstr ""
 
@@ -1578,7 +1578,7 @@ msgstr ""
 msgid "Use a New Prefix"
 msgstr ""
 
-#: data/ui/game_dialog.blp:121 data/ui/game_page.blp:284
+#: data/ui/game_dialog.blp:121 data/ui/game_page.blp:288
 msgid "C_hoose…"
 msgstr ""
 
@@ -1600,79 +1600,79 @@ msgid ""
 "the launcher's."
 msgstr ""
 
-#: data/ui/game_page.blp:17
+#: data/ui/game_page.blp:21
 msgid "Starting this game needs your permission"
 msgstr ""
 
-#: data/ui/game_page.blp:18
+#: data/ui/game_page.blp:22
 msgid "How to Enable"
 msgstr ""
 
-#: data/ui/game_page.blp:126
+#: data/ui/game_page.blp:130
 msgid "Add to Collection"
 msgstr ""
 
-#: data/ui/game_page.blp:150
+#: data/ui/game_page.blp:154
 msgid "More Actions"
 msgstr ""
 
-#: data/ui/game_page.blp:193
+#: data/ui/game_page.blp:197
 msgid "Your playtime is being recorded"
 msgstr ""
 
-#: data/ui/game_page.blp:221
+#: data/ui/game_page.blp:225
 msgid "About"
 msgstr ""
 
-#: data/ui/game_page.blp:224
+#: data/ui/game_page.blp:228
 msgid "Developer"
 msgstr ""
 
-#: data/ui/game_page.blp:233
+#: data/ui/game_page.blp:237
 msgid "Genres"
 msgstr ""
 
-#: data/ui/game_page.blp:248 data/ui/game_page.blp:268
+#: data/ui/game_page.blp:252 data/ui/game_page.blp:272
 msgid "Launch"
 msgstr ""
 
-#: data/ui/game_page.blp:251
+#: data/ui/game_page.blp:255
 msgid "Started by the launcher"
 msgstr ""
 
-#: data/ui/game_page.blp:261
+#: data/ui/game_page.blp:265
 msgid "Choose Launch Options"
 msgstr ""
 
-#: data/ui/game_page.blp:262
+#: data/ui/game_page.blp:266
 msgid "Ask Steam which of the game’s launch options to use"
 msgstr ""
 
-#: data/ui/game_page.blp:269
+#: data/ui/game_page.blp:273
 msgid "Changes apply the next time the game starts."
 msgstr ""
 
-#: data/ui/game_page.blp:298
+#: data/ui/game_page.blp:302
 msgid "Environment, Such as NAME=value"
 msgstr ""
 
-#: data/ui/game_page.blp:304 data/ui/preferences.blp:172
+#: data/ui/game_page.blp:308 data/ui/preferences.blp:172
 msgid "MangoHud"
 msgstr ""
 
-#: data/ui/game_page.blp:305 data/ui/preferences.blp:173
+#: data/ui/game_page.blp:309 data/ui/preferences.blp:173
 msgid "An overlay with the frame rate and how busy the computer is"
 msgstr ""
 
-#: data/ui/game_page.blp:309 data/ui/preferences.blp:177
+#: data/ui/game_page.blp:313 data/ui/preferences.blp:177
 msgid "GameMode"
 msgstr ""
 
-#: data/ui/game_page.blp:310 data/ui/preferences.blp:178
+#: data/ui/game_page.blp:314 data/ui/preferences.blp:178
 msgid "Asks the system to favour the game while it runs"
 msgstr ""
 
-#: data/ui/game_page.blp:314
+#: data/ui/game_page.blp:318
 msgid "Wrapper Command, Such as taskset -c 0-3"
 msgstr ""
 

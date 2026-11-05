@@ -73,7 +73,7 @@ impl PinduWindow {
                         .label(&label)
                         .use_underline(false)
                         .focus_on_click(false)
-                        .css_classes(["flat"])
+                        .css_classes(["flat", "library-tab"])
                         .build();
                     tab.connect_clicked(glib::clone!(
                         #[weak(rename_to = window)]
