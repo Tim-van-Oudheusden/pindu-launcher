@@ -475,6 +475,10 @@ impl PinduApplication {
         let sessions = self.session_service().clone();
         let app = self.clone();
         self.with_game(id, move |window, game, library, toast| {
+            // In fullscreen mode the launch overlay follows the launch, which reports
+            // back through its toast.
+            window.begin_launch(game);
+            let reported = window.downgrade();
             launch_service::play(
                 app.upcast_ref(),
                 Some(window.upcast_ref()),
@@ -482,7 +486,12 @@ impl PinduApplication {
                 library,
                 &sessions,
                 logs,
-                toast,
+                move |message| {
+                    toast(message);
+                    if let Some(window) = reported.upgrade() {
+                        window.launch_reported();
+                    }
+                },
             );
         });
     }

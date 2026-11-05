@@ -103,8 +103,68 @@ window.fullscreen-mode gridview.library > child:focus-within {
   }
 }
 
+/* Fullscreen mode's library tabs: the shown tab filled with the accent colour. */
+.library-tabs button {
+  border-radius: 999px;
+  padding: 6px 20px;
+  font-weight: bold;
+}
+
+.library-tabs button:checked {
+  background-color: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+}
+
 /* Fullscreen mode's hint bar: each controller glyph with what its button does. */
 .hint-bar {
   padding: 12px 36px;
   font-weight: bold;
+}
+
+/* Fullscreen Home: the focused game's hero fills the page and fades into the window
+   behind the carousel; the focused card is lifted a little with a ring around it. */
+.home .hero-gradient {
+  background-image: linear-gradient(to bottom, alpha(var(--window-bg-color), 0.05) 30%, alpha(var(--window-bg-color), 0.85) 70%, var(--window-bg-color));
+}
+
+.home-carousel > button {
+  transition: transform 120ms ease-out;
+}
+
+.home-carousel > button:focus-visible {
+  transform: scale(1.05);
+  outline: 3px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.home-carousel > .library-tile {
+  border-radius: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-carousel > button {
+    transition: none;
+  }
+}
+
+/* Fullscreen game page: a large Play, a ring around the focused button that shows on the
+   accent-coloured Play too, the Playing Now card, and the launch overlay that covers the
+   page while Play starts the game. */
+window.fullscreen-mode .game-play {
+  min-height: 64px;
+  padding: 0 56px;
+  font-size: 1.3em;
+}
+
+window.fullscreen-mode .game-actions button:focus-visible {
+  outline: 3px solid var(--window-fg-color);
+  outline-offset: 3px;
+}
+
+.playing-card {
+  padding: 16px 20px;
+}
+
+.launch-overlay {
+  background-color: alpha(var(--window-bg-color), 0.92);
 }

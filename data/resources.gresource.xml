@@ -4,6 +4,7 @@
     <file preprocess="xml-stripblanks">ui/cover_tile.ui</file>
     <file preprocess="xml-stripblanks">ui/game_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/game_page.ui</file>
+    <file preprocess="xml-stripblanks">ui/home_page.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences.ui</file>
     <!-- AdwApplication loads it from here and adds app.shortcuts on Ctrl+?. -->
     <file preprocess="xml-stripblanks" alias="shortcuts-dialog.ui">ui/shortcuts-dialog.ui</file>
@@ -20,7 +21,9 @@
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-home-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-l-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-l1-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-l2-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-lb-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-lt-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-menu-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-minus-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-north-triangle-symbolic.svg</file>
@@ -29,7 +32,9 @@
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-plus-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-r-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-r1-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-r2-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-rb-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-rt-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-south-a-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-south-b-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-south-cross-symbolic.svg</file>
@@ -37,5 +42,7 @@
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-west-square-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-west-x-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-west-y-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-zl-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-zr-symbolic.svg</file>
   </gresource>
 </gresources>

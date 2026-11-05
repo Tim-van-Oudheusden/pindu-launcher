@@ -1,8 +1,11 @@
 //! Controller navigation in the main window: directions move focus the way the arrow keys
 //! do (`move-focus` on the window), the cover grid steps through its covers with
-//! `scroll_to`, A activates the focused widget, B closes a dialog or goes back and Guide
-//! enters fullscreen mode. Intents never become synthetic key events, and only the active
-//! window acts on them.
+//! `scroll_to`, A activates the focused widget, B closes a menu or dialog or goes back, Y
+//! searches from Home or the library, View or X opens a game page's options, LB/RB and
+//! LT/RT switch the fullscreen library's tabs and sort order, and Guide enters fullscreen
+//! mode. While the launch overlay is up it takes every button, and a held B cancels a game
+//! we start. Intents never become synthetic key events, and only the active window acts
+//! on them.
 
 use std::collections::BTreeSet;
 
@@ -11,6 +14,7 @@ use adw::subclass::prelude::*;
 use gtk::glib;
 use pindu_core::gamepad::{Direction, Intent};
 use pindu_core::grid;
+use pindu_core::hints::Launching;
 
 use crate::application::PinduApplication;
 use crate::fullscreen::Sound;
@@ -56,6 +60,13 @@ impl PinduWindow {
         }
         // As with the keyboard, focus shows once the controller moves it.
         self.set_focus_visible(true);
+        if self.launching() != Launching::No {
+            if intent == Intent::BackHeld {
+                self.cancel_launch();
+                self.play_sound(Sound::Back);
+            }
+            return;
+        }
         match intent {
             Intent::Navigate(direction) => {
                 self.navigate(direction);
@@ -70,6 +81,23 @@ impl PinduWindow {
                 self.play_sound(Sound::Back);
             }
             Intent::Home => self.enter_fullscreen(),
+            Intent::Search => {
+                self.start_search();
+                self.play_sound(Sound::Select);
+            }
+            Intent::Options => {
+                self.show_game_options();
+                self.play_sound(Sound::Select);
+            }
+            Intent::PreviousTab | Intent::NextTab if self.shows_tabs() => {
+                if self.step_tab(intent == Intent::NextTab) {
+                    self.play_sound(Sound::Move);
+                }
+            }
+            Intent::PreviousSort | Intent::NextSort if self.shows_tabs() => {
+                self.cycle_sort(intent == Intent::NextSort);
+                self.play_sound(Sound::Move);
+            }
             _ => {}
         }
     }
@@ -160,18 +188,28 @@ impl PinduWindow {
         }
     }
 
-    /// Closes the open dialog, or leaves the shown page for the one before it.
+    /// Closes the open menu or dialog, or leaves the shown page for the one before it.
     fn go_back(&self) {
-        if let Some(dialog) = self.visible_dialog() {
+        if let Some(menu) = self.open_menu() {
+            menu.popdown();
+        } else if let Some(dialog) = self.visible_dialog() {
             dialog.close();
         } else {
             self.imp().navigation_view.pop();
         }
     }
+
+    /// The menu (a popover) that has focus, if one is open.
+    pub(crate) fn open_menu(&self) -> Option<gtk::Popover> {
+        gtk::prelude::GtkWindowExt::focus(self)
+            .and_then(|focus| focus.ancestor(gtk::Popover::static_type()))
+            .and_downcast::<gtk::Popover>()
+    }
 }
 
 /// How many covers a row of the grid holds: GTK does not say, so count the distinct
-/// columns its tiles sit in.
+/// columns its tiles sit in, by their centres, which fullscreen mode's lift of the focused
+/// cover (a scale about its centre) leaves in place.
 fn grid_columns(grid: &gtk::GridView) -> u32 {
     let mut columns = BTreeSet::new();
     let mut child = grid.first_child();
@@ -179,7 +217,7 @@ fn grid_columns(grid: &gtk::GridView) -> u32 {
         if widget.is_child_visible()
             && let Some(bounds) = widget.compute_bounds(grid)
         {
-            columns.insert(bounds.x().round() as i32);
+            columns.insert((bounds.x() + bounds.width() / 2.0).round() as i32);
         }
         child = widget.next_sibling();
     }

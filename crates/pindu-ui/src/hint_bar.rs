@@ -41,7 +41,7 @@ impl PinduWindow {
 
     /// Shows the hints for where focus is now, in fullscreen mode while a controller is in
     /// use, and hides the bar otherwise.
-    fn update_hints(&self) {
+    pub(crate) fn update_hints(&self) {
         let imp = self.imp();
         let kind = self
             .application()
@@ -60,32 +60,45 @@ impl PinduWindow {
             imp.hint_bar.remove(&child);
         }
         for hint in shown.iter().flat_map(|(_, hints)| hints) {
-            let glyph = gtk::Image::builder()
-                .icon_name(hints::glyph(kind, hint.button))
-                .pixel_size(GLYPH_SIZE)
-                .accessible_role(gtk::AccessibleRole::Presentation)
-                .build();
-            let label = gtk::Label::new(Some(&action_label(hint.action)));
             let item = gtk::Box::builder().spacing(8).build();
-            item.append(&glyph);
+            for button in std::iter::once(hint.button).chain(hint.pair) {
+                let glyph = gtk::Image::builder()
+                    .icon_name(hints::glyph(kind, button))
+                    .pixel_size(GLYPH_SIZE)
+                    .accessible_role(gtk::AccessibleRole::Presentation)
+                    .build();
+                item.append(&glyph);
+            }
+            let label = gtk::Label::new(Some(&action_label(hint.action)));
             item.append(&label);
             imp.hint_bar.append(&item);
         }
         imp.hints.replace(shown);
     }
 
-    /// Where the user is, for the hints: the focused widget, an open dialog and whether a
-    /// page lies below the shown one.
+    /// Where the user is, for the hints: the focused widget, an open dialog, whether a
+    /// page lies below the shown one, whether it searches (Home and the library), whether
+    /// it has tabs (the library in fullscreen mode), whether it is a game's (with
+    /// options), and whether the launch overlay is up.
     fn hint_context(&self) -> Context {
-        let navigation_view = &self.imp().navigation_view;
-        let page_below = navigation_view
-            .visible_page()
-            .and_then(|page| navigation_view.previous_page(&page))
+        let imp = self.imp();
+        let navigation_view = &imp.navigation_view;
+        let page = navigation_view.visible_page();
+        let page_below = page
+            .as_ref()
+            .and_then(|page| navigation_view.previous_page(page))
             .is_some();
+        let library = page.as_ref() == Some(&*imp.library_page);
+        let home = page.as_ref() == Some(imp.home_page.upcast_ref::<adw::NavigationPage>());
         Context {
             focus: self.hint_focus(),
-            dialog: self.visible_dialog().is_some(),
+            // An open menu closes on B like a dialog, and keeps the page's buttons too.
+            dialog: self.visible_dialog().is_some() || self.open_menu().is_some(),
             page_below,
+            search: library || home,
+            tabs: library && self.is_fullscreen(),
+            options: self.visible_game_page().is_some(),
+            launching: self.launching(),
         }
     }
 
@@ -132,5 +145,10 @@ fn action_label(action: Action) -> String {
         Action::Select => gettext("Select"),
         Action::Back => gettext("Back"),
         Action::Close => gettext("Close"),
+        Action::Search => gettext("Search"),
+        Action::Tabs => gettext("Tabs"),
+        Action::Sort => gettext("Sort"),
+        Action::Options => gettext("Options"),
+        Action::HoldToCancel => gettext("Hold to Cancel"),
     }
 }

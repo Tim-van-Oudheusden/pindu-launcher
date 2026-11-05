@@ -8,6 +8,7 @@ use pindu_core::focus::FocusMemory;
 use pindu_core::gamepad::DeviceKind;
 use pindu_core::grid;
 use pindu_core::hints::Hint;
+use pindu_core::launch_overlay::LaunchOverlay;
 use pindu_core::library::{
     Counts, Filters, HistoryGroup, PlaytimeOrigin, SortMode, View, history_group,
 };
@@ -17,6 +18,7 @@ use crate::application::PinduApplication;
 use crate::config::APP_ID;
 use crate::fullscreen::NavigationSounds;
 use crate::game_page::GamePage;
+use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
 use crate::log_service;
 use crate::models::{GameObject, LibraryModel};
@@ -77,6 +79,8 @@ mod imp {
         #[template_child]
         pub library_page: TemplateChild<adw::NavigationPage>,
         #[template_child]
+        pub home_page: TemplateChild<HomePage>,
+        #[template_child]
         pub sync_spinner: TemplateChild<adw::Spinner>,
         #[template_child]
         pub empty_page: TemplateChild<adw::StatusPage>,
@@ -86,6 +90,16 @@ mod imp {
         pub grid: TemplateChild<gtk::GridView>,
         #[template_child]
         pub content_stack: TemplateChild<gtk::Stack>,
+        #[template_child]
+        pub library_tabs: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub tab_scroller: TemplateChild<gtk::ScrolledWindow>,
+        #[template_child]
+        pub tab_row: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub sort_label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub filter_row: TemplateChild<adw::WrapBox>,
         #[template_child]
         pub installed_filter: TemplateChild<gtk::ToggleButton>,
         #[template_child]
@@ -114,6 +128,19 @@ mod imp {
         pub sounds: OnceCell<NavigationSounds>,
         /// The hints the hint bar shows, and for which kind of controller.
         pub hints: RefCell<Option<(DeviceKind, Vec<Hint>)>>,
+        /// Whether the sidebar showed before fullscreen mode hid it, to show it again after.
+        pub sidebar_before_hiding: Cell<Option<bool>>,
+        /// Fullscreen mode's library tabs, each with the view it shows.
+        pub tabs: RefCell<Vec<(View, gtk::ToggleButton)>>,
+        /// Whether the first cover takes focus once the current re-sort is done, after
+        /// the triggers changed the order.
+        pub focus_first_after_sort: Cell<bool>,
+        /// The launch fullscreen mode's overlay follows, and the return to its page.
+        pub launch: RefCell<LaunchOverlay>,
+        /// The timer that lets the launch overlay linger.
+        pub launch_linger: RefCell<Option<glib::SourceId>>,
+        /// The launched game and its `notify::playing` handler.
+        pub launch_game: RefCell<Option<(GameObject, glib::SignalHandlerId)>>,
     }
 
     #[glib::object_subclass]
@@ -123,6 +150,7 @@ mod imp {
         type ParentType = adw::ApplicationWindow;
 
         fn class_init(klass: &mut Self::Class) {
+            HomePage::ensure_type();
             klass.bind_template();
         }
 
@@ -179,7 +207,10 @@ impl PinduWindow {
         window.setup_grid();
         window.setup_search_and_filters();
         window.observe_sync(sync_service);
+        window.setup_home();
+        window.setup_fullscreen_library();
         window.setup_fullscreen();
+        window.setup_fullscreen_game();
         if let Some(application) = application.downcast_ref::<PinduApplication>() {
             window.setup_controller_navigation(application);
             window.setup_hint_bar(application);
@@ -257,7 +288,11 @@ impl PinduWindow {
 
         let search = gio::ActionEntry::builder("search")
             .activate(|window: &Self, _, _| {
-                window.imp().search_entry.grab_focus();
+                if window.is_fullscreen() {
+                    window.start_search();
+                } else {
+                    window.imp().search_entry.grab_focus();
+                }
             })
             .build();
         self.add_action_entries([search]);
@@ -279,9 +314,10 @@ impl PinduWindow {
     }
 
     /// Pushes the game's page.
-    fn show_details(&self, id: &GameId) {
+    pub(crate) fn show_details(&self, id: &GameId) {
         if let Some(game) = self.library().game_object(id) {
             let page = GamePage::new(&game, &self.library_service());
+            page.set_fullscreen(self.is_fullscreen());
             self.imp().navigation_view.push(&page);
         }
     }
@@ -406,18 +442,27 @@ impl PinduWindow {
         self.update_content_page();
     }
 
-    fn apply_filters(&self) {
+    /// Applies the filter toggles; fullscreen mode's library has tabs instead, so they wait
+    /// for the desktop window.
+    pub(crate) fn apply_filters(&self) {
         let imp = self.imp();
-        let filters = Filters {
+        let toggles = Filters {
             installed: imp.installed_filter.is_active(),
             not_installed: imp.not_installed_filter.is_active(),
             favourites: imp.favourites_filter.is_active(),
             windows: imp.windows_filter.is_active(),
             native: imp.native_filter.is_active(),
         };
-        imp.clear_filters.set_visible(filters.any());
+        imp.clear_filters.set_visible(toggles.any());
+        let filters = if self.is_fullscreen() {
+            Filters::default()
+        } else {
+            toggles
+        };
         self.scroll_grid_to_top();
         self.library().set_filters(filters);
+        // The controller comes back on the cover it was last on, wherever it now is.
+        imp.grid_cursor.set(self.recall_cover());
         self.update_jump_back_in();
     }
 
@@ -517,20 +562,22 @@ impl PinduWindow {
         }
     }
 
-    /// The "Jump back in" row: shown in All Games while no search or filter is active.
+    /// The "Jump back in" row: shown in All Games while no search or filter is active, and
+    /// not in fullscreen mode, where Home has it.
     fn update_jump_back_in(&self) {
         let imp = self.imp();
         let games = self.library().jump_back_in();
         let quiet = self.library().view() == View::All
             && imp.search_entry.text().is_empty()
-            && !imp.clear_filters.is_visible();
+            && !imp.clear_filters.is_visible()
+            && !self.is_fullscreen();
         imp.jump_back_in.set_visible(quiet && !games.is_empty());
         while let Some(card) = imp.jump_cards.first_child() {
             imp.jump_cards.remove(&card);
         }
         if quiet {
             for game in &games {
-                imp.jump_cards.append(&jump_card(game));
+                imp.jump_cards.append(&jump_card(game, (240, 112)));
             }
         }
     }
@@ -576,10 +623,10 @@ impl PinduWindow {
             imp.grid_cursor.set(self.recall_cover());
             imp.library_page.set_title(&gettext("Hidden Games"));
             imp.sidebar.set_selected(gtk::INVALID_LIST_POSITION);
-            imp.navigation_view.pop_to_tag("library");
+            self.select_tab();
+            self.show_library();
             self.update_jump_back_in();
         } else if self.library().view() == View::Hidden {
-            self.select_view(View::All);
             self.show_view_of(&imp.all_item);
         }
     }
@@ -721,6 +768,18 @@ impl PinduWindow {
         else {
             return;
         };
+        self.set_shown_view(view);
+        // Choosing a view from a game page (or Home) goes to the library.
+        self.show_library();
+        if imp.split_view.is_collapsed() {
+            imp.split_view.set_show_sidebar(false);
+        }
+    }
+
+    /// Shows `view` in the library page, with its sidebar row and tab selected, without
+    /// going to the page.
+    pub(crate) fn set_shown_view(&self, view: View) {
+        let imp = self.imp();
         self.scroll_grid_to_top();
         self.library().set_view(view);
         // The controller comes back into the grid on the cover it was last on in this view.
@@ -729,13 +788,16 @@ impl PinduWindow {
             action.change_state(&false.to_variant());
         }
         self.update_jump_back_in();
-        imp.library_page
-            .set_title(&item.title().unwrap_or_default());
-        // Choosing a view from a game page goes back to the library.
-        imp.navigation_view.pop_to_tag("library");
-        if imp.split_view.is_collapsed() {
-            imp.split_view.set_show_sidebar(false);
-        }
+        let title = imp
+            .views
+            .borrow()
+            .iter()
+            .find(|(_, candidate, _)| *candidate == view)
+            .and_then(|(item, _, _)| item.title())
+            .unwrap_or_default();
+        imp.library_page.set_title(&title);
+        self.select_view(view);
+        self.select_tab();
     }
 
     /// One sidebar row per collection, in the user's order, keeping the shown view.
@@ -763,7 +825,6 @@ impl PinduWindow {
         self.show_counts(&self.library().counts());
         let shown = self.library().view();
         if matches!(shown, View::Collection(id) if !collections.iter().any(|c| c.id == id)) {
-            self.select_view(View::All);
             self.show_view_of(&imp.all_item);
         } else {
             self.select_view(shown);
@@ -832,6 +893,9 @@ impl PinduWindow {
                 if sorted.pending() == 0 {
                     if imp.grid_at_top.replace(false) {
                         window.scroll_grid_to_top();
+                    }
+                    if imp.focus_first_after_sort.take() {
+                        window.focus_page();
                     }
                 } else if !imp.grid_at_top.get() {
                     imp.grid_at_top.set(at_top());
@@ -980,10 +1044,9 @@ impl PinduWindow {
 
     /// Searches the library for `text`, as typing it in the search entry would.
     pub fn search_for(&self, text: &str) {
-        let imp = self.imp();
-        imp.navigation_view.pop_to_tag("library");
-        imp.search_entry.set_text(text);
-        imp.search_entry.grab_focus();
+        self.show_library();
+        self.imp().search_entry.set_text(text);
+        self.focus_search_entry();
     }
 
     /// Shows a toast over the window.
@@ -1060,10 +1123,9 @@ const SORT_MODES: [(SortMode, &str); 5] = [
     (SortMode::Playtime, "playtime"),
 ];
 
-/// A landscape card for "Jump back in": the game's banner (or cover) with its title.
-fn jump_card(game: &GameObject) -> gtk::Button {
-    const WIDTH: i32 = 240;
-    const HEIGHT: i32 = 112;
+/// A landscape card for "Jump back in" and fullscreen Home: the game's banner (or cover)
+/// with its title, `width`×`height` pixels.
+pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::Button {
     let (title, pinned, art, icon) = {
         let entry = game.entry();
         let art = entry.art.hero.clone().or_else(|| entry.art.cover.clone());
@@ -1076,7 +1138,7 @@ fn jump_card(game: &GameObject) -> gtk::Button {
     };
     // Cover art draws at its own fixed size, whatever the image's size.
     let picture = CoverArt::new();
-    picture.set_size_request(WIDTH, HEIGHT);
+    picture.set_size_request(width, height);
     let label = gtk::Label::builder()
         .label(&title)
         .xalign(0.0)
@@ -1109,13 +1171,13 @@ fn jump_card(game: &GameObject) -> gtk::Button {
     picture.show(
         art,
         icon,
-        ((WIDTH * scale) as u32, (HEIGHT * scale) as u32),
+        ((width * scale) as u32, (height * scale) as u32),
         |_| {},
     );
     card
 }
 
-fn sort_mode_name(mode: SortMode) -> &'static str {
+pub(crate) fn sort_mode_name(mode: SortMode) -> &'static str {
     SORT_MODES
         .iter()
         .find(|(candidate, _)| *candidate == mode)
@@ -1123,7 +1185,7 @@ fn sort_mode_name(mode: SortMode) -> &'static str {
         .expect("every sort mode has a name")
 }
 
-fn sort_mode_from_name(name: &str) -> Option<SortMode> {
+pub(crate) fn sort_mode_from_name(name: &str) -> Option<SortMode> {
     SORT_MODES
         .iter()
         .find(|(_, candidate)| *candidate == name)

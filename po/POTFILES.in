@@ -1,9 +1,12 @@
 crates/pindu-ui/src/application.rs
 crates/pindu-ui/src/collection_actions.rs
 crates/pindu-ui/src/file_service.rs
+crates/pindu-ui/src/fullscreen_game.rs
+crates/pindu-ui/src/fullscreen_library.rs
 crates/pindu-ui/src/game_dialog.rs
 crates/pindu-ui/src/game_page.rs
 crates/pindu-ui/src/hint_bar.rs
+crates/pindu-ui/src/home_page.rs
 crates/pindu-ui/src/launch_service.rs
 crates/pindu-ui/src/log_service.rs
 crates/pindu-ui/src/preferences.rs
@@ -22,6 +25,7 @@ data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in
 data/ui/cover_tile.blp
 data/ui/game_dialog.blp
 data/ui/game_page.blp
+data/ui/home_page.blp
 data/ui/preferences.blp
 data/ui/shortcuts-dialog.blp
 data/ui/window.blp

@@ -11,6 +11,7 @@ pub mod gamepad;
 pub mod grid;
 pub mod hints;
 pub mod launch;
+pub mod launch_overlay;
 pub mod library;
 pub mod logs;
 pub mod manual;

@@ -152,6 +152,49 @@ template $PinduWindow: Adw.ApplicationWindow {
               content: Box {
                 orientation: vertical;
 
+                // Fullscreen mode's tabs, which the shoulder buttons switch, and the sort
+                // order, which the triggers cycle; the filter row hides meanwhile. Focus
+                // stays on the page below them.
+                Box library_tabs {
+                  visible: false;
+                  can-focus: false;
+                  spacing: 24;
+                  margin-top: 24;
+                  margin-bottom: 12;
+                  margin-start: 36;
+                  margin-end: 36;
+
+                  styles [
+                    "library-tabs",
+                  ]
+
+                  ScrolledWindow tab_scroller {
+                    hexpand: true;
+                    vscrollbar-policy: never;
+                    hscrollbar-policy: external;
+
+                    child: Box tab_row {
+                      spacing: 6;
+                    };
+                  }
+
+                  Box {
+                    spacing: 8;
+                    valign: center;
+
+                    Image {
+                      icon-name: "view-sort-descending-symbolic";
+                      accessible-role: presentation;
+                    }
+
+                    Label sort_label {}
+
+                    styles [
+                      "dimmed",
+                    ]
+                  }
+                }
+
                 Adw.WrapBox filter_row {
                   child-spacing: 6;
                   line-spacing: 6;
@@ -315,6 +358,9 @@ template $PinduWindow: Adw.ApplicationWindow {
               };
             };
           }
+
+          // Fullscreen mode's first page, under the library.
+          $PinduHomePage home_page {}
         };
       };
     };

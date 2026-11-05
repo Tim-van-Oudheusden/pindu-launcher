@@ -1,8 +1,9 @@
 //! Fullscreen mode: the same window and models, presented for a controller at a distance.
 //! The window goes fullscreen and the mode follows its `fullscreened` property: top bars
-//! hide, type grows, controllers are listened to, and focus is kept on the page. Entering
-//! and leaving go through `win.fullscreen-mode` (main menu, F11, `--fullscreen`, Guide) and
-//! `win.leave-fullscreen` (Esc, and the menu drawer's "Exit Fullscreen Mode").
+//! and the sidebar hide, type grows, controllers are listened to, focus is kept on the
+//! page, Home is the first page, with the library (in tabs) and game pages above it.
+//! Entering and leaving go through `win.fullscreen-mode` (main menu, F11, `--fullscreen`,
+//! Guide) and `win.leave-fullscreen` (Esc, and the menu drawer's "Exit Fullscreen Mode").
 
 use std::cell::RefCell;
 
@@ -11,6 +12,7 @@ use adw::subclass::prelude::*;
 use gtk::{gio, glib};
 use pindu_core::sound::tone_wav;
 
+use crate::game_page::GamePage;
 use crate::models::GameObject;
 use crate::window::PinduWindow;
 
@@ -53,10 +55,15 @@ impl PinduWindow {
             .connect_visible_page_notify(glib::clone!(
                 #[weak(rename_to = window)]
                 self,
-                move |_| window.show_top_bars(!window.is_fullscreen())
+                move |_| window.update_top_bars()
             ));
         self.connect_focus_widget_notify(|window| {
-            if window.is_fullscreen() && gtk::prelude::GtkWindowExt::focus(window).is_none() {
+            if !window.is_fullscreen() {
+                return;
+            }
+            // The library's top bar shows while its search entry has focus.
+            window.update_top_bars();
+            if gtk::prelude::GtkWindowExt::focus(window).is_none() {
                 // Wait for the change that dropped focus (a closing dialog, a hidden bar)
                 // to finish before taking it back.
                 glib::idle_add_local_once(glib::clone!(
@@ -89,7 +96,11 @@ impl PinduWindow {
             self.remove_css_class(STYLE_CLASS);
         }
         self.update_listening();
-        self.show_top_bars(!fullscreen);
+        self.show_fullscreen_library(fullscreen);
+        self.show_fullscreen_game(fullscreen);
+        self.arrange_pages(fullscreen);
+        self.hide_sidebar_in_fullscreen();
+        self.update_top_bars();
         if let Some(action) = self
             .lookup_action("fullscreen-mode")
             .and_downcast::<gio::SimpleAction>()
@@ -115,30 +126,176 @@ impl PinduWindow {
         }
     }
 
-    /// Reveals or hides the top bars of the sidebar and of every page.
-    fn show_top_bars(&self, reveal: bool) {
+    /// Home: its carousel follows the "Jump back in" games and its Library tile goes to the
+    /// library (`win.show-library`).
+    pub(crate) fn setup_home(&self) {
+        let show_library = gio::ActionEntry::builder("show-library")
+            .activate(|window: &Self, _, _| window.show_library())
+            .build();
+        self.add_action_entries([show_library]);
+        // In fullscreen mode the library opens on the cover the controller was last on,
+        // rather than on the widget that had focus when the page was last left, unless
+        // Y brought it up to search.
+        self.imp().library_page.connect_shown(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| {
+                let searching = window
+                    .imp()
+                    .search_entry
+                    .state_flags()
+                    .contains(gtk::StateFlags::FOCUS_WITHIN);
+                if window.is_fullscreen() && !searching {
+                    // After the page has given focus back to where it was left.
+                    glib::idle_add_local_once(glib::clone!(
+                        #[weak]
+                        window,
+                        move || window.focus_page()
+                    ));
+                }
+            }
+        ));
+        self.library().connect_counts_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.update_home()
+        ));
+        self.update_home();
+    }
+
+    fn update_home(&self) {
+        self.imp()
+            .home_page
+            .set_games(&self.library().jump_back_in());
+    }
+
+    /// Shows the library page: back down to it, or up from Home to it.
+    pub(crate) fn show_library(&self) {
         let imp = self.imp();
+        let library = imp.library_page.get();
+        let in_stack = imp
+            .navigation_view
+            .navigation_stack()
+            .iter::<adw::NavigationPage>()
+            .flatten()
+            .any(|page| page == library);
+        if in_stack {
+            imp.navigation_view.pop_to_page(&library);
+        } else {
+            imp.navigation_view.push(&library);
+        }
+    }
+
+    /// Fullscreen mode opens on Home, which the library and game pages go above; the
+    /// desktop window keeps the library at the bottom, under any game page.
+    fn arrange_pages(&self, fullscreen: bool) {
+        let imp = self.imp();
+        let home = imp.home_page.get().upcast::<adw::NavigationPage>();
+        let library = imp.library_page.get();
+        let stack: Vec<adw::NavigationPage> = imp
+            .navigation_view
+            .navigation_stack()
+            .iter::<adw::NavigationPage>()
+            .flatten()
+            .collect();
+        if fullscreen {
+            if stack.first() != Some(&home) {
+                imp.navigation_view.replace(&[home]);
+            }
+        } else if stack.contains(&home) {
+            let pages: Vec<adw::NavigationPage> = std::iter::once(library.clone())
+                .chain(
+                    stack
+                        .into_iter()
+                        .filter(|page| *page != home && *page != library),
+                )
+                .collect();
+            imp.navigation_view.replace(&pages);
+        }
+    }
+
+    /// Home, the library's tabs and the pages opened from them fill the window in
+    /// fullscreen mode: the sidebar hides, and comes back as it was after.
+    fn hide_sidebar_in_fullscreen(&self) {
+        let imp = self.imp();
+        let split_view = &imp.split_view;
+        if self.is_fullscreen() {
+            if imp.sidebar_before_hiding.get().is_none() {
+                imp.sidebar_before_hiding
+                    .set(Some(split_view.shows_sidebar()));
+                split_view.set_show_sidebar(false);
+            }
+        } else if let Some(shown) = imp.sidebar_before_hiding.take() {
+            split_view.set_show_sidebar(shown);
+        }
+    }
+
+    /// Y and Ctrl+F: search the library from Home or the library page, in the search
+    /// entry for now.
+    pub(crate) fn start_search(&self) {
+        if self.visible_dialog().is_some() {
+            return;
+        }
+        let imp = self.imp();
+        let page = imp.navigation_view.visible_page();
+        if page.as_ref() == Some(imp.home_page.upcast_ref()) {
+            self.show_library();
+        } else if page.as_ref() != Some(&*imp.library_page) {
+            return;
+        }
+        self.focus_search_entry();
+    }
+
+    /// Focuses the search entry, showing its top bar meanwhile in fullscreen mode.
+    pub(crate) fn focus_search_entry(&self) {
+        let imp = self.imp();
+        if let Some(toolbar) = imp.library_page.child().and_downcast::<adw::ToolbarView>() {
+            toolbar.set_reveal_top_bars(true);
+        }
+        imp.search_entry.grab_focus();
+    }
+
+    /// Reveals the top bars of the sidebar and of every page in the desktop window. In
+    /// fullscreen mode they hide, except the library's while its search entry has focus.
+    fn update_top_bars(&self) {
+        let imp = self.imp();
+        let reveal = !self.is_fullscreen();
         imp.sidebar_toolbar.set_reveal_top_bars(reveal);
+        let searching = imp
+            .search_entry
+            .state_flags()
+            .contains(gtk::StateFlags::FOCUS_WITHIN);
         let pages = imp.navigation_view.navigation_stack();
         for page in pages.iter::<adw::NavigationPage>().flatten() {
             if let Some(toolbar) = page.child().and_downcast::<adw::ToolbarView>() {
-                toolbar.set_reveal_top_bars(reveal);
+                toolbar.set_reveal_top_bars(reveal || (page == *imp.library_page && searching));
             }
         }
     }
 
-    /// Gives focus to the shown page: the library's grid on the cover the controller was
-    /// last on, or else the first item that takes focus.
+    /// Gives focus to the shown page: Home's card that had focus last, the library's grid
+    /// on the cover the controller was last on, a game page's Play, or else the first item
+    /// that takes focus.
     pub(crate) fn focus_page(&self) {
         let imp = self.imp();
         let Some(page) = imp.navigation_view.visible_page() else {
             return;
         };
+        if page == *imp.home_page.upcast_ref::<adw::NavigationPage>() {
+            imp.home_page.focus_remembered();
+            return;
+        }
+        if let Some(page) = page.downcast_ref::<GamePage>() {
+            page.focus_play();
+            return;
+        }
         let grid_shown = imp.content_stack.visible_child_name().as_deref() == Some("grid");
         if page == *imp.library_page
             && grid_shown
             && let Some(model) = imp.grid.model().filter(|model| model.n_items() > 0)
         {
+            // A grid that does not have focus yet does not take it from `scroll_to`.
+            imp.grid.grab_focus();
             self.focus_cover(imp.grid_cursor.get().min(model.n_items() - 1));
             return;
         }

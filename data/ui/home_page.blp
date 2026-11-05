@@ -1,0 +1,106 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PinduHomePage: Adw.NavigationPage {
+  title: _("Home");
+  tag: "home";
+
+  child: Overlay {
+    styles [
+      "home",
+    ]
+
+    child: Picture hero {
+      content-fit: cover;
+      can-shrink: true;
+    };
+
+    [overlay]
+    Box {
+      can-target: false;
+
+      styles [
+        "hero-gradient",
+      ]
+    }
+
+    [overlay]
+    Box {
+      orientation: vertical;
+      valign: end;
+      spacing: 24;
+      margin-bottom: 24;
+
+      Box {
+        margin-start: 48;
+        margin-end: 48;
+
+        Picture logo {
+          visible: false;
+          content-fit: contain;
+          width-request: 480;
+          height-request: 160;
+          can-shrink: true;
+          halign: start;
+        }
+
+        Label title {
+          wrap: true;
+          xalign: 0;
+
+          styles [
+            "title-1",
+          ]
+        }
+      }
+
+      ScrolledWindow {
+        hscrollbar-policy: external;
+        vscrollbar-policy: never;
+        propagate-natural-height: true;
+
+        child: Box carousel {
+          spacing: 24;
+          margin-start: 48;
+          margin-end: 48;
+          margin-top: 12;
+          margin-bottom: 12;
+
+          styles [
+            "home-carousel",
+          ]
+
+          Button library_tile {
+            width-request: 320;
+            height-request: 150;
+            action-name: "win.show-library";
+
+            styles [
+              "card",
+              "library-tile",
+            ]
+
+            child: Box {
+              orientation: vertical;
+              spacing: 12;
+              valign: center;
+
+              Image {
+                icon-name: "view-grid-symbolic";
+                pixel-size: 48;
+              }
+
+              Label {
+                label: _("Library");
+
+                styles [
+                  "heading",
+                ]
+              }
+            };
+          }
+        };
+      }
+    }
+  };
+}

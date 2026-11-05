@@ -20,7 +20,9 @@ pub enum Focus {
     Other,
 }
 
-/// Where the user is: the focused widget, an open dialog and a page to go back to.
+/// Where the user is: the focused widget, an open dialog, a page to go back to, whether
+/// the page searches, whether it has tabs and a sort to step through, whether it has
+/// options for its game, and whether a launch is under way.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Context {
     pub focus: Focus,
@@ -28,6 +30,27 @@ pub struct Context {
     pub dialog: bool,
     /// A page lies below the shown one, which B goes back to.
     pub page_below: bool,
+    /// The page searches the library (Home and the library), which Y starts.
+    pub search: bool,
+    /// The page has tabs, which the shoulder buttons switch, and a sort order, which the
+    /// triggers cycle (fullscreen mode's library).
+    pub tabs: bool,
+    /// The page is a game's, whose options View opens.
+    pub options: bool,
+    /// The launch overlay is up.
+    pub launching: Launching,
+}
+
+/// What the launch overlay shows, as far as the buttons are concerned.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Launching {
+    /// No launch overlay.
+    #[default]
+    No,
+    /// A store game going to its launcher, which cannot be called back.
+    HandingOff,
+    /// A game we run starting, which holding B cancels.
+    Starting,
 }
 
 /// What a button does, as the hint bar names it.
@@ -40,17 +63,41 @@ pub enum Action {
     Select,
     Back,
     Close,
+    Search,
+    /// Switch to the tab before or after.
+    Tabs,
+    /// Cycle the sort order back or forward.
+    Sort,
+    /// Open the options for the page's game.
+    Options,
+    /// Hold the button to cancel the launch.
+    HoldToCancel,
 }
 
-/// One hint: the button, by its position on the pad, and what it does.
+/// One hint: the button, by its position on the pad, and what it does. A pair of buttons
+/// that step two ways (the shoulders, the triggers) shares one hint.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Hint {
     pub button: Button,
+    /// The button that steps the other way.
+    pub pair: Option<Button>,
     pub action: Action,
 }
 
 /// The hints for `context` on a controller of `kind`, confirm first.
 pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
+    // The launch overlay takes every button: only a held B, for a game we start.
+    match context.launching {
+        Launching::No => {}
+        Launching::HandingOff => return Vec::new(),
+        Launching::Starting => {
+            return vec![Hint {
+                button: kind.button(Intent::Back),
+                pair: None,
+                action: Action::HoldToCancel,
+            }];
+        }
+    }
     let activate = match context.focus {
         Focus::Nothing => None,
         Focus::Game => Some(Action::Open),
@@ -64,15 +111,36 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
     } else {
         context.page_below.then_some(Action::Back)
     };
-    [(Intent::Activate, activate), (Intent::Back, back)]
-        .into_iter()
-        .filter_map(|(intent, action)| {
-            Some(Hint {
-                button: kind.button(intent),
-                action: action?,
-            })
+    // Y searches the page under a dialog, so it waits for the dialog to close; so do the
+    // page's tabs, sort and options.
+    let search = (context.search && !context.dialog).then_some(Action::Search);
+    let options = (context.options && !context.dialog).then_some(Action::Options);
+    let tabs = context.tabs && !context.dialog;
+    let single = |intent, action: Option<Action>| {
+        action.map(|action| Hint {
+            button: kind.button(intent),
+            pair: None,
+            action,
         })
-        .collect()
+    };
+    let pair = |back, forward, action| {
+        tabs.then(|| Hint {
+            button: kind.button(back),
+            pair: Some(kind.button(forward)),
+            action,
+        })
+    };
+    [
+        single(Intent::Activate, activate),
+        single(Intent::Back, back),
+        single(Intent::Search, search),
+        single(Intent::Options, options),
+        pair(Intent::PreviousTab, Intent::NextTab, Action::Tabs),
+        pair(Intent::PreviousSort, Intent::NextSort, Action::Sort),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
 }
 
 /// The icon name of the glyph for `button` on a controller of `kind`: the layout's own
@@ -99,6 +167,12 @@ pub fn glyph(kind: DeviceKind, button: Button) -> &'static str {
         (PlayStation | SteamDeck, Button::RightShoulder) => "pindu-glyph-r1-symbolic",
         (Nintendo, Button::LeftShoulder) => "pindu-glyph-l-symbolic",
         (Nintendo, Button::RightShoulder) => "pindu-glyph-r-symbolic",
+        (Xbox | Generic, Button::LeftTrigger) => "pindu-glyph-lt-symbolic",
+        (Xbox | Generic, Button::RightTrigger) => "pindu-glyph-rt-symbolic",
+        (PlayStation | SteamDeck, Button::LeftTrigger) => "pindu-glyph-l2-symbolic",
+        (PlayStation | SteamDeck, Button::RightTrigger) => "pindu-glyph-r2-symbolic",
+        (Nintendo, Button::LeftTrigger) => "pindu-glyph-zl-symbolic",
+        (Nintendo, Button::RightTrigger) => "pindu-glyph-zr-symbolic",
         (Nintendo, Button::Select) => "pindu-glyph-minus-symbolic",
         (Nintendo, Button::Start) => "pindu-glyph-plus-symbolic",
         (_, Button::Select) => "pindu-glyph-view-symbolic",
@@ -120,6 +194,10 @@ mod tests {
             focus,
             dialog: false,
             page_below: false,
+            search: false,
+            tabs: false,
+            options: false,
+            launching: Launching::No,
         }
     }
 
@@ -128,6 +206,54 @@ mod tests {
             .into_iter()
             .map(|hint| (hint.button, hint.action))
             .collect()
+    }
+
+    #[test]
+    fn the_fullscreen_library_switches_tabs_with_the_shoulders_and_sorts_with_the_triggers() {
+        let library = Context {
+            page_below: true,
+            search: true,
+            tabs: true,
+            ..context(Focus::Game)
+        };
+        let shown: Vec<_> = hints(library, DeviceKind::Xbox)
+            .into_iter()
+            .map(|hint| (hint.button, hint.pair, hint.action))
+            .collect();
+        assert_eq!(
+            shown,
+            [
+                (Button::South, None, Action::Open),
+                (Button::East, None, Action::Back),
+                (Button::North, None, Action::Search),
+                (
+                    Button::LeftShoulder,
+                    Some(Button::RightShoulder),
+                    Action::Tabs
+                ),
+                (
+                    Button::LeftTrigger,
+                    Some(Button::RightTrigger),
+                    Action::Sort
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn an_open_dialog_keeps_the_shoulders_and_triggers_from_the_library() {
+        let dialog_over_library = Context {
+            dialog: true,
+            tabs: true,
+            ..context(Focus::Other)
+        };
+        assert_eq!(
+            actions(dialog_over_library, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Close)
+            ]
+        );
     }
 
     #[test]
@@ -176,6 +302,103 @@ mod tests {
             actions(game_page, DeviceKind::Nintendo),
             [(Button::East, Action::Play), (Button::South, Action::Back)]
         );
+    }
+
+    #[test]
+    fn home_and_the_library_search_with_the_north_button() {
+        let home = Context {
+            search: true,
+            ..context(Focus::Game)
+        };
+        assert_eq!(
+            actions(home, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Open),
+                (Button::North, Action::Search)
+            ]
+        );
+        let library = Context {
+            page_below: true,
+            ..home
+        };
+        assert_eq!(
+            actions(library, DeviceKind::Nintendo),
+            [
+                (Button::East, Action::Open),
+                (Button::South, Action::Back),
+                (Button::North, Action::Search)
+            ]
+        );
+    }
+
+    #[test]
+    fn an_open_dialog_keeps_y_from_searching() {
+        let preferences_over_home = Context {
+            dialog: true,
+            search: true,
+            ..context(Focus::Toggle)
+        };
+        assert_eq!(
+            actions(preferences_over_home, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Toggle),
+                (Button::East, Action::Close)
+            ]
+        );
+    }
+
+    #[test]
+    fn the_game_page_opens_its_options_with_view() {
+        let game_page = Context {
+            page_below: true,
+            options: true,
+            ..context(Focus::Play)
+        };
+        assert_eq!(
+            actions(game_page, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Play),
+                (Button::East, Action::Back),
+                (Button::Select, Action::Options)
+            ]
+        );
+        let dialog_over_game_page = Context {
+            dialog: true,
+            ..game_page
+        };
+        assert_eq!(
+            actions(dialog_over_game_page, DeviceKind::Xbox),
+            [(Button::South, Action::Play), (Button::East, Action::Close)]
+        );
+    }
+
+    #[test]
+    fn a_game_we_start_cancels_with_a_held_b_and_nothing_else() {
+        let starting = Context {
+            page_below: true,
+            options: true,
+            launching: Launching::Starting,
+            ..context(Focus::Play)
+        };
+        assert_eq!(
+            actions(starting, DeviceKind::Xbox),
+            [(Button::East, Action::HoldToCancel)]
+        );
+        assert_eq!(
+            actions(starting, DeviceKind::Nintendo),
+            [(Button::South, Action::HoldToCancel)]
+        );
+    }
+
+    #[test]
+    fn a_store_hand_off_has_no_hints() {
+        let opening = Context {
+            page_below: true,
+            options: true,
+            launching: Launching::HandingOff,
+            ..context(Focus::Play)
+        };
+        assert_eq!(actions(opening, DeviceKind::Xbox), []);
     }
 
     #[test]
