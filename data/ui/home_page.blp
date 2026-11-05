@@ -59,13 +59,34 @@ template $PinduHomePage: Adw.NavigationPage {
           margin-start: 48;
           margin-end: 48;
 
-          Picture logo {
-            visible: false;
-            content-fit: contain;
-            width-request: 480;
-            height-request: 160;
-            can-shrink: true;
-            halign: start;
+          styles [
+            "home-title",
+          ]
+
+          // The logo stays within its 480×160 box whatever the image's size: the clamps
+          // cap its natural size, and a design's `min-width`/`min-height` enlarge it.
+          Adw.Clamp {
+            maximum-size: 480;
+            tightening-threshold: 480;
+
+            child: Adw.Clamp {
+              orientation: vertical;
+              maximum-size: 160;
+              tightening-threshold: 160;
+
+              child: Picture logo {
+                visible: false;
+                content-fit: contain;
+                width-request: 480;
+                height-request: 160;
+                can-shrink: true;
+                halign: start;
+
+                styles [
+                  "home-logo",
+                ]
+              };
+            };
           }
 
           Label title {
