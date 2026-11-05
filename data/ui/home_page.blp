@@ -10,12 +10,29 @@ template $PinduHomePage: Adw.NavigationPage {
       "home",
     ]
 
-    // A backdrop: the logo or title over it says what it shows.
-    child: Picture hero {
+    // A backdrop: the logo or title over it says what it shows. Two pictures, so the
+    // incoming art (`.shown`) can fade in over the outgoing one in a design.
+    child: Picture hero_a {
       content-fit: cover;
       can-shrink: true;
       accessible-role: presentation;
+
+      styles [
+        "home-hero",
+      ]
     };
+
+    [overlay]
+    Picture hero_b {
+      content-fit: cover;
+      can-shrink: true;
+      can-target: false;
+      accessible-role: presentation;
+
+      styles [
+        "home-hero",
+      ]
+    }
 
     [overlay]
     Box {

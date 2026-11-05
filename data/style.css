@@ -148,9 +148,15 @@ window.fullscreen-mode gridview.library > child:focus-within {
 }
 
 /* Fullscreen Home: the focused game's hero fills the page and fades into the window
-   behind the carousel; the focused card is lifted a little with a ring around it. */
+   behind the carousel; the focused card is lifted a little with a ring around it. Of the
+   two hero pictures only the one with `.shown` draws, swapped at once; a design can give
+   `.home-hero` a `transition: opacity` to crossfade them. */
 .home .hero-gradient {
   background-image: linear-gradient(to bottom, alpha(var(--window-bg-color), 0.05) 30%, alpha(var(--window-bg-color), 0.85) 70%, var(--window-bg-color));
+}
+
+.home-hero:not(.shown) {
+  opacity: 0;
 }
 
 .home-carousel > button {

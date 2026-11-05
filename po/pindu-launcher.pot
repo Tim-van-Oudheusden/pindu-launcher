@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 16:54+0100\n"
+"POT-Creation-Date: 2026-11-05 17:24+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -238,7 +238,7 @@ msgid "Favourites"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:188
-#: crates/pindu-ui/src/game_page.rs:621 crates/pindu-ui/src/home_page.rs:42
+#: crates/pindu-ui/src/game_page.rs:621 crates/pindu-ui/src/home_page.rs:43
 msgid "Last Played"
 msgstr ""
 
@@ -255,7 +255,7 @@ msgid "Recently Added"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:192
-#: crates/pindu-ui/src/game_page.rs:658 crates/pindu-ui/src/home_page.rs:31
+#: crates/pindu-ui/src/game_page.rs:658 crates/pindu-ui/src/home_page.rs:32
 msgid "Playtime"
 msgstr ""
 
@@ -529,7 +529,7 @@ msgstr ""
 msgid "Starts on this computer in the Steam Linux Runtime"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:618 crates/pindu-ui/src/home_page.rs:48
+#: crates/pindu-ui/src/game_page.rs:618 crates/pindu-ui/src/home_page.rs:49
 msgid "Launcher"
 msgstr ""
 
@@ -689,15 +689,15 @@ msgstr ""
 msgid "D-pad Right"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:35 crates/pindu-ui/src/window.rs:617
+#: crates/pindu-ui/src/home_page.rs:36 crates/pindu-ui/src/window.rs:617
 msgid "Today"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:36 crates/pindu-ui/src/window.rs:618
+#: crates/pindu-ui/src/home_page.rs:37 crates/pindu-ui/src/window.rs:618
 msgid "This Week"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:412 data/ui/home_page.blp:116
+#: crates/pindu-ui/src/home_page.rs:452 data/ui/home_page.blp:133
 #: data/ui/preferences.blp:10 data/ui/shortcuts-dialog.blp:35
 #: data/ui/window.blp:105 data/ui/window.blp:437 data/ui/window.blp:536
 msgid "Library"

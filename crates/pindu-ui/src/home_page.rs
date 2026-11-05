@@ -1,7 +1,8 @@
 //! Fullscreen mode's Home page, where the mode opens: the hero of the focused game over a
 //! carousel of the pinned and recently played games (the "Jump back in" games), with a
 //! Library tile at the end. Focus comes back to the card that last had it. A fullscreen
-//! design can choose the cards' shape (`pindu_core::home`).
+//! design can choose the cards' shape (`pindu_core::home`) and crossfade the hero (`.shown`,
+//! `.no-art`).
 
 use std::cell::{Cell, RefCell};
 
@@ -78,7 +79,11 @@ mod imp {
     #[template(resource = "/io/github/tim_van_oudheusden/pindu-launcher/ui/home_page.ui")]
     pub struct HomePage {
         #[template_child]
-        pub hero: TemplateChild<gtk::Picture>,
+        pub hero_a: TemplateChild<gtk::Picture>,
+        #[template_child]
+        pub hero_b: TemplateChild<gtk::Picture>,
+        /// Whether `hero_b`, not `hero_a`, holds the latest art shown.
+        pub hero_b_latest: Cell<bool>,
         #[template_child]
         pub logo: TemplateChild<gtk::Picture>,
         #[template_child]
@@ -396,19 +401,54 @@ impl HomePage {
         imp.details.set_visible(!details.is_empty());
     }
 
+    /// The two hero pictures: the one with the latest art shown, then the other.
+    fn heroes(&self) -> (gtk::Picture, gtk::Picture) {
+        let imp = self.imp();
+        let (a, b) = (imp.hero_a.get(), imp.hero_b.get());
+        if imp.hero_b_latest.get() {
+            (b, a)
+        } else {
+            (a, b)
+        }
+    }
+
+    /// Shows `texture` as the hero: the picture that does not hold the latest art takes it
+    /// and `.shown`, and the other one loses `.shown`, so a design's `transition: opacity`
+    /// crossfades them. Pindu's own style hides a hero without `.shown` at once.
+    fn show_hero_art(&self, texture: &gtk::gdk::Texture) {
+        let imp = self.imp();
+        let (outgoing, incoming) = self.heroes();
+        incoming.set_paintable(Some(texture));
+        incoming.add_css_class("shown");
+        outgoing.remove_css_class("shown");
+        imp.hero_b_latest.set(!imp.hero_b_latest.get());
+        imp.home.remove_css_class("no-art");
+    }
+
+    /// Hides the hero art, keeping it in its picture so a design can fade it out, and marks
+    /// the page `.no-art`.
+    fn hide_hero_art(&self) {
+        let imp = self.imp();
+        imp.hero_a.remove_css_class("shown");
+        imp.hero_b.remove_css_class("shown");
+        imp.home.add_css_class("no-art");
+    }
+
     /// Shows the game's hero art (or its cover) with its logo (or its title), and its
     /// details when the design asks for them; the Library tile shows the title "Library"
-    /// without art.
+    /// without art. The page carries `.no-art` while no hero art shows. Art that still has
+    /// to load replaces the hero shown once it has, so a design fades straight from one to
+    /// the other.
     fn show_hero(&self, game: Option<&GameObject>) {
         let imp = self.imp();
         let generation = imp.hero_generation.get() + 1;
         imp.hero_generation.set(generation);
-        imp.hero.set_paintable(gtk::gdk::Paintable::NONE);
         imp.logo.set_paintable(gtk::gdk::Paintable::NONE);
         imp.logo.set_visible(false);
         imp.title.set_visible(true);
         self.show_details(game);
         let Some(game) = game else {
+            self.hide_hero_art();
             imp.title.set_label(&gettext("Library"));
             return;
         };
@@ -424,13 +464,17 @@ impl HomePage {
         imp.logo
             .update_property(&[gtk::accessible::Property::Label(&title)]);
         // Art in memory shows at once, so moving along the carousel does not flicker.
-        let art = art.filter(|path| match textures::cached(path) {
+        let art = match art.as_deref().and_then(textures::cached) {
             Some(texture) => {
-                imp.hero.set_paintable(Some(&texture));
-                false
+                self.show_hero_art(&texture);
+                None
             }
-            None => true,
-        });
+            None if art.is_none() => {
+                self.hide_hero_art();
+                None
+            }
+            None => art,
+        };
         let logo = logo.filter(|path| match textures::cached(path) {
             Some(texture) => {
                 self.show_logo(&texture);
@@ -443,12 +487,16 @@ impl HomePage {
         }
         let page = self.downgrade();
         glib::spawn_future_local(async move {
-            if let Some(path) = art
-                && let Ok(texture) = textures::load(&path).await
-                && let Some(page) = page.upgrade()
-                && page.imp().hero_generation.get() == generation
-            {
-                page.imp().hero.set_paintable(Some(&texture));
+            if let Some(path) = art {
+                let texture = textures::load(&path).await;
+                if let Some(page) = page.upgrade()
+                    && page.imp().hero_generation.get() == generation
+                {
+                    match texture {
+                        Ok(texture) => page.show_hero_art(&texture),
+                        Err(_) => page.hide_hero_art(),
+                    }
+                }
             }
             if let Some(path) = logo
                 && let Ok(texture) = textures::load(&path).await
