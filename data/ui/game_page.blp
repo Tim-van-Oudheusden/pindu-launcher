@@ -19,160 +19,277 @@ template $PinduGamePage: Adw.NavigationPage {
       action-name: "app.preferences";
     }
 
-    content: ScrolledWindow {
-      hscrollbar-policy: never;
+    // In fullscreen mode, Play shows the launch overlay over the page.
+    content: Overlay {
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
 
-      child: Box {
-        orientation: vertical;
+        child: Box {
+          orientation: vertical;
 
-        Overlay {
-          styles [
-            "game-hero",
-          ]
-
-          child: Picture hero {
-            content-fit: cover;
-            height-request: 320;
-            can-shrink: true;
-          };
-
-          [overlay]
-          Box {
-            can-target: false;
-
+          Overlay {
             styles [
-              "hero-gradient",
+              "game-hero",
             ]
-          }
 
-          [overlay]
-          Box {
-            halign: start;
-            valign: end;
-            margin-start: 32;
-            margin-end: 32;
-            margin-bottom: 24;
-
-            Picture logo {
-              visible: false;
-              content-fit: contain;
-              width-request: 320;
-              height-request: 120;
+            child: Picture hero {
+              content-fit: cover;
+              height-request: 320;
               can-shrink: true;
-              halign: start;
-            }
+            };
 
-            Label title {
-              wrap: true;
-              xalign: 0;
+            [overlay]
+            Box {
+              can-target: false;
 
               styles [
-                "title-1",
+                "hero-gradient",
               ]
             }
-          }
-        }
 
-        Adw.Clamp {
-          maximum-size: 900;
-          margin-start: 24;
-          margin-end: 24;
-          margin-bottom: 32;
-
-          child: Box {
-            orientation: vertical;
-            spacing: 24;
-
+            [overlay]
             Box {
-              spacing: 12;
+              halign: start;
+              valign: end;
+              margin-start: 32;
+              margin-end: 32;
+              margin-bottom: 24;
 
-              Button play_button {
-                label: _("_Play");
-                use-underline: true;
-                action-name: "app.play";
-
-                styles [
-                  "pill",
-                  "suggested-action",
-                ]
+              Picture logo {
+                visible: false;
+                content-fit: contain;
+                width-request: 320;
+                height-request: 120;
+                can-shrink: true;
+                halign: start;
               }
 
-              Button favourite_button {
-                icon-name: "non-starred-symbolic";
-                tooltip-text: _("Add to Favourites");
-                valign: center;
-                action-name: "win.toggle-favourite";
+              Label title {
+                wrap: true;
+                xalign: 0;
 
                 styles [
-                  "circular",
-                ]
-              }
-
-              MenuButton more_button {
-                icon-name: "view-more-symbolic";
-                tooltip-text: _("More Actions");
-                valign: center;
-
-                styles [
-                  "circular",
+                  "title-1",
                 ]
               }
             }
+          }
 
-            Adw.WrapBox facts {
-              child-spacing: 32;
-              line-spacing: 12;
-            }
+          Adw.Clamp {
+            maximum-size: 900;
+            margin-start: 24;
+            margin-end: 24;
+            margin-bottom: 32;
 
-            Adw.PreferencesGroup about_group {
-              title: _("About");
+            child: Box {
+              orientation: vertical;
+              spacing: 24;
 
-              Adw.ActionRow developer_row {
-                title: _("Developer");
-                subtitle-selectable: true;
-
-                styles [
-                  "property",
-                ]
-              }
-
-              Adw.ActionRow genres_row {
-                title: _("Genres");
+              Box {
+                spacing: 12;
 
                 styles [
-                  "property",
+                  "game-actions",
                 ]
-              }
-            }
 
-            Label description {
-              wrap: true;
-              xalign: 0;
-              selectable: true;
-            }
+                Button play_button {
+                  label: _("_Play");
+                  use-underline: true;
+                  action-name: "app.play";
 
-            Adw.PreferencesGroup launch_group {
-              title: _("Launch");
+                  styles [
+                    "pill",
+                    "suggested-action",
+                    "game-play",
+                  ]
+                }
 
-              Adw.ActionRow launch_row {
-                title: _("Started by the launcher");
-
-                [suffix]
-                Button open_in_launcher {
+                Button favourite_button {
+                  icon-name: "non-starred-symbolic";
+                  tooltip-text: _("Add to Favourites");
                   valign: center;
-                  action-name: "app.open-in-launcher";
+                  action-name: "win.toggle-favourite";
+
+                  styles [
+                    "circular",
+                  ]
+                }
+
+                // Fullscreen mode has "Add to Collection" beside Favourite; the desktop
+                // window has it in the ⋮ menu.
+                MenuButton collection_button {
+                  icon-name: "list-add-symbolic";
+                  tooltip-text: _("Add to Collection");
+                  valign: center;
+                  visible: false;
+
+                  styles [
+                    "circular",
+                  ]
+                }
+
+                MenuButton more_button {
+                  icon-name: "view-more-symbolic";
+                  tooltip-text: _("More Actions");
+                  valign: center;
+
+                  styles [
+                    "circular",
+                  ]
                 }
               }
 
-              Adw.SwitchRow steam_dialog_row {
-                title: _("Choose Launch Options");
-                subtitle: _("Ask Steam which of the game’s launch options to use");
+              // Shown in fullscreen mode while a game we started runs.
+              Box playing_card {
                 visible: false;
+                spacing: 16;
+
+                styles [
+                  "card",
+                  "playing-card",
+                ]
+
+                Image {
+                  icon-name: "media-playback-start-symbolic";
+                  pixel-size: 32;
+                  accessible-role: presentation;
+
+                  styles [
+                    "accent",
+                  ]
+                }
+
+                Box {
+                  orientation: vertical;
+                  spacing: 2;
+
+                  Label {
+                    label: _("Playing Now");
+                    xalign: 0;
+
+                    styles [
+                      "heading",
+                    ]
+                  }
+
+                  Label {
+                    label: _("Your playtime is being recorded");
+                    xalign: 0;
+                    wrap: true;
+
+                    styles [
+                      "dimmed",
+                    ]
+                  }
+                }
               }
-            }
-          };
-        }
+
+              // How Play starts the game, in fullscreen mode.
+              Label launch_summary {
+                visible: false;
+                wrap: true;
+                xalign: 0;
+
+                styles [
+                  "dimmed",
+                ]
+              }
+
+              Adw.WrapBox facts {
+                child-spacing: 32;
+                line-spacing: 12;
+              }
+
+              Adw.PreferencesGroup about_group {
+                title: _("About");
+
+                Adw.ActionRow developer_row {
+                  title: _("Developer");
+                  subtitle-selectable: true;
+
+                  styles [
+                    "property",
+                  ]
+                }
+
+                Adw.ActionRow genres_row {
+                  title: _("Genres");
+
+                  styles [
+                    "property",
+                  ]
+                }
+              }
+
+              Label description {
+                wrap: true;
+                xalign: 0;
+                selectable: true;
+              }
+
+              Adw.PreferencesGroup launch_group {
+                title: _("Launch");
+
+                Adw.ActionRow launch_row {
+                  title: _("Started by the launcher");
+
+                  [suffix]
+                  Button open_in_launcher {
+                    valign: center;
+                    action-name: "app.open-in-launcher";
+                  }
+                }
+
+                Adw.SwitchRow steam_dialog_row {
+                  title: _("Choose Launch Options");
+                  subtitle: _("Ask Steam which of the game’s launch options to use");
+                  visible: false;
+                }
+              }
+            };
+          }
+        };
       };
+
+      [overlay]
+      Box launch_overlay {
+        visible: false;
+
+        styles [
+          "launch-overlay",
+        ]
+
+        Box {
+          orientation: vertical;
+          spacing: 24;
+          valign: center;
+          hexpand: true;
+
+          Adw.Spinner {
+            width-request: 64;
+            height-request: 64;
+            halign: center;
+          }
+
+          Label launch_title {
+            wrap: true;
+            justify: center;
+
+            styles [
+              "title-1",
+            ]
+          }
+
+          Label launch_status {
+            wrap: true;
+            justify: center;
+
+            styles [
+              "title-3",
+            ]
+          }
+        }
+      }
     };
   };
 }

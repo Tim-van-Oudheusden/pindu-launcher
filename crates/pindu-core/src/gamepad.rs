@@ -1,6 +1,7 @@
 //! Turns controller input into app intents, so the shells never see hardware. Devices come
 //! from a [`GamepadBackend`]; [`Intents`] maps their mapped buttons and sticks to intents,
-//! repeats held directions, and tracks each device's kind for glyphs and the A/B swap.
+//! repeats held directions, notices a held Back, and tracks each device's kind for glyphs
+//! and the A/B swap.
 
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
@@ -56,6 +57,8 @@ pub enum Intent {
     Navigate(Direction),
     Activate,
     Back,
+    /// Back held down for [`HOLD_DURATION`], as long presses ask: it cancels a launch.
+    BackHeld,
     PreviousTab,
     NextTab,
     PreviousSort,
@@ -163,6 +166,8 @@ pub enum GamepadEvent {
 pub const REPEAT_DELAY: Duration = Duration::from_millis(300);
 /// How often a held direction repeats after that.
 pub const REPEAT_INTERVAL: Duration = Duration::from_millis(50);
+/// How long Back is held to cancel a launch.
+pub const HOLD_DURATION: Duration = Duration::from_secs(1);
 /// How far a stick must move before it navigates.
 pub const DEADZONE: f64 = 0.5;
 
@@ -185,6 +190,8 @@ pub struct Intents {
     /// The buttons held down, so a trigger that reports each move as a press asks once.
     pressed: HashSet<(DeviceId, Button)>,
     held: Option<Held>,
+    /// Back held down, by which device and button, and when it counts as a hold.
+    back_held: Option<(DeviceId, Button, Duration)>,
     /// The device last plugged in or used, whose kind the glyphs show.
     active: Option<DeviceId>,
 }
@@ -226,6 +233,9 @@ impl Intents {
                 if self.held.is_some_and(|held| held.device == device) {
                     self.held = None;
                 }
+                if self.back_held.is_some_and(|(holder, ..)| holder == device) {
+                    self.back_held = None;
+                }
                 if self.active == Some(device) {
                     self.active = self.kinds.keys().min().copied();
                 }
@@ -241,8 +251,12 @@ impl Intents {
                     return None;
                 }
                 let intent = button_intent(self.confirm_and_back_swapped(device, button));
-                if let Intent::Navigate(direction) = intent {
-                    self.hold(device, Source::Button(button), direction, now);
+                match intent {
+                    Intent::Navigate(direction) => {
+                        self.hold(device, Source::Button(button), direction, now);
+                    }
+                    Intent::Back => self.back_held = Some((device, button, now + HOLD_DURATION)),
+                    _ => {}
                 }
                 Some(intent)
             }
@@ -253,6 +267,12 @@ impl Intents {
             } => {
                 self.pressed.remove(&(device, button));
                 self.release(device, Source::Button(button));
+                if self
+                    .back_held
+                    .is_some_and(|(holder, held, _)| (holder, held) == (device, button))
+                {
+                    self.back_held = None;
+                }
                 None
             }
             GamepadEvent::Axis {
@@ -301,16 +321,34 @@ impl Intents {
         }
     }
 
-    /// The repeat of a held direction, when one is due at `now`.
+    /// The repeat of a held direction, or the hold of Back, when one is due at `now`.
     pub fn repeat(&mut self, now: Duration) -> Option<Intent> {
-        let held = self.held.as_mut().filter(|held| held.due <= now)?;
-        held.due = now + REPEAT_INTERVAL;
-        Some(Intent::Navigate(held.direction))
+        let direction_due = self.held.map(|held| held.due).filter(|&due| due <= now);
+        let back_due = self
+            .back_held
+            .map(|(.., due)| due)
+            .filter(|&due| due <= now);
+        match (direction_due, back_due) {
+            (_, Some(back)) if direction_due.is_none_or(|direction| back < direction) => {
+                self.back_held = None;
+                Some(Intent::BackHeld)
+            }
+            (Some(_), _) => {
+                let held = self.held.as_mut()?;
+                held.due = now + REPEAT_INTERVAL;
+                Some(Intent::Navigate(held.direction))
+            }
+            _ => None,
+        }
     }
 
-    /// When the held direction next repeats, if one is held.
+    /// When the held direction next repeats or Back counts as held, if either is held.
     pub fn next_repeat(&self) -> Option<Duration> {
-        self.held.map(|held| held.due)
+        let back = self.back_held.map(|(.., due)| due);
+        [self.held.map(|held| held.due), back]
+            .into_iter()
+            .flatten()
+            .min()
     }
 
     /// The kind of the device last plugged in or used, for glyphs; `None` without one.
@@ -610,5 +648,58 @@ mod tests {
 
         intents.handle(&GamepadEvent::Disconnected { device: other }, ms(30));
         assert_eq!(intents.active_kind(), None);
+    }
+
+    #[test]
+    fn holding_back_asks_once_more_after_the_hold_duration() {
+        let mut intents = Intents::new();
+
+        assert_eq!(
+            intents.handle(&press(Button::East), ms(0)),
+            Some(Intent::Back)
+        );
+        assert_eq!(intents.next_repeat(), Some(HOLD_DURATION));
+        assert_eq!(intents.repeat(HOLD_DURATION - ms(1)), None);
+        assert_eq!(intents.repeat(HOLD_DURATION), Some(Intent::BackHeld));
+        assert_eq!(intents.repeat(HOLD_DURATION * 2), None);
+        assert_eq!(intents.next_repeat(), None);
+    }
+
+    #[test]
+    fn letting_go_of_back_early_is_no_hold() {
+        let mut intents = Intents::new();
+
+        intents.handle(&press(Button::East), ms(0));
+        intents.handle(&release(Button::East), ms(500));
+
+        assert_eq!(intents.next_repeat(), None);
+        assert_eq!(intents.repeat(HOLD_DURATION), None);
+    }
+
+    #[test]
+    fn a_nintendo_pad_holds_back_on_its_south_button() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Nintendo), ms(0));
+
+        intents.handle(&press(Button::East), ms(0));
+        assert_eq!(intents.repeat(HOLD_DURATION), None);
+        intents.handle(&release(Button::East), ms(0));
+
+        intents.handle(&press(Button::South), ms(0));
+        assert_eq!(intents.repeat(HOLD_DURATION), Some(Intent::BackHeld));
+    }
+
+    #[test]
+    fn a_held_direction_still_repeats_while_back_is_held() {
+        let mut intents = Intents::new();
+        let down = Intent::Navigate(Direction::Down);
+
+        intents.handle(&press(Button::East), ms(0));
+        intents.handle(&press(Button::DpadDown), ms(0));
+
+        assert_eq!(intents.next_repeat(), Some(REPEAT_DELAY));
+        assert_eq!(intents.repeat(REPEAT_DELAY), Some(down));
+        intents.handle(&release(Button::DpadDown), ms(400));
+        assert_eq!(intents.repeat(HOLD_DURATION), Some(Intent::BackHeld));
     }
 }
