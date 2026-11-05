@@ -185,3 +185,5 @@ Other widgets inside these are libadwaita's and GTK's own; their names may chang
 
 The names and options above are a promise for contract 1. Renaming or removing one, or changing what it
 means, raises the contract version and is listed in the release notes. Adding names or options does not.
+
+The designs Pindu ships, in `data/themes/`, are worked examples of everything on this page.
