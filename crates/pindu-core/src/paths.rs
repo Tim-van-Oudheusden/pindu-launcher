@@ -77,6 +77,13 @@ pub fn document_portal_parts(path: &Path) -> Option<(String, Vec<PathBuf>)> {
     Some((id, rest))
 }
 
+/// The root of the document a path lies below, `/run/user/<uid>/doc/<id>`; `None` for the
+/// root itself and for any other path.
+pub fn document_root(path: &Path) -> Option<PathBuf> {
+    document_portal_parts(path)?;
+    Some(path.components().take(6).collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -99,6 +106,20 @@ mod tests {
             document_portal_parts(Path::new("/run/user/1000/doc/a1b2c3")),
             None
         );
+    }
+
+    #[test]
+    fn paths_below_a_document_have_its_root() {
+        assert_eq!(
+            document_root(Path::new("/run/user/1000/doc/a1b2c3/Celeste/bin")),
+            Some("/run/user/1000/doc/a1b2c3".into())
+        );
+        assert_eq!(
+            document_root(Path::new("/run/user/1000/doc/a1b2c3/Celeste")),
+            Some("/run/user/1000/doc/a1b2c3".into())
+        );
+        assert_eq!(document_root(Path::new("/run/user/1000/doc/a1b2c3")), None);
+        assert_eq!(document_root(Path::new("/home/me/Games/Celeste")), None);
     }
 
     #[test]
