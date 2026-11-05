@@ -20,8 +20,8 @@ pub enum Focus {
     Other,
 }
 
-/// Where the user is: the focused widget, an open dialog, a page to go back to and
-/// whether the page searches.
+/// Where the user is: the focused widget, an open dialog, a page to go back to, whether
+/// the page searches and whether it has tabs and a sort to step through.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Context {
     pub focus: Focus,
@@ -31,6 +31,9 @@ pub struct Context {
     pub page_below: bool,
     /// The page searches the library (Home and the library), which Y starts.
     pub search: bool,
+    /// The page has tabs, which the shoulder buttons switch, and a sort order, which the
+    /// triggers cycle (fullscreen mode's library).
+    pub tabs: bool,
 }
 
 /// What a button does, as the hint bar names it.
@@ -44,12 +47,19 @@ pub enum Action {
     Back,
     Close,
     Search,
+    /// Switch to the tab before or after.
+    Tabs,
+    /// Cycle the sort order back or forward.
+    Sort,
 }
 
-/// One hint: the button, by its position on the pad, and what it does.
+/// One hint: the button, by its position on the pad, and what it does. A pair of buttons
+/// that step two ways (the shoulders, the triggers) shares one hint.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Hint {
     pub button: Button,
+    /// The button that steps the other way.
+    pub pair: Option<Button>,
     pub action: Action,
 }
 
@@ -68,20 +78,33 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
     } else {
         context.page_below.then_some(Action::Back)
     };
-    // Y searches the page under a dialog, so it waits for the dialog to close.
+    // Y searches the page under a dialog, so it waits for the dialog to close; so do the
+    // page's tabs and sort.
     let search = (context.search && !context.dialog).then_some(Action::Search);
+    let tabs = context.tabs && !context.dialog;
+    let single = |intent, action: Option<Action>| {
+        action.map(|action| Hint {
+            button: kind.button(intent),
+            pair: None,
+            action,
+        })
+    };
+    let pair = |back, forward, action| {
+        tabs.then(|| Hint {
+            button: kind.button(back),
+            pair: Some(kind.button(forward)),
+            action,
+        })
+    };
     [
-        (Intent::Activate, activate),
-        (Intent::Back, back),
-        (Intent::Search, search),
+        single(Intent::Activate, activate),
+        single(Intent::Back, back),
+        single(Intent::Search, search),
+        pair(Intent::PreviousTab, Intent::NextTab, Action::Tabs),
+        pair(Intent::PreviousSort, Intent::NextSort, Action::Sort),
     ]
     .into_iter()
-    .filter_map(|(intent, action)| {
-        Some(Hint {
-            button: kind.button(intent),
-            action: action?,
-        })
-    })
+    .flatten()
     .collect()
 }
 
@@ -109,6 +132,12 @@ pub fn glyph(kind: DeviceKind, button: Button) -> &'static str {
         (PlayStation | SteamDeck, Button::RightShoulder) => "pindu-glyph-r1-symbolic",
         (Nintendo, Button::LeftShoulder) => "pindu-glyph-l-symbolic",
         (Nintendo, Button::RightShoulder) => "pindu-glyph-r-symbolic",
+        (Xbox | Generic, Button::LeftTrigger) => "pindu-glyph-lt-symbolic",
+        (Xbox | Generic, Button::RightTrigger) => "pindu-glyph-rt-symbolic",
+        (PlayStation | SteamDeck, Button::LeftTrigger) => "pindu-glyph-l2-symbolic",
+        (PlayStation | SteamDeck, Button::RightTrigger) => "pindu-glyph-r2-symbolic",
+        (Nintendo, Button::LeftTrigger) => "pindu-glyph-zl-symbolic",
+        (Nintendo, Button::RightTrigger) => "pindu-glyph-zr-symbolic",
         (Nintendo, Button::Select) => "pindu-glyph-minus-symbolic",
         (Nintendo, Button::Start) => "pindu-glyph-plus-symbolic",
         (_, Button::Select) => "pindu-glyph-view-symbolic",
@@ -131,6 +160,7 @@ mod tests {
             dialog: false,
             page_below: false,
             search: false,
+            tabs: false,
         }
     }
 
@@ -139,6 +169,54 @@ mod tests {
             .into_iter()
             .map(|hint| (hint.button, hint.action))
             .collect()
+    }
+
+    #[test]
+    fn the_fullscreen_library_switches_tabs_with_the_shoulders_and_sorts_with_the_triggers() {
+        let library = Context {
+            page_below: true,
+            search: true,
+            tabs: true,
+            ..context(Focus::Game)
+        };
+        let shown: Vec<_> = hints(library, DeviceKind::Xbox)
+            .into_iter()
+            .map(|hint| (hint.button, hint.pair, hint.action))
+            .collect();
+        assert_eq!(
+            shown,
+            [
+                (Button::South, None, Action::Open),
+                (Button::East, None, Action::Back),
+                (Button::North, None, Action::Search),
+                (
+                    Button::LeftShoulder,
+                    Some(Button::RightShoulder),
+                    Action::Tabs
+                ),
+                (
+                    Button::LeftTrigger,
+                    Some(Button::RightTrigger),
+                    Action::Sort
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn an_open_dialog_keeps_the_shoulders_and_triggers_from_the_library() {
+        let dialog_over_library = Context {
+            dialog: true,
+            tabs: true,
+            ..context(Focus::Other)
+        };
+        assert_eq!(
+            actions(dialog_over_library, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Close)
+            ]
+        );
     }
 
     #[test]

@@ -1,9 +1,9 @@
 //! Fullscreen mode: the same window and models, presented for a controller at a distance.
 //! The window goes fullscreen and the mode follows its `fullscreened` property: top bars
-//! hide, type grows, controllers are listened to, focus is kept on the page, and Home is
-//! the first page, with the library and game pages above it. Entering and leaving go
-//! through `win.fullscreen-mode` (main menu, F11, `--fullscreen`, Guide) and
-//! `win.leave-fullscreen` (Esc, and the menu drawer's "Exit Fullscreen Mode").
+//! and the sidebar hide, type grows, controllers are listened to, focus is kept on the
+//! page, Home is the first page, with the library (in tabs) and game pages above it.
+//! Entering and leaving go through `win.fullscreen-mode` (main menu, F11, `--fullscreen`,
+//! Guide) and `win.leave-fullscreen` (Esc, and the menu drawer's "Exit Fullscreen Mode").
 
 use std::cell::RefCell;
 
@@ -95,8 +95,9 @@ impl PinduWindow {
             self.remove_css_class(STYLE_CLASS);
         }
         self.update_listening();
+        self.show_fullscreen_library(fullscreen);
         self.arrange_pages(fullscreen);
-        self.show_sidebar_beside_library();
+        self.hide_sidebar_in_fullscreen();
         self.update_top_bars();
         if let Some(action) = self
             .lookup_action("fullscreen-mode")
@@ -123,8 +124,8 @@ impl PinduWindow {
         }
     }
 
-    /// Home: its carousel follows the "Jump back in" games, its Library tile goes to the
-    /// library (`win.show-library`), and the sidebar shows only beside the library.
+    /// Home: its carousel follows the "Jump back in" games and its Library tile goes to the
+    /// library (`win.show-library`).
     pub(crate) fn setup_home(&self) {
         let show_library = gio::ActionEntry::builder("show-library")
             .activate(|window: &Self, _, _| window.show_library())
@@ -157,13 +158,6 @@ impl PinduWindow {
             self,
             move |_| window.update_home()
         ));
-        self.imp()
-            .navigation_view
-            .connect_visible_page_notify(glib::clone!(
-                #[weak(rename_to = window)]
-                self,
-                move |_| window.show_sidebar_beside_library()
-            ));
         self.update_home();
     }
 
@@ -218,18 +212,12 @@ impl PinduWindow {
         }
     }
 
-    /// Home and the pages opened from it fill the window in fullscreen mode: the sidebar,
-    /// which picks the library's view, hides unless the library shows, and comes back as
-    /// it was after.
-    fn show_sidebar_beside_library(&self) {
+    /// Home, the library's tabs and the pages opened from them fill the window in
+    /// fullscreen mode: the sidebar hides, and comes back as it was after.
+    fn hide_sidebar_in_fullscreen(&self) {
         let imp = self.imp();
         let split_view = &imp.split_view;
-        let hide = self.is_fullscreen()
-            && imp
-                .navigation_view
-                .visible_page()
-                .is_some_and(|page| page != *imp.library_page);
-        if hide {
+        if self.is_fullscreen() {
             if imp.sidebar_before_hiding.get().is_none() {
                 imp.sidebar_before_hiding
                     .set(Some(split_view.shows_sidebar()));

@@ -1,7 +1,8 @@
 //! The libmanette 0.2 gamepad backend: the only code that touches controllers. It reports
 //! libmanette's mapped buttons and axes (SDL's mapping database), so every pad shows up as
 //! the same positions; pads without a mapping send their D-pad as a hat, which becomes
-//! D-pad buttons here.
+//! D-pad buttons here. Mapped triggers arrive as buttons, even on pads that report them as
+//! axes.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -17,6 +18,8 @@ mod code {
     pub const BTN_WEST: u16 = 0x134;
     pub const BTN_TL: u16 = 0x136;
     pub const BTN_TR: u16 = 0x137;
+    pub const BTN_TL2: u16 = 0x138;
+    pub const BTN_TR2: u16 = 0x139;
     pub const BTN_SELECT: u16 = 0x13a;
     pub const BTN_START: u16 = 0x13b;
     pub const BTN_MODE: u16 = 0x13c;
@@ -198,6 +201,8 @@ fn button(code: u16) -> Option<Button> {
         code::BTN_WEST => Button::West,
         code::BTN_TL => Button::LeftShoulder,
         code::BTN_TR => Button::RightShoulder,
+        code::BTN_TL2 => Button::LeftTrigger,
+        code::BTN_TR2 => Button::RightTrigger,
         code::BTN_SELECT => Button::Select,
         code::BTN_START => Button::Start,
         code::BTN_MODE => Button::Guide,

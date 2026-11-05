@@ -2,7 +2,7 @@
 //! from a [`GamepadBackend`]; [`Intents`] maps their mapped buttons and sticks to intents,
 //! repeats held directions, and tracks each device's kind for glyphs and the A/B swap.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 /// A connected controller, as its backend numbers it.
@@ -11,7 +11,7 @@ pub struct DeviceId(pub u64);
 
 /// A controller button, by its position on an Xbox-style pad (SDL's mapping): `South` is
 /// A on Xbox, Cross on PlayStation and B on Nintendo.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Button {
     South,
     East,
@@ -19,6 +19,10 @@ pub enum Button {
     North,
     LeftShoulder,
     RightShoulder,
+    /// LT, L2 or ZL: a trigger libmanette maps to a button whether the pad reports it as
+    /// a button or as an axis.
+    LeftTrigger,
+    RightTrigger,
     /// View, Back, Share or Minus.
     Select,
     /// Menu, Options or Plus.
@@ -54,6 +58,8 @@ pub enum Intent {
     Back,
     PreviousTab,
     NextTab,
+    PreviousSort,
+    NextSort,
     Search,
     Menu,
     Options,
@@ -176,6 +182,8 @@ pub trait GamepadBackend {
 pub struct Intents {
     kinds: HashMap<DeviceId, DeviceKind>,
     sticks: HashMap<DeviceId, [f64; 2]>,
+    /// The buttons held down, so a trigger that reports each move as a press asks once.
+    pressed: HashSet<(DeviceId, Button)>,
     held: Option<Held>,
     /// The device last plugged in or used, whose kind the glyphs show.
     active: Option<DeviceId>,
@@ -214,6 +222,7 @@ impl Intents {
             GamepadEvent::Disconnected { device } => {
                 self.kinds.remove(&device);
                 self.sticks.remove(&device);
+                self.pressed.retain(|(holder, _)| *holder != device);
                 if self.held.is_some_and(|held| held.device == device) {
                     self.held = None;
                 }
@@ -228,6 +237,9 @@ impl Intents {
                 pressed: true,
             } => {
                 self.active = Some(device);
+                if !self.pressed.insert((device, button)) {
+                    return None;
+                }
                 let intent = button_intent(self.confirm_and_back_swapped(device, button));
                 if let Intent::Navigate(direction) = intent {
                     self.hold(device, Source::Button(button), direction, now);
@@ -239,6 +251,7 @@ impl Intents {
                 button,
                 pressed: false,
             } => {
+                self.pressed.remove(&(device, button));
                 self.release(device, Source::Button(button));
                 None
             }
@@ -334,7 +347,7 @@ fn stick_direction([x, y]: [f64; 2]) -> Option<Direction> {
 
 /// Every button, in the order hints prefer them when two do the same: options show on
 /// View, which the spec names for it, rather than on the west face button.
-pub(crate) const BUTTONS: [Button; 13] = [
+pub(crate) const BUTTONS: [Button; 15] = [
     Button::South,
     Button::East,
     Button::North,
@@ -344,6 +357,8 @@ pub(crate) const BUTTONS: [Button; 13] = [
     Button::Guide,
     Button::LeftShoulder,
     Button::RightShoulder,
+    Button::LeftTrigger,
+    Button::RightTrigger,
     Button::DpadUp,
     Button::DpadDown,
     Button::DpadLeft,
@@ -360,6 +375,8 @@ fn button_intent(button: Button) -> Intent {
         Button::Guide => Intent::Home,
         Button::LeftShoulder => Intent::PreviousTab,
         Button::RightShoulder => Intent::NextTab,
+        Button::LeftTrigger => Intent::PreviousSort,
+        Button::RightTrigger => Intent::NextSort,
         Button::DpadUp => Intent::Navigate(Direction::Up),
         Button::DpadDown => Intent::Navigate(Direction::Down),
         Button::DpadLeft => Intent::Navigate(Direction::Left),
@@ -403,6 +420,8 @@ mod tests {
             (Button::Guide, Intent::Home),
             (Button::LeftShoulder, Intent::PreviousTab),
             (Button::RightShoulder, Intent::NextTab),
+            (Button::LeftTrigger, Intent::PreviousSort),
+            (Button::RightTrigger, Intent::NextSort),
             (Button::DpadUp, Intent::Navigate(Direction::Up)),
             (Button::DpadDown, Intent::Navigate(Direction::Down)),
             (Button::DpadLeft, Intent::Navigate(Direction::Left)),
@@ -421,6 +440,21 @@ mod tests {
                 "{button:?}"
             );
         }
+    }
+
+    #[test]
+    fn a_trigger_pulled_further_asks_once_until_it_is_let_go() {
+        // libmanette reports every move of an axis trigger past halfway as another press.
+        let mut intents = Intents::new();
+        let pull = press(Button::RightTrigger);
+
+        assert_eq!(intents.handle(&pull, ms(0)), Some(Intent::NextSort));
+        assert_eq!(intents.handle(&pull, ms(10)), None);
+        assert_eq!(intents.handle(&pull, ms(20)), None);
+
+        intents.handle(&release(Button::RightTrigger), ms(30));
+        intents.handle(&release(Button::RightTrigger), ms(40));
+        assert_eq!(intents.handle(&pull, ms(50)), Some(Intent::NextSort));
     }
 
     fn connected(kind: DeviceKind) -> GamepadEvent {
@@ -444,6 +478,7 @@ mod tests {
             intents.handle(&press(Button::South), Duration::ZERO),
             Some(Intent::Back)
         );
+        intents.handle(&release(Button::South), Duration::ZERO);
 
         intents.handle(&connected(DeviceKind::Xbox), Duration::ZERO);
         assert_eq!(

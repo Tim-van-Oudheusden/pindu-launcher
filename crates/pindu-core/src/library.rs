@@ -157,6 +157,26 @@ pub enum SortMode {
     Playtime,
 }
 
+impl SortMode {
+    /// Every order, as the sort menu lists them.
+    pub const ALL: [Self; 5] = [
+        Self::LastPlayed,
+        Self::NameAscending,
+        Self::NameDescending,
+        Self::RecentlyAdded,
+        Self::Playtime,
+    ];
+
+    /// The order after this one in the sort menu, or before it, going round: what the
+    /// triggers step to in fullscreen mode.
+    pub fn cycled(self, forward: bool) -> Self {
+        let count = Self::ALL.len();
+        let index = Self::ALL.iter().position(|&mode| mode == self).unwrap_or(0);
+        let step = if forward { 1 } else { count - 1 };
+        Self::ALL[(index + step) % count]
+    }
+}
+
 /// What sorting needs from a game, computed once so comparisons stay cheap in big
 /// libraries.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -244,6 +264,29 @@ impl View {
             Self::Hidden => game.hidden,
         }
     }
+}
+
+/// Fullscreen mode's library tabs: All, Installed, Favourites, then each collection in
+/// the user's order.
+pub fn fullscreen_tabs(collections: impl IntoIterator<Item = i64>) -> Vec<View> {
+    [View::All, View::Installed, View::Favourites]
+        .into_iter()
+        .chain(collections.into_iter().map(View::Collection))
+        .collect()
+}
+
+/// The tab after `current`, or before it, which the shoulder buttons switch to: none past
+/// either end, and the first tab from a view without one.
+pub fn step_tab(tabs: &[View], current: View, forward: bool) -> Option<View> {
+    let Some(index) = tabs.iter().position(|&tab| tab == current) else {
+        return tabs.first().copied();
+    };
+    let next = if forward {
+        index + 1
+    } else {
+        index.checked_sub(1)?
+    };
+    tabs.get(next).copied()
 }
 
 /// The stacking filter toggles of the library page. Toggles of one kind widen each other
@@ -384,6 +427,52 @@ mod tests {
 
     use super::*;
     use crate::model::{Game, GameId, LaunchKind, Source};
+
+    #[test]
+    fn fullscreen_tabs_are_all_installed_favourites_then_each_collection_in_order() {
+        assert_eq!(
+            fullscreen_tabs([3, 1]),
+            [
+                View::All,
+                View::Installed,
+                View::Favourites,
+                View::Collection(3),
+                View::Collection(1)
+            ]
+        );
+    }
+
+    #[test]
+    fn the_shoulders_step_to_the_next_tab_and_stop_at_either_end() {
+        let tabs = fullscreen_tabs([7]);
+
+        assert_eq!(step_tab(&tabs, View::All, true), Some(View::Installed));
+        assert_eq!(
+            step_tab(&tabs, View::Favourites, true),
+            Some(View::Collection(7))
+        );
+        assert_eq!(step_tab(&tabs, View::Collection(7), true), None);
+        assert_eq!(step_tab(&tabs, View::Installed, false), Some(View::All));
+        assert_eq!(step_tab(&tabs, View::All, false), None);
+        // A view without a tab (a source, play history) steps onto the first tab.
+        assert_eq!(
+            step_tab(&tabs, View::Source(Source::Steam), true),
+            Some(View::All)
+        );
+        assert_eq!(step_tab(&tabs, View::Hidden, false), Some(View::All));
+    }
+
+    #[test]
+    fn the_triggers_cycle_the_sort_orders_of_the_sort_menu_round() {
+        assert_eq!(SortMode::LastPlayed.cycled(true), SortMode::NameAscending);
+        assert_eq!(SortMode::RecentlyAdded.cycled(true), SortMode::Playtime);
+        assert_eq!(SortMode::Playtime.cycled(true), SortMode::LastPlayed);
+        assert_eq!(SortMode::LastPlayed.cycled(false), SortMode::Playtime);
+        assert_eq!(
+            SortMode::NameDescending.cycled(false),
+            SortMode::NameAscending
+        );
+    }
 
     fn game(id: &str, title: &str, last_played_at: Option<i64>, added_at: i64) -> Game {
         let mut game = Game::new(
