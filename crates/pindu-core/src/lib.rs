@@ -14,6 +14,7 @@ pub mod launch;
 pub mod library;
 pub mod manual;
 pub mod model;
+pub mod osk;
 pub mod paths;
 pub mod pe;
 pub mod permissions;

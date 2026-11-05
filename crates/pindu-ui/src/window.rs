@@ -12,6 +12,7 @@ use pindu_core::library::{
     Counts, Filters, HistoryGroup, PlaytimeOrigin, SortMode, View, history_group,
 };
 use pindu_core::model::{GameId, Source};
+use pindu_core::osk::Keyboard;
 
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
@@ -36,6 +37,10 @@ mod imp {
         pub hint_toolbar: TemplateChild<adw::ToolbarView>,
         #[template_child]
         pub hint_bar: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub keyboard_revealer: TemplateChild<gtk::Revealer>,
+        #[template_child]
+        pub keyboard_grid: TemplateChild<gtk::Grid>,
         #[template_child]
         pub toast_overlay: TemplateChild<adw::ToastOverlay>,
         #[template_child]
@@ -133,6 +138,10 @@ mod imp {
         /// Whether the first cover takes focus once the current re-sort is done, after
         /// the triggers changed the order.
         pub focus_first_after_sort: Cell<bool>,
+        /// Fullscreen mode's search keyboard, while it is open.
+        pub search_keyboard: Cell<Option<Keyboard>>,
+        /// The search keyboard's keys, row by row.
+        pub keyboard_keys: RefCell<Vec<Vec<gtk::Label>>>,
     }
 
     #[glib::object_subclass]
@@ -202,6 +211,7 @@ impl PinduWindow {
         window.setup_home();
         window.setup_fullscreen_library();
         window.setup_fullscreen();
+        window.setup_search_keyboard();
         if let Some(application) = application.downcast_ref::<PinduApplication>() {
             window.setup_controller_navigation(application);
             window.setup_hint_bar(application);

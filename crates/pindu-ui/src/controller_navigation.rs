@@ -1,7 +1,8 @@
 //! Controller navigation in the main window: directions move focus the way the arrow keys
 //! do (`move-focus` on the window), the cover grid steps through its covers with
 //! `scroll_to`, A activates the focused widget, B closes a dialog or goes back, Y searches
-//! from Home or the library, LB/RB and LT/RT switch the fullscreen library's tabs and sort
+//! from Home or the library (with the search keyboard in fullscreen mode, which takes the
+//! buttons while it is open), LB/RB and LT/RT switch the fullscreen library's tabs and sort
 //! order, and Guide enters fullscreen mode. Intents never become synthetic key events, and
 //! only the active window acts on them.
 
@@ -57,6 +58,9 @@ impl PinduWindow {
         }
         // As with the keyboard, focus shows once the controller moves it.
         self.set_focus_visible(true);
+        if self.search_keyboard_intent(intent) {
+            return;
+        }
         match intent {
             Intent::Navigate(direction) => {
                 self.navigate(direction);
@@ -72,7 +76,10 @@ impl PinduWindow {
             }
             Intent::Home => self.enter_fullscreen(),
             Intent::Search => {
-                self.start_search();
+                // In fullscreen mode Y brings up the search keyboard with the entry.
+                if self.start_search() && self.is_fullscreen() {
+                    self.open_search_keyboard();
+                }
                 self.play_sound(Sound::Select);
             }
             Intent::PreviousTab | Intent::NextTab if self.shows_tabs() => {
