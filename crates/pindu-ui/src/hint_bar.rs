@@ -6,7 +6,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
-use pindu_core::hints::{self, Action, Context, Focus};
+use pindu_core::hints::{self, Action, Context, Focus, GlyphName};
 
 use crate::application::PinduApplication;
 use crate::window::PinduWindow;
@@ -65,8 +65,10 @@ impl PinduWindow {
                 let glyph = gtk::Image::builder()
                     .icon_name(hints::glyph(kind, button))
                     .pixel_size(GLYPH_SIZE)
-                    .accessible_role(gtk::AccessibleRole::Presentation)
                     .build();
+                glyph.update_property(&[gtk::accessible::Property::Label(&glyph_label(
+                    hints::glyph_name(kind, button),
+                ))]);
                 item.append(&glyph);
             }
             let label = gtk::Label::new(Some(&action_label(hint.action)));
@@ -158,5 +160,25 @@ fn action_label(action: Action) -> String {
         Action::Type => gettext("Type"),
         Action::Delete => gettext("Delete"),
         Action::Done => gettext("Done"),
+    }
+}
+
+/// What a screen reader calls a button's glyph.
+fn glyph_label(name: GlyphName) -> String {
+    match name {
+        GlyphName::Label(letters) => letters.to_owned(),
+        GlyphName::Cross => gettext("Cross"),
+        GlyphName::Circle => gettext("Circle"),
+        GlyphName::Square => gettext("Square"),
+        GlyphName::Triangle => gettext("Triangle"),
+        GlyphName::View => gettext("View"),
+        GlyphName::Menu => gettext("Menu"),
+        GlyphName::Minus => gettext("Minus"),
+        GlyphName::Plus => gettext("Plus"),
+        GlyphName::Home => gettext("Home"),
+        GlyphName::DpadUp => gettext("D-pad Up"),
+        GlyphName::DpadDown => gettext("D-pad Down"),
+        GlyphName::DpadLeft => gettext("D-pad Left"),
+        GlyphName::DpadRight => gettext("D-pad Right"),
     }
 }

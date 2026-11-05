@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 11:40+0100\n"
+"POT-Creation-Date: 2026-11-05 11:53+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -211,13 +211,13 @@ msgid "Playtime"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:507
-#: crates/pindu-ui/src/hint_bar.rs:146
+#: crates/pindu-ui/src/hint_bar.rs:148
 #: crates/pindu-ui/src/widgets/cover_tile.rs:210 data/ui/cover_tile.blp:61
 msgid "Play"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:508
-#: crates/pindu-ui/src/hint_bar.rs:147
+#: crates/pindu-ui/src/hint_bar.rs:149
 #: crates/pindu-ui/src/widgets/cover_tile.rs:208
 msgid "Stop"
 msgstr ""
@@ -510,63 +510,112 @@ msgid_plural "{n} hours"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/hint_bar.rs:145
+#: crates/pindu-ui/src/hint_bar.rs:147
 msgid "Open"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:148
+#: crates/pindu-ui/src/hint_bar.rs:150
 msgid "Toggle"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:149
+#: crates/pindu-ui/src/hint_bar.rs:151
 msgid "Select"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:150 data/ui/shortcuts-dialog.blp:58
+#: crates/pindu-ui/src/hint_bar.rs:152 data/ui/shortcuts-dialog.blp:58
 msgid "Back"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:151
+#: crates/pindu-ui/src/hint_bar.rs:153
 msgid "Close"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:152 data/ui/shortcuts-dialog.blp:9
+#: crates/pindu-ui/src/hint_bar.rs:154 data/ui/shortcuts-dialog.blp:9
 msgid "Search"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:153
+#: crates/pindu-ui/src/hint_bar.rs:155
 msgid "Tabs"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:154 data/ui/window.blp:441
+#: crates/pindu-ui/src/hint_bar.rs:156 data/ui/window.blp:441
 msgid "Sort"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:155 data/ui/game_page.blp:138
+#: crates/pindu-ui/src/hint_bar.rs:157 data/ui/game_page.blp:138
 msgid "Options"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:156
+#: crates/pindu-ui/src/hint_bar.rs:158
 msgid "Hold to Cancel"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:157 data/ui/shortcuts-dialog.blp:77
-#: data/ui/window.blp:41
+#: crates/pindu-ui/src/hint_bar.rs:159 crates/pindu-ui/src/hint_bar.rs:175
+#: data/ui/shortcuts-dialog.blp:77 data/ui/window.blp:41
 msgid "Menu"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:158 data/ui/game_dialog.blp:40
+#: crates/pindu-ui/src/hint_bar.rs:160 data/ui/game_dialog.blp:40
 msgid "Type"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:159
-#: crates/pindu-ui/src/search_keyboard.rs:163
+#: crates/pindu-ui/src/hint_bar.rs:161
+#: crates/pindu-ui/src/search_keyboard.rs:167
 msgid "Delete"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:160
-#: crates/pindu-ui/src/search_keyboard.rs:164
+#: crates/pindu-ui/src/hint_bar.rs:162
+#: crates/pindu-ui/src/search_keyboard.rs:168
 msgid "Done"
+msgstr ""
+
+#: crates/pindu-ui/src/hint_bar.rs:170
+msgid "Cross"
+msgstr ""
+
+#: crates/pindu-ui/src/hint_bar.rs:171
+msgid "Circle"
+msgstr ""
+
+#: crates/pindu-ui/src/hint_bar.rs:172
+msgid "Square"
+msgstr ""
+
+#: crates/pindu-ui/src/hint_bar.rs:173
+msgid "Triangle"
+msgstr ""
+
+#: crates/pindu-ui/src/hint_bar.rs:174
+msgid "View"
+msgstr ""
+
+#: crates/pindu-ui/src/hint_bar.rs:176
+msgid "Minus"
+msgstr ""
+
+#: crates/pindu-ui/src/hint_bar.rs:177
+msgid "Plus"
+msgstr ""
+
+#: crates/pindu-ui/src/hint_bar.rs:178 data/ui/home_page.blp:5
+#: data/ui/window.blp:87
+msgid "Home"
+msgstr ""
+
+#: crates/pindu-ui/src/hint_bar.rs:179
+msgid "D-pad Up"
+msgstr ""
+
+#: crates/pindu-ui/src/hint_bar.rs:180
+msgid "D-pad Down"
+msgstr ""
+
+#: crates/pindu-ui/src/hint_bar.rs:181
+msgid "D-pad Left"
+msgstr ""
+
+#: crates/pindu-ui/src/hint_bar.rs:182
+msgid "D-pad Right"
 msgstr ""
 
 #: crates/pindu-ui/src/home_page.rs:233 data/ui/home_page.blp:97
@@ -898,7 +947,7 @@ msgstr ""
 msgid "Preparing…"
 msgstr ""
 
-#: crates/pindu-ui/src/search_keyboard.rs:162
+#: crates/pindu-ui/src/search_keyboard.rs:166
 msgid "Space"
 msgstr ""
 
@@ -1002,7 +1051,12 @@ msgstr ""
 msgid "SteamGridDB Cannot Be Reached"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:235
+#: crates/pindu-ui/src/steamgriddb_picker.rs:222
+#, rust-format
+msgid "Image {number} of {total}, {width} by {height} pixels"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:242
 msgid "The Image Cannot Be Downloaded"
 msgstr ""
 
@@ -1526,10 +1580,6 @@ msgstr ""
 
 #: data/ui/game_page.blp:314
 msgid "Wrapper Command, Such as taskset -c 0-3"
-msgstr ""
-
-#: data/ui/home_page.blp:5 data/ui/window.blp:87
-msgid "Home"
 msgstr ""
 
 #: data/ui/preferences.blp:6 data/ui/shortcuts-dialog.blp:6
