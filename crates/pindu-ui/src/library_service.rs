@@ -238,6 +238,36 @@ impl LibraryService {
         }
     }
 
+    /// Changes a game's stored launch config in the background. The library model holds
+    /// no launch configs, so nothing reloads.
+    pub fn edit_launch_config(
+        &self,
+        id: &GameId,
+        edit: impl FnOnce(&mut LaunchConfig) + Send + 'static,
+    ) {
+        let id = id.clone();
+        glib::spawn_future_local(async move {
+            let written = gtk::gio::spawn_blocking(move || {
+                let store = Store::open(&default_library_db_path())?;
+                store.in_transaction(|store| {
+                    let Some(mut config) = store.launch_config(&id)? else {
+                        return Ok(());
+                    };
+                    edit(&mut config);
+                    store.set_launch_config(&id, &config)
+                })
+            })
+            .await;
+            match written {
+                Ok(Ok(())) => {}
+                Ok(Err(error)) => {
+                    glib::g_warning!("pindu", "Could not save a launch config: {error}");
+                }
+                Err(_) => glib::g_warning!("pindu", "Saving a launch config stopped unexpectedly"),
+            }
+        });
+    }
+
     /// Changes one stored game in the background.
     fn spawn_edit(&self, id: &GameId, edit: impl FnOnce(&mut Game) + Send + 'static) {
         let (service, id) = (self.clone(), id.clone());

@@ -372,6 +372,18 @@ impl PinduWindow {
         }
     }
 
+    /// Shows the open game page's launch settings again, after the Edit dialog saved.
+    pub fn refresh_game_page(&self) {
+        if let Some(page) = self
+            .imp()
+            .navigation_view
+            .visible_page()
+            .and_downcast::<GamePage>()
+        {
+            page.load_launch_settings();
+        }
+    }
+
     /// Opens the game's install folder in the file manager.
     fn open_install_folder(&self, id: &GameId) {
         let Some(path) = self

@@ -261,6 +261,59 @@ template $PinduGamePage: Adw.NavigationPage {
                   visible: false;
                 }
               }
+
+              Adw.PreferencesGroup settings_group {
+                title: _("Launch");
+                description: _("Changes apply the next time the game starts.");
+                visible: false;
+
+                Adw.ComboRow proton_row {
+                  title: _("Proton");
+
+                  model: StringList {};
+                }
+
+                Adw.ActionRow prefix_row {
+                  title: _("Prefix");
+                  subtitle-selectable: true;
+
+                  [suffix]
+                  Button {
+                    label: _("C_hoose…");
+                    use-underline: true;
+                    valign: center;
+                    clicked => $choose_prefix() swapped;
+                  }
+                }
+
+                Adw.EntryRow arguments_row {
+                  title: _("Arguments");
+                  show-apply-button: true;
+                  apply => $apply_arguments() swapped;
+                }
+
+                Adw.EntryRow environment_row {
+                  title: _("Environment, Such as NAME=value");
+                  show-apply-button: true;
+                  apply => $apply_environment() swapped;
+                }
+
+                Adw.SwitchRow mangohud_row {
+                  title: _("MangoHud");
+                  subtitle: _("An overlay with the frame rate and how busy the computer is");
+                }
+
+                Adw.SwitchRow gamemode_row {
+                  title: _("GameMode");
+                  subtitle: _("Asks the system to favour the game while it runs");
+                }
+
+                Adw.EntryRow wrappers_row {
+                  title: _("Wrapper Command, Such as taskset -c 0-3");
+                  show-apply-button: true;
+                  apply => $apply_wrappers() swapped;
+                }
+              }
             };
           }
         };

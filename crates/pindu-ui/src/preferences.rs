@@ -1,9 +1,11 @@
-//! The Preferences dialog: General (covers, launching, controller, permissions), Sources
-//! (import, folder, sidebar), Artwork (SteamGridDB) and Fullscreen (start-up, sounds).
-//! Everything is GSettings, except the SteamGridDB key, which lives in the keyring, and each
-//! source's import switch and folder, which live with the library's other source state.
+//! The Preferences dialog: General (covers, launching, controller, permissions), Sources (import,
+//! folder, sidebar), Artwork (SteamGridDB), Windows games (default Proton, prefix folder and
+//! tools) and Fullscreen (start-up, sounds). Everything is GSettings, except the SteamGridDB
+//! key, which lives in the keyring, and each source's import switch and folder, which live with
+//! the library's other source state.
 
 use std::cell::OnceCell;
+use std::rc::Rc;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -15,6 +17,8 @@ use pindu_core::sources::sync::IMPORTED_SOURCES;
 use crate::config::APP_ID;
 use crate::file_service;
 use crate::permission_service;
+use crate::proton_choice::{FirstChoice, ProtonChoice};
+use crate::proton_launch;
 use crate::sources::{source_icon, source_name};
 use crate::steamgriddb_service;
 use crate::sync_service::SyncService;
@@ -54,8 +58,19 @@ mod imp {
         pub key_status_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub prefer_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub default_proton_row: TemplateChild<adw::ComboRow>,
+        #[template_child]
+        pub prefix_folder_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub reset_prefix_folder_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub default_mangohud_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub default_gamemode_row: TemplateChild<adw::SwitchRow>,
         pub settings: OnceCell<gio::Settings>,
         pub sync: OnceCell<SyncService>,
+        pub default_proton: OnceCell<Rc<ProtonChoice>>,
     }
 
     #[glib::object_subclass]
@@ -89,6 +104,17 @@ mod imp {
         fn save_key(&self) {
             self.obj().save_key();
         }
+
+        #[template_callback]
+        fn choose_prefix_folder(&self) {
+            self.obj().choose_prefix_folder();
+        }
+
+        #[template_callback]
+        fn reset_prefix_folder(&self) {
+            let _ = self.obj().settings().set_string("prefix-folder", "");
+            self.obj().show_prefix_folder();
+        }
     }
 
     impl ObjectImpl for PreferencesDialog {
@@ -116,6 +142,12 @@ mod imp {
             settings
                 .bind("prefer-steamgriddb", &*self.prefer_row, "active")
                 .build();
+            settings
+                .bind("default-mangohud", &*self.default_mangohud_row, "active")
+                .build();
+            settings
+                .bind("default-gamemode", &*self.default_gamemode_row, "active")
+                .build();
             let size = settings.string("tile-size");
             let position = TILE_SIZES.iter().position(|s| *s == size.as_str());
             self.tile_size_row
@@ -130,6 +162,20 @@ mod imp {
                 }
             ));
             self.settings.set(settings).expect("constructed once");
+
+            let proton = proton_launch::defaults().proton_version;
+            let choice = ProtonChoice::new(&self.default_proton_row, FirstChoice::Newest, proton);
+            choice.connect_changed(glib::clone!(
+                #[weak(rename_to = dialog)]
+                self.obj(),
+                move |name| {
+                    let _ = dialog
+                        .settings()
+                        .set_string("default-proton", name.as_deref().unwrap_or_default());
+                }
+            ));
+            self.default_proton.set(choice).expect("constructed once");
+            self.obj().show_prefix_folder();
 
             let allowed = permission_service::host_spawn_allowed();
             self.host_status.set_label(&if allowed {
@@ -298,6 +344,38 @@ impl PreferencesDialog {
             if let (Some(folder), Some(reset)) = (folder.upgrade(), reset.upgrade()) {
                 folder.set_subtitle(&shown.display().to_string());
                 reset.set_visible(true);
+            }
+        });
+    }
+
+    /// Shows the folder new Windows games get their prefix in.
+    fn show_prefix_folder(&self) {
+        let imp = self.imp();
+        let chosen = !self.settings().string("prefix-folder").is_empty();
+        imp.prefix_folder_row
+            .set_subtitle(&proton_launch::defaults().prefixes.to_string_lossy());
+        imp.reset_prefix_folder_button.set_visible(chosen);
+    }
+
+    /// Picks the prefix folder. umu runs inside the sandbox, so the path the sandbox
+    /// sees is the one kept.
+    fn choose_prefix_folder(&self) {
+        let chooser = gtk::FileDialog::builder()
+            .title(gettext("Choose the Prefix Folder"))
+            .modal(true)
+            .initial_folder(&gio::File::for_path(proton_launch::defaults().prefixes))
+            .build();
+        let root = self.root().and_downcast::<gtk::Window>();
+        let dialog = self.downgrade();
+        glib::spawn_future_local(async move {
+            let Ok(folder) = chooser.select_folder_future(root.as_ref()).await else {
+                return;
+            };
+            if let (Some(dialog), Some(path)) = (dialog.upgrade(), folder.path()) {
+                let _ = dialog
+                    .settings()
+                    .set_string("prefix-folder", &path.to_string_lossy());
+                dialog.show_prefix_folder();
             }
         });
     }
