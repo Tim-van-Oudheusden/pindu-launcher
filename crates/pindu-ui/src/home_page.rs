@@ -1,26 +1,29 @@
 //! Fullscreen mode's Home page, where the mode opens, in two screens. The first lists
-//! Home's sections (`pindu_core::sections`), a tile each, then the Library tile, over a
-//! black backdrop, with the focused section's name and game count. Activating a section
+//! Home's sections (`pindu_core::sections`), a tile each, then the Library tile, over
+//! Home's background, with the focused section's name and game count. Activating a section
 //! (`win.home-section`) opens the second screen: its games, with the focused game's hero
 //! behind them. B goes back to the first screen, on the section it came from. Each screen
 //! comes back to the tile or card that last had focus. The page carries `.home-sections`
 //! or `.home-games` for designs, which can choose the tiles' shape and size
-//! (`pindu_core::home`) and crossfade the hero (`.shown`, `.no-art`).
+//! (`pindu_core::home`) and crossfade the hero (`.shown`, `.no-art`). Behind the first
+//! screen plays Home's background (`.home-background`), as `home::background_playback`
+//! says for where the window is.
 
 use std::cell::{Cell, RefCell};
+use std::path::Path;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::glib;
 use pindu_core::focus::FocusMemory;
-use pindu_core::home::{self, CardArt, Detail};
+use pindu_core::home::{self, BackgroundContext, CardArt, Detail, Playback};
 use pindu_core::library::{ArtSet, HistoryGroup};
 use pindu_core::model::GameId;
 use pindu_core::sections::{Section, SectionId};
 use pindu_core::themes::{HomeLayout, ThemeLayout, TileShape};
 
-use crate::config::RESOURCE_BASE_PATH;
+use crate::config::{PKGDATADIR, RESOURCE_BASE_PATH};
 use crate::game_page::{date, playtime};
 use crate::models::GameObject;
 use crate::sources::{source_icon, source_name};
@@ -169,6 +172,12 @@ mod imp {
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/io/github/tim_van_oudheusden/pindu-launcher/ui/home_page.ui")]
     pub struct HomePage {
+        #[template_child]
+        pub background: TemplateChild<gtk::Picture>,
+        /// Home's background video, loaded the first time the window is fullscreen.
+        pub background_media: RefCell<Option<gtk::MediaFile>>,
+        /// Where the window is, as the window last said (`set_background_context`).
+        pub background_context: Cell<BackgroundContext>,
         #[template_child]
         pub hero_a: TemplateChild<gtk::Picture>,
         #[template_child]
@@ -348,6 +357,76 @@ impl HomePage {
         let games = self.imp().open.get().is_some();
         home.remove_css_class(if games { "home-sections" } else { "home-games" });
         home.add_css_class(if games { "home-games" } else { "home-sections" });
+        self.show_background_playback();
+    }
+
+    /// Follows where the window is for Home's background. `first_screen` says whether
+    /// Home is the shown page; the page itself knows whether its first screen shows.
+    pub fn set_background_context(&self, context: BackgroundContext) {
+        let imp = self.imp();
+        imp.background_context.set(context);
+        if context.fullscreen && imp.background_media.borrow().is_none() {
+            self.load_background();
+        }
+        self.show_background_playback();
+    }
+
+    /// Loads Home's background (`home/background.webm` in the app's data), muted and
+    /// looped. A file that is missing or does not play is logged and leaves the black of
+    /// `.home-background`.
+    fn load_background(&self) {
+        let media = gtk::MediaFile::new();
+        media.set_loop(true);
+        media.connect_error_notify(glib::clone!(
+            #[weak(rename_to = page)]
+            self,
+            move |media| {
+                if let Some(error) = media.error() {
+                    glib::g_warning!("pindu", "Could not play Home's background: {error}");
+                    page.imp()
+                        .background
+                        .set_paintable(gtk::gdk::Paintable::NONE);
+                }
+            }
+        ));
+        // Holding the first frame needs a stream that can seek, which it is once prepared.
+        media.connect_prepared_notify(glib::clone!(
+            #[weak(rename_to = page)]
+            self,
+            move |_| page.show_background_playback()
+        ));
+        let imp = self.imp();
+        imp.background.set_paintable(Some(&media));
+        imp.background_media.replace(Some(media.clone()));
+        media.set_filename(Some(
+            Path::new(PKGDATADIR).join("home").join("background.webm"),
+        ));
+        // After the file: GStreamer's player, which takes the mute, comes with it.
+        media.set_muted(true);
+    }
+
+    /// Plays, pauses or holds Home's background on its first frame, as
+    /// `home::background_playback` says for where the window is and the screen shown.
+    fn show_background_playback(&self) {
+        let imp = self.imp();
+        let Some(media) = imp.background_media.borrow().clone() else {
+            return;
+        };
+        let context = imp.background_context.get();
+        let context = BackgroundContext {
+            first_screen: context.first_screen && imp.open.get().is_none(),
+            ..context
+        };
+        match home::background_playback(context) {
+            Playback::Play => media.play(),
+            Playback::Pause => media.pause(),
+            Playback::FirstFrame => {
+                media.pause();
+                if media.is_seekable() && media.timestamp() != 0 {
+                    media.seek(0);
+                }
+            }
+        }
     }
 
     /// Takes Home's sections, each with its games, and shows them on the screen shown. A

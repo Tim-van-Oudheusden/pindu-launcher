@@ -41,10 +41,23 @@ impl std::fmt::Debug for Running {
     }
 }
 
-#[derive(Debug, Clone)]
+/// Handlers called with `any_playing()` when it changes.
+type PlayingHandlers = Rc<RefCell<Vec<Box<dyn Fn(bool)>>>>;
+
+#[derive(Clone)]
 pub struct SessionService {
     library: LibraryService,
     running: Rc<RefCell<HashMap<GameId, Running>>>,
+    on_any_playing: PlayingHandlers,
+}
+
+impl std::fmt::Debug for SessionService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SessionService")
+            .field("library", &self.library)
+            .field("running", &self.running)
+            .finish_non_exhaustive()
+    }
 }
 
 impl SessionService {
@@ -52,6 +65,20 @@ impl SessionService {
         Self {
             library: library.clone(),
             running: Rc::default(),
+            on_any_playing: PlayingHandlers::default(),
+        }
+    }
+
+    /// Calls `handler` with `any_playing()` whenever it changes: the first game we
+    /// started begins, or the last one ends.
+    pub fn connect_any_playing_changed(&self, handler: impl Fn(bool) + 'static) {
+        self.on_any_playing.borrow_mut().push(Box::new(handler));
+    }
+
+    fn any_playing_changed(&self) {
+        let playing = self.any_playing();
+        for handler in self.on_any_playing.borrow().iter() {
+            handler(playing);
         }
     }
 
@@ -106,11 +133,17 @@ impl SessionService {
             request_background();
         }
         self.set_playing(id, true);
+        if first {
+            self.any_playing_changed();
+        }
         let (service, id, child) = (self.clone(), id.clone(), child.clone());
         glib::spawn_future_local(async move {
             service.record(&id, &child).await;
             service.running.borrow_mut().remove(&id);
             service.set_playing(&id, false);
+            if !service.any_playing() {
+                service.any_playing_changed();
+            }
             service.library.reload();
         });
     }

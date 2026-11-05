@@ -167,8 +167,8 @@ window.fullscreen-mode gridview.library > child:focus-within .cover-frame {
   opacity: 0;
 }
 
-/* Home's first screen, the sections, has no hero: it shows over black, with white text in
-   the light style too. */
+/* Home's first screen, the sections, has no hero: it shows over Home's background on black,
+   with white text in the light style too. */
 window.fullscreen-mode .home.home-sections {
   background-color: black;
   background-image: none;
@@ -181,6 +181,16 @@ window.fullscreen-mode .home.home-sections .hero-gradient {
 window.fullscreen-mode .home.home-sections .home-title,
 window.fullscreen-mode .home.home-sections .home-details {
   color: white;
+}
+
+/* Home's background plays behind the first screen, black until its first frame and where
+   there is no video; the second screen hides it under the hero, paused. */
+.home-background {
+  background-color: black;
+}
+
+.home.home-games .home-background {
+  opacity: 0;
 }
 
 .home-carousel > button {

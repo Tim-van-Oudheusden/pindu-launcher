@@ -136,15 +136,20 @@ controller's position.
 
 **Home**
 
-Home has two screens. The first, `.home-sections`, is a row of sections over black: Recently played,
-Favourites, Installed, one per launcher, the user's collections, then the Library tile. Activating a
-section opens the second, `.home-games`: that section's games over the focused game's art. B goes back to
-the first. Both screens use the same widgets and layout options, so a rule without either class styles
-both.
+Home has two screens. The first, `.home-sections`, is a row of sections over Home's animated background:
+Recently played, Favourites, Installed, one per launcher, the user's collections, then the Library tile.
+Activating a section opens the second, `.home-games`: that section's games over the focused game's art.
+B goes back to the first. Both screens use the same widgets and layout options, so a rule without either
+class styles both.
+
+The background plays muted and looped behind the first screen. It pauses on the second screen, while a
+game we started runs and while the window is hidden, and holds its first frame outside fullscreen mode and
+while the system asks for reduced motion.
 
 | Name | What |
 |---|---|
 | `.home` | The page; also `.home-sections` on the first screen or `.home-games` on the second, `.home-layout-hero-bottom` or `.home-layout-row-top`, and `.no-art` while no art is shown (always on the first screen) |
+| `.home-background` | Home's animated background, filling the page under the art; black where there is no video, hidden (`opacity: 0`) on the second screen. Dim or blur it with `opacity` or `filter` |
 | `.home-hero` | The focused game's art filling the page; the one showing the current art also has `.shown`, so `transition: opacity` crossfades |
 | `.hero-gradient` | The shade over the art |
 | `.home-title` | The row with the focused section's name, or the game's logo or title |

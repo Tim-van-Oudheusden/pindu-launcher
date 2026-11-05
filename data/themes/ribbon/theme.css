@@ -67,13 +67,13 @@ window.fullscreen-mode .fullscreen-top-bar .clock {
   font-feature-settings: "tnum";
 }
 
-/* Home: the art fills the page, darkest at the left and the bottom; without art, a quiet
-   dark backdrop. */
+/* Home: a section's games show over the art, darkest at the left and the bottom; without
+   art, a quiet dark backdrop. The sections show over Home's background, unshaded. */
 window.fullscreen-mode .home {
   background-image: radial-gradient(circle at 70% 30%, #2a2e36, #0f1115 70%);
 }
 
-window.fullscreen-mode .home .hero-gradient {
+window.fullscreen-mode .home.home-games .hero-gradient {
   background-image:
     linear-gradient(to bottom, rgb(0 0 0 / 55%), transparent 30%),
     linear-gradient(to right, rgb(0 0 0 / 78%), rgb(0 0 0 / 40%) 45%, rgb(0 0 0 / 15%) 80%),
