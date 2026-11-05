@@ -9,6 +9,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::OsStr;
+use std::fs::File;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -54,6 +55,11 @@ impl SessionService {
         }
     }
 
+    /// The library the sessions are written to.
+    pub fn library(&self) -> &LibraryService {
+        &self.library
+    }
+
     /// Whether any game we started is running.
     pub fn any_playing(&self) -> bool {
         !self.running.borrow().is_empty()
@@ -64,14 +70,16 @@ impl SessionService {
         self.running.borrow().contains_key(id)
     }
 
-    /// Starts a game on the host as our child and tracks its session until it exits.
+    /// Starts a game on the host as our child, its output written to `output` when
+    /// given, and tracks its session until it exits.
     pub fn start(
         &self,
         app: &gio::Application,
         id: &GameId,
         command: &Command,
+        output: Option<File>,
     ) -> Result<(), glib::Error> {
-        let child = spawn(command)?;
+        let child = spawn(command, output)?;
         let signalled = child.clone();
         self.track(app, id, &child, move || signalled.send_signal(SIGTERM));
         Ok(())
@@ -185,9 +193,17 @@ async fn write<T: Send + 'static>(
 }
 
 /// Spawns the command on the host: through `flatpak-spawn --host` inside Flatpak (never
-/// `--watch-bus`), directly outside it.
-pub fn spawn(command: &Command) -> Result<gio::Subprocess, glib::Error> {
-    let launcher = gio::SubprocessLauncher::new(gio::SubprocessFlags::NONE);
+/// `--watch-bus`), directly outside it. With `output`, the game's output and errors go
+/// there; `flatpak-spawn` hands them on to the game.
+pub fn spawn(command: &Command, output: Option<File>) -> Result<gio::Subprocess, glib::Error> {
+    let launcher = match output {
+        Some(output) => {
+            let launcher = gio::SubprocessLauncher::new(gio::SubprocessFlags::STDERR_MERGE);
+            launcher.take_stdout_fd(Some(output.into()));
+            launcher
+        }
+        None => gio::SubprocessLauncher::new(gio::SubprocessFlags::NONE),
+    };
     let argv = if permission_service::in_flatpak() {
         command.flatpak_spawn_argv()
     } else {

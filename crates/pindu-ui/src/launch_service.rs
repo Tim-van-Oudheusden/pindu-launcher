@@ -13,6 +13,7 @@ use pindu_core::model::{Game, Source};
 
 use crate::config::APP_ID;
 use crate::library_service::LibraryService;
+use crate::log_service::{self, GameLog};
 use crate::models::GameObject;
 use crate::permission_service;
 use crate::proton_launch;
@@ -36,13 +37,16 @@ pub fn launcher_name(source: Source) -> Option<&'static str> {
 /// Windows game runs through umu, its session tracked from the moment umu starts it.
 /// Either saves the last-played time, and the toast says what happened, or why the game
 /// could not start. Without a window (`--launch`, Shell search) nothing is shown, unless
-/// the game needs a permission: then the window opens to explain it.
+/// the game needs a permission: then the window opens to explain it. With `logs` ("Play
+/// with Logs"), a game we start keeps its output, and a Windows game Proton's log too, in
+/// a new log of the game (see `log_service`).
 pub fn play(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
     game: &GameObject,
     library: &LibraryService,
     sessions: &SessionService,
+    logs: bool,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
     let game = game.game().clone();
@@ -65,11 +69,36 @@ pub fn play(
             Some(Route::StoreUri(uri)) => {
                 open_store_uri(&app, window.as_ref(), &game, &uri, library, sessions, toast);
             }
-            Some(Route::HostSpawn(command)) => {
+            Some(Route::HostSpawn(mut command)) => {
+                let mut output = None;
+                if logs {
+                    let (id, title) = (game.id.clone(), game.title.clone());
+                    let created = gio::spawn_blocking(move || {
+                        let log = GameLog::create(&id, &title, &mut command, false)
+                            .and_then(|log| log.output());
+                        (log, command)
+                    })
+                    .await;
+                    let Ok((created, logged)) = created else {
+                        return;
+                    };
+                    command = logged;
+                    match created {
+                        Ok(created) => output = Some(created),
+                        Err(error) => {
+                            glib::g_warning!(
+                                "pindu",
+                                "Could not start a log of “{}”: {error}",
+                                game.title
+                            );
+                            toast(adw::Toast::new(&log_service::could_not_keep(&game.title)));
+                        }
+                    }
+                }
                 let started = if launch::tracks_sessions(&game) {
-                    sessions.start(app.upcast_ref(), &game.id, &command)
+                    sessions.start(app.upcast_ref(), &game.id, &command, output)
                 } else {
-                    session_service::spawn(&command).map(drop)
+                    session_service::spawn(&command, output).map(drop)
                 };
                 let message = match started {
                     Ok(()) => {
@@ -84,15 +113,7 @@ pub fn play(
                 toast(adw::Toast::new(&message.replace("{title}", &game.title)));
             }
             Some(Route::Proton(config)) => {
-                proton_launch::play(
-                    &app,
-                    window.as_ref(),
-                    game,
-                    config,
-                    library,
-                    sessions,
-                    toast,
-                );
+                proton_launch::play(&app, window.as_ref(), game, config, sessions, logs, toast);
             }
             None => toast(adw::Toast::new(&gettext("This game cannot be started yet"))),
         }

@@ -462,6 +462,15 @@ fn more_menu(object: &GameObject, collections: &[Collection]) -> gio::Menu {
         item
     };
     let menu = gio::Menu::new();
+    // Games we start ourselves can keep their output, and Proton's log, in a log.
+    if launch::launch_settings(&game).is_some() {
+        let logs = gio::Menu::new();
+        if !object.is_playing() {
+            logs.append_item(&item(gettext("Play with _Logs"), "app.play-with-logs"));
+        }
+        logs.append_item(&item(gettext("Open Latest L_og"), "win.open-log"));
+        menu.append_section(None, &logs);
+    }
     menu.append_section(None, &collection_menu(object, collections));
     let manage = gio::Menu::new();
     manage.append_item(&item(gettext("_Edit…"), "app.edit-game"));

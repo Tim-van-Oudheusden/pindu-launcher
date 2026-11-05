@@ -12,6 +12,7 @@ pub mod grid;
 pub mod hints;
 pub mod launch;
 pub mod library;
+pub mod logs;
 pub mod manual;
 pub mod model;
 pub mod paths;
