@@ -193,12 +193,12 @@ pub fn game_options(game: &Game, playing: bool) -> Vec<GameOption> {
     .collect()
 }
 
-/// A design the Quick Access panel offers, or Default (no design, `id` empty).
+/// A design the Quick Access panel offers, or Adwaita (no design, `id` empty).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DesignChoice {
-    /// What the `fullscreen-design` setting holds for it; empty for Default.
+    /// What the `fullscreen-design` setting holds for it; empty for Adwaita.
     pub id: String,
-    /// The theme's name; `None` for Default, which the shell names.
+    /// The theme's name; `None` for Adwaita, which the shell names.
     pub name: Option<String>,
     pub description: String,
     /// The design in force, which the panel checks.
@@ -207,8 +207,8 @@ pub struct DesignChoice {
     pub available: bool,
 }
 
-/// What the Quick Access panel's Designs level lists: Default first, then `themes` in
-/// their order, with the one in force checked. `active` is the setting's id; Default is
+/// What the Quick Access panel's Designs level lists: Adwaita first, then `themes` in
+/// their order, with the one in force checked. `active` is the setting's id; Adwaita is
 /// in force when it names no design this Pindu launcher can apply.
 pub fn design_choices(themes: &[Theme], active: &str) -> Vec<DesignChoice> {
     let applies = themes
@@ -496,11 +496,11 @@ mod tests {
                 ("future", false, false)
             ]
         );
-        assert_eq!(choices[0].name, None, "the shell names Default");
+        assert_eq!(choices[0].name, None, "the shell names Adwaita");
         assert_eq!(choices[1].name.as_deref(), Some("Mango"));
         for active in ["", "gone", "future"] {
             let choices = design_choices(&themes, active);
-            assert!(choices[0].active, "{active:?} leaves Default in force");
+            assert!(choices[0].active, "{active:?} leaves Adwaita in force");
             assert_eq!(
                 choices.iter().filter(|choice| choice.active).count(),
                 1,

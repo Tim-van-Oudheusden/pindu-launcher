@@ -88,9 +88,9 @@
       <description>Restyle fullscreen mode with your own stylesheet, fullscreen.css in the app's config folder. The desktop window is not affected.</description>
     </key>
     <key name="fullscreen-design" type="s">
-      <default>''</default>
+      <default>'ribbon'</default>
       <summary>Fullscreen design</summary>
-      <description>The id of the design fullscreen mode is shown in: a theme folder shipped with the app or in the app's config folder under themes. Empty for the standard look. The desktop window is not affected.</description>
+      <description>The id of the design fullscreen mode is shown in: a theme folder shipped with the app or in the app's config folder under themes. Empty for Adwaita, the standard look. The desktop window is not affected.</description>
     </key>
     <key name="steamgriddb-prompt-shown" type="b">
       <default>false</default>

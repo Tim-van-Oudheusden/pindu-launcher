@@ -21,7 +21,8 @@ This page is the style contract: the files, the `theme.json` fields and the CSS 
   shipped one replaces it.
 - Pick a design in fullscreen mode's **Quick Access** panel (right stick click, the Steam Deck's "…" button,
   or Ctrl+2) under **Design**, or set it with
-  `gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-design <id>` (empty for none).
+  `gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-design <id>`. Ribbon (`ribbon`) is
+  the default; **Adwaita**, an empty id, is no design: the standard libadwaita look.
 - `fullscreen.css` applies while the `fullscreen-custom-style` setting is on.
 - Saving a stylesheet, or another file directly in the design's folder, reloads it at once. Files in
   subfolders (such as `assets/`) are picked up the next time the stylesheet loads.
