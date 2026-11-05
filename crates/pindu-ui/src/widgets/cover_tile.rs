@@ -1,5 +1,6 @@
 //! The library's cover tile: 2:3 art with a launcher badge top left, a state badge top
-//! right, a Play button on hover and keyboard focus, and the title below.
+//! right, a Play button on hover and keyboard focus, and the title below (not in
+//! fullscreen mode).
 
 use std::cell::{Cell, OnceCell, RefCell};
 
@@ -7,6 +8,7 @@ use gettextrs::gettext;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, gio, glib};
+use pindu_core::library;
 
 use super::CoverArt;
 use crate::models::GameObject;
@@ -130,12 +132,27 @@ glib::wrapper! {
 }
 
 impl CoverTile {
-    pub fn new(size: TileSize, show_title: bool, show_badges: bool) -> Self {
+    /// A tile in `window`'s grid; it shows its title as `show_titles` asks, except while
+    /// the window is in fullscreen mode, where the title takes no space.
+    pub fn new(
+        window: &impl IsA<gtk::Window>,
+        size: TileSize,
+        show_titles: bool,
+        show_badges: bool,
+    ) -> Self {
         let tile: Self = glib::Object::new();
         let (width, height) = size.cover_size();
         let imp = tile.imp();
         imp.cover.set_size_request(width, height);
-        imp.title.set_visible(show_title);
+        // The binding goes with the tile, so tiles dropped while scrolling leave nothing
+        // connected to the window.
+        window
+            .bind_property("fullscreened", &*imp.title, "visible")
+            .transform_to(move |_, fullscreen: bool| {
+                Some(library::tile_shows_title(show_titles, fullscreen))
+            })
+            .sync_create()
+            .build();
         imp.show_badges.set(show_badges);
         imp.source_badge.set_visible(show_badges);
         tile
