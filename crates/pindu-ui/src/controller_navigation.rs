@@ -1,12 +1,13 @@
 //! Controller navigation in the main window: directions move focus the way the arrow keys
 //! do (`move-focus` on the window), the cover grid steps through its covers with
 //! `scroll_to`, A activates the focused widget, B closes a menu or dialog or goes back, Y
-//! searches from Home or the library, LB/RB and LT/RT switch the fullscreen library's tabs
-//! and sort order, and Guide enters fullscreen mode. The panels come first: in fullscreen
-//! mode Start or Guide toggles the menu drawer, View or X opens the options sheet for the
-//! focused game, and B closes them. While the launch overlay is up it takes every button,
-//! and a held B cancels a game we start. Intents never become synthetic key events, and
-//! only the active window acts on them.
+//! searches from Home or the library (with the search keyboard in fullscreen mode, which
+//! takes the buttons while it is open), LB/RB and LT/RT switch the fullscreen library's
+//! tabs and sort order, and Guide enters fullscreen mode. The panels come next: in
+//! fullscreen mode Start or Guide toggles the menu drawer, View or X opens the options
+//! sheet for the focused game, and B closes them. While the launch overlay is up it takes
+//! every button, and a held B cancels a game we start. Intents never become synthetic key
+//! events, and only the active window acts on them.
 
 use std::collections::BTreeSet;
 
@@ -68,6 +69,10 @@ impl PinduWindow {
             }
             return;
         }
+        // The search keyboard takes every button while it is open, Start included.
+        if self.search_keyboard_intent(intent) {
+            return;
+        }
         if self.handle_panel_intent(intent) {
             match intent {
                 Intent::Back => self.play_sound(Sound::Back),
@@ -91,7 +96,10 @@ impl PinduWindow {
             }
             Intent::Home => self.enter_fullscreen(),
             Intent::Search => {
-                self.start_search();
+                // In fullscreen mode Y brings up the search keyboard with the entry.
+                if self.start_search() && self.is_fullscreen() {
+                    self.open_search_keyboard();
+                }
                 self.play_sound(Sound::Select);
             }
             Intent::PreviousTab | Intent::NextTab if self.shows_tabs() => {

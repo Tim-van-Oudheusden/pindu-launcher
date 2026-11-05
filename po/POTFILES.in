@@ -15,6 +15,7 @@ crates/pindu-ui/src/proton_choice.rs
 crates/pindu-ui/src/proton_download_service.rs
 crates/pindu-ui/src/proton_downloads_page.rs
 crates/pindu-ui/src/proton_launch.rs
+crates/pindu-ui/src/search_keyboard.rs
 crates/pindu-ui/src/search_provider.rs
 crates/pindu-ui/src/session_service.rs
 crates/pindu-ui/src/sources.rs
