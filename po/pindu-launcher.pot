@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 17:24+0100\n"
+"POT-Creation-Date: 2026-11-05 17:34+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -697,7 +697,7 @@ msgstr ""
 msgid "This Week"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:452 data/ui/home_page.blp:133
+#: crates/pindu-ui/src/home_page.rs:454 data/ui/home_page.blp:133
 #: data/ui/preferences.blp:10 data/ui/shortcuts-dialog.blp:35
 #: data/ui/window.blp:105 data/ui/window.blp:437 data/ui/window.blp:536
 msgid "Library"

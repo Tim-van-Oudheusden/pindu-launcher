@@ -13,13 +13,20 @@ use crate::themes::TileShape;
 /// art is decoded this much larger.
 pub const ART_HEADROOM: f64 = 1.6;
 
-/// The size of Home's cards, the Library tile's too, in the shape a design chose.
-pub fn card_size(shape: TileShape) -> (i32, i32) {
-    match shape {
+/// The size of Home's cards, the Library tile's too, in the shape a design chose, with
+/// its shorter side `size` pixels when the design sets it (`ThemeLayout::home_tile_size`).
+pub fn card_size(shape: TileShape, size: Option<i32>) -> (i32, i32) {
+    let (width, height) = match shape {
         TileShape::Landscape => (320, 150),
         TileShape::Square => (200, 200),
         TileShape::Portrait => (200, 300),
-    }
+    };
+    let Some(size) = size else {
+        return (width, height);
+    };
+    let shorter = f64::from(width.min(height));
+    let scaled = |side: i32| (f64::from(side) * f64::from(size) / shorter).round() as i32;
+    (scaled(width), scaled(height))
 }
 
 /// The device pixels to decode a card's art at, for a card of `card` logical pixels on a
@@ -107,9 +114,17 @@ mod tests {
 
     #[test]
     fn each_shape_has_its_card_size() {
-        assert_eq!(card_size(TileShape::Landscape), (320, 150));
-        assert_eq!(card_size(TileShape::Square), (200, 200));
-        assert_eq!(card_size(TileShape::Portrait), (200, 300));
+        assert_eq!(card_size(TileShape::Landscape, None), (320, 150));
+        assert_eq!(card_size(TileShape::Square, None), (200, 200));
+        assert_eq!(card_size(TileShape::Portrait, None), (200, 300));
+    }
+
+    #[test]
+    fn a_design_sets_the_shorter_side_and_the_shape_keeps_its_aspect() {
+        assert_eq!(card_size(TileShape::Square, Some(112)), (112, 112));
+        assert_eq!(card_size(TileShape::Landscape, Some(150)), (320, 150));
+        assert_eq!(card_size(TileShape::Landscape, Some(112)), (239, 112));
+        assert_eq!(card_size(TileShape::Portrait, Some(112)), (112, 168));
     }
 
     #[test]

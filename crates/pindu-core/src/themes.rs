@@ -3,6 +3,7 @@
 //! `fullscreen.css`, and theirs win over a shipped one with the same id.
 
 use std::fs;
+use std::ops::RangeInclusive;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value as Json;
@@ -38,7 +39,13 @@ pub struct ThemeLayout {
     pub top_bar: bool,
     /// `"home-details"`: show the focused game's details on Home.
     pub home_details: bool,
+    /// `"home-tile-size"`: the shorter side of Home's cards in pixels, within
+    /// `HOME_TILE_SIZES`; `None` keeps each shape's own size.
+    pub home_tile_size: Option<i32>,
 }
+
+/// The sizes, in pixels, a theme can give the shorter side of Home's cards.
+pub const HOME_TILE_SIZES: RangeInclusive<i32> = 64..=400;
 
 impl ThemeLayout {
     fn from_json(layout: Option<&Json>) -> Self {
@@ -54,6 +61,9 @@ impl ThemeLayout {
                 .unwrap_or_default(),
             top_bar: flag("top-bar"),
             home_details: flag("home-details"),
+            home_tile_size: value("home-tile-size").and_then(Json::as_f64).map(|size| {
+                (size.round() as i32).clamp(*HOME_TILE_SIZES.start(), *HOME_TILE_SIZES.end())
+            }),
         }
     }
 }
@@ -427,5 +437,65 @@ mod tests {
         };
         assert_eq!(details("details"), Some(true));
         assert_eq!(details("quoted"), Some(false));
+    }
+
+    #[test]
+    fn a_theme_can_choose_the_home_tile_size() {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(
+            user.path(),
+            "small",
+            r#"{"contract": 1, "name": "Small", "layout": {"home-tile-size": 112}}"#,
+        );
+        write_theme(user.path(), "plain", r#"{"contract": 1, "name": "Plain"}"#);
+
+        let found = discover(&[user.path()]);
+
+        let size = |id: &str| {
+            found
+                .themes
+                .iter()
+                .find(|theme| theme.id == id)
+                .map(|theme| theme.layout.home_tile_size)
+        };
+        assert_eq!(size("small"), Some(Some(112)));
+        assert_eq!(size("plain"), Some(None));
+    }
+
+    #[test]
+    fn the_home_tile_size_is_clamped_and_an_invalid_one_ignored() {
+        let user = tempfile::tempdir().unwrap();
+        for (id, size) in [
+            ("tiny", "10"),
+            ("huge", "5000"),
+            ("negative", "-3"),
+            ("fraction", "112.4"),
+            ("quoted", r#""112""#),
+            ("null", "null"),
+        ] {
+            write_theme(
+                user.path(),
+                id,
+                &format!(
+                    r#"{{"contract": 1, "name": "{id}", "layout": {{"home-tile-size": {size}}}}}"#
+                ),
+            );
+        }
+
+        let found = discover(&[user.path()]);
+
+        let size = |id: &str| {
+            found
+                .themes
+                .iter()
+                .find(|theme| theme.id == id)
+                .map(|theme| theme.layout.home_tile_size)
+        };
+        assert_eq!(size("tiny"), Some(Some(64)));
+        assert_eq!(size("huge"), Some(Some(400)));
+        assert_eq!(size("negative"), Some(Some(64)));
+        assert_eq!(size("fraction"), Some(Some(112)));
+        assert_eq!(size("quoted"), Some(None));
+        assert_eq!(size("null"), Some(None));
     }
 }
