@@ -99,13 +99,13 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
     }
   }
 
-  Adw.PreferencesPage {
+  Adw.PreferencesPage artwork_page {
     title: _("Artwork");
     icon-name: "image-x-generic-symbolic";
 
     Adw.PreferencesGroup {
       title: _("SteamGridDB");
-      description: _("Art from SteamGridDB needs your own API key, which is kept in your keyring.");
+      description: _("Art from SteamGridDB needs your own API key, which is kept in your keyring. Missing art is fetched right after you save a key and after each import.");
 
       Adw.PasswordEntryRow key_row {
         title: _("API Key");

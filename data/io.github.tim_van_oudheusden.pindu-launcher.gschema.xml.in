@@ -82,5 +82,10 @@
       <summary>Navigation sounds</summary>
       <description>Play a soft sound in fullscreen mode when the controller moves focus, selects or goes back.</description>
     </key>
+    <key name="steamgriddb-prompt-shown" type="b">
+      <default>false</default>
+      <summary>SteamGridDB prompt shown</summary>
+      <description>Whether the window has offered, once, to set up a SteamGridDB API key for game art.</description>
+    </key>
   </schema>
 </schemalist>
