@@ -60,18 +60,23 @@ impl PinduWindow {
             imp.hint_bar.remove(&child);
         }
         for hint in shown.iter().flat_map(|(_, hints)| hints) {
-            let item = gtk::Box::builder().spacing(8).build();
+            // Named for fullscreen designs: `.hint` holds `.hint-glyph`s and a `.hint-label`.
+            let item = gtk::Box::builder().spacing(8).css_classes(["hint"]).build();
             for button in std::iter::once(hint.button).chain(hint.pair) {
                 let glyph = gtk::Image::builder()
                     .icon_name(hints::glyph(kind, button))
                     .pixel_size(GLYPH_SIZE)
+                    .css_classes(["hint-glyph"])
                     .build();
                 glyph.update_property(&[gtk::accessible::Property::Label(&glyph_label(
                     hints::glyph_name(kind, button),
                 ))]);
                 item.append(&glyph);
             }
-            let label = gtk::Label::new(Some(&action_label(hint.action)));
+            let label = gtk::Label::builder()
+                .label(action_label(hint.action))
+                .css_classes(["hint-label"])
+                .build();
             item.append(&label);
             imp.hint_bar.append(&item);
         }
