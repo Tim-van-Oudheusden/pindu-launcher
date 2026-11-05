@@ -3,7 +3,8 @@
 //! and the sidebar hide, type grows, controllers are listened to, focus is kept on the
 //! page, Home is the first page, with the library (in tabs) and game pages above it.
 //! Entering and leaving go through `win.fullscreen-mode` (main menu, F11, `--fullscreen`,
-//! Guide) and `win.leave-fullscreen` (Esc, and the menu drawer's "Exit Fullscreen Mode").
+//! Guide) and `win.leave-fullscreen` (the menu drawer's "Exit Fullscreen Mode"); Esc goes
+//! through `win.escape`, which goes back from a Home section's games first.
 //! Keys stand in for the controller's other buttons (`pindu_core::keys`).
 
 use std::cell::RefCell;
@@ -13,7 +14,7 @@ use adw::subclass::prelude::*;
 use gettextrs::ngettext;
 use gtk::{gdk, gio, glib};
 use pindu_core::home::BackgroundContext;
-use pindu_core::keys::{self, Modifiers};
+use pindu_core::keys::{self, Escape, Modifiers};
 use pindu_core::sound::tone_wav;
 use pindu_core::themes::ThemeLayout;
 
@@ -43,14 +44,17 @@ impl PinduWindow {
         let leave = gio::ActionEntry::builder("leave-fullscreen")
             .activate(|window: &Self, _, _| window.leave_fullscreen())
             .build();
-        self.add_action_entries([leave]);
-        // Esc leaves fullscreen mode once nothing nearer the focus (a dialog, the search
-        // entry) took it; F11 is an application accelerator.
+        let escape_action = gio::ActionEntry::builder("escape")
+            .activate(|window: &Self, _, _| window.escape())
+            .build();
+        self.add_action_entries([leave, escape_action]);
+        // Esc goes back from a Home section or leaves fullscreen mode once nothing nearer
+        // the focus (a dialog, the search entry) took it; F11 is an application accelerator.
         let escape = gtk::ShortcutController::new();
         escape.set_propagation_phase(gtk::PropagationPhase::Bubble);
         escape.add_shortcut(gtk::Shortcut::new(
             gtk::ShortcutTrigger::parse_string("Escape"),
-            Some(gtk::NamedAction::new("win.leave-fullscreen")),
+            Some(gtk::NamedAction::new("win.escape")),
         ));
         self.add_controller(escape);
         // Keys stand in for the controller buttons that do more than move and activate:
@@ -159,6 +163,15 @@ impl PinduWindow {
         self.unfullscreen();
     }
 
+    /// Acts on Esc in fullscreen mode (`keys::escape`): back from a Home section's games to
+    /// Home's first screen, or out of fullscreen mode.
+    fn escape(&self) {
+        match keys::escape(self.shows_home_section()) {
+            Escape::ShowSections => self.imp().home_page.show_sections(),
+            Escape::LeaveFullscreen => self.leave_fullscreen(),
+        }
+    }
+
     /// Shows the window in fullscreen mode or as the desktop window, as it is fullscreen.
     fn show_fullscreen_mode(&self) {
         let fullscreen = self.is_fullscreen();
@@ -188,11 +201,10 @@ impl PinduWindow {
         {
             action.set_state(&fullscreen.to_variant());
         }
-        if let Some(action) = self
-            .lookup_action("leave-fullscreen")
-            .and_downcast::<gio::SimpleAction>()
-        {
-            action.set_enabled(fullscreen);
+        for name in ["leave-fullscreen", "escape"] {
+            if let Some(action) = self.lookup_action(name).and_downcast::<gio::SimpleAction>() {
+                action.set_enabled(fullscreen);
+            }
         }
         if fullscreen {
             self.set_focus_visible(true);
