@@ -9,7 +9,9 @@
 //! every button, and a held B cancels a game we start. Intents never become synthetic key
 //! events, and only the active window acts on them.
 
+use std::cell::RefCell;
 use std::collections::BTreeSet;
+use std::rc::Rc;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -17,6 +19,7 @@ use gtk::glib;
 use pindu_core::gamepad::{Direction, Intent, WindowFocus};
 use pindu_core::grid;
 use pindu_core::hints::Launching;
+use pindu_core::menus::{self, Back};
 
 use crate::application::PinduApplication;
 use crate::fullscreen::Sound;
@@ -128,9 +131,22 @@ impl PinduWindow {
         .takes_controller()
     }
 
-    /// Steps through the cover grid when it has focus, and moves focus as the arrow keys
-    /// would everywhere else, including out of the grid at its edges.
+    /// Moves through the open menu, steps through the cover grid when it has focus, and
+    /// moves focus as the arrow keys would everywhere else, including out of the grid at
+    /// its edges.
     fn navigate(&self, direction: Direction) {
+        let focus_direction = match direction {
+            Direction::Up => gtk::DirectionType::Up,
+            Direction::Down => gtk::DirectionType::Down,
+            Direction::Left => gtk::DirectionType::Left,
+            Direction::Right => gtk::DirectionType::Right,
+        };
+        if let Some(menu) = self.open_menu() {
+            // The window's `move-focus` would leave the menu at its ends for the page
+            // behind it. Right opens a submenu, Left goes back from its title.
+            menu.child_focus(focus_direction);
+            return;
+        }
         let grid = &self.imp().grid;
         let Some(model) = grid.model() else {
             return;
@@ -147,12 +163,7 @@ impl PinduWindow {
         let in_grid = self.focused_tile().is_some();
         // At its edge the grid would wrap to the next row itself: leave it instead.
         grid.set_can_focus(!in_grid);
-        self.emit_move_focus(match direction {
-            Direction::Up => gtk::DirectionType::Up,
-            Direction::Down => gtk::DirectionType::Down,
-            Direction::Left => gtk::DirectionType::Left,
-            Direction::Right => gtk::DirectionType::Right,
-        });
+        self.emit_move_focus(focus_direction);
         grid.set_can_focus(true);
         match gtk::prelude::GtkWindowExt::focus(self) {
             // Nothing lies that way: the window dropped focus, so keep it where it was.
@@ -195,21 +206,40 @@ impl PinduWindow {
     }
 
     /// Activates the focused widget as Enter or Space would: a cover opens its game, a
-    /// button clicks, a row activates.
+    /// button clicks, a row activates, a menu button opens its menu and a menu item acts.
     fn activate_focus(&self) {
         let Some(focus) = gtk::prelude::GtkWindowExt::focus(self) else {
             return;
         };
+        // Items of an open menu lie inside its button too: they activate as they are.
+        if self.open_menu().is_none()
+            && let Some(button) = focus
+                .ancestor(gtk::MenuButton::static_type())
+                .and_downcast::<gtk::MenuButton>()
+        {
+            open_without_grab(&button);
+            return;
+        }
         if !focus.activate() {
             // Covers are grid items, which activate through their list item action.
             let _ = focus.activate_action("listitem.activate", None);
         }
     }
 
-    /// Closes the open menu or dialog, or leaves the shown page for the one before it.
+    /// Steps out of the open submenu or closes the open menu, closes the open dialog, or
+    /// leaves the shown page for the one before it.
     fn go_back(&self) {
         if let Some(menu) = self.open_menu() {
-            menu.popdown();
+            let submenu = menu
+                .downcast_ref::<gtk::PopoverMenu>()
+                .and_then(|menu| menu.property::<Option<String>>("visible-submenu"));
+            match (menus::back(submenu.as_deref()), self.submenu_title()) {
+                // The title at the top of a submenu goes back to the item that opened it.
+                (Back::StepOut, Some(title)) => {
+                    title.activate();
+                }
+                _ => menu.popdown(),
+            }
         } else if let Some(dialog) = self.visible_dialog() {
             dialog.close();
         } else {
@@ -223,6 +253,59 @@ impl PinduWindow {
             .and_then(|focus| focus.ancestor(gtk::Popover::static_type()))
             .and_downcast::<gtk::Popover>()
     }
+
+    /// The title of the submenu that has focus, which leads back to its parent menu.
+    fn submenu_title(&self) -> Option<gtk::Widget> {
+        gtk::prelude::GtkWindowExt::focus(self)?
+            .ancestor(gtk::Stack::static_type())
+            .and_downcast::<gtk::Stack>()?
+            .visible_child()?
+            .first_child()
+            .filter(|title| {
+                title.find_property("menu-name").is_some()
+                    && title.property::<Option<String>>("menu-name").is_some()
+            })
+    }
+}
+
+/// Opens the button's menu without a grab and gives it focus. The compositor lets a menu
+/// grab input only right after a key or pointer press, which a controller press is not,
+/// and dismisses a grabbing menu at once otherwise; without a grab, B closes the menu
+/// instead of a click outside it. Once closed, the menu grabs again for the pointer and
+/// the keyboard.
+fn open_without_grab(button: &gtk::MenuButton) {
+    if let Some(popover) = button.popover() {
+        popover.set_autohide(false);
+    }
+    button.popup();
+    let Some(popover) = button.popover() else {
+        return;
+    };
+    if popover.is_visible() && popover.is_autohide() {
+        // The button made a new menu as it opened (the game page's ⋮ menu): open that
+        // one again, without a grab.
+        popover.popdown();
+        popover.set_autohide(false);
+        popover.popup();
+    }
+    popover.child_focus(gtk::DirectionType::TabForward);
+    let closed = Rc::new(RefCell::new(None));
+    let handler = popover.connect_closed(glib::clone!(
+        #[strong]
+        closed,
+        move |popover| {
+            if let Some(handler) = closed.take() {
+                popover.disconnect(handler);
+            }
+            // Changing it unrealizes the menu, which waits until it has finished closing.
+            glib::idle_add_local_once(glib::clone!(
+                #[weak]
+                popover,
+                move || popover.set_autohide(true)
+            ));
+        }
+    ));
+    closed.replace(Some(handler));
 }
 
 /// How many covers a row of the grid holds: GTK does not say, so count the distinct
