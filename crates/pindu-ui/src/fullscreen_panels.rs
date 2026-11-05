@@ -530,7 +530,7 @@ impl PinduWindow {
                 needs_newer_launcher()
             };
             let row = adw::ActionRow::builder()
-                .title(choice.name.unwrap_or_else(default_design_name))
+                .title(choice.name.unwrap_or_else(no_design_name))
                 .subtitle(subtitle)
                 .use_markup(false)
                 .activatable_widget(&check)
@@ -541,8 +541,8 @@ impl PinduWindow {
         }
     }
 
-    /// Applies the design `id` (Default for an empty one) unless it is in force already;
-    /// Quick Access stays open.
+    /// Applies the design `id` (Adwaita, no design, for an empty one) unless it is in force
+    /// already; Quick Access stays open.
     fn choose_design(&self, id: &str) {
         if self.design_in_force().as_deref() == Some(id) {
             return;
@@ -553,7 +553,7 @@ impl PinduWindow {
     }
 
     /// The id of the design Quick Access checks: the chosen one if it can apply, or empty
-    /// for Default.
+    /// for Adwaita.
     fn design_in_force(&self) -> Option<String> {
         let application = self.application().and_downcast::<PinduApplication>()?;
         let service = application.style_service();
@@ -652,9 +652,10 @@ impl PinduWindow {
     }
 }
 
-/// What Quick Access calls the choice of no design: the stock look.
-fn default_design_name() -> String {
-    gettext("Default")
+/// What Quick Access calls the choice of no design: Adwaita, the stock libadwaita look it
+/// leaves in force. A name, so it is not translated.
+fn no_design_name() -> String {
+    "Adwaita".to_owned()
 }
 
 /// Why Quick Access cannot apply a design written for a newer style contract.

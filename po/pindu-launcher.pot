@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 20:11+0100\n"
+"POT-Creation-Date: 2026-11-05 23:06+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -201,7 +201,7 @@ msgstr ""
 msgid "_Cancel"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen.rs:477
+#: crates/pindu-ui/src/fullscreen.rs:512
 #, rust-format
 msgid "Your fullscreen style has a problem"
 msgid_plural "Your fullscreen style has {count} problems"
@@ -226,7 +226,7 @@ msgid "All"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:61
-#: crates/pindu-ui/src/home_page.rs:85
+#: crates/pindu-ui/src/home_page.rs:88
 #: crates/pindu-ui/src/proton_downloads_page.rs:338
 #: crates/pindu-ui/src/widgets/cover_tile.rs:346 data/ui/window.blp:452
 #: data/ui/window.blp:667
@@ -234,13 +234,13 @@ msgid "Installed"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:62
-#: crates/pindu-ui/src/home_page.rs:84 data/ui/window.blp:464
+#: crates/pindu-ui/src/home_page.rs:87 data/ui/window.blp:464
 #: data/ui/window.blp:675
 msgid "Favourites"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:188
-#: crates/pindu-ui/src/game_page.rs:621 crates/pindu-ui/src/home_page.rs:48
+#: crates/pindu-ui/src/game_page.rs:621 crates/pindu-ui/src/home_page.rs:51
 msgid "Last Played"
 msgstr ""
 
@@ -257,77 +257,70 @@ msgid "Recently Added"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:192
-#: crates/pindu-ui/src/game_page.rs:658 crates/pindu-ui/src/home_page.rs:37
+#: crates/pindu-ui/src/game_page.rs:658 crates/pindu-ui/src/home_page.rs:40
 msgid "Playtime"
-msgstr ""
-
-#. / What Quick Access calls the choice of no design: the stock look.
-
-#: crates/pindu-ui/src/fullscreen_panels.rs:657
-#: crates/pindu-ui/src/proton_choice.rs:101
-msgid "Default"
 msgstr ""
 
 #. / Why Quick Access cannot apply a design written for a newer style contract.
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:662
+#: crates/pindu-ui/src/fullscreen_panels.rs:663
 msgid "Needs a newer Pindu launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:668
+#: crates/pindu-ui/src/fullscreen_panels.rs:669
 #: crates/pindu-ui/src/hint_bar.rs:155
 #: crates/pindu-ui/src/widgets/cover_tile.rs:227 data/ui/cover_tile.blp:65
 msgid "Play"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:669
+#: crates/pindu-ui/src/fullscreen_panels.rs:670
 #: crates/pindu-ui/src/hint_bar.rs:156
 #: crates/pindu-ui/src/widgets/cover_tile.rs:225
 msgid "Stop"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:670
+#: crates/pindu-ui/src/fullscreen_panels.rs:671
 #: crates/pindu-ui/src/game_page.rs:385 data/ui/game_page.blp:115
 msgid "Add to Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:671
+#: crates/pindu-ui/src/fullscreen_panels.rs:672
 #: crates/pindu-ui/src/game_page.rs:383
 msgid "Remove from Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:672 data/ui/window.blp:123
+#: crates/pindu-ui/src/fullscreen_panels.rs:673 data/ui/window.blp:123
 #: data/ui/window.blp:210 data/ui/window.blp:493
 msgid "Collections"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:673
+#: crates/pindu-ui/src/fullscreen_panels.rs:674
 msgid "Hide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:674
+#: crates/pindu-ui/src/fullscreen_panels.rs:675
 msgid "Unhide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:678
+#: crates/pindu-ui/src/fullscreen_panels.rs:679
 msgid "Open in Launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:679
+#: crates/pindu-ui/src/fullscreen_panels.rs:680
 #: crates/pindu-ui/src/game_page.rs:268
 #, rust-format
 msgid "Open in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:726 data/ui/game_page.blp:188
+#: crates/pindu-ui/src/fullscreen_panels.rs:727 data/ui/game_page.blp:188
 msgid "Playing Now"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:742
+#: crates/pindu-ui/src/fullscreen_panels.rs:743
 msgid "_Return"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:743
+#: crates/pindu-ui/src/fullscreen_panels.rs:744
 #: crates/pindu-ui/src/game_page.rs:396
 msgid "_Stop"
 msgstr ""
@@ -531,7 +524,7 @@ msgstr ""
 msgid "Starts on this computer in the Steam Linux Runtime"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:618 crates/pindu-ui/src/home_page.rs:54
+#: crates/pindu-ui/src/game_page.rs:618 crates/pindu-ui/src/home_page.rs:57
 msgid "Launcher"
 msgstr ""
 
@@ -691,32 +684,32 @@ msgstr ""
 msgid "D-pad Right"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:41 crates/pindu-ui/src/window.rs:617
+#: crates/pindu-ui/src/home_page.rs:44 crates/pindu-ui/src/window.rs:617
 msgid "Today"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:42 crates/pindu-ui/src/window.rs:618
+#: crates/pindu-ui/src/home_page.rs:45 crates/pindu-ui/src/window.rs:618
 msgid "This Week"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:56
+#: crates/pindu-ui/src/home_page.rs:59
 msgid "Games"
 msgstr ""
 
 #. / How many games a section holds, as its details row says it.
 
-#: crates/pindu-ui/src/home_page.rs:76
+#: crates/pindu-ui/src/home_page.rs:79
 #, rust-format
 msgid "{count} game"
 msgid_plural "{count} games"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/home_page.rs:83
+#: crates/pindu-ui/src/home_page.rs:86
 msgid "Recently Played"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:766 data/ui/home_page.blp:154
+#: crates/pindu-ui/src/home_page.rs:856 data/ui/home_page.blp:168
 #: data/ui/preferences.blp:10 data/ui/shortcuts-dialog.blp:35
 #: data/ui/window.blp:105 data/ui/window.blp:437 data/ui/window.blp:536
 msgid "Library"
@@ -852,6 +845,10 @@ msgstr ""
 #: crates/pindu-ui/src/proton_choice.rs:99
 #, rust-format
 msgid "Default ({proton})"
+msgstr ""
+
+#: crates/pindu-ui/src/proton_choice.rs:101
+msgid "Default"
 msgstr ""
 
 #: crates/pindu-ui/src/proton_choice.rs:105
@@ -1046,7 +1043,7 @@ msgstr ""
 msgid "Game in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/session_service.rs:241
+#: crates/pindu-ui/src/session_service.rs:274
 msgid "A game you started is running"
 msgstr ""
 
@@ -1244,11 +1241,11 @@ msgstr ""
 msgid "Some Games Could Not Be Imported"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1302
+#: crates/pindu-ui/src/window.rs:1304
 msgid "Pinned"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1320
+#: crates/pindu-ui/src/window.rs:1322
 #, rust-format
 msgid "{title}, pinned"
 msgstr ""
@@ -1407,8 +1404,8 @@ msgstr ""
 #: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:93
 msgid ""
 "The id of the design fullscreen mode is shown in: a theme folder shipped "
-"with the app or in the app's config folder under themes. Empty for the "
-"standard look. The desktop window is not affected."
+"with the app or in the app's config folder under themes. Empty for Adwaita, "
+"the standard look. The desktop window is not affected."
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:97
