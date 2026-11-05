@@ -27,12 +27,6 @@ gridview > child:focus-within .cover-tile .play-button {
   opacity: 1;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .cover-tile .play-button {
-    transition: none;
-  }
-}
-
 gridview.library {
   padding: 12px;
 }
@@ -74,11 +68,13 @@ gridview.library > child {
   border-radius: 12px;
 }
 
+/* A dark band under the title keeps it readable on light art and on the light card of a
+   game without art. */
 .jump-card .jump-title {
   padding: 6px 10px;
   border-radius: 0 0 12px 12px;
   color: white;
-  background-image: linear-gradient(to bottom, transparent, rgb(0 0 0 / 70%));
+  background-image: linear-gradient(to bottom, rgb(0 0 0 / 55%), rgb(0 0 0 / 80%));
 }
 
 /* Fullscreen mode: type a step larger for a screen across the room, and the focused cover
@@ -95,12 +91,6 @@ window.fullscreen-mode gridview.library > child:focus-within {
   transform: scale(1.05);
   outline: 3px solid var(--accent-color);
   outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  window.fullscreen-mode gridview.library > child {
-    transition: none;
-  }
 }
 
 /* Fullscreen mode's library tabs: the shown tab filled with the accent colour. */
@@ -160,12 +150,6 @@ window.fullscreen-mode gridview.library > child:focus-within {
   border-radius: 12px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .home-carousel > button {
-    transition: none;
-  }
-}
-
 /* Fullscreen game page: a large Play, a ring around the focused button that shows on the
    accent-coloured Play too, the Playing Now card, and the launch overlay that covers the
    page while Play starts the game. */
@@ -207,4 +191,17 @@ window.fullscreen-mode .game-actions button:focus-visible {
 
 .options-sheet {
   padding: 24px 24px 36px;
+}
+
+/* Reduced motion (the window's reduced-motion class): no fades or lifts; focus keeps its
+   ring. */
+window.reduced-motion .cover-tile .play-button,
+window.reduced-motion.fullscreen-mode gridview.library > child,
+window.reduced-motion .home-carousel > button {
+  transition: none;
+}
+
+window.reduced-motion.fullscreen-mode gridview.library > child:focus-within,
+window.reduced-motion .home-carousel > button:focus-visible {
+  transform: none;
 }

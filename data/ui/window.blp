@@ -35,6 +35,11 @@ template $PinduWindow: Adw.ApplicationWindow {
           // Fullscreen mode's menu drawer: Start or Guide opens it over the page, B closes it.
           sidebar: Box drawer_panel {
             orientation: vertical;
+            accessible-role: group;
+
+            accessibility {
+              label: _("Menu");
+            }
 
             styles [
               "menu-drawer",
@@ -416,6 +421,10 @@ template $PinduWindow: Adw.ApplicationWindow {
                       placeholder-text: _("Search games");
                       hexpand: true;
                       max-width-chars: 32;
+
+                      accessibility {
+                        label: _("Search games");
+                      }
                     };
 
                     [end]
@@ -658,6 +667,11 @@ template $PinduWindow: Adw.ApplicationWindow {
           child: Box options_panel {
             orientation: vertical;
             spacing: 12;
+            accessible-role: group;
+
+            accessibility {
+              labelled-by: options_title;
+            }
 
             styles [
               "options-sheet",

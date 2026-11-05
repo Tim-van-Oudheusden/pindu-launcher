@@ -60,8 +60,37 @@ Adw.ShortcutsDialog shortcuts_dialog {
     }
 
     Adw.ShortcutsItem {
+      title: _("Open the Focused Game's Menu");
+      accelerator: "Menu <shift>F10";
+    }
+
+    Adw.ShortcutsItem {
       title: _("Fullscreen Mode");
       accelerator: "F11";
+    }
+  }
+
+  Adw.ShortcutsSection {
+    title: _("Fullscreen Mode");
+
+    Adw.ShortcutsItem {
+      title: _("Menu");
+      accelerator: "F10";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Options for the Focused Game");
+      accelerator: "Menu <shift>F10";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Previous or Next Tab");
+      accelerator: "<primary>Page_Up <primary>Page_Down";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Previous or Next Sort Order");
+      accelerator: "<primary><shift>Page_Up <primary><shift>Page_Down";
     }
   }
 }

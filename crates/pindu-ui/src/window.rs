@@ -273,6 +273,7 @@ impl PinduWindow {
         window.setup_search_keyboard();
         window.setup_fullscreen_game();
         window.setup_panels();
+        window.follow_reduced_motion();
         if let Some(application) = application.downcast_ref::<PinduApplication>() {
             window.setup_controller_navigation(application);
             window.setup_hint_bar(application);
@@ -1171,7 +1172,43 @@ impl PinduWindow {
         let _ = settings.set_int("window-height", height);
         let _ = settings.set_boolean("window-maximized", self.is_maximized());
     }
+
+    /// Marks the window `reduced-motion` while the system asks for less motion (animations
+    /// off, or reduced motion in the accessibility settings): `style.css` then drops the
+    /// covers' lift and fades, and the search keyboard fades in rather than sliding up.
+    fn follow_reduced_motion(&self) {
+        let Some(settings) = gtk::Settings::default() else {
+            return;
+        };
+        let update = glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |settings: &gtk::Settings| {
+                let reduce = !settings.is_gtk_enable_animations()
+                    || settings.gtk_interface_reduced_motion() == gtk::ReducedMotion::Reduce;
+                if reduce {
+                    window.add_css_class(REDUCED_MOTION_CLASS);
+                } else {
+                    window.remove_css_class(REDUCED_MOTION_CLASS);
+                }
+                window
+                    .imp()
+                    .keyboard_revealer
+                    .set_transition_type(if reduce {
+                        gtk::RevealerTransitionType::Crossfade
+                    } else {
+                        gtk::RevealerTransitionType::SlideUp
+                    });
+            }
+        );
+        update(&settings);
+        settings.connect_gtk_enable_animations_notify(update.clone());
+        settings.connect_gtk_interface_reduced_motion_notify(update);
+    }
 }
+
+/// The window's style class while the system asks for reduced motion.
+const REDUCED_MOTION_CLASS: &str = "reduced-motion";
 
 /// Horizontal padding around the cover grid and around each tile, as in `style.css`.
 const GRID_PADDING: f64 = 24.0;
@@ -1201,6 +1238,7 @@ pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::
     // Cover art draws at its own fixed size, whatever the image's size.
     let picture = CoverArt::new();
     picture.set_size_request(width, height);
+    picture.set_alternative_text(&title);
     let label = gtk::Label::builder()
         .label(&title)
         .xalign(0.0)
@@ -1229,6 +1267,13 @@ pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::
         .action_target(&game.id().as_str().to_variant())
         .css_classes(["jump-card", "card"])
         .build();
+    // Named outright: from its contents it would say the title twice, once for the art.
+    let name = if pinned {
+        gettext("{title}, pinned").replace("{title}", &title)
+    } else {
+        title.clone()
+    };
+    card.update_property(&[gtk::accessible::Property::Label(&name)]);
     let scale = card.scale_factor().max(1);
     picture.show(
         art,

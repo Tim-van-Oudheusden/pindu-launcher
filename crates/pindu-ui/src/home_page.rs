@@ -242,6 +242,8 @@ impl HomePage {
             )
         };
         imp.title.set_label(&title);
+        imp.logo
+            .update_property(&[gtk::accessible::Property::Label(&title)]);
         // Art in memory shows at once, so moving along the carousel does not flicker.
         let art = art.filter(|path| match textures::cached(path) {
             Some(texture) => {
