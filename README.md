@@ -1,38 +1,135 @@
-# Pindu launcher
+<div align="center">
 
-A native GNOME game library: every PC game on the machine in one library, with a fullscreen controller mode over the
-same data. Rust on GTK4 and libadwaita, built with Meson, shipped as a Flatpak on GNOME 51.
+<img src="docs/brand/readme-banner.svg" alt="Pindu launcher: play all your games. Every PC game on your machine in one GNOME library.">
 
-## Building
+[Install](#installing) · [Features](#features) · [Fullscreen mode](#fullscreen-mode) ·
+[Report a bug](https://github.com/Tim-van-Oudheusden/pindu-launcher/issues/new) ·
+[Roadmap](https://github.com/Tim-van-Oudheusden/pindu-launcher/milestones)
 
-The build needs GTK 4.24, libadwaita 1.10, blueprint-compiler, Meson and Rust 1.93 or newer, all of which the
-`org.gnome.Sdk//51` runtime with the `rust-stable` extension provides.
+[![CI](https://github.com/Tim-van-Oudheusden/pindu-launcher/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Tim-van-Oudheusden/pindu-launcher/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/github/v/tag/Tim-van-Oudheusden/pindu-launcher?label=version)](https://github.com/Tim-van-Oudheusden/pindu-launcher/tags)
+[![GNOME 51](https://img.shields.io/badge/GNOME-51-4A86CF?logo=gnome&logoColor=white)](#building-from-source)
+[![Flatpak](https://img.shields.io/badge/Flatpak-x86__64-4A90D9?logo=flatpak&logoColor=white)](#installing)
+[![Rust 1.93+](https://img.shields.io/badge/Rust-1.93%2B-CE422B?logo=rust&logoColor=white)](#tech-stack)
+[![Licence](https://img.shields.io/github/license/Tim-van-Oudheusden/pindu-launcher)](LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/Tim-van-Oudheusden/pindu-launcher)](https://github.com/Tim-van-Oudheusden/pindu-launcher/commits/main)
+
+</div>
+
+<p align="center">
+  <img src="data/screenshots/1-library.png" width="820" alt="The library: a sidebar with All Games, Installed, Favourites and Play History, the sources Steam, Heroic: Sideloaded, Lutris, Desktop and Added by Hand, and the collections Strategy and Racing; beside it the filter chips Installed, Not Installed, Favourites, Windows and Native, a Jump Back In row of SuperTuxKart, Hedgewars and SuperTux, and a grid of game covers">
+</p>
+
+<p align="center">
+  <img src="data/screenshots/2-game-page.png" width="405" alt="The SuperTuxKart game page: its banner art, a Play button, a favourite star and a menu, then the launcher (Steam), 30 hours of playtime, last played and added dates and the size, and the launch settings">
+  <img src="data/screenshots/3-play-history.png" width="405" alt="Play History: the games played today and this week, each with its date and playtime, from Steam, Heroic and Lutris or tracked by Pindu launcher">
+  <br>
+  <img src="data/screenshots/4-collection.png" width="405" alt="The Strategy collection: covers of Mindustry, 0 A.D., MegaGlest and two more games">
+  <img src="data/screenshots/5-game-page-dark.png" width="405" alt="The Hedgewars game page in the dark style">
+</p>
+
+## Status
+
+Early development. Version 0.1.0 is tagged, but there is no release download and no Flathub listing yet: install a CI
+build or build it from source ([Installing](#installing)). Linux only, as a Flatpak on the GNOME 51 runtime. Progress is
+tracked in the [milestones](https://github.com/Tim-van-Oudheusden/pindu-launcher/milestones).
+
+## About
+
+Pindu launcher gathers every game on your computer into one library, whichever launcher installed it. Browse your
+covers, pick up where you left off and start any game with one click, or switch to the fullscreen mode and do the same
+from the couch with a controller. Both modes are views over the same library, built with stock GTK 4 and libadwaita
+widgets so it looks and behaves like the rest of GNOME.
+
+## Features
+
+- **Every launcher, one library.** Steam, Heroic, Lutris, Bottles, Faugus, games installed as apps (Flatpaks included)
+  and games you add yourself, side by side. The library resyncs when a launcher's files change.
+- **Launchers stay in charge.** Store games start through their own launcher, which keeps their settings, updates and
+  playtime. Pindu launcher only reads the launchers' files and never writes to them.
+- **Windows games too.** Add a Windows game, or its installer, by hand and it runs with Proton through
+  [umu](https://github.com/Open-Wine-Components/umu-launcher) in a prefix of its own. Download GE-Proton and
+  Proton-CachyOS builds from Preferences, and turn on MangoHud or GameMode per game.
+- **A fullscreen mode for the couch.** A controller-first Home, library and game pages, a Quick Access panel, an
+  on-screen keyboard for search and navigation sounds, with switchable designs and your own CSS
+  ([Fullscreen mode](#fullscreen-mode)).
+- **A tidy library.** Search, sort and filter by installed, favourite, Windows or native. Group games into your own
+  collections, jump back into recent games and hide the ones you never play.
+- **Play history.** When you played and for how long, including the playtime your launchers recorded.
+- **Your artwork.** Covers, banners and logos from your launchers, from your own files, or from
+  [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring.
+- **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
+- **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
+  Proton builds you ask for.
+- **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
+  and import them again.
+
+## Game sources
+
+| Source | Games | How they start |
+| --- | --- | --- |
+| Steam, native or Flatpak | Installed games, with their playtime | Through Steam |
+| Heroic, native or Flatpak | Epic Games, GOG, Amazon and sideloaded games, installed or not | Through Heroic |
+| Lutris, native or Flatpak | Lutris games | Through Lutris |
+| Bottles, native or Flatpak | Programs in your bottles | Through Bottles |
+| Faugus Launcher, native or Flatpak | Faugus games | On the host ([needs host access](#starting-games-on-the-host)) |
+| Desktop entries and Flatpaks | Games installed as apps | On the host ([needs host access](#starting-games-on-the-host)) |
+| Added by hand | Native programs, and Windows games or installers | Native ones on the host; Windows ones with Proton in the sandbox |
+
+The importers read each launcher's data read-only and never its credentials.
+
+## Installing
+
+Pick one:
+
+- **Download a CI build.** Every CI run uploads a development bundle of the latest code as the
+  `pindu-launcher-devel-x86_64.flatpak` artifact. Open a recent run of the
+  [`CI` workflow](https://github.com/Tim-van-Oudheusden/pindu-launcher/actions/workflows/ci.yml) (you must be signed in
+  to GitHub), download the artifact and unzip it. The bundle needs the GNOME 51 runtime, which Flatpak installs from
+  Flathub, so add the Flathub remote first:
+
+  ```sh
+  flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  flatpak install --user ./pindu-launcher-devel.flatpak
+  flatpak run io.github.tim_van_oudheusden.pindu-launcher-devel
+  ```
+
+  The development build has its own app ID and nightly icon, and installs beside a stable one.
+- **Build from source.** See [Building from source](#building-from-source).
+
+### Starting games on the host
+
+Store games start through the OpenURI portal and always work. Games that start as a program on the host (desktop
+entries, Flatpak games, Faugus games and native games added by hand) need the app to reach the host through
+`org.freedesktop.Flatpak`, which Pindu launcher never asks for itself. Until you grant it, those games explain what is
+missing instead of failing, and **Preferences → Permissions** shows the command:
 
 ```sh
-meson setup _build
-meson compile -C _build
-meson test -C _build
+flatpak override --user --talk-name=org.freedesktop.Flatpak io.github.tim_van_oudheusden.pindu-launcher
 ```
 
-### Development Flatpak
+> [!WARNING]
+> **This is a sandbox escape that you choose.** Access to `org.freedesktop.Flatpak` lets Pindu launcher run any
+> command on your host as your user, outside the sandbox. Only grant it if you accept that.
 
-The development manifest builds the app with the `development` profile, which installs
-it as `io.github.tim_van_oudheusden.pindu-launcher-devel` beside the stable app, with the
-nightly icon:
+Restart Pindu launcher afterwards. To take the access back:
 
 ```sh
-flatpak-builder --user --install --force-clean _flatpak \
-  build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher-devel.yml
-flatpak run io.github.tim_van_oudheusden.pindu-launcher-devel
+flatpak override --user --no-talk-name=org.freedesktop.Flatpak io.github.tim_van_oudheusden.pindu-launcher
 ```
 
-CI builds the same manifest, runs the tests in it (including a UI smoke test under
-xvfb), lints the manifest and the build with `flatpak-builder-lint`, and uploads the
-bundle. The lint exceptions in `build-aux/flatpak/lint-exceptions.json` each say why.
+For the development build, use `io.github.tim_van_oudheusden.pindu-launcher-devel` in both commands.
 
-## Running in gamescope
+## Fullscreen mode
 
-For a couch setup, run the app's fullscreen mode inside [gamescope](https://github.com/ValveSoftware/gamescope):
+Press <kbd>F11</kbd>, start the app with `--fullscreen`, or turn on **Start in Fullscreen Mode** in Preferences. Move
+with the D-pad or left stick, open with A and go back with B; the hint bar at the bottom names the buttons that work on
+each screen, drawn with the app's own glyphs for the controller you hold. Quick Access (right stick click, the Steam
+Deck's "…" button, or <kbd>Ctrl</kbd>+<kbd>2</kbd>) switches the design.
+
+### Running in gamescope
+
+For a couch setup, run the fullscreen mode inside [gamescope](https://github.com/ValveSoftware/gamescope):
 
 ```sh
 gamescope -f -- flatpak run --nosocket=wayland io.github.tim_van_oudheusden.pindu-launcher --fullscreen
@@ -48,10 +145,47 @@ gamescope -f -- flatpak run --nosocket=wayland io.github.tim_van_oudheusden.pind
 - `--expose-wayland` is not recommended. The app then runs as a Wayland client, but gamescope doesn't make its window
   fullscreen: the window keeps its desktop size, and gamescope scales it up to the screen.
 
-## Styling fullscreen mode
+### Styling fullscreen mode
 
-Fullscreen mode has switchable designs (Quick Access → Design) and takes your own CSS. Where the files go, the
-`theme.json` fields and the CSS names designs can rely on are in [docs/fullscreen-style.md](docs/fullscreen-style.md).
+Fullscreen mode has switchable designs (Quick Access → Design; Panorama and Ribbon ship with the app) and takes your
+own CSS. Where the files go, the `theme.json` fields and the CSS names designs can rely on are in
+[`docs/fullscreen-style.md`](docs/fullscreen-style.md).
+
+## Building from source
+
+The build needs GTK 4.24, libadwaita 1.10, blueprint-compiler, Meson and Rust 1.93 or newer, all of which the
+`org.gnome.Sdk//51` runtime with the `rust-stable` extension provides.
+
+```sh
+git clone https://github.com/Tim-van-Oudheusden/pindu-launcher.git
+cd pindu-launcher
+meson setup _build
+meson compile -C _build
+meson test -C _build
+```
+
+| Command | What it does |
+| --- | --- |
+| `cargo fmt --all --check` | Formatting check |
+| `cargo clippy --workspace --all-targets -- -D warnings` | Lints, with warnings as errors |
+| `cargo test --workspace` | Unit tests; the core crate's tests need no display |
+| `meson test -C _build` | Meson tests, including the translation file checks |
+| `meson compile -C _build pindu-launcher-pot` | Refreshes the translation template |
+
+### Development Flatpak
+
+The development manifest builds the app with the `development` profile, which installs it as
+`io.github.tim_van_oudheusden.pindu-launcher-devel` beside the stable app, with the nightly icon:
+
+```sh
+flatpak-builder --user --install --force-clean _flatpak \
+  build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher-devel.yml
+flatpak run io.github.tim_van_oudheusden.pindu-launcher-devel
+```
+
+CI builds the same manifest, runs the tests in it (including a UI smoke test under xvfb), lints the manifest and the
+build with `flatpak-builder-lint`, and uploads the bundle. The lint exceptions in
+`build-aux/flatpak/lint-exceptions.json` each say why.
 
 ## Translating
 
@@ -66,6 +200,100 @@ Every file with translatable strings must be listed in `po/POTFILES.in`; `meson 
 `po/check-pot.sh _build`, which fails when the template's strings differ from the code's (locations and dates are
 ignored).
 
+## Tech stack
+
+- **App:** Rust (edition 2024), GTK 4.24 and libadwaita 1.10 through gtk4-rs, UI layout in Blueprint
+- **Libraries:** rusqlite for the library database, oo7 for the keyring, glycin for images, libsoup 3 for downloads,
+  libmanette for controllers (through bindings in `crates/manette`)
+- **Windows games:** umu-launcher and Proton, with GameMode and MangoHud
+- **Build and packaging:** Meson driving cargo, Flatpak on `org.gnome.Platform//51`
+- **CI:** GitHub Actions running rustfmt, clippy, the tests, the Flatpak build with a UI smoke test, and
+  `flatpak-builder-lint`
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph machine["Your machine (read-only)"]
+    launchers["Steam, Heroic, Lutris,<br/>Bottles, Faugus,<br/>desktop entries, Flatpaks"]
+  end
+
+  subgraph core["pindu-core: no GTK"]
+    importers["Importers<br/>sources/"]
+    store[("Library<br/>SQLite")]
+    logic["Launch plans, playtime,<br/>Proton, art cache,<br/>themes, navigation"]
+  end
+
+  subgraph ui["pindu-ui: GTK shells"]
+    services["Services<br/>import, artwork, launch,<br/>gamepad, search provider"]
+    models["GObject list models"]
+    desktop["Desktop shell"]
+    fullscreen["Fullscreen shell"]
+  end
+
+  launchers --> importers --> store
+  services <--> core
+  services --> models --> desktop & fullscreen
+  desktop & fullscreen -->|"intents"| services
+  services -->|"OpenURI portal,<br/>host spawn, umu"| games["Games"]
+  services -.->|"only when asked"| online["SteamGridDB,<br/>Proton releases"]
+```
+
+Everything that can be decided without GTK lives in `crates/pindu-core` and is tested with plain `cargo test`. The
+shells never read files or spawn processes: they observe the models and call the services, so the fullscreen mode is a
+second presentation of the same library.
+
+## Documentation
+
+| Document | Covers |
+| --- | --- |
+| [`docs/Adwaita Game Library — Main Spec.pdf`](docs/) | The product spec: scope, design and the issue plan |
+| [`docs/Research — *.pdf`](docs/) | Research behind the spec: Cartridges, Heroic, Faugus, OpenGamepadUI, Flatpak and Flathub, the GNOME platform |
+| [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
+| [`data/screenshots/CREDITS.md`](data/screenshots/CREDITS.md) | Where the demo library's game art comes from, and its licences |
+| [`AGENTS.md`](AGENTS.md) | How AI agents work in this repository |
+| [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md) | Which parts of the project had AI assistance |
+
+## Contributing
+
+Work is tracked in [GitHub issues](https://github.com/Tim-van-Oudheusden/pindu-launcher/issues), grouped into
+[milestones](https://github.com/Tim-van-Oudheusden/pindu-launcher/milestones). Bug reports are welcome; for code, pick
+an open issue, branch off `main` and open a pull request that passes the checks in
+[Building from source](#building-from-source). AI agents follow [`AGENTS.md`](AGENTS.md).
+
+## Acknowledgments
+
+- [Cartridges](https://codeberg.org/kramo/cartridges) by kramo, the GNOME game launcher that showed how a libadwaita
+  game library can look.
+- [Heroic Games Launcher](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher),
+  [Lutris](https://github.com/lutris/lutris), [Bottles](https://github.com/bottlesdevs/Bottles) and
+  [Faugus Launcher](https://github.com/Faugus/faugus-launcher), whose libraries Pindu launcher reads.
+- [OpenGamepadUI](https://github.com/ShadowBlip/OpenGamepadUI), for how a couch-first game library behaves.
+- [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher),
+  [GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom) and
+  [Proton-CachyOS](https://github.com/CachyOS/proton-cachyos), which run the Windows games.
+- [SteamGridDB](https://www.steamgriddb.com), for community artwork.
+
+## Disclaimer
+
+Pindu launcher is not affiliated with Valve, Epic Games, GOG, Amazon or any launcher it imports from. Product names and
+trademarks belong to their owners.
+
+## Contact
+
+- [GitHub](https://github.com/Tim-van-Oudheusden)
+- [LinkedIn](https://www.linkedin.com/in/tim-van-oudheusden)
+- [buildwithtim.dev](https://buildwithtim.dev)
+- Other projects: [Dailies](https://github.com/Tim-van-Oudheusden/Dailies), your daily guessing games in one GNOME
+  app, and [MinimalUI](https://github.com/Tim-van-Oudheusden/MinimalUI), a minimal Android launcher for
+  keyboard-centric phones
+
 ## Licence
 
-GPL-3.0-or-later; see [LICENSE](LICENSE).
+| Path | Licence |
+| --- | --- |
+| Code and everything not listed below | [GNU General Public License v3.0 or later](LICENSE) |
+| `data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in` | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `data/home/` (fullscreen Home's art) | [GPL-3.0-or-later](data/home/LICENSE) |
+| `docs/brand/readme-banner.svg` | [GPL-3.0-or-later](LICENSE); the outlined text is [Adwaita Sans](https://gitlab.gnome.org/GNOME/adwaita-fonts), SIL Open Font License 1.1 |
+| Game art in `data/screenshots/` | Each game's own licence, listed in [`CREDITS.md`](data/screenshots/CREDITS.md) |
