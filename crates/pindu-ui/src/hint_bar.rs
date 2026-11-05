@@ -78,7 +78,9 @@ impl PinduWindow {
 
     /// Where the user is, for the hints: the focused widget, an open dialog, whether a
     /// page lies below the shown one, whether it searches (Home and the library), whether
-    /// it has tabs (the library in fullscreen mode) and the open search keyboard.
+    /// it has tabs (the library in fullscreen mode), whether a game has options, whether
+    /// Start opens the menu drawer, an open panel, whether the launch overlay is up and
+    /// the open search keyboard.
     fn hint_context(&self) -> Context {
         let imp = self.imp();
         let navigation_view = &imp.navigation_view;
@@ -91,10 +93,15 @@ impl PinduWindow {
         let home = page.as_ref() == Some(imp.home_page.upcast_ref::<adw::NavigationPage>());
         Context {
             focus: self.hint_focus(),
-            dialog: self.visible_dialog().is_some(),
+            // An open menu closes on B like a dialog, and keeps the page's buttons too.
+            dialog: self.visible_dialog().is_some() || self.open_menu().is_some(),
             page_below,
             search: library || home,
             tabs: library && self.is_fullscreen(),
+            options: self.focused_game().is_some(),
+            menu: self.is_fullscreen(),
+            panel: self.open_panel(),
+            launching: self.launching(),
             keyboard: self.search_keyboard_typing(),
         }
     }
@@ -145,6 +152,9 @@ fn action_label(action: Action) -> String {
         Action::Search => gettext("Search"),
         Action::Tabs => gettext("Tabs"),
         Action::Sort => gettext("Sort"),
+        Action::Options => gettext("Options"),
+        Action::HoldToCancel => gettext("Hold to Cancel"),
+        Action::Menu => gettext("Menu"),
         Action::Type => gettext("Type"),
         Action::Delete => gettext("Delete"),
         Action::Done => gettext("Done"),

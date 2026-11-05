@@ -140,7 +140,7 @@ impl PinduWindow {
         }
     }
 
-    fn show_tab(&self, view: View) {
+    pub(crate) fn show_tab(&self, view: View) {
         self.set_shown_view(view);
         self.focus_page();
     }

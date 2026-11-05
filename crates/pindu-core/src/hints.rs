@@ -3,6 +3,7 @@
 
 use crate::gamepad::{Button, DeviceKind, Intent};
 use crate::osk::Key;
+use crate::panels::{DrawerLevel, OptionsLevel, Panel};
 
 /// What kind of widget has focus, as far as the A button is concerned.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,8 +23,9 @@ pub enum Focus {
 }
 
 /// Where the user is: the focused widget, an open dialog, a page to go back to, whether
-/// the page searches and whether it has tabs and a sort to step through, and the search
-/// keyboard while it is open.
+/// the page searches, whether it has tabs and a sort to step through, whether a game has
+/// options, whether Start opens the menu drawer, an open panel, whether a launch is
+/// under way, and the search keyboard while it is open.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Context {
     pub focus: Focus,
@@ -36,6 +38,14 @@ pub struct Context {
     /// The page has tabs, which the shoulder buttons switch, and a sort order, which the
     /// triggers cycle (fullscreen mode's library).
     pub tabs: bool,
+    /// A game has focus (a cover or card) or the page is a game's: View opens its options.
+    pub options: bool,
+    /// Start opens the menu drawer (fullscreen mode).
+    pub menu: bool,
+    /// The menu drawer or the options sheet is open, at a level.
+    pub panel: Option<Panel>,
+    /// The launch overlay is up.
+    pub launching: Launching,
     /// The search keyboard is open, which takes the buttons.
     pub keyboard: Option<Typing>,
 }
@@ -46,6 +56,18 @@ pub struct Context {
 pub struct Typing {
     pub key: Key,
     pub empty: bool,
+}
+
+/// What the launch overlay shows, as far as the buttons are concerned.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Launching {
+    /// No launch overlay.
+    #[default]
+    No,
+    /// A store game going to its launcher, which cannot be called back.
+    HandingOff,
+    /// A game we run starting, which holding B cancels.
+    Starting,
 }
 
 /// What a button does, as the hint bar names it.
@@ -63,6 +85,12 @@ pub enum Action {
     Tabs,
     /// Cycle the sort order back or forward.
     Sort,
+    /// Open the options for the page's game.
+    Options,
+    /// Hold the button to cancel the launch.
+    HoldToCancel,
+    /// Open the menu drawer.
+    Menu,
     /// Type the key's character into the search field.
     Type,
     /// Delete the search field's last character.
@@ -83,6 +111,18 @@ pub struct Hint {
 
 /// The hints for `context` on a controller of `kind`, confirm first.
 pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
+    // The launch overlay takes every button: only a held B, for a game we start.
+    match context.launching {
+        Launching::No => {}
+        Launching::HandingOff => return Vec::new(),
+        Launching::Starting => {
+            return vec![Hint {
+                button: kind.button(Intent::Back),
+                pair: None,
+                action: Action::HoldToCancel,
+            }];
+        }
+    }
     let single = |intent, action: Option<Action>| {
         action.map(|action| Hint {
             button: kind.button(intent),
@@ -120,15 +160,23 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
         Focus::Toggle => Some(Action::Toggle),
         Focus::Other => Some(Action::Select),
     };
-    let back = if context.dialog {
-        Some(Action::Close)
-    } else {
-        context.page_below.then_some(Action::Back)
+    // A panel over the page closes on B, or steps back from one of its lists; the page's
+    // own buttons wait for it, as they wait for a dialog.
+    let back = match context.panel {
+        _ if context.dialog => Some(Action::Close),
+        Some(Panel::Drawer(DrawerLevel::Main) | Panel::Options(OptionsLevel::Main)) => {
+            Some(Action::Close)
+        }
+        Some(_) => Some(Action::Back),
+        None => context.page_below.then_some(Action::Back),
     };
+    let page = !context.dialog && context.panel.is_none();
     // Y searches the page under a dialog, so it waits for the dialog to close; so do the
-    // page's tabs and sort.
-    let search = (context.search && !context.dialog).then_some(Action::Search);
-    let tabs = context.tabs && !context.dialog;
+    // page's tabs, sort, options and menu.
+    let search = (context.search && page).then_some(Action::Search);
+    let options = (context.options && page).then_some(Action::Options);
+    let menu = (context.menu && page).then_some(Action::Menu);
+    let tabs = context.tabs && page;
     let pair = |back, forward, action| {
         tabs.then(|| Hint {
             button: kind.button(back),
@@ -140,6 +188,8 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
         single(Intent::Activate, activate),
         single(Intent::Back, back),
         single(Intent::Search, search),
+        single(Intent::Options, options),
+        single(Intent::Menu, menu),
         pair(Intent::PreviousTab, Intent::NextTab, Action::Tabs),
         pair(Intent::PreviousSort, Intent::NextSort, Action::Sort),
     ]
@@ -202,7 +252,97 @@ mod tests {
             search: false,
             tabs: false,
             keyboard: None,
+            options: false,
+            menu: false,
+            panel: None,
+            launching: Launching::No,
         }
+    }
+
+    #[test]
+    fn fullscreen_pages_open_the_menu_with_start_and_a_focused_cover_s_options_with_view() {
+        let home = Context {
+            search: true,
+            options: true,
+            menu: true,
+            ..context(Focus::Game)
+        };
+        assert_eq!(
+            actions(home, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Open),
+                (Button::North, Action::Search),
+                (Button::Select, Action::Options),
+                (Button::Start, Action::Menu)
+            ]
+        );
+        let dialog_over_home = Context {
+            dialog: true,
+            ..home
+        };
+        assert_eq!(
+            actions(dialog_over_home, DeviceKind::Xbox),
+            [(Button::South, Action::Open), (Button::East, Action::Close)]
+        );
+    }
+
+    #[test]
+    fn an_open_panel_shows_only_a_and_b_which_closes_it_or_steps_back_a_level() {
+        let library = Context {
+            page_below: true,
+            search: true,
+            tabs: true,
+            options: true,
+            menu: true,
+            ..context(Focus::Other)
+        };
+        let drawer = Context {
+            panel: Some(Panel::Drawer(DrawerLevel::Main)),
+            ..library
+        };
+        assert_eq!(
+            actions(drawer, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Close)
+            ]
+        );
+        let settings = Context {
+            focus: Focus::Toggle,
+            panel: Some(Panel::Drawer(DrawerLevel::Settings)),
+            ..library
+        };
+        assert_eq!(
+            actions(settings, DeviceKind::Nintendo),
+            [
+                (Button::East, Action::Toggle),
+                (Button::South, Action::Back)
+            ]
+        );
+        let collections = Context {
+            focus: Focus::Toggle,
+            panel: Some(Panel::Options(OptionsLevel::Collections)),
+            ..library
+        };
+        assert_eq!(
+            actions(collections, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Toggle),
+                (Button::East, Action::Back)
+            ]
+        );
+        // A dialog opened from a panel closes first.
+        let dialog_over_sheet = Context {
+            dialog: true,
+            ..collections
+        };
+        assert_eq!(
+            actions(dialog_over_sheet, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Toggle),
+                (Button::East, Action::Close)
+            ]
+        );
     }
 
     fn actions(context: Context, kind: DeviceKind) -> Vec<(Button, Action)> {
@@ -357,6 +497,7 @@ mod tests {
             search: true,
             tabs: true,
             page_below: true,
+            menu: true,
             keyboard: Some(Typing { key, empty }),
             ..context(Focus::Other)
         };
@@ -384,6 +525,60 @@ mod tests {
             actions(typing(Key::Done, false), DeviceKind::Xbox)[0],
             (Button::South, Action::Done)
         );
+    }
+
+    #[test]
+    fn the_game_page_opens_its_options_with_view() {
+        let game_page = Context {
+            page_below: true,
+            options: true,
+            ..context(Focus::Play)
+        };
+        assert_eq!(
+            actions(game_page, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Play),
+                (Button::East, Action::Back),
+                (Button::Select, Action::Options)
+            ]
+        );
+        let dialog_over_game_page = Context {
+            dialog: true,
+            ..game_page
+        };
+        assert_eq!(
+            actions(dialog_over_game_page, DeviceKind::Xbox),
+            [(Button::South, Action::Play), (Button::East, Action::Close)]
+        );
+    }
+
+    #[test]
+    fn a_game_we_start_cancels_with_a_held_b_and_nothing_else() {
+        let starting = Context {
+            page_below: true,
+            options: true,
+            launching: Launching::Starting,
+            ..context(Focus::Play)
+        };
+        assert_eq!(
+            actions(starting, DeviceKind::Xbox),
+            [(Button::East, Action::HoldToCancel)]
+        );
+        assert_eq!(
+            actions(starting, DeviceKind::Nintendo),
+            [(Button::South, Action::HoldToCancel)]
+        );
+    }
+
+    #[test]
+    fn a_store_hand_off_has_no_hints() {
+        let opening = Context {
+            page_below: true,
+            options: true,
+            launching: Launching::HandingOff,
+            ..context(Focus::Play)
+        };
+        assert_eq!(actions(opening, DeviceKind::Xbox), []);
     }
 
     #[test]

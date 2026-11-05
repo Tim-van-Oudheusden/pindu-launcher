@@ -23,8 +23,8 @@ use crate::sources::{source_icon, source_name};
 use crate::steamgriddb_service;
 use crate::sync_service::SyncService;
 
-/// Tile sizes in the order of the cover size row.
-const TILE_SIZES: [&str; 3] = ["small", "medium", "large"];
+/// Tile sizes in the order of the cover size row (and the menu drawer's toggles).
+pub(crate) const TILE_SIZES: [&str; 3] = ["small", "medium", "large"];
 
 mod imp {
     use super::*;

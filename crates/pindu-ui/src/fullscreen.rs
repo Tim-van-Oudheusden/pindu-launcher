@@ -12,6 +12,7 @@ use adw::subclass::prelude::*;
 use gtk::{gio, glib};
 use pindu_core::sound::tone_wav;
 
+use crate::game_page::GamePage;
 use crate::models::GameObject;
 use crate::window::PinduWindow;
 
@@ -89,6 +90,10 @@ impl PinduWindow {
     /// Shows the window in fullscreen mode or as the desktop window, as it is fullscreen.
     fn show_fullscreen_mode(&self) {
         let fullscreen = self.is_fullscreen();
+        // The panels belong to the mode they were opened in.
+        if self.open_panel().is_some() {
+            self.close_panel();
+        }
         if fullscreen {
             self.add_css_class(STYLE_CLASS);
         } else {
@@ -96,6 +101,7 @@ impl PinduWindow {
         }
         self.update_listening();
         self.show_fullscreen_library(fullscreen);
+        self.show_fullscreen_game(fullscreen);
         self.arrange_pages(fullscreen);
         self.hide_sidebar_in_fullscreen();
         self.update_top_bars();
@@ -272,15 +278,24 @@ impl PinduWindow {
         }
     }
 
-    /// Gives focus to the shown page: Home's card that had focus last, the library's grid
-    /// on the cover the controller was last on, or else the first item that takes focus.
+    /// Gives focus to the open panel, or to the shown page: Home's card that had focus
+    /// last, the library's grid on the cover the controller was last on, a game page's
+    /// Play, or else the first item that takes focus.
     pub(crate) fn focus_page(&self) {
+        if self.open_panel().is_some() {
+            self.focus_panel(None);
+            return;
+        }
         let imp = self.imp();
         let Some(page) = imp.navigation_view.visible_page() else {
             return;
         };
         if page == *imp.home_page.upcast_ref::<adw::NavigationPage>() {
             imp.home_page.focus_remembered();
+            return;
+        }
+        if let Some(page) = page.downcast_ref::<GamePage>() {
+            page.focus_play();
             return;
         }
         let grid_shown = imp.content_stack.visible_child_name().as_deref() == Some("grid");
