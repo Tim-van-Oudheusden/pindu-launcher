@@ -14,6 +14,7 @@ use gettextrs::ngettext;
 use gtk::{gdk, gio, glib};
 use pindu_core::keys::{self, Modifiers};
 use pindu_core::sound::tone_wav;
+use pindu_core::themes::ThemeLayout;
 
 use crate::application::PinduApplication;
 use crate::game_page::GamePage;
@@ -121,13 +122,25 @@ impl PinduWindow {
             }
         });
         if let Some(application) = self.application().and_downcast::<PinduApplication>() {
-            application.style_service().connect_problems(glib::clone!(
+            let style = application.style_service();
+            style.connect_problems(glib::clone!(
                 #[weak(rename_to = window)]
                 self,
                 move |count| window.add_toast(adw::Toast::new(&style_problems_message(count)))
             ));
+            style.connect_layout_changed(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |layout| window.apply_layout(layout)
+            ));
+            self.apply_layout(style.layout());
         }
         self.show_fullscreen_mode();
+    }
+
+    /// Follows the layout of the fullscreen design in force.
+    fn apply_layout(&self, layout: ThemeLayout) {
+        self.imp().home_page.set_layout(layout);
     }
 
     /// Enters fullscreen mode; the window follows once the compositor makes it fullscreen.
