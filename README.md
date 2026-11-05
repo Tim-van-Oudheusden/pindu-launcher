@@ -214,34 +214,29 @@ ignored).
 
 ```mermaid
 flowchart LR
-  subgraph machine["Your machine (read-only)"]
-    launchers["Steam, Heroic, Lutris,<br/>Bottles, Faugus,<br/>desktop entries, Flatpaks"]
-  end
+  launchers["Steam, Heroic, Lutris,<br/>Bottles, Faugus,<br/>desktop entries, Flatpaks"]
 
   subgraph core["pindu-core: no GTK"]
-    importers["Importers<br/>sources/"]
-    store[("Library<br/>SQLite")]
+    importers["Importers<br/>sources/"] --> store[("Library<br/>SQLite")]
     logic["Launch plans, playtime,<br/>Proton, art cache,<br/>themes, navigation"]
   end
 
   subgraph ui["pindu-ui: GTK shells"]
-    services["Services<br/>import, artwork, launch,<br/>gamepad, search provider"]
-    models["GObject list models"]
-    desktop["Desktop shell"]
-    fullscreen["Fullscreen shell"]
+    services["Services<br/>import, artwork, launch,<br/>gamepad, search provider"] --> models["GObject list models"]
+    models --> desktop["Desktop shell"]
+    models --> fullscreen["Fullscreen shell"]
   end
 
-  launchers --> importers --> store
-  services <--> core
-  services --> models --> desktop & fullscreen
-  desktop & fullscreen -->|"intents"| services
+  launchers -->|"read-only"| importers
+  store --> services
+  logic --> services
   services -->|"OpenURI portal,<br/>host spawn, umu"| games["Games"]
   services -.->|"only when asked"| online["SteamGridDB,<br/>Proton releases"]
 ```
 
 Everything that can be decided without GTK lives in `crates/pindu-core` and is tested with plain `cargo test`. The
-shells never read files or spawn processes: they observe the models and call the services, so the fullscreen mode is a
-second presentation of the same library.
+shells never read files or spawn processes: they observe the models and send the user's intents back to the services,
+so the fullscreen mode is a second presentation of the same library.
 
 ## Documentation
 
