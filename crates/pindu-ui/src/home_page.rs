@@ -1,8 +1,8 @@
 //! Fullscreen mode's Home page, where the mode opens: the hero of the focused game over a
 //! carousel of the pinned and recently played games (the "Jump back in" games), with a
 //! Library tile at the end. Focus comes back to the card that last had it. A fullscreen
-//! design can choose the cards' shape (`pindu_core::home`) and crossfade the hero (`.shown`,
-//! `.no-art`).
+//! design can choose the cards' shape and size (`pindu_core::home`) and crossfade the hero
+//! (`.shown`, `.no-art`).
 
 use std::cell::{Cell, RefCell};
 
@@ -147,7 +147,7 @@ mod imp {
                 viewport.set_scroll_to_focus(false);
             }
             page.show_home_layout(HomeLayout::default());
-            page.show_tile_shape(TileShape::default());
+            page.show_tile_shape(TileShape::default(), None);
             page.show_hero(None);
         }
     }
@@ -170,8 +170,8 @@ glib::wrapper! {
 }
 
 impl HomePage {
-    /// Follows the layout of the design in force: where the carousel sits, the shape its
-    /// cards take, and whether the focused game's details show.
+    /// Follows the layout of the design in force: where the carousel sits, the shape and
+    /// size its cards take, and whether the focused game's details show.
     pub fn set_layout(&self, layout: ThemeLayout) {
         let imp = self.imp();
         let old = imp.layout.replace(layout);
@@ -181,8 +181,8 @@ impl HomePage {
         if old.home_details != layout.home_details {
             self.show_details(self.remembered().1.as_ref());
         }
-        if old.home_tile != layout.home_tile {
-            self.show_tile_shape(layout.home_tile);
+        if (old.home_tile, old.home_tile_size) != (layout.home_tile, layout.home_tile_size) {
+            self.show_tile_shape(layout.home_tile, layout.home_tile_size);
             let had_focus = self.carousel_has_focus();
             let games: Vec<GameObject> = imp
                 .cards
@@ -226,9 +226,10 @@ impl HomePage {
         }
     }
 
-    /// Sizes the Library tile for `shape` and names the shape on the carousel
-    /// (`home-tile-landscape`, `home-tile-square`, `home-tile-portrait`) for designs.
-    fn show_tile_shape(&self, shape: TileShape) {
+    /// Sizes the Library tile for `shape` with its shorter side `size` pixels, if set, and
+    /// names the shape on the carousel (`home-tile-landscape`, `home-tile-square`,
+    /// `home-tile-portrait`) for designs.
+    fn show_tile_shape(&self, shape: TileShape, size: Option<i32>) {
         let imp = self.imp();
         for other in TileShape::ALL {
             imp.carousel
@@ -236,7 +237,7 @@ impl HomePage {
         }
         imp.carousel
             .add_css_class(&format!("home-tile-{}", shape.name()));
-        let (width, height) = home::card_size(shape);
+        let (width, height) = home::card_size(shape, size);
         imp.library_tile.set_size_request(width, height);
     }
 
@@ -266,8 +267,9 @@ impl HomePage {
         for (card, _) in imp.cards.take() {
             imp.carousel.remove(&card);
         }
-        let shape = imp.layout.get().home_tile;
-        let size = home::card_size(shape);
+        let layout = imp.layout.get();
+        let shape = layout.home_tile;
+        let size = home::card_size(shape, layout.home_tile_size);
         let mut cards = Vec::with_capacity(games.len());
         for game in games {
             let (card, picture) = jump_card_frame(game, size);
