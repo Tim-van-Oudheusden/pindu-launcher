@@ -59,7 +59,9 @@ impl PinduWindow {
         self.is_fullscreen() || self.settings().boolean("controller-navigation")
     }
 
-    fn handle_intent(&self, intent: Intent) {
+    /// Acts on a controller intent, or on a key that stands for one in fullscreen mode
+    /// (`pindu_core::keys`).
+    pub(crate) fn handle_intent(&self, intent: Intent) {
         if !self.takes_controller() || !self.listens_to_controllers() {
             return;
         }

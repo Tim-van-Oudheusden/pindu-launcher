@@ -10,9 +10,11 @@ template $PinduHomePage: Adw.NavigationPage {
       "home",
     ]
 
+    // A backdrop: the logo or title over it says what it shows.
     child: Picture hero {
       content-fit: cover;
       can-shrink: true;
+      accessible-role: presentation;
     };
 
     [overlay]
@@ -88,6 +90,7 @@ template $PinduHomePage: Adw.NavigationPage {
               Image {
                 icon-name: "view-grid-symbolic";
                 pixel-size: 48;
+                accessible-role: presentation;
               }
 
               Label {

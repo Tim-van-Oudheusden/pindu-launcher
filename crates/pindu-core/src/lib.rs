@@ -10,6 +10,7 @@ pub mod focus;
 pub mod gamepad;
 pub mod grid;
 pub mod hints;
+pub mod keys;
 pub mod launch;
 pub mod launch_overlay;
 pub mod library;

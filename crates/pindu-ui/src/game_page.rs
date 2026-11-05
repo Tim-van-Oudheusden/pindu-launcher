@@ -201,6 +201,9 @@ impl GamePage {
         let target = game.id.as_str().to_variant();
         self.set_title(&game.title);
         imp.title.set_label(&game.title);
+        // The logo stands in for the title once it loads.
+        imp.logo
+            .update_property(&[gtk::accessible::Property::Label(&game.title)]);
         imp.play_button.set_action_target_value(Some(&target));
         let handler = object.connect_notify_local(
             Some("playing"),

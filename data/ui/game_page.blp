@@ -32,10 +32,12 @@ template $PinduGamePage: Adw.NavigationPage {
               "game-hero",
             ]
 
+            // A backdrop: the logo or title over it says what it shows.
             child: Picture hero {
               content-fit: cover;
               height-request: 320;
               can-shrink: true;
+              accessible-role: presentation;
             };
 
             [overlay]

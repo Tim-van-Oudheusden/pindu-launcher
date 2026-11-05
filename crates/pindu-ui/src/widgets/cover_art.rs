@@ -108,6 +108,11 @@ impl CoverArt {
         self.imp().texture.borrow().is_some()
     }
 
+    /// What a screen reader says for the art: the game's title.
+    pub fn set_alternative_text(&self, text: &str) {
+        self.update_property(&[gtk::accessible::Property::Label(text)]);
+    }
+
     /// Shows `cover`, resized for a tile of `size` device pixels, or `icon` when there is
     /// no cover, loading it in the background. `on_loaded` runs once the art for this call
     /// is shown (or failed to load).

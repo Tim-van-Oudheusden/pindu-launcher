@@ -164,6 +164,7 @@ impl CoverTile {
         let entry = game.entry();
         let source = entry.game.source();
         imp.title.set_text(Some(&entry.game.title));
+        imp.cover.set_alternative_text(&entry.game.title);
         imp.source_badge.set_icon_name(Some(source_icon(source)));
         imp.source_badge
             .set_tooltip_text(Some(&source_name(source)));

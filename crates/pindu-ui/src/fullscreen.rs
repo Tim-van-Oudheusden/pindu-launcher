@@ -4,12 +4,14 @@
 //! page, Home is the first page, with the library (in tabs) and game pages above it.
 //! Entering and leaving go through `win.fullscreen-mode` (main menu, F11, `--fullscreen`,
 //! Guide) and `win.leave-fullscreen` (Esc, and the menu drawer's "Exit Fullscreen Mode").
+//! Keys stand in for the controller's other buttons (`pindu_core::keys`).
 
 use std::cell::RefCell;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use gtk::{gio, glib};
+use gtk::{gdk, gio, glib};
+use pindu_core::keys::{self, Modifiers};
 use pindu_core::sound::tone_wav;
 
 use crate::game_page::GamePage;
@@ -47,6 +49,36 @@ impl PinduWindow {
             Some(gtk::NamedAction::new("win.leave-fullscreen")),
         ));
         self.add_controller(escape);
+        // Keys stand in for the controller buttons that do more than move and activate:
+        // the drawer, a game's options, the tabs and the sort order. They go first, as the
+        // Menu key on a cover opens the options sheet here rather than the desktop menu.
+        let button_keys = gtk::EventControllerKey::new();
+        button_keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+        button_keys.connect_key_pressed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or]
+            glib::Propagation::Proceed,
+            move |_, key, _, state| {
+                if !window.is_fullscreen() {
+                    return glib::Propagation::Proceed;
+                }
+                let modifiers = Modifiers {
+                    control: state.contains(gdk::ModifierType::CONTROL_MASK),
+                    shift: state.contains(gdk::ModifierType::SHIFT_MASK),
+                    alt: state.contains(gdk::ModifierType::ALT_MASK),
+                };
+                let Some(intent) = key
+                    .name()
+                    .and_then(|name| keys::fullscreen_intent(&name, modifiers))
+                else {
+                    return glib::Propagation::Proceed;
+                };
+                window.handle_intent(intent);
+                glib::Propagation::Stop
+            }
+        ));
+        self.add_controller(button_keys);
 
         self.connect_fullscreened_notify(|window| window.show_fullscreen_mode());
         // Pages pushed later get their bars hidden too.
@@ -56,6 +88,19 @@ impl PinduWindow {
                 #[weak(rename_to = window)]
                 self,
                 move |_| window.update_top_bars()
+            ));
+        // A collapsed sidebar comes back on its own once the split view uncollapses, as it
+        // does when the window widens to fullscreen with large text: keep it hidden.
+        self.imp()
+            .split_view
+            .connect_show_sidebar_notify(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |split_view| {
+                    if window.is_fullscreen() && split_view.shows_sidebar() {
+                        split_view.set_show_sidebar(false);
+                    }
+                }
             ));
         self.connect_focus_widget_notify(|window| {
             if !window.is_fullscreen() {
