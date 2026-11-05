@@ -71,7 +71,7 @@ CSS restyles widgets but cannot move, add or remove them. These options change w
 | Option | Values (default first) | Effect |
 |---|---|---|
 | `home` | `"hero-bottom"`, `"row-top"` | Where Home's row of games sits: under the title at the bottom, or near the top with the title and details below it. |
-| `home-tile` | `"landscape"`, `"square"`, `"portrait"` | The shape of Home's cards and the art they show (banner, icon or cover, cover). |
+| `home-tile` | `"landscape"`, `"square"`, `"portrait"` | The shape of Home's cards and the art they show: the banner, else the cover; SteamGridDB square art, else the cover cropped to square; the cover, else the banner. Cards never show icons. |
 | `home-tile-size` | a number, 64–400 | The cards' shorter side in pixels; art is decoded for 1.6× that size, so a focused card can grow that much and stay sharp. Without it the shape's own size applies. |
 | `top-bar` | `false`, `true` | A bar at the top of Home and the library with Home and Library tabs and a clock. |
 | `home-details` | `false`, `true` | A row under Home's title with the focused game's playtime, when it was last played and its source. |

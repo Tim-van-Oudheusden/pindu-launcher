@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 18:00+0100\n"
+"POT-Creation-Date: 2026-11-05 19:46+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1071,63 +1071,67 @@ msgstr ""
 msgid "Icon"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:83
+#: crates/pindu-ui/src/steamgriddb_picker.rs:48
+msgid "Square Art"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:84
 #, rust-format
 msgid "SteamGridDB: {layout}"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:102
+#: crates/pindu-ui/src/steamgriddb_picker.rs:103
 msgid "The Keyring Cannot Be Used"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:119 data/ui/preferences.blp:111
+#: crates/pindu-ui/src/steamgriddb_picker.rs:120 data/ui/preferences.blp:111
 msgid "API Key"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:127
+#: crates/pindu-ui/src/steamgriddb_picker.rs:128
 msgid "_Save Key"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:132
+#: crates/pindu-ui/src/steamgriddb_picker.rs:133
 msgid "Get a Key on SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:143
+#: crates/pindu-ui/src/steamgriddb_picker.rs:144
 msgid "SteamGridDB Needs Your API Key"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:145
+#: crates/pindu-ui/src/steamgriddb_picker.rs:146
 msgid "The key is kept in your keyring, never in plain settings."
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:160
+#: crates/pindu-ui/src/steamgriddb_picker.rs:161
 msgid "The Key Was Not Saved"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:184
+#: crates/pindu-ui/src/steamgriddb_picker.rs:185
 msgid "No Images Found"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:185
+#: crates/pindu-ui/src/steamgriddb_picker.rs:186
 msgid "SteamGridDB has no images of this kind for the game"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:194
+#: crates/pindu-ui/src/steamgriddb_picker.rs:195
 msgid ""
 "SteamGridDB did not accept the stored key. Enter a valid one; it is kept in "
 "your keyring."
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:200
+#: crates/pindu-ui/src/steamgriddb_picker.rs:201
 msgid "SteamGridDB Cannot Be Reached"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:225
+#: crates/pindu-ui/src/steamgriddb_picker.rs:226
 #, rust-format
 msgid "Image {number} of {total}, {width} by {height} pixels"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:245
+#: crates/pindu-ui/src/steamgriddb_picker.rs:246
 msgid "The Image Cannot Be Downloaded"
 msgstr ""
 

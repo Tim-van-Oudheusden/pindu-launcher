@@ -45,6 +45,7 @@ pub fn pick(
         ArtLayout::Hero => gettext("Banner"),
         ArtLayout::Logo => gettext("Logo"),
         ArtLayout::Icon => gettext("Icon"),
+        ArtLayout::Square => gettext("Square Art"),
     };
     let stack = gtk::Stack::new();
     stack.add_named(
