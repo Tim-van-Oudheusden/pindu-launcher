@@ -3,7 +3,6 @@
 
 use std::path::PathBuf;
 
-use crate::art::ICON_SCALE;
 use crate::library::{ArtSet, HistoryGroup, history_group};
 use crate::model::{Game, Source, Timestamp};
 use crate::themes::TileShape;
@@ -36,48 +35,37 @@ pub fn art_pixels((width, height): (i32, i32), scale_factor: i32) -> (u32, u32) 
     (pixels(width), pixels(height))
 }
 
-/// The art a Home card shows of its game.
+/// The art a Home card shows of its game. Cards never show icons, so every card in a row
+/// looks alike; a game without art shows the card's title alone.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CardArt {
     /// The picture to show, fitted to the card as covers are.
     pub art: Option<PathBuf>,
-    /// The icon to show instead: when there is no `art`, or first if `icon_first`.
-    pub icon: Option<PathBuf>,
-    /// Show the icon when it is large enough (`icon_large_enough`), the art otherwise.
-    pub icon_first: bool,
     /// Crop the art to fill the card, whatever its shape.
     pub crop: bool,
 }
 
-/// What a card of `shape` shows of a game with `art`.
+/// What a card of `shape` shows of a game with `art`: square cards their square art, or
+/// else the cover (or banner) cropped to square.
 pub fn card_art(shape: TileShape, art: &ArtSet) -> CardArt {
     match shape {
         TileShape::Landscape => CardArt {
             art: art.hero.clone().or_else(|| art.cover.clone()),
-            icon: art.icon.clone(),
-            icon_first: false,
             crop: false,
         },
         TileShape::Square => CardArt {
-            art: art.cover.clone().or_else(|| art.hero.clone()),
-            icon: art.icon.clone(),
-            icon_first: true,
+            art: art
+                .square
+                .clone()
+                .or_else(|| art.cover.clone())
+                .or_else(|| art.hero.clone()),
             crop: true,
         },
         TileShape::Portrait => CardArt {
             art: art.cover.clone().or_else(|| art.hero.clone()),
-            icon: art.icon.clone(),
-            icon_first: false,
             crop: false,
         },
     }
-}
-
-/// Whether an icon of `icon` pixels is large enough to stand for its game on a card
-/// `card_width` device pixels wide, where it draws at `art::ICON_SCALE` of the width: it is
-/// never enlarged.
-pub fn icon_large_enough((width, height): (u32, u32), card_width: u32) -> bool {
-    width.min(height) as f32 >= card_width as f32 * ICON_SCALE
 }
 
 /// One item of the details row a design can show under the focused game's logo or title.
@@ -141,6 +129,7 @@ mod tests {
             hero: Some("hero.png".into()),
             logo: Some("logo.png".into()),
             icon: Some("icon.png".into()),
+            square: Some("square.png".into()),
         };
         let without_hero = ArtSet {
             hero: None,
@@ -154,8 +143,6 @@ mod tests {
             shown,
             CardArt {
                 art: Some("hero.png".into()),
-                icon: Some("icon.png".into()),
-                icon_first: false,
                 crop: false,
             }
         );
@@ -163,22 +150,41 @@ mod tests {
     }
 
     #[test]
-    fn square_cards_show_a_large_icon_or_else_the_cover_cropped() {
+    fn square_cards_show_square_art_or_else_the_cover_cropped_and_never_the_icon() {
         let art = ArtSet {
             cover: Some("cover.png".into()),
             hero: Some("hero.png".into()),
             logo: None,
             icon: Some("icon.png".into()),
+            square: Some("square.png".into()),
+        };
+        let without_square = ArtSet {
+            square: None,
+            ..art.clone()
+        };
+        let only_icon = ArtSet {
+            icon: Some("icon.png".into()),
+            ..ArtSet::default()
         };
 
-        let shown = card_art(TileShape::Square, &art);
-
         assert_eq!(
-            shown,
+            card_art(TileShape::Square, &art),
+            CardArt {
+                art: Some("square.png".into()),
+                crop: true,
+            }
+        );
+        assert_eq!(
+            card_art(TileShape::Square, &without_square),
             CardArt {
                 art: Some("cover.png".into()),
-                icon: Some("icon.png".into()),
-                icon_first: true,
+                crop: true,
+            }
+        );
+        assert_eq!(
+            card_art(TileShape::Square, &only_icon),
+            CardArt {
+                art: None,
                 crop: true,
             }
         );
@@ -191,6 +197,7 @@ mod tests {
             hero: Some("hero.png".into()),
             logo: None,
             icon: None,
+            square: Some("square.png".into()),
         };
         let without_cover = ArtSet {
             cover: None,
@@ -201,17 +208,8 @@ mod tests {
         let fallback = card_art(TileShape::Portrait, &without_cover);
 
         assert_eq!(shown.art, Some("cover.png".into()));
-        assert!(!shown.icon_first && !shown.crop);
+        assert!(!shown.crop);
         assert_eq!(fallback.art, Some("hero.png".into()));
-    }
-
-    #[test]
-    fn an_icon_is_large_enough_when_it_is_not_enlarged() {
-        // Icons draw half as wide as the card.
-        assert!(icon_large_enough((256, 256), 320));
-        assert!(icon_large_enough((160, 200), 320));
-        assert!(!icon_large_enough((128, 128), 320));
-        assert!(!icon_large_enough((32, 32), 200));
     }
 
     const DAY: i64 = 86_400;

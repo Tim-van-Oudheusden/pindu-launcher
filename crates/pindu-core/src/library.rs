@@ -17,6 +17,7 @@ pub struct ArtSet {
     pub hero: Option<PathBuf>,
     pub logo: Option<PathBuf>,
     pub icon: Option<PathBuf>,
+    pub square: Option<PathBuf>,
 }
 
 impl ArtSet {
@@ -28,6 +29,7 @@ impl ArtSet {
             hero: path(ArtLayout::Hero),
             logo: path(ArtLayout::Logo),
             icon: path(ArtLayout::Icon),
+            square: path(ArtLayout::Square),
         }
     }
 }

@@ -102,7 +102,7 @@ string_enum! {
 }
 
 string_enum! {
-    /// The four artwork layouts, as on SteamGridDB.
+    /// The artwork layouts: SteamGridDB's four, and its square grids.
     ArtLayout, "artwork layout" {
         /// Portrait cover, 2:3 (600×900).
         Cover => "cover",
@@ -110,6 +110,8 @@ string_enum! {
         Hero => "hero",
         Logo => "logo",
         Icon => "icon",
+        /// Square grid (512×512 or 1024×1024), for fullscreen Home's square tiles.
+        Square => "square",
     }
 }
 

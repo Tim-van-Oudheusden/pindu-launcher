@@ -45,10 +45,11 @@ pub struct Image {
     pub height: u32,
 }
 
-/// The images of a game in one layout; covers are asked for at 600×900.
+/// The images of a game in one layout; covers are asked for at 600×900, square art as
+/// square grids.
 pub fn images_url(layout: ArtLayout, game: &GameRef) -> String {
     let kind = match layout {
-        ArtLayout::Cover => "grids",
+        ArtLayout::Cover | ArtLayout::Square => "grids",
         ArtLayout::Hero => "heroes",
         ArtLayout::Logo => "logos",
         ArtLayout::Icon => "icons",
@@ -57,10 +58,10 @@ pub fn images_url(layout: ArtLayout, game: &GameRef) -> String {
         GameRef::Steam(app_id) => format!("steam/{app_id}"),
         GameRef::Grid(id) => format!("game/{id}"),
     };
-    let query = if layout == ArtLayout::Cover {
-        "?dimensions=600x900"
-    } else {
-        ""
+    let query = match layout {
+        ArtLayout::Cover => "?dimensions=600x900",
+        ArtLayout::Square => "?dimensions=512x512,1024x1024",
+        ArtLayout::Hero | ArtLayout::Logo | ArtLayout::Icon => "",
     };
     format!("{API}/{kind}/{by}{query}")
 }
@@ -310,17 +311,39 @@ mod tests {
 
         assert_eq!(
             layouts_to_fetch(&artwork, false),
-            [ArtLayout::Logo, ArtLayout::Icon]
+            [ArtLayout::Logo, ArtLayout::Icon, ArtLayout::Square]
         );
         assert_eq!(
             layouts_to_fetch(&artwork, true),
-            [ArtLayout::Cover, ArtLayout::Logo, ArtLayout::Icon]
+            [
+                ArtLayout::Cover,
+                ArtLayout::Logo,
+                ArtLayout::Icon,
+                ArtLayout::Square
+            ]
         );
         assert!(
             layouts_to_fetch(&[art(ArtLayout::Cover, ArtOrigin::SteamGridDb)], true)
                 .iter()
                 .all(|layout| *layout != ArtLayout::Cover)
         );
+    }
+
+    #[test]
+    fn square_art_is_fetched_until_steamgriddb_or_the_user_filled_it() {
+        let sources_art = [
+            art(ArtLayout::Cover, ArtOrigin::Source),
+            art(ArtLayout::Icon, ArtOrigin::Source),
+        ];
+        let wants_square =
+            |artwork: &[Artwork]| layouts_to_fetch(artwork, false).contains(&ArtLayout::Square);
+
+        assert!(wants_square(&sources_art));
+        assert!(!wants_square(&[art(
+            ArtLayout::Square,
+            ArtOrigin::SteamGridDb
+        )]));
+        assert!(!wants_square(&[art(ArtLayout::Square, ArtOrigin::User)]));
     }
 
     #[test]
@@ -340,6 +363,18 @@ mod tests {
         assert_eq!(
             images_url(ArtLayout::Icon, &GameRef::Steam(570)),
             "https://www.steamgriddb.com/api/v2/icons/steam/570"
+        );
+    }
+
+    #[test]
+    fn square_art_is_asked_for_as_square_grids() {
+        assert_eq!(
+            images_url(ArtLayout::Square, &GameRef::Steam(570)),
+            "https://www.steamgriddb.com/api/v2/grids/steam/570?dimensions=512x512,1024x1024"
+        );
+        assert_eq!(
+            images_url(ArtLayout::Square, &GameRef::Grid(42)),
+            "https://www.steamgriddb.com/api/v2/grids/game/42?dimensions=512x512,1024x1024"
         );
     }
 

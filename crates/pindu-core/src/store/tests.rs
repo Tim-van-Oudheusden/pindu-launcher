@@ -296,6 +296,81 @@ fn deleting_artwork_removes_only_that_layout_and_origin() {
 }
 
 #[test]
+fn every_layout_can_be_stored() {
+    let (_dir, store) = temp_store();
+    let id = stored_game(&store, "witcher");
+    let art = |layout: ArtLayout| Artwork {
+        game_id: id.clone(),
+        layout,
+        origin: ArtOrigin::SteamGridDb,
+        path: format!("/{layout}.png").into(),
+    };
+
+    for layout in ArtLayout::ALL {
+        store.set_artwork(&art(*layout)).unwrap();
+    }
+
+    let mut stored = store.artwork(&id).unwrap();
+    stored.sort_by_key(|art| art.layout);
+    assert_eq!(
+        stored,
+        ArtLayout::ALL
+            .iter()
+            .map(|layout| art(*layout))
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn artwork_is_kept_when_the_store_learns_square_art() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("library.db");
+    let conn = rusqlite::Connection::open(&path).unwrap();
+    for migration in [
+        include_str!("migrations/0001_initial.sql"),
+        include_str!("migrations/0002_steam_launch_dialog.sql"),
+        include_str!("migrations/0003_launch_uri.sql"),
+    ] {
+        conn.execute_batch(migration).unwrap();
+    }
+    conn.pragma_update(None, "user_version", 3).unwrap();
+    conn.execute_batch(
+        "INSERT INTO games (id, source, native_id, title, sort_title, added_at, launch_kind)
+         VALUES ('steam:570', 'steam', '570', 'Dota 2', 'Dota 2', 1, 'store-uri');
+         INSERT INTO artwork (game_id, layout, origin, path)
+         VALUES ('steam:570', 'cover', 'source', '/cover.jpg');",
+    )
+    .unwrap();
+    drop(conn);
+
+    let store = Store::open(&path).unwrap();
+    let id = GameId::new(Source::Steam, "570");
+    let art = |layout, origin, path: &str| Artwork {
+        game_id: id.clone(),
+        layout,
+        origin,
+        path: path.into(),
+    };
+    store
+        .set_artwork(&art(
+            ArtLayout::Square,
+            ArtOrigin::SteamGridDb,
+            "/square.png",
+        ))
+        .unwrap();
+
+    assert_eq!(
+        store.artwork(&id).unwrap(),
+        vec![
+            art(ArtLayout::Cover, ArtOrigin::Source, "/cover.jpg"),
+            art(ArtLayout::Square, ArtOrigin::SteamGridDb, "/square.png"),
+        ]
+    );
+    store.delete_game(&id).unwrap();
+    assert!(store.artwork(&id).unwrap().is_empty());
+}
+
+#[test]
 fn collections_are_listed_by_position() {
     let (_dir, store) = temp_store();
     let rpgs = store.create_collection("RPGs").unwrap();
