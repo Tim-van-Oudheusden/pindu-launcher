@@ -5,7 +5,7 @@ template $PinduHomePage: Adw.NavigationPage {
   title: _("Home");
   tag: "home";
 
-  child: Overlay {
+  child: Overlay home {
     styles [
       "home",
     ]
@@ -26,14 +26,15 @@ template $PinduHomePage: Adw.NavigationPage {
       ]
     }
 
+    // The layout of the design in force reorders these (`home-layout-*`).
     [overlay]
-    Box {
+    Box content {
       orientation: vertical;
       valign: end;
       spacing: 24;
       margin-bottom: 24;
 
-      Box {
+      Box title_row {
         margin-start: 48;
         margin-end: 48;
 
@@ -56,7 +57,7 @@ template $PinduHomePage: Adw.NavigationPage {
         }
       }
 
-      ScrolledWindow {
+      ScrolledWindow carousel_row {
         hscrollbar-policy: external;
         vscrollbar-policy: never;
         propagate-natural-height: true;

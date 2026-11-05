@@ -13,7 +13,7 @@ use pindu_core::focus::FocusMemory;
 use pindu_core::home::{self, CardArt};
 use pindu_core::library::ArtSet;
 use pindu_core::model::GameId;
-use pindu_core::themes::{ThemeLayout, TileShape};
+use pindu_core::themes::{HomeLayout, ThemeLayout, TileShape};
 
 use crate::models::GameObject;
 use crate::widgets::{CoverArt, textures};
@@ -38,6 +38,14 @@ mod imp {
         pub logo: TemplateChild<gtk::Picture>,
         #[template_child]
         pub title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub home: TemplateChild<gtk::Overlay>,
+        #[template_child]
+        pub content: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub title_row: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub carousel_row: TemplateChild<gtk::ScrolledWindow>,
         #[template_child]
         pub carousel: TemplateChild<gtk::Box>,
         #[template_child]
@@ -86,6 +94,7 @@ mod imp {
             if let Some(viewport) = self.carousel.parent().and_downcast::<gtk::Viewport>() {
                 viewport.set_scroll_to_focus(false);
             }
+            page.show_home_layout(HomeLayout::default());
             page.show_tile_shape(TileShape::default());
             page.show_hero(None);
         }
@@ -109,10 +118,14 @@ glib::wrapper! {
 }
 
 impl HomePage {
-    /// Follows the layout of the design in force: the cards take its tile shape.
+    /// Follows the layout of the design in force: where the carousel sits, and the shape
+    /// its cards take.
     pub fn set_layout(&self, layout: ThemeLayout) {
         let imp = self.imp();
         let old = imp.layout.replace(layout);
+        if old.home != layout.home {
+            self.show_home_layout(layout.home);
+        }
         if old.home_tile != layout.home_tile {
             self.show_tile_shape(layout.home_tile);
             let had_focus = self.carousel_has_focus();
@@ -130,11 +143,39 @@ impl HomePage {
         }
     }
 
+    /// Puts the carousel at the bottom under the logo or title, or near the top above
+    /// them, and names the layout on the page (`home-layout-hero-bottom`,
+    /// `home-layout-row-top`) for designs. Moving the rows keeps focus where it is.
+    fn show_home_layout(&self, layout: HomeLayout) {
+        let imp = self.imp();
+        for other in HomeLayout::ALL {
+            imp.home
+                .remove_css_class(&format!("home-layout-{}", other.name()));
+        }
+        imp.home
+            .add_css_class(&format!("home-layout-{}", layout.name()));
+        let content = &imp.content;
+        match layout {
+            HomeLayout::HeroBottom => {
+                content.reorder_child_after(&*imp.carousel_row, Some(&*imp.title_row));
+                content.set_valign(gtk::Align::End);
+                content.set_margin_top(0);
+                content.set_margin_bottom(24);
+            }
+            HomeLayout::RowTop => {
+                content.reorder_child_after(&*imp.title_row, Some(&*imp.carousel_row));
+                content.set_valign(gtk::Align::Start);
+                content.set_margin_top(24);
+                content.set_margin_bottom(0);
+            }
+        }
+    }
+
     /// Sizes the Library tile for `shape` and names the shape on the carousel
     /// (`home-tile-landscape`, `home-tile-square`, `home-tile-portrait`) for designs.
     fn show_tile_shape(&self, shape: TileShape) {
         let imp = self.imp();
-        for other in [TileShape::Landscape, TileShape::Square, TileShape::Portrait] {
+        for other in TileShape::ALL {
             imp.carousel
                 .remove_css_class(&format!("home-tile-{}", other.name()));
         }
