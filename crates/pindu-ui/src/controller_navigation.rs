@@ -14,7 +14,7 @@ use std::collections::BTreeSet;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::glib;
-use pindu_core::gamepad::{Direction, Intent};
+use pindu_core::gamepad::{Direction, Intent, WindowFocus};
 use pindu_core::grid;
 use pindu_core::hints::Launching;
 
@@ -57,7 +57,7 @@ impl PinduWindow {
     }
 
     fn handle_intent(&self, intent: Intent) {
-        if !self.has_toplevel_focus() || !self.listens_to_controllers() {
+        if !self.takes_controller() || !self.listens_to_controllers() {
             return;
         }
         // As with the keyboard, focus shows once the controller moves it.
@@ -115,12 +115,17 @@ impl PinduWindow {
         }
     }
 
-    /// Whether the compositor gives this window focus. A game in front of it has focus
-    /// instead, and then the controller is the game's.
-    fn has_toplevel_focus(&self) -> bool {
-        self.surface()
+    /// Whether this window has focus, so the controller is its (see `WindowFocus`).
+    fn takes_controller(&self) -> bool {
+        let compositor_focused = self
+            .surface()
             .and_downcast::<gtk::gdk::Toplevel>()
-            .is_some_and(|toplevel| toplevel.state().contains(gtk::gdk::ToplevelState::FOCUSED))
+            .is_some_and(|toplevel| toplevel.state().contains(gtk::gdk::ToplevelState::FOCUSED));
+        WindowFocus {
+            compositor_focused,
+            keyboard_focused: self.is_active(),
+        }
+        .takes_controller()
     }
 
     /// Steps through the cover grid when it has focus, and moves focus as the arrow keys
