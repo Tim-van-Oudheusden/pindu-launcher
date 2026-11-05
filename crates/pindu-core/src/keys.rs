@@ -38,6 +38,25 @@ pub fn fullscreen_intent(key: &str, modifiers: Modifiers) -> Option<Intent> {
     }
 }
 
+/// What Esc does in fullscreen mode once nothing nearer the focus (a menu, a dialog, the
+/// search entry, a page to go back from) took it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Escape {
+    /// Back from a section's games to Home's first screen, as B does.
+    ShowSections,
+    /// Leave fullscreen mode for the desktop window.
+    LeaveFullscreen,
+}
+
+/// What Esc does in fullscreen mode, as Home shows a section's games or not.
+pub fn escape(shows_home_section: bool) -> Escape {
+    if shows_home_section {
+        Escape::ShowSections
+    } else {
+        Escape::LeaveFullscreen
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -118,5 +137,15 @@ mod tests {
         assert_eq!(fullscreen_intent("Menu", control), None);
         assert_eq!(fullscreen_intent("Return", NONE), None);
         assert_eq!(fullscreen_intent("Escape", NONE), None);
+    }
+
+    #[test]
+    fn escape_on_a_home_sections_games_goes_back_to_homes_first_screen() {
+        assert_eq!(escape(true), Escape::ShowSections);
+    }
+
+    #[test]
+    fn escape_anywhere_else_leaves_fullscreen_mode() {
+        assert_eq!(escape(false), Escape::LeaveFullscreen);
     }
 }
