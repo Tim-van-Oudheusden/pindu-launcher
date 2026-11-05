@@ -78,6 +78,10 @@ resources = gnome.compile_resources(
   install_dir: pkgdatadir,
 )
 
+# The fullscreen designs Pindu ships, theme folders found by `pindu_core::themes`. They
+# stay files rather than resources: a design's url() and @import resolve beside its CSS.
+install_subdir('themes', install_dir: pkgdatadir)
+
 test(
   'validate-desktop',
   find_program('desktop-file-validate'),

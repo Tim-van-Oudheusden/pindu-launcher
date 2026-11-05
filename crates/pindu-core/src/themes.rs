@@ -220,6 +220,24 @@ mod tests {
     }
 
     #[test]
+    fn the_shipped_designs_are_valid_and_supported() {
+        let shipped = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/themes");
+
+        let found = discover(&[&shipped]);
+
+        assert!(found.skipped.is_empty(), "{:?}", found.skipped);
+        assert!(!found.themes.is_empty());
+        for theme in &found.themes {
+            assert!(theme.supported(), "{} needs a newer contract", theme.id);
+            assert!(
+                theme.dir.join("LICENSE").is_file(),
+                "{} has no LICENSE",
+                theme.id
+            );
+        }
+    }
+
+    #[test]
     fn a_theme_folder_is_found_with_its_name() {
         let bundled = tempfile::tempdir().unwrap();
         write_theme(

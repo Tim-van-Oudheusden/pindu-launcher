@@ -1,0 +1,14 @@
+{
+  "contract": 1,
+  "name": "Ribbon",
+  "description": "A row of square tiles across the top, over the focused game's art",
+  "author": "Pindu launcher contributors",
+  "license": "GPL-3.0-or-later",
+  "layout": {
+    "home": "row-top",
+    "home-tile": "square",
+    "home-tile-size": 112,
+    "top-bar": true,
+    "home-details": true
+  }
+}

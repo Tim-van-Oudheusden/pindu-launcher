@@ -1,0 +1,275 @@
+/* Ribbon — a fullscreen design for Pindu launcher.
+ *
+ * A row of square tiles across the top over the focused game's art, which darkens towards
+ * the left and the bottom where the text sits; the game's logo at mid-left over grey pills
+ * of details; light white type with grey for what is not selected. Always dark; colour comes
+ * only from neutral greys and the system accent.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+/* Palette: libadwaita's colours, redefined for everything under the fullscreen window. */
+window.fullscreen-mode {
+  --window-bg-color: #0f1115;
+  --window-fg-color: #ffffff;
+  --view-bg-color: #0f1115;
+  --view-fg-color: #ffffff;
+  --headerbar-bg-color: transparent;
+  --headerbar-fg-color: #ffffff;
+  --card-bg-color: rgb(124 124 124 / 22%);
+  --card-fg-color: #ffffff;
+  --popover-bg-color: #1a1d23;
+  --popover-fg-color: #ffffff;
+  --dialog-bg-color: #1a1d23;
+  --dialog-fg-color: #ffffff;
+  --sidebar-bg-color: rgb(12 13 17 / 86%);
+  --sidebar-fg-color: #ffffff;
+  --sheet-bg-color: rgb(12 13 17 / 90%);
+  --sheet-fg-color: #ffffff;
+  --ribbon-grey: #a3a3a3;
+  --ribbon-pill: rgb(124 124 124 / 50%);
+  --ribbon-divider: rgb(131 131 131 / 53%);
+  background-color: var(--window-bg-color);
+  color: var(--window-fg-color);
+  font-family: "Adwaita Sans", sans-serif;
+  font-weight: 300;
+}
+
+/* Top bar: "Home  Library" in grey at the top left, the shown page in white, the clock at
+   the right. */
+window.fullscreen-mode .fullscreen-top-bar {
+  padding: 18px 36px 0;
+}
+
+window.fullscreen-mode .fullscreen-top-bar .page-tab {
+  background: none;
+  box-shadow: none;
+  padding: 4px 14px;
+  border-radius: 8px;
+  color: var(--ribbon-grey);
+  font-weight: 300;
+  font-size: 1.25em;
+}
+
+window.fullscreen-mode .fullscreen-top-bar .page-tab:checked {
+  color: white;
+  font-weight: 500;
+}
+
+window.fullscreen-mode .fullscreen-top-bar .page-tab:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 0;
+}
+
+window.fullscreen-mode .fullscreen-top-bar .clock {
+  font-weight: 300;
+  font-size: 1.25em;
+  font-feature-settings: "tnum";
+}
+
+/* Home: the art fills the page, darkest at the left and the bottom; without art, a quiet
+   dark backdrop. */
+window.fullscreen-mode .home {
+  background-image: radial-gradient(circle at 70% 30%, #2a2e36, #0f1115 70%);
+}
+
+window.fullscreen-mode .home .hero-gradient {
+  background-image:
+    linear-gradient(to bottom, rgb(0 0 0 / 55%), transparent 30%),
+    linear-gradient(to right, rgb(0 0 0 / 78%), rgb(0 0 0 / 40%) 45%, rgb(0 0 0 / 15%) 80%),
+    linear-gradient(to top, rgb(0 0 0 / 75%), transparent 45%);
+}
+
+window.fullscreen-mode .home .home-hero {
+  transition: opacity 300ms ease-out;
+}
+
+/* The row: square tiles under the top bar; the focused one grows from its top-left corner
+   and pushes the rest aside, and the others dim a little. */
+window.fullscreen-mode .home.home-layout-row-top .home-carousel {
+  margin-top: 64px;
+  padding: 0 0 84px;
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button {
+  border-radius: 14px;
+  opacity: 0.9;
+  transform-origin: 0 0;
+  transition: transform 160ms ease-out, margin 160ms ease-out, opacity 160ms ease-out;
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button:focus-within {
+  transform: scale(1.6);
+  margin-right: 68px;
+  opacity: 1;
+  outline: none;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button cover-art,
+window.fullscreen-mode .home-carousel.home-tile-square > button picture {
+  border-radius: 14px;
+}
+
+/* No titles on the tiles: the game's name and logo sit below the row. */
+window.fullscreen-mode .home-carousel.home-tile-square .jump-title {
+  opacity: 0;
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > .library-tile {
+  background-color: var(--ribbon-pill);
+}
+
+/* The logo, or the title, at mid-left; the details below it in grey pills. */
+window.fullscreen-mode .home.home-layout-row-top .home-title {
+  margin-top: 96px;
+}
+
+window.fullscreen-mode .home .home-title .title-1 {
+  font-weight: 300;
+  font-size: 2.2em;
+}
+
+window.fullscreen-mode .home .home-details {
+  margin: 28px 48px 0;
+  padding: 0;
+  border-radius: 999px;
+  background-color: var(--ribbon-pill);
+}
+
+window.fullscreen-mode .home .home-details .detail {
+  padding: 10px 22px;
+  font-weight: 500;
+}
+
+window.fullscreen-mode .home .home-details .detail + .detail {
+  border-left: 1px solid var(--ribbon-divider);
+}
+
+/* Library: text tabs, grey until shown; covers with a white ring when focused. */
+window.fullscreen-mode .library-tabs .library-tab {
+  background: none;
+  box-shadow: none;
+  color: var(--ribbon-grey);
+  font-weight: 300;
+  padding: 4px 14px;
+}
+
+window.fullscreen-mode .library-tabs .library-tab:checked {
+  background: none;
+  color: white;
+  font-weight: 500;
+}
+
+window.fullscreen-mode gridview.library > child {
+  opacity: 0.9;
+}
+
+window.fullscreen-mode gridview.library > child:focus-within {
+  opacity: 1;
+  transform: scale(1.06);
+  outline: 3px solid white;
+  outline-offset: 3px;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 50%);
+}
+
+window.fullscreen-mode .cover-tile cover-art {
+  border-radius: 14px;
+}
+
+window.fullscreen-mode .cover-tile .play-button {
+  background-color: white;
+  color: black;
+}
+
+/* Game page: the art under a left and bottom shade, a white Play pill. */
+window.fullscreen-mode .game-hero .hero-gradient {
+  background-image:
+    linear-gradient(to right, rgb(0 0 0 / 70%), transparent 60%),
+    linear-gradient(to bottom, transparent 40%, var(--window-bg-color));
+}
+
+window.fullscreen-mode .game-play {
+  background-color: white;
+  color: black;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+window.fullscreen-mode .game-actions button:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+
+/* Panels: frosted dark glass over the page, rows that light up when focused. */
+window.fullscreen-mode .menu-drawer,
+window.fullscreen-mode .quick-access,
+window.fullscreen-mode .options-sheet {
+  background-color: rgb(12 13 17 / 82%);
+  backdrop-filter: blur(24px);
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar,
+window.fullscreen-mode .quick-access .navigation-sidebar,
+window.fullscreen-mode .options-sheet .navigation-sidebar {
+  background: none;
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar > row,
+window.fullscreen-mode .quick-access .navigation-sidebar > row,
+window.fullscreen-mode .options-sheet .navigation-sidebar > row {
+  border-radius: 12px;
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar > row:focus-visible,
+window.fullscreen-mode .quick-access .navigation-sidebar > row:focus-visible,
+window.fullscreen-mode .options-sheet .navigation-sidebar > row:focus-visible,
+window.fullscreen-mode .menu-drawer .boxed-list > row:focus-visible,
+window.fullscreen-mode .quick-access .boxed-list > row:focus-visible {
+  background-color: rgb(255 255 255 / 14%);
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+/* The lists inside them (cover sizes, designs): one soft glass card. */
+window.fullscreen-mode .menu-drawer .boxed-list,
+window.fullscreen-mode .quick-access .boxed-list {
+  background-color: rgb(255 255 255 / 6%);
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+window.fullscreen-mode .menu-drawer .boxed-list > row,
+window.fullscreen-mode .quick-access .boxed-list > row {
+  border-radius: 16px;
+}
+
+/* Hint bar and search keyboard: light type, keys as grey pills, the cursor in white. */
+window.fullscreen-mode .hint-bar {
+  font-weight: 300;
+  color: rgb(255 255 255 / 85%);
+}
+
+window.fullscreen-mode .search-keyboard {
+  background-color: rgb(12 13 17 / 86%);
+  backdrop-filter: blur(24px);
+}
+
+window.fullscreen-mode .search-keyboard .osk-key {
+  background-color: var(--ribbon-pill);
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+window.fullscreen-mode .search-keyboard .osk-key.cursor {
+  background-color: white;
+  color: black;
+}
+
+/* Less motion asked for: nothing grows or slides; focus still shows. */
+@media (prefers-reduced-motion: reduce) {
+  window.fullscreen-mode .home-carousel.home-tile-square > button,
+  window.fullscreen-mode .home .home-hero {
+    transition: none;
+  }
+}

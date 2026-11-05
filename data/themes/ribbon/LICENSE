@@ -1,0 +1,12 @@
+Ribbon, a fullscreen design for Pindu launcher
+Copyright (C) 2026 Pindu launcher contributors
+
+This design (theme.json and theme.css) is free software: you can redistribute it and/or
+modify it under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any later
+version. The full text of the licence is in the LICENSE file at the root of Pindu
+launcher's source, and at <https://www.gnu.org/licenses/gpl-3.0.html>.
+
+Ribbon was written from scratch. It follows the layout of the ps5-menu-es-de theme for
+ES-DE, recreated from its published numbers; it contains none of that theme's files,
+fonts, images or sounds, and no console names, logos or button art.
