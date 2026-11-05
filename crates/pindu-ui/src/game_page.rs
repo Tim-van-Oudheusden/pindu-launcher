@@ -603,7 +603,9 @@ fn launch_summary(game: &Game) -> String {
             gettext("Starts on this computer")
         }
         (LaunchKind::Proton, _) => gettext("Starts on this computer with Proton"),
-        (LaunchKind::RuntimeNative, _) => gettext("This game cannot be started yet"),
+        (LaunchKind::RuntimeNative, _) => {
+            gettext("Starts on this computer in the Steam Linux Runtime")
+        }
     }
 }
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 11:13+0100\n"
+"POT-Creation-Date: 2026-11-05 11:28+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -153,9 +153,9 @@ msgid "Name"
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:239
-#: crates/pindu-ui/src/game_dialog.rs:784
+#: crates/pindu-ui/src/game_dialog.rs:791
 #: crates/pindu-ui/src/proton_downloads_page.rs:227
-#: crates/pindu-ui/src/proton_launch.rs:464 data/ui/game_dialog.blp:16
+#: crates/pindu-ui/src/proton_launch.rs:560 data/ui/game_dialog.blp:16
 msgid "_Cancel"
 msgstr ""
 
@@ -189,7 +189,7 @@ msgid "Favourites"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:188
-#: crates/pindu-ui/src/game_page.rs:616
+#: crates/pindu-ui/src/game_page.rs:618
 msgid "Last Played"
 msgstr ""
 
@@ -206,7 +206,7 @@ msgid "Recently Added"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:192
-#: crates/pindu-ui/src/game_page.rs:653
+#: crates/pindu-ui/src/game_page.rs:655
 msgid "Playtime"
 msgstr ""
 
@@ -268,134 +268,134 @@ msgstr ""
 msgid "_Stop"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:219 data/ui/shortcuts-dialog.blp:14
+#: crates/pindu-ui/src/game_dialog.rs:222 data/ui/shortcuts-dialog.blp:14
 msgid "Add Game"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:220
+#: crates/pindu-ui/src/game_dialog.rs:223
 msgid "_Add"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:235
+#: crates/pindu-ui/src/game_dialog.rs:238
 #, rust-format
 msgid "Edit “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:237
+#: crates/pindu-ui/src/game_dialog.rs:240
 msgid "_Save"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:326
+#: crates/pindu-ui/src/game_dialog.rs:331
 msgid "Choose the Game's Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:339
+#: crates/pindu-ui/src/game_dialog.rs:344
 msgid "This folder cannot be used"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:404
+#: crates/pindu-ui/src/game_dialog.rs:409
 msgid "No programs found in this folder"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:486
+#: crates/pindu-ui/src/game_dialog.rs:491
 #, rust-format
 msgid "A new folder in {folder}"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:497 crates/pindu-ui/src/game_page.rs:507
+#: crates/pindu-ui/src/game_dialog.rs:502 crates/pindu-ui/src/game_page.rs:507
 msgid "Choose the Game's Prefix"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:518
+#: crates/pindu-ui/src/game_dialog.rs:523
 msgid "Windows Programs"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:523
+#: crates/pindu-ui/src/game_dialog.rs:528
 msgid "Choose the Game's Installer"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:592
+#: crates/pindu-ui/src/game_dialog.rs:597
 msgid "Installed. Pick the game's program."
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:596
+#: crates/pindu-ui/src/game_dialog.rs:601
 msgid "The installer added no programs. Choose the game's folder instead."
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:613
+#: crates/pindu-ui/src/game_dialog.rs:618
 msgid "Installing… Finish the installer to go on."
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:615 data/ui/game_dialog.blp:124
+#: crates/pindu-ui/src/game_dialog.rs:620 data/ui/game_dialog.blp:130
 msgid ""
 "Run the game's installer in its prefix, then pick the program it installed"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:686
+#: crates/pindu-ui/src/game_dialog.rs:693
 msgid "Choose an Image File"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:687
-#: crates/pindu-ui/src/game_dialog.rs:775
+#: crates/pindu-ui/src/game_dialog.rs:694
+#: crates/pindu-ui/src/game_dialog.rs:782
 msgid "Use a Web Address"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:688
+#: crates/pindu-ui/src/game_dialog.rs:695
 msgid "Choose From SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:689
+#: crates/pindu-ui/src/game_dialog.rs:696
 msgid "Remove Your Image"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:718
+#: crates/pindu-ui/src/game_dialog.rs:725
 msgid "Images"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:723
+#: crates/pindu-ui/src/game_dialog.rs:730
 msgid "Choose an Image"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:777
+#: crates/pindu-ui/src/game_dialog.rs:784
 msgid "The image is downloaded once and kept with your library."
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:784
+#: crates/pindu-ui/src/game_dialog.rs:791
 msgid "_Use"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:798
+#: crates/pindu-ui/src/game_dialog.rs:805
 #, rust-format
 msgid "Could not use the address: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:825
+#: crates/pindu-ui/src/game_dialog.rs:832
 #, rust-format
 msgid "New image ({extension})"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:828
+#: crates/pindu-ui/src/game_dialog.rs:835
 msgid "Your image will be removed"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:829
+#: crates/pindu-ui/src/game_dialog.rs:836
 msgid "Your image"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:830
+#: crates/pindu-ui/src/game_dialog.rs:837
 msgid "None"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:831
+#: crates/pindu-ui/src/game_dialog.rs:838
 msgid "From the launcher, if it has one"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:866
+#: crates/pindu-ui/src/game_dialog.rs:873
 #, rust-format
 msgid "Added “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:904
+#: crates/pindu-ui/src/game_dialog.rs:911
 msgid "Choose a folder and a program first"
 msgstr ""
 
@@ -463,48 +463,47 @@ msgstr ""
 msgid "Starts on this computer with Proton"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:606
-#: crates/pindu-ui/src/launch_service.rs:118
-msgid "This game cannot be started yet"
+#: crates/pindu-ui/src/game_page.rs:607
+msgid "Starts on this computer in the Steam Linux Runtime"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:613
+#: crates/pindu-ui/src/game_page.rs:615
 msgid "Launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:617
+#: crates/pindu-ui/src/game_page.rs:619
 msgid "Never"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:619
+#: crates/pindu-ui/src/game_page.rs:621
 msgid "Added"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:622
+#: crates/pindu-ui/src/game_page.rs:624
 msgid "Size"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:650
+#: crates/pindu-ui/src/game_page.rs:652
 #, rust-format
 msgid "Playtime · {source}"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:652
+#: crates/pindu-ui/src/game_page.rs:654
 msgid "Playtime · Tracked Here"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:661 crates/pindu-ui/src/preferences.rs:440
+#: crates/pindu-ui/src/game_page.rs:663 crates/pindu-ui/src/preferences.rs:440
 msgid "None yet"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:662
+#: crates/pindu-ui/src/game_page.rs:664
 #, rust-format
 msgid "{n} minute"
 msgid_plural "{n} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/game_page.rs:665
+#: crates/pindu-ui/src/game_page.rs:667
 #, rust-format
 msgid "{n} hour"
 msgid_plural "{n} hours"
@@ -575,46 +574,50 @@ msgstr ""
 msgid "Library"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:106
-#: crates/pindu-ui/src/proton_launch.rs:111
+#: crates/pindu-ui/src/launch_service.rs:108
+#: crates/pindu-ui/src/proton_launch.rs:165
 #, rust-format
 msgid "Starting “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:110
-#: crates/pindu-ui/src/proton_launch.rs:339
+#: crates/pindu-ui/src/launch_service.rs:112
+#: crates/pindu-ui/src/proton_launch.rs:435
 #, rust-format
 msgid "Could not start “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:151
+#: crates/pindu-ui/src/launch_service.rs:131
+msgid "This game cannot be started yet"
+msgstr ""
+
+#: crates/pindu-ui/src/launch_service.rs:164
 #, rust-format
 msgid "Starting “{title}” in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:155
-#: crates/pindu-ui/src/launch_service.rs:210
+#: crates/pindu-ui/src/launch_service.rs:168
+#: crates/pindu-ui/src/launch_service.rs:223
 #, rust-format
 msgid "Could not open {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:169
+#: crates/pindu-ui/src/launch_service.rs:182
 msgid "Permission Needed"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:172
+#: crates/pindu-ui/src/launch_service.rs:185
 #, rust-format
 msgid ""
 "“{title}” starts on this computer, outside the sandbox. Allow that in "
 "Preferences, then restart Pindu launcher."
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:179
-#: crates/pindu-ui/src/proton_launch.rs:438 crates/pindu-ui/src/window.rs:1147
+#: crates/pindu-ui/src/launch_service.rs:192
+#: crates/pindu-ui/src/proton_launch.rs:534 crates/pindu-ui/src/window.rs:1147
 msgid "_Close"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:180
+#: crates/pindu-ui/src/launch_service.rs:193
 msgid "_How to Enable"
 msgstr ""
 
@@ -653,7 +656,7 @@ msgstr ""
 msgid "Found automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:299 data/ui/game_dialog.blp:56
+#: crates/pindu-ui/src/preferences.rs:299 data/ui/game_dialog.blp:62
 #: data/ui/preferences.blp:159
 msgid "_Choose…"
 msgstr ""
@@ -834,63 +837,63 @@ msgid "Downloading {received} of {total}"
 msgstr ""
 
 #: crates/pindu-ui/src/proton_downloads_page.rs:409
-#: crates/pindu-ui/src/proton_launch.rs:508
+#: crates/pindu-ui/src/proton_launch.rs:604
 msgid "Unpacking…"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:329
+#: crates/pindu-ui/src/proton_launch.rs:425
 #, rust-format
 msgid "Could not start “{title}”: no Proton found"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:331
+#: crates/pindu-ui/src/proton_launch.rs:427
 #, rust-format
 msgid "Could not start “{title}”: {proton} is not installed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:398
+#: crates/pindu-ui/src/proton_launch.rs:494
 msgid "No Internet Connection"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:400
+#: crates/pindu-ui/src/proton_launch.rs:496
 msgid ""
 "Windows games need the Steam Linux Runtime, a one-time download. Connect to "
 "the internet, then try again."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:409
+#: crates/pindu-ui/src/proton_launch.rs:505
 msgid "Could Not Set Up Windows Games"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:410
+#: crates/pindu-ui/src/proton_launch.rs:506
 msgid "The Steam Linux Runtime could not be installed. Try again later."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:453
+#: crates/pindu-ui/src/proton_launch.rs:549
 msgid "Setting Up Windows Games"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:456
+#: crates/pindu-ui/src/proton_launch.rs:552
 #, rust-format
 msgid ""
 "Windows games need the Steam Linux Runtime, a one-time download. “{title}” "
 "starts when it is ready."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:504
+#: crates/pindu-ui/src/proton_launch.rs:600
 #, rust-format
 msgid "Downloading… {size}"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:506
+#: crates/pindu-ui/src/proton_launch.rs:602
 msgid "Downloading…"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:509
+#: crates/pindu-ui/src/proton_launch.rs:605
 msgid "Checking…"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:511
+#: crates/pindu-ui/src/proton_launch.rs:607
 msgid "Preparing…"
 msgstr ""
 
@@ -931,15 +934,15 @@ msgstr ""
 msgid "Added by Hand"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:44 data/ui/game_dialog.blp:146
+#: crates/pindu-ui/src/steamgriddb_picker.rs:44 data/ui/game_dialog.blp:152
 msgid "Cover"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:45 data/ui/game_dialog.blp:150
+#: crates/pindu-ui/src/steamgriddb_picker.rs:45 data/ui/game_dialog.blp:156
 msgid "Banner"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:46 data/ui/game_dialog.blp:154
+#: crates/pindu-ui/src/steamgriddb_picker.rs:46 data/ui/game_dialog.blp:160
 msgid "Logo"
 msgstr ""
 
@@ -1363,71 +1366,81 @@ msgstr ""
 msgid "Native"
 msgstr ""
 
-#: data/ui/game_dialog.blp:45 data/ui/game_dialog.blp:87
+#: data/ui/game_dialog.blp:45 data/ui/game_dialog.blp:93
 #: data/ui/preferences.blp:128 data/ui/window.blp:508
 msgid "Windows"
 msgstr ""
 
 #: data/ui/game_dialog.blp:51
-msgid "Game Folder"
+msgid "Run on the Host"
 msgstr ""
 
 #: data/ui/game_dialog.blp:52
+msgid ""
+"Start the game outside the Steam Linux Runtime. This needs permission to run "
+"programs on this computer."
+msgstr ""
+
+#: data/ui/game_dialog.blp:57
+msgid "Game Folder"
+msgstr ""
+
+#: data/ui/game_dialog.blp:58
 msgid "None chosen"
 msgstr ""
 
-#: data/ui/game_dialog.blp:64
+#: data/ui/game_dialog.blp:70
 msgid "Program"
 msgstr ""
 
-#: data/ui/game_dialog.blp:71
+#: data/ui/game_dialog.blp:77
 msgid "Title"
 msgstr ""
 
-#: data/ui/game_dialog.blp:76 data/ui/game_page.blp:290
+#: data/ui/game_dialog.blp:82 data/ui/game_page.blp:290
 msgid "Arguments"
 msgstr ""
 
-#: data/ui/game_dialog.blp:81
+#: data/ui/game_dialog.blp:87
 msgid "Working Folder (empty for the program's folder)"
 msgstr ""
 
-#: data/ui/game_dialog.blp:88
+#: data/ui/game_dialog.blp:94
 msgid ""
 "Windows games run through Proton, each in a prefix: a folder that holds its "
 "Windows files and saves."
 msgstr ""
 
-#: data/ui/game_dialog.blp:92 data/ui/game_page.blp:271
+#: data/ui/game_dialog.blp:98 data/ui/game_page.blp:271
 #: data/ui/preferences.blp:136 data/ui/preferences.blp:184
 msgid "Proton"
 msgstr ""
 
-#: data/ui/game_dialog.blp:98 data/ui/game_page.blp:277
+#: data/ui/game_dialog.blp:104 data/ui/game_page.blp:277
 msgid "Prefix"
 msgstr ""
 
-#: data/ui/game_dialog.blp:103
+#: data/ui/game_dialog.blp:109
 msgid "Use a New Prefix"
 msgstr ""
 
-#: data/ui/game_dialog.blp:115 data/ui/game_page.blp:282
+#: data/ui/game_dialog.blp:121 data/ui/game_page.blp:282
 msgid "C_hoose…"
 msgstr ""
 
-#: data/ui/game_dialog.blp:123
+#: data/ui/game_dialog.blp:129
 msgid "Installer"
 msgstr ""
 
-#: data/ui/game_dialog.blp:133
+#: data/ui/game_dialog.blp:139
 msgid "_Run Installer…"
 msgstr ""
 
-#: data/ui/game_dialog.blp:142 data/ui/preferences.blp:103
+#: data/ui/game_dialog.blp:148 data/ui/preferences.blp:103
 msgid "Artwork"
 msgstr ""
 
-#: data/ui/game_dialog.blp:143
+#: data/ui/game_dialog.blp:149
 msgid ""
 "Pick an image file or paste a web address. Art you pick is used instead of "
 "the launcher's."

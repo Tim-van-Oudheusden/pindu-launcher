@@ -34,10 +34,10 @@ impl Launch {
             // A store game's URI needs no launch config.
             LaunchKind::StoreUri => matches!(launch::route(game, None), Some(Route::StoreUri(_)))
                 .then_some(Self::HandOff),
-            LaunchKind::HostCommand | LaunchKind::DesktopEntry | LaunchKind::Proton => {
-                Some(Self::Run)
-            }
-            LaunchKind::RuntimeNative => None,
+            LaunchKind::HostCommand
+            | LaunchKind::DesktopEntry
+            | LaunchKind::Proton
+            | LaunchKind::RuntimeNative => Some(Self::Run),
         }
     }
 }
@@ -208,6 +208,7 @@ mod tests {
             LaunchKind::HostCommand,
             LaunchKind::DesktopEntry,
             LaunchKind::Proton,
+            LaunchKind::RuntimeNative,
         ] {
             assert_eq!(
                 Launch::of(&game(Source::Manual, kind)),
@@ -219,10 +220,6 @@ mod tests {
 
     #[test]
     fn games_that_cannot_start_show_no_overlay() {
-        assert_eq!(
-            Launch::of(&game(Source::Manual, LaunchKind::RuntimeNative)),
-            None
-        );
         // A store game with no URI of its own and no launcher to build one.
         assert_eq!(
             Launch::of(&game(Source::Desktop, LaunchKind::StoreUri)),

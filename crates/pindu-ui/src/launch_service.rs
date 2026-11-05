@@ -1,7 +1,8 @@
 //! Starts games and opens their launchers. Store games go to their launcher through a URI,
 //! which `GtkUriLauncher` hands to the OpenURI portal inside the sandbox; games we start
-//! ourselves run on the host as our child, from an argument list, and Windows games run
-//! through umu in the sandbox (see `proton_launch`).
+//! ourselves run on the host as our child, from an argument list, and Windows games and
+//! native games in the Steam Linux Runtime run through umu in the sandbox (see
+//! `proton_launch`).
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -34,12 +35,13 @@ pub fn launcher_name(source: Source) -> Option<&'static str> {
 
 /// Starts a game. A store launch hands the game to its launcher; a host launch runs the
 /// game as our child, tracking its session unless its launcher tracks playtime itself; a
-/// Windows game runs through umu, its session tracked from the moment umu starts it.
-/// Either saves the last-played time, and the toast says what happened, or why the game
-/// could not start. Without a window (`--launch`, Shell search) nothing is shown, unless
-/// the game needs a permission: then the window opens to explain it. With `logs` ("Play
-/// with Logs"), a game we start keeps its output, and a Windows game Proton's log too, in
-/// a new log of the game (see `log_service`).
+/// Windows game, or a native game in the Steam Linux Runtime, runs through umu, its
+/// session tracked from the moment umu starts it. Either saves the last-played time, and
+/// the toast says what happened, or why the game could not start. Without a window
+/// (`--launch`, Shell search) nothing is shown, unless the game needs a permission: then
+/// the window opens to explain it. With `logs` ("Play with Logs"), a game we start keeps
+/// its output, and a Windows game Proton's log too, in a new log of the game (see
+/// `log_service`).
 pub fn play(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
@@ -114,6 +116,17 @@ pub fn play(
             }
             Some(Route::Proton(config)) => {
                 proton_launch::play(&app, window.as_ref(), game, config, sessions, logs, toast);
+            }
+            Some(Route::Runtime(command)) => {
+                proton_launch::play_native(
+                    &app,
+                    window.as_ref(),
+                    game,
+                    command,
+                    sessions,
+                    logs,
+                    toast,
+                );
             }
             None => toast(adw::Toast::new(&gettext("This game cannot be started yet"))),
         }
