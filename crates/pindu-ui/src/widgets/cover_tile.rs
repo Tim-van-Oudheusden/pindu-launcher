@@ -293,6 +293,19 @@ impl CoverTile {
             let popover = gtk::PopoverMenu::from_model(None::<&gio::MenuModel>);
             popover.set_has_arrow(true);
             popover.set_parent(self);
+            // Closing the menu drops the focus inside it: give focus back to the cover,
+            // as a menu button takes it back, so the keyboard and the controller go on
+            // from there.
+            popover.connect_closed(glib::clone!(
+                #[weak(rename_to = tile)]
+                self,
+                move |popover| {
+                    let lost = popover.root().is_some_and(|root| root.focus().is_none());
+                    if lost && let Some(item) = tile.parent() {
+                        item.grab_focus();
+                    }
+                }
+            ));
             popover
         });
         popover.set_menu_model(Some(&menu));
