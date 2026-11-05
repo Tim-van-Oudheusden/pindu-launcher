@@ -32,6 +32,8 @@ pub struct Theme {
 pub struct ThemeLayout {
     /// `"home-tile"`: the shape of Home's cards.
     pub home_tile: TileShape,
+    /// `"home"`: where Home's carousel sits.
+    pub home: HomeLayout,
 }
 
 impl ThemeLayout {
@@ -44,6 +46,9 @@ impl ThemeLayout {
         Self {
             home_tile: text("home-tile")
                 .and_then(TileShape::from_name)
+                .unwrap_or_default(),
+            home: text("home")
+                .and_then(HomeLayout::from_name)
                 .unwrap_or_default(),
         }
     }
@@ -61,6 +66,8 @@ pub enum TileShape {
 }
 
 impl TileShape {
+    pub const ALL: [Self; 3] = [Self::Landscape, Self::Square, Self::Portrait];
+
     /// The shape's name in `theme.json`, also its CSS class's suffix.
     pub fn name(self) -> &'static str {
         match self {
@@ -71,9 +78,33 @@ impl TileShape {
     }
 
     fn from_name(name: &str) -> Option<Self> {
-        [Self::Landscape, Self::Square, Self::Portrait]
-            .into_iter()
-            .find(|shape| shape.name() == name)
+        Self::ALL.into_iter().find(|shape| shape.name() == name)
+    }
+}
+
+/// Where fullscreen Home's carousel sits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum HomeLayout {
+    /// The carousel at the bottom, under the focused game's logo or title.
+    #[default]
+    HeroBottom,
+    /// The carousel near the top, with the logo or title under it at the left.
+    RowTop,
+}
+
+impl HomeLayout {
+    pub const ALL: [Self; 2] = [Self::HeroBottom, Self::RowTop];
+
+    /// The layout's name in `theme.json`, also its CSS class's suffix.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::HeroBottom => "hero-bottom",
+            Self::RowTop => "row-top",
+        }
+    }
+
+    fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|layout| layout.name() == name)
     }
 }
 
@@ -311,7 +342,7 @@ mod tests {
         write_theme(
             user.path(),
             "odd",
-            r#"{"contract": 1, "name": "Odd", "layout": {"home-tile": "round"}}"#,
+            r#"{"contract": 1, "name": "Odd", "layout": {"home-tile": "round", "home": "left"}}"#,
         );
 
         let found = discover(&[user.path()]);
@@ -320,6 +351,22 @@ mod tests {
         for theme in &found.themes {
             assert_eq!(theme.layout, ThemeLayout::default());
             assert_eq!(theme.layout.home_tile, TileShape::Landscape);
+            assert_eq!(theme.layout.home, HomeLayout::HeroBottom);
         }
+    }
+
+    #[test]
+    fn a_theme_can_put_the_home_row_at_the_top() {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(
+            user.path(),
+            "ribbon",
+            r#"{"contract": 1, "name": "Ribbon", "layout": {"home": "row-top"}}"#,
+        );
+
+        let found = discover(&[user.path()]);
+
+        assert_eq!(found.themes[0].layout.home, HomeLayout::RowTop);
+        assert_eq!(found.themes[0].layout.home_tile, TileShape::Landscape);
     }
 }
