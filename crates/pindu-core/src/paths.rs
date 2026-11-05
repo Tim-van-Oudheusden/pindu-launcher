@@ -57,6 +57,23 @@ pub fn default_prefixes_dir() -> PathBuf {
         .join("prefixes")
 }
 
+/// `$XDG_CONFIG_HOME`, falling back to `~/.config` when unset or not absolute, as the XDG
+/// Base Directory spec requires.
+pub fn config_home(xdg_config_home: Option<&Path>, home: &Path) -> PathBuf {
+    match xdg_config_home {
+        Some(dir) if dir.is_absolute() => dir.to_owned(),
+        _ => home.join(".config"),
+    }
+}
+
+/// `$XDG_CONFIG_HOME/pindu-launcher/fullscreen.css`: the user's own stylesheet for
+/// fullscreen mode.
+pub fn fullscreen_style_path(xdg_config_home: Option<&Path>, home: &Path) -> PathBuf {
+    config_home(xdg_config_home, home)
+        .join(APP_DIR)
+        .join("fullscreen.css")
+}
+
 /// Splits a document portal path, `/run/user/<uid>/doc/<id>/<name>/<rest…>`, into the
 /// document ID and the parts below the document itself; `None` for any other path.
 pub fn document_portal_parts(path: &Path) -> Option<(String, Vec<PathBuf>)> {
@@ -147,5 +164,35 @@ mod tests {
             path,
             Path::new("/home/me/.local/share/pindu-launcher/library.db")
         );
+    }
+
+    #[test]
+    fn the_fullscreen_style_lives_in_xdg_config_home() {
+        let path = fullscreen_style_path(Some(Path::new("/config")), Path::new("/home/me"));
+
+        assert_eq!(path, Path::new("/config/pindu-launcher/fullscreen.css"));
+    }
+
+    #[test]
+    fn without_xdg_config_home_the_fullscreen_style_lives_in_dot_config() {
+        let path = fullscreen_style_path(None, Path::new("/home/me"));
+
+        assert_eq!(
+            path,
+            Path::new("/home/me/.config/pindu-launcher/fullscreen.css")
+        );
+    }
+
+    #[test]
+    fn an_empty_or_relative_xdg_config_home_is_ignored() {
+        for xdg_config_home in ["", "config"] {
+            let path =
+                fullscreen_style_path(Some(Path::new(xdg_config_home)), Path::new("/home/me"));
+
+            assert_eq!(
+                path,
+                Path::new("/home/me/.config/pindu-launcher/fullscreen.css")
+            );
+        }
     }
 }
