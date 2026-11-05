@@ -17,6 +17,7 @@ use pindu_core::library::{
 };
 
 use pindu_core::model::{Collection, GameId};
+use pindu_core::sections::{self, Section};
 
 use super::GameObject;
 
@@ -208,6 +209,37 @@ impl LibraryModel {
         chosen
             .iter()
             .filter_map(|id| objects.iter().find(|object| object.id() == *id).cloned())
+            .collect()
+    }
+
+    /// Fullscreen Home's sections (`pindu_core::sections`), each with its games.
+    pub fn home_sections(&self) -> Vec<(Section, Vec<GameObject>)> {
+        let games = &self.imp().games;
+        let objects: Vec<GameObject> = (0..games.n_items())
+            .filter_map(|position| games.item(position).and_downcast::<GameObject>())
+            .collect();
+        let entries: Vec<_> = objects.iter().map(GameObject::entry).collect();
+        let pairs: Vec<_> = entries
+            .iter()
+            .map(|entry| (&entry.game, entry.collections.as_slice()))
+            .collect();
+        let sections = sections::sections(&pairs, &self.imp().collections.borrow());
+        drop(pairs);
+        drop(entries);
+        let objects: HashMap<GameId, GameObject> = objects
+            .into_iter()
+            .map(|object| (object.id(), object))
+            .collect();
+        sections
+            .into_iter()
+            .map(|section| {
+                let games = section
+                    .games
+                    .iter()
+                    .filter_map(|id| objects.get(id).cloned())
+                    .collect();
+                (section, games)
+            })
             .collect()
     }
 

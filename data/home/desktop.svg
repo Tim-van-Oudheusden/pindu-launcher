@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder art for Home's "desktop" section; the maintainer replaces it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1c1d21"/>
+  <rect x="146" y="166" width="220" height="146" rx="10" fill="none" stroke="#c0c4cc" stroke-width="20"/><path d="M216 352h80m-40-40v40" stroke="#c0c4cc" stroke-width="20" stroke-linecap="round"/>
+</svg>

@@ -31,7 +31,8 @@ pub struct Context {
     pub focus: Focus,
     /// A dialog is open, which B closes.
     pub dialog: bool,
-    /// A page lies below the shown one, which B goes back to.
+    /// A page lies below the shown one, or Home's first screen below its second, which B
+    /// goes back to.
     pub page_below: bool,
     /// The page searches the library (Home and the library), which Y starts.
     pub search: bool,

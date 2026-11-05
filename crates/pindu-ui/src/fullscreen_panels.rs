@@ -32,8 +32,7 @@ impl PinduWindow {
         let home = gio::ActionEntry::builder("drawer-home")
             .activate(|window: &Self, _, _| {
                 window.close_panel();
-                let imp = window.imp();
-                imp.navigation_view.pop_to_page(&*imp.home_page);
+                window.show_home();
             })
             .build();
         let library = gio::ActionEntry::builder("drawer-library")

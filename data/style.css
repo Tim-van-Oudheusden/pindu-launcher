@@ -167,6 +167,22 @@ window.fullscreen-mode gridview.library > child:focus-within .cover-frame {
   opacity: 0;
 }
 
+/* Home's first screen, the sections, has no hero: it shows over black, with white text in
+   the light style too. */
+window.fullscreen-mode .home.home-sections {
+  background-color: black;
+  background-image: none;
+}
+
+window.fullscreen-mode .home.home-sections .hero-gradient {
+  background-image: none;
+}
+
+window.fullscreen-mode .home.home-sections .home-title,
+window.fullscreen-mode .home.home-sections .home-details {
+  color: white;
+}
+
 .home-carousel > button {
   transition: transform 120ms ease-out;
 }
@@ -178,6 +194,12 @@ window.fullscreen-mode gridview.library > child:focus-within .cover-frame {
 }
 
 .home-carousel > .library-tile {
+  border-radius: 12px;
+}
+
+/* A section's art fills its tile, which rounds it like the cards. */
+.home-carousel > .home-section-tile {
+  padding: 0;
   border-radius: 12px;
 }
 

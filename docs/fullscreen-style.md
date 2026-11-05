@@ -70,11 +70,11 @@ CSS restyles widgets but cannot move, add or remove them. These options change w
 
 | Option | Values (default first) | Effect |
 |---|---|---|
-| `home` | `"hero-bottom"`, `"row-top"` | Where Home's row of games sits: under the title at the bottom, or near the top with the title and details below it. |
-| `home-tile` | `"landscape"`, `"square"`, `"portrait"` | The shape of Home's cards and the art they show: the banner, else the cover; SteamGridDB square art, else the cover cropped to square; the cover, else the banner. Cards never show icons. |
-| `home-tile-size` | a number, 64–400 | The cards' shorter side in pixels; art is decoded for 1.6× that size, so a focused card can grow that much and stay sharp. Without it the shape's own size applies. |
+| `home` | `"hero-bottom"`, `"row-top"` | Where Home's row of tiles sits, on both its screens: under the title at the bottom, or near the top with the title and details below it. |
+| `home-tile` | `"landscape"`, `"square"`, `"portrait"` | The shape of Home's tiles, on both its screens, and the art a game's card shows: the banner, else the cover; SteamGridDB square art, else the cover cropped to square; the cover, else the banner. Cards never show icons. |
+| `home-tile-size` | a number, 64–400 | The tiles' shorter side in pixels; art is decoded for 1.6× that size, so a focused card can grow that much and stay sharp. Without it the shape's own size applies. |
 | `top-bar` | `false`, `true` | A bar at the top of Home and the library with Home and Library tabs and a clock. |
-| `home-details` | `false`, `true` | A row under Home's title with the focused game's playtime, when it was last played and its source. |
+| `home-details` | `false`, `true` | A row under Home's title: on the first screen the focused section's number of games, on the second the focused game's playtime, when it was last played and its source. |
 
 ## Writing the CSS
 
@@ -136,18 +136,25 @@ controller's position.
 
 **Home**
 
+Home has two screens. The first, `.home-sections`, is a row of sections over black: Recently played,
+Favourites, Installed, one per launcher, the user's collections, then the Library tile. Activating a
+section opens the second, `.home-games`: that section's games over the focused game's art. B goes back to
+the first. Both screens use the same widgets and layout options, so a rule without either class styles
+both.
+
 | Name | What |
 |---|---|
-| `.home` | The page; also `.home-layout-hero-bottom` or `.home-layout-row-top`, and `.no-art` while no art is shown |
+| `.home` | The page; also `.home-sections` on the first screen or `.home-games` on the second, `.home-layout-hero-bottom` or `.home-layout-row-top`, and `.no-art` while no art is shown (always on the first screen) |
 | `.home-hero` | The focused game's art filling the page; the one showing the current art also has `.shown`, so `transition: opacity` crossfades |
 | `.hero-gradient` | The shade over the art |
-| `.home-title` | The row with the game's logo or title |
+| `.home-title` | The row with the focused section's name, or the game's logo or title |
 | `.home-logo` | The logo, contained in 480×160 unless you grow it with `min-width`/`min-height` |
 | `.title-1` | The title, when there is no logo |
 | `.home-details`, `.detail` | The details row and each detail (with `home-details`) |
-| `.home-carousel` | The row of cards; also `.home-tile-landscape`, `.home-tile-square` or `.home-tile-portrait` |
-| `.jump-card` | A game's card (a button); `.jump-title` is its title on the art, `.badge` its pin |
-| `.library-tile` | The Library card at the end of the row |
+| `.home-carousel` | The row of tiles; also `.home-tile-landscape`, `.home-tile-square` or `.home-tile-portrait` |
+| `.home-section-tile` | A section's tile (a button) on the first screen, its art filling it; a collection's also has `.home-collection-tile`, an icon over its name |
+| `.jump-card` | A game's card (a button) on the second screen; `.jump-title` is its title on the art, `.badge` its pin |
+| `.library-tile` | The Library tile at the end of the first screen's row |
 
 **Library**
 

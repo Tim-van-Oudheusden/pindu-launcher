@@ -28,10 +28,7 @@ impl PinduWindow {
             .state(String::new().to_variant())
             .activate(
                 |window: &Self, _, target| match target.and_then(|target| target.str()) {
-                    Some("home") => {
-                        let imp = window.imp();
-                        imp.navigation_view.pop_to_page(&*imp.home_page);
-                    }
+                    Some("home") => window.show_home(),
                     Some("library") => window.show_library(),
                     _ => {}
                 },

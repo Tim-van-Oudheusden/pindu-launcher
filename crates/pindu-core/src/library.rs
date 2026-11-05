@@ -266,6 +266,14 @@ impl View {
             Self::Hidden => game.hidden,
         }
     }
+
+    /// Whether the view shows `game`, held by the collections `collections`, before any
+    /// toggles or search: in the library, hidden only in the Hidden view, and in the view.
+    pub fn shows(self, game: &Game, collections: &[i64]) -> bool {
+        game.in_library()
+            && (game.hidden == (self == Self::Hidden))
+            && self.includes(game, collections)
+    }
 }
 
 /// Fullscreen mode's library tabs: All, Installed, Favourites, then each collection in
@@ -387,9 +395,7 @@ impl LibraryFilter {
     /// allowed by the toggles and matching the search. `collections` are the IDs of the collections
     /// holding the game.
     pub fn matches(&self, game: &Game, collections: &[i64], key: &SearchKey) -> bool {
-        game.in_library()
-            && (game.hidden == (self.view == View::Hidden))
-            && self.view.includes(game, collections)
+        self.view.shows(game, collections)
             && self.filters.includes(game)
             && self.search.matches(&key.0)
     }

@@ -202,13 +202,22 @@ impl PinduWindow {
         }
     }
 
-    /// Home: its carousel follows the "Jump back in" games and its Library tile goes to the
-    /// library (`win.show-library`).
+    /// Home: its first screen follows the sections (`pindu_core::sections`), a section
+    /// tile opens its games (`win.home-section` with the section's name) and the Library
+    /// tile goes to the library (`win.show-library`).
     pub(crate) fn setup_home(&self) {
         let show_library = gio::ActionEntry::builder("show-library")
             .activate(|window: &Self, _, _| window.show_library())
             .build();
-        self.add_action_entries([show_library]);
+        let show_section = gio::ActionEntry::builder("home-section")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(|window: &Self, _, name| {
+                if let Some(name) = name.and_then(|name| name.str()) {
+                    window.show_home_section(name);
+                }
+            })
+            .build();
+        self.add_action_entries([show_library, show_section]);
         // In fullscreen mode the library opens on the cover the controller was last on,
         // rather than on the widget that had focus when the page was last left, unless
         // Y brought it up to search.
@@ -236,13 +245,46 @@ impl PinduWindow {
             self,
             move |_| window.update_home()
         ));
+        self.library().connect_collections_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.update_home()
+        ));
         self.update_home();
     }
 
     fn update_home(&self) {
         self.imp()
             .home_page
-            .set_games(&self.library().jump_back_in());
+            .set_sections(self.library().home_sections());
+    }
+
+    /// Shows Home's first screen: back down to Home, from a section's games too.
+    pub(crate) fn show_home(&self) {
+        let imp = self.imp();
+        imp.navigation_view.pop_to_page(&*imp.home_page);
+        imp.home_page.show_sections();
+    }
+
+    /// Shows the games of Home's section named `name` (`SectionId::name`), back down on
+    /// Home; Home shows only in fullscreen mode.
+    fn show_home_section(&self, name: &str) {
+        if !self.is_fullscreen() {
+            return;
+        }
+        let imp = self.imp();
+        imp.navigation_view.pop_to_page(&*imp.home_page);
+        if !imp.home_page.show_section(name) {
+            glib::g_debug!("pindu", "No Home section {name}");
+        }
+    }
+
+    /// Whether Home shows, on its second screen: a section's games, which B leaves.
+    pub(crate) fn shows_home_section(&self) -> bool {
+        let imp = self.imp();
+        imp.navigation_view.visible_page().as_ref()
+            == Some(imp.home_page.upcast_ref::<adw::NavigationPage>())
+            && imp.home_page.shows_section()
     }
 
     /// Shows the library page: back down to it, or up from Home to it.
