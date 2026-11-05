@@ -65,6 +65,18 @@ pub fn crop(art_width: f32, art_height: f32, box_width: f32, box_height: f32) ->
     scaled(art_width, art_height, box_width, box_height, f32::max)
 }
 
+/// How many times larger than drawn art may be before plain linear filtering aliases.
+const LINEAR_SHRINK_LIMIT: f32 = 2.0;
+
+/// Whether `art_width`×`art_height` art drawn into `drawn_width`×`drawn_height` device
+/// pixels needs mipmaps (trilinear filtering): only art shrunk more than twice does.
+/// GTK picks the mipmap level from the drawn size before a CSS transform, so art a design
+/// scales up would show that smaller level enlarged; without mipmaps it stays sharp.
+pub fn needs_mipmaps(art_width: f32, art_height: f32, drawn_width: f32, drawn_height: f32) -> bool {
+    let shrink = f32::max(art_width / drawn_width, art_height / drawn_height);
+    shrink > LINEAR_SHRINK_LIMIT
+}
+
 /// The art scaled by `pick` of the two axis scales and centred in the box.
 fn scaled(
     art_width: f32,
@@ -225,5 +237,19 @@ mod tests {
         assert_eq!((rect.x, rect.width), (0.0, 200.0));
         assert!((rect.height - 300.0).abs() < 0.001);
         assert!((rect.y + 50.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn art_decoded_for_a_card_a_design_scales_up_is_drawn_without_mipmaps() {
+        // A 224-pixel card's art, decoded 1.6 times larger for a focused card.
+        assert!(!needs_mipmaps(359.0, 359.0, 224.0, 224.0));
+    }
+
+    #[test]
+    fn art_shrunk_more_than_twice_is_drawn_with_mipmaps() {
+        // A full-size cover in a library tile, and art at exactly twice the drawn size.
+        assert!(needs_mipmaps(600.0, 900.0, 200.0, 300.0));
+        assert!(!needs_mipmaps(448.0, 448.0, 224.0, 224.0));
+        assert!(needs_mipmaps(449.0, 300.0, 224.0, 150.0));
     }
 }

@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, glib, graphene, gsk};
-use pindu_core::art::{ICON_SCALE, Placement, Rect, crop, place};
+use pindu_core::art::{ICON_SCALE, Placement, Rect, crop, needs_mipmaps, place};
 
 use super::textures;
 
@@ -56,18 +56,20 @@ mod imp {
             let widget = self.obj();
             let (width, height) = (widget.width() as f32, widget.height() as f32);
             let (art_width, art_height) = (texture.width() as f32, texture.height() as f32);
+            let scale = widget.scale_factor() as f32;
             if self.crop.get() && !self.is_icon.get() {
                 append(
                     snapshot,
                     &texture,
                     crop(art_width, art_height, width, height),
+                    scale,
                 );
                 return;
             }
             let (background, foreground) = match place(art_width, art_height, width, height) {
                 // An icon never fills: it sits, smaller, on a blurred copy of itself.
                 Placement::Fill(rect) if !self.is_icon.get() => {
-                    append(snapshot, &texture, rect);
+                    append(snapshot, &texture, rect, scale);
                     return;
                 }
                 Placement::Fill(rect) => (rect, rect),
@@ -88,16 +90,28 @@ mod imp {
                 foreground
             };
             snapshot.push_blur(BLUR_RADIUS);
-            append(snapshot, &texture, background);
+            append(snapshot, &texture, background, scale);
             snapshot.pop();
-            append(snapshot, &texture, foreground);
+            append(snapshot, &texture, foreground, scale);
         }
     }
 }
 
-fn append(snapshot: &gtk::Snapshot, texture: &gdk::Texture, rect: Rect) {
+/// Draws `texture` into `rect` of a widget at `scale` device pixels per pixel, with
+/// mipmaps only where it shrinks enough to need them (`art::needs_mipmaps`).
+fn append(snapshot: &gtk::Snapshot, texture: &gdk::Texture, rect: Rect, scale: f32) {
     let bounds = graphene::Rect::new(rect.x, rect.y, rect.width, rect.height);
-    snapshot.append_scaled_texture(texture, gsk::ScalingFilter::Trilinear, &bounds);
+    let filter = if needs_mipmaps(
+        texture.width() as f32,
+        texture.height() as f32,
+        rect.width * scale,
+        rect.height * scale,
+    ) {
+        gsk::ScalingFilter::Trilinear
+    } else {
+        gsk::ScalingFilter::Linear
+    };
+    snapshot.append_scaled_texture(texture, filter, &bounds);
 }
 
 glib::wrapper! {
