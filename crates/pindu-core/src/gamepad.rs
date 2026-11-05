@@ -422,6 +422,25 @@ fn button_intent(button: Button) -> Intent {
     }
 }
 
+/// What a window knows about its focus, to decide whether controller input is its.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WindowFocus {
+    /// The compositor reports the window as focused (`GDK_TOPLEVEL_STATE_FOCUSED`).
+    pub compositor_focused: bool,
+    /// The window has keyboard focus (`gtk_window_is_active`).
+    pub keyboard_focused: bool,
+}
+
+impl WindowFocus {
+    /// Whether the window acts on the controller. A game or another app in front of it
+    /// has focus instead, and then the controller is theirs. Keyboard focus counts too: on
+    /// X11 the compositor only says "focused" when the window manager supports
+    /// `_NET_WM_STATE_FOCUSED`, which gamescope's doesn't.
+    pub fn takes_controller(self) -> bool {
+        self.compositor_focused || self.keyboard_focused
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -701,5 +720,26 @@ mod tests {
         assert_eq!(intents.repeat(REPEAT_DELAY), Some(down));
         intents.handle(&release(Button::DpadDown), ms(400));
         assert_eq!(intents.repeat(HOLD_DURATION), Some(Intent::BackHeld));
+    }
+
+    #[test]
+    fn a_window_with_keyboard_focus_takes_the_controller_where_the_compositor_never_says_focused() {
+        // Gamescope's X11 window manager lacks _NET_WM_STATE_FOCUSED.
+        let focus = WindowFocus {
+            compositor_focused: false,
+            keyboard_focused: true,
+        };
+
+        assert!(focus.takes_controller());
+    }
+
+    #[test]
+    fn a_window_behind_a_game_leaves_the_controller_to_it() {
+        let focus = WindowFocus {
+            compositor_focused: false,
+            keyboard_focused: false,
+        };
+
+        assert!(!focus.takes_controller());
     }
 }

@@ -235,19 +235,20 @@ impl PinduWindow {
     }
 
     /// Y and Ctrl+F: search the library from Home or the library page, in the search
-    /// entry for now.
-    pub(crate) fn start_search(&self) {
+    /// entry; `false` when nothing searches here (a dialog is open, or another page shows).
+    pub(crate) fn start_search(&self) -> bool {
         if self.visible_dialog().is_some() {
-            return;
+            return false;
         }
         let imp = self.imp();
         let page = imp.navigation_view.visible_page();
         if page.as_ref() == Some(imp.home_page.upcast_ref()) {
             self.show_library();
         } else if page.as_ref() != Some(&*imp.library_page) {
-            return;
+            return false;
         }
         self.focus_search_entry();
+        true
     }
 
     /// Focuses the search entry, showing its top bar meanwhile in fullscreen mode.
