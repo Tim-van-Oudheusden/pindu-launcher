@@ -36,8 +36,8 @@ pub fn art_pixels((width, height): (i32, i32), scale_factor: i32) -> (u32, u32) 
     (pixels(width), pixels(height))
 }
 
-/// The art a Home card shows of its game. Cards never show icons, so every card in a row
-/// looks alike; a game without art shows the card's title alone.
+/// The art a Home card shows of its game: art of the card's shape where there is some, so
+/// every card in a row looks alike; a game without art shows the card's title alone.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CardArt {
     /// The picture to show, fitted to the card as covers are.
@@ -47,7 +47,8 @@ pub struct CardArt {
 }
 
 /// What a card of `shape` shows of a game with `art`: square cards their square art, or
-/// else the cover (or banner) cropped to square.
+/// else the cover (or banner) cropped to square, and the icon only when there is nothing
+/// else, as for a desktop launcher entry.
 pub fn card_art(shape: TileShape, art: &ArtSet) -> CardArt {
     match shape {
         TileShape::Landscape => CardArt {
@@ -59,7 +60,8 @@ pub fn card_art(shape: TileShape, art: &ArtSet) -> CardArt {
                 .square
                 .clone()
                 .or_else(|| art.cover.clone())
-                .or_else(|| art.hero.clone()),
+                .or_else(|| art.hero.clone())
+                .or_else(|| art.icon.clone()),
             crop: true,
         },
         TileShape::Portrait => CardArt {
@@ -257,7 +259,7 @@ mod tests {
     }
 
     #[test]
-    fn square_cards_show_square_art_or_else_the_cover_cropped_and_never_the_icon() {
+    fn square_cards_show_square_art_or_else_the_cover_cropped_and_the_icon_only_as_a_last_resort() {
         let art = ArtSet {
             cover: Some("cover.png".into()),
             hero: Some("hero.png".into()),
@@ -291,7 +293,7 @@ mod tests {
         assert_eq!(
             card_art(TileShape::Square, &only_icon),
             CardArt {
-                art: None,
+                art: Some("icon.png".into()),
                 crop: true,
             }
         );
