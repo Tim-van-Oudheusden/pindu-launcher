@@ -53,6 +53,7 @@ jobs:
               cargo test --workspace
               meson setup --reconfigure _build || meson setup _build
               meson test -C _build --print-errorlogs
+              po/check-pot.sh _build
             '
 
   flatpak:
