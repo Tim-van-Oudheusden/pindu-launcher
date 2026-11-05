@@ -34,17 +34,17 @@ pub struct ThemeLayout {
     pub home_tile: TileShape,
     /// `"home"`: where Home's carousel sits.
     pub home: HomeLayout,
+    /// `"top-bar"`: whether fullscreen mode shows a bar with page tabs and a clock.
+    pub top_bar: bool,
     /// `"home-details"`: show the focused game's details on Home.
     pub home_details: bool,
 }
 
 impl ThemeLayout {
     fn from_json(layout: Option<&Json>) -> Self {
-        let text = |key: &str| {
-            layout
-                .and_then(|layout| layout.get(key))
-                .and_then(Json::as_str)
-        };
+        let value = |key: &str| layout.and_then(|layout| layout.get(key));
+        let text = |key: &str| value(key).and_then(Json::as_str);
+        let flag = |key: &str| value(key).and_then(Json::as_bool).unwrap_or_default();
         Self {
             home_tile: text("home-tile")
                 .and_then(TileShape::from_name)
@@ -52,10 +52,8 @@ impl ThemeLayout {
             home: text("home")
                 .and_then(HomeLayout::from_name)
                 .unwrap_or_default(),
-            home_details: layout
-                .and_then(|layout| layout.get("home-details"))
-                .and_then(Json::as_bool)
-                .unwrap_or_default(),
+            top_bar: flag("top-bar"),
+            home_details: flag("home-details"),
         }
     }
 }
@@ -339,6 +337,33 @@ mod tests {
         };
         assert_eq!(shape("square"), Some(TileShape::Square));
         assert_eq!(shape("portrait"), Some(TileShape::Portrait));
+    }
+
+    #[test]
+    fn a_theme_turns_the_top_bar_on() {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(
+            user.path(),
+            "bar",
+            r#"{"contract": 1, "name": "Bar", "layout": {"top-bar": true}}"#,
+        );
+        write_theme(
+            user.path(),
+            "odd",
+            r#"{"contract": 1, "name": "Odd", "layout": {"top-bar": "yes"}}"#,
+        );
+
+        let found = discover(&[user.path()]);
+
+        let top_bar = |id: &str| {
+            found
+                .themes
+                .iter()
+                .find(|theme| theme.id == id)
+                .map(|theme| theme.layout.top_bar)
+        };
+        assert_eq!(top_bar("bar"), Some(true));
+        assert_eq!(top_bar("odd"), Some(false));
     }
 
     #[test]

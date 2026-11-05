@@ -141,6 +141,7 @@ impl PinduWindow {
     /// Follows the layout of the fullscreen design in force.
     fn apply_layout(&self, layout: ThemeLayout) {
         self.imp().home_page.set_layout(layout);
+        self.update_fullscreen_top_bar();
     }
 
     /// Enters fullscreen mode; the window follows once the compositor makes it fullscreen.
@@ -175,6 +176,7 @@ impl PinduWindow {
         self.arrange_pages(fullscreen);
         self.hide_sidebar_in_fullscreen();
         self.update_top_bars();
+        self.update_fullscreen_top_bar();
         if let Some(action) = self
             .lookup_action("fullscreen-mode")
             .and_downcast::<gio::SimpleAction>()

@@ -4,6 +4,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gdk, gio, glib};
+use pindu_core::clock::ClockFormat;
 use pindu_core::focus::FocusMemory;
 use pindu_core::gamepad::DeviceKind;
 use pindu_core::grid;
@@ -50,6 +51,12 @@ mod imp {
         pub split_view: TemplateChild<adw::OverlaySplitView>,
         #[template_child]
         pub sidebar_toolbar: TemplateChild<adw::ToolbarView>,
+        #[template_child]
+        pub top_bar_view: TemplateChild<adw::ToolbarView>,
+        #[template_child]
+        pub top_bar: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub clock: TemplateChild<gtk::Label>,
         #[template_child]
         pub navigation_view: TemplateChild<adw::NavigationView>,
         #[template_child]
@@ -211,6 +218,11 @@ mod imp {
         pub game_options: RefCell<Vec<GameOption>>,
         /// The widget that had focus before a panel opened, to give it back after.
         pub focus_before_panel: glib::WeakRef<gtk::Widget>,
+        /// Fullscreen mode's top bar: the clock's format, its next tick while the bar
+        /// shows, and the portal's notice of format changes.
+        pub clock_format: Cell<ClockFormat>,
+        pub clock_tick: RefCell<Option<glib::SourceId>>,
+        pub clock_format_changes: RefCell<Option<gio::SignalSubscription>>,
     }
 
     #[glib::object_subclass]
@@ -279,6 +291,7 @@ impl PinduWindow {
         window.observe_sync(sync_service);
         window.setup_home();
         window.setup_fullscreen_library();
+        window.setup_top_bar();
         window.setup_fullscreen();
         window.setup_search_keyboard();
         window.setup_fullscreen_game();
