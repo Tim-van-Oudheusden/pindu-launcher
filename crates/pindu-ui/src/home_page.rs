@@ -376,7 +376,18 @@ impl HomePage {
     /// `.home-background`.
     fn load_background(&self) {
         let media = gtk::MediaFile::new();
-        media.set_loop(true);
+        // Looped by hand: with `loop` set, GTK's GStreamer player on GNOME 51 stops on the
+        // last frame instead of starting again, and never says it ended.
+        media.connect_ended_notify(glib::clone!(
+            #[weak(rename_to = page)]
+            self,
+            move |media| {
+                if media.is_ended() {
+                    media.seek(0);
+                    page.show_background_playback();
+                }
+            }
+        ));
         media.connect_error_notify(glib::clone!(
             #[weak(rename_to = page)]
             self,
