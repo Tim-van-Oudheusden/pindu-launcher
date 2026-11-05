@@ -34,7 +34,7 @@ pub fn error_count(problems: &[StyleProblem]) -> usize {
         .count()
 }
 
-/// What decides whether the user's stylesheet is in force.
+/// What decides whether the user's stylesheet and the chosen design are in force.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct StyleState {
     /// The user turned the custom style on.
@@ -50,6 +50,12 @@ impl StyleState {
     /// colours cannot defeat it.
     pub fn applies(self) -> bool {
         self.enabled && self.fullscreen && !self.high_contrast
+    }
+
+    /// Whether the chosen design should be in force: in fullscreen mode without high
+    /// contrast, whether or not the user's own stylesheet is on.
+    pub fn design_applies(self) -> bool {
+        self.fullscreen && !self.high_contrast
     }
 }
 
@@ -113,6 +119,19 @@ mod tests {
         };
 
         assert!(!state.applies());
+    }
+
+    #[test]
+    fn a_design_applies_in_fullscreen_mode_without_the_custom_style_setting() {
+        let state = |enabled, fullscreen, high_contrast| StyleState {
+            enabled,
+            fullscreen,
+            high_contrast,
+        };
+
+        assert!(state(false, true, false).design_applies());
+        assert!(!state(true, false, false).design_applies());
+        assert!(!state(true, true, true).design_applies());
     }
 
     #[test]
