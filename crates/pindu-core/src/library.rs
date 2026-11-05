@@ -17,6 +17,7 @@ pub struct ArtSet {
     pub hero: Option<PathBuf>,
     pub logo: Option<PathBuf>,
     pub icon: Option<PathBuf>,
+    pub square: Option<PathBuf>,
 }
 
 impl ArtSet {
@@ -28,6 +29,7 @@ impl ArtSet {
             hero: path(ArtLayout::Hero),
             logo: path(ArtLayout::Logo),
             icon: path(ArtLayout::Icon),
+            square: path(ArtLayout::Square),
         }
     }
 }
@@ -283,6 +285,12 @@ pub fn fullscreen_tabs(collections: impl IntoIterator<Item = i64>) -> Vec<View> 
         .collect()
 }
 
+/// Whether a library tile shows its title under the cover: as the `show-titles` setting
+/// asks on the desktop, and never in fullscreen mode, where the cover alone fills the tile.
+pub fn tile_shows_title(show_titles: bool, fullscreen: bool) -> bool {
+    show_titles && !fullscreen
+}
+
 /// The tab after `current`, or before it, which the shoulder buttons switch to: none past
 /// either end, and the first tab from a view without one.
 pub fn step_tab(tabs: &[View], current: View, forward: bool) -> Option<View> {
@@ -446,6 +454,14 @@ mod tests {
                 View::Collection(1)
             ]
         );
+    }
+
+    #[test]
+    fn tiles_show_titles_as_the_setting_asks_but_never_in_fullscreen_mode() {
+        assert!(tile_shows_title(true, false));
+        assert!(!tile_shows_title(false, false));
+        assert!(!tile_shows_title(true, true));
+        assert!(!tile_shows_title(false, true));
     }
 
     #[test]

@@ -228,7 +228,7 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_library.rs:61
 #: crates/pindu-ui/src/home_page.rs:85
 #: crates/pindu-ui/src/proton_downloads_page.rs:338
-#: crates/pindu-ui/src/widgets/cover_tile.rs:329 data/ui/window.blp:452
+#: crates/pindu-ui/src/widgets/cover_tile.rs:346 data/ui/window.blp:452
 #: data/ui/window.blp:667
 msgid "Installed"
 msgstr ""
@@ -276,13 +276,13 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:668
 #: crates/pindu-ui/src/hint_bar.rs:155
-#: crates/pindu-ui/src/widgets/cover_tile.rs:210 data/ui/cover_tile.blp:61
+#: crates/pindu-ui/src/widgets/cover_tile.rs:227 data/ui/cover_tile.blp:65
 msgid "Play"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:669
 #: crates/pindu-ui/src/hint_bar.rs:156
-#: crates/pindu-ui/src/widgets/cover_tile.rs:208
+#: crates/pindu-ui/src/widgets/cover_tile.rs:225
 msgid "Stop"
 msgstr ""
 
@@ -469,7 +469,7 @@ msgid "{launcher} starts the game, keeps its settings and tracks its playtime"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:403
-#: crates/pindu-ui/src/widgets/cover_tile.rs:248 data/ui/game_page.blp:102
+#: crates/pindu-ui/src/widgets/cover_tile.rs:265 data/ui/game_page.blp:102
 msgid "_Play"
 msgstr ""
 
@@ -482,28 +482,28 @@ msgid "Open Latest L_og"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:566
-#: crates/pindu-ui/src/widgets/cover_tile.rs:284
+#: crates/pindu-ui/src/widgets/cover_tile.rs:301
 msgid "_Edit…"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:568
-#: crates/pindu-ui/src/widgets/cover_tile.rs:286
+#: crates/pindu-ui/src/widgets/cover_tile.rs:303
 msgid "_Unhide"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:570
-#: crates/pindu-ui/src/widgets/cover_tile.rs:288
+#: crates/pindu-ui/src/widgets/cover_tile.rs:305
 msgid "_Hide"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:572
 #: crates/pindu-ui/src/proton_downloads_page.rs:228
-#: crates/pindu-ui/src/widgets/cover_tile.rs:290
+#: crates/pindu-ui/src/widgets/cover_tile.rs:307
 msgid "_Remove"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:574
-#: crates/pindu-ui/src/widgets/cover_tile.rs:251
+#: crates/pindu-ui/src/widgets/cover_tile.rs:268
 msgid "_Open in Launcher"
 msgstr ""
 
@@ -761,7 +761,7 @@ msgid ""
 msgstr ""
 
 #: crates/pindu-ui/src/launch_service.rs:192
-#: crates/pindu-ui/src/proton_launch.rs:534 crates/pindu-ui/src/window.rs:1171
+#: crates/pindu-ui/src/proton_launch.rs:534 crates/pindu-ui/src/window.rs:1180
 msgid "_Close"
 msgstr ""
 
@@ -1090,63 +1090,67 @@ msgstr ""
 msgid "Icon"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:83
+#: crates/pindu-ui/src/steamgriddb_picker.rs:48
+msgid "Square Art"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_picker.rs:84
 #, rust-format
 msgid "SteamGridDB: {layout}"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:102
+#: crates/pindu-ui/src/steamgriddb_picker.rs:103
 msgid "The Keyring Cannot Be Used"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:119 data/ui/preferences.blp:111
+#: crates/pindu-ui/src/steamgriddb_picker.rs:120 data/ui/preferences.blp:111
 msgid "API Key"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:127
+#: crates/pindu-ui/src/steamgriddb_picker.rs:128
 msgid "_Save Key"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:132
+#: crates/pindu-ui/src/steamgriddb_picker.rs:133
 msgid "Get a Key on SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:143
+#: crates/pindu-ui/src/steamgriddb_picker.rs:144
 msgid "SteamGridDB Needs Your API Key"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:145
+#: crates/pindu-ui/src/steamgriddb_picker.rs:146
 msgid "The key is kept in your keyring, never in plain settings."
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:160
+#: crates/pindu-ui/src/steamgriddb_picker.rs:161
 msgid "The Key Was Not Saved"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:184
+#: crates/pindu-ui/src/steamgriddb_picker.rs:185
 msgid "No Images Found"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:185
+#: crates/pindu-ui/src/steamgriddb_picker.rs:186
 msgid "SteamGridDB has no images of this kind for the game"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:194
+#: crates/pindu-ui/src/steamgriddb_picker.rs:195
 msgid ""
 "SteamGridDB did not accept the stored key. Enter a valid one; it is kept in "
 "your keyring."
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:200
+#: crates/pindu-ui/src/steamgriddb_picker.rs:201
 msgid "SteamGridDB Cannot Be Reached"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:225
+#: crates/pindu-ui/src/steamgriddb_picker.rs:226
 #, rust-format
 msgid "Image {number} of {total}, {width} by {height} pixels"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:245
+#: crates/pindu-ui/src/steamgriddb_picker.rs:246
 msgid "The Image Cannot Be Downloaded"
 msgstr ""
 
@@ -1154,38 +1158,38 @@ msgstr ""
 msgid "The import stopped unexpectedly"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:193
-#: crates/pindu-ui/src/widgets/cover_tile.rs:325
+#: crates/pindu-ui/src/widgets/cover_tile.rs:210
+#: crates/pindu-ui/src/widgets/cover_tile.rs:342
 msgid "Playing"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:195
-#: crates/pindu-ui/src/widgets/cover_tile.rs:327
+#: crates/pindu-ui/src/widgets/cover_tile.rs:212
+#: crates/pindu-ui/src/widgets/cover_tile.rs:344
 msgid "Needs permission"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:197
-#: crates/pindu-ui/src/widgets/cover_tile.rs:331
+#: crates/pindu-ui/src/widgets/cover_tile.rs:214
+#: crates/pindu-ui/src/widgets/cover_tile.rs:348
 msgid "Not installed"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:249
+#: crates/pindu-ui/src/widgets/cover_tile.rs:266
 msgid "_Details"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:268
+#: crates/pindu-ui/src/widgets/cover_tile.rs:285
 msgid "Remove from _Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:270
+#: crates/pindu-ui/src/widgets/cover_tile.rs:287
 msgid "Add to _Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:276
+#: crates/pindu-ui/src/widgets/cover_tile.rs:293
 msgid "Un_pin from Jump Back In"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:278
+#: crates/pindu-ui/src/widgets/cover_tile.rs:295
 msgid "_Pin to Jump Back In"
 msgstr ""
 
@@ -1225,26 +1229,26 @@ msgstr ""
 msgid "“{title}” hidden"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1150
+#: crates/pindu-ui/src/window.rs:1159
 #, rust-format
 msgid "One import problem"
 msgid_plural "{count} import problems"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/window.rs:1153
+#: crates/pindu-ui/src/window.rs:1162
 msgid "Details"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1168
+#: crates/pindu-ui/src/window.rs:1177
 msgid "Some Games Could Not Be Imported"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1293
+#: crates/pindu-ui/src/window.rs:1302
 msgid "Pinned"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1311
+#: crates/pindu-ui/src/window.rs:1320
 #, rust-format
 msgid "{title}, pinned"
 msgstr ""

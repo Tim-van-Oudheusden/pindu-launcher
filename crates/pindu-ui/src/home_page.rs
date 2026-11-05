@@ -831,35 +831,8 @@ impl HomePage {
     }
 }
 
-/// Shows a card's art at `size`, decoded for a design that scales the card up: a square
-/// card's icon when it is large enough, else its art, and the icon when there is no art.
+/// Shows a card's art at `size`, decoded for a design that scales the card up.
 fn show_card_art(picture: &CoverArt, art: CardArt, size: (i32, i32), scale_factor: i32) {
-    let pixels = home::art_pixels(size, scale_factor);
     picture.set_crop(art.crop);
-    let Some(icon) = art.icon.clone().filter(|_| art.icon_first) else {
-        picture.show(art.art, art.icon, pixels, |_| {});
-        return;
-    };
-    let card_width = (size.0 * scale_factor.max(1)) as u32;
-    let large = move |texture: &gtk::gdk::Texture| {
-        home::icon_large_enough(
-            (texture.width() as u32, texture.height() as u32),
-            card_width,
-        )
-    };
-    if let Some(texture) = textures::cached(&icon) {
-        let shown = if large(&texture) { None } else { art.art };
-        picture.show(shown, art.icon, pixels, |_| {});
-        return;
-    }
-    let picture = picture.downgrade();
-    glib::spawn_future_local(async move {
-        let large = textures::load(&icon)
-            .await
-            .is_ok_and(|texture| large(&texture));
-        if let Some(picture) = picture.upgrade() {
-            let shown = if large { None } else { art.art };
-            picture.show(shown, art.icon, pixels, |_| {});
-        }
-    });
+    picture.show(art.art, None, home::art_pixels(size, scale_factor), |_| {});
 }

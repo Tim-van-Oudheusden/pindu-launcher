@@ -71,7 +71,7 @@ CSS restyles widgets but cannot move, add or remove them. These options change w
 | Option | Values (default first) | Effect |
 |---|---|---|
 | `home` | `"hero-bottom"`, `"row-top"` | Where Home's row of tiles sits, on both its screens: under the title at the bottom, or near the top with the title and details below it. |
-| `home-tile` | `"landscape"`, `"square"`, `"portrait"` | The shape of Home's tiles, on both its screens, and the art a game's card shows (banner, icon or cover, cover). |
+| `home-tile` | `"landscape"`, `"square"`, `"portrait"` | The shape of Home's tiles, on both its screens, and the art a game's card shows: the banner, else the cover; SteamGridDB square art, else the cover cropped to square; the cover, else the banner. Cards never show icons. |
 | `home-tile-size` | a number, 64–400 | The tiles' shorter side in pixels; art is decoded for 1.6× that size, so a focused card can grow that much and stay sharp. Without it the shape's own size applies. |
 | `top-bar` | `false`, `true` | A bar at the top of Home and the library with Home and Library tabs and a clock. |
 | `home-details` | `false`, `true` | A row under Home's title: on the first screen the focused section's number of games, on the second the focused game's playtime, when it was last played and its source. |
@@ -163,7 +163,7 @@ both.
 | `.library-tabs` | The bar of tabs and the sort order |
 | `.library-tab` | A tab; the shown one is `:checked` |
 | `gridview.library > child` | A tile's place in the grid; `:focus-within` on the focused one |
-| `.cover-tile` | A tile: `cover-art` (the cover), `.badge` (source and state), `.play-button`, `label` (the title) |
+| `.cover-tile` | A tile: `.cover-frame` (the cover with its badges, which takes the focus ring; give it the cover's `border-radius`), `cover-art` (the cover), `.badge` (source and state), `.play-button`, `label` (the title, absent in fullscreen mode) |
 
 **Game page**
 
