@@ -36,15 +36,15 @@ pub struct ThemeLayout {
     pub home: HomeLayout,
     /// `"top-bar"`: whether fullscreen mode shows a bar with page tabs and a clock.
     pub top_bar: bool,
+    /// `"home-details"`: show the focused game's details on Home.
+    pub home_details: bool,
 }
 
 impl ThemeLayout {
     fn from_json(layout: Option<&Json>) -> Self {
-        let text = |key: &str| {
-            layout
-                .and_then(|layout| layout.get(key))
-                .and_then(Json::as_str)
-        };
+        let value = |key: &str| layout.and_then(|layout| layout.get(key));
+        let text = |key: &str| value(key).and_then(Json::as_str);
+        let flag = |key: &str| value(key).and_then(Json::as_bool).unwrap_or_default();
         Self {
             home_tile: text("home-tile")
                 .and_then(TileShape::from_name)
@@ -52,10 +52,8 @@ impl ThemeLayout {
             home: text("home")
                 .and_then(HomeLayout::from_name)
                 .unwrap_or_default(),
-            top_bar: layout
-                .and_then(|layout| layout.get("top-bar"))
-                .and_then(Json::as_bool)
-                .unwrap_or_default(),
+            top_bar: flag("top-bar"),
+            home_details: flag("home-details"),
         }
     }
 }
@@ -385,6 +383,7 @@ mod tests {
             assert_eq!(theme.layout, ThemeLayout::default());
             assert_eq!(theme.layout.home_tile, TileShape::Landscape);
             assert_eq!(theme.layout.home, HomeLayout::HeroBottom);
+            assert!(!theme.layout.home_details);
         }
     }
 
@@ -401,5 +400,32 @@ mod tests {
 
         assert_eq!(found.themes[0].layout.home, HomeLayout::RowTop);
         assert_eq!(found.themes[0].layout.home_tile, TileShape::Landscape);
+    }
+
+    #[test]
+    fn a_theme_can_show_the_home_details() {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(
+            user.path(),
+            "details",
+            r#"{"contract": 1, "name": "Details", "layout": {"home-details": true}}"#,
+        );
+        write_theme(
+            user.path(),
+            "quoted",
+            r#"{"contract": 1, "name": "Quoted", "layout": {"home-details": "true"}}"#,
+        );
+
+        let found = discover(&[user.path()]);
+
+        let details = |id: &str| {
+            found
+                .themes
+                .iter()
+                .find(|theme| theme.id == id)
+                .map(|theme| theme.layout.home_details)
+        };
+        assert_eq!(details("details"), Some(true));
+        assert_eq!(details("quoted"), Some(false));
     }
 }

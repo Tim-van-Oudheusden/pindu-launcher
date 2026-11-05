@@ -4,7 +4,8 @@
 use std::path::PathBuf;
 
 use crate::art::ICON_SCALE;
-use crate::library::ArtSet;
+use crate::library::{ArtSet, HistoryGroup, history_group};
+use crate::model::{Game, Source, Timestamp};
 use crate::themes::TileShape;
 
 /// How far a design may scale a focused card (`transform: scale()`) before its art blurs:
@@ -72,9 +73,37 @@ pub fn icon_large_enough((width, height): (u32, u32), card_width: u32) -> bool {
     width.min(height) as f32 >= card_width as f32 * ICON_SCALE
 }
 
+/// One item of the details row a design can show under the focused game's logo or title.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Detail {
+    /// Its playtime in seconds, at least a minute.
+    Playtime(i64),
+    /// When it was last played: its Play history group (today, this week, earlier), and
+    /// the time, for a date on an earlier day.
+    LastPlayed { group: HistoryGroup, at: Timestamp },
+    /// Where it comes from.
+    Source(Source),
+}
+
+/// The details of `game` with `playtime_secs` played, at `now` and `utc_offset` seconds
+/// east of UTC: playtime, last played and source, leaving out what it has no data for.
+pub fn details(game: &Game, playtime_secs: i64, now: Timestamp, utc_offset: i64) -> Vec<Detail> {
+    let playtime = (playtime_secs >= 60).then_some(Detail::Playtime(playtime_secs));
+    let last_played = game.last_played_at.map(|at| Detail::LastPlayed {
+        group: history_group(at, now, utc_offset),
+        at,
+    });
+    playtime
+        .into_iter()
+        .chain(last_played)
+        .chain([Detail::Source(game.source())])
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::{GameId, LaunchKind};
 
     #[test]
     fn each_shape_has_its_card_size() {
@@ -168,5 +197,67 @@ mod tests {
         assert!(icon_large_enough((160, 200), 320));
         assert!(!icon_large_enough((128, 128), 320));
         assert!(!icon_large_enough((32, 32), 200));
+    }
+
+    const DAY: i64 = 86_400;
+    const NOW: i64 = 1_800_000_000;
+
+    fn played(last_played: Option<i64>) -> Game {
+        let mut game = Game::new(
+            GameId::new(Source::Steam, "1"),
+            "Celeste",
+            LaunchKind::StoreUri,
+            0,
+        );
+        game.last_played_at = last_played;
+        game
+    }
+
+    #[test]
+    fn details_show_playtime_last_played_and_source() {
+        let game = played(Some(NOW - 3 * DAY));
+
+        let shown = details(&game, 12 * 3600, NOW, 0);
+
+        assert_eq!(
+            shown,
+            [
+                Detail::Playtime(12 * 3600),
+                Detail::LastPlayed {
+                    group: HistoryGroup::ThisWeek,
+                    at: NOW - 3 * DAY,
+                },
+                Detail::Source(Source::Steam),
+            ]
+        );
+    }
+
+    #[test]
+    fn details_leave_out_what_is_missing() {
+        // Under a minute reads as no playtime, as on the game's page.
+        let game = played(None);
+
+        let shown = details(&game, 59, NOW, 0);
+
+        assert_eq!(shown, [Detail::Source(Source::Steam)]);
+    }
+
+    #[test]
+    fn last_played_follows_the_local_day() {
+        // Played at 23:30 local time (UTC+2) and now 00:30 local the next day, though
+        // both fall on one day in UTC.
+        let at = NOW - NOW.rem_euclid(DAY) - 30 * 60 - 2 * 3600 + DAY;
+        let now = at + 3600;
+        let game = played(Some(at));
+
+        let shown = details(&game, 0, now, 2 * 3600);
+
+        assert_eq!(
+            shown[0],
+            Detail::LastPlayed {
+                group: HistoryGroup::ThisWeek,
+                at,
+            }
+        );
     }
 }
