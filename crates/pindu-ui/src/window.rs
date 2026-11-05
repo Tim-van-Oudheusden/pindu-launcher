@@ -1063,10 +1063,19 @@ impl PinduWindow {
         let show_titles = settings.boolean("show-titles");
         let show_badges = settings.boolean("show-badges");
         let factory = gtk::SignalListItemFactory::new();
-        factory.connect_setup(move |_, item| {
-            let item = item.downcast_ref::<gtk::ListItem>().expect("a list item");
-            item.set_child(Some(&CoverTile::new(size, show_titles, show_badges)));
-        });
+        factory.connect_setup(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, item| {
+                let item = item.downcast_ref::<gtk::ListItem>().expect("a list item");
+                item.set_child(Some(&CoverTile::new(
+                    &window,
+                    size,
+                    show_titles,
+                    show_badges,
+                )));
+            }
+        ));
         factory.connect_bind(|_, item| {
             let item = item.downcast_ref::<gtk::ListItem>().expect("a list item");
             let (Some(game), Some(tile)) = (

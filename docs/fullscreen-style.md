@@ -156,7 +156,7 @@ controller's position.
 | `.library-tabs` | The bar of tabs and the sort order |
 | `.library-tab` | A tab; the shown one is `:checked` |
 | `gridview.library > child` | A tile's place in the grid; `:focus-within` on the focused one |
-| `.cover-tile` | A tile: `cover-art` (the cover), `.badge` (source and state), `.play-button`, `label` (the title) |
+| `.cover-tile` | A tile: `.cover-frame` (the cover with its badges, which takes the focus ring; give it the cover's `border-radius`), `cover-art` (the cover), `.badge` (source and state), `.play-button`, `label` (the title, absent in fullscreen mode) |
 
 **Game page**
 
