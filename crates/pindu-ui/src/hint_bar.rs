@@ -41,7 +41,7 @@ impl PinduWindow {
 
     /// Shows the hints for where focus is now, in fullscreen mode while a controller is in
     /// use, and hides the bar otherwise.
-    fn update_hints(&self) {
+    pub(crate) fn update_hints(&self) {
         let imp = self.imp();
         let kind = self
             .application()
@@ -77,8 +77,9 @@ impl PinduWindow {
     }
 
     /// Where the user is, for the hints: the focused widget, an open dialog, whether a
-    /// page lies below the shown one, whether it searches (Home and the library) and
-    /// whether it has tabs (the library in fullscreen mode).
+    /// page lies below the shown one, whether it searches (Home and the library), whether
+    /// it has tabs (the library in fullscreen mode), whether it is a game's (with
+    /// options), and whether the launch overlay is up.
     fn hint_context(&self) -> Context {
         let imp = self.imp();
         let navigation_view = &imp.navigation_view;
@@ -91,10 +92,13 @@ impl PinduWindow {
         let home = page.as_ref() == Some(imp.home_page.upcast_ref::<adw::NavigationPage>());
         Context {
             focus: self.hint_focus(),
-            dialog: self.visible_dialog().is_some(),
+            // An open menu closes on B like a dialog, and keeps the page's buttons too.
+            dialog: self.visible_dialog().is_some() || self.open_menu().is_some(),
             page_below,
             search: library || home,
             tabs: library && self.is_fullscreen(),
+            options: self.visible_game_page().is_some(),
+            launching: self.launching(),
         }
     }
 
@@ -144,5 +148,7 @@ fn action_label(action: Action) -> String {
         Action::Search => gettext("Search"),
         Action::Tabs => gettext("Tabs"),
         Action::Sort => gettext("Sort"),
+        Action::Options => gettext("Options"),
+        Action::HoldToCancel => gettext("Hold to Cancel"),
     }
 }

@@ -12,15 +12,39 @@ use crate::window::PinduWindow;
 
 /// The "Add to Collection" submenu and "Remove from" items for a game's menus.
 pub fn collection_menu(game: &GameObject, collections: &[Collection]) -> gio::Menu {
+    let menu = gio::Menu::new();
+    menu.append_submenu(
+        Some(&gettext("_Add to Collection")),
+        &add_menu(game, collections),
+    );
+    for item in remove_items(game, collections) {
+        menu.append_item(&item);
+    }
+    menu
+}
+
+/// The menu of an "Add to Collection" button: the collections to add to, "New
+/// Collection…", and the "Remove from" items, without a submenu to go through.
+pub fn collection_button_menu(game: &GameObject, collections: &[Collection]) -> gio::Menu {
+    let menu = add_menu(game, collections);
+    let remove = gio::Menu::new();
+    for item in remove_items(game, collections) {
+        remove.append_item(&item);
+    }
+    menu.append_section(None, &remove);
+    menu
+}
+
+/// The collections the game is not in, then "New Collection…".
+fn add_menu(game: &GameObject, collections: &[Collection]) -> gio::Menu {
     let id = game.id();
     let member_of = game.entry().collections.clone();
-    let target = |collection: i64| (id.as_str(), collection).to_variant();
     let add = gio::Menu::new();
     for collection in collections.iter().filter(|c| !member_of.contains(&c.id)) {
         let item = gio::MenuItem::new(Some(&collection.name), None);
         item.set_action_and_target_value(
             Some("win.add-to-collection"),
-            Some(&target(collection.id)),
+            Some(&(id.as_str(), collection.id).to_variant()),
         );
         add.append_item(&item);
     }
@@ -29,19 +53,27 @@ pub fn collection_menu(game: &GameObject, collections: &[Collection]) -> gio::Me
     let new_section = gio::Menu::new();
     new_section.append_item(&new);
     add.append_section(None, &new_section);
+    add
+}
 
-    let menu = gio::Menu::new();
-    menu.append_submenu(Some(&gettext("_Add to Collection")), &add);
-    for collection in collections.iter().filter(|c| member_of.contains(&c.id)) {
-        let label = gettext("Remove from “{collection}”").replace("{collection}", &collection.name);
-        let item = gio::MenuItem::new(Some(&label), None);
-        item.set_action_and_target_value(
-            Some("win.remove-from-collection"),
-            Some(&target(collection.id)),
-        );
-        menu.append_item(&item);
-    }
-    menu
+/// "Remove from" items for the collections the game is in.
+fn remove_items(game: &GameObject, collections: &[Collection]) -> Vec<gio::MenuItem> {
+    let id = game.id();
+    let member_of = game.entry().collections.clone();
+    collections
+        .iter()
+        .filter(|c| member_of.contains(&c.id))
+        .map(|collection| {
+            let label =
+                gettext("Remove from “{collection}”").replace("{collection}", &collection.name);
+            let item = gio::MenuItem::new(Some(&label), None);
+            item.set_action_and_target_value(
+                Some("win.remove-from-collection"),
+                Some(&(id.as_str(), collection.id).to_variant()),
+            );
+            item
+        })
+        .collect()
 }
 
 impl PinduWindow {

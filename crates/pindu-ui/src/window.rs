@@ -8,6 +8,7 @@ use pindu_core::focus::FocusMemory;
 use pindu_core::gamepad::DeviceKind;
 use pindu_core::grid;
 use pindu_core::hints::Hint;
+use pindu_core::launch_overlay::LaunchOverlay;
 use pindu_core::library::{
     Counts, Filters, HistoryGroup, PlaytimeOrigin, SortMode, View, history_group,
 };
@@ -133,6 +134,12 @@ mod imp {
         /// Whether the first cover takes focus once the current re-sort is done, after
         /// the triggers changed the order.
         pub focus_first_after_sort: Cell<bool>,
+        /// The launch fullscreen mode's overlay follows, and the return to its page.
+        pub launch: RefCell<LaunchOverlay>,
+        /// The timer that lets the launch overlay linger.
+        pub launch_linger: RefCell<Option<glib::SourceId>>,
+        /// The launched game and its `notify::playing` handler.
+        pub launch_game: RefCell<Option<(GameObject, glib::SignalHandlerId)>>,
     }
 
     #[glib::object_subclass]
@@ -202,6 +209,7 @@ impl PinduWindow {
         window.setup_home();
         window.setup_fullscreen_library();
         window.setup_fullscreen();
+        window.setup_fullscreen_game();
         if let Some(application) = application.downcast_ref::<PinduApplication>() {
             window.setup_controller_navigation(application);
             window.setup_hint_bar(application);
@@ -304,9 +312,10 @@ impl PinduWindow {
     }
 
     /// Pushes the game's page.
-    fn show_details(&self, id: &GameId) {
+    pub(crate) fn show_details(&self, id: &GameId) {
         if let Some(game) = self.library().game_object(id) {
             let page = GamePage::new(&game, &self.library_service());
+            page.set_fullscreen(self.is_fullscreen());
             self.imp().navigation_view.push(&page);
         }
     }
