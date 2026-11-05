@@ -168,13 +168,17 @@ window.fullscreen-mode gridview.library > child {
 window.fullscreen-mode gridview.library > child:focus-within {
   opacity: 1;
   transform: scale(1.06);
+}
+
+window.fullscreen-mode .cover-tile cover-art,
+window.fullscreen-mode .cover-tile .cover-frame {
+  border-radius: 14px;
+}
+
+window.fullscreen-mode gridview.library > child:focus-within .cover-frame {
   outline: 3px solid white;
   outline-offset: 3px;
   box-shadow: 0 10px 28px rgb(0 0 0 / 50%);
-}
-
-window.fullscreen-mode .cover-tile cover-art {
-  border-radius: 14px;
 }
 
 window.fullscreen-mode .cover-tile .play-button {

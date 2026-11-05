@@ -78,17 +78,25 @@ gridview.library > child {
 }
 
 /* Fullscreen mode: type a step larger for a screen across the room, and the focused cover
-   lifted a little with a ring around it. */
+   lifted a little with a ring that hugs it (the tiles have no titles there). */
 window.fullscreen-mode {
   font-size: 1.35em;
 }
 
 window.fullscreen-mode gridview.library > child {
+  outline: none;
   transition: transform 120ms ease-out;
 }
 
 window.fullscreen-mode gridview.library > child:focus-within {
   transform: scale(1.05);
+}
+
+window.fullscreen-mode .cover-tile .cover-frame {
+  border-radius: 12px;
+}
+
+window.fullscreen-mode gridview.library > child:focus-within .cover-frame {
   outline: 3px solid var(--accent-color);
   outline-offset: 2px;
 }
