@@ -69,12 +69,13 @@ pub fn route(game: &Game, config: Option<&LaunchConfig>) -> Option<Route> {
     }
 }
 
-/// Whether we record play sessions for a game: every game we start ourselves, except
-/// Faugus's, whose launcher tracks playtime and which we import instead.
+/// Whether we record play sessions for a game: every game we start ourselves, Windows
+/// games included, except Faugus's, whose launcher tracks playtime and which we import
+/// instead.
 pub fn tracks_sessions(game: &Game) -> bool {
     matches!(
         game.launch_kind,
-        LaunchKind::HostCommand | LaunchKind::DesktopEntry
+        LaunchKind::HostCommand | LaunchKind::DesktopEntry | LaunchKind::Proton
     ) && game.source() != Source::Faugus
 }
 
@@ -389,6 +390,11 @@ mod tests {
 
         assert_eq!(route(&game, Some(&config())), Some(Route::Proton(config())));
         assert_eq!(route(&game, None), None);
+    }
+
+    #[test]
+    fn proton_games_are_tracked_like_the_games_we_start_on_the_host() {
+        assert!(tracks_sessions(&host_game(LaunchKind::Proton)));
     }
 
     #[test]

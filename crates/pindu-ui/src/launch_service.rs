@@ -1,6 +1,7 @@
 //! Starts games and opens their launchers. Store games go to their launcher through a URI,
 //! which `GtkUriLauncher` hands to the OpenURI portal inside the sandbox; games we start
-//! ourselves run on the host as our child, from an argument list.
+//! ourselves run on the host as our child, from an argument list, and Windows games run
+//! through umu in the sandbox (see `proton_launch`).
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -31,7 +32,8 @@ pub fn launcher_name(source: Source) -> Option<&'static str> {
 }
 
 /// Starts a game. A store launch hands the game to its launcher; a host launch runs the
-/// game as our child, tracking its session unless its launcher tracks playtime itself.
+/// game as our child, tracking its session unless its launcher tracks playtime itself; a
+/// Windows game runs through umu, its session tracked from the moment umu starts it.
 /// Either saves the last-played time, and the toast says what happened, or why the game
 /// could not start. Without a window (`--launch`, Shell search) nothing is shown, unless
 /// the game needs a permission: then the window opens to explain it.
@@ -82,7 +84,15 @@ pub fn play(
                 toast(adw::Toast::new(&message.replace("{title}", &game.title)));
             }
             Some(Route::Proton(config)) => {
-                proton_launch::play(&app, window.as_ref(), game, config, library, toast);
+                proton_launch::play(
+                    &app,
+                    window.as_ref(),
+                    game,
+                    config,
+                    library,
+                    sessions,
+                    toast,
+                );
             }
             None => toast(adw::Toast::new(&gettext("This game cannot be started yet"))),
         }
