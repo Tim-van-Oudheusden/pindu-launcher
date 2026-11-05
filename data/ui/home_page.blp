@@ -34,25 +34,43 @@ template $PinduHomePage: Adw.NavigationPage {
       spacing: 24;
       margin-bottom: 24;
 
-      Box title_row {
-        margin-start: 48;
-        margin-end: 48;
+      Box info {
+        orientation: vertical;
+        spacing: 12;
 
-        Picture logo {
-          visible: false;
-          content-fit: contain;
-          width-request: 480;
-          height-request: 160;
-          can-shrink: true;
-          halign: start;
+        Box {
+          margin-start: 48;
+          margin-end: 48;
+
+          Picture logo {
+            visible: false;
+            content-fit: contain;
+            width-request: 480;
+            height-request: 160;
+            can-shrink: true;
+            halign: start;
+          }
+
+          Label title {
+            wrap: true;
+            xalign: 0;
+
+            styles [
+              "title-1",
+            ]
+          }
         }
 
-        Label title {
-          wrap: true;
-          xalign: 0;
+        // The focused game's details, shown when the design asks for them.
+        Box details {
+          visible: false;
+          spacing: 12;
+          margin-start: 48;
+          margin-end: 48;
+          halign: start;
 
           styles [
-            "title-1",
+            "home-details",
           ]
         }
       }

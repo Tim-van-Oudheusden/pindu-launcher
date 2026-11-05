@@ -10,14 +10,59 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
 use pindu_core::focus::FocusMemory;
-use pindu_core::home::{self, CardArt};
-use pindu_core::library::ArtSet;
+use pindu_core::home::{self, CardArt, Detail};
+use pindu_core::library::{ArtSet, HistoryGroup};
 use pindu_core::model::GameId;
 use pindu_core::themes::{HomeLayout, ThemeLayout, TileShape};
 
+use crate::game_page::{date, playtime};
 use crate::models::GameObject;
+use crate::sources::{source_icon, source_name};
 use crate::widgets::{CoverArt, textures};
 use crate::window::jump_card_frame;
+
+/// A `.detail` item of Home's details row: an icon and the value, with what it is as its
+/// tooltip and description. The wording is the game page's.
+fn detail_item(detail: Detail) -> gtk::Box {
+    let (icon, value, caption) = match detail {
+        Detail::Playtime(secs) => (
+            "media-playback-start-symbolic",
+            playtime(secs),
+            gettext("Playtime"),
+        ),
+        Detail::LastPlayed { group, at } => {
+            let value = match group {
+                HistoryGroup::Today => gettext("Today"),
+                HistoryGroup::ThisWeek => gettext("This Week"),
+                HistoryGroup::Earlier => date(at),
+            };
+            (
+                "document-open-recent-symbolic",
+                value,
+                gettext("Last Played"),
+            )
+        }
+        Detail::Source(source) => (
+            source_icon(source),
+            source_name(source),
+            gettext("Launcher"),
+        ),
+    };
+    let item = gtk::Box::builder()
+        .spacing(6)
+        .tooltip_text(&caption)
+        .css_classes(["detail"])
+        .build();
+    item.append(
+        &gtk::Image::builder()
+            .icon_name(icon)
+            .accessible_role(gtk::AccessibleRole::Presentation)
+            .build(),
+    );
+    item.append(&gtk::Label::new(Some(&value)));
+    item.update_property(&[gtk::accessible::Property::Description(&caption)]);
+    item
+}
 
 /// Room kept beside the focused card when the carousel scrolls, as wide as its margins;
 /// padding a design gives the carousel, for a focused card it scales up, adds to it.
@@ -43,7 +88,9 @@ mod imp {
         #[template_child]
         pub content: TemplateChild<gtk::Box>,
         #[template_child]
-        pub title_row: TemplateChild<gtk::Box>,
+        pub info: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub details: TemplateChild<gtk::Box>,
         #[template_child]
         pub carousel_row: TemplateChild<gtk::ScrolledWindow>,
         #[template_child]
@@ -118,13 +165,16 @@ glib::wrapper! {
 }
 
 impl HomePage {
-    /// Follows the layout of the design in force: where the carousel sits, and the shape
-    /// its cards take.
+    /// Follows the layout of the design in force: where the carousel sits, the shape its
+    /// cards take, and whether the focused game's details show.
     pub fn set_layout(&self, layout: ThemeLayout) {
         let imp = self.imp();
         let old = imp.layout.replace(layout);
         if old.home != layout.home {
             self.show_home_layout(layout.home);
+        }
+        if old.home_details != layout.home_details {
+            self.show_details(self.remembered().1.as_ref());
         }
         if old.home_tile != layout.home_tile {
             self.show_tile_shape(layout.home_tile);
@@ -157,13 +207,13 @@ impl HomePage {
         let content = &imp.content;
         match layout {
             HomeLayout::HeroBottom => {
-                content.reorder_child_after(&*imp.carousel_row, Some(&*imp.title_row));
+                content.reorder_child_after(&*imp.carousel_row, Some(&*imp.info));
                 content.set_valign(gtk::Align::End);
                 content.set_margin_top(0);
                 content.set_margin_bottom(24);
             }
             HomeLayout::RowTop => {
-                content.reorder_child_after(&*imp.title_row, Some(&*imp.carousel_row));
+                content.reorder_child_after(&*imp.info, Some(&*imp.carousel_row));
                 content.set_valign(gtk::Align::Start);
                 content.set_margin_top(24);
                 content.set_margin_bottom(0);
@@ -323,8 +373,32 @@ impl HomePage {
         f64::from((width - gaps).max(0)) / 2.0
     }
 
-    /// Shows the game's hero art (or its cover) with its logo (or its title); the Library
-    /// tile shows the title "Library" without art.
+    /// Fills the `.home-details` row with the game's `.detail` items, while the design
+    /// asks for them; the row hides without a game or details.
+    fn show_details(&self, game: Option<&GameObject>) {
+        let imp = self.imp();
+        while let Some(item) = imp.details.first_child() {
+            imp.details.remove(&item);
+        }
+        let details = match game.filter(|_| imp.layout.get().home_details) {
+            Some(game) => {
+                let now = glib::DateTime::now_local().ok();
+                let (now, offset) =
+                    now.map_or((0, 0), |now| (now.to_unix(), now.utc_offset().as_seconds()));
+                let entry = game.entry();
+                home::details(&entry.game, entry.playtime_secs, now, offset)
+            }
+            None => Vec::new(),
+        };
+        for detail in &details {
+            imp.details.append(&detail_item(*detail));
+        }
+        imp.details.set_visible(!details.is_empty());
+    }
+
+    /// Shows the game's hero art (or its cover) with its logo (or its title), and its
+    /// details when the design asks for them; the Library tile shows the title "Library"
+    /// without art.
     fn show_hero(&self, game: Option<&GameObject>) {
         let imp = self.imp();
         let generation = imp.hero_generation.get() + 1;
@@ -333,6 +407,7 @@ impl HomePage {
         imp.logo.set_paintable(gtk::gdk::Paintable::NONE);
         imp.logo.set_visible(false);
         imp.title.set_visible(true);
+        self.show_details(game);
         let Some(game) = game else {
             imp.title.set_label(&gettext("Library"));
             return;

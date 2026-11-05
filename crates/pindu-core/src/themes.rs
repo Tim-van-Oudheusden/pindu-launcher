@@ -34,6 +34,8 @@ pub struct ThemeLayout {
     pub home_tile: TileShape,
     /// `"home"`: where Home's carousel sits.
     pub home: HomeLayout,
+    /// `"home-details"`: show the focused game's details on Home.
+    pub home_details: bool,
 }
 
 impl ThemeLayout {
@@ -49,6 +51,10 @@ impl ThemeLayout {
                 .unwrap_or_default(),
             home: text("home")
                 .and_then(HomeLayout::from_name)
+                .unwrap_or_default(),
+            home_details: layout
+                .and_then(|layout| layout.get("home-details"))
+                .and_then(Json::as_bool)
                 .unwrap_or_default(),
         }
     }
@@ -352,6 +358,7 @@ mod tests {
             assert_eq!(theme.layout, ThemeLayout::default());
             assert_eq!(theme.layout.home_tile, TileShape::Landscape);
             assert_eq!(theme.layout.home, HomeLayout::HeroBottom);
+            assert!(!theme.layout.home_details);
         }
     }
 
@@ -368,5 +375,32 @@ mod tests {
 
         assert_eq!(found.themes[0].layout.home, HomeLayout::RowTop);
         assert_eq!(found.themes[0].layout.home_tile, TileShape::Landscape);
+    }
+
+    #[test]
+    fn a_theme_can_show_the_home_details() {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(
+            user.path(),
+            "details",
+            r#"{"contract": 1, "name": "Details", "layout": {"home-details": true}}"#,
+        );
+        write_theme(
+            user.path(),
+            "quoted",
+            r#"{"contract": 1, "name": "Quoted", "layout": {"home-details": "true"}}"#,
+        );
+
+        let found = discover(&[user.path()]);
+
+        let details = |id: &str| {
+            found
+                .themes
+                .iter()
+                .find(|theme| theme.id == id)
+                .map(|theme| theme.layout.home_details)
+        };
+        assert_eq!(details("details"), Some(true));
+        assert_eq!(details("quoted"), Some(false));
     }
 }
