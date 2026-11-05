@@ -105,6 +105,23 @@ window.fullscreen-mode gridview.library > child:focus-within {
   color: var(--accent-fg-color);
 }
 
+/* Fullscreen mode's top bar, which a design turns on: page tabs, the shown one marked, and
+   a clock. */
+.fullscreen-top-bar .page-tab {
+  border-radius: 999px;
+  padding: 6px 20px;
+  background: none;
+  font-weight: bold;
+}
+
+.fullscreen-top-bar .page-tab:checked {
+  background-color: color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.fullscreen-top-bar .clock {
+  font-weight: bold;
+}
+
 /* Fullscreen mode's hint bar: each controller glyph with what its button does. */
 .hint-bar {
   padding: 12px 36px;
