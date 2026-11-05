@@ -1,0 +1,13 @@
+{
+  "contract": 1,
+  "name": "Panorama",
+  "description": "The focused game's art across the screen, with a row of square tiles below",
+  "author": "Pindu launcher contributors",
+  "license": "GPL-3.0-or-later",
+  "layout": {
+    "home": "hero-bottom",
+    "home-tile": "square",
+    "home-tile-size": 168,
+    "top-bar": true
+  }
+}

@@ -1,0 +1,260 @@
+/* Panorama — a fullscreen design for Pindu launcher.
+ *
+ * The focused game's art across the whole screen, crossfading as focus moves; a row of
+ * square tiles in the lower part, where the focused tile grows, takes an outline and a soft
+ * glow in the system accent colour and shows its title; a top bar with the page tabs and
+ * the clock straight on the art. Always dark; the only colour is the system accent.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+/* Palette: near-black surfaces, white type. */
+window.fullscreen-mode {
+  --window-bg-color: #0d0d0d;
+  --window-fg-color: #ffffff;
+  --view-bg-color: #0d0d0d;
+  --view-fg-color: #ffffff;
+  --headerbar-bg-color: transparent;
+  --headerbar-fg-color: #ffffff;
+  --card-bg-color: #262626;
+  --card-fg-color: #ffffff;
+  --popover-bg-color: #1c1c1c;
+  --popover-fg-color: #ffffff;
+  --dialog-bg-color: #1c1c1c;
+  --dialog-fg-color: #ffffff;
+  --sidebar-bg-color: #161616;
+  --sidebar-fg-color: #ffffff;
+  --sheet-bg-color: #161616;
+  --sheet-fg-color: #ffffff;
+  --panorama-surface: #1c1c1c;
+  --panorama-muted: rgb(255 255 255 / 70%);
+  background-color: var(--window-bg-color);
+  color: var(--window-fg-color);
+  font-family: "Adwaita Sans", sans-serif;
+}
+
+/* Top bar: no surface, white type with a soft shadow so it reads on any art. */
+window.fullscreen-mode .fullscreen-top-bar {
+  padding: 16px 40px 0;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 70%);
+}
+
+window.fullscreen-mode .fullscreen-top-bar .page-tab {
+  background: none;
+  border-radius: 4px;
+  padding: 6px 4px;
+  margin-right: 24px;
+  color: var(--panorama-muted);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+window.fullscreen-mode .fullscreen-top-bar .page-tab:checked {
+  color: white;
+  box-shadow: inset 0 -3px var(--accent-color);
+}
+
+window.fullscreen-mode .fullscreen-top-bar .page-tab:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+window.fullscreen-mode .fullscreen-top-bar .clock {
+  font-weight: 600;
+  font-feature-settings: "tnum";
+}
+
+/* Home: the art fills the screen and crossfades; the lower part darkens under the row. */
+window.fullscreen-mode .home {
+  background-image: linear-gradient(160deg, #262626, #0d0d0d 65%);
+}
+
+window.fullscreen-mode .home .home-hero {
+  transition: opacity 450ms ease-in-out;
+}
+
+window.fullscreen-mode .home .hero-gradient {
+  background-image:
+    linear-gradient(to bottom, rgb(0 0 0 / 45%), transparent 18%),
+    linear-gradient(to top, rgb(0 0 0 / 85%), rgb(0 0 0 / 40%) 40%, transparent 65%);
+}
+
+/* The title is on the focused tile instead. */
+window.fullscreen-mode .home .home-title {
+  opacity: 0;
+}
+
+/* The row: square tiles with small corners; the focused one grows from its bottom edge,
+   takes the accent outline and glow, and shows its title on a dark band. */
+window.fullscreen-mode .home-carousel.home-tile-square {
+  padding: 96px 0 8px;
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button {
+  border-radius: 4px;
+  transform-origin: 0 100%;
+  transition: transform 140ms ease-out, margin 140ms ease-out, box-shadow 140ms ease-out;
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button cover-art,
+window.fullscreen-mode .home-carousel.home-tile-square > button picture {
+  border-radius: 4px;
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button:focus-within {
+  transform: scale(1.4);
+  margin-right: 68px;
+  outline: 3px solid var(--accent-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 28px 4px color-mix(in srgb, var(--accent-color) 55%, transparent);
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square .jump-title {
+  opacity: 0;
+  border-radius: 0 0 4px 4px;
+  font-size: 0.75em;
+  transition: opacity 140ms ease-out;
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button:focus-within .jump-title {
+  opacity: 1;
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > .library-tile {
+  background-color: var(--panorama-surface);
+  border-radius: 4px;
+}
+
+/* Library: text tabs underlined in the accent; tiles with small corners whose title shows
+   only on the focused one. */
+window.fullscreen-mode .library-tabs .library-tab {
+  background: none;
+  border-radius: 4px;
+  padding: 6px 4px;
+  margin-right: 20px;
+  color: var(--panorama-muted);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+window.fullscreen-mode .library-tabs .library-tab:checked {
+  color: white;
+  box-shadow: inset 0 -3px var(--accent-color);
+}
+
+window.fullscreen-mode .cover-tile cover-art {
+  border-radius: 4px;
+}
+
+window.fullscreen-mode .cover-tile > label {
+  opacity: 0;
+}
+
+window.fullscreen-mode gridview.library > child {
+  border-radius: 6px;
+}
+
+window.fullscreen-mode gridview.library > child:focus-within {
+  transform: scale(1.06);
+  outline: 3px solid var(--accent-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 28px 4px color-mix(in srgb, var(--accent-color) 45%, transparent);
+}
+
+window.fullscreen-mode gridview.library > child:focus-within .cover-tile > label {
+  opacity: 1;
+}
+
+/* Game page: the art over a deep fade, Play filled with the accent. */
+window.fullscreen-mode .game-hero .hero-gradient {
+  background-image: linear-gradient(to bottom, rgb(0 0 0 / 30%), transparent 30%, var(--window-bg-color));
+}
+
+window.fullscreen-mode .game-play {
+  border-radius: 4px;
+}
+
+window.fullscreen-mode .game-actions button {
+  border-radius: 4px;
+}
+
+window.fullscreen-mode .game-actions button:focus-visible {
+  outline: 3px solid var(--accent-color);
+  outline-offset: 3px;
+}
+
+/* Panels: solid dark sheets with full-width rows; the focused row takes the accent
+   outline. */
+window.fullscreen-mode .menu-drawer,
+window.fullscreen-mode .quick-access,
+window.fullscreen-mode .options-sheet {
+  background-color: var(--sidebar-bg-color);
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar,
+window.fullscreen-mode .quick-access .navigation-sidebar,
+window.fullscreen-mode .options-sheet .navigation-sidebar {
+  background: none;
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar > row,
+window.fullscreen-mode .quick-access .navigation-sidebar > row,
+window.fullscreen-mode .options-sheet .navigation-sidebar > row {
+  border-radius: 8px;
+  background-color: var(--panorama-surface);
+  margin-bottom: 6px;
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar > row:focus-visible,
+window.fullscreen-mode .quick-access .navigation-sidebar > row:focus-visible,
+window.fullscreen-mode .options-sheet .navigation-sidebar > row:focus-visible,
+window.fullscreen-mode .menu-drawer .boxed-list > row:focus-visible,
+window.fullscreen-mode .quick-access .boxed-list > row:focus-visible {
+  outline: 3px solid var(--accent-color);
+  outline-offset: -3px;
+}
+
+/* The lists inside them (cover sizes, designs): one solid card with small corners. */
+window.fullscreen-mode .menu-drawer .boxed-list,
+window.fullscreen-mode .quick-access .boxed-list {
+  background-color: var(--panorama-surface);
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+window.fullscreen-mode .menu-drawer .boxed-list > row,
+window.fullscreen-mode .quick-access .boxed-list > row {
+  border-radius: 8px;
+}
+
+/* Hint bar and search keyboard. */
+window.fullscreen-mode .hint-bar {
+  background-color: rgb(0 0 0 / 55%);
+}
+
+window.fullscreen-mode .hint .hint-label {
+  font-weight: 600;
+}
+
+window.fullscreen-mode .search-keyboard {
+  background-color: var(--sidebar-bg-color);
+}
+
+window.fullscreen-mode .search-keyboard .osk-key {
+  border-radius: 4px;
+  background-color: var(--panorama-surface);
+}
+
+window.fullscreen-mode .search-keyboard .osk-key.cursor {
+  background-color: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+}
+
+/* Less motion asked for: no growing, sliding or fading. */
+@media (prefers-reduced-motion: reduce) {
+  window.fullscreen-mode .home .home-hero,
+  window.fullscreen-mode .home-carousel.home-tile-square > button,
+  window.fullscreen-mode .home-carousel.home-tile-square .jump-title {
+    transition: none;
+  }
+}

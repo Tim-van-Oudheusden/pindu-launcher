@@ -1,0 +1,13 @@
+Panorama, a fullscreen design for Pindu launcher
+Copyright (C) 2026 Pindu launcher contributors
+
+This design (theme.json and theme.css) is free software: you can redistribute it and/or
+modify it under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any later
+version. The full text of the licence is in the LICENSE file at the root of Pindu
+launcher's source, and at <https://www.gnu.org/licenses/gpl-3.0.html>.
+
+Panorama was written from scratch. It follows the general layout of today's console
+dashboards (game art across the screen, a row of tiles, a bar at the top); it contains no
+console names, logos, button art or brand colours, and takes its only colour from the
+system accent.
