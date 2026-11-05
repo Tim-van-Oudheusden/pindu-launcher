@@ -34,6 +34,8 @@ pub struct ThemeLayout {
     pub home_tile: TileShape,
     /// `"home"`: where Home's carousel sits.
     pub home: HomeLayout,
+    /// `"top-bar"`: whether fullscreen mode shows a bar with page tabs and a clock.
+    pub top_bar: bool,
 }
 
 impl ThemeLayout {
@@ -49,6 +51,10 @@ impl ThemeLayout {
                 .unwrap_or_default(),
             home: text("home")
                 .and_then(HomeLayout::from_name)
+                .unwrap_or_default(),
+            top_bar: layout
+                .and_then(|layout| layout.get("top-bar"))
+                .and_then(Json::as_bool)
                 .unwrap_or_default(),
         }
     }
@@ -333,6 +339,33 @@ mod tests {
         };
         assert_eq!(shape("square"), Some(TileShape::Square));
         assert_eq!(shape("portrait"), Some(TileShape::Portrait));
+    }
+
+    #[test]
+    fn a_theme_turns_the_top_bar_on() {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(
+            user.path(),
+            "bar",
+            r#"{"contract": 1, "name": "Bar", "layout": {"top-bar": true}}"#,
+        );
+        write_theme(
+            user.path(),
+            "odd",
+            r#"{"contract": 1, "name": "Odd", "layout": {"top-bar": "yes"}}"#,
+        );
+
+        let found = discover(&[user.path()]);
+
+        let top_bar = |id: &str| {
+            found
+                .themes
+                .iter()
+                .find(|theme| theme.id == id)
+                .map(|theme| theme.layout.top_bar)
+        };
+        assert_eq!(top_bar("bar"), Some(true));
+        assert_eq!(top_bar("odd"), Some(false));
     }
 
     #[test]
