@@ -74,6 +74,14 @@ pub fn fullscreen_style_path(xdg_config_home: Option<&Path>, home: &Path) -> Pat
         .join("fullscreen.css")
 }
 
+/// `$XDG_CONFIG_HOME/pindu-launcher/themes`: the user's own fullscreen designs, one theme
+/// folder each.
+pub fn themes_dir(xdg_config_home: Option<&Path>, home: &Path) -> PathBuf {
+    config_home(xdg_config_home, home)
+        .join(APP_DIR)
+        .join("themes")
+}
+
 /// Splits a document portal path, `/run/user/<uid>/doc/<id>/<name>/<rest…>`, into the
 /// document ID and the parts below the document itself; `None` for any other path.
 pub fn document_portal_parts(path: &Path) -> Option<(String, Vec<PathBuf>)> {
@@ -194,5 +202,12 @@ mod tests {
                 Path::new("/home/me/.config/pindu-launcher/fullscreen.css")
             );
         }
+    }
+
+    #[test]
+    fn user_themes_live_beside_the_fullscreen_style() {
+        let path = themes_dir(Some(Path::new("/config")), Path::new("/home/me"));
+
+        assert_eq!(path, Path::new("/config/pindu-launcher/themes"));
     }
 }

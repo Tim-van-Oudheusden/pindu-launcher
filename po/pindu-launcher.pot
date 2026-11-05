@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 14:45+0100\n"
+"POT-Creation-Date: 2026-11-05 15:35+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -201,7 +201,7 @@ msgstr ""
 msgid "_Cancel"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen.rs:421
+#: crates/pindu-ui/src/fullscreen.rs:420
 #, rust-format
 msgid "Your fullscreen style has a problem"
 msgid_plural "Your fullscreen style has {count} problems"
@@ -1360,10 +1360,21 @@ msgid ""
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:92
-msgid "SteamGridDB prompt shown"
+msgid "Fullscreen design"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:93
+msgid ""
+"The id of the design fullscreen mode is shown in: a theme folder shipped "
+"with the app or in the app's config folder under themes. Empty for the "
+"standard look. The desktop window is not affected."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:97
+msgid "SteamGridDB prompt shown"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:98
 msgid ""
 "Whether the window has offered, once, to set up a SteamGridDB API key for "
 "game art."
