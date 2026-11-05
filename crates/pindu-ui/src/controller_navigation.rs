@@ -81,7 +81,9 @@ impl PinduWindow {
         if self.handle_panel_intent(intent) {
             match intent {
                 Intent::Back => self.play_sound(Sound::Back),
-                Intent::Menu | Intent::Home | Intent::Options => self.play_sound(Sound::Select),
+                Intent::Menu | Intent::Home | Intent::QuickAccess | Intent::Options => {
+                    self.play_sound(Sound::Select)
+                }
                 _ => {}
             }
             return;

@@ -3,7 +3,7 @@
 
 use crate::gamepad::{Button, DeviceKind, Intent};
 use crate::osk::Key;
-use crate::panels::{DrawerLevel, OptionsLevel, Panel};
+use crate::panels::{DrawerLevel, OptionsLevel, Panel, QuickAccessLevel};
 
 /// What kind of widget has focus, as far as the A button is concerned.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,6 +91,8 @@ pub enum Action {
     HoldToCancel,
     /// Open the menu drawer.
     Menu,
+    /// Open the Quick Access panel.
+    QuickAccess,
     /// Type the key's character into the search field.
     Type,
     /// Delete the search field's last character.
@@ -164,18 +166,21 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
     // own buttons wait for it, as they wait for a dialog.
     let back = match context.panel {
         _ if context.dialog => Some(Action::Close),
-        Some(Panel::Drawer(DrawerLevel::Main) | Panel::Options(OptionsLevel::Main)) => {
-            Some(Action::Close)
-        }
+        Some(
+            Panel::Drawer(DrawerLevel::Main)
+            | Panel::Options(OptionsLevel::Main)
+            | Panel::QuickAccess(QuickAccessLevel::Main),
+        ) => Some(Action::Close),
         Some(_) => Some(Action::Back),
         None => context.page_below.then_some(Action::Back),
     };
     let page = !context.dialog && context.panel.is_none();
     // Y searches the page under a dialog, so it waits for the dialog to close; so do the
-    // page's tabs, sort, options and menu.
+    // page's tabs, sort, options, menu and Quick Access.
     let search = (context.search && page).then_some(Action::Search);
     let options = (context.options && page).then_some(Action::Options);
     let menu = (context.menu && page).then_some(Action::Menu);
+    let quick_access = (context.menu && page).then_some(Action::QuickAccess);
     let tabs = context.tabs && page;
     let pair = |back, forward, action| {
         tabs.then(|| Hint {
@@ -190,6 +195,7 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
         single(Intent::Search, search),
         single(Intent::Options, options),
         single(Intent::Menu, menu),
+        single(Intent::QuickAccess, quick_access),
         pair(Intent::PreviousTab, Intent::NextTab, Action::Tabs),
         pair(Intent::PreviousSort, Intent::NextSort, Action::Sort),
     ]
@@ -232,7 +238,10 @@ pub fn glyph(kind: DeviceKind, button: Button) -> &'static str {
         (Nintendo, Button::Start) => "pindu-glyph-plus-symbolic",
         (_, Button::Select) => "pindu-glyph-view-symbolic",
         (_, Button::Start) => "pindu-glyph-menu-symbolic",
+        (PlayStation | SteamDeck, Button::RightStick) => "pindu-glyph-r3-symbolic",
+        (Xbox | Nintendo | Generic, Button::RightStick) => "pindu-glyph-rs-symbolic",
         (_, Button::Guide) => "pindu-glyph-home-symbolic",
+        (_, Button::Misc1) => "pindu-glyph-more-symbolic",
         (_, Button::DpadUp) => "pindu-glyph-dpad-up-symbolic",
         (_, Button::DpadDown) => "pindu-glyph-dpad-down-symbolic",
         (_, Button::DpadLeft) => "pindu-glyph-dpad-left-symbolic",
@@ -255,6 +264,8 @@ pub enum GlyphName {
     Minus,
     Plus,
     Home,
+    /// The Steam Deck's "…" button.
+    More,
     DpadUp,
     DpadDown,
     DpadLeft,
@@ -294,7 +305,10 @@ pub fn glyph_name(kind: DeviceKind, button: Button) -> GlyphName {
         (Nintendo, Button::Start) => GlyphName::Plus,
         (_, Button::Select) => GlyphName::View,
         (_, Button::Start) => GlyphName::Menu,
+        (PlayStation | SteamDeck, Button::RightStick) => Label("R3"),
+        (Xbox | Nintendo | Generic, Button::RightStick) => Label("RS"),
         (_, Button::Guide) => GlyphName::Home,
+        (_, Button::Misc1) => GlyphName::More,
         (_, Button::DpadUp) => GlyphName::DpadUp,
         (_, Button::DpadDown) => GlyphName::DpadDown,
         (_, Button::DpadLeft) => GlyphName::DpadLeft,
@@ -335,7 +349,8 @@ mod tests {
                 (Button::South, Action::Open),
                 (Button::North, Action::Search),
                 (Button::Select, Action::Options),
-                (Button::Start, Action::Menu)
+                (Button::Start, Action::Menu),
+                (Button::RightStick, Action::QuickAccess)
             ]
         );
         let dialog_over_home = Context {
@@ -345,6 +360,49 @@ mod tests {
         assert_eq!(
             actions(dialog_over_home, DeviceKind::Xbox),
             [(Button::South, Action::Open), (Button::East, Action::Close)]
+        );
+    }
+
+    #[test]
+    fn fullscreen_pages_open_quick_access_with_r3_after_the_menu() {
+        let library = Context {
+            page_below: true,
+            menu: true,
+            ..context(Focus::Game)
+        };
+        for kind in [DeviceKind::Xbox, DeviceKind::SteamDeck] {
+            assert_eq!(
+                actions(library, kind)[2..],
+                [
+                    (Button::Start, Action::Menu),
+                    (Button::RightStick, Action::QuickAccess)
+                ],
+                "{kind:?}"
+            );
+        }
+        let quick_access = Context {
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+            ..library
+        };
+        assert_eq!(
+            actions(quick_access, DeviceKind::Xbox),
+            [(Button::South, Action::Open), (Button::East, Action::Close)]
+        );
+        let designs = Context {
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Designs)),
+            ..library
+        };
+        assert_eq!(
+            actions(designs, DeviceKind::Xbox),
+            [(Button::South, Action::Open), (Button::East, Action::Back)]
+        );
+        let desktop = Context {
+            menu: false,
+            ..library
+        };
+        assert_eq!(
+            actions(desktop, DeviceKind::Xbox),
+            [(Button::South, Action::Open), (Button::East, Action::Back)]
         );
     }
 
@@ -711,6 +769,33 @@ mod tests {
         for (kind, button, name) in cases {
             assert_eq!(glyph_name(kind, button), name, "{kind:?} {button:?}");
         }
+    }
+
+    #[test]
+    fn the_right_stick_click_shows_r3_or_rs_as_the_layout_names_it() {
+        let cases = [
+            (DeviceKind::Xbox, "pindu-glyph-rs-symbolic", "RS"),
+            (DeviceKind::Generic, "pindu-glyph-rs-symbolic", "RS"),
+            (DeviceKind::Nintendo, "pindu-glyph-rs-symbolic", "RS"),
+            (DeviceKind::PlayStation, "pindu-glyph-r3-symbolic", "R3"),
+            (DeviceKind::SteamDeck, "pindu-glyph-r3-symbolic", "R3"),
+        ];
+        for (kind, icon, label) in cases {
+            assert_eq!(glyph(kind, Button::RightStick), icon, "{kind:?}");
+            assert_eq!(
+                glyph_name(kind, Button::RightStick),
+                GlyphName::Label(label),
+                "{kind:?}"
+            );
+        }
+        assert_eq!(
+            glyph(DeviceKind::SteamDeck, Button::Misc1),
+            "pindu-glyph-more-symbolic"
+        );
+        assert_eq!(
+            glyph_name(DeviceKind::SteamDeck, Button::Misc1),
+            GlyphName::More
+        );
     }
 
     #[test]

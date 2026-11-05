@@ -19,8 +19,8 @@ template $PinduWindow: Adw.ApplicationWindow {
     reveal-bottom-bars: false;
 
     content: Adw.ToastOverlay toast_overlay {
-      // Fullscreen mode's panels: the options sheet at the bottom and the menu drawer on
-      // the left, over the pages.
+      // Fullscreen mode's panels: the options sheet at the bottom, the menu drawer on the
+      // left and Quick Access on the right, over the pages.
       child: Adw.BottomSheet options_sheet {
         can-open: false;
         show-drag-handle: false;
@@ -309,352 +309,467 @@ template $PinduWindow: Adw.ApplicationWindow {
             }
           };
 
-          content: Adw.OverlaySplitView split_view {
-            sidebar: Adw.ToolbarView sidebar_toolbar {
-              [top]
-              Adw.HeaderBar {
-                title-widget: Adw.WindowTitle {
-                  title: _("Pindu launcher");
-                };
+          content: Adw.OverlaySplitView quick_access {
+            collapsed: true;
+            show-sidebar: false;
+            sidebar-position: end;
+            enable-show-gesture: false;
+            max-sidebar-width: 440;
+            sidebar-width-fraction: 0.4;
+
+            // Fullscreen mode's Quick Access: R3 or the Deck's "…" button opens it over the
+            // page, B closes it.
+            sidebar: Box quick_access_panel {
+              orientation: vertical;
+              accessible-role: group;
+
+              accessibility {
+                label: _("Quick Access");
               }
 
-              content: Adw.Sidebar sidebar {
-                Adw.SidebarSection {
-                  title: _("Library");
+              styles [
+                "quick-access",
+              ]
 
-                  Adw.SidebarItem all_item {
-                    title: _("All Games");
-                    icon-name: "view-grid-symbolic";
+              Stack quick_access_stack {
+                vexpand: true;
+                transition-type: crossfade;
 
-                    suffix: Label all_count {
-                      styles [
-                        "dimmed",
-                        "numeric",
-                      ]
-                    };
-                  }
+                StackPage {
+                  name: "main";
 
-                  Adw.SidebarItem installed_item {
-                    title: _("Installed");
-                    icon-name: "drive-harddisk-symbolic";
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
 
-                    suffix: Label installed_count {
-                      styles [
-                        "dimmed",
-                        "numeric",
-                      ]
-                    };
-                  }
-
-                  Adw.SidebarItem favourites_item {
-                    title: _("Favourites");
-                    icon-name: "starred-symbolic";
-
-                    suffix: Label favourites_count {
-                      styles [
-                        "dimmed",
-                        "numeric",
-                      ]
-                    };
-                  }
-
-                  Adw.SidebarItem history_item {
-                    title: _("Play History");
-                    icon-name: "document-open-recent-symbolic";
-
-                    suffix: Label history_count {
-                      styles [
-                        "dimmed",
-                        "numeric",
-                      ]
-                    };
-                  }
-                }
-
-                Adw.SidebarSection sources_section {
-                  title: _("Sources");
-                }
-
-                Adw.SidebarSection collections_section {
-                  title: _("Collections");
-                  menu-model: collection_menu;
-                }
-
-                Adw.SidebarSection {
-                  Adw.SidebarItem new_collection_item {
-                    title: _("New Collection");
-                    icon-name: "list-add-symbolic";
-                  }
-                }
-              };
-            };
-
-            content: Adw.NavigationView navigation_view {
-              Adw.NavigationPage library_page {
-                title: _("All Games");
-                tag: "library";
-
-                child: Adw.ToolbarView {
-                  [top]
-                  Adw.HeaderBar {
-                    [start]
-                    ToggleButton sidebar_toggle {
-                      icon-name: "sidebar-show-symbolic";
-                      tooltip-text: _("Toggle Sidebar");
-                      active: bind split_view.show-sidebar bidirectional;
-                    }
-
-                    [start]
-                    MenuButton {
-                      icon-name: "list-add-symbolic";
-                      tooltip-text: _("Add");
-                      menu-model: add_menu;
-                    }
-
-                    [start]
-                    Adw.Spinner sync_spinner {
-                      visible: false;
-                      tooltip-text: _("Importing Games…");
-                    }
-
-                    title-widget: SearchEntry search_entry {
-                      placeholder-text: _("Search games");
-                      hexpand: true;
-                      max-width-chars: 32;
-
-                      accessibility {
-                        label: _("Search games");
-                      }
-                    };
-
-                    [end]
-                    MenuButton {
-                      primary: true;
-                      icon-name: "open-menu-symbolic";
-                      tooltip-text: _("Main Menu");
-                      menu-model: primary_menu;
-                    }
-
-                    [end]
-                    MenuButton {
-                      icon-name: "view-sort-descending-symbolic";
-                      tooltip-text: _("Sort");
-                      menu-model: sort_menu;
-                    }
-                  }
-
-                  content: Box {
-                    orientation: vertical;
-
-                    // Fullscreen mode's tabs, which the shoulder buttons switch, and the sort
-                    // order, which the triggers cycle; the filter row hides meanwhile. Focus
-                    // stays on the page below them.
-                    Box library_tabs {
-                      visible: false;
-                      can-focus: false;
-                      spacing: 24;
-                      margin-top: 24;
-                      margin-bottom: 12;
-                      margin-start: 36;
-                      margin-end: 36;
-
-                      styles [
-                        "library-tabs",
-                      ]
-
-                      ScrolledWindow tab_scroller {
-                        hexpand: true;
-                        vscrollbar-policy: never;
-                        hscrollbar-policy: external;
-
-                        child: Box tab_row {
-                          spacing: 6;
-                        };
-                      }
-
-                      Box {
-                        spacing: 8;
-                        valign: center;
-
-                        Image {
-                          icon-name: "view-sort-descending-symbolic";
-                          accessible-role: presentation;
-                        }
-
-                        Label sort_label {}
-
-                        styles [
-                          "dimmed",
-                        ]
-                      }
-                    }
-
-                    Adw.WrapBox filter_row {
-                      child-spacing: 6;
-                      line-spacing: 6;
-                      margin-top: 6;
-                      margin-bottom: 6;
-                      margin-start: 18;
-                      margin-end: 18;
-
-                      styles [
-                        "filter-row",
-                      ]
-
-                      ToggleButton installed_filter {
-                        label: _("Installed");
-                      }
-
-                      ToggleButton not_installed_filter {
-                        label: _("Not Installed");
-                      }
-
-                      ToggleButton favourites_filter {
-                        label: _("Favourites");
-                      }
-
-                      ToggleButton windows_filter {
-                        label: _("Windows");
-                      }
-
-                      ToggleButton native_filter {
-                        label: _("Native");
-                      }
-
-                      Button clear_filters {
-                        label: _("Clear");
-                        visible: false;
-
-                        styles [
-                          "flat",
-                        ]
-                      }
-                    }
-
-                    Box jump_back_in {
+                    child: Box {
                       orientation: vertical;
-                      spacing: 6;
-                      visible: false;
-                      margin-start: 18;
-                      margin-end: 18;
-                      margin-bottom: 6;
+                      spacing: 12;
 
                       Label {
-                        label: _("Jump Back In");
+                        label: _("Quick Access");
                         xalign: 0;
 
                         styles [
-                          "heading",
+                          "title-3",
                         ]
                       }
 
-                      ScrolledWindow {
-                        vscrollbar-policy: never;
-                        propagate-natural-height: true;
+                      ListBox quick_access_list {
+                        selection-mode: none;
 
-                        child: Box jump_cards {
-                          spacing: 12;
-                          margin-bottom: 6;
-                        };
+                        styles [
+                          "navigation-sidebar",
+                        ]
+
+                        ListBoxRow quick_access_design_row {
+                          action-name: "win.quick-access-designs";
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "preferences-desktop-appearance-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Label {
+                              label: _("Design");
+                              xalign: 0;
+                              hexpand: true;
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
+                      }
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "designs";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      Label {
+                        label: _("Design");
+                        xalign: 0;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // Default, then each installed design, with a check on the one in
+                      // force; filled in code.
+                      ListBox quick_access_designs {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+                      }
+                    };
+                  };
+                }
+              }
+            };
+
+            content: Adw.OverlaySplitView split_view {
+              sidebar: Adw.ToolbarView sidebar_toolbar {
+                [top]
+                Adw.HeaderBar {
+                  title-widget: Adw.WindowTitle {
+                    title: _("Pindu launcher");
+                  };
+                }
+
+                content: Adw.Sidebar sidebar {
+                  Adw.SidebarSection {
+                    title: _("Library");
+
+                    Adw.SidebarItem all_item {
+                      title: _("All Games");
+                      icon-name: "view-grid-symbolic";
+
+                      suffix: Label all_count {
+                        styles [
+                          "dimmed",
+                          "numeric",
+                        ]
+                      };
+                    }
+
+                    Adw.SidebarItem installed_item {
+                      title: _("Installed");
+                      icon-name: "drive-harddisk-symbolic";
+
+                      suffix: Label installed_count {
+                        styles [
+                          "dimmed",
+                          "numeric",
+                        ]
+                      };
+                    }
+
+                    Adw.SidebarItem favourites_item {
+                      title: _("Favourites");
+                      icon-name: "starred-symbolic";
+
+                      suffix: Label favourites_count {
+                        styles [
+                          "dimmed",
+                          "numeric",
+                        ]
+                      };
+                    }
+
+                    Adw.SidebarItem history_item {
+                      title: _("Play History");
+                      icon-name: "document-open-recent-symbolic";
+
+                      suffix: Label history_count {
+                        styles [
+                          "dimmed",
+                          "numeric",
+                        ]
+                      };
+                    }
+                  }
+
+                  Adw.SidebarSection sources_section {
+                    title: _("Sources");
+                  }
+
+                  Adw.SidebarSection collections_section {
+                    title: _("Collections");
+                    menu-model: collection_menu;
+                  }
+
+                  Adw.SidebarSection {
+                    Adw.SidebarItem new_collection_item {
+                      title: _("New Collection");
+                      icon-name: "list-add-symbolic";
+                    }
+                  }
+                };
+              };
+
+              content: Adw.NavigationView navigation_view {
+                Adw.NavigationPage library_page {
+                  title: _("All Games");
+                  tag: "library";
+
+                  child: Adw.ToolbarView {
+                    [top]
+                    Adw.HeaderBar {
+                      [start]
+                      ToggleButton sidebar_toggle {
+                        icon-name: "sidebar-show-symbolic";
+                        tooltip-text: _("Toggle Sidebar");
+                        active: bind split_view.show-sidebar bidirectional;
+                      }
+
+                      [start]
+                      MenuButton {
+                        icon-name: "list-add-symbolic";
+                        tooltip-text: _("Add");
+                        menu-model: add_menu;
+                      }
+
+                      [start]
+                      Adw.Spinner sync_spinner {
+                        visible: false;
+                        tooltip-text: _("Importing Games…");
+                      }
+
+                      title-widget: SearchEntry search_entry {
+                        placeholder-text: _("Search games");
+                        hexpand: true;
+                        max-width-chars: 32;
+
+                        accessibility {
+                          label: _("Search games");
+                        }
+                      };
+
+                      [end]
+                      MenuButton {
+                        primary: true;
+                        icon-name: "open-menu-symbolic";
+                        tooltip-text: _("Main Menu");
+                        menu-model: primary_menu;
+                      }
+
+                      [end]
+                      MenuButton {
+                        icon-name: "view-sort-descending-symbolic";
+                        tooltip-text: _("Sort");
+                        menu-model: sort_menu;
                       }
                     }
 
-                    Stack content_stack {
-                      vexpand: true;
+                    content: Box {
+                      orientation: vertical;
 
-                      StackPage {
-                        name: "grid";
+                      // Fullscreen mode's tabs, which the shoulder buttons switch, and the sort
+                      // order, which the triggers cycle; the filter row hides meanwhile. Focus
+                      // stays on the page below them.
+                      Box library_tabs {
+                        visible: false;
+                        can-focus: false;
+                        spacing: 24;
+                        margin-top: 24;
+                        margin-bottom: 12;
+                        margin-start: 36;
+                        margin-end: 36;
 
-                        child: ScrolledWindow {
-                          hscrollbar-policy: never;
+                        styles [
+                          "library-tabs",
+                        ]
 
-                          child: GridView grid {
-                            single-click-activate: true;
+                        ScrolledWindow tab_scroller {
+                          hexpand: true;
+                          vscrollbar-policy: never;
+                          hscrollbar-policy: external;
 
-                            styles [
-                              "library",
-                            ]
+                          child: Box tab_row {
+                            spacing: 6;
                           };
-                        };
+                        }
+
+                        Box {
+                          spacing: 8;
+                          valign: center;
+
+                          Image {
+                            icon-name: "view-sort-descending-symbolic";
+                            accessible-role: presentation;
+                          }
+
+                          Label sort_label {}
+
+                          styles [
+                            "dimmed",
+                          ]
+                        }
                       }
 
-                      StackPage {
-                        name: "empty";
+                      Adw.WrapBox filter_row {
+                        child-spacing: 6;
+                        line-spacing: 6;
+                        margin-top: 6;
+                        margin-bottom: 6;
+                        margin-start: 18;
+                        margin-end: 18;
 
-                        child: Adw.StatusPage empty_page {
-                          title: _("No Games Yet");
-                          description: _("Games from your launchers appear here once they are imported");
+                        styles [
+                          "filter-row",
+                        ]
 
-                          child: Button {
-                            label: _("_Import Now");
-                            use-underline: true;
-                            halign: center;
-                            action-name: "app.import";
+                        ToggleButton installed_filter {
+                          label: _("Installed");
+                        }
 
-                            styles [
-                              "pill",
-                              "suggested-action",
-                            ]
+                        ToggleButton not_installed_filter {
+                          label: _("Not Installed");
+                        }
+
+                        ToggleButton favourites_filter {
+                          label: _("Favourites");
+                        }
+
+                        ToggleButton windows_filter {
+                          label: _("Windows");
+                        }
+
+                        ToggleButton native_filter {
+                          label: _("Native");
+                        }
+
+                        Button clear_filters {
+                          label: _("Clear");
+                          visible: false;
+
+                          styles [
+                            "flat",
+                          ]
+                        }
+                      }
+
+                      Box jump_back_in {
+                        orientation: vertical;
+                        spacing: 6;
+                        visible: false;
+                        margin-start: 18;
+                        margin-end: 18;
+                        margin-bottom: 6;
+
+                        Label {
+                          label: _("Jump Back In");
+                          xalign: 0;
+
+                          styles [
+                            "heading",
+                          ]
+                        }
+
+                        ScrolledWindow {
+                          vscrollbar-policy: never;
+                          propagate-natural-height: true;
+
+                          child: Box jump_cards {
+                            spacing: 12;
+                            margin-bottom: 6;
                           };
-                        };
+                        }
                       }
 
-                      StackPage {
-                        name: "no-results";
+                      Stack content_stack {
+                        vexpand: true;
 
-                        child: Adw.StatusPage {
-                          icon-name: "edit-find-symbolic";
-                          title: _("No Results Found");
-                          description: _("Try a different search or filter");
-                        };
-                      }
+                        StackPage {
+                          name: "grid";
 
-                      StackPage {
-                        name: "history";
+                          child: ScrolledWindow {
+                            hscrollbar-policy: never;
 
-                        child: ScrolledWindow {
-                          hscrollbar-policy: never;
+                            child: GridView grid {
+                              single-click-activate: true;
 
-                          child: Adw.Clamp {
-                            margin-top: 12;
-                            margin-bottom: 24;
-                            margin-start: 12;
-                            margin-end: 12;
-
-                            child: Box history_groups {
-                              orientation: vertical;
-                              spacing: 24;
+                              styles [
+                                "library",
+                              ]
                             };
                           };
-                        };
+                        }
+
+                        StackPage {
+                          name: "empty";
+
+                          child: Adw.StatusPage empty_page {
+                            title: _("No Games Yet");
+                            description: _("Games from your launchers appear here once they are imported");
+
+                            child: Button {
+                              label: _("_Import Now");
+                              use-underline: true;
+                              halign: center;
+                              action-name: "app.import";
+
+                              styles [
+                                "pill",
+                                "suggested-action",
+                              ]
+                            };
+                          };
+                        }
+
+                        StackPage {
+                          name: "no-results";
+
+                          child: Adw.StatusPage {
+                            icon-name: "edit-find-symbolic";
+                            title: _("No Results Found");
+                            description: _("Try a different search or filter");
+                          };
+                        }
+
+                        StackPage {
+                          name: "history";
+
+                          child: ScrolledWindow {
+                            hscrollbar-policy: never;
+
+                            child: Adw.Clamp {
+                              margin-top: 12;
+                              margin-bottom: 24;
+                              margin-start: 12;
+                              margin-end: 12;
+
+                              child: Box history_groups {
+                                orientation: vertical;
+                                spacing: 24;
+                              };
+                            };
+                          };
+                        }
+
+                        StackPage {
+                          name: "no-hidden";
+
+                          child: Adw.StatusPage {
+                            icon-name: "view-reveal-symbolic";
+                            title: _("No Hidden Games");
+                            description: _("Games you hide show here, to unhide them");
+                          };
+                        }
+
+                        StackPage {
+                          name: "empty-collection";
+
+                          child: Adw.StatusPage {
+                            icon-name: "folder-symbolic";
+                            title: _("Empty Collection");
+                            description: _("Add games with “Add to Collection” in their menu");
+                          };
+                        }
                       }
-
-                      StackPage {
-                        name: "no-hidden";
-
-                        child: Adw.StatusPage {
-                          icon-name: "view-reveal-symbolic";
-                          title: _("No Hidden Games");
-                          description: _("Games you hide show here, to unhide them");
-                        };
-                      }
-
-                      StackPage {
-                        name: "empty-collection";
-
-                        child: Adw.StatusPage {
-                          icon-name: "folder-symbolic";
-                          title: _("Empty Collection");
-                          description: _("Add games with “Add to Collection” in their menu");
-                        };
-                      }
-                    }
+                    };
                   };
-                };
-              }
+                }
 
-              // Fullscreen mode's first page, under the library.
-              $PinduHomePage home_page {}
+                // Fullscreen mode's first page, under the library.
+                $PinduHomePage home_page {}
+              };
             };
           };
         };

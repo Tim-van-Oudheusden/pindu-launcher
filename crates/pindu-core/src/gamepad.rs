@@ -30,6 +30,10 @@ pub enum Button {
     Start,
     /// Xbox, PS or Home.
     Guide,
+    /// R3: the right stick pressed in.
+    RightStick,
+    /// The Steam Deck's "…" button (libmanette's `misc1`).
+    Misc1,
     DpadUp,
     DpadDown,
     DpadLeft,
@@ -67,6 +71,8 @@ pub enum Intent {
     Menu,
     Options,
     Home,
+    /// Open or close the Quick Access panel.
+    QuickAccess,
 }
 
 /// The kind of controller, which decides its glyphs and whether A and B swap.
@@ -385,7 +391,7 @@ fn stick_direction([x, y]: [f64; 2]) -> Option<Direction> {
 
 /// Every button, in the order hints prefer them when two do the same: options show on
 /// View, which the spec names for it, rather than on the west face button.
-pub(crate) const BUTTONS: [Button; 15] = [
+pub(crate) const BUTTONS: [Button; 17] = [
     Button::South,
     Button::East,
     Button::North,
@@ -393,6 +399,8 @@ pub(crate) const BUTTONS: [Button; 15] = [
     Button::West,
     Button::Start,
     Button::Guide,
+    Button::RightStick,
+    Button::Misc1,
     Button::LeftShoulder,
     Button::RightShoulder,
     Button::LeftTrigger,
@@ -411,6 +419,7 @@ fn button_intent(button: Button) -> Intent {
         Button::West | Button::Select => Intent::Options,
         Button::Start => Intent::Menu,
         Button::Guide => Intent::Home,
+        Button::RightStick | Button::Misc1 => Intent::QuickAccess,
         Button::LeftShoulder => Intent::PreviousTab,
         Button::RightShoulder => Intent::NextTab,
         Button::LeftTrigger => Intent::PreviousSort,
@@ -494,6 +503,18 @@ mod tests {
             assert_eq!(
                 intents.handle(&release(button), Duration::ZERO),
                 None,
+                "{button:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn r3_and_the_deck_s_dots_button_open_quick_access() {
+        let mut intents = Intents::new();
+        for button in [Button::RightStick, Button::Misc1] {
+            assert_eq!(
+                intents.handle(&press(button), Duration::ZERO),
+                Some(Intent::QuickAccess),
                 "{button:?}"
             );
         }

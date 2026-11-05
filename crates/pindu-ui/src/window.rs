@@ -160,6 +160,16 @@ mod imp {
         pub options_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub options_collections: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access: TemplateChild<adw::OverlaySplitView>,
+        #[template_child]
+        pub quick_access_panel: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub quick_access_stack: TemplateChild<gtk::Stack>,
+        #[template_child]
+        pub quick_access_design_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_designs: TemplateChild<gtk::ListBox>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
         /// Every sidebar row with the view it selects and, for sources, its count label.
@@ -193,7 +203,7 @@ mod imp {
         pub launch_linger: RefCell<Option<glib::SourceId>>,
         /// The launched game and its `notify::playing` handler.
         pub launch_game: RefCell<Option<(GameObject, glib::SignalHandlerId)>>,
-        /// Fullscreen mode's menu drawer or options sheet, whichever is open.
+        /// Fullscreen mode's menu drawer, Quick Access or options sheet, whichever is open.
         pub panels: Cell<Panels>,
         /// The game the options sheet is for.
         pub options_game: RefCell<Option<GameObject>>,
