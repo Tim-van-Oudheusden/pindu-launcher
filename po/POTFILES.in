@@ -1,6 +1,7 @@
 crates/pindu-ui/src/application.rs
 crates/pindu-ui/src/collection_actions.rs
 crates/pindu-ui/src/file_service.rs
+crates/pindu-ui/src/fullscreen.rs
 crates/pindu-ui/src/fullscreen_game.rs
 crates/pindu-ui/src/fullscreen_library.rs
 crates/pindu-ui/src/fullscreen_panels.rs

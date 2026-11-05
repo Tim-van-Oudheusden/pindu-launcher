@@ -82,6 +82,11 @@
       <summary>Navigation sounds</summary>
       <description>Play a soft sound in fullscreen mode when the controller moves focus, selects or goes back.</description>
     </key>
+    <key name="fullscreen-custom-style" type="b">
+      <default>false</default>
+      <summary>Custom fullscreen style</summary>
+      <description>Restyle fullscreen mode with your own stylesheet, fullscreen.css in the app's config folder. The desktop window is not affected.</description>
+    </key>
     <key name="steamgriddb-prompt-shown" type="b">
       <default>false</default>
       <summary>SteamGridDB prompt shown</summary>

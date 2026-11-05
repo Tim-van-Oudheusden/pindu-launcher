@@ -10,10 +10,12 @@ use std::cell::RefCell;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
+use gettextrs::ngettext;
 use gtk::{gdk, gio, glib};
 use pindu_core::keys::{self, Modifiers};
 use pindu_core::sound::tone_wav;
 
+use crate::application::PinduApplication;
 use crate::game_page::GamePage;
 use crate::models::GameObject;
 use crate::window::PinduWindow;
@@ -118,6 +120,13 @@ impl PinduWindow {
                 ));
             }
         });
+        if let Some(application) = self.application().and_downcast::<PinduApplication>() {
+            application.style_service().connect_problems(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |count| window.add_toast(adw::Toast::new(&style_problems_message(count)))
+            ));
+        }
         self.show_fullscreen_mode();
     }
 
@@ -143,6 +152,9 @@ impl PinduWindow {
             self.add_css_class(STYLE_CLASS);
         } else {
             self.remove_css_class(STYLE_CLASS);
+        }
+        if let Some(application) = self.application().and_downcast::<PinduApplication>() {
+            application.style_service().set_fullscreen(fullscreen);
         }
         self.update_listening();
         self.show_fullscreen_library(fullscreen);
@@ -399,6 +411,17 @@ impl PinduWindow {
             .get_or_init(NavigationSounds::default)
             .play(sound);
     }
+}
+
+/// The toast for a fullscreen style that GTK found `count` errors in.
+fn style_problems_message(count: usize) -> String {
+    let count = u32::try_from(count).unwrap_or(u32::MAX);
+    ngettext(
+        "Your fullscreen style has a problem",
+        "Your fullscreen style has {count} problems",
+        count,
+    )
+    .replace("{count}", &count.to_string())
 }
 
 /// What a navigation sound answers.
