@@ -1232,18 +1232,34 @@ const SORT_MODES: [(SortMode, &str); 5] = [
     (SortMode::Playtime, "playtime"),
 ];
 
-/// A landscape card for "Jump back in" and fullscreen Home: the game's banner (or cover)
-/// with its title, `width`×`height` pixels.
+/// A landscape card for "Jump back in": the game's banner (or cover) with its title,
+/// `width`×`height` pixels.
 pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::Button {
-    let (title, pinned, art, icon) = {
+    let (art, icon) = {
         let entry = game.entry();
         let art = entry.art.hero.clone().or_else(|| entry.art.cover.clone());
-        (
-            entry.game.title.clone(),
-            entry.game.pin_order.is_some(),
-            art,
-            entry.art.icon.clone(),
-        )
+        (art, entry.art.icon.clone())
+    };
+    let (card, picture) = jump_card_frame(game, (width, height));
+    let scale = card.scale_factor().max(1);
+    picture.show(
+        art,
+        icon,
+        ((width * scale) as u32, (height * scale) as u32),
+        |_| {},
+    );
+    card
+}
+
+/// A card for "Jump back in" and fullscreen Home, `width`×`height` pixels, with the game's
+/// title and its art, which the caller shows.
+pub(crate) fn jump_card_frame(
+    game: &GameObject,
+    (width, height): (i32, i32),
+) -> (gtk::Button, CoverArt) {
+    let (title, pinned) = {
+        let entry = game.entry();
+        (entry.game.title.clone(), entry.game.pin_order.is_some())
     };
     // Cover art draws at its own fixed size, whatever the image's size.
     let picture = CoverArt::new();
@@ -1284,14 +1300,7 @@ pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::
         title.clone()
     };
     card.update_property(&[gtk::accessible::Property::Label(&name)]);
-    let scale = card.scale_factor().max(1);
-    picture.show(
-        art,
-        icon,
-        ((width * scale) as u32, (height * scale) as u32),
-        |_| {},
-    );
-    card
+    (card, picture)
 }
 
 pub(crate) fn sort_mode_name(mode: SortMode) -> &'static str {

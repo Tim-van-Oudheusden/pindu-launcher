@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 15:59+0100\n"
+"POT-Creation-Date: 2026-11-05 16:12+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -201,7 +201,7 @@ msgstr ""
 msgid "_Cancel"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen.rs:420
+#: crates/pindu-ui/src/fullscreen.rs:433
 #, rust-format
 msgid "Your fullscreen style has a problem"
 msgid_plural "Your fullscreen style has {count} problems"
@@ -689,7 +689,7 @@ msgstr ""
 msgid "D-pad Right"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:233 data/ui/home_page.blp:97
+#: crates/pindu-ui/src/home_page.rs:296 data/ui/home_page.blp:97
 #: data/ui/preferences.blp:10 data/ui/shortcuts-dialog.blp:35
 #: data/ui/window.blp:105 data/ui/window.blp:437
 msgid "Library"
@@ -1221,11 +1221,11 @@ msgstr ""
 msgid "Some Games Could Not Be Imported"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1264
+#: crates/pindu-ui/src/window.rs:1280
 msgid "Pinned"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1282
+#: crates/pindu-ui/src/window.rs:1298
 #, rust-format
 msgid "{title}, pinned"
 msgstr ""

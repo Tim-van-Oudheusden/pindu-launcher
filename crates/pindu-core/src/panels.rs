@@ -473,6 +473,7 @@ mod tests {
             description: String::new(),
             dir: format!("/themes/{id}").into(),
             contract,
+            layout: Default::default(),
         }
     }
 

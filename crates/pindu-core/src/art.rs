@@ -6,6 +6,8 @@ use crate::model::{ArtLayout, ArtOrigin, Artwork};
 pub const COVER_RATIO: f32 = 2.0 / 3.0;
 /// How far from [`COVER_RATIO`] art may be and still fill a cover with a slight crop.
 pub const FILL_TOLERANCE: f32 = 0.1;
+/// Share of the box's width an icon takes when it stands in for art.
+pub const ICON_SCALE: f32 = 0.5;
 
 /// The image to show for a layout: the user's choice, then the source's own art, then
 /// SteamGridDB, then a generated placeholder. `prefer_steamgriddb` puts SteamGridDB before
@@ -55,6 +57,12 @@ pub fn place(art_width: f32, art_height: f32, box_width: f32, box_height: f32) -
             foreground: scaled(art_width, art_height, box_width, box_height, f32::min),
         }
     }
+}
+
+/// Places `art_width`×`art_height` art to cover a `box_width`×`box_height` box, whatever
+/// its ratio, cropping the overflow evenly.
+pub fn crop(art_width: f32, art_height: f32, box_width: f32, box_height: f32) -> Rect {
+    scaled(art_width, art_height, box_width, box_height, f32::max)
 }
 
 /// The art scaled by `pick` of the two axis scales and centred in the box.
@@ -207,5 +215,15 @@ mod tests {
             place(512.0, 512.0, 200.0, 300.0),
             Placement::FitOnBlur { .. }
         ));
+    }
+
+    #[test]
+    fn cropped_art_fills_any_box() {
+        // A 2:3 cover in a square card, cropped evenly top and bottom.
+        let rect = crop(600.0, 900.0, 200.0, 200.0);
+
+        assert_eq!((rect.x, rect.width), (0.0, 200.0));
+        assert!((rect.height - 300.0).abs() < 0.001);
+        assert!((rect.y + 50.0).abs() < 0.001);
     }
 }

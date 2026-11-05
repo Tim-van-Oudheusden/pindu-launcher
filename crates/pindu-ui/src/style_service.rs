@@ -4,9 +4,10 @@
 //! fullscreen mode, without high contrast, and for `fullscreen.css` with the
 //! `fullscreen-custom-style` setting on. So nothing in either can reach the desktop
 //! window. Saving a stylesheet, or another file directly in the design's folder (one it
-//! imports, say), reloads it.
+//! imports, say), reloads it. The design's layout choices (`ThemeLayout`), which CSS
+//! cannot make, are in force with its stylesheet; choosing the design again rereads them.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Duration;
@@ -14,7 +15,8 @@ use std::time::Duration;
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
 use pindu_core::custom_style::{self, Severity, StyleProblem, StyleState};
-use pindu_core::{paths, themes};
+use pindu_core::paths;
+use pindu_core::themes::{self, Theme, ThemeLayout};
 
 use crate::config::{APP_ID, PKGDATADIR};
 
@@ -29,6 +31,7 @@ const DEBOUNCE: Duration = Duration::from_millis(300);
 
 type ProblemsHandler = Box<dyn Fn(usize)>;
 type ProblemsHandlers = Rc<RefCell<Vec<ProblemsHandler>>>;
+type LayoutHandlers = Rc<RefCell<Vec<Box<dyn Fn(ThemeLayout)>>>>;
 
 /// Which changes in a stylesheet's folder reload it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -215,6 +218,11 @@ pub struct StyleService {
     settings: gio::Settings,
     style: Rc<RefCell<StyleState>>,
     on_problems: ProblemsHandlers,
+    /// The chosen design's layout, in force while the design is.
+    design_layout: Rc<Cell<ThemeLayout>>,
+    /// The layout last reported to the handlers.
+    layout: Rc<Cell<ThemeLayout>>,
+    on_layout: LayoutHandlers,
 }
 
 impl std::fmt::Debug for StyleService {
@@ -251,6 +259,9 @@ impl StyleService {
             settings: gio::Settings::new(APP_ID),
             style: Rc::default(),
             on_problems,
+            design_layout: Rc::default(),
+            layout: Rc::default(),
+            on_layout: LayoutHandlers::default(),
         };
         service.follow_settings();
         service.follow_style_manager();
@@ -261,6 +272,21 @@ impl StyleService {
     /// Calls `handler` with the number of errors whenever a stylesheet is read with any.
     pub fn connect_problems(&self, handler: impl Fn(usize) + 'static) {
         self.on_problems.borrow_mut().push(Box::new(handler));
+    }
+
+    /// The layout of the design in force: the chosen design's while it applies (fullscreen
+    /// mode, no high contrast), `ThemeLayout::default()` otherwise.
+    pub fn layout(&self) -> ThemeLayout {
+        if self.style.borrow().design_applies() {
+            self.design_layout.get()
+        } else {
+            ThemeLayout::default()
+        }
+    }
+
+    /// Calls `handler` with the new layout whenever `layout()` changes.
+    pub fn connect_layout_changed(&self, handler: impl Fn(ThemeLayout) + 'static) {
+        self.on_layout.borrow_mut().push(Box::new(handler));
     }
 
     /// The window entered or left fullscreen mode.
@@ -323,13 +349,15 @@ impl StyleService {
 
     fn follow_design(&self) {
         let id = self.settings.string(DESIGN);
-        self.design.set_file(self.design_stylesheet(&id));
+        let theme = self.design_theme(&id);
+        self.design.set_file(theme.as_ref().map(Theme::stylesheet));
+        self.design_layout
+            .set(theme.map(|theme| theme.layout).unwrap_or_default());
         self.update();
     }
 
-    /// The stylesheet of the design `id`, if it is installed and this Pindu launcher can
-    /// apply it.
-    fn design_stylesheet(&self, id: &str) -> Option<PathBuf> {
+    /// The design `id`, if it is installed and this Pindu launcher can apply it.
+    fn design_theme(&self, id: &str) -> Option<Theme> {
         if id.is_empty() {
             return None;
         }
@@ -350,7 +378,7 @@ impl StyleService {
             );
             return None;
         }
-        Some(theme.stylesheet())
+        Some(theme)
     }
 
     /// Dark and light for `prefers-color-scheme`, as libadwaita does for its own
@@ -402,11 +430,17 @@ impl StyleService {
         settings.connect_gtk_interface_reduced_motion_notify(update);
     }
 
-    /// Shows each stylesheet while it is in force.
+    /// Shows each stylesheet while it is in force, and reports a change of layout.
     fn update(&self) {
         let style = *self.style.borrow();
         self.design.show(style.design_applies());
         self.custom.show(style.applies());
+        let layout = self.layout();
+        if self.layout.replace(layout) != layout {
+            for handler in self.on_layout.borrow().iter() {
+                handler(layout);
+            }
+        }
     }
 }
 

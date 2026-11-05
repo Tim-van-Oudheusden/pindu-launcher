@@ -22,6 +22,59 @@ pub struct Theme {
     pub dir: PathBuf,
     /// The style contract the theme was written for.
     pub contract: u64,
+    /// What the theme changes in fullscreen mode's layout, which CSS cannot.
+    pub layout: ThemeLayout,
+}
+
+/// The layout choices a theme makes in its `theme.json` `layout` object; a missing or
+/// unknown value keeps the default, today's layout.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ThemeLayout {
+    /// `"home-tile"`: the shape of Home's cards.
+    pub home_tile: TileShape,
+}
+
+impl ThemeLayout {
+    fn from_json(layout: Option<&Json>) -> Self {
+        let text = |key: &str| {
+            layout
+                .and_then(|layout| layout.get(key))
+                .and_then(Json::as_str)
+        };
+        Self {
+            home_tile: text("home-tile")
+                .and_then(TileShape::from_name)
+                .unwrap_or_default(),
+        }
+    }
+}
+
+/// The shape of the cards in fullscreen Home's carousel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TileShape {
+    /// Wide cards with the hero art.
+    #[default]
+    Landscape,
+    Square,
+    /// Tall cards with the cover art.
+    Portrait,
+}
+
+impl TileShape {
+    /// The shape's name in `theme.json`, also its CSS class's suffix.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Landscape => "landscape",
+            Self::Square => "square",
+            Self::Portrait => "portrait",
+        }
+    }
+
+    fn from_name(name: &str) -> Option<Self> {
+        [Self::Landscape, Self::Square, Self::Portrait]
+            .into_iter()
+            .find(|shape| shape.name() == name)
+    }
 }
 
 impl Theme {
@@ -104,6 +157,7 @@ fn read_theme(dir: &Path) -> Result<Theme, String> {
         description: text("description").unwrap_or_default(),
         dir: dir.to_owned(),
         contract,
+        layout: ThemeLayout::from_json(metadata.get("layout")),
     })
 }
 
@@ -221,5 +275,51 @@ mod tests {
         };
         assert_eq!(supported("future"), Some(false));
         assert_eq!(supported("today"), Some(true));
+    }
+
+    #[test]
+    fn a_theme_chooses_its_home_tile_shape() {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(
+            user.path(),
+            "square",
+            r#"{"contract": 1, "name": "Square", "layout": {"home-tile": "square"}}"#,
+        );
+        write_theme(
+            user.path(),
+            "portrait",
+            r#"{"contract": 1, "name": "Portrait", "layout": {"home-tile": "portrait"}}"#,
+        );
+
+        let found = discover(&[user.path()]);
+
+        let shape = |id: &str| {
+            found
+                .themes
+                .iter()
+                .find(|theme| theme.id == id)
+                .map(|theme| theme.layout.home_tile)
+        };
+        assert_eq!(shape("square"), Some(TileShape::Square));
+        assert_eq!(shape("portrait"), Some(TileShape::Portrait));
+    }
+
+    #[test]
+    fn a_missing_or_unknown_layout_keeps_todays() {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(user.path(), "plain", r#"{"contract": 1, "name": "Plain"}"#);
+        write_theme(
+            user.path(),
+            "odd",
+            r#"{"contract": 1, "name": "Odd", "layout": {"home-tile": "round"}}"#,
+        );
+
+        let found = discover(&[user.path()]);
+
+        assert_eq!(found.themes.len(), 2);
+        for theme in &found.themes {
+            assert_eq!(theme.layout, ThemeLayout::default());
+            assert_eq!(theme.layout.home_tile, TileShape::Landscape);
+        }
     }
 }
