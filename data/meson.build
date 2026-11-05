@@ -82,6 +82,9 @@ resources = gnome.compile_resources(
 # stay files rather than resources: a design's url() and @import resolve beside its CSS.
 install_subdir('themes', install_dir: pkgdatadir)
 
+# Home's background video, a file rather than a resource so GStreamer streams it from disk.
+install_data('home' / 'background.webm', install_dir: pkgdatadir / 'home')
+
 test(
   'validate-desktop',
   find_program('desktop-file-validate'),

@@ -1207,7 +1207,8 @@ impl PinduWindow {
 
     /// Marks the window `reduced-motion` while the system asks for less motion (animations
     /// off, or reduced motion in the accessibility settings): `style.css` then drops the
-    /// covers' lift and fades, and the search keyboard fades in rather than sliding up.
+    /// covers' lift and fades, the search keyboard fades in rather than sliding up, and
+    /// Home's background holds its first frame.
     fn follow_reduced_motion(&self) {
         let Some(settings) = gtk::Settings::default() else {
             return;
@@ -1231,6 +1232,7 @@ impl PinduWindow {
                     } else {
                         gtk::RevealerTransitionType::SlideUp
                     });
+                window.update_home_background();
             }
         );
         update(&settings);
@@ -1240,7 +1242,7 @@ impl PinduWindow {
 }
 
 /// The window's style class while the system asks for reduced motion.
-const REDUCED_MOTION_CLASS: &str = "reduced-motion";
+pub(crate) const REDUCED_MOTION_CLASS: &str = "reduced-motion";
 
 /// Horizontal padding around the cover grid and around each tile, as in `style.css`.
 const GRID_PADDING: f64 = 24.0;

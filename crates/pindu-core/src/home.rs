@@ -106,11 +106,108 @@ pub fn section_details(section: &Section) -> Vec<Detail> {
     vec![Detail::Games(count)]
 }
 
+/// What Home's animated background, behind its first screen, does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Playback {
+    /// Plays on, muted and looped.
+    Play,
+    /// Holds the frame it is on.
+    Pause,
+    /// Holds its first frame.
+    FirstFrame,
+}
+
+/// Where the window is, as far as Home's background is concerned.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct BackgroundContext {
+    /// The window is in fullscreen mode.
+    pub fullscreen: bool,
+    /// Home is the shown page, on its first screen (the sections).
+    pub first_screen: bool,
+    /// A game we started runs.
+    pub game_running: bool,
+    /// The window is hidden or minimized.
+    pub hidden: bool,
+    /// The system asks for reduced motion.
+    pub reduced_motion: bool,
+}
+
+/// What Home's background does in `context`: it holds its first frame outside fullscreen
+/// mode and under reduced motion, pauses behind a section's games, a running game or a
+/// hidden window, and plays behind the first screen.
+pub fn background_playback(context: BackgroundContext) -> Playback {
+    if !context.fullscreen || context.reduced_motion {
+        Playback::FirstFrame
+    } else if !context.first_screen || context.game_running || context.hidden {
+        Playback::Pause
+    } else {
+        Playback::Play
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::model::{GameId, LaunchKind};
     use crate::sections::SectionId;
+
+    const ON_FIRST_SCREEN: BackgroundContext = BackgroundContext {
+        fullscreen: true,
+        first_screen: true,
+        game_running: false,
+        hidden: false,
+        reduced_motion: false,
+    };
+
+    #[test]
+    fn the_background_plays_behind_the_first_screen() {
+        assert_eq!(background_playback(ON_FIRST_SCREEN), Playback::Play);
+    }
+
+    #[test]
+    fn the_background_pauses_behind_a_section_a_game_or_a_hidden_window() {
+        for context in [
+            BackgroundContext {
+                first_screen: false,
+                ..ON_FIRST_SCREEN
+            },
+            BackgroundContext {
+                game_running: true,
+                ..ON_FIRST_SCREEN
+            },
+            BackgroundContext {
+                hidden: true,
+                ..ON_FIRST_SCREEN
+            },
+        ] {
+            assert_eq!(background_playback(context), Playback::Pause, "{context:?}");
+        }
+    }
+
+    #[test]
+    fn the_background_holds_its_first_frame_outside_fullscreen_and_under_reduced_motion() {
+        for context in [
+            BackgroundContext {
+                fullscreen: false,
+                ..ON_FIRST_SCREEN
+            },
+            BackgroundContext {
+                reduced_motion: true,
+                ..ON_FIRST_SCREEN
+            },
+            BackgroundContext {
+                fullscreen: false,
+                first_screen: false,
+                ..ON_FIRST_SCREEN
+            },
+        ] {
+            assert_eq!(
+                background_playback(context),
+                Playback::FirstFrame,
+                "{context:?}"
+            );
+        }
+    }
 
     #[test]
     fn each_shape_has_its_card_size() {

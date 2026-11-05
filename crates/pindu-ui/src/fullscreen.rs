@@ -12,6 +12,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::ngettext;
 use gtk::{gdk, gio, glib};
+use pindu_core::home::BackgroundContext;
 use pindu_core::keys::{self, Modifiers};
 use pindu_core::sound::tone_wav;
 use pindu_core::themes::ThemeLayout;
@@ -19,7 +20,7 @@ use pindu_core::themes::ThemeLayout;
 use crate::application::PinduApplication;
 use crate::game_page::GamePage;
 use crate::models::GameObject;
-use crate::window::PinduWindow;
+use crate::window::{PinduWindow, REDUCED_MOTION_CLASS};
 
 /// The window's style class in fullscreen mode, which `style.css` scales type up with.
 const STYLE_CLASS: &str = "fullscreen-mode";
@@ -90,7 +91,10 @@ impl PinduWindow {
             .connect_visible_page_notify(glib::clone!(
                 #[weak(rename_to = window)]
                 self,
-                move |_| window.update_top_bars()
+                move |_| {
+                    window.update_top_bars();
+                    window.update_home_background();
+                }
             ));
         // A collapsed sidebar comes back on its own once the split view uncollapses, as it
         // does when the window widens to fullscreen with large text: keep it hidden.
@@ -177,6 +181,7 @@ impl PinduWindow {
         self.hide_sidebar_in_fullscreen();
         self.update_top_bars();
         self.update_fullscreen_top_bar();
+        self.update_home_background();
         if let Some(action) = self
             .lookup_action("fullscreen-mode")
             .and_downcast::<gio::SimpleAction>()
@@ -251,6 +256,36 @@ impl PinduWindow {
             move |_| window.update_home()
         ));
         self.update_home();
+        self.connect_suspended_notify(|window| window.update_home_background());
+        self.connect_visible_notify(|window| window.update_home_background());
+        if let Some(application) = self.application().and_downcast::<PinduApplication>() {
+            application
+                .session_service()
+                .connect_any_playing_changed(glib::clone!(
+                    #[weak(rename_to = window)]
+                    self,
+                    move |_| window.update_home_background()
+                ));
+        }
+    }
+
+    /// Tells Home where the window is, for its background (`home::background_playback`):
+    /// fullscreen, Home shown, a game we started running, the window hidden or suspended
+    /// (minimized, or covered whole), the system asking for reduced motion.
+    pub(crate) fn update_home_background(&self) {
+        let imp = self.imp();
+        let game_running = self
+            .application()
+            .and_downcast::<PinduApplication>()
+            .is_some_and(|application| application.session_service().any_playing());
+        imp.home_page.set_background_context(BackgroundContext {
+            fullscreen: self.is_fullscreen(),
+            first_screen: imp.navigation_view.visible_page().as_ref()
+                == Some(imp.home_page.upcast_ref::<adw::NavigationPage>()),
+            game_running,
+            hidden: !self.is_visible() || self.is_suspended(),
+            reduced_motion: self.has_css_class(REDUCED_MOTION_CLASS),
+        });
     }
 
     fn update_home(&self) {

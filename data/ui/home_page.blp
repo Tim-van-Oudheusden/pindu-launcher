@@ -10,17 +10,31 @@ template $PinduHomePage: Adw.NavigationPage {
       "home",
     ]
 
-    // A backdrop: the logo or title over it says what it shows. Two pictures, so the
-    // incoming art (`.shown`) can fade in over the outgoing one in a design.
-    child: Picture hero_a {
+    // The animated background behind the first screen (`data/home/background.webm`),
+    // under the heroes, which only the second screen shows.
+    child: Picture background {
       content-fit: cover;
       can-shrink: true;
       accessible-role: presentation;
 
       styles [
-        "home-hero",
+        "home-background",
       ]
     };
+
+    // A backdrop: the logo or title over it says what it shows. Two pictures, so the
+    // incoming art (`.shown`) can fade in over the outgoing one in a design.
+    [overlay]
+    Picture hero_a {
+      content-fit: cover;
+      can-shrink: true;
+      can-target: false;
+      accessible-role: presentation;
+
+      styles [
+        "home-hero",
+      ]
+    }
 
     [overlay]
     Picture hero_b {
