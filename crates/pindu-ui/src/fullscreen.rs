@@ -348,9 +348,11 @@ impl PinduWindow {
             && grid_shown
             && let Some(model) = imp.grid.model().filter(|model| model.n_items() > 0)
         {
-            // A grid that does not have focus yet does not take it from `scroll_to`.
-            imp.grid.grab_focus();
+            // A grid without focus only moves its focus mark to the cover on `scroll_to`;
+            // grabbing focus then lands right on it. Grabbing first would focus the cell
+            // GTK last tracked, and screen readers would hear an unnamed cell on the way.
             self.focus_cover(imp.grid_cursor.get().min(model.n_items() - 1));
+            imp.grid.grab_focus();
             return;
         }
         page.child_focus(gtk::DirectionType::TabForward);

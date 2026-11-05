@@ -206,7 +206,8 @@ impl Picker {
             ArtLayout::Hero => (320, 104),
             _ => (160, 160),
         };
-        for image in images {
+        let total = images.len();
+        for (index, image) in images.into_iter().enumerate() {
             let picture = gtk::Picture::builder()
                 .content_fit(gtk::ContentFit::Contain)
                 .width_request(width)
@@ -218,6 +219,12 @@ impl Picker {
                 .tooltip_text(format!("{}×{}", image.width, image.height))
                 .css_classes(["flat"])
                 .build();
+            let name = gettext("Image {number} of {total}, {width} by {height} pixels")
+                .replace("{number}", &(index + 1).to_string())
+                .replace("{total}", &total.to_string())
+                .replace("{width}", &image.width.to_string())
+                .replace("{height}", &image.height.to_string());
+            button.update_property(&[gtk::accessible::Property::Label(&name)]);
             self.images.append(&button);
             let picker = self.clone();
             let chosen = client.clone();

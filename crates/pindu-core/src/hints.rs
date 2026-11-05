@@ -240,6 +240,68 @@ pub fn glyph(kind: DeviceKind, button: Button) -> &'static str {
     }
 }
 
+/// What a screen reader calls the glyph for a button: the label the layout prints on it,
+/// as `glyph` draws it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GlyphName {
+    /// Letters printed on the button, read the same in every language.
+    Label(&'static str),
+    Cross,
+    Circle,
+    Square,
+    Triangle,
+    View,
+    Menu,
+    Minus,
+    Plus,
+    Home,
+    DpadUp,
+    DpadDown,
+    DpadLeft,
+    DpadRight,
+}
+
+/// The name of the glyph `glyph` draws for `button` on a controller of `kind`.
+pub fn glyph_name(kind: DeviceKind, button: Button) -> GlyphName {
+    use DeviceKind::{Generic, Nintendo, PlayStation, SteamDeck, Xbox};
+    use GlyphName::Label;
+    match (kind, button) {
+        (PlayStation, Button::South) => GlyphName::Cross,
+        (PlayStation, Button::East) => GlyphName::Circle,
+        (PlayStation, Button::West) => GlyphName::Square,
+        (PlayStation, Button::North) => GlyphName::Triangle,
+        (Nintendo, Button::East) => Label("A"),
+        (Nintendo, Button::South) => Label("B"),
+        (Nintendo, Button::North) => Label("X"),
+        (Nintendo, Button::West) => Label("Y"),
+        (Xbox | SteamDeck | Generic, Button::South) => Label("A"),
+        (Xbox | SteamDeck | Generic, Button::East) => Label("B"),
+        (Xbox | SteamDeck | Generic, Button::West) => Label("X"),
+        (Xbox | SteamDeck | Generic, Button::North) => Label("Y"),
+        (Xbox | Generic, Button::LeftShoulder) => Label("LB"),
+        (Xbox | Generic, Button::RightShoulder) => Label("RB"),
+        (PlayStation | SteamDeck, Button::LeftShoulder) => Label("L1"),
+        (PlayStation | SteamDeck, Button::RightShoulder) => Label("R1"),
+        (Nintendo, Button::LeftShoulder) => Label("L"),
+        (Nintendo, Button::RightShoulder) => Label("R"),
+        (Xbox | Generic, Button::LeftTrigger) => Label("LT"),
+        (Xbox | Generic, Button::RightTrigger) => Label("RT"),
+        (PlayStation | SteamDeck, Button::LeftTrigger) => Label("L2"),
+        (PlayStation | SteamDeck, Button::RightTrigger) => Label("R2"),
+        (Nintendo, Button::LeftTrigger) => Label("ZL"),
+        (Nintendo, Button::RightTrigger) => Label("ZR"),
+        (Nintendo, Button::Select) => GlyphName::Minus,
+        (Nintendo, Button::Start) => GlyphName::Plus,
+        (_, Button::Select) => GlyphName::View,
+        (_, Button::Start) => GlyphName::Menu,
+        (_, Button::Guide) => GlyphName::Home,
+        (_, Button::DpadUp) => GlyphName::DpadUp,
+        (_, Button::DpadDown) => GlyphName::DpadDown,
+        (_, Button::DpadLeft) => GlyphName::DpadLeft,
+        (_, Button::DpadRight) => GlyphName::DpadRight,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -617,6 +679,65 @@ mod tests {
         ];
         for (kind, button, icon) in cases {
             assert_eq!(glyph(kind, button), icon, "{kind:?} {button:?}");
+        }
+    }
+
+    #[test]
+    fn glyph_names_say_each_layout_s_label_for_screen_readers() {
+        let cases = [
+            (DeviceKind::Xbox, Button::South, GlyphName::Label("A")),
+            (DeviceKind::Nintendo, Button::East, GlyphName::Label("A")),
+            (DeviceKind::PlayStation, Button::South, GlyphName::Cross),
+            (DeviceKind::PlayStation, Button::North, GlyphName::Triangle),
+            (
+                DeviceKind::SteamDeck,
+                Button::LeftShoulder,
+                GlyphName::Label("L1"),
+            ),
+            (
+                DeviceKind::Xbox,
+                Button::LeftShoulder,
+                GlyphName::Label("LB"),
+            ),
+            (
+                DeviceKind::Nintendo,
+                Button::RightTrigger,
+                GlyphName::Label("ZR"),
+            ),
+            (DeviceKind::Xbox, Button::Select, GlyphName::View),
+            (DeviceKind::Nintendo, Button::Start, GlyphName::Plus),
+            (DeviceKind::Generic, Button::DpadUp, GlyphName::DpadUp),
+        ];
+        for (kind, button, name) in cases {
+            assert_eq!(glyph_name(kind, button), name, "{kind:?} {button:?}");
+        }
+    }
+
+    #[test]
+    fn every_glyph_name_is_the_label_its_icon_draws() {
+        let kinds = [
+            DeviceKind::Xbox,
+            DeviceKind::PlayStation,
+            DeviceKind::Nintendo,
+            DeviceKind::SteamDeck,
+            DeviceKind::Generic,
+        ];
+        for kind in kinds {
+            for button in crate::gamepad::BUTTONS {
+                let label = match glyph_name(kind, button) {
+                    GlyphName::Label(letters) => letters.to_lowercase(),
+                    GlyphName::DpadUp => "dpad-up".to_owned(),
+                    GlyphName::DpadDown => "dpad-down".to_owned(),
+                    GlyphName::DpadLeft => "dpad-left".to_owned(),
+                    GlyphName::DpadRight => "dpad-right".to_owned(),
+                    other => format!("{other:?}").to_lowercase(),
+                };
+                let icon = glyph(kind, button);
+                assert!(
+                    icon.ends_with(&format!("-{label}-symbolic")),
+                    "{kind:?} {button:?}: {icon} is not {label}"
+                );
+            }
         }
     }
 

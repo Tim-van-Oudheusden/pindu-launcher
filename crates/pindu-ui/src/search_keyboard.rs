@@ -136,7 +136,7 @@ impl PinduWindow {
         })
     }
 
-    /// Marks the key under the cursor.
+    /// Marks the key under the cursor, and tells screen readers which key it is.
     fn show_keyboard_cursor(&self) {
         let imp = self.imp();
         let Some(keyboard) = imp.search_keyboard.get() else {
@@ -152,6 +152,10 @@ impl PinduWindow {
                 }
             }
         }
+        self.announce(
+            &key_label(keyboard.key()),
+            gtk::AccessibleAnnouncementPriority::Medium,
+        );
     }
 }
 
