@@ -1,7 +1,8 @@
-//! The user's own stylesheet for fullscreen mode: the problems GTK reports while loading it,
-//! worded for display.
+//! The user's own stylesheet for fullscreen mode: when it is in force, which file changes
+//! concern it, and the problems GTK reports while loading it, worded for display.
 
 use std::fmt;
+use std::path::Path;
 
 /// Whether GTK dropped part of the stylesheet or only warned about it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -31,6 +32,31 @@ pub fn error_count(problems: &[StyleProblem]) -> usize {
         .iter()
         .filter(|problem| problem.severity == Severity::Error)
         .count()
+}
+
+/// What decides whether the user's stylesheet is in force.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct StyleState {
+    /// The user turned the custom style on.
+    pub enabled: bool,
+    /// The window is in fullscreen mode.
+    pub fullscreen: bool,
+    /// The system asks for high contrast.
+    pub high_contrast: bool,
+}
+
+impl StyleState {
+    /// Whether the stylesheet should be in force: never under high contrast, so the user's
+    /// colours cannot defeat it.
+    pub fn applies(self) -> bool {
+        self.enabled && self.fullscreen && !self.high_contrast
+    }
+}
+
+/// Whether a change in the style's folder, to `file` and, for a rename, `other`, touches
+/// the stylesheet at `style`.
+pub fn concerns_style(style: &Path, file: &Path, other: Option<&Path>) -> bool {
+    file == style || other == Some(style)
 }
 
 #[cfg(test)]
@@ -63,5 +89,43 @@ mod tests {
 
         assert_eq!(error_count(&problems), 2);
         assert_eq!(error_count(&problems[1..2]), 0);
+    }
+
+    #[test]
+    fn the_style_applies_only_in_fullscreen_mode_with_the_setting_on() {
+        let state = |enabled, fullscreen| StyleState {
+            enabled,
+            fullscreen,
+            high_contrast: false,
+        };
+
+        assert!(state(true, true).applies());
+        assert!(!state(true, false).applies());
+        assert!(!state(false, true).applies());
+    }
+
+    #[test]
+    fn high_contrast_suspends_the_style() {
+        let state = StyleState {
+            enabled: true,
+            fullscreen: true,
+            high_contrast: true,
+        };
+
+        assert!(!state.applies());
+    }
+
+    #[test]
+    fn changes_concern_the_style_when_they_touch_its_file() {
+        let style = Path::new("/config/pindu-launcher/fullscreen.css");
+        let other = Path::new("/config/pindu-launcher/notes.txt");
+        let temp = Path::new("/config/pindu-launcher/.fullscreen.css.swp");
+
+        assert!(concerns_style(style, style, None));
+        assert!(!concerns_style(style, other, None));
+        // An editor that saves by writing a temporary file and renaming it over the style.
+        assert!(concerns_style(style, temp, Some(style)));
+        // Renaming the style away.
+        assert!(concerns_style(style, style, Some(other)));
     }
 }

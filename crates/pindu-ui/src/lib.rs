@@ -32,6 +32,7 @@ pub mod session_service;
 pub mod sources;
 pub mod steamgriddb_picker;
 pub mod steamgriddb_service;
+pub mod style_service;
 pub mod sync_service;
 pub mod watch_service;
 pub mod widgets;

@@ -15,6 +15,7 @@ use crate::preferences::PreferencesDialog;
 use crate::search_provider;
 use crate::session_service::SessionService;
 use crate::steamgriddb_service;
+use crate::style_service::StyleService;
 use crate::sync_service::SyncService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
@@ -50,6 +51,8 @@ mod imp {
         pub pending_fullscreen: std::cell::Cell<bool>,
         /// Controller input for every shell; it opens controllers only when one listens.
         pub gamepad_service: OnceCell<GamepadService>,
+        /// The user's own stylesheet for fullscreen mode.
+        pub style_service: OnceCell<StyleService>,
     }
 
     #[glib::object_subclass]
@@ -122,6 +125,9 @@ mod imp {
                 .expect("start-up runs once");
             self.gamepad_service
                 .set(GamepadService::new(Box::new(ManetteBackend::new())))
+                .expect("start-up runs once");
+            self.style_service
+                .set(StyleService::new())
                 .expect("start-up runs once");
             // Loaded here, not on the first window: Shell search and --launch need the
             // library when no window opens.
@@ -265,6 +271,14 @@ impl PinduApplication {
     pub fn gamepad_service(&self) -> &GamepadService {
         self.imp()
             .gamepad_service
+            .get()
+            .expect("the application has started")
+    }
+
+    /// The user's own stylesheet for fullscreen mode.
+    pub fn style_service(&self) -> &StyleService {
+        self.imp()
+            .style_service
             .get()
             .expect("the application has started")
     }
