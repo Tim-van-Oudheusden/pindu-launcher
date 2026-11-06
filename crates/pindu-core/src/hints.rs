@@ -132,7 +132,7 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
         Launching::HandingOff => return Vec::new(),
         Launching::Starting => {
             return vec![Hint {
-                button: layout.button(Intent::Back),
+                button: layout.button(Intent::BackHeld),
                 pair: None,
                 action: Action::HoldToCancel,
             }];

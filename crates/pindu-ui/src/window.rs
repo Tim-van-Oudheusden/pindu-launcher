@@ -7,7 +7,7 @@ use gtk::{gdk, gio, glib};
 use pindu_core::accessibility::Accessibility;
 use pindu_core::clock::ClockFormat;
 use pindu_core::focus::FocusMemory;
-use pindu_core::gamepad::Layout;
+use pindu_core::gamepad::{Intent, Layout};
 use pindu_core::grid;
 use pindu_core::hints::Hint;
 use pindu_core::launch_overlay::LaunchOverlay;
@@ -216,6 +216,10 @@ mod imp {
         #[template_child]
         pub quick_access_swap: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub quick_access_controls_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_controls: TemplateChild<gtk::Box>,
+        #[template_child]
         pub tile_small: TemplateChild<gtk::CheckButton>,
         #[template_child]
         pub tile_medium: TemplateChild<gtk::CheckButton>,
@@ -297,6 +301,8 @@ mod imp {
         pub options_game: RefCell<Option<GameObject>>,
         /// The options the sheet lists for that game, in its rows' order.
         pub game_options: RefCell<Vec<GameOption>>,
+        /// The intents Quick Access's Controls lists, in its rows' order across its groups.
+        pub shown_controls: RefCell<Vec<Intent>>,
         /// The widget that had focus before a panel opened, to give it back after.
         pub focus_before_panel: glib::WeakRef<gtk::Widget>,
         /// Fullscreen mode's clocks: their format, their next tick while one shows, and
@@ -398,6 +404,7 @@ impl PinduWindow {
             window.setup_notifications(application);
             window.setup_activity(application, sync_service);
             window.setup_controllers(application);
+            window.setup_controls(application);
         }
         window
     }

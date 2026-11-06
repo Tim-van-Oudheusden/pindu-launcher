@@ -57,7 +57,7 @@ impl PinduWindow {
         let escape = gtk::ShortcutController::new();
         escape.set_propagation_phase(gtk::PropagationPhase::Bubble);
         escape.add_shortcut(gtk::Shortcut::new(
-            gtk::ShortcutTrigger::parse_string("Escape"),
+            gtk::ShortcutTrigger::parse_string(&keys::ESCAPE.accelerator()),
             Some(gtk::NamedAction::new("win.escape")),
         ));
         self.add_controller(escape);

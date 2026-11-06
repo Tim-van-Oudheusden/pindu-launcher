@@ -12,7 +12,7 @@ use crate::application::PinduApplication;
 use crate::window::PinduWindow;
 
 /// How large glyphs draw, to read from across the room.
-const GLYPH_SIZE: i32 = 32;
+pub(crate) const GLYPH_SIZE: i32 = 32;
 
 impl PinduWindow {
     /// Keeps the hint bar up to date while the window is fullscreen with a controller.
@@ -186,7 +186,7 @@ fn action_label(action: Action) -> String {
 }
 
 /// What a screen reader calls a button's glyph.
-fn glyph_label(name: GlyphName) -> String {
+pub(crate) fn glyph_label(name: GlyphName) -> String {
     match name {
         GlyphName::Label(letters) => letters.to_owned(),
         GlyphName::Cross => gettext("Cross"),
