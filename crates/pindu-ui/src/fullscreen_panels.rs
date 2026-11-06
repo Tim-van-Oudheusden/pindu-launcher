@@ -46,11 +46,6 @@ impl PinduWindow {
                 window.show_panel(Panel::Drawer(DrawerLevel::Collections));
             })
             .build();
-        let settings = gio::ActionEntry::builder("drawer-settings")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::Drawer(DrawerLevel::Settings));
-            })
-            .build();
         let collection = gio::ActionEntry::builder("drawer-collection")
             .parameter_type(Some(glib::VariantTy::INT64))
             .activate(|window: &Self, _, target| {
@@ -78,17 +73,22 @@ impl PinduWindow {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Designs));
             })
             .build();
+        let quick_settings = gio::ActionEntry::builder("quick-access-settings")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Settings));
+            })
+            .build();
         self.add_action_entries([
             close,
             home,
             library,
             collections,
-            settings,
             collection,
             options,
             game_collections,
             quick_access,
             designs,
+            quick_settings,
         ]);
         // The drawer's Return and Stop: game IDs.
         self.add_game_action("drawer-return", |window, id| {
@@ -121,7 +121,10 @@ impl PinduWindow {
                 glib::Propagation::Stop
             }
         ));
-        for list in [imp.drawer_sizes.get(), imp.drawer_switches.get()] {
+        for list in [
+            imp.quick_access_sizes.get(),
+            imp.quick_access_switches.get(),
+        ] {
             list.connect_keynav_failed(|list, direction| {
                 step_out_of_list(list, direction);
                 glib::Propagation::Stop
@@ -193,21 +196,21 @@ impl PinduWindow {
                 }
             }
         ));
-        self.setup_drawer_settings();
+        self.setup_quick_access_settings();
         self.setup_quick_access();
         self.fill_drawer();
     }
 
-    /// The drawer's settings: cover size, navigation sounds and exiting after a launch,
-    /// the same settings Preferences changes.
-    fn setup_drawer_settings(&self) {
+    /// Quick Access's settings: cover size, navigation sounds and exiting after a launch,
+    /// the same settings Preferences changes, applied as they change.
+    fn setup_quick_access_settings(&self) {
         let imp = self.imp();
         let settings = self.settings();
         settings
-            .bind("navigation-sounds", &*imp.drawer_sounds_row, "active")
+            .bind("navigation-sounds", &*imp.quick_access_sounds_row, "active")
             .build();
         settings
-            .bind("exit-after-launch", &*imp.drawer_exit_row, "active")
+            .bind("exit-after-launch", &*imp.quick_access_exit_row, "active")
             .build();
         let toggles = [
             imp.tile_small.get(),
@@ -376,7 +379,6 @@ impl PinduWindow {
             Some(Panel::Drawer(level)) => imp.drawer_stack.set_visible_child_name(match level {
                 DrawerLevel::Main => "main",
                 DrawerLevel::Collections => "collections",
-                DrawerLevel::Settings => "settings",
             }),
             Some(Panel::Options(level)) => imp.options_stack.set_visible_child_name(match level {
                 OptionsLevel::Main => "main",
@@ -386,6 +388,7 @@ impl PinduWindow {
                 imp.quick_access_stack.set_visible_child_name(match level {
                     QuickAccessLevel::Main => "main",
                     QuickAccessLevel::Designs => "designs",
+                    QuickAccessLevel::Settings => "settings",
                 });
             }
             None => {
@@ -419,9 +422,9 @@ impl PinduWindow {
                 Some(Panel::Drawer(DrawerLevel::Collections)),
             ) => Some(imp.drawer_collections_row.get().upcast()),
             (
-                Some(Panel::Drawer(DrawerLevel::Main)),
-                Some(Panel::Drawer(DrawerLevel::Settings)),
-            ) => Some(imp.drawer_settings_row.get().upcast()),
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::Settings)),
+            ) => Some(imp.quick_access_settings_row.get().upcast()),
             (Some(Panel::QuickAccess(QuickAccessLevel::Main)), _) => {
                 Some(imp.quick_access_design_row.get().upcast())
             }
@@ -464,7 +467,7 @@ impl PinduWindow {
             (Some(Panel::Drawer(DrawerLevel::Collections)), _) => {
                 first_row(&imp.drawer_collections)
             }
-            (Some(Panel::Drawer(DrawerLevel::Settings)), _) => {
+            (Some(Panel::QuickAccess(QuickAccessLevel::Settings)), _) => {
                 imp.tile_small.ancestor(gtk::ListBoxRow::static_type())
             }
             (Some(Panel::Options(OptionsLevel::Main)), _) => first_row(&imp.options_list),

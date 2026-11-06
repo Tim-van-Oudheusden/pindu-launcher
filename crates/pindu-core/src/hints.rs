@@ -43,7 +43,7 @@ pub struct Context {
     pub options: bool,
     /// Start opens the menu drawer (fullscreen mode).
     pub menu: bool,
-    /// The menu drawer or the options sheet is open, at a level.
+    /// The menu drawer, Quick Access or the options sheet is open, at a level.
     pub panel: Option<Panel>,
     /// The launch overlay is up.
     pub launching: Launching,
@@ -430,7 +430,7 @@ mod tests {
         );
         let settings = Context {
             focus: Focus::Toggle,
-            panel: Some(Panel::Drawer(DrawerLevel::Settings)),
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Settings)),
             ..library
         };
         assert_eq!(

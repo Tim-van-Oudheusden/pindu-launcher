@@ -1,5 +1,5 @@
-//! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go, a
-//! few settings, leaving), the Quick Access panel on the right (the design) and the
+//! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
+//! leaving), the Quick Access panel on the right (the design and a few settings) and the
 //! options sheet at the bottom (what to do with one game). This decides which one is
 //! open and at which level, what Start, Guide, R3, View or X and B do to them, and what
 //! each lists.
@@ -17,14 +17,12 @@ pub enum Panel {
     QuickAccess(QuickAccessLevel),
 }
 
-/// What the drawer shows: its entries, or the list one of them leads to.
+/// What the drawer shows: its entries, or the collections one of them leads to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DrawerLevel {
     Main,
     /// The collections, each opening its tab in the library.
     Collections,
-    /// Cover size, navigation sounds and exiting after a launch.
-    Settings,
 }
 
 /// What the options sheet shows: the game's actions, or its collections to add it to or
@@ -35,11 +33,14 @@ pub enum OptionsLevel {
     Collections,
 }
 
-/// What the Quick Access panel shows: its entries, or the designs to pick from.
+/// What the Quick Access panel shows: its entries, or the list one of them leads to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QuickAccessLevel {
     Main,
+    /// The designs to pick from.
     Designs,
+    /// Cover size, navigation sounds and exiting after a launch.
+    Settings,
 }
 
 /// What lies under the panels when an intent comes in.
@@ -132,7 +133,6 @@ pub enum DrawerEntry {
     Home,
     Library,
     Collections,
-    Settings,
     ExitFullscreen,
     Quit,
 }
@@ -148,7 +148,6 @@ pub fn drawer_entries(playing: bool, collections: bool) -> Vec<DrawerEntry> {
         Some(Home),
         Some(Library),
         collections,
-        Some(Settings),
         Some(ExitFullscreen),
         Some(Quit),
     ]
@@ -272,14 +271,26 @@ mod tests {
     }
 
     #[test]
-    fn b_steps_back_from_the_designs_and_then_closes_quick_access() {
+    fn b_steps_back_from_a_list_and_then_closes_quick_access() {
+        for level in [QuickAccessLevel::Designs, QuickAccessLevel::Settings] {
+            let mut panels = Panels::new();
+            panels.handle(Intent::QuickAccess, PAGE);
+            panels.show(Panel::QuickAccess(level));
+            assert!(panels.handle(Intent::Back, PAGE), "{level:?}");
+            assert_eq!(panels.open(), quick_access(), "{level:?}");
+            assert!(panels.handle(Intent::Back, PAGE), "{level:?}");
+            assert_eq!(panels.open(), None, "{level:?}");
+        }
+    }
+
+    #[test]
+    fn quick_access_toggles_shut_from_its_settings() {
         let mut panels = Panels::new();
-        panels.handle(Intent::QuickAccess, PAGE);
-        panels.show(Panel::QuickAccess(QuickAccessLevel::Designs));
-        assert!(panels.handle(Intent::Back, PAGE));
-        assert_eq!(panels.open(), quick_access());
-        assert!(panels.handle(Intent::Back, PAGE));
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Settings));
+        assert!(panels.handle(Intent::QuickAccess, PAGE));
         assert_eq!(panels.open(), None);
+        assert!(panels.handle(Intent::QuickAccess, PAGE));
+        assert_eq!(panels.open(), quick_access(), "it opens at its entries");
     }
 
     #[test]
@@ -329,16 +340,14 @@ mod tests {
     }
 
     #[test]
-    fn b_leaves_a_list_for_the_drawer_s_entries_first() {
-        for level in [DrawerLevel::Collections, DrawerLevel::Settings] {
-            let mut panels = Panels::new();
-            panels.handle(Intent::Menu, PAGE);
-            panels.show(Panel::Drawer(level));
-            assert!(panels.handle(Intent::Back, PAGE));
-            assert_eq!(panels.open(), drawer(), "{level:?}");
-            assert!(panels.handle(Intent::Back, PAGE));
-            assert_eq!(panels.open(), None, "{level:?}");
-        }
+    fn b_leaves_the_collections_for_the_drawer_s_entries_first() {
+        let mut panels = Panels::new();
+        panels.handle(Intent::Menu, PAGE);
+        panels.show(Panel::Drawer(DrawerLevel::Collections));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), drawer());
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), None);
     }
 
     #[test]
@@ -412,11 +421,11 @@ mod tests {
     #[test]
     fn closing_forgets_the_level() {
         let mut panels = Panels::new();
-        panels.show(Panel::Drawer(DrawerLevel::Settings));
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Settings));
         panels.close();
         assert_eq!(panels.open(), None);
-        panels.handle(Intent::Home, PAGE);
-        assert_eq!(panels.open(), drawer());
+        panels.handle(Intent::QuickAccess, PAGE);
+        assert_eq!(panels.open(), quick_access());
     }
 
     #[test]
@@ -424,19 +433,12 @@ mod tests {
         use DrawerEntry::*;
         assert_eq!(
             drawer_entries(true, true),
-            [
-                PlayingNow,
-                Home,
-                Library,
-                Collections,
-                Settings,
-                ExitFullscreen,
-                Quit
-            ]
+            [PlayingNow, Home, Library, Collections, ExitFullscreen, Quit]
         );
         assert_eq!(
             drawer_entries(false, false),
-            [Home, Library, Settings, ExitFullscreen, Quit]
+            [Home, Library, ExitFullscreen, Quit],
+            "settings live in Quick Access"
         );
     }
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 23:06+0100\n"
+"POT-Creation-Date: 2026-11-06 18:50+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -139,7 +139,7 @@ msgid "_Add to Collection"
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:39
-#: crates/pindu-ui/src/fullscreen_panels.rs:613
+#: crates/pindu-ui/src/fullscreen_panels.rs:616
 msgid "_New Collection…"
 msgstr ""
 
@@ -201,7 +201,7 @@ msgstr ""
 msgid "_Cancel"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen.rs:512
+#: crates/pindu-ui/src/fullscreen.rs:524
 #, rust-format
 msgid "Your fullscreen style has a problem"
 msgid_plural "Your fullscreen style has {count} problems"
@@ -263,64 +263,64 @@ msgstr ""
 
 #. / Why Quick Access cannot apply a design written for a newer style contract.
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:663
+#: crates/pindu-ui/src/fullscreen_panels.rs:666
 msgid "Needs a newer Pindu launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:669
+#: crates/pindu-ui/src/fullscreen_panels.rs:672
 #: crates/pindu-ui/src/hint_bar.rs:155
 #: crates/pindu-ui/src/widgets/cover_tile.rs:227 data/ui/cover_tile.blp:65
 msgid "Play"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:670
+#: crates/pindu-ui/src/fullscreen_panels.rs:673
 #: crates/pindu-ui/src/hint_bar.rs:156
 #: crates/pindu-ui/src/widgets/cover_tile.rs:225
 msgid "Stop"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:671
+#: crates/pindu-ui/src/fullscreen_panels.rs:674
 #: crates/pindu-ui/src/game_page.rs:385 data/ui/game_page.blp:115
 msgid "Add to Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:672
+#: crates/pindu-ui/src/fullscreen_panels.rs:675
 #: crates/pindu-ui/src/game_page.rs:383
 msgid "Remove from Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:673 data/ui/window.blp:123
-#: data/ui/window.blp:210 data/ui/window.blp:493
+#: crates/pindu-ui/src/fullscreen_panels.rs:676 data/ui/window.blp:123
+#: data/ui/window.blp:186 data/ui/window.blp:493
 msgid "Collections"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:674
+#: crates/pindu-ui/src/fullscreen_panels.rs:677
 msgid "Hide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:675
+#: crates/pindu-ui/src/fullscreen_panels.rs:678
 msgid "Unhide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:679
+#: crates/pindu-ui/src/fullscreen_panels.rs:682
 msgid "Open in Launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:680
+#: crates/pindu-ui/src/fullscreen_panels.rs:683
 #: crates/pindu-ui/src/game_page.rs:268
 #, rust-format
 msgid "Open in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:727 data/ui/game_page.blp:188
+#: crates/pindu-ui/src/fullscreen_panels.rs:730 data/ui/game_page.blp:188
 msgid "Playing Now"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:743
+#: crates/pindu-ui/src/fullscreen_panels.rs:746
 msgid "_Return"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:744
+#: crates/pindu-ui/src/fullscreen_panels.rs:747
 #: crates/pindu-ui/src/game_page.rs:396
 msgid "_Stop"
 msgstr ""
@@ -613,7 +613,7 @@ msgid "Menu"
 msgstr ""
 
 #: crates/pindu-ui/src/hint_bar.rs:167 data/ui/shortcuts-dialog.blp:82
-#: data/ui/window.blp:327 data/ui/window.blp:349
+#: data/ui/window.blp:222 data/ui/window.blp:244
 msgid "Quick Access"
 msgstr ""
 
@@ -709,7 +709,7 @@ msgstr[1] ""
 msgid "Recently Played"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:856 data/ui/home_page.blp:168
+#: crates/pindu-ui/src/home_page.rs:858 data/ui/home_page.blp:175
 #: data/ui/preferences.blp:10 data/ui/shortcuts-dialog.blp:35
 #: data/ui/window.blp:105 data/ui/window.blp:437 data/ui/window.blp:536
 msgid "Library"
@@ -1736,7 +1736,7 @@ msgstr ""
 msgid "Launching"
 msgstr ""
 
-#: data/ui/preferences.blp:39 data/ui/window.blp:303
+#: data/ui/preferences.blp:39 data/ui/window.blp:417
 msgid "Exit After Launching"
 msgstr ""
 
@@ -1890,7 +1890,7 @@ msgstr ""
 msgid "Start in Fullscreen Mode"
 msgstr ""
 
-#: data/ui/preferences.blp:222 data/ui/window.blp:299
+#: data/ui/preferences.blp:222 data/ui/window.blp:413
 msgid "Navigation Sounds"
 msgstr ""
 
@@ -1906,7 +1906,7 @@ msgstr ""
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: data/ui/shortcuts-dialog.blp:29 data/ui/window.blp:189
+#: data/ui/shortcuts-dialog.blp:29 data/ui/window.blp:165
 msgid "Quit"
 msgstr ""
 
@@ -1942,28 +1942,28 @@ msgstr ""
 msgid "Previous or Next Sort Order"
 msgstr ""
 
-#: data/ui/window.blp:147 data/ui/window.blp:240
-msgid "Settings"
-msgstr ""
-
-#: data/ui/window.blp:171
+#: data/ui/window.blp:147
 msgid "Exit Fullscreen Mode"
 msgstr ""
 
-#: data/ui/window.blp:259
+#: data/ui/window.blp:271 data/ui/window.blp:322
+msgid "Design"
+msgstr ""
+
+#: data/ui/window.blp:295 data/ui/window.blp:354
+msgid "Settings"
+msgstr ""
+
+#: data/ui/window.blp:373
 msgid "Small Covers"
 msgstr ""
 
-#: data/ui/window.blp:269
+#: data/ui/window.blp:383
 msgid "Medium Covers"
 msgstr ""
 
-#: data/ui/window.blp:280
+#: data/ui/window.blp:394
 msgid "Large Covers"
-msgstr ""
-
-#: data/ui/window.blp:376 data/ui/window.blp:403
-msgid "Design"
 msgstr ""
 
 #: data/ui/window.blp:440 data/ui/window.blp:556
