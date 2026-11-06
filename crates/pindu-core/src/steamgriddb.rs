@@ -199,6 +199,8 @@ pub enum RunEnd {
     KeyRejected,
     /// SteamGridDB could not be reached, or kept refusing for a while.
     Unreachable,
+    /// The user cancelled it.
+    Cancelled,
 }
 
 /// What a run does after a failed request.
@@ -538,5 +540,16 @@ mod tests {
         assert_eq!(run_notice(&run(0, RunEnd::Done), false), None);
         assert_eq!(run_notice(&run(0, RunEnd::Unreachable), false), None);
         assert!(!announces_start(3, false));
+    }
+
+    #[test]
+    fn a_cancelled_run_speaks_only_of_the_art_it_stored() {
+        for asked in [true, false] {
+            assert_eq!(
+                run_notice(&run(1, RunEnd::Cancelled), asked),
+                Some(RunNotice::Added(1))
+            );
+            assert_eq!(run_notice(&run(0, RunEnd::Cancelled), asked), None);
+        }
     }
 }

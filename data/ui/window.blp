@@ -359,6 +359,57 @@ template $PinduWindow: Adw.ApplicationWindow {
                           };
                         }
 
+                        // Shown while something runs in the background: a sync, an art
+                        // fetch or a Proton download.
+                        ListBoxRow quick_access_activity_row {
+                          action-name: "win.quick-access-activity";
+                          visible: false;
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "emblem-synchronizing-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Label {
+                              label: _("Activity");
+                              xalign: 0;
+                              hexpand: true;
+                            }
+
+                            Adw.Spinner {
+                              valign: center;
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
+
+                        // The same sync as Import, unavailable while one runs.
+                        ListBoxRow quick_access_refresh_row {
+                          action-name: "app.import";
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "view-refresh-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Label {
+                              label: _("Refresh Library");
+                              xalign: 0;
+                              hexpand: true;
+                            }
+                          };
+                        }
+
                         ListBoxRow quick_access_design_row {
                           action-name: "win.quick-access-designs";
 
@@ -433,6 +484,38 @@ template $PinduWindow: Adw.ApplicationWindow {
                       // What happened this session, newest first, or that nothing has;
                       // filled in code.
                       ListBox quick_access_notifications {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+                      }
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "activity";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      Label {
+                        label: _("Activity");
+                        xalign: 0;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // What runs, oldest first, each with its progress and Cancel where
+                      // it can be cancelled; filled in code.
+                      ListBox quick_access_activity {
                         selection-mode: none;
 
                         styles [

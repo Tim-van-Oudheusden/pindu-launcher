@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::art_cache::default_cache_dir;
 use pindu_core::manual;
@@ -17,9 +18,11 @@ use pindu_core::steamgriddb::{
     matching_hit, on_failure, retry_delay,
 };
 use pindu_core::store::Store;
+use pindu_core::tasks::{Progress, TaskKind};
 use soup::prelude::*;
 
 use crate::file_service::PickedImage;
+use crate::task_service::TaskService;
 
 /// Where the API key is filed in the keyring.
 const KEY_ATTRIBUTES: [(&str, &str); 1] = [("pindu-launcher", "steamgriddb-api-key")];
@@ -65,9 +68,11 @@ pub async fn set_api_key(key: &str) -> Result<(), String> {
 /// requested and there is no run. Steam games are looked up by app ID, others by a search
 /// that must find their exact title. A game SteamGridDB has nothing for is skipped; a
 /// rejected key or no connection ends the run ([`on_failure`]). Answers already fetched
-/// come from the cache.
+/// come from the cache. A run with games to fetch is a task in `tasks`, which the user can
+/// cancel.
 pub async fn fetch_missing_art(
     prefer_steamgriddb: bool,
+    tasks: &TaskService,
     on_start: impl FnOnce(usize),
 ) -> Option<ArtRun> {
     let key = match api_key().await {
@@ -101,19 +106,40 @@ pub async fn fetch_missing_art(
         tried: 0,
         end: RunEnd::Done,
     };
+    if wanted.is_empty() {
+        return Some(run);
+    }
+    let cancellable = gio::Cancellable::new();
+    let task = tasks.start(
+        TaskKind::ArtFetch,
+        &gettext("Artwork From SteamGridDB"),
+        Some(&cancellable),
+    );
+    let total = wanted.len();
     for (game, layouts) in wanted {
         run.tried += 1;
-        match fetch_game_art(&client, &game, layouts).await {
-            Ok(stored) => {
+        let fetched = gio::CancellableFuture::new(
+            fetch_game_art(&client, &game, layouts),
+            cancellable.clone(),
+        )
+        .await;
+        match fetched {
+            Ok(Ok(stored)) => {
                 run.stored += stored;
                 run.games_with_art += usize::from(stored > 0);
             }
-            Err(end) => {
+            Ok(Err(end)) => {
                 run.end = end;
                 break;
             }
+            Err(gio::Cancelled) => {
+                run.end = RunEnd::Cancelled;
+                break;
+            }
         }
+        tasks.set_progress(task, Progress::of(run.tried, total));
     }
+    tasks.finish(task);
     Some(run)
 }
 

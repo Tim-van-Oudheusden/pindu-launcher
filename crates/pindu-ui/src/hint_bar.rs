@@ -145,6 +145,8 @@ impl PinduWindow {
             Some(row) if !row.is_activatable() => Focus::Nothing,
             // A notification with a target opens it.
             Some(row) if row.has_css_class("notification") => Focus::Link,
+            // A task the user can cancel, in Quick Access's Activity.
+            Some(row) if row.has_css_class("task") => Focus::Cancel,
             _ => Focus::Other,
         }
     }
@@ -156,6 +158,7 @@ fn action_label(action: Action) -> String {
         Action::Open => gettext("Open"),
         Action::Play => gettext("Play"),
         Action::Stop => gettext("Stop"),
+        Action::Cancel => gettext("Cancel"),
         Action::Toggle => gettext("Toggle"),
         Action::Select => gettext("Select"),
         Action::Back => gettext("Back"),

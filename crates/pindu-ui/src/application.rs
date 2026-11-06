@@ -20,6 +20,7 @@ use crate::sources::source_list;
 use crate::steamgriddb_service;
 use crate::style_service::StyleService;
 use crate::sync_service::SyncService;
+use crate::task_service::TaskService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
 use pindu_core::backup::ImportSummary;
@@ -61,6 +62,8 @@ mod imp {
         pub power_service: OnceCell<PowerService>,
         /// What happened in the background this session, for Quick Access.
         pub notification_service: NotificationService,
+        /// What runs in the background, for Quick Access's Activity.
+        pub task_service: TaskService,
     }
 
     #[glib::object_subclass]
@@ -308,6 +311,11 @@ impl PinduApplication {
         &self.imp().notification_service
     }
 
+    /// What runs in the background: syncs, art fetches and Proton downloads.
+    pub fn task_service(&self) -> &TaskService {
+        &self.imp().task_service
+    }
+
     fn setup_actions(&self) {
         let quit_action = gio::ActionEntry::builder("quit")
             .activate(move |app: &Self, _, _| app.quit())
@@ -468,7 +476,7 @@ impl PinduApplication {
         let app = self.clone();
         glib::spawn_future_local(async move {
             let mut progress = None;
-            let run = steamgriddb_service::fetch_missing_art(prefer, |games| {
+            let run = steamgriddb_service::fetch_missing_art(prefer, app.task_service(), |games| {
                 if steamgriddb::announces_start(games, asked) {
                     // It stays up until the run ends.
                     let toast = adw::Toast::builder()

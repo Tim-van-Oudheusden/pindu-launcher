@@ -196,6 +196,13 @@ pub fn work_dir(tools: &Path, folder: &str) -> PathBuf {
     tools.join(format!(".download-{folder}"))
 }
 
+/// Deletes what the install of `folder` left in its work folder: the tarball, whole or
+/// in part, and anything unpacked from it. An install ends with this whether it finished,
+/// failed or was cancelled, so only a finished one leaves a build behind.
+pub fn discard_install(tools: &Path, folder: &str) {
+    let _ = std::fs::remove_dir_all(work_dir(tools, folder));
+}
+
 /// Moves the one folder a tarball unpacked into `unpacked` to `tools/<folder>`, in one
 /// rename, so the build appears whole or not at all. Returns its new path.
 pub fn finish_install(unpacked: &Path, tools: &Path, folder: &str) -> io::Result<PathBuf> {
@@ -511,5 +518,28 @@ mod tests {
             .collect();
         left.sort();
         assert_eq!(left, [".download-Running", "Build"]);
+    }
+
+    #[test]
+    fn a_cancelled_install_leaves_no_partial_build_behind() {
+        let tools = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(tools.path().join("Build/files")).unwrap();
+        let work = work_dir(tools.path(), "GE-Proton11-12-x86_64");
+        std::fs::create_dir_all(work.join("unpacked/GE-Proton11-12-x86_64/files")).unwrap();
+        std::fs::write(
+            work.join("GE-Proton11-12-x86_64.tar.gz"),
+            b"part of a tarball",
+        )
+        .unwrap();
+
+        discard_install(tools.path(), "GE-Proton11-12-x86_64");
+
+        let left: Vec<_> = std::fs::read_dir(tools.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        assert_eq!(left, ["Build"]);
+        discard_install(tools.path(), "GE-Proton11-12-x86_64");
+        assert!(tools.path().join("Build/files").exists());
     }
 }

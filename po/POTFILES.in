@@ -2,6 +2,7 @@ crates/pindu-ui/src/application.rs
 crates/pindu-ui/src/collection_actions.rs
 crates/pindu-ui/src/file_service.rs
 crates/pindu-ui/src/fullscreen.rs
+crates/pindu-ui/src/fullscreen_activity.rs
 crates/pindu-ui/src/fullscreen_game.rs
 crates/pindu-ui/src/fullscreen_library.rs
 crates/pindu-ui/src/fullscreen_notifications.rs
@@ -24,6 +25,7 @@ crates/pindu-ui/src/search_provider.rs
 crates/pindu-ui/src/session_service.rs
 crates/pindu-ui/src/sources.rs
 crates/pindu-ui/src/steamgriddb_picker.rs
+crates/pindu-ui/src/steamgriddb_service.rs
 crates/pindu-ui/src/sync_service.rs
 crates/pindu-ui/src/widgets/cover_tile.rs
 crates/pindu-ui/src/window.rs

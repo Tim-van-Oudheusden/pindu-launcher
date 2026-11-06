@@ -18,6 +18,8 @@ pub enum Focus {
     Play,
     /// The game page's Stop button, while the game runs.
     Stop,
+    /// A background task the user can cancel.
+    Cancel,
     /// A switch, check box or toggle button.
     Toggle,
     /// Any other widget that activates.
@@ -79,6 +81,8 @@ pub enum Action {
     Open,
     Play,
     Stop,
+    /// Cancel a background task.
+    Cancel,
     Toggle,
     Select,
     Back,
@@ -162,6 +166,7 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
         Focus::Game | Focus::Link => Some(Action::Open),
         Focus::Play => Some(Action::Play),
         Focus::Stop => Some(Action::Stop),
+        Focus::Cancel => Some(Action::Cancel),
         Focus::Toggle => Some(Action::Toggle),
         Focus::Other => Some(Action::Select),
     };
@@ -426,6 +431,30 @@ mod tests {
         };
         assert_eq!(
             actions(plain, DeviceKind::Xbox),
+            [(Button::East, Action::Back)]
+        );
+    }
+
+    #[test]
+    fn a_running_task_that_can_be_cancelled_shows_cancel_on_a() {
+        let activity = Context {
+            menu: true,
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Activity)),
+            ..context(Focus::Cancel)
+        };
+        assert_eq!(
+            actions(activity, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Cancel),
+                (Button::East, Action::Back)
+            ]
+        );
+        let working = Context {
+            focus: Focus::Nothing,
+            ..activity
+        };
+        assert_eq!(
+            actions(working, DeviceKind::Xbox),
             [(Button::East, Action::Back)]
         );
     }
