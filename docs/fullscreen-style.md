@@ -190,6 +190,7 @@ while the system asks for reduced motion.
 | `.quick-access-status` | The header at the top of Quick Access: `.clock` (the time), `.offline` (shown while there is no network) and `.battery` (the machine's battery, absent without one) |
 | `.notification-count` | The unread count on Quick Access's Notifications entry |
 | `.notification` | A row of Quick Access's notifications; `.unread` while it is new, with an `.unread-dot` |
+| `.task` | A row of Quick Access's Activity, which lists what runs in the background: a label, what it is doing, a progress bar and, while it can be cancelled, a Cancel button |
 | `.options-sheet` | A game's options at the bottom |
 | `.navigation-sidebar > row` | A row in any of the three |
 | `.hint-bar` | The controller hints at the bottom; each `.hint` has `.hint-glyph`s and a `.hint-label` |

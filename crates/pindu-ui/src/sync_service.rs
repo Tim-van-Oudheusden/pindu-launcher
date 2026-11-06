@@ -15,8 +15,10 @@ use pindu_core::paths::default_library_db_path;
 use pindu_core::sources::location::{self, HostDirs};
 use pindu_core::sources::sync::{SyncSummary, Tally, sync_all};
 use pindu_core::store::Store;
+use pindu_core::tasks::TaskKind;
 
 use crate::sources::source_name;
+use crate::task_service::TaskService;
 
 mod imp {
     use std::sync::LazyLock;
@@ -122,11 +124,16 @@ impl SyncService {
         });
     }
 
-    /// Syncs every source on a worker thread; a call while syncing is ignored.
+    /// Syncs every source on a worker thread; a call while syncing is ignored. The sync is
+    /// a task in the application's Activity while it runs.
     pub fn sync(&self) {
         if self.syncing() {
             return;
         }
+        let tasks = TaskService::of_application();
+        let task = tasks
+            .as_ref()
+            .map(|tasks| tasks.start(TaskKind::LibrarySync, &gettext("Refreshing Library"), None));
         self.set_syncing(true);
         let service = self.clone();
         glib::spawn_future_local(async move {
@@ -150,6 +157,9 @@ impl SyncService {
             imp.added.replace(added);
             imp.missing.replace(missing);
             service.set_syncing(false);
+            if let (Some(tasks), Some(task)) = (tasks, task) {
+                tasks.finish(task);
+            }
             service.emit_by_name::<()>("finished", &[]);
         });
     }

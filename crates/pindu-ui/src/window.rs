@@ -16,6 +16,7 @@ use pindu_core::library::{
 use pindu_core::model::{GameId, Source, Timestamp};
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{GameOption, Panels};
+use pindu_core::tasks::Task;
 
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
@@ -178,6 +179,12 @@ mod imp {
         #[template_child]
         pub quick_access_notifications: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub quick_access_activity_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_refresh_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_activity: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub quick_access_design_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub quick_access_designs: TemplateChild<gtk::ListBox>,
@@ -247,6 +254,10 @@ mod imp {
         /// next tick while the drawer or Quick Access shows.
         pub session_times: RefCell<Vec<(gtk::Label, Timestamp)>>,
         pub session_tick: RefCell<Option<glib::SourceId>>,
+        /// The tasks Quick Access's Activity shows, each with its progress bar, and the
+        /// next pulse of the bars of those with no telling how far they are.
+        pub activity_shown: RefCell<Vec<(Task, gtk::ProgressBar)>>,
+        pub activity_pulse: RefCell<Option<glib::SourceId>>,
     }
 
     #[glib::object_subclass]
@@ -328,6 +339,7 @@ impl PinduWindow {
             window.setup_quick_access_status(application);
             window.setup_playing_cards(application);
             window.setup_notifications(application);
+            window.setup_activity(application, sync_service);
         }
         window
     }

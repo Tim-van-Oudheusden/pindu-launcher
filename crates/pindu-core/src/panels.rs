@@ -1,8 +1,8 @@
 //! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
-//! leaving), the Quick Access panel on the right (notifications, the design and a few
-//! settings) and the options sheet at the bottom (what to do with one game). This decides
-//! which one is open and at which level, what Start, Guide, R3, View or X and B do to
-//! them, and what each lists.
+//! leaving), the Quick Access panel on the right (notifications, what runs in the
+//! background, the design and a few settings) and the options sheet at the bottom (what
+//! to do with one game). This decides which one is open and at which level, what Start,
+//! Guide, R3, View or X and B do to them, and what each lists.
 
 use crate::gamepad::Intent;
 use crate::launch;
@@ -39,6 +39,8 @@ pub enum QuickAccessLevel {
     Main,
     /// The session's notifications, newest first.
     Notifications,
+    /// What runs in the background: syncs, art fetches and Proton downloads.
+    Activity,
     /// The designs to pick from.
     Designs,
     /// Cover size, navigation sounds and exiting after a launch.
@@ -132,6 +134,14 @@ impl Panels {
     /// the window left fullscreen mode.
     pub fn close(&mut self) {
         self.open = None;
+    }
+
+    /// Nothing runs in the background any more: Quick Access leaves its Activity, which
+    /// has nothing left to list, for its entries.
+    pub fn activity_ended(&mut self) {
+        if self.open == Some(Panel::QuickAccess(QuickAccessLevel::Activity)) {
+            self.open = Some(Panel::QuickAccess(QuickAccessLevel::Main));
+        }
     }
 }
 
@@ -285,7 +295,12 @@ mod tests {
 
     #[test]
     fn b_steps_back_from_a_list_and_then_closes_quick_access() {
-        for level in [QuickAccessLevel::Designs, QuickAccessLevel::Settings] {
+        for level in [
+            QuickAccessLevel::Notifications,
+            QuickAccessLevel::Activity,
+            QuickAccessLevel::Designs,
+            QuickAccessLevel::Settings,
+        ] {
             let mut panels = Panels::new();
             panels.handle(Intent::QuickAccess, PAGE);
             panels.show(Panel::QuickAccess(level));
@@ -462,6 +477,29 @@ mod tests {
         assert_eq!(panels.open(), None);
         panels.handle(Intent::QuickAccess, PAGE);
         assert_eq!(panels.open(), quick_access());
+    }
+
+    #[test]
+    fn quick_access_leaves_its_activity_once_nothing_runs() {
+        let mut panels = Panels::new();
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Activity));
+        panels.activity_ended();
+        assert_eq!(panels.open(), quick_access());
+
+        for open in [
+            None,
+            drawer(),
+            options(),
+            quick_access(),
+            Some(Panel::QuickAccess(QuickAccessLevel::Settings)),
+        ] {
+            let mut panels = Panels::new();
+            if let Some(panel) = open {
+                panels.show(panel);
+            }
+            panels.activity_ended();
+            assert_eq!(panels.open(), open, "{open:?} stays");
+        }
     }
 
     #[test]

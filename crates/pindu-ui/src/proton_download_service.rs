@@ -5,8 +5,9 @@
 //! An install fetches the release's `.sha512sum` first when it has one, hashes the
 //! tarball as it downloads, unpacks it with `tar` in a hidden work folder beside the
 //! builds and moves the build in with one rename. Installs outlive the Preferences
-//! dialog; a dialog opened later sees them through [`step`], and Quick Access's
-//! notifications tell how each ended unless the user stopped it.
+//! dialog; a dialog opened later sees them through [`step`]. Each is a task in Quick
+//! Access's Activity, where, as with the Preferences' Stop button, the user can cancel its
+//! download; Quick Access's notifications tell how each ended unless the user stopped it.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -20,9 +21,11 @@ use pindu_core::notifications::Kind;
 use pindu_core::paths::default_tools_dir;
 use pindu_core::proton::{self, ProtonBuild};
 use pindu_core::proton_downloads::{self, Fork, Release, Step};
+use pindu_core::tasks::{Progress, TaskId, TaskKind};
 use soup::prelude::*;
 
 use crate::application::PinduApplication;
+use crate::task_service::TaskService;
 
 /// How much of a tarball is read, hashed and written at a time.
 const CHUNK: usize = 256 * 1024;
@@ -31,7 +34,28 @@ const CHUNK: usize = 256 * 1024;
 #[derive(Debug)]
 struct Install {
     step: Cell<Step>,
-    stopped: Cell<bool>,
+    /// Stops the download, through the install's task.
+    cancellable: gio::Cancellable,
+    /// Its task in Quick Access's Activity.
+    task: Option<(TaskService, TaskId)>,
+}
+
+impl Install {
+    /// Moves the install on to `step`, which its task shows; once it unpacks it can no
+    /// longer be cancelled.
+    fn set_step(&self, step: Step) {
+        self.step.set(step);
+        if let Some((tasks, id)) = &self.task {
+            tasks.set_progress(
+                *id,
+                step.fraction()
+                    .map_or(Progress::Working, Progress::Fraction),
+            );
+            if step == Step::Unpacking {
+                tasks.no_longer_cancellable(*id);
+            }
+        }
+    }
 }
 
 thread_local! {
@@ -54,13 +78,14 @@ pub fn running() -> Vec<String> {
     RUNNING.with_borrow(|running| running.keys().cloned().collect())
 }
 
-/// Stops the download of the build in `folder`; an install that is unpacking finishes.
+/// Stops the download of the build in `folder`, as cancelling its task does; an install
+/// that is unpacking finishes.
 pub fn stop(folder: &str) {
-    RUNNING.with_borrow(|running| {
-        if let Some(install) = running.get(folder) {
-            install.stopped.set(true);
-        }
-    });
+    let task =
+        RUNNING.with_borrow(|running| running.get(folder).and_then(|install| install.task.clone()));
+    if let Some((tasks, id)) = task {
+        tasks.cancel(id);
+    }
 }
 
 /// The builds in our tools folder, newest first. Leftovers of interrupted installs and
@@ -83,30 +108,39 @@ pub async fn releases(fork: Fork) -> Result<Vec<Release>, String> {
 }
 
 /// Downloads, checks and unpacks `release` into our tools folder, and posts how it ended.
+/// Whichever way it ends, its work folder goes, so only a finished install leaves a build.
 pub async fn install(release: Release) -> Result<(), String> {
     let folder = release.folder().to_owned();
-    let install = Rc::new(Install {
-        step: Cell::new(Step::Downloading {
-            received: 0,
-            total: release.tarball.size,
-        }),
-        stopped: Cell::new(false),
-    });
-    let started = RUNNING.with_borrow_mut(|running| {
-        if running.contains_key(&folder) {
-            return false;
-        }
-        running.insert(folder.clone(), install.clone());
-        true
-    });
-    if !started {
+    if RUNNING.with_borrow(|running| running.contains_key(&folder)) {
         return Err(gettext("{build} is already being installed").replace("{build}", &folder));
     }
-    let work = proton_downloads::work_dir(&default_tools_dir(), &folder);
-    let result = run_install(&release, &install, &work).await;
-    let _ = gio::spawn_blocking(move || std::fs::remove_dir_all(work)).await;
+    let cancellable = gio::Cancellable::new();
+    let task = TaskService::of_application().map(|tasks| {
+        let id = tasks.start(TaskKind::ProtonDownload, &release.tag, Some(&cancellable));
+        (tasks, id)
+    });
+    let first = Step::Downloading {
+        received: 0,
+        total: release.tarball.size,
+    };
+    let install = Rc::new(Install {
+        step: Cell::new(first),
+        cancellable,
+        task,
+    });
+    install.set_step(first);
+    RUNNING.with_borrow_mut(|running| running.insert(folder.clone(), install.clone()));
+    let result = run_install(&release, &install).await;
+    let discarded = folder.clone();
+    let _ = gio::spawn_blocking(move || {
+        proton_downloads::discard_install(&default_tools_dir(), &discarded);
+    })
+    .await;
     RUNNING.with_borrow_mut(|running| running.remove(&folder));
-    if !install.stopped.get() {
+    if let Some((tasks, id)) = &install.task {
+        tasks.finish(*id);
+    }
+    if !install.cancellable.is_cancelled() {
         notify_install(&release.tag, &result);
     }
     result
@@ -142,18 +176,42 @@ pub async fn remove(folder: String) -> Result<(), String> {
         .map_err(|error| error.to_string())
 }
 
-async fn run_install(release: &Release, install: &Install, work: &Path) -> Result<(), String> {
+async fn run_install(release: &Release, install: &Install) -> Result<(), String> {
+    let folder = release.folder().to_owned();
+    let work = proton_downloads::work_dir(&default_tools_dir(), &folder);
     let unpacked = work.join("unpacked");
     let fresh = unpacked.clone();
-    let work_dir = work.to_owned();
+    let leftover = folder.clone();
     gio::spawn_blocking(move || {
-        let _ = std::fs::remove_dir_all(&work_dir);
+        proton_downloads::discard_install(&default_tools_dir(), &leftover);
         std::fs::create_dir_all(&fresh)
     })
     .await
     .map_err(|_| gettext("The download folder could not be made"))?
     .map_err(|error| error.to_string())?;
 
+    let tarball = work.join(&release.tarball.name);
+    // Until it unpacks, cancelling the install's task drops the download.
+    gio::CancellableFuture::new(
+        download_checked(release, &tarball, install),
+        install.cancellable.clone(),
+    )
+    .await
+    .map_err(|gio::Cancelled| gettext("The download was stopped"))??;
+
+    install.set_step(Step::Unpacking);
+    gio::spawn_blocking(move || unpack(&tarball, &unpacked, &folder))
+        .await
+        .map_err(|_| gettext("The tarball could not be unpacked"))?
+}
+
+/// Downloads the release's tarball to `tarball` and checks it against the checksum the
+/// release published, if it has one.
+async fn download_checked(
+    release: &Release,
+    tarball: &Path,
+    install: &Install,
+) -> Result<(), String> {
     let expected =
         match &release.checksum {
             Some(file) => {
@@ -168,19 +226,13 @@ async fn run_install(release: &Release, install: &Install, work: &Path) -> Resul
             }
             None => None,
         };
-    let tarball = work.join(&release.tarball.name);
-    let sha512 = download(&release.tarball.url, &tarball, install).await?;
+    let sha512 = download(&release.tarball.url, tarball, install).await?;
     if expected.is_some_and(|expected| expected != sha512) {
         return Err(gettext(
             "The download does not match the checksum the release published; nothing was installed",
         ));
     }
-
-    install.step.set(Step::Unpacking);
-    let folder = release.folder().to_owned();
-    gio::spawn_blocking(move || unpack(&tarball, &unpacked, &folder))
-        .await
-        .map_err(|_| gettext("The tarball could not be unpacked"))?
+    Ok(())
 }
 
 /// Unpacks `tarball` into `unpacked` and moves the build into the tools folder.
@@ -233,9 +285,6 @@ async fn download(url: &str, path: &Path, install: &Install) -> Result<String, S
         glib::Checksum::new(glib::ChecksumType::Sha512).expect("GLib computes SHA-512");
     let mut received = 0;
     loop {
-        if install.stopped.get() {
-            return Err(gettext("The download was stopped"));
-        }
         let bytes = input
             .read_bytes_future(CHUNK, glib::Priority::DEFAULT)
             .await
@@ -249,7 +298,7 @@ async fn download(url: &str, path: &Path, install: &Install) -> Result<String, S
             .write_all_future(bytes, glib::Priority::DEFAULT)
             .await
             .map_err(|(_, error)| error.to_string())?;
-        install.step.set(Step::Downloading { received, total });
+        install.set_step(Step::Downloading { received, total });
     }
     output
         .close_future(glib::Priority::DEFAULT)

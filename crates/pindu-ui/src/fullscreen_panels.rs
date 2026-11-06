@@ -5,7 +5,8 @@
 //! `pindu_core::panels`; this fills them, shows them, keeps focus inside the open one and
 //! gives it back after, and does what their entries say. They are widgets in the window
 //! rather than popover menus, which the compositor dismisses on a controller press.
-//! Quick Access's notifications are `fullscreen_notifications`'s.
+//! Quick Access's notifications are `fullscreen_notifications`'s, its Activity and Refresh
+//! Library `fullscreen_activity`'s.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -75,6 +76,11 @@ impl PinduWindow {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Notifications));
             })
             .build();
+        let activity = gio::ActionEntry::builder("quick-access-activity")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Activity));
+            })
+            .build();
         let designs = gio::ActionEntry::builder("quick-access-designs")
             .activate(|window: &Self, _, _| {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Designs));
@@ -95,6 +101,7 @@ impl PinduWindow {
             game_collections,
             quick_access,
             notifications,
+            activity,
             designs,
             quick_settings,
         ]);
@@ -326,6 +333,13 @@ impl PinduWindow {
         self.set_panels(panels);
     }
 
+    /// Nothing runs any more: Quick Access leaves its Activity for its entries.
+    pub(crate) fn leave_activity(&self) {
+        let mut panels = self.imp().panels.get();
+        panels.activity_ended();
+        self.set_panels(panels);
+    }
+
     /// Shows `panels` as they now are: the drawer, Quick Access or the sheet, at its level,
     /// with focus inside the open one and the page under it out of focus's way, or back on
     /// the page.
@@ -345,6 +359,7 @@ impl PinduWindow {
         }
         match open {
             Some(Panel::QuickAccess(QuickAccessLevel::Notifications)) => self.show_notifications(),
+            Some(Panel::QuickAccess(QuickAccessLevel::Activity)) => self.show_activity(),
             Some(Panel::QuickAccess(QuickAccessLevel::Designs)) => self.fill_designs(),
             _ => {}
         }
@@ -371,6 +386,7 @@ impl PinduWindow {
                 imp.quick_access_stack.set_visible_child_name(match level {
                     QuickAccessLevel::Main => "main",
                     QuickAccessLevel::Notifications => "notifications",
+                    QuickAccessLevel::Activity => "activity",
                     QuickAccessLevel::Designs => "designs",
                     QuickAccessLevel::Settings => "settings",
                 });
@@ -409,6 +425,11 @@ impl PinduWindow {
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Notifications)),
             ) => Some(imp.quick_access_notifications_row.get().upcast()),
+            // Activity, or the entry after it once nothing runs.
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::Activity)),
+            ) => Some(self.activity_entry()),
             (
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Designs)),
@@ -436,6 +457,9 @@ impl PinduWindow {
             }
             (Some(Panel::QuickAccess(QuickAccessLevel::Notifications)), _) => {
                 first_row(&imp.quick_access_notifications)
+            }
+            (Some(Panel::QuickAccess(QuickAccessLevel::Activity)), _) => {
+                first_row(&imp.quick_access_activity)
             }
             // The design in force.
             (Some(Panel::QuickAccess(QuickAccessLevel::Designs)), _) => {
