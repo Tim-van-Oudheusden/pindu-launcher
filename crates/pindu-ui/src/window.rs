@@ -156,6 +156,12 @@ mod imp {
         #[template_child]
         pub options_collections: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub options_performance: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub options_overlay_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub options_gamemode_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
         pub quick_access: TemplateChild<adw::OverlaySplitView>,
         #[template_child]
         pub quick_access_panel: TemplateChild<gtk::Box>,
@@ -259,6 +265,18 @@ mod imp {
         pub quick_access_hidden_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub quick_access_clear_filters: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_performance_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_performance_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_performance: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_overlay_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_gamemode_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_performance_note: TemplateChild<gtk::Label>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
         /// Every sidebar row with the view it selects and, for sources, its count label.
@@ -320,6 +338,14 @@ mod imp {
         pub activity_pulse: RefCell<Option<glib::SourceId>>,
         /// The game Surprise Me picked last, which it does not pick again next time.
         pub surprise_previous: RefCell<Option<GameId>>,
+        /// The game fullscreen mode's performance switches are for, and its
+        /// `notify::playing` handler.
+        pub performance_game: RefCell<Option<(GameObject, glib::SignalHandlerId)>>,
+        /// That game's Performance Overlay and GameMode as stored, which every switch
+        /// shows; `None` until they are read, or for a game without launch settings.
+        pub performance_tools: Cell<Option<[bool; 2]>>,
+        /// Whether the switches are being set to show those, rather than by the user.
+        pub performance_filling: Cell<bool>,
     }
 
     #[glib::object_subclass]

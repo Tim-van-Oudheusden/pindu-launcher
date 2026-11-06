@@ -1,9 +1,10 @@
 //! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
 //! leaving), the Quick Access panel on the right (notifications, what runs in the
 //! background, the design, the controllers and what each button does, a few settings,
-//! and entries for the page under it such as the library's filters) and the options sheet
-//! at the bottom (what to do with one game). This decides which one is open and at which
-//! level, what Start, Guide, R3, View or X and B do to them, and what each lists.
+//! and entries for the page under it such as the library's filters and a focused game's
+//! performance switches) and the options sheet at the bottom (what to do with one game).
+//! This decides which one is open and at which level, what Start, Guide, R3, View or X and
+//! B do to them, and what each lists.
 
 use crate::gamepad::Intent;
 use crate::launch;
@@ -52,6 +53,9 @@ pub enum QuickAccessLevel {
     Settings,
     /// The library filters, while the library is under the panel (see [`page_entries`]).
     Filters,
+    /// The Performance Overlay (MangoHud) and GameMode switches of the focused game, one
+    /// we run ourselves (see [`page_entries`]).
+    Performance,
 }
 
 /// What lies under the panels when an intent comes in.
@@ -59,6 +63,9 @@ pub enum QuickAccessLevel {
 pub struct Under {
     /// A game has focus, or the page is a game's: View or X has a game to show options for.
     pub game: bool,
+    /// That game is one we run ourselves ([`launch::offers_performance`]): Quick Access
+    /// offers its performance switches.
+    pub own_game: bool,
     /// A dialog is open over everything, and takes the buttons first.
     pub dialog: bool,
     /// A notification is unread: Quick Access opens at the notifications.
@@ -190,16 +197,22 @@ pub fn drawer_entries(playing: bool, collections: bool) -> Vec<DrawerEntry> {
 pub enum PageEntry {
     /// The library filters, leading to [`QuickAccessLevel::Filters`].
     Filters,
+    /// The focused game's performance switches, leading to
+    /// [`QuickAccessLevel::Performance`].
+    Performance,
 }
 
 /// The entries Quick Access adds for the page `under` it, top to bottom: the library's
-/// Filters.
+/// Filters, then Performance for a focused game we run ourselves (on its page, its cover
+/// or its Home card).
 pub fn page_entries(under: Under) -> Vec<PageEntry> {
-    under
-        .library
-        .then_some(PageEntry::Filters)
-        .into_iter()
-        .collect()
+    [
+        under.library.then_some(PageEntry::Filters),
+        (under.game && under.own_game).then_some(PageEntry::Performance),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
 }
 
 /// An action of the options sheet for one game.
@@ -318,18 +331,21 @@ mod tests {
 
     const PAGE: Under = Under {
         game: false,
+        own_game: false,
         dialog: false,
         unread: false,
         library: false,
     };
     const GAME: Under = Under {
         game: true,
+        own_game: false,
         dialog: false,
         unread: false,
         library: false,
     };
     const DIALOG: Under = Under {
         game: true,
+        own_game: false,
         dialog: true,
         unread: false,
         library: false,
@@ -366,6 +382,7 @@ mod tests {
             QuickAccessLevel::Controls,
             QuickAccessLevel::Settings,
             QuickAccessLevel::Filters,
+            QuickAccessLevel::Performance,
         ] {
             let mut panels = Panels::new();
             panels.handle(Intent::QuickAccess, PAGE);
@@ -597,6 +614,34 @@ mod tests {
         assert_eq!(page_entries(library_game), [PageEntry::Filters]);
         assert!(page_entries(PAGE).is_empty());
         assert!(page_entries(GAME).is_empty(), "a game page has no filters");
+    }
+
+    #[test]
+    fn quick_access_offers_performance_for_a_focused_game_we_run_only() {
+        let ours = Under {
+            own_game: true,
+            ..GAME
+        };
+        let ours_in_the_library = Under {
+            library: true,
+            ..ours
+        };
+        let store_game_in_the_library = Under {
+            library: true,
+            ..GAME
+        };
+
+        assert_eq!(page_entries(ours), [PageEntry::Performance]);
+        assert_eq!(
+            page_entries(ours_in_the_library),
+            [PageEntry::Filters, PageEntry::Performance]
+        );
+        assert_eq!(
+            page_entries(store_game_in_the_library),
+            [PageEntry::Filters]
+        );
+        assert!(page_entries(GAME).is_empty(), "a store game has none");
+        assert!(page_entries(PAGE).is_empty());
     }
 
     fn game(source: Source, kind: LaunchKind) -> Game {

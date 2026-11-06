@@ -134,7 +134,10 @@ your launchers again, offline like every sync. **Surprise Me** opens the page of
 never the same one twice in a row, so you still choose whether to play. On the library page, **Filters** narrows every
 tab to installed or not installed games, Windows or native ones, and can show hidden games too; a **Filtered** chip
 beside the tabs says so, and **Clear Filters** brings the whole tab back. These filters are apart from the desktop
-window's filter row and last until the app quits. Quick Access also switches the design and holds quick
+window's filter row and last until the app quits. With a game Pindu runs itself focused, or on its page,
+**Performance** turns its **Performance Overlay** (MangoHud) and **GameMode** on or off from its next launch, the same
+switches its options sheet (View or X) has; store games, whose launcher keeps their settings, have neither, and while
+the game runs the level says a change waits for its next start. Quick Access also switches the design and holds quick
 settings: cover size, navigation sounds with a volume slider that left and right turn (here or in Preferences),
 exiting after a launch, and under Accessibility **Reduce Motion** (Home's background holds still and art changes
 without a fade, as it also does when the system's animations are off) and **Larger Text** (fullscreen text about a

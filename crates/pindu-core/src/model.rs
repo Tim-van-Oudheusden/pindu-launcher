@@ -270,6 +270,24 @@ pub struct LaunchConfig {
     pub wrappers: Vec<String>,
 }
 
+/// A tool fullscreen mode switches on or off for a game we run, from its next launch: its
+/// Performance Overlay (MangoHud) or GameMode, as [`LaunchConfig`] keeps them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PerformanceTool {
+    Overlay,
+    GameMode,
+}
+
+impl PerformanceTool {
+    /// Whether `config` has the tool on.
+    pub fn is_on(self, config: &LaunchConfig) -> bool {
+        match self {
+            Self::Overlay => config.mangohud,
+            Self::GameMode => config.gamemode,
+        }
+    }
+}
+
 /// One play session of a game we started ourselves.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlaySession {

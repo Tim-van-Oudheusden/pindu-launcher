@@ -8,8 +8,10 @@
 //! Quick Access's notifications are `fullscreen_notifications`'s, its Activity and Refresh
 //! Library `fullscreen_activity`'s, its Surprise Me `fullscreen_surprise`'s, its
 //! Controllers `fullscreen_controllers`'s, its Controls `fullscreen_controls`'s, its
-//! Filters (on the library page only) `fullscreen_library`'s. Its Design level holds the
-//! design, its variant, Home's background blur and dim, and the user's own stylesheet.
+//! Filters (on the library page only) `fullscreen_library`'s, its Performance (for a game we
+//! run ourselves, which the options sheet has too) `fullscreen_performance`'s. Its Design
+//! level holds the design, its variant, Home's background blur and dim, and the user's own
+//! stylesheet.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -18,6 +20,7 @@ use gtk::{gio, glib};
 use pindu_core::gamepad::Intent;
 use pindu_core::home::{BLUR_KEY, DIM_KEY};
 use pindu_core::keys;
+use pindu_core::launch;
 use pindu_core::library::View;
 use pindu_core::panels::{
     DrawerEntry, DrawerLevel, GameOption, OptionsLevel, PageEntry, Panel, Panels, QuickAccessLevel,
@@ -113,6 +116,11 @@ impl PinduWindow {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Filters));
             })
             .build();
+        let performance = gio::ActionEntry::builder("quick-access-performance")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Performance));
+            })
+            .build();
         self.add_action_entries([
             close,
             home,
@@ -129,10 +137,11 @@ impl PinduWindow {
             controls,
             quick_settings,
             filters,
+            performance,
         ]);
-        // Up and Down stop at a list's ends; in Quick Access's Controllers and settings they
-        // go on to the next list (`fullscreen_playing` takes the drawer's and Quick Access's
-        // own lists up to their Playing Now cards).
+        // Up and Down stop at a list's ends; in Quick Access's Controllers and settings and
+        // the options sheet they go on to the next list (`fullscreen_playing` takes the
+        // drawer's and Quick Access's own lists up to their Playing Now cards).
         for list in [
             imp.quick_access_designs.get(),
             imp.quick_access_variants.get(),
@@ -147,6 +156,8 @@ impl PinduWindow {
             imp.quick_access_accessibility.get(),
             imp.quick_access_filters.get(),
             imp.quick_access_clear_filters.get(),
+            imp.options_list.get(),
+            imp.options_performance.get(),
         ] {
             list.connect_keynav_failed(|list, direction| {
                 step_out_of_list(list, direction);
@@ -221,6 +232,7 @@ impl PinduWindow {
         ));
         self.setup_quick_access_settings();
         self.setup_quick_access();
+        self.setup_performance();
         self.fill_drawer();
     }
 
@@ -378,6 +390,7 @@ impl PinduWindow {
         let game = self.focused_game();
         let under = Under {
             game: game.is_some(),
+            own_game: game.as_ref().is_some_and(own_game),
             dialog: self.visible_dialog().is_some(),
             unread: self.has_unread_notifications(),
             library: self.library_under_panels(),
@@ -416,17 +429,25 @@ impl PinduWindow {
             && imp.navigation_view.visible_page().as_ref() == Some(&*imp.library_page)
     }
 
-    /// Shows the entries Quick Access adds for the page under it, as it opens.
+    /// Shows the entries Quick Access adds for the page under it, as it opens, and makes
+    /// the performance switches the focused game's when they show.
     fn show_page_entries(&self) {
+        let game = self.focused_game();
         let under = Under {
-            game: self.focused_game().is_some(),
+            game: game.is_some(),
+            own_game: game.as_ref().is_some_and(own_game),
             library: self.library_under_panels(),
             ..Under::default()
         };
         let entries = page_entries(under);
-        self.imp()
-            .quick_access_filters_row
+        let imp = self.imp();
+        imp.quick_access_filters_row
             .set_visible(entries.contains(&PageEntry::Filters));
+        let performance = entries.contains(&PageEntry::Performance);
+        imp.quick_access_performance_row.set_visible(performance);
+        if performance && let Some(game) = game {
+            self.show_performance_for(&game);
+        }
     }
 
     /// The panel that is open, if any.
@@ -527,6 +548,7 @@ impl PinduWindow {
                     QuickAccessLevel::Controls => "controls",
                     QuickAccessLevel::Settings => "settings",
                     QuickAccessLevel::Filters => "filters",
+                    QuickAccessLevel::Performance => "performance",
                 });
             }
             None => {
@@ -588,6 +610,10 @@ impl PinduWindow {
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Filters)),
             ) => Some(imp.quick_access_filters_row.get().upcast()),
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::Performance)),
+            ) => Some(imp.quick_access_performance_row.get().upcast()),
             // The first Playing Now card's Return comes first.
             (Some(Panel::Drawer(DrawerLevel::Main)), _) if imp.playing_cards.is_visible() => imp
                 .playing_cards
@@ -649,6 +675,9 @@ impl PinduWindow {
             }
             (Some(Panel::QuickAccess(QuickAccessLevel::Filters)), _) => {
                 first_row(&imp.quick_access_filters)
+            }
+            (Some(Panel::QuickAccess(QuickAccessLevel::Performance)), _) => {
+                first_row(&imp.quick_access_performance)
             }
             // The first controller that can rumble, or else the first button prompt.
             (Some(Panel::QuickAccess(QuickAccessLevel::Controllers)), _) => {
@@ -811,7 +840,8 @@ impl PinduWindow {
             .map(|choice| choice.id)
     }
 
-    /// The sheet's title and actions for `game`, and its collections.
+    /// The sheet's title and actions for `game`, its performance switches for a game we
+    /// run ourselves, and its collections.
     fn fill_options(&self, game: &GameObject) {
         let imp = self.imp();
         imp.options_game.replace(Some(game.clone()));
@@ -827,6 +857,11 @@ impl PinduWindow {
             imp.options_list.append(&row);
         }
         imp.game_options.replace(options);
+        let performance = own_game(game);
+        imp.options_performance.set_visible(performance);
+        if performance {
+            self.show_performance_for(game);
+        }
         self.fill_options_collections(game);
     }
 
@@ -904,6 +939,11 @@ impl PinduWindow {
 /// leaves in force. A name, so it is not translated.
 fn no_design_name() -> String {
     "Adwaita".to_owned()
+}
+
+/// Whether `game` is one we run ourselves, which has performance switches.
+fn own_game(game: &GameObject) -> bool {
+    launch::offers_performance(&game.game())
 }
 
 /// The setting My Stylesheet turns on: `fullscreen.css` over the design.
