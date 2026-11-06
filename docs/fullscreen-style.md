@@ -187,6 +187,7 @@ while the system asks for reduced motion.
 |---|---|
 | `.menu-drawer` | The menu drawer on the left |
 | `.quick-access` | The Quick Access panel on the right |
+| `.quick-access-status` | The header at the top of Quick Access: `.clock` (the time), `.offline` (shown while there is no network) and `.battery` (the machine's battery, absent without one) |
 | `.options-sheet` | A game's options at the bottom |
 | `.navigation-sidebar > row` | A row in any of the three |
 | `.hint-bar` | The controller hints at the bottom; each `.hint` has `.hint-glyph`s and a `.hint-label` |

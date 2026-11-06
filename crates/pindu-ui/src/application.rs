@@ -11,6 +11,7 @@ use crate::library_service::{ImportFailure, LibraryService};
 use crate::manette_backend::ManetteBackend;
 use crate::models::GameObject;
 use crate::permission_service;
+use crate::power_service::PowerService;
 use crate::preferences::PreferencesDialog;
 use crate::search_provider;
 use crate::session_service::SessionService;
@@ -53,6 +54,8 @@ mod imp {
         pub gamepad_service: OnceCell<GamepadService>,
         /// The user's own stylesheet for fullscreen mode.
         pub style_service: OnceCell<StyleService>,
+        /// The batteries, for Quick Access's header.
+        pub power_service: OnceCell<PowerService>,
     }
 
     #[glib::object_subclass]
@@ -128,6 +131,9 @@ mod imp {
                 .expect("start-up runs once");
             self.style_service
                 .set(StyleService::new())
+                .expect("start-up runs once");
+            self.power_service
+                .set(PowerService::new())
                 .expect("start-up runs once");
             // Loaded here, not on the first window: Shell search and --launch need the
             // library when no window opens.
@@ -279,6 +285,14 @@ impl PinduApplication {
     pub fn style_service(&self) -> &StyleService {
         self.imp()
             .style_service
+            .get()
+            .expect("the application has started")
+    }
+
+    /// The batteries the kernel reports.
+    pub fn power_service(&self) -> &PowerService {
+        self.imp()
+            .power_service
             .get()
             .expect("the application has started")
     }

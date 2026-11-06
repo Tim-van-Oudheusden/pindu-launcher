@@ -249,6 +249,12 @@ window.fullscreen-mode .game-actions button:focus-visible {
   padding: 6px 12px;
 }
 
+/* Quick Access's status header: the clock, Offline and the battery, bold like the top
+   bar's clock. */
+.quick-access-status {
+  font-weight: bold;
+}
+
 .menu-drawer button:focus-visible {
   outline: 3px solid var(--window-fg-color);
   outline-offset: 3px;

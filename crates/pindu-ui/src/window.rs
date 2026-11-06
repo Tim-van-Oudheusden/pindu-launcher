@@ -156,6 +156,16 @@ mod imp {
         #[template_child]
         pub quick_access_panel: TemplateChild<gtk::Box>,
         #[template_child]
+        pub quick_access_clock: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_offline: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub quick_access_battery: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub quick_access_battery_icon: TemplateChild<gtk::Image>,
+        #[template_child]
+        pub quick_access_battery_level: TemplateChild<gtk::Label>,
+        #[template_child]
         pub quick_access_stack: TemplateChild<gtk::Stack>,
         #[template_child]
         pub quick_access_design_row: TemplateChild<gtk::ListBoxRow>,
@@ -218,8 +228,8 @@ mod imp {
         pub game_options: RefCell<Vec<GameOption>>,
         /// The widget that had focus before a panel opened, to give it back after.
         pub focus_before_panel: glib::WeakRef<gtk::Widget>,
-        /// Fullscreen mode's top bar: the clock's format, its next tick while the bar
-        /// shows, and the portal's notice of format changes.
+        /// Fullscreen mode's clocks: their format, their next tick while one shows, and
+        /// the portal's notice of format changes.
         pub clock_format: Cell<ClockFormat>,
         pub clock_tick: RefCell<Option<glib::SourceId>>,
         pub clock_format_changes: RefCell<Option<gio::SignalSubscription>>,
@@ -292,6 +302,7 @@ impl PinduWindow {
         window.setup_home();
         window.setup_fullscreen_library();
         window.setup_top_bar();
+        window.setup_clock();
         window.setup_fullscreen();
         window.setup_search_keyboard();
         window.setup_fullscreen_game();
@@ -300,6 +311,7 @@ impl PinduWindow {
         if let Some(application) = application.downcast_ref::<PinduApplication>() {
             window.setup_controller_navigation(application);
             window.setup_hint_bar(application);
+            window.setup_quick_access_status(application);
         }
         window
     }

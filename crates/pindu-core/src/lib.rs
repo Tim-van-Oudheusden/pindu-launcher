@@ -26,6 +26,7 @@ pub mod panels;
 pub mod paths;
 pub mod pe;
 pub mod permissions;
+pub mod power;
 pub mod proton;
 pub mod proton_downloads;
 pub mod search;
