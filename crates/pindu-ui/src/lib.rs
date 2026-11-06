@@ -11,6 +11,7 @@ pub mod fullscreen_clock;
 pub mod fullscreen_game;
 pub mod fullscreen_library;
 pub mod fullscreen_panels;
+pub mod fullscreen_playing;
 pub mod fullscreen_status;
 pub mod fullscreen_top_bar;
 pub mod game_dialog;

@@ -5,6 +5,7 @@ crates/pindu-ui/src/fullscreen.rs
 crates/pindu-ui/src/fullscreen_game.rs
 crates/pindu-ui/src/fullscreen_library.rs
 crates/pindu-ui/src/fullscreen_panels.rs
+crates/pindu-ui/src/fullscreen_playing.rs
 crates/pindu-ui/src/fullscreen_status.rs
 crates/pindu-ui/src/game_dialog.rs
 crates/pindu-ui/src/game_page.rs

@@ -59,10 +59,12 @@ template $PinduWindow: Adw.ApplicationWindow {
                     orientation: vertical;
                     spacing: 12;
 
-                    // A card for each game we started that runs, with Return and Stop.
+                    // A card for each game we started that runs, with its session time,
+                    // Return and Stop.
                     Box playing_cards {
                       orientation: vertical;
                       spacing: 12;
+                      visible: false;
                     }
 
                     ListBox drawer_list {
@@ -298,6 +300,13 @@ template $PinduWindow: Adw.ApplicationWindow {
                     child: Box {
                       orientation: vertical;
                       spacing: 12;
+
+                      // The same Playing Now cards as the drawer's.
+                      Box quick_access_playing_cards {
+                        orientation: vertical;
+                        spacing: 12;
+                        visible: false;
+                      }
 
                       Label {
                         label: _("Quick Access");

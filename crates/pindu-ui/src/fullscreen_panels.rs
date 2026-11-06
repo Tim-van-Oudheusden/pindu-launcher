@@ -18,6 +18,7 @@ use pindu_core::panels::{
 };
 
 use crate::application::PinduApplication;
+use crate::fullscreen_playing::card_return;
 use crate::launch_service::launcher_name;
 use crate::models::GameObject;
 use crate::preferences::TILE_SIZES;
@@ -90,37 +91,9 @@ impl PinduWindow {
             designs,
             quick_settings,
         ]);
-        // The drawer's Return and Stop: game IDs.
-        self.add_game_action("drawer-return", |window, id| {
-            window.close_panel();
-            window.return_to_game(id);
-        });
-        self.add_game_action("drawer-stop", |window, id| {
-            window.close_panel();
-            if let Some(application) = window.application() {
-                application.activate_action("stop", Some(&id.as_str().to_variant()));
-            }
-        });
-
-        // Up and Down stop at a list's ends; in a panel they go on to what lies above or
-        // below it: the next list of settings, or the nearest Playing Now card's Return
-        // (rather than the Stop beside it).
-        imp.drawer_list.connect_keynav_failed(glib::clone!(
-            #[weak(rename_to = window)]
-            self,
-            #[upgrade_or]
-            glib::Propagation::Stop,
-            move |_, direction| {
-                let cards = &window.imp().playing_cards;
-                if direction == gtk::DirectionType::Up
-                    && cards.is_visible()
-                    && let Some(button) = cards.last_child().as_ref().and_then(card_return)
-                {
-                    button.grab_focus();
-                }
-                glib::Propagation::Stop
-            }
-        ));
+        // Up and Down stop at a list's ends; in Quick Access's settings they go on to the
+        // next list (`fullscreen_playing` takes the drawer's and Quick Access's own lists up
+        // to their Playing Now cards).
         for list in [
             imp.quick_access_sizes.get(),
             imp.quick_access_switches.get(),
@@ -425,6 +398,20 @@ impl PinduWindow {
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Settings)),
             ) => Some(imp.quick_access_settings_row.get().upcast()),
+            // The first Playing Now card's Return comes first.
+            (Some(Panel::Drawer(DrawerLevel::Main)), _) if imp.playing_cards.is_visible() => imp
+                .playing_cards
+                .first_child()
+                .as_ref()
+                .and_then(card_return),
+            (Some(Panel::QuickAccess(QuickAccessLevel::Main)), _)
+                if imp.quick_access_playing_cards.is_visible() =>
+            {
+                imp.quick_access_playing_cards
+                    .first_child()
+                    .as_ref()
+                    .and_then(card_return)
+            }
             (Some(Panel::QuickAccess(QuickAccessLevel::Main)), _) => {
                 Some(imp.quick_access_design_row.get().upcast())
             }
@@ -457,12 +444,6 @@ impl PinduWindow {
                     .and_then(|index| imp.options_list.row_at_index(index as i32))
                     .map(|row| row.upcast())
             }
-            // The first Playing Now card's Return comes first.
-            (Some(Panel::Drawer(DrawerLevel::Main)), _) if imp.playing_cards.is_visible() => imp
-                .playing_cards
-                .first_child()
-                .as_ref()
-                .and_then(card_return),
             (Some(Panel::Drawer(DrawerLevel::Main)), _) => first_row(&imp.drawer_list),
             (Some(Panel::Drawer(DrawerLevel::Collections)), _) => {
                 first_row(&imp.drawer_collections)
@@ -481,26 +462,15 @@ impl PinduWindow {
         }
     }
 
-    /// The drawer's Playing Now cards, one per game we started that runs, and its
-    /// collections.
+    /// The drawer's collections. Its Playing Now cards are `fill_playing_cards`'s.
     fn fill_drawer(&self) {
         let imp = self.imp();
-        let playing: Vec<GameObject> = self
-            .library()
-            .all_games()
-            .into_iter()
-            .filter(GameObject::is_playing)
-            .collect();
+        let playing = self
+            .application()
+            .and_downcast::<PinduApplication>()
+            .is_some_and(|application| application.session_service().any_playing());
         let collections = self.library().collections();
-        let entries = drawer_entries(!playing.is_empty(), !collections.is_empty());
-        while let Some(card) = imp.playing_cards.first_child() {
-            imp.playing_cards.remove(&card);
-        }
-        for game in &playing {
-            imp.playing_cards.append(&playing_card(game));
-        }
-        imp.playing_cards
-            .set_visible(entries.contains(&DrawerEntry::PlayingNow));
+        let entries = drawer_entries(playing, !collections.is_empty());
         imp.drawer_collections_row
             .set_visible(entries.contains(&DrawerEntry::Collections));
         imp.drawer_collections.remove_all();
@@ -718,47 +688,6 @@ fn append_next_arrow(row: &gtk::ListBoxRow) {
     }
 }
 
-/// The drawer's card for a game we started that runs: Return to its page, or Stop it.
-fn playing_card(game: &GameObject) -> gtk::Box {
-    let card = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(12)
-        .css_classes(["card", "playing-card"])
-        .build();
-    card.append(
-        &gtk::Label::builder()
-            .label(gettext("Playing Now"))
-            .xalign(0.0)
-            .css_classes(["heading", "accent"])
-            .build(),
-    );
-    card.append(
-        &gtk::Label::builder()
-            .label(game.game().title.as_str())
-            .xalign(0.0)
-            .wrap(true)
-            .css_classes(["title-3"])
-            .build(),
-    );
-    let buttons = gtk::Box::builder().spacing(12).homogeneous(true).build();
-    let target = game.id().as_str().to_variant();
-    for (label, action, style) in [
-        (gettext("_Return"), "win.drawer-return", "suggested-action"),
-        (gettext("_Stop"), "win.drawer-stop", "destructive-action"),
-    ] {
-        let button = gtk::Button::builder()
-            .label(label)
-            .use_underline(true)
-            .action_name(action)
-            .action_target(&target)
-            .css_classes(["pill", style])
-            .build();
-        buttons.append(&button);
-    }
-    card.append(&buttons);
-    card
-}
-
 /// Moves focus from the end of `list` to the nearest widget above or below it that takes
 /// focus, as `direction` says: a list box keeps Up and Down to itself, ringing the bell at
 /// its ends.
@@ -775,9 +704,4 @@ fn step_out_of_list(list: &gtk::ListBox, direction: gtk::DirectionType) {
         }
         sibling = next(&widget);
     }
-}
-
-/// A Playing Now card's Return button: a card holds its labels, then its buttons.
-fn card_return(card: &gtk::Widget) -> Option<gtk::Widget> {
-    card.last_child()?.first_child()
 }

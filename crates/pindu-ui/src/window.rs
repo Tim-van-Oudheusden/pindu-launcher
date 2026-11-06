@@ -13,7 +13,7 @@ use pindu_core::launch_overlay::LaunchOverlay;
 use pindu_core::library::{
     Counts, Filters, HistoryGroup, PlaytimeOrigin, SortMode, View, history_group,
 };
-use pindu_core::model::{GameId, Source};
+use pindu_core::model::{GameId, Source, Timestamp};
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{GameOption, Panels};
 
@@ -156,6 +156,10 @@ mod imp {
         #[template_child]
         pub quick_access_panel: TemplateChild<gtk::Box>,
         #[template_child]
+        pub quick_access_playing_cards: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub quick_access_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub quick_access_clock: TemplateChild<gtk::Label>,
         #[template_child]
         pub quick_access_offline: TemplateChild<gtk::Box>,
@@ -233,6 +237,10 @@ mod imp {
         pub clock_format: Cell<ClockFormat>,
         pub clock_tick: RefCell<Option<glib::SourceId>>,
         pub clock_format_changes: RefCell<Option<gio::SignalSubscription>>,
+        /// The Playing Now cards' time labels, each with when its session began, and their
+        /// next tick while the drawer or Quick Access shows.
+        pub session_times: RefCell<Vec<(gtk::Label, Timestamp)>>,
+        pub session_tick: RefCell<Option<glib::SourceId>>,
     }
 
     #[glib::object_subclass]
@@ -312,6 +320,7 @@ impl PinduWindow {
             window.setup_controller_navigation(application);
             window.setup_hint_bar(application);
             window.setup_quick_access_status(application);
+            window.setup_playing_cards(application);
         }
         window
     }

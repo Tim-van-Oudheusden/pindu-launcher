@@ -30,6 +30,8 @@ const FLUSH_INTERVAL: Duration = Duration::from_secs(30);
 pub const SIGTERM: i32 = 15;
 
 struct Running {
+    /// When the session began.
+    started_at: Timestamp,
     /// What Stop does for this game.
     stop: Rc<dyn Fn()>,
     _hold: gio::ApplicationHoldGuard,
@@ -44,11 +46,15 @@ impl std::fmt::Debug for Running {
 /// Handlers called with `any_playing()` when it changes.
 type PlayingHandlers = Rc<RefCell<Vec<Box<dyn Fn(bool)>>>>;
 
+/// Handlers called whenever a game we started begins or ends.
+type SessionHandlers = Rc<RefCell<Vec<Box<dyn Fn()>>>>;
+
 #[derive(Clone)]
 pub struct SessionService {
     library: LibraryService,
     running: Rc<RefCell<HashMap<GameId, Running>>>,
     on_any_playing: PlayingHandlers,
+    on_sessions: SessionHandlers,
 }
 
 impl std::fmt::Debug for SessionService {
@@ -66,6 +72,7 @@ impl SessionService {
             library: library.clone(),
             running: Rc::default(),
             on_any_playing: PlayingHandlers::default(),
+            on_sessions: SessionHandlers::default(),
         }
     }
 
@@ -82,6 +89,17 @@ impl SessionService {
         }
     }
 
+    /// Calls `handler` whenever a game we started begins or ends.
+    pub fn connect_sessions_changed(&self, handler: impl Fn() + 'static) {
+        self.on_sessions.borrow_mut().push(Box::new(handler));
+    }
+
+    fn sessions_changed(&self) {
+        for handler in self.on_sessions.borrow().iter() {
+            handler();
+        }
+    }
+
     /// The library the sessions are written to.
     pub fn library(&self) -> &LibraryService {
         &self.library
@@ -95,6 +113,19 @@ impl SessionService {
     /// Whether a game we started is still running.
     pub fn is_playing(&self, id: &GameId) -> bool {
         self.running.borrow().contains_key(id)
+    }
+
+    /// The games we started that run, each with when its session began, the first
+    /// started first.
+    pub fn sessions(&self) -> Vec<(GameId, Timestamp)> {
+        let mut sessions: Vec<_> = self
+            .running
+            .borrow()
+            .iter()
+            .map(|(id, running)| (id.clone(), running.started_at))
+            .collect();
+        sessions.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.as_str().cmp(b.0.as_str())));
+        sessions
     }
 
     /// Starts a game on the host as our child, its output written to `output` when
@@ -122,9 +153,11 @@ impl SessionService {
         stop: impl Fn() + 'static,
     ) {
         let first = self.running.borrow().is_empty();
+        let started_at = now();
         self.running.borrow_mut().insert(
             id.clone(),
             Running {
+                started_at,
                 stop: Rc::new(stop),
                 _hold: app.hold(),
             },
@@ -136,14 +169,16 @@ impl SessionService {
         if first {
             self.any_playing_changed();
         }
+        self.sessions_changed();
         let (service, id, child) = (self.clone(), id.clone(), child.clone());
         glib::spawn_future_local(async move {
-            service.record(&id, &child).await;
+            service.record(&id, &child, started_at).await;
             service.running.borrow_mut().remove(&id);
             service.set_playing(&id, false);
             if !service.any_playing() {
                 service.any_playing_changed();
             }
+            service.sessions_changed();
             service.library.reload();
         });
     }
@@ -161,9 +196,9 @@ impl SessionService {
         }
     }
 
-    /// Writes the session as it goes and once more when the child exits.
-    async fn record(&self, id: &GameId, child: &gio::Subprocess) {
-        let started_at = now();
+    /// Writes the session that began at `started_at` as it goes and once more when the
+    /// child exits.
+    async fn record(&self, id: &GameId, child: &gio::Subprocess, started_at: Timestamp) {
         let session = write(
             move |store, id| {
                 store
@@ -297,7 +332,8 @@ fn request_background() {
     });
 }
 
-fn now() -> Timestamp {
+/// The time now, as sessions record it.
+pub(crate) fn now() -> Timestamp {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |elapsed| elapsed.as_secs() as i64)
