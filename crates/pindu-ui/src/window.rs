@@ -142,22 +142,6 @@ mod imp {
         #[template_child]
         pub drawer_collections: TemplateChild<gtk::ListBox>,
         #[template_child]
-        pub drawer_settings_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub tile_small: TemplateChild<gtk::CheckButton>,
-        #[template_child]
-        pub tile_medium: TemplateChild<gtk::CheckButton>,
-        #[template_child]
-        pub tile_large: TemplateChild<gtk::CheckButton>,
-        #[template_child]
-        pub drawer_sizes: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub drawer_switches: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub drawer_sounds_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub drawer_exit_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
         pub options_panel: TemplateChild<gtk::Box>,
         #[template_child]
         pub options_title: TemplateChild<gtk::Label>,
@@ -177,6 +161,22 @@ mod imp {
         pub quick_access_design_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub quick_access_designs: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_settings_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub tile_small: TemplateChild<gtk::CheckButton>,
+        #[template_child]
+        pub tile_medium: TemplateChild<gtk::CheckButton>,
+        #[template_child]
+        pub tile_large: TemplateChild<gtk::CheckButton>,
+        #[template_child]
+        pub quick_access_sizes: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_switches: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_sounds_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_exit_row: TemplateChild<adw::SwitchRow>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
         /// Every sidebar row with the view it selects and, for sources, its count label.

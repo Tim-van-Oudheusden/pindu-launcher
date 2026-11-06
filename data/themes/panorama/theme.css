@@ -210,21 +210,18 @@ window.fullscreen-mode .options-sheet .navigation-sidebar > row {
 window.fullscreen-mode .menu-drawer .navigation-sidebar > row:focus-visible,
 window.fullscreen-mode .quick-access .navigation-sidebar > row:focus-visible,
 window.fullscreen-mode .options-sheet .navigation-sidebar > row:focus-visible,
-window.fullscreen-mode .menu-drawer .boxed-list > row:focus-visible,
 window.fullscreen-mode .quick-access .boxed-list > row:focus-visible {
   outline: 3px solid var(--accent-color);
   outline-offset: -3px;
 }
 
-/* The lists inside them (cover sizes, designs): one solid card with small corners. */
-window.fullscreen-mode .menu-drawer .boxed-list,
+/* The lists inside Quick Access (cover sizes, designs): one solid card with small corners. */
 window.fullscreen-mode .quick-access .boxed-list {
   background-color: var(--panorama-surface);
   border-radius: 8px;
   box-shadow: none;
 }
 
-window.fullscreen-mode .menu-drawer .boxed-list > row,
 window.fullscreen-mode .quick-access .boxed-list > row {
   border-radius: 8px;
 }

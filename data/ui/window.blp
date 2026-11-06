@@ -132,30 +132,6 @@ template $PinduWindow: Adw.ApplicationWindow {
                         };
                       }
 
-                      ListBoxRow drawer_settings_row {
-                        action-name: "win.drawer-settings";
-
-                        child: Box {
-                          spacing: 16;
-
-                          Image {
-                            icon-name: "preferences-system-symbolic";
-                            accessible-role: presentation;
-                          }
-
-                          Label {
-                            label: _("Settings");
-                            xalign: 0;
-                            hexpand: true;
-                          }
-
-                          Image {
-                            icon-name: "go-next-symbolic";
-                            accessible-role: presentation;
-                          }
-                        };
-                      }
-
                       ListBoxRow {
                         action-name: "win.leave-fullscreen";
 
@@ -221,87 +197,6 @@ template $PinduWindow: Adw.ApplicationWindow {
                       styles [
                         "navigation-sidebar",
                       ]
-                    }
-                  };
-                };
-              }
-
-              StackPage {
-                name: "settings";
-
-                child: ScrolledWindow {
-                  hscrollbar-policy: never;
-
-                  child: Box {
-                    orientation: vertical;
-                    spacing: 12;
-
-                    Label {
-                      label: _("Settings");
-                      xalign: 0;
-
-                      styles [
-                        "title-3",
-                      ]
-                    }
-
-                    // Radio rows rather than a drop-down, whose popover a controller press
-                    // would dismiss, or toggles side by side, which up and down step
-                    // through.
-                    ListBox drawer_sizes {
-                      selection-mode: none;
-
-                      styles [
-                        "boxed-list",
-                      ]
-
-                      Adw.ActionRow {
-                        title: _("Small Covers");
-                        activatable-widget: tile_small;
-
-                        [prefix]
-                        CheckButton tile_small {
-                          can-focus: false;
-                        }
-                      }
-
-                      Adw.ActionRow {
-                        title: _("Medium Covers");
-                        activatable-widget: tile_medium;
-
-                        [prefix]
-                        CheckButton tile_medium {
-                          group: tile_small;
-                          can-focus: false;
-                        }
-                      }
-
-                      Adw.ActionRow {
-                        title: _("Large Covers");
-                        activatable-widget: tile_large;
-
-                        [prefix]
-                        CheckButton tile_large {
-                          group: tile_small;
-                          can-focus: false;
-                        }
-                      }
-                    }
-
-                    ListBox drawer_switches {
-                      selection-mode: none;
-
-                      styles [
-                        "boxed-list",
-                      ]
-
-                      Adw.SwitchRow drawer_sounds_row {
-                        title: _("Navigation Sounds");
-                      }
-
-                      Adw.SwitchRow drawer_exit_row {
-                        title: _("Exit After Launching");
-                      }
                     }
                   };
                 };
@@ -384,6 +279,30 @@ template $PinduWindow: Adw.ApplicationWindow {
                             }
                           };
                         }
+
+                        ListBoxRow quick_access_settings_row {
+                          action-name: "win.quick-access-settings";
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "preferences-system-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Label {
+                              label: _("Settings");
+                              xalign: 0;
+                              hexpand: true;
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
                       }
                     };
                   };
@@ -416,6 +335,87 @@ template $PinduWindow: Adw.ApplicationWindow {
                         styles [
                           "boxed-list",
                         ]
+                      }
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "settings";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      Label {
+                        label: _("Settings");
+                        xalign: 0;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // Radio rows rather than a drop-down, whose popover a controller press
+                      // would dismiss, or toggles side by side, which up and down step
+                      // through.
+                      ListBox quick_access_sizes {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.ActionRow {
+                          title: _("Small Covers");
+                          activatable-widget: tile_small;
+
+                          [prefix]
+                          CheckButton tile_small {
+                            can-focus: false;
+                          }
+                        }
+
+                        Adw.ActionRow {
+                          title: _("Medium Covers");
+                          activatable-widget: tile_medium;
+
+                          [prefix]
+                          CheckButton tile_medium {
+                            group: tile_small;
+                            can-focus: false;
+                          }
+                        }
+
+                        Adw.ActionRow {
+                          title: _("Large Covers");
+                          activatable-widget: tile_large;
+
+                          [prefix]
+                          CheckButton tile_large {
+                            group: tile_small;
+                            can-focus: false;
+                          }
+                        }
+                      }
+
+                      ListBox quick_access_switches {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.SwitchRow quick_access_sounds_row {
+                          title: _("Navigation Sounds");
+                        }
+
+                        Adw.SwitchRow quick_access_exit_row {
+                          title: _("Exit After Launching");
+                        }
                       }
                     };
                   };
