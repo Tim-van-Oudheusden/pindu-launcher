@@ -12,7 +12,8 @@ pub enum Focus {
     Nothing,
     /// A cover or card that opens its game.
     Game,
-    /// An entry that opens what it names: a notification's game or Preferences page.
+    /// An entry that opens what it names: a notification's game or Preferences page, or
+    /// the game Surprise Me picks.
     Link,
     /// The game page's Play button.
     Play,

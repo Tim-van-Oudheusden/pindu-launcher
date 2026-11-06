@@ -145,6 +145,27 @@ pub fn next_pin<'a>(games: impl IntoIterator<Item = &'a Game>) -> Option<u8> {
     (1..=MAX_PINS).find(|place| !taken.contains(place))
 }
 
+/// Surprise Me's pick: a game in the library that is installed and not hidden, the one at
+/// `random` (any number; the caller's random source) among them, never `previous` while
+/// there is another to pick. `None` when no game is installed.
+pub fn surprise_me<'a>(
+    games: impl IntoIterator<Item = &'a Game>,
+    previous: Option<&GameId>,
+    random: u64,
+) -> Option<&'a Game> {
+    // The games the Installed view shows: in the library, installed and not hidden.
+    let mut candidates: Vec<&Game> = games
+        .into_iter()
+        .filter(|game| View::Installed.shows(game, &[]))
+        .collect();
+    if candidates.len() > 1 {
+        candidates.retain(|game| Some(&game.id) != previous);
+    }
+    // No index at all when nothing is installed.
+    let index = random.checked_rem(u64::try_from(candidates.len()).ok()?)?;
+    candidates.get(usize::try_from(index).ok()?).copied()
+}
+
 /// The library sort orders, as offered in the sort menu.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum SortMode {
@@ -755,6 +776,62 @@ mod tests {
 
         games[2].pin_order = Some(2);
         assert_eq!(next_pin(&games), None);
+    }
+
+    #[test]
+    fn surprise_me_picks_only_installed_games_in_the_library_and_not_hidden() {
+        let mut games = sample();
+        let mut removed = game("6", "Removed", None, 0);
+        removed.installed = true;
+        removed.user_removed = true;
+        let mut gone = game("7", "Gone", None, 0);
+        gone.installed = true;
+        gone.missing_since = Some(1);
+        games.extend([removed, gone]);
+
+        let picks: Vec<&str> = (0..4)
+            .filter_map(|random| surprise_me(&games, None, random))
+            .map(|game| game.title.as_str())
+            .collect();
+
+        assert_eq!(picks, ["Installed", "Heroic", "Installed", "Heroic"]);
+    }
+
+    #[test]
+    fn surprise_me_never_picks_the_previous_game_again_while_there_is_another() {
+        let games = sample();
+        let installed = &games[0].id;
+        let heroic = &games[2].id;
+
+        for random in 0..8 {
+            let after_installed = surprise_me(&games, Some(installed), random).map(|g| &g.id);
+            assert_eq!(after_installed, Some(heroic), "random {random}");
+            let after_heroic = surprise_me(&games, Some(heroic), random).map(|g| &g.id);
+            assert_eq!(after_heroic, Some(installed), "random {random}");
+        }
+
+        // The only game installed is picked again; a previous pick no longer installed
+        // rules nothing out.
+        let only: Vec<Game> = games[..2].to_vec();
+        assert_eq!(
+            surprise_me(&only, Some(installed), 5).map(|g| &g.id),
+            Some(installed)
+        );
+        let picks: Vec<&str> = (0..2)
+            .filter_map(|random| surprise_me(&games, Some(&games[3].id), random))
+            .map(|game| game.title.as_str())
+            .collect();
+        assert_eq!(picks, ["Installed", "Heroic"]);
+    }
+
+    #[test]
+    fn surprise_me_picks_nothing_when_no_game_is_installed() {
+        assert_eq!(surprise_me(&[], None, 3), None);
+
+        let mut games = sample();
+        games.retain(|game| !game.installed || game.hidden);
+        assert_eq!(surprise_me(&games, None, 0), None);
+        assert_eq!(surprise_me(&games, Some(&games[0].id), 1), None);
     }
 
     #[test]

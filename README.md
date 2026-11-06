@@ -130,8 +130,9 @@ are playing with how long it has run, and this session's notifications: games a 
 fetched or not, Proton downloads and games that need a permission. It opens on them while one is unread. While a
 library sync, a SteamGridDB artwork fetch or a Proton download runs, its Activity lists them with their progress and
 cancels artwork fetches and Proton downloads (a cancelled download leaves nothing behind). **Refresh Library** reads
-your launchers again, offline like every sync. It also switches the design and holds quick settings: cover size,
-navigation sounds and exiting after a launch.
+your launchers again, offline like every sync. **Surprise Me** opens the page of an installed game picked at random,
+never the same one twice in a row, so you still choose whether to play. It also switches the design and holds quick
+settings: cover size, navigation sounds and exiting after a launch.
 
 ### Running in gamescope
 

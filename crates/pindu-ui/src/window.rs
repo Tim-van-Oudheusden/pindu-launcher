@@ -183,6 +183,8 @@ mod imp {
         #[template_child]
         pub quick_access_refresh_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
+        pub quick_access_surprise_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
         pub quick_access_activity: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub quick_access_design_row: TemplateChild<gtk::ListBoxRow>,
@@ -258,6 +260,8 @@ mod imp {
         /// next pulse of the bars of those with no telling how far they are.
         pub activity_shown: RefCell<Vec<(Task, gtk::ProgressBar)>>,
         pub activity_pulse: RefCell<Option<glib::SourceId>>,
+        /// The game Surprise Me picked last, which it does not pick again next time.
+        pub surprise_previous: RefCell<Option<GameId>>,
     }
 
     #[glib::object_subclass]
@@ -332,6 +336,7 @@ impl PinduWindow {
         window.setup_search_keyboard();
         window.setup_fullscreen_game();
         window.setup_panels();
+        window.setup_surprise_me();
         window.follow_reduced_motion();
         if let Some(application) = application.downcast_ref::<PinduApplication>() {
             window.setup_controller_navigation(application);
@@ -439,12 +444,21 @@ impl PinduWindow {
         self.add_action(&action);
     }
 
-    /// Pushes the game's page.
+    /// Pushes the game's page. There is one game page at a time: another game's page, and
+    /// what was opened over it, goes first, so Back leads where it led from that page.
     pub(crate) fn show_details(&self, id: &GameId) {
         if let Some(game) = self.library().game_object(id) {
             let page = GamePage::new(&game, &self.library_service());
             page.set_fullscreen(self.is_fullscreen());
-            self.imp().navigation_view.push(&page);
+            let navigation_view = &self.imp().navigation_view;
+            if let Some(below) = self
+                .game_pages()
+                .first()
+                .and_then(|open| navigation_view.previous_page(open))
+            {
+                navigation_view.pop_to_page(&below);
+            }
+            navigation_view.push(&page);
         }
     }
 

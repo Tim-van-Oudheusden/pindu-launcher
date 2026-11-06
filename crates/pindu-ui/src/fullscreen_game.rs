@@ -193,15 +193,14 @@ impl PinduWindow {
         self.show_launch();
     }
 
-    /// The page of the game with `id`, the one nearest the top if it is open twice.
+    /// The page of the game with `id`, if it is open.
     fn game_page(&self, id: &GameId) -> Option<GamePage> {
         self.game_pages()
             .into_iter()
-            .rev()
             .find(|page| page.game().is_some_and(|object| object.id() == *id))
     }
 
-    fn game_pages(&self) -> Vec<GamePage> {
+    pub(crate) fn game_pages(&self) -> Vec<GamePage> {
         self.imp()
             .navigation_view
             .navigation_stack()
