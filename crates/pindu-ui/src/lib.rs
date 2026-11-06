@@ -9,6 +9,7 @@ pub mod file_service;
 pub mod fullscreen;
 pub mod fullscreen_activity;
 pub mod fullscreen_clock;
+pub mod fullscreen_controllers;
 pub mod fullscreen_game;
 pub mod fullscreen_library;
 pub mod fullscreen_notifications;

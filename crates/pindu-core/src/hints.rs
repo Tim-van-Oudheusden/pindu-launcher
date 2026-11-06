@@ -1,7 +1,7 @@
 //! The fullscreen hint bar: what each button does right now for the focused page and
 //! widget, with the glyph that shows the button on the active controller.
 
-use crate::gamepad::{Button, DeviceKind, Intent};
+use crate::gamepad::{Button, Glyphs, Intent, Layout};
 use crate::osk::Key;
 use crate::panels::{DrawerLevel, OptionsLevel, Panel, QuickAccessLevel};
 
@@ -119,15 +119,15 @@ pub struct Hint {
     pub action: Action,
 }
 
-/// The hints for `context` on a controller of `kind`, confirm first.
-pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
+/// The hints for `context` on a controller with `layout`, confirm first.
+pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
     // The launch overlay takes every button: only a held B, for a game we start.
     match context.launching {
         Launching::No => {}
         Launching::HandingOff => return Vec::new(),
         Launching::Starting => {
             return vec![Hint {
-                button: kind.button(Intent::Back),
+                button: layout.button(Intent::Back),
                 pair: None,
                 action: Action::HoldToCancel,
             }];
@@ -135,7 +135,7 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
     }
     let single = |intent, action: Option<Action>| {
         action.map(|action| Hint {
-            button: kind.button(intent),
+            button: layout.button(intent),
             pair: None,
             action,
         })
@@ -193,8 +193,8 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
     let tabs = context.tabs && page;
     let pair = |back, forward, action| {
         tabs.then(|| Hint {
-            button: kind.button(back),
-            pair: Some(kind.button(forward)),
+            button: layout.button(back),
+            pair: Some(layout.button(forward)),
             action,
         })
     };
@@ -213,42 +213,41 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
     .collect()
 }
 
-/// The icon name of the glyph for `button` on a controller of `kind`: the layout's own
-/// label (a letter or shape) drawn at the button's position, in our neutral style.
-/// Unknown pads look like Xbox pads, as libmanette maps them.
-pub fn glyph(kind: DeviceKind, button: Button) -> &'static str {
-    use DeviceKind::{Generic, Nintendo, PlayStation, SteamDeck, Xbox};
-    match (kind, button) {
-        (PlayStation, Button::South) => "pindu-glyph-south-cross-symbolic",
-        (PlayStation, Button::East) => "pindu-glyph-east-circle-symbolic",
-        (PlayStation, Button::West) => "pindu-glyph-west-square-symbolic",
-        (PlayStation, Button::North) => "pindu-glyph-north-triangle-symbolic",
-        (Nintendo, Button::East) => "pindu-glyph-east-a-symbolic",
-        (Nintendo, Button::South) => "pindu-glyph-south-b-symbolic",
-        (Nintendo, Button::North) => "pindu-glyph-north-x-symbolic",
-        (Nintendo, Button::West) => "pindu-glyph-west-y-symbolic",
-        (Xbox | SteamDeck | Generic, Button::South) => "pindu-glyph-south-a-symbolic",
-        (Xbox | SteamDeck | Generic, Button::East) => "pindu-glyph-east-b-symbolic",
-        (Xbox | SteamDeck | Generic, Button::West) => "pindu-glyph-west-x-symbolic",
-        (Xbox | SteamDeck | Generic, Button::North) => "pindu-glyph-north-y-symbolic",
-        (Xbox | Generic, Button::LeftShoulder) => "pindu-glyph-lb-symbolic",
-        (Xbox | Generic, Button::RightShoulder) => "pindu-glyph-rb-symbolic",
-        (PlayStation | SteamDeck, Button::LeftShoulder) => "pindu-glyph-l1-symbolic",
-        (PlayStation | SteamDeck, Button::RightShoulder) => "pindu-glyph-r1-symbolic",
-        (Nintendo, Button::LeftShoulder) => "pindu-glyph-l-symbolic",
-        (Nintendo, Button::RightShoulder) => "pindu-glyph-r-symbolic",
-        (Xbox | Generic, Button::LeftTrigger) => "pindu-glyph-lt-symbolic",
-        (Xbox | Generic, Button::RightTrigger) => "pindu-glyph-rt-symbolic",
-        (PlayStation | SteamDeck, Button::LeftTrigger) => "pindu-glyph-l2-symbolic",
-        (PlayStation | SteamDeck, Button::RightTrigger) => "pindu-glyph-r2-symbolic",
-        (Nintendo, Button::LeftTrigger) => "pindu-glyph-zl-symbolic",
-        (Nintendo, Button::RightTrigger) => "pindu-glyph-zr-symbolic",
-        (Nintendo, Button::Select) => "pindu-glyph-minus-symbolic",
-        (Nintendo, Button::Start) => "pindu-glyph-plus-symbolic",
+/// The icon name of the glyph for `button` in the set `glyphs`: the layout's own label (a
+/// letter or shape) drawn at the button's position, in our neutral style.
+pub fn glyph(glyphs: Glyphs, button: Button) -> &'static str {
+    use Glyphs::{DeckLetters, Letters, NintendoLetters, Shapes};
+    match (glyphs, button) {
+        (Shapes, Button::South) => "pindu-glyph-south-cross-symbolic",
+        (Shapes, Button::East) => "pindu-glyph-east-circle-symbolic",
+        (Shapes, Button::West) => "pindu-glyph-west-square-symbolic",
+        (Shapes, Button::North) => "pindu-glyph-north-triangle-symbolic",
+        (NintendoLetters, Button::East) => "pindu-glyph-east-a-symbolic",
+        (NintendoLetters, Button::South) => "pindu-glyph-south-b-symbolic",
+        (NintendoLetters, Button::North) => "pindu-glyph-north-x-symbolic",
+        (NintendoLetters, Button::West) => "pindu-glyph-west-y-symbolic",
+        (Letters | DeckLetters, Button::South) => "pindu-glyph-south-a-symbolic",
+        (Letters | DeckLetters, Button::East) => "pindu-glyph-east-b-symbolic",
+        (Letters | DeckLetters, Button::West) => "pindu-glyph-west-x-symbolic",
+        (Letters | DeckLetters, Button::North) => "pindu-glyph-north-y-symbolic",
+        (Letters, Button::LeftShoulder) => "pindu-glyph-lb-symbolic",
+        (Letters, Button::RightShoulder) => "pindu-glyph-rb-symbolic",
+        (Shapes | DeckLetters, Button::LeftShoulder) => "pindu-glyph-l1-symbolic",
+        (Shapes | DeckLetters, Button::RightShoulder) => "pindu-glyph-r1-symbolic",
+        (NintendoLetters, Button::LeftShoulder) => "pindu-glyph-l-symbolic",
+        (NintendoLetters, Button::RightShoulder) => "pindu-glyph-r-symbolic",
+        (Letters, Button::LeftTrigger) => "pindu-glyph-lt-symbolic",
+        (Letters, Button::RightTrigger) => "pindu-glyph-rt-symbolic",
+        (Shapes | DeckLetters, Button::LeftTrigger) => "pindu-glyph-l2-symbolic",
+        (Shapes | DeckLetters, Button::RightTrigger) => "pindu-glyph-r2-symbolic",
+        (NintendoLetters, Button::LeftTrigger) => "pindu-glyph-zl-symbolic",
+        (NintendoLetters, Button::RightTrigger) => "pindu-glyph-zr-symbolic",
+        (NintendoLetters, Button::Select) => "pindu-glyph-minus-symbolic",
+        (NintendoLetters, Button::Start) => "pindu-glyph-plus-symbolic",
         (_, Button::Select) => "pindu-glyph-view-symbolic",
         (_, Button::Start) => "pindu-glyph-menu-symbolic",
-        (PlayStation | SteamDeck, Button::RightStick) => "pindu-glyph-r3-symbolic",
-        (Xbox | Nintendo | Generic, Button::RightStick) => "pindu-glyph-rs-symbolic",
+        (Shapes | DeckLetters, Button::RightStick) => "pindu-glyph-r3-symbolic",
+        (Letters | NintendoLetters, Button::RightStick) => "pindu-glyph-rs-symbolic",
         (_, Button::Guide) => "pindu-glyph-home-symbolic",
         (_, Button::Misc1) => "pindu-glyph-more-symbolic",
         (_, Button::DpadUp) => "pindu-glyph-dpad-up-symbolic",
@@ -281,41 +280,41 @@ pub enum GlyphName {
     DpadRight,
 }
 
-/// The name of the glyph `glyph` draws for `button` on a controller of `kind`.
-pub fn glyph_name(kind: DeviceKind, button: Button) -> GlyphName {
-    use DeviceKind::{Generic, Nintendo, PlayStation, SteamDeck, Xbox};
+/// The name of the glyph `glyph` draws for `button` in the set `glyphs`.
+pub fn glyph_name(glyphs: Glyphs, button: Button) -> GlyphName {
     use GlyphName::Label;
-    match (kind, button) {
-        (PlayStation, Button::South) => GlyphName::Cross,
-        (PlayStation, Button::East) => GlyphName::Circle,
-        (PlayStation, Button::West) => GlyphName::Square,
-        (PlayStation, Button::North) => GlyphName::Triangle,
-        (Nintendo, Button::East) => Label("A"),
-        (Nintendo, Button::South) => Label("B"),
-        (Nintendo, Button::North) => Label("X"),
-        (Nintendo, Button::West) => Label("Y"),
-        (Xbox | SteamDeck | Generic, Button::South) => Label("A"),
-        (Xbox | SteamDeck | Generic, Button::East) => Label("B"),
-        (Xbox | SteamDeck | Generic, Button::West) => Label("X"),
-        (Xbox | SteamDeck | Generic, Button::North) => Label("Y"),
-        (Xbox | Generic, Button::LeftShoulder) => Label("LB"),
-        (Xbox | Generic, Button::RightShoulder) => Label("RB"),
-        (PlayStation | SteamDeck, Button::LeftShoulder) => Label("L1"),
-        (PlayStation | SteamDeck, Button::RightShoulder) => Label("R1"),
-        (Nintendo, Button::LeftShoulder) => Label("L"),
-        (Nintendo, Button::RightShoulder) => Label("R"),
-        (Xbox | Generic, Button::LeftTrigger) => Label("LT"),
-        (Xbox | Generic, Button::RightTrigger) => Label("RT"),
-        (PlayStation | SteamDeck, Button::LeftTrigger) => Label("L2"),
-        (PlayStation | SteamDeck, Button::RightTrigger) => Label("R2"),
-        (Nintendo, Button::LeftTrigger) => Label("ZL"),
-        (Nintendo, Button::RightTrigger) => Label("ZR"),
-        (Nintendo, Button::Select) => GlyphName::Minus,
-        (Nintendo, Button::Start) => GlyphName::Plus,
+    use Glyphs::{DeckLetters, Letters, NintendoLetters, Shapes};
+    match (glyphs, button) {
+        (Shapes, Button::South) => GlyphName::Cross,
+        (Shapes, Button::East) => GlyphName::Circle,
+        (Shapes, Button::West) => GlyphName::Square,
+        (Shapes, Button::North) => GlyphName::Triangle,
+        (NintendoLetters, Button::East) => Label("A"),
+        (NintendoLetters, Button::South) => Label("B"),
+        (NintendoLetters, Button::North) => Label("X"),
+        (NintendoLetters, Button::West) => Label("Y"),
+        (Letters | DeckLetters, Button::South) => Label("A"),
+        (Letters | DeckLetters, Button::East) => Label("B"),
+        (Letters | DeckLetters, Button::West) => Label("X"),
+        (Letters | DeckLetters, Button::North) => Label("Y"),
+        (Letters, Button::LeftShoulder) => Label("LB"),
+        (Letters, Button::RightShoulder) => Label("RB"),
+        (Shapes | DeckLetters, Button::LeftShoulder) => Label("L1"),
+        (Shapes | DeckLetters, Button::RightShoulder) => Label("R1"),
+        (NintendoLetters, Button::LeftShoulder) => Label("L"),
+        (NintendoLetters, Button::RightShoulder) => Label("R"),
+        (Letters, Button::LeftTrigger) => Label("LT"),
+        (Letters, Button::RightTrigger) => Label("RT"),
+        (Shapes | DeckLetters, Button::LeftTrigger) => Label("L2"),
+        (Shapes | DeckLetters, Button::RightTrigger) => Label("R2"),
+        (NintendoLetters, Button::LeftTrigger) => Label("ZL"),
+        (NintendoLetters, Button::RightTrigger) => Label("ZR"),
+        (NintendoLetters, Button::Select) => GlyphName::Minus,
+        (NintendoLetters, Button::Start) => GlyphName::Plus,
         (_, Button::Select) => GlyphName::View,
         (_, Button::Start) => GlyphName::Menu,
-        (PlayStation | SteamDeck, Button::RightStick) => Label("R3"),
-        (Xbox | Nintendo | Generic, Button::RightStick) => Label("RS"),
+        (Shapes | DeckLetters, Button::RightStick) => Label("R3"),
+        (Letters | NintendoLetters, Button::RightStick) => Label("RS"),
         (_, Button::Guide) => GlyphName::Home,
         (_, Button::Misc1) => GlyphName::More,
         (_, Button::DpadUp) => GlyphName::DpadUp,
@@ -328,6 +327,7 @@ pub fn glyph_name(kind: DeviceKind, button: Button) -> GlyphName {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gamepad::{ControllerSettings, DeviceKind, Prompts, Swap};
 
     fn context(focus: Focus) -> Context {
         Context {
@@ -520,7 +520,7 @@ mod tests {
     }
 
     fn actions(context: Context, kind: DeviceKind) -> Vec<(Button, Action)> {
-        hints(context, kind)
+        hints(context, Layout::detected(kind))
             .into_iter()
             .map(|hint| (hint.button, hint.action))
             .collect()
@@ -534,7 +534,7 @@ mod tests {
             tabs: true,
             ..context(Focus::Game)
         };
-        let shown: Vec<_> = hints(library, DeviceKind::Xbox)
+        let shown: Vec<_> = hints(library, Layout::detected(DeviceKind::Xbox))
             .into_iter()
             .map(|hint| (hint.button, hint.pair, hint.action))
             .collect();
@@ -790,7 +790,7 @@ mod tests {
             ),
         ];
         for (kind, button, icon) in cases {
-            assert_eq!(glyph(kind, button), icon, "{kind:?} {button:?}");
+            assert_eq!(glyph(kind.glyphs(), button), icon, "{kind:?} {button:?}");
         }
     }
 
@@ -821,7 +821,11 @@ mod tests {
             (DeviceKind::Generic, Button::DpadUp, GlyphName::DpadUp),
         ];
         for (kind, button, name) in cases {
-            assert_eq!(glyph_name(kind, button), name, "{kind:?} {button:?}");
+            assert_eq!(
+                glyph_name(kind.glyphs(), button),
+                name,
+                "{kind:?} {button:?}"
+            );
         }
     }
 
@@ -835,35 +839,28 @@ mod tests {
             (DeviceKind::SteamDeck, "pindu-glyph-r3-symbolic", "R3"),
         ];
         for (kind, icon, label) in cases {
-            assert_eq!(glyph(kind, Button::RightStick), icon, "{kind:?}");
+            assert_eq!(glyph(kind.glyphs(), Button::RightStick), icon, "{kind:?}");
             assert_eq!(
-                glyph_name(kind, Button::RightStick),
+                glyph_name(kind.glyphs(), Button::RightStick),
                 GlyphName::Label(label),
                 "{kind:?}"
             );
         }
         assert_eq!(
-            glyph(DeviceKind::SteamDeck, Button::Misc1),
+            glyph(DeviceKind::SteamDeck.glyphs(), Button::Misc1),
             "pindu-glyph-more-symbolic"
         );
         assert_eq!(
-            glyph_name(DeviceKind::SteamDeck, Button::Misc1),
+            glyph_name(DeviceKind::SteamDeck.glyphs(), Button::Misc1),
             GlyphName::More
         );
     }
 
     #[test]
     fn every_glyph_name_is_the_label_its_icon_draws() {
-        let kinds = [
-            DeviceKind::Xbox,
-            DeviceKind::PlayStation,
-            DeviceKind::Nintendo,
-            DeviceKind::SteamDeck,
-            DeviceKind::Generic,
-        ];
-        for kind in kinds {
+        for kind in DeviceKind::ALL {
             for button in crate::gamepad::BUTTONS {
-                let label = match glyph_name(kind, button) {
+                let label = match glyph_name(kind.glyphs(), button) {
                     GlyphName::Label(letters) => letters.to_lowercase(),
                     GlyphName::DpadUp => "dpad-up".to_owned(),
                     GlyphName::DpadDown => "dpad-down".to_owned(),
@@ -871,7 +868,7 @@ mod tests {
                     GlyphName::DpadRight => "dpad-right".to_owned(),
                     other => format!("{other:?}").to_lowercase(),
                 };
-                let icon = glyph(kind, button);
+                let icon = glyph(kind.glyphs(), button);
                 assert!(
                     icon.ends_with(&format!("-{label}-symbolic")),
                     "{kind:?} {button:?}: {icon} is not {label}"
@@ -884,19 +881,57 @@ mod tests {
     fn every_glyph_is_an_icon_in_the_app_resources() {
         let data = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data");
         let resources = std::fs::read_to_string(data.join("resources.gresource.xml")).unwrap();
-        let kinds = [
-            DeviceKind::Xbox,
-            DeviceKind::PlayStation,
-            DeviceKind::Nintendo,
-            DeviceKind::SteamDeck,
-            DeviceKind::Generic,
-        ];
-        for kind in kinds {
+        for kind in DeviceKind::ALL {
             for button in crate::gamepad::BUTTONS {
-                let file = format!("icons/scalable/actions/{}.svg", glyph(kind, button));
+                let file = format!(
+                    "icons/scalable/actions/{}.svg",
+                    glyph(kind.glyphs(), button)
+                );
                 assert!(data.join(&file).is_file(), "{file} is missing");
                 assert!(resources.contains(&file), "{file} is not a resource");
             }
         }
+    }
+
+    #[test]
+    fn with_steam_s_virtual_pad_and_shapes_the_hints_show_shapes() {
+        let steam_pad = DeviceKind::detect(Some("03000000de280000ff11000001000000"), false);
+        let layout = Layout::resolve(
+            steam_pad,
+            ControllerSettings {
+                prompts: Prompts::Shapes,
+                swap: Swap::Auto,
+            },
+        );
+        let open = hints(context(Focus::Game), layout)[0];
+
+        assert_eq!(
+            glyph(layout.glyphs, open.button),
+            "pindu-glyph-south-cross-symbolic"
+        );
+    }
+
+    #[test]
+    fn with_swap_on_the_hints_confirm_on_the_east_button_and_go_back_on_the_south() {
+        let layout = Layout::resolve(
+            DeviceKind::Xbox,
+            ControllerSettings {
+                prompts: Prompts::Auto,
+                swap: Swap::On,
+            },
+        );
+        let game_page = Context {
+            page_below: true,
+            ..context(Focus::Play)
+        };
+        let shown: Vec<_> = hints(game_page, layout)
+            .into_iter()
+            .map(|hint| (hint.button, hint.action))
+            .collect();
+
+        assert_eq!(
+            shown,
+            [(Button::East, Action::Play), (Button::South, Action::Back)]
+        );
     }
 }

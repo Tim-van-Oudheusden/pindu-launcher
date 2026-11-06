@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-06 20:34+0100\n"
+"POT-Creation-Date: 2026-11-06 20:58+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -112,7 +112,7 @@ msgstr ""
 #: crates/pindu-ui/src/application.rs:734
 #: data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in:2
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:7
-#: data/ui/window.blp:5 data/ui/window.blp:670
+#: data/ui/window.blp:5 data/ui/window.blp:852
 msgid "Pindu launcher"
 msgstr ""
 
@@ -165,7 +165,7 @@ msgid "_Add to Collection"
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:39
-#: crates/pindu-ui/src/fullscreen_panels.rs:632
+#: crates/pindu-ui/src/fullscreen_panels.rs:656
 msgid "_New Collection…"
 msgstr ""
 
@@ -174,7 +174,7 @@ msgstr ""
 msgid "Remove from “{collection}”"
 msgstr ""
 
-#: crates/pindu-ui/src/collection_actions.rs:129 data/ui/window.blp:738
+#: crates/pindu-ui/src/collection_actions.rs:129 data/ui/window.blp:920
 msgid "New Collection"
 msgstr ""
 
@@ -202,7 +202,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:185
 #: crates/pindu-ui/src/collection_actions.rs:210
-#: crates/pindu-ui/src/window.rs:777 crates/pindu-ui/src/window.rs:791
+#: crates/pindu-ui/src/window.rs:795 crates/pindu-ui/src/window.rs:809
 msgid "_Undo"
 msgstr ""
 
@@ -255,6 +255,37 @@ msgstr ""
 msgid "Installing"
 msgstr ""
 
+#: crates/pindu-ui/src/fullscreen_controllers.rs:88
+msgid "No Controllers Connected"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_controllers.rs:114 data/ui/preferences.blp:45
+msgid "Controller"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_controllers.rs:128
+msgid "Rumble to tell which controller this is"
+msgstr ""
+
+#. Translators: a battery's charge; {percent} is a number from 0 to 100.
+#: crates/pindu-ui/src/fullscreen_controllers.rs:151
+#: crates/pindu-ui/src/fullscreen_status.rs:58
+#, rust-format
+msgid "{percent} %"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_controllers.rs:167 data/ui/window.blp:668
+msgid "Letters"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_controllers.rs:168 data/ui/window.blp:680
+msgid "Shapes"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_controllers.rs:169 data/ui/window.blp:692
+msgid "Letters, A on the Right"
+msgstr ""
+
 #: crates/pindu-ui/src/fullscreen_game.rs:158
 msgid "Opening the launcher…"
 msgstr ""
@@ -275,14 +306,14 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_library.rs:61
 #: crates/pindu-ui/src/home_page.rs:88
 #: crates/pindu-ui/src/proton_downloads_page.rs:338
-#: crates/pindu-ui/src/widgets/cover_tile.rs:346 data/ui/window.blp:691
-#: data/ui/window.blp:906
+#: crates/pindu-ui/src/widgets/cover_tile.rs:346 data/ui/window.blp:873
+#: data/ui/window.blp:1088
 msgid "Installed"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:62
-#: crates/pindu-ui/src/home_page.rs:87 data/ui/window.blp:703
-#: data/ui/window.blp:914
+#: crates/pindu-ui/src/home_page.rs:87 data/ui/window.blp:885
+#: data/ui/window.blp:1096
 msgid "Favourites"
 msgstr ""
 
@@ -330,50 +361,50 @@ msgstr ""
 
 #. / Why Quick Access cannot apply a design written for a newer style contract.
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:682
+#: crates/pindu-ui/src/fullscreen_panels.rs:706
 msgid "Needs a newer Pindu launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:688
+#: crates/pindu-ui/src/fullscreen_panels.rs:712
 #: crates/pindu-ui/src/hint_bar.rs:164
 #: crates/pindu-ui/src/widgets/cover_tile.rs:227 data/ui/cover_tile.blp:65
 msgid "Play"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:689
+#: crates/pindu-ui/src/fullscreen_panels.rs:713
 #: crates/pindu-ui/src/hint_bar.rs:165
 #: crates/pindu-ui/src/widgets/cover_tile.rs:225
 msgid "Stop"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:690
-#: crates/pindu-ui/src/game_page.rs:385 data/ui/game_page.blp:115
+#: crates/pindu-ui/src/fullscreen_panels.rs:714
+#: crates/pindu-ui/src/game_page.rs:385 data/ui/game_page.blp:113
 msgid "Add to Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:691
+#: crates/pindu-ui/src/fullscreen_panels.rs:715
 #: crates/pindu-ui/src/game_page.rs:383
 msgid "Remove from Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:692 data/ui/window.blp:125
-#: data/ui/window.blp:188 data/ui/window.blp:732
+#: crates/pindu-ui/src/fullscreen_panels.rs:716 data/ui/window.blp:125
+#: data/ui/window.blp:188 data/ui/window.blp:914
 msgid "Collections"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:693
+#: crates/pindu-ui/src/fullscreen_panels.rs:717
 msgid "Hide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:694
+#: crates/pindu-ui/src/fullscreen_panels.rs:718
 msgid "Unhide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:698
+#: crates/pindu-ui/src/fullscreen_panels.rs:722
 msgid "Open in Launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:699
+#: crates/pindu-ui/src/fullscreen_panels.rs:723
 #: crates/pindu-ui/src/game_page.rs:268
 #, rust-format
 msgid "Open in {launcher}"
@@ -399,7 +430,7 @@ msgstr ""
 msgid "{hours} h {minutes} min"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_playing.rs:190 data/ui/game_page.blp:188
+#: crates/pindu-ui/src/fullscreen_playing.rs:190 data/ui/game_page.blp:186
 msgid "Playing Now"
 msgstr ""
 
@@ -410,12 +441,6 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_playing.rs:215
 #: crates/pindu-ui/src/game_page.rs:396
 msgid "_Stop"
-msgstr ""
-
-#. Translators: a battery's charge; {percent} is a number from 0 to 100.
-#: crates/pindu-ui/src/fullscreen_status.rs:58
-#, rust-format
-msgid "{percent} %"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_status.rs:61
@@ -571,7 +596,7 @@ msgid "{launcher} starts the game, keeps its settings and tracks its playtime"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:403
-#: crates/pindu-ui/src/widgets/cover_tile.rs:265 data/ui/game_page.blp:102
+#: crates/pindu-ui/src/widgets/cover_tile.rs:265 data/ui/game_page.blp:100
 msgid "_Play"
 msgstr ""
 
@@ -658,7 +683,7 @@ msgstr ""
 msgid "Playtime · Tracked Here"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:666 crates/pindu-ui/src/preferences.rs:472
+#: crates/pindu-ui/src/game_page.rs:666 crates/pindu-ui/src/preferences.rs:490
 msgid "None yet"
 msgstr ""
 
@@ -704,11 +729,11 @@ msgstr ""
 msgid "Tabs"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:173 data/ui/window.blp:842
+#: crates/pindu-ui/src/hint_bar.rs:173 data/ui/window.blp:1024
 msgid "Sort"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:174 data/ui/game_page.blp:142
+#: crates/pindu-ui/src/hint_bar.rs:174 data/ui/game_page.blp:140
 msgid "Options"
 msgstr ""
 
@@ -769,7 +794,7 @@ msgid "Plus"
 msgstr ""
 
 #: crates/pindu-ui/src/hint_bar.rs:196 data/ui/home_page.blp:5
-#: data/ui/window.blp:89 data/ui/window.blp:765
+#: data/ui/window.blp:89 data/ui/window.blp:947
 msgid "Home"
 msgstr ""
 
@@ -793,11 +818,11 @@ msgstr ""
 msgid "D-pad Right"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:44 crates/pindu-ui/src/window.rs:662
+#: crates/pindu-ui/src/home_page.rs:44 crates/pindu-ui/src/window.rs:680
 msgid "Today"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:45 crates/pindu-ui/src/window.rs:663
+#: crates/pindu-ui/src/home_page.rs:45 crates/pindu-ui/src/window.rs:681
 msgid "This Week"
 msgstr ""
 
@@ -820,7 +845,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/home_page.rs:858 data/ui/home_page.blp:175
 #: data/ui/preferences.blp:10 data/ui/shortcuts-dialog.blp:35
-#: data/ui/window.blp:107 data/ui/window.blp:676 data/ui/window.blp:775
+#: data/ui/window.blp:107 data/ui/window.blp:858 data/ui/window.blp:957
 msgid "Library"
 msgstr ""
 
@@ -852,7 +877,7 @@ msgid "Could not open {launcher}"
 msgstr ""
 
 #: crates/pindu-ui/src/launch_service.rs:196
-#: crates/pindu-ui/src/proton_launch.rs:534 crates/pindu-ui/src/window.rs:1225
+#: crates/pindu-ui/src/proton_launch.rs:534 crates/pindu-ui/src/window.rs:1243
 msgid "_Close"
 msgstr ""
 
@@ -880,66 +905,66 @@ msgstr ""
 msgid "Could not keep a log of “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:117
+#: crates/pindu-ui/src/preferences.rs:123
 msgid "Command copied"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:219
+#: crates/pindu-ui/src/preferences.rs:237
 msgid "Allowed"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:221
+#: crates/pindu-ui/src/preferences.rs:239
 msgid "Not allowed"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:301
+#: crates/pindu-ui/src/preferences.rs:319
 msgid "Not found on this computer"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:312
+#: crates/pindu-ui/src/preferences.rs:330
 msgid "Import"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:324
+#: crates/pindu-ui/src/preferences.rs:342
 msgid "Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:326
+#: crates/pindu-ui/src/preferences.rs:344
 msgid "Found automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:331 data/ui/game_dialog.blp:62
-#: data/ui/preferences.blp:159
+#: crates/pindu-ui/src/preferences.rs:349 data/ui/game_dialog.blp:62
+#: data/ui/preferences.blp:187
 msgid "_Choose…"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:337
+#: crates/pindu-ui/src/preferences.rs:355
 msgid "Find Automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:368
+#: crates/pindu-ui/src/preferences.rs:386
 msgid "Show in Sidebar"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:385
+#: crates/pindu-ui/src/preferences.rs:403
 #, rust-format
 msgid "Choose the Folder of {source}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:427
+#: crates/pindu-ui/src/preferences.rs:445
 msgid "Choose the Prefix Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:471
+#: crates/pindu-ui/src/preferences.rs:489
 msgid "A key is stored in your keyring"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:474
+#: crates/pindu-ui/src/preferences.rs:492
 #, rust-format
 msgid "The keyring cannot be used: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:502
+#: crates/pindu-ui/src/preferences.rs:520
 #, rust-format
 msgid "The key was not saved: {error}"
 msgstr ""
@@ -1236,7 +1261,7 @@ msgstr ""
 msgid "The Keyring Cannot Be Used"
 msgstr ""
 
-#: crates/pindu-ui/src/steamgriddb_picker.rs:120 data/ui/preferences.blp:111
+#: crates/pindu-ui/src/steamgriddb_picker.rs:120 data/ui/preferences.blp:139
 msgid "API Key"
 msgstr ""
 
@@ -1334,62 +1359,62 @@ msgstr ""
 msgid "_Pin to Jump Back In"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:499
+#: crates/pindu-ui/src/window.rs:517
 msgid "No logs yet: start the game with Play with Logs"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:664
+#: crates/pindu-ui/src/window.rs:682
 msgid "Earlier"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:672
+#: crates/pindu-ui/src/window.rs:690
 #, rust-format
 msgid "{time} in {source}"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:676
+#: crates/pindu-ui/src/window.rs:694
 #, rust-format
 msgid "{time}, tracked here"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:741
+#: crates/pindu-ui/src/window.rs:759
 msgid "Three games are pinned already; unpin one first"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:755
+#: crates/pindu-ui/src/window.rs:773
 msgid "Hidden Games"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:776
+#: crates/pindu-ui/src/window.rs:794
 #, rust-format
 msgid "“{title}” removed"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:790
+#: crates/pindu-ui/src/window.rs:808
 #, rust-format
 msgid "“{title}” hidden"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1204
+#: crates/pindu-ui/src/window.rs:1222
 #, rust-format
 msgid "One import problem"
 msgid_plural "{count} import problems"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/window.rs:1207
+#: crates/pindu-ui/src/window.rs:1225
 msgid "Details"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1222
+#: crates/pindu-ui/src/window.rs:1240
 msgid "Some Games Could Not Be Imported"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1349
+#: crates/pindu-ui/src/window.rs:1367
 msgid "Pinned"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1367
+#: crates/pindu-ui/src/window.rs:1385
 #, rust-format
 msgid "{title}, pinned"
 msgstr ""
@@ -1473,90 +1498,113 @@ msgid ""
 "Controllers are only opened while this is on."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:57
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:63
+msgid "Button prompts"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:64
+msgid ""
+"The glyphs fullscreen mode shows for the controller's buttons. Auto follows "
+"the controller: letters with A at the bottom, shapes, or letters with A on "
+"the right. Steam Input shows every controller as its own virtual pad, which "
+"Auto takes for letters."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:73
+msgid "Swap confirm and back"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:74
+msgid ""
+"Whether the right face button confirms and the bottom one goes back, rather "
+"than the other way round. Auto swaps them when the button prompts put A on "
+"the right."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:78
 msgid "Default Proton build"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:58
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:79
 msgid ""
 "The internal name of the Proton build Windows games run with unless they "
 "name their own. Empty for the newest build on this computer."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:62
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:83
 msgid "Prefix folder"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:63
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:84
 msgid ""
 "The folder new Windows games get their own prefix in. Empty for ~/Games/"
 "pindu-launcher/prefixes."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:67
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:88
 msgid "MangoHud for new Windows games"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:68
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:89
 msgid ""
 "Whether Windows games added from now on start with the MangoHud performance "
 "overlay."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:72
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:93
 msgid "GameMode for new Windows games"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:73
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:94
 msgid "Whether Windows games added from now on start with GameMode."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:77
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:98
 msgid "Start in fullscreen mode"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:78
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:99
 msgid ""
 "Open the window in fullscreen mode, the controller-driven presentation of "
 "the library."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:82
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:103
 msgid "Navigation sounds"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:83
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:104
 msgid ""
 "Play a soft sound in fullscreen mode when the controller moves focus, "
 "selects or goes back."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:87
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:108
 msgid "Custom fullscreen style"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:88
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:109
 msgid ""
 "Restyle fullscreen mode with your own stylesheet, fullscreen.css in the "
 "app's config folder. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:92
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:113
 msgid "Fullscreen design"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:93
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:114
 msgid ""
 "The id of the design fullscreen mode is shown in: a theme folder shipped "
 "with the app or in the app's config folder under themes. Empty for Adwaita, "
 "the standard look. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:97
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:118
 msgid "SteamGridDB prompt shown"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:98
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:119
 msgid ""
 "Whether the window has offered, once, to set up a SteamGridDB API key for "
 "game art."
@@ -1680,12 +1728,12 @@ msgstr ""
 msgid "Choose the game's folder; its program, title and options come next."
 msgstr ""
 
-#: data/ui/game_dialog.blp:44 data/ui/window.blp:922
+#: data/ui/game_dialog.blp:44 data/ui/window.blp:1104
 msgid "Native"
 msgstr ""
 
 #: data/ui/game_dialog.blp:45 data/ui/game_dialog.blp:93
-#: data/ui/preferences.blp:128 data/ui/window.blp:918
+#: data/ui/preferences.blp:156 data/ui/window.blp:1100
 msgid "Windows"
 msgstr ""
 
@@ -1715,7 +1763,7 @@ msgstr ""
 msgid "Title"
 msgstr ""
 
-#: data/ui/game_dialog.blp:82 data/ui/game_page.blp:296
+#: data/ui/game_dialog.blp:82 data/ui/game_page.blp:294
 msgid "Arguments"
 msgstr ""
 
@@ -1729,12 +1777,12 @@ msgid ""
 "Windows files and saves."
 msgstr ""
 
-#: data/ui/game_dialog.blp:98 data/ui/game_page.blp:277
-#: data/ui/preferences.blp:136 data/ui/preferences.blp:184
+#: data/ui/game_dialog.blp:98 data/ui/game_page.blp:275
+#: data/ui/preferences.blp:164 data/ui/preferences.blp:212
 msgid "Proton"
 msgstr ""
 
-#: data/ui/game_dialog.blp:104 data/ui/game_page.blp:283
+#: data/ui/game_dialog.blp:104 data/ui/game_page.blp:281
 msgid "Prefix"
 msgstr ""
 
@@ -1742,7 +1790,7 @@ msgstr ""
 msgid "Use a New Prefix"
 msgstr ""
 
-#: data/ui/game_dialog.blp:121 data/ui/game_page.blp:288
+#: data/ui/game_dialog.blp:121 data/ui/game_page.blp:286
 msgid "C_hoose…"
 msgstr ""
 
@@ -1754,7 +1802,7 @@ msgstr ""
 msgid "_Run Installer…"
 msgstr ""
 
-#: data/ui/game_dialog.blp:148 data/ui/preferences.blp:103
+#: data/ui/game_dialog.blp:148 data/ui/preferences.blp:131
 msgid "Artwork"
 msgstr ""
 
@@ -1764,79 +1812,79 @@ msgid ""
 "the launcher's."
 msgstr ""
 
-#: data/ui/game_page.blp:21
+#: data/ui/game_page.blp:19
 msgid "Starting this game needs your permission"
 msgstr ""
 
-#: data/ui/game_page.blp:22
+#: data/ui/game_page.blp:20
 msgid "How to Enable"
 msgstr ""
 
-#: data/ui/game_page.blp:130
+#: data/ui/game_page.blp:128
 msgid "Add to Collection"
 msgstr ""
 
-#: data/ui/game_page.blp:154
+#: data/ui/game_page.blp:152
 msgid "More Actions"
 msgstr ""
 
-#: data/ui/game_page.blp:197
+#: data/ui/game_page.blp:195
 msgid "Your playtime is being recorded"
 msgstr ""
 
-#: data/ui/game_page.blp:225
+#: data/ui/game_page.blp:223
 msgid "About"
 msgstr ""
 
-#: data/ui/game_page.blp:228
+#: data/ui/game_page.blp:226
 msgid "Developer"
 msgstr ""
 
-#: data/ui/game_page.blp:237
+#: data/ui/game_page.blp:235
 msgid "Genres"
 msgstr ""
 
-#: data/ui/game_page.blp:252 data/ui/game_page.blp:272
+#: data/ui/game_page.blp:250 data/ui/game_page.blp:270
 msgid "Launch"
 msgstr ""
 
-#: data/ui/game_page.blp:255
+#: data/ui/game_page.blp:253
 msgid "Started by the launcher"
 msgstr ""
 
-#: data/ui/game_page.blp:265
+#: data/ui/game_page.blp:263
 msgid "Choose Launch Options"
 msgstr ""
 
-#: data/ui/game_page.blp:266
+#: data/ui/game_page.blp:264
 msgid "Ask Steam which of the game’s launch options to use"
 msgstr ""
 
-#: data/ui/game_page.blp:273
+#: data/ui/game_page.blp:271
 msgid "Changes apply the next time the game starts."
 msgstr ""
 
-#: data/ui/game_page.blp:302
+#: data/ui/game_page.blp:300
 msgid "Environment, Such as NAME=value"
 msgstr ""
 
-#: data/ui/game_page.blp:308 data/ui/preferences.blp:172
+#: data/ui/game_page.blp:306 data/ui/preferences.blp:200
 msgid "MangoHud"
 msgstr ""
 
-#: data/ui/game_page.blp:309 data/ui/preferences.blp:173
+#: data/ui/game_page.blp:307 data/ui/preferences.blp:201
 msgid "An overlay with the frame rate and how busy the computer is"
 msgstr ""
 
-#: data/ui/game_page.blp:313 data/ui/preferences.blp:177
+#: data/ui/game_page.blp:311 data/ui/preferences.blp:205
 msgid "GameMode"
 msgstr ""
 
-#: data/ui/game_page.blp:314 data/ui/preferences.blp:178
+#: data/ui/game_page.blp:312 data/ui/preferences.blp:206
 msgid "Asks the system to favour the game while it runs"
 msgstr ""
 
-#: data/ui/game_page.blp:318
+#: data/ui/game_page.blp:316
 msgid "Wrapper Command, Such as taskset -c 0-3"
 msgstr ""
 
@@ -1880,7 +1928,7 @@ msgstr ""
 msgid "Launching"
 msgstr ""
 
-#: data/ui/preferences.blp:39 data/ui/window.blp:656
+#: data/ui/preferences.blp:39 data/ui/window.blp:838
 msgid "Exit After Launching"
 msgstr ""
 
@@ -1888,10 +1936,6 @@ msgstr ""
 msgid ""
 "Quit once a store game is handed to its launcher. Games Pindu launcher "
 "starts itself keep it running, to record their playtime."
-msgstr ""
-
-#: data/ui/preferences.blp:45
-msgid "Controller"
 msgstr ""
 
 #: data/ui/preferences.blp:48
@@ -1904,141 +1948,187 @@ msgid ""
 "this is on, a Steam Deck's own controls work only as a controller."
 msgstr ""
 
-#: data/ui/preferences.blp:54
-msgid "Permissions"
+#: data/ui/preferences.blp:54 data/ui/window.blp:637
+msgid "Button Prompts"
 msgstr ""
 
 #: data/ui/preferences.blp:55
+msgid ""
+"The glyphs fullscreen mode shows for the buttons. Under Steam Input every "
+"controller looks like Steam's own, which Automatic shows with letters."
+msgstr ""
+
+#: data/ui/preferences.blp:59 data/ui/preferences.blp:73 data/ui/window.blp:655
+#: data/ui/window.blp:722
+msgid "Automatic"
+msgstr ""
+
+#: data/ui/preferences.blp:60
+msgid "Letters (Xbox)"
+msgstr ""
+
+#: data/ui/preferences.blp:61
+msgid "Shapes (PlayStation)"
+msgstr ""
+
+#: data/ui/preferences.blp:62
+msgid "Letters (Nintendo)"
+msgstr ""
+
+#: data/ui/preferences.blp:68 data/ui/window.blp:705
+msgid "Swap Confirm and Back"
+msgstr ""
+
+#: data/ui/preferences.blp:69
+msgid ""
+"On, the right button opens and the bottom one goes back. Automatic swaps "
+"them for Nintendo letters."
+msgstr ""
+
+#: data/ui/preferences.blp:74 data/ui/window.blp:735
+msgid "Off"
+msgstr ""
+
+#: data/ui/preferences.blp:75 data/ui/window.blp:748
+msgid "On"
+msgstr ""
+
+#: data/ui/preferences.blp:82
+msgid "Permissions"
+msgstr ""
+
+#: data/ui/preferences.blp:83
 msgid ""
 "Store games start through their launcher and always work. Desktop entries, "
 "Flatpak games and games added by hand start on this computer, outside the "
 "sandbox, which needs your permission."
 msgstr ""
 
-#: data/ui/preferences.blp:58
+#: data/ui/preferences.blp:86
 msgid "Start Games on This Computer"
 msgstr ""
 
-#: data/ui/preferences.blp:69
+#: data/ui/preferences.blp:97
 msgid "Run This Command, Then Restart Pindu launcher"
 msgstr ""
 
-#: data/ui/preferences.blp:80
+#: data/ui/preferences.blp:108
 msgid "Copy Command"
 msgstr ""
 
-#: data/ui/preferences.blp:93 data/ui/preferences.blp:97 data/ui/window.blp:728
+#: data/ui/preferences.blp:121 data/ui/preferences.blp:125
+#: data/ui/window.blp:910
 msgid "Sources"
 msgstr ""
 
-#: data/ui/preferences.blp:98
+#: data/ui/preferences.blp:126
 msgid ""
 "Where games come from. A source that is off is no longer imported; one left "
 "out of the sidebar still is."
 msgstr ""
 
-#: data/ui/preferences.blp:107
+#: data/ui/preferences.blp:135
 msgid "SteamGridDB"
 msgstr ""
 
-#: data/ui/preferences.blp:108
+#: data/ui/preferences.blp:136
 msgid ""
 "Art from SteamGridDB needs your own API key, which is kept in your keyring. "
 "Missing art is fetched right after you save a key and after each import."
 msgstr ""
 
-#: data/ui/preferences.blp:117
+#: data/ui/preferences.blp:145
 msgid "Stored Key"
 msgstr ""
 
-#: data/ui/preferences.blp:121
+#: data/ui/preferences.blp:149
 msgid "Prefer SteamGridDB Art"
 msgstr ""
 
-#: data/ui/preferences.blp:122
+#: data/ui/preferences.blp:150
 msgid "Show it before the launcher's own art; art you pick always comes first"
 msgstr ""
 
-#: data/ui/preferences.blp:132
+#: data/ui/preferences.blp:160
 msgid "Defaults"
 msgstr ""
 
-#: data/ui/preferences.blp:133
+#: data/ui/preferences.blp:161
 msgid "Windows games run with these unless their page says otherwise."
 msgstr ""
 
-#: data/ui/preferences.blp:142
+#: data/ui/preferences.blp:170
 msgid "Prefix Folder"
 msgstr ""
 
-#: data/ui/preferences.blp:148
+#: data/ui/preferences.blp:176
 msgid "Use the Games Folder"
 msgstr ""
 
-#: data/ui/preferences.blp:168
+#: data/ui/preferences.blp:196
 msgid "Tools"
 msgstr ""
 
-#: data/ui/preferences.blp:169
+#: data/ui/preferences.blp:197
 msgid ""
 "Games added from now on start with these switched on; each game's page can "
 "change them."
 msgstr ""
 
-#: data/ui/preferences.blp:188
+#: data/ui/preferences.blp:216
 msgid "Downloaded Builds"
 msgstr ""
 
-#: data/ui/preferences.blp:189
+#: data/ui/preferences.blp:217
 msgid ""
 "Builds installed here can be chosen for any Windows game, like those from "
 "Steam."
 msgstr ""
 
-#: data/ui/preferences.blp:193
+#: data/ui/preferences.blp:221
 msgid "Releases"
 msgstr ""
 
-#: data/ui/preferences.blp:194
+#: data/ui/preferences.blp:222
 msgid ""
 "GE-Proton and Proton-CachyOS builds published on GitHub. Pindu launcher only "
 "goes online when you check for releases or install one; games never download "
 "Proton when they start."
 msgstr ""
 
-#: data/ui/preferences.blp:197
+#: data/ui/preferences.blp:225
 msgid "_Check for Releases"
 msgstr ""
 
-#: data/ui/preferences.blp:204
+#: data/ui/preferences.blp:232
 msgid "Not Checked Yet"
 msgstr ""
 
-#: data/ui/preferences.blp:210
+#: data/ui/preferences.blp:238
 msgid "Fullscreen"
 msgstr ""
 
-#: data/ui/preferences.blp:214 data/ui/shortcuts-dialog.blp:68
+#: data/ui/preferences.blp:242 data/ui/shortcuts-dialog.blp:68
 #: data/ui/shortcuts-dialog.blp:74
 msgid "Fullscreen Mode"
 msgstr ""
 
-#: data/ui/preferences.blp:215
+#: data/ui/preferences.blp:243
 msgid ""
 "The library at the size of a TV, driven by a controller. Enter it from the "
 "main menu, with F11 or with the controller's Guide button; leave it with F11 "
 "or Esc."
 msgstr ""
 
-#: data/ui/preferences.blp:218
+#: data/ui/preferences.blp:246
 msgid "Start in Fullscreen Mode"
 msgstr ""
 
-#: data/ui/preferences.blp:222 data/ui/window.blp:652
+#: data/ui/preferences.blp:250 data/ui/window.blp:834
 msgid "Navigation Sounds"
 msgstr ""
 
-#: data/ui/preferences.blp:223
+#: data/ui/preferences.blp:251
 msgid "A soft sound when the controller moves, selects or goes back"
 msgstr ""
 
@@ -2054,7 +2144,7 @@ msgstr ""
 msgid "Quit"
 msgstr ""
 
-#: data/ui/shortcuts-dialog.blp:38 data/ui/window.blp:804
+#: data/ui/shortcuts-dialog.blp:38 data/ui/window.blp:986
 msgid "Toggle Sidebar"
 msgstr ""
 
@@ -2094,11 +2184,11 @@ msgstr ""
 msgid "Artwork downloads wait until you are online"
 msgstr ""
 
-#: data/ui/window.blp:340 data/ui/window.blp:497
+#: data/ui/window.blp:340 data/ui/window.blp:521
 msgid "Notifications"
 msgstr ""
 
-#: data/ui/window.blp:377 data/ui/window.blp:529
+#: data/ui/window.blp:377 data/ui/window.blp:553
 msgid "Activity"
 msgstr ""
 
@@ -2110,162 +2200,182 @@ msgstr ""
 msgid "Surprise Me"
 msgstr ""
 
-#: data/ui/window.blp:446 data/ui/window.blp:561
+#: data/ui/window.blp:446 data/ui/window.blp:585
 msgid "Design"
 msgstr ""
 
-#: data/ui/window.blp:470 data/ui/window.blp:593
+#: data/ui/window.blp:470 data/ui/window.blp:617
+msgid "Controllers"
+msgstr ""
+
+#: data/ui/window.blp:494 data/ui/window.blp:775
 msgid "Settings"
 msgstr ""
 
-#: data/ui/window.blp:612
+#: data/ui/window.blp:656
+msgid "As the controller shows them"
+msgstr ""
+
+#: data/ui/window.blp:723
+msgid "Swapped when A is on the right"
+msgstr ""
+
+#: data/ui/window.blp:736
+msgid "The bottom button confirms"
+msgstr ""
+
+#: data/ui/window.blp:749
+msgid "The right button confirms"
+msgstr ""
+
+#: data/ui/window.blp:794
 msgid "Small Covers"
 msgstr ""
 
-#: data/ui/window.blp:622
+#: data/ui/window.blp:804
 msgid "Medium Covers"
 msgstr ""
 
-#: data/ui/window.blp:633
+#: data/ui/window.blp:815
 msgid "Large Covers"
 msgstr ""
 
-#: data/ui/window.blp:679 data/ui/window.blp:795
+#: data/ui/window.blp:861 data/ui/window.blp:977
 msgid "All Games"
 msgstr ""
 
-#: data/ui/window.blp:715
+#: data/ui/window.blp:897
 msgid "Play History"
 msgstr ""
 
-#: data/ui/window.blp:811
+#: data/ui/window.blp:993
 msgid "Add"
 msgstr ""
 
-#: data/ui/window.blp:818
+#: data/ui/window.blp:1000
 msgid "Importing Games…"
 msgstr ""
 
-#: data/ui/window.blp:822 data/ui/window.blp:827
+#: data/ui/window.blp:1004 data/ui/window.blp:1009
 msgid "Search games"
 msgstr ""
 
-#: data/ui/window.blp:835
+#: data/ui/window.blp:1017
 msgid "Main Menu"
 msgstr ""
 
-#: data/ui/window.blp:910
+#: data/ui/window.blp:1092
 msgid "Not Installed"
 msgstr ""
 
-#: data/ui/window.blp:926
+#: data/ui/window.blp:1108
 msgid "Clear"
 msgstr ""
 
-#: data/ui/window.blp:944
+#: data/ui/window.blp:1126
 msgid "Jump Back In"
 msgstr ""
 
-#: data/ui/window.blp:986
+#: data/ui/window.blp:1168
 msgid "No Games Yet"
 msgstr ""
 
-#: data/ui/window.blp:987
+#: data/ui/window.blp:1169
 msgid "Games from your launchers appear here once they are imported"
 msgstr ""
 
-#: data/ui/window.blp:990 data/ui/window.blp:1196
+#: data/ui/window.blp:1172 data/ui/window.blp:1378
 msgid "_Import Now"
 msgstr ""
 
-#: data/ui/window.blp:1008
+#: data/ui/window.blp:1190
 msgid "No Results Found"
 msgstr ""
 
-#: data/ui/window.blp:1009
+#: data/ui/window.blp:1191
 msgid "Try a different search or filter"
 msgstr ""
 
-#: data/ui/window.blp:1038
+#: data/ui/window.blp:1220
 msgid "No Hidden Games"
 msgstr ""
 
-#: data/ui/window.blp:1039
+#: data/ui/window.blp:1221
 msgid "Games you hide show here, to unhide them"
 msgstr ""
 
-#: data/ui/window.blp:1048
+#: data/ui/window.blp:1230
 msgid "Empty Collection"
 msgstr ""
 
-#: data/ui/window.blp:1049
+#: data/ui/window.blp:1231
 msgid "Add games with “Add to Collection” in their menu"
 msgstr ""
 
-#: data/ui/window.blp:1165
+#: data/ui/window.blp:1347
 msgid "_Rename…"
 msgstr ""
 
-#: data/ui/window.blp:1170
+#: data/ui/window.blp:1352
 msgid "Move _Up"
 msgstr ""
 
-#: data/ui/window.blp:1175
+#: data/ui/window.blp:1357
 msgid "Move _Down"
 msgstr ""
 
-#: data/ui/window.blp:1182
+#: data/ui/window.blp:1364
 msgid "_Delete"
 msgstr ""
 
-#: data/ui/window.blp:1191
+#: data/ui/window.blp:1373
 msgid "_Add Game…"
 msgstr ""
 
-#: data/ui/window.blp:1205
+#: data/ui/window.blp:1387
 msgid "_Last Played"
 msgstr ""
 
-#: data/ui/window.blp:1211
+#: data/ui/window.blp:1393
 msgid "Name _A–Z"
 msgstr ""
 
-#: data/ui/window.blp:1217
+#: data/ui/window.blp:1399
 msgid "Name _Z–A"
 msgstr ""
 
-#: data/ui/window.blp:1223
+#: data/ui/window.blp:1405
 msgid "_Recently Added"
 msgstr ""
 
-#: data/ui/window.blp:1229
+#: data/ui/window.blp:1411
 msgid "_Playtime"
 msgstr ""
 
-#: data/ui/window.blp:1239
+#: data/ui/window.blp:1421
 msgid "Show _Hidden Games"
 msgstr ""
 
-#: data/ui/window.blp:1244
+#: data/ui/window.blp:1426
 msgid "_Fullscreen Mode"
 msgstr ""
 
-#: data/ui/window.blp:1251
+#: data/ui/window.blp:1433
 msgid "_Export Library…"
 msgstr ""
 
-#: data/ui/window.blp:1256
+#: data/ui/window.blp:1438
 msgid "I_mport Backup…"
 msgstr ""
 
-#: data/ui/window.blp:1263
+#: data/ui/window.blp:1445
 msgid "_Preferences"
 msgstr ""
 
-#: data/ui/window.blp:1268
+#: data/ui/window.blp:1450
 msgid "_Keyboard Shortcuts"
 msgstr ""
 
-#: data/ui/window.blp:1273
+#: data/ui/window.blp:1455
 msgid "_About Pindu launcher"
 msgstr ""

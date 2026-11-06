@@ -1,7 +1,8 @@
-//! The Preferences dialog: General (covers, launching, controller, permissions), Sources (import,
-//! folder, sidebar), Artwork (SteamGridDB), Windows games (default Proton, prefix folder and
-//! tools), Proton (downloaded builds and releases to install) and Fullscreen (start-up,
-//! sounds). Everything is GSettings, except the SteamGridDB key, which lives in the keyring,
+//! The Preferences dialog: General (covers, launching, controller navigation, button prompts
+//! and the confirm and back swap, permissions), Sources (import, folder, sidebar), Artwork
+//! (SteamGridDB), Windows games (default Proton, prefix folder and tools), Proton
+//! (downloaded builds and releases to install) and Fullscreen (start-up, sounds).
+//! Everything is GSettings, except the SteamGridDB key, which lives in the keyring,
 //! each source's import switch and folder, which live with the library's other source state,
 //! and the Proton builds, which are folders in our tools folder.
 
@@ -12,6 +13,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use pindu_core::gamepad::{PROMPTS_KEY, Prompts, SWAP_KEY, Swap};
 use pindu_core::model::{Source, SourceState};
 use pindu_core::sources::sync::IMPORTED_SOURCES;
 
@@ -46,6 +48,10 @@ mod imp {
         pub exit_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub controller_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub prompts_row: TemplateChild<adw::ComboRow>,
+        #[template_child]
+        pub swap_row: TemplateChild<adw::ComboRow>,
         #[template_child]
         pub start_fullscreen_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
@@ -185,6 +191,18 @@ mod imp {
                     }
                 }
             ));
+            bind_choice(
+                &settings,
+                PROMPTS_KEY,
+                &self.prompts_row,
+                Prompts::ALL.map(Prompts::setting).to_vec(),
+            );
+            bind_choice(
+                &settings,
+                SWAP_KEY,
+                &self.swap_row,
+                Swap::ALL.map(Swap::setting).to_vec(),
+            );
             self.settings.set(settings).expect("constructed once");
 
             let proton = proton_launch::defaults().proton_version;
@@ -504,4 +522,27 @@ impl PreferencesDialog {
             }
         });
     }
+}
+
+/// Binds `row`'s selection both ways to the string setting `key`, whose values are
+/// `values` in the row's order; a value the row does not list selects the first.
+fn bind_choice(
+    settings: &gio::Settings,
+    key: &str,
+    row: &adw::ComboRow,
+    values: Vec<&'static str>,
+) {
+    let listed = values.clone();
+    settings
+        .bind(key, row, "selected")
+        .mapping(move |variant, _| {
+            let value = variant.str()?;
+            let index = listed.iter().position(|listed| *listed == value);
+            Some((index.unwrap_or(0) as u32).to_value())
+        })
+        .set_mapping(move |value, _| {
+            let index = value.get::<u32>().ok()?;
+            values.get(index as usize).map(|value| value.to_variant())
+        })
+        .build();
 }
