@@ -234,6 +234,63 @@ fn a_launch_config_round_trips_and_is_replaced_on_write() {
 }
 
 #[test]
+fn a_performance_switch_writes_only_that_tool_of_only_that_game() {
+    let (_dir, store) = temp_store();
+    let witcher = stored_game(&store, "witcher");
+    let celeste = stored_game(&store, "celeste");
+    let config = LaunchConfig {
+        executable: "/games/witcher/witcher.exe".into(),
+        arguments: vec!["-skipintro".into()],
+        working_dir: Some("/games/witcher".into()),
+        environment: [("DXVK_HUD".to_owned(), "fps".to_owned())].into(),
+        proton_version: Some("GE-Proton10-1".into()),
+        prefix_path: Some("/prefixes/witcher".into()),
+        mangohud: false,
+        gamemode: true,
+        wrappers: vec!["strace".into()],
+    };
+    store.set_launch_config(&witcher, &config).unwrap();
+    store.set_launch_config(&celeste, &config).unwrap();
+
+    store
+        .set_performance_tool(&witcher, PerformanceTool::Overlay, true)
+        .unwrap();
+    store
+        .set_performance_tool(&witcher, PerformanceTool::GameMode, false)
+        .unwrap();
+
+    assert_eq!(
+        store.launch_config(&witcher).unwrap(),
+        Some(LaunchConfig {
+            mangohud: true,
+            gamemode: false,
+            ..config.clone()
+        }),
+        "every other launch setting stays"
+    );
+    assert_eq!(
+        store.launch_config(&celeste).unwrap(),
+        Some(config),
+        "another game's settings stay as they were"
+    );
+    let written = store.launch_config(&witcher).unwrap().unwrap();
+    assert!(PerformanceTool::Overlay.is_on(&written));
+    assert!(!PerformanceTool::GameMode.is_on(&written));
+}
+
+#[test]
+fn a_performance_switch_leaves_a_game_without_launch_settings_without_them() {
+    let (_dir, store) = temp_store();
+    let id = stored_game(&store, "witcher");
+
+    store
+        .set_performance_tool(&id, PerformanceTool::Overlay, true)
+        .unwrap();
+
+    assert_eq!(store.launch_config(&id).unwrap(), None);
+}
+
+#[test]
 fn deleting_a_launch_config_removes_it() {
     let (_dir, store) = temp_store();
     let id = stored_game(&store, "witcher");

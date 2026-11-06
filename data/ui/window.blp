@@ -457,6 +457,33 @@ template $PinduWindow: Adw.ApplicationWindow {
                           };
                         }
 
+                        // Shown while a game we run ourselves has focus under the panel, or
+                        // the page is its own.
+                        ListBoxRow quick_access_performance_row {
+                          action-name: "win.quick-access-performance";
+                          visible: false;
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "power-profile-performance-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Label {
+                              label: _("Performance");
+                              xalign: 0;
+                              hexpand: true;
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
+
                         ListBoxRow quick_access_design_row {
                           action-name: "win.quick-access-designs";
 
@@ -1184,6 +1211,61 @@ template $PinduWindow: Adw.ApplicationWindow {
                     };
                   };
                 }
+
+                StackPage {
+                  name: "performance";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      // "Performance for <the game>".
+                      Label quick_access_performance_title {
+                        xalign: 0;
+                        wrap: true;
+                        wrap-mode: word_char;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // The game's own launch settings, the same as its options sheet's.
+                      ListBox quick_access_performance {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.SwitchRow quick_access_overlay_row {
+                          title: _("Performance Overlay");
+                          subtitle: _("MangoHud");
+                        }
+
+                        Adw.SwitchRow quick_access_gamemode_row {
+                          title: _("GameMode");
+                          subtitle: _("Asks the system to favour the game while it runs");
+                        }
+                      }
+
+                      // Shown while the game runs.
+                      Label quick_access_performance_note {
+                        label: _("Changes apply the next time the game starts.");
+                        xalign: 0;
+                        wrap: true;
+                        visible: false;
+
+                        styles [
+                          "dim-label",
+                        ]
+                      }
+                    };
+                  };
+                }
               }
             };
 
@@ -1643,12 +1725,38 @@ template $PinduWindow: Adw.ApplicationWindow {
               StackPage {
                 name: "main";
 
-                child: ListBox options_list {
-                  selection-mode: none;
+                child: Box {
+                  orientation: vertical;
+                  spacing: 12;
 
-                  styles [
-                    "navigation-sidebar",
-                  ]
+                  ListBox options_list {
+                    selection-mode: none;
+
+                    styles [
+                      "navigation-sidebar",
+                    ]
+                  }
+
+                  // A game we run ourselves: the same switches as Quick Access's
+                  // Performance.
+                  ListBox options_performance {
+                    selection-mode: none;
+                    visible: false;
+
+                    styles [
+                      "boxed-list",
+                    ]
+
+                    Adw.SwitchRow options_overlay_row {
+                      title: _("Performance Overlay");
+                      subtitle: _("MangoHud");
+                    }
+
+                    Adw.SwitchRow options_gamemode_row {
+                      title: _("GameMode");
+                      subtitle: _("Asks the system to favour the game while it runs");
+                    }
+                  }
                 };
               }
 

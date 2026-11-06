@@ -113,6 +113,13 @@ pub fn launch_settings(game: &Game) -> Option<LaunchSettings> {
     }
 }
 
+/// Whether fullscreen mode offers a game's Performance Overlay (MangoHud) and GameMode
+/// switches, in Quick Access and its options sheet: every game we run ourselves, whose
+/// launch settings are ours. A store game's launcher keeps its settings, so it has none.
+pub fn offers_performance(game: &Game) -> bool {
+    launch_settings(game).is_some()
+}
+
 /// A game ID and window class of the game's own, so umu, the compositor and the shell
 /// tell our games apart: `pindu-<hash>` from the game's ID.
 pub(crate) fn session_environment(game: &Game) -> BTreeMap<String, String> {
@@ -230,7 +237,7 @@ mod tests {
     use super::*;
     use std::path::Path;
 
-    use crate::model::{Game, GameId, LaunchConfig, LaunchKind, Source};
+    use crate::model::{Game, GameId, LaunchConfig, LaunchKind, PerformanceTool, Source};
 
     fn host_game(kind: LaunchKind) -> Game {
         Game::new(GameId::new(Source::Desktop, "celeste"), "Celeste", kind, 0)
@@ -283,6 +290,28 @@ mod tests {
                 arguments: false
             })
         );
+    }
+
+    #[test]
+    fn games_we_run_offer_the_performance_switches_and_store_games_do_not() {
+        let game = |source, kind| Game::new(GameId::new(source, "x"), "X", kind, 0);
+
+        for (source, kind) in [
+            (Source::Manual, LaunchKind::Proton),
+            (Source::Manual, LaunchKind::HostCommand),
+            (Source::Manual, LaunchKind::RuntimeNative),
+            (Source::Lutris, LaunchKind::HostCommand),
+            (Source::Desktop, LaunchKind::DesktopEntry),
+        ] {
+            assert!(offers_performance(&game(source, kind)), "{source} {kind}");
+        }
+        for source in [Source::Steam, Source::HeroicEpic, Source::Lutris] {
+            let store_game = game(source, LaunchKind::StoreUri);
+            assert!(
+                !offers_performance(&store_game),
+                "{source}: its launcher runs it"
+            );
+        }
     }
 
     #[test]
@@ -458,6 +487,36 @@ mod tests {
             [
                 "gamescope",
                 "obs-gamecapture",
+                "gamemoderun",
+                "mangohud",
+                "/opt/Celeste Game/Celeste",
+                "--fullscreen"
+            ]
+        );
+    }
+
+    #[test]
+    fn switching_a_host_game_s_tools_on_wraps_its_next_launch_in_them() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = crate::store::Store::open(&dir.path().join("library.db")).unwrap();
+        let game = host_game(LaunchKind::HostCommand);
+        store.insert_game(&game).unwrap();
+        store.set_launch_config(&game.id, &config()).unwrap();
+
+        store
+            .set_performance_tool(&game.id, PerformanceTool::Overlay, true)
+            .unwrap();
+        store
+            .set_performance_tool(&game.id, PerformanceTool::GameMode, true)
+            .unwrap();
+
+        let config = store.launch_config(&game.id).unwrap();
+        let Some(Route::HostSpawn(command)) = route(&game, config.as_ref()) else {
+            panic!("no host route");
+        };
+        assert_eq!(
+            command.argv,
+            [
                 "gamemoderun",
                 "mangohud",
                 "/opt/Celeste Game/Celeste",

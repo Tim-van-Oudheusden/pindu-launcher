@@ -369,7 +369,7 @@ fn path_text(path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Game, GameId, LaunchConfig, LaunchKind};
+    use crate::model::{Game, GameId, LaunchConfig, LaunchKind, PerformanceTool};
 
     const PREFIXES: &str = "/home/me/Games/pindu-launcher/prefixes";
 
@@ -523,6 +523,44 @@ mod tests {
         );
         assert_eq!(command.environment["MANGOHUD"], "1");
         assert!(!plain.environment.contains_key("MANGOHUD"));
+    }
+
+    #[test]
+    fn turning_on_a_windows_game_s_overlay_shows_mangohud_from_its_next_launch() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = crate::store::Store::open(&dir.path().join("library.db")).unwrap();
+        let other = Game::new(
+            GameId::new(Source::Manual, "hades-3c4d"),
+            "Hades",
+            LaunchKind::Proton,
+            0,
+        );
+        for game in [game(), other.clone()] {
+            store.insert_game(&game).unwrap();
+            store.set_launch_config(&game.id, &config()).unwrap();
+        }
+        let builds = [build("GE-Proton11-3")];
+        let next_launch = |game: &Game| {
+            let config = store.launch_config(&game.id).unwrap().unwrap();
+            command(game, &config, &builds, &defaults()).unwrap()
+        };
+        assert!(!next_launch(&game()).environment.contains_key("MANGOHUD"));
+
+        store
+            .set_performance_tool(&game().id, PerformanceTool::Overlay, true)
+            .unwrap();
+
+        let command = next_launch(&game());
+        assert_eq!(command.environment["MANGOHUD"], "1");
+        assert_eq!(
+            command.argv,
+            ["umu-run", "/games/Celeste/Celeste.exe", "--windowed"]
+        );
+        assert_eq!(
+            command.environment["DXVK_HUD"], "fps",
+            "its own settings stay"
+        );
+        assert!(!next_launch(&other).environment.contains_key("MANGOHUD"));
     }
 
     #[test]

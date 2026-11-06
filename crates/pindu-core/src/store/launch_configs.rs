@@ -1,7 +1,7 @@
 use rusqlite::{OptionalExtension, named_params};
 
 use super::{Result, Store, json_column, path_column, path_to_sql, to_json};
-use crate::model::{GameId, LaunchConfig};
+use crate::model::{GameId, LaunchConfig, PerformanceTool};
 
 impl Store {
     /// Stores the launch config of a game, replacing any earlier one.
@@ -24,6 +24,27 @@ impl Store {
                 ":wrappers": to_json(&config.wrappers),
             },
         )?;
+        Ok(())
+    }
+
+    /// Switches one performance tool of a game's launch config on or off, leaving the rest
+    /// of it and every other game's as they are. A game without a launch config stays
+    /// without one.
+    pub fn set_performance_tool(
+        &self,
+        game_id: &GameId,
+        tool: PerformanceTool,
+        on: bool,
+    ) -> Result<()> {
+        let sql = match tool {
+            PerformanceTool::Overlay => {
+                "UPDATE launch_configs SET mangohud = ?2 WHERE game_id = ?1"
+            }
+            PerformanceTool::GameMode => {
+                "UPDATE launch_configs SET gamemode = ?2 WHERE game_id = ?1"
+            }
+        };
+        self.conn.execute(sql, rusqlite::params![game_id, on])?;
         Ok(())
     }
 

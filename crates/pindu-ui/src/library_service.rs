@@ -7,7 +7,7 @@ use gtk::glib;
 use gtk::subclass::prelude::*;
 use pindu_core::backup::{self, BackupError, ImportSummary};
 use pindu_core::library::{self, LibraryEntry};
-use pindu_core::model::{Collection, Game, GameId, LaunchConfig, Timestamp};
+use pindu_core::model::{Collection, Game, GameId, LaunchConfig, PerformanceTool, Timestamp};
 use pindu_core::paths::default_library_db_path;
 use pindu_core::store::{self, Store};
 
@@ -264,6 +264,27 @@ impl LibraryService {
                     glib::g_warning!("pindu", "Could not save a launch config: {error}");
                 }
                 Err(_) => glib::g_warning!("pindu", "Saving a launch config stopped unexpectedly"),
+            }
+        });
+    }
+
+    /// Switches one performance tool of a game's stored launch config on or off in the
+    /// background, from its next launch; the rest of its config stays.
+    pub fn set_performance_tool(&self, id: &GameId, tool: PerformanceTool, on: bool) {
+        let id = id.clone();
+        glib::spawn_future_local(async move {
+            let written = gtk::gio::spawn_blocking(move || {
+                Store::open(&default_library_db_path())?.set_performance_tool(&id, tool, on)
+            })
+            .await;
+            match written {
+                Ok(Ok(())) => {}
+                Ok(Err(error)) => {
+                    glib::g_warning!("pindu", "Could not save a performance switch: {error}");
+                }
+                Err(_) => {
+                    glib::g_warning!("pindu", "Saving a performance switch stopped unexpectedly")
+                }
             }
         });
     }
