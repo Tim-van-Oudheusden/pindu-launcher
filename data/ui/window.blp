@@ -505,6 +505,30 @@ template $PinduWindow: Adw.ApplicationWindow {
                           };
                         }
 
+                        ListBoxRow quick_access_controls_row {
+                          action-name: "win.quick-access-controls";
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "help-browser-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Label {
+                              label: _("Controls");
+                              xalign: 0;
+                              hexpand: true;
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
+
                         ListBoxRow quick_access_settings_row {
                           action-name: "win.quick-access-settings";
 
@@ -928,6 +952,36 @@ template $PinduWindow: Adw.ApplicationWindow {
                             can-focus: false;
                           }
                         }
+                      }
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "controls";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      Label {
+                        label: _("Controls");
+                        xalign: 0;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // What each button and key does, a heading and a list per group,
+                      // with the glyphs of the controller in use or the keys alone
+                      // without one. Filled in code, and again as the controller changes.
+                      Box quick_access_controls {
+                        orientation: vertical;
+                        spacing: 12;
                       }
                     };
                   };

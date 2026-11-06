@@ -7,9 +7,9 @@
 //! rather than popover menus, which the compositor dismisses on a controller press.
 //! Quick Access's notifications are `fullscreen_notifications`'s, its Activity and Refresh
 //! Library `fullscreen_activity`'s, its Surprise Me `fullscreen_surprise`'s, its
-//! Controllers `fullscreen_controllers`'s, its Filters (on the library page only)
-//! `fullscreen_library`'s. Its Design level holds the design, its variant, Home's
-//! background blur and dim, and the user's own stylesheet.
+//! Controllers `fullscreen_controllers`'s, its Controls `fullscreen_controls`'s, its
+//! Filters (on the library page only) `fullscreen_library`'s. Its Design level holds the
+//! design, its variant, Home's background blur and dim, and the user's own stylesheet.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -17,6 +17,7 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::gamepad::Intent;
 use pindu_core::home::{BLUR_KEY, DIM_KEY};
+use pindu_core::keys;
 use pindu_core::library::View;
 use pindu_core::panels::{
     DrawerEntry, DrawerLevel, GameOption, OptionsLevel, PageEntry, Panel, Panels, QuickAccessLevel,
@@ -97,6 +98,11 @@ impl PinduWindow {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Controllers));
             })
             .build();
+        let controls = gio::ActionEntry::builder("quick-access-controls")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Controls));
+            })
+            .build();
         let quick_settings = gio::ActionEntry::builder("quick-access-settings")
             .activate(|window: &Self, _, _| {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Settings));
@@ -120,6 +126,7 @@ impl PinduWindow {
             activity,
             designs,
             controllers,
+            controls,
             quick_settings,
             filters,
         ]);
@@ -154,7 +161,7 @@ impl PinduWindow {
         ] {
             let escape = gtk::ShortcutController::new();
             escape.add_shortcut(gtk::Shortcut::new(
-                gtk::ShortcutTrigger::parse_string("Escape"),
+                gtk::ShortcutTrigger::parse_string(&keys::ESCAPE.accelerator()),
                 Some(gtk::NamedAction::new("win.close-panel")),
             ));
             panel.add_controller(escape);
@@ -487,6 +494,7 @@ impl PinduWindow {
             Some(Panel::QuickAccess(QuickAccessLevel::Activity)) => self.show_activity(),
             Some(Panel::QuickAccess(QuickAccessLevel::Designs)) => self.fill_designs(),
             Some(Panel::QuickAccess(QuickAccessLevel::Controllers)) => self.fill_controllers(),
+            Some(Panel::QuickAccess(QuickAccessLevel::Controls)) => self.fill_controls(),
             Some(Panel::QuickAccess(QuickAccessLevel::Filters)) => self.show_fullscreen_filters(),
             _ => {}
         }
@@ -516,6 +524,7 @@ impl PinduWindow {
                     QuickAccessLevel::Activity => "activity",
                     QuickAccessLevel::Designs => "designs",
                     QuickAccessLevel::Controllers => "controllers",
+                    QuickAccessLevel::Controls => "controls",
                     QuickAccessLevel::Settings => "settings",
                     QuickAccessLevel::Filters => "filters",
                 });
@@ -567,6 +576,10 @@ impl PinduWindow {
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Controllers)),
             ) => Some(imp.quick_access_controllers_row.get().upcast()),
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::Controls)),
+            ) => Some(imp.quick_access_controls_row.get().upcast()),
             (
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Settings)),
@@ -644,6 +657,13 @@ impl PinduWindow {
                 })
                 .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
                 .or_else(|| first_row(&imp.quick_access_prompts))
+            }
+            (Some(Panel::QuickAccess(QuickAccessLevel::Controls)), _) => {
+                std::iter::successors(imp.quick_access_controls.first_child(), |child| {
+                    child.next_sibling()
+                })
+                .find_map(|child| child.downcast::<gtk::ListBox>().ok())
+                .and_then(|list| first_row(&list))
             }
             (Some(Panel::Options(OptionsLevel::Main)), _) => first_row(&imp.options_list),
             (Some(Panel::Options(OptionsLevel::Collections)), _) => {
@@ -966,7 +986,7 @@ fn append_next_arrow(row: &gtk::ListBoxRow) {
 /// Moves focus from the end of `list` to the nearest widget above or below it that takes
 /// focus, as `direction` says: a list box keeps Up and Down to itself, ringing the bell at
 /// its ends.
-fn step_out_of_list(list: &gtk::ListBox, direction: gtk::DirectionType) {
+pub(crate) fn step_out_of_list(list: &gtk::ListBox, direction: gtk::DirectionType) {
     let next = |widget: &gtk::Widget| match direction {
         gtk::DirectionType::Down => widget.next_sibling(),
         gtk::DirectionType::Up => widget.prev_sibling(),

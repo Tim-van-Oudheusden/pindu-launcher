@@ -142,7 +142,10 @@ quarter larger). **Controllers** lists the controllers it sees, with the glyphs 
 the system reports one for it; select one to make it rumble, so you can tell which is which. There, or in Preferences,
 **Button Prompts** picks the glyphs (letters, shapes or letters with A on the right) instead of following the
 controller, which helps under Steam Input, where every controller looks like Steam's own, and **Swap Confirm and Back**
-makes the right button confirm and the bottom one go back everywhere in fullscreen mode.
+makes the right button confirm and the bottom one go back everywhere in fullscreen mode. **Controls** lists everything
+the buttons do, in groups (moving, the library, the panels and launching), with the glyphs of the controller in use and
+the keys that do the same, including the ones the hint bar leaves out, such as holding B to cancel a launch; without a
+controller it lists the keys alone.
 
 ### Running in gamescope
 

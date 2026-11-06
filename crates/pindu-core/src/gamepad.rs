@@ -76,6 +76,20 @@ pub enum Intent {
     QuickAccess,
 }
 
+/// The intents a button asks for when held down for [`HOLD_DURATION`] rather than pressed:
+/// the pressed intent, then the held one.
+const HOLDS: [(Intent, Intent); 1] = [(Intent::Back, Intent::BackHeld)];
+
+impl Intent {
+    /// The intent whose button, held down, asks for this one: Back for BackHeld.
+    pub fn held_from(self) -> Option<Intent> {
+        HOLDS
+            .into_iter()
+            .find(|&(_, held)| held == self)
+            .map(|(pressed, _)| pressed)
+    }
+}
+
 /// The kind of controller, which decides its glyphs and whether A and B swap, unless the
 /// [`ControllerSettings`] say otherwise.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -262,11 +276,12 @@ impl Layout {
     }
 
     /// The button that asks for `intent`, for hints: with confirm and back swapped, the
-    /// east button confirms.
+    /// east button confirms. A held intent's button is the one held down.
     pub fn button(self, intent: Intent) -> Button {
+        let pressed = intent.held_from().unwrap_or(intent);
         BUTTONS
             .into_iter()
-            .find(|&button| button_intent(self.xbox_position(button)) == intent)
+            .find(|&button| button_intent(self.xbox_position(button)) == pressed)
             .expect("every intent has a button")
     }
 
@@ -395,8 +410,9 @@ pub struct Intents {
     /// The buttons held down, so a trigger that reports each move as a press asks once.
     pressed: HashSet<(DeviceId, Button)>,
     held: Option<Held>,
-    /// Back held down, by which device and button, and when it counts as a hold.
-    back_held: Option<(DeviceId, Button, Duration)>,
+    /// A button held down that asks for an intent once held (Back's, to cancel a launch):
+    /// by which device and button, that intent, and when it counts as a hold.
+    back_held: Option<(DeviceId, Button, Intent, Duration)>,
     /// The device last plugged in or used, whose layout the hints show.
     active: Option<DeviceId>,
     settings: ControllerSettings,
@@ -461,8 +477,11 @@ impl Intents {
                     Intent::Navigate(direction) => {
                         self.hold(device, Source::Button(button), direction, now);
                     }
-                    Intent::Back => self.back_held = Some((device, button, now + HOLD_DURATION)),
-                    _ => {}
+                    _ => {
+                        if let Some((_, held)) = HOLDS.into_iter().find(|&(on, _)| on == intent) {
+                            self.back_held = Some((device, button, held, now + HOLD_DURATION));
+                        }
+                    }
                 }
                 Some(intent)
             }
@@ -475,7 +494,7 @@ impl Intents {
                 self.release(device, Source::Button(button));
                 if self
                     .back_held
-                    .is_some_and(|(holder, held, _)| (holder, held) == (device, button))
+                    .is_some_and(|(holder, held, ..)| (holder, held) == (device, button))
                 {
                     self.back_held = None;
                 }
@@ -536,8 +555,7 @@ impl Intents {
             .filter(|&due| due <= now);
         match (direction_due, back_due) {
             (_, Some(back)) if direction_due.is_none_or(|direction| back < direction) => {
-                self.back_held = None;
-                Some(Intent::BackHeld)
+                self.back_held.take().map(|(_, _, held, _)| held)
             }
             (Some(_), _) => {
                 let held = self.held.as_mut()?;
@@ -634,6 +652,19 @@ pub(crate) const BUTTONS: [Button; 17] = [
     Button::DpadLeft,
     Button::DpadRight,
 ];
+
+/// Every intent a controller asks for: each button's, in the order hints prefer the
+/// buttons, then each held one.
+pub fn intents() -> Vec<Intent> {
+    let mut intents = Vec::new();
+    let held = HOLDS.map(|(_, held)| held);
+    for intent in BUTTONS.into_iter().map(button_intent).chain(held) {
+        if !intents.contains(&intent) {
+            intents.push(intent);
+        }
+    }
+    intents
+}
 
 fn button_intent(button: Button) -> Intent {
     match button {
@@ -1149,6 +1180,17 @@ mod tests {
         assert_eq!(intents.repeat(REPEAT_DELAY), Some(down));
         intents.handle(&release(Button::DpadDown), ms(400));
         assert_eq!(intents.repeat(HOLD_DURATION), Some(Intent::BackHeld));
+    }
+
+    #[test]
+    fn a_held_intent_is_asked_for_by_holding_its_pressed_intent_s_button() {
+        let nintendo = Layout::detected(DeviceKind::Nintendo);
+        let xbox = Layout::detected(DeviceKind::Xbox);
+
+        assert_eq!(Intent::BackHeld.held_from(), Some(Intent::Back));
+        assert_eq!(Intent::Back.held_from(), None);
+        assert_eq!(xbox.button(Intent::BackHeld), Button::East);
+        assert_eq!(nintendo.button(Intent::BackHeld), Button::South);
     }
 
     #[test]

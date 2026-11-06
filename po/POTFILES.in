@@ -4,6 +4,7 @@ crates/pindu-ui/src/file_service.rs
 crates/pindu-ui/src/fullscreen.rs
 crates/pindu-ui/src/fullscreen_activity.rs
 crates/pindu-ui/src/fullscreen_controllers.rs
+crates/pindu-ui/src/fullscreen_controls.rs
 crates/pindu-ui/src/fullscreen_game.rs
 crates/pindu-ui/src/fullscreen_library.rs
 crates/pindu-ui/src/fullscreen_notifications.rs

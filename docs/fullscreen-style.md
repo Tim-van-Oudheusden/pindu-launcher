@@ -248,6 +248,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.notification-count` | The unread count on Quick Access's Notifications entry |
 | `.notification` | A row of Quick Access's notifications; `.unread` while it is new, with an `.unread-dot` |
 | `.task` | A row of Quick Access's Activity, which lists what runs in the background: a label, what it is doing, a progress bar and, while it can be cancelled, a Cancel button |
+| `.control` | A row of Quick Access's Controls: the button's `.control-glyph` (after a Hold label for a held one) and the keys that do the same in `.control-keys` |
 | `.options-sheet` | A game's options at the bottom |
 | `.navigation-sidebar > row` | A row in any of the three |
 | `.hint-bar` | The controller hints at the bottom; each `.hint` has `.hint-glyph`s and a `.hint-label` |

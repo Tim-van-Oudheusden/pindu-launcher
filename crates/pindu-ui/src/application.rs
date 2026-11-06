@@ -24,6 +24,7 @@ use crate::task_service::TaskService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
 use pindu_core::backup::ImportSummary;
+use pindu_core::keys;
 use pindu_core::library::Filters;
 use pindu_core::notifications::{Kind, Target};
 use pindu_core::steamgriddb::{self, RunNotice};
@@ -84,7 +85,7 @@ mod imp {
             obj.setup_actions();
             obj.set_accels_for_action("app.quit", &["<primary>q"]);
             obj.set_accels_for_action("win.show-sidebar", &["F9"]);
-            obj.set_accels_for_action("win.search", &["<primary>f"]);
+            obj.set_accels_for_action("win.search", &[&keys::SEARCH.accelerator()]);
             obj.set_accels_for_action("win.back", &["<alt>Left", "Back"]);
             obj.set_accels_for_action("app.preferences", &["<primary>comma"]);
             obj.set_accels_for_action("app.add-game", &["<primary>n"]);
