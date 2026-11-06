@@ -202,6 +202,8 @@ mod imp {
         pub carousel: TemplateChild<gtk::Box>,
         #[template_child]
         pub library_tile: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub library_tile_frame: TemplateChild<gtk::Box>,
         /// Home's sections, in order, each with its games.
         pub sections: RefCell<Vec<(Section, Vec<GameObject>)>>,
         /// The section whose games the second screen shows; `None` on the first screen.
@@ -347,7 +349,7 @@ impl HomePage {
         imp.carousel
             .add_css_class(&format!("home-tile-{}", shape.name()));
         let (width, height) = home::card_size(shape, size);
-        imp.library_tile.set_size_request(width, height);
+        imp.library_tile_frame.set_size_request(width, height);
     }
 
     /// Names the screen shown on the page for designs: `.home-sections` for the first,

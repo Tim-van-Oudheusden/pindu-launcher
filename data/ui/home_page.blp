@@ -143,9 +143,9 @@ template $PinduHomePage: Adw.NavigationPage {
             "home-carousel",
           ]
 
+          // The size sits on the tile's child, as on the other tiles, so the margin a
+          // design gives the focused tile adds to it rather than squeezing it.
           Button library_tile {
-            width-request: 320;
-            height-request: 150;
             action-name: "win.show-library";
 
             styles [
@@ -153,23 +153,31 @@ template $PinduHomePage: Adw.NavigationPage {
               "library-tile",
             ]
 
-            child: Box {
-              orientation: vertical;
-              spacing: 12;
-              valign: center;
+            child: Overlay {
+              child: Box library_tile_frame {
+                width-request: 320;
+                height-request: 150;
+              };
 
-              Image {
-                icon-name: "view-grid-symbolic";
-                pixel-size: 48;
-                accessible-role: presentation;
-              }
+              [overlay]
+              Box {
+                orientation: vertical;
+                spacing: 12;
+                valign: center;
 
-              Label {
-                label: _("Library");
+                Image {
+                  icon-name: "view-grid-symbolic";
+                  pixel-size: 48;
+                  accessible-role: presentation;
+                }
 
-                styles [
-                  "heading",
-                ]
+                Label {
+                  label: _("Library");
+
+                  styles [
+                    "heading",
+                  ]
+                }
               }
             };
           }
