@@ -10,17 +10,20 @@ use crate::launch_service;
 use crate::library_service::{ImportFailure, LibraryService};
 use crate::manette_backend::ManetteBackend;
 use crate::models::GameObject;
+use crate::notification_service::NotificationService;
 use crate::permission_service;
 use crate::power_service::PowerService;
 use crate::preferences::PreferencesDialog;
 use crate::search_provider;
 use crate::session_service::SessionService;
+use crate::sources::source_list;
 use crate::steamgriddb_service;
 use crate::style_service::StyleService;
 use crate::sync_service::SyncService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
 use pindu_core::backup::ImportSummary;
+use pindu_core::notifications::{Kind, Target};
 use pindu_core::steamgriddb::{self, RunNotice};
 
 mod imp {
@@ -56,6 +59,8 @@ mod imp {
         pub style_service: OnceCell<StyleService>,
         /// The batteries, for Quick Access's header.
         pub power_service: OnceCell<PowerService>,
+        /// What happened in the background this session, for Quick Access.
+        pub notification_service: NotificationService,
     }
 
     #[glib::object_subclass]
@@ -115,8 +120,9 @@ mod imp {
                 self.obj(),
                 #[weak]
                 library,
-                move |_| {
+                move |sync| {
                     library.reload();
+                    app.notify_sync(sync);
                     app.fetch_missing_art(false);
                 }
             ));
@@ -297,6 +303,11 @@ impl PinduApplication {
             .expect("the application has started")
     }
 
+    /// What happened in the background this session.
+    pub fn notification_service(&self) -> &NotificationService {
+        &self.imp().notification_service
+    }
+
     fn setup_actions(&self) {
         let quit_action = gio::ActionEntry::builder("quit")
             .activate(move |app: &Self, _, _| app.quit())
@@ -308,6 +319,10 @@ impl PinduApplication {
             .activate(move |app: &Self, _, _| {
                 app.show_preferences();
             })
+            .build();
+        // Preferences at its Permissions group: how to let games start on this computer.
+        let permissions_action = gio::ActionEntry::builder("permissions")
+            .activate(move |app: &Self, _, _| app.show_preferences().show_permissions())
             .build();
         let add_game_action = gio::ActionEntry::builder("add-game")
             .activate(move |app: &Self, _, _| {
@@ -414,6 +429,7 @@ impl PinduApplication {
             quit_action,
             about_action,
             preferences_action,
+            permissions_action,
             add_game_action,
             edit_game_action,
             import_action,
@@ -474,13 +490,55 @@ impl PinduApplication {
                     app.library_service().reload();
                 }
                 if let Some(notice) = steamgriddb::run_notice(&run, asked) {
-                    app.show_art_toast(&adw::Toast::new(&art_notice_message(notice)));
+                    let message = art_notice_message(notice);
+                    app.show_art_toast(&adw::Toast::new(&message));
+                    let kind = match notice {
+                        RunNotice::Added(_) | RunNotice::NoneFound => Kind::Artwork,
+                        RunNotice::KeyRejected | RunNotice::Unreachable => Kind::ArtworkFailed,
+                    };
+                    // A name, so it is not translated.
+                    app.notification_service()
+                        .post(kind, &message, "SteamGridDB", None);
                 }
             }
             if let Some(asked) = imp.fetch_art_again.take() {
                 app.fetch_missing_art(asked);
             }
         });
+    }
+
+    /// Posts what the last sync changed: one notification for the games it added and one
+    /// for the games it found missing, each saying how many and from which sources. A
+    /// single game added opens its page.
+    fn notify_sync(&self, sync: &SyncService) {
+        let notifications = self.notification_service();
+        let added = sync.added();
+        if !added.games.is_empty() {
+            let count = added.games.len();
+            let title = ngettext("Added one game", "Added {count} games", count as u32)
+                .replace("{count}", &count.to_string());
+            // Translators: {sources} names launchers, such as "Steam and Lutris".
+            let body = gettext("From {sources}").replace("{sources}", &source_list(&added.sources));
+            let target = match added.games.as_slice() {
+                [game] => Some(Target::Game(game.clone())),
+                _ => None,
+            };
+            notifications.post(Kind::Library, &title, &body, target);
+        }
+        let missing = sync.missing();
+        if !missing.games.is_empty() {
+            let count = missing.games.len();
+            let title = ngettext(
+                "One game is missing",
+                "{count} games are missing",
+                count as u32,
+            )
+            .replace("{count}", &count.to_string());
+            // Translators: {sources} names launchers, such as "Steam and Lutris".
+            let body = gettext("No longer listed by {sources}")
+                .replace("{sources}", &source_list(&missing.sources));
+            notifications.post(Kind::Library, &title, &body, None);
+        }
     }
 
     /// Shows a toast about SteamGridDB art in Preferences while it is open, as saving a

@@ -143,6 +143,8 @@ impl PinduWindow {
         }
         match focus.downcast_ref::<gtk::ListBoxRow>() {
             Some(row) if !row.is_activatable() => Focus::Nothing,
+            // A notification with a target opens it.
+            Some(row) if row.has_css_class("notification") => Focus::Link,
             _ => Focus::Other,
         }
     }

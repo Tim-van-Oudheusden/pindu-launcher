@@ -126,8 +126,9 @@ Press <kbd>F11</kbd>, start the app with `--fullscreen`, or turn on **Start in F
 with the D-pad or left stick, open with A and go back with B; the hint bar at the bottom names the buttons that work on
 each screen, drawn with the app's own glyphs for the controller you hold. Quick Access (right stick click, the Steam
 Deck's "…" button, or <kbd>Ctrl</kbd>+<kbd>2</kbd>) shows the time, the battery and whether you are offline, the game you
-are playing with how long it has run, switches the design and holds quick settings: cover size, navigation sounds and
-exiting after a launch.
+are playing with how long it has run, and this session's notifications: games a sync added or found missing, artwork
+fetched or not, Proton downloads and games that need a permission. It opens on them while one is unread. It also
+switches the design and holds quick settings: cover size, navigation sounds and exiting after a launch.
 
 ### Running in gamescope
 

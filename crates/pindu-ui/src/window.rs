@@ -172,6 +172,12 @@ mod imp {
         #[template_child]
         pub quick_access_stack: TemplateChild<gtk::Stack>,
         #[template_child]
+        pub quick_access_notifications_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_unread: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_notifications: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub quick_access_design_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub quick_access_designs: TemplateChild<gtk::ListBox>,
@@ -321,6 +327,7 @@ impl PinduWindow {
             window.setup_hint_bar(application);
             window.setup_quick_access_status(application);
             window.setup_playing_cards(application);
+            window.setup_notifications(application);
         }
         window
     }

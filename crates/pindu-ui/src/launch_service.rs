@@ -11,7 +11,9 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::launch::{self, Route};
 use pindu_core::model::{Game, Source};
+use pindu_core::notifications::{Kind, Target};
 
+use crate::application::PinduApplication;
 use crate::config::APP_ID;
 use crate::library_service::LibraryService;
 use crate::log_service::{self, GameLog};
@@ -39,9 +41,9 @@ pub fn launcher_name(source: Source) -> Option<&'static str> {
 /// session tracked from the moment umu starts it. Either saves the last-played time, and
 /// the toast says what happened, or why the game could not start. Without a window
 /// (`--launch`, Shell search) nothing is shown, unless the game needs a permission: then
-/// the window opens to explain it. With `logs` ("Play with Logs"), a game we start keeps
-/// its output, and a Windows game Proton's log too, in a new log of the game (see
-/// `log_service`).
+/// the window opens to explain it, and a notification keeps the explanation for Quick
+/// Access. With `logs` ("Play with Logs"), a game we start keeps its output, and a Windows
+/// game Proton's log too, in a new log of the game (see `log_service`).
 pub fn play(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
@@ -53,6 +55,14 @@ pub fn play(
 ) {
     let game = game.game().clone();
     if permission_service::needs_permission(&game) {
+        if let Some(application) = app.downcast_ref::<PinduApplication>() {
+            application.notification_service().post(
+                Kind::Permission,
+                &permission_needed(),
+                &permission_explanation(&game.title),
+                Some(Target::Permissions),
+            );
+        }
         if window.is_none() {
             app.activate();
         }
@@ -179,14 +189,8 @@ fn open_store_uri(
 /// Explains, instead of failing, that a game needs the host-spawn permission.
 fn explain_permission(window: &impl IsA<gtk::Window>, title: &str) {
     let dialog = adw::AlertDialog::new(
-        Some(&gettext("Permission Needed")),
-        Some(
-            &gettext(
-                "“{title}” starts on this computer, outside the sandbox. Allow that in \
-                 Preferences, then restart Pindu launcher.",
-            )
-            .replace("{title}", title),
-        ),
+        Some(&permission_needed()),
+        Some(&permission_explanation(title)),
     );
     dialog.add_responses(&[
         ("close", &gettext("_Close")),
@@ -198,8 +202,22 @@ fn explain_permission(window: &impl IsA<gtk::Window>, title: &str) {
     let parent = window.upcast_ref::<gtk::Window>().clone();
     dialog.present(Some(&parent));
     dialog.connect_response(Some("enable"), move |_, _| {
-        let _ = parent.activate_action("app.preferences", None);
+        let _ = parent.activate_action("app.permissions", None);
     });
+}
+
+/// The heading of the explanation that a game needs a permission.
+fn permission_needed() -> String {
+    gettext("Permission Needed")
+}
+
+/// Why the game titled `title` cannot start yet, and what to do about it.
+fn permission_explanation(title: &str) -> String {
+    gettext(
+        "“{title}” starts on this computer, outside the sandbox. Allow that in \
+         Preferences, then restart Pindu launcher.",
+    )
+    .replace("{title}", title)
 }
 
 /// Brings up the game's launcher: Steam on the game's page, or Heroic.

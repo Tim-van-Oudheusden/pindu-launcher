@@ -12,6 +12,8 @@ pub enum Focus {
     Nothing,
     /// A cover or card that opens its game.
     Game,
+    /// An entry that opens what it names: a notification's game or Preferences page.
+    Link,
     /// The game page's Play button.
     Play,
     /// The game page's Stop button, while the game runs.
@@ -157,7 +159,7 @@ pub fn hints(context: Context, kind: DeviceKind) -> Vec<Hint> {
     }
     let activate = match context.focus {
         Focus::Nothing => None,
-        Focus::Game => Some(Action::Open),
+        Focus::Game | Focus::Link => Some(Action::Open),
         Focus::Play => Some(Action::Play),
         Focus::Stop => Some(Action::Stop),
         Focus::Toggle => Some(Action::Toggle),
@@ -404,6 +406,27 @@ mod tests {
         assert_eq!(
             actions(desktop, DeviceKind::Xbox),
             [(Button::South, Action::Open), (Button::East, Action::Back)]
+        );
+    }
+
+    #[test]
+    fn a_notification_opens_what_it_names_and_one_without_a_target_shows_only_back() {
+        let notifications = Context {
+            menu: true,
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Notifications)),
+            ..context(Focus::Link)
+        };
+        assert_eq!(
+            actions(notifications, DeviceKind::Xbox),
+            [(Button::South, Action::Open), (Button::East, Action::Back)]
+        );
+        let plain = Context {
+            focus: Focus::Nothing,
+            ..notifications
+        };
+        assert_eq!(
+            actions(plain, DeviceKind::Xbox),
+            [(Button::East, Action::Back)]
         );
     }
 

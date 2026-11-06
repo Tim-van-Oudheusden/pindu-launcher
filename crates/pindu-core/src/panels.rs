@@ -1,8 +1,8 @@
 //! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
-//! leaving), the Quick Access panel on the right (the design and a few settings) and the
-//! options sheet at the bottom (what to do with one game). This decides which one is
-//! open and at which level, what Start, Guide, R3, View or X and B do to them, and what
-//! each lists.
+//! leaving), the Quick Access panel on the right (notifications, the design and a few
+//! settings) and the options sheet at the bottom (what to do with one game). This decides
+//! which one is open and at which level, what Start, Guide, R3, View or X and B do to
+//! them, and what each lists.
 
 use crate::gamepad::Intent;
 use crate::launch;
@@ -37,6 +37,8 @@ pub enum OptionsLevel {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QuickAccessLevel {
     Main,
+    /// The session's notifications, newest first.
+    Notifications,
     /// The designs to pick from.
     Designs,
     /// Cover size, navigation sounds and exiting after a launch.
@@ -50,6 +52,8 @@ pub struct Under {
     pub game: bool,
     /// A dialog is open over everything, and takes the buttons first.
     pub dialog: bool,
+    /// A notification is unread: Quick Access opens at the notifications.
+    pub unread: bool,
 }
 
 /// The panel that is open, if any.
@@ -69,10 +73,11 @@ impl Panels {
     }
 
     /// Acts on a controller intent and says whether the panels took it, so the page does
-    /// not act on it too. Start and Guide toggle the drawer, R3 toggles Quick Access, View
-    /// or X opens the options for a game, and B steps back a level or closes. Opening one
-    /// panel closes the other. While a panel is open the page's own buttons (search, tabs,
-    /// sort) wait; directions and A move and act inside it.
+    /// not act on it too. Start and Guide toggle the drawer, R3 toggles Quick Access (at
+    /// its notifications while one is unread, as Steam's does), View or X opens the
+    /// options for a game, and B steps back a level or closes. Opening one panel closes
+    /// the other. While a panel is open the page's own buttons (search, tabs, sort) wait;
+    /// directions and A move and act inside it.
     pub fn handle(&mut self, intent: Intent, under: Under) -> bool {
         if under.dialog {
             return false;
@@ -82,7 +87,12 @@ impl Panels {
             (Intent::Menu | Intent::Home, _) => self.open = Some(Panel::Drawer(DrawerLevel::Main)),
             (Intent::QuickAccess, Some(Panel::QuickAccess(_))) => self.open = None,
             (Intent::QuickAccess, _) => {
-                self.open = Some(Panel::QuickAccess(QuickAccessLevel::Main));
+                let level = if under.unread {
+                    QuickAccessLevel::Notifications
+                } else {
+                    QuickAccessLevel::Main
+                };
+                self.open = Some(Panel::QuickAccess(level));
             }
             (Intent::Options, None) if under.game => {
                 self.open = Some(Panel::Options(OptionsLevel::Main));
@@ -239,14 +249,17 @@ mod tests {
     const PAGE: Under = Under {
         game: false,
         dialog: false,
+        unread: false,
     };
     const GAME: Under = Under {
         game: true,
         dialog: false,
+        unread: false,
     };
     const DIALOG: Under = Under {
         game: true,
         dialog: true,
+        unread: false,
     };
 
     fn drawer() -> Option<Panel> {
@@ -291,6 +304,29 @@ mod tests {
         assert_eq!(panels.open(), None);
         assert!(panels.handle(Intent::QuickAccess, PAGE));
         assert_eq!(panels.open(), quick_access(), "it opens at its entries");
+    }
+
+    #[test]
+    fn quick_access_opens_at_its_notifications_while_one_is_unread() {
+        let unread = Under {
+            unread: true,
+            ..PAGE
+        };
+        let mut panels = Panels::new();
+        assert!(panels.handle(Intent::QuickAccess, unread));
+        assert_eq!(
+            panels.open(),
+            Some(Panel::QuickAccess(QuickAccessLevel::Notifications))
+        );
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), quick_access(), "B leads to its entries");
+        panels.close();
+        assert!(panels.handle(Intent::QuickAccess, PAGE));
+        assert_eq!(
+            panels.open(),
+            quick_access(),
+            "read, it opens at its entries"
+        );
     }
 
     #[test]

@@ -2,7 +2,7 @@ using Gtk 4.0;
 using Adw 1;
 
 template $PinduPreferencesDialog: Adw.PreferencesDialog {
-  Adw.PreferencesPage {
+  Adw.PreferencesPage general_page {
     title: _("General");
     icon-name: "preferences-system-symbolic";
 
@@ -54,7 +54,7 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
       title: _("Permissions");
       description: _("Store games start through their launcher and always work. Desktop entries, Flatpak games and games added by hand start on this computer, outside the sandbox, which needs your permission.");
 
-      Adw.ActionRow {
+      Adw.ActionRow host_row {
         title: _("Start Games on This Computer");
 
         [suffix]
