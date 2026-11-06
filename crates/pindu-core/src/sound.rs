@@ -35,6 +35,12 @@ pub fn tone_wav(frequency: f64, millis: u32) -> Vec<u8> {
     wav
 }
 
+/// The `navigation-sound-volume` setting, 0 to 100, as a `GtkMediaStream` volume, 0 to 1.
+/// GTK's GStreamer backend cubes that volume for loudness by ear, so it needs no curve here.
+pub fn media_volume(percent: i32) -> f64 {
+    f64::from(percent.clamp(0, 100)) / 100.0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,5 +66,18 @@ mod tests {
         assert_eq!(samples[0], 0);
         assert!(samples.last().unwrap().abs() < 200);
         assert!(samples.iter().any(|sample| sample.abs() > 3000));
+    }
+
+    #[test]
+    fn the_volume_setting_maps_from_percent_to_the_media_stream_s_scale() {
+        assert_eq!(media_volume(0), 0.0);
+        assert_eq!(media_volume(60), 0.6);
+        assert_eq!(media_volume(100), 1.0);
+    }
+
+    #[test]
+    fn a_volume_outside_the_setting_s_range_is_clamped() {
+        assert_eq!(media_volume(-5), 0.0);
+        assert_eq!(media_volume(250), 1.0);
     }
 }

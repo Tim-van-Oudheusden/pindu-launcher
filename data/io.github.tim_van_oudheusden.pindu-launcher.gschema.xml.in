@@ -103,6 +103,12 @@
       <summary>Navigation sounds</summary>
       <description>Play a soft sound in fullscreen mode when the controller moves focus, selects or goes back.</description>
     </key>
+    <key name="navigation-sound-volume" type="i">
+      <range min="0" max="100"/>
+      <default>60</default>
+      <summary>Navigation sound volume</summary>
+      <description>How loud the navigation sounds play, from 0 (silent) to 100 (full).</description>
+    </key>
     <key name="fullscreen-custom-style" type="b">
       <default>false</default>
       <summary>Custom fullscreen style</summary>

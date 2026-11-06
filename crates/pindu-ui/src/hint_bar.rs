@@ -123,6 +123,9 @@ impl PinduWindow {
         if self.focused_tile().is_some() || focus.has_css_class("jump-card") {
             return Focus::Game;
         }
+        if focus.is::<gtk::Range>() {
+            return Focus::Slider;
+        }
         if let Some(button) = focus.downcast_ref::<gtk::Button>() {
             match button.action_name().as_deref() {
                 Some("app.play") => return Focus::Play,
@@ -171,6 +174,7 @@ fn action_label(action: Action) -> String {
         Action::Search => gettext("Search"),
         Action::Tabs => gettext("Tabs"),
         Action::Sort => gettext("Sort"),
+        Action::Adjust => gettext("Adjust"),
         Action::Options => gettext("Options"),
         Action::HoldToCancel => gettext("Hold to Cancel"),
         Action::Menu => gettext("Menu"),

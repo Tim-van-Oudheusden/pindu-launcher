@@ -834,6 +834,32 @@ template $PinduWindow: Adw.ApplicationWindow {
                           title: _("Navigation Sounds");
                         }
 
+                        // The slider takes focus rather than its row, so left and right
+                        // turn it; the row goes insensitive while the sounds are off.
+                        Adw.ActionRow quick_access_volume_row {
+                          title: _("Volume");
+                          activatable: false;
+                          focusable: false;
+
+                          [suffix]
+                          Scale quick_access_volume {
+                            hexpand: true;
+                            digits: 0;
+                            draw-value: false;
+
+                            adjustment: Adjustment {
+                              lower: 0;
+                              upper: 100;
+                              step-increment: 5;
+                              page-increment: 20;
+                            };
+
+                            accessibility {
+                              label: _("Navigation Sound Volume");
+                            }
+                          }
+                        }
+
                         Adw.SwitchRow quick_access_exit_row {
                           title: _("Exit After Launching");
                         }

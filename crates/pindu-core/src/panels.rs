@@ -45,7 +45,7 @@ pub enum QuickAccessLevel {
     Designs,
     /// The connected controllers, the button prompts and the confirm and back swap.
     Controllers,
-    /// Cover size, navigation sounds and exiting after a launch.
+    /// Cover size, navigation sounds and their volume, and exiting after a launch.
     Settings,
 }
 

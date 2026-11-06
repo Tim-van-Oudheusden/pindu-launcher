@@ -132,12 +132,12 @@ library sync, a SteamGridDB artwork fetch or a Proton download runs, its Activit
 cancels artwork fetches and Proton downloads (a cancelled download leaves nothing behind). **Refresh Library** reads
 your launchers again, offline like every sync. **Surprise Me** opens the page of an installed game picked at random,
 never the same one twice in a row, so you still choose whether to play. It also switches the design and holds quick
-settings: cover size, navigation sounds and exiting after a launch. **Controllers** lists the controllers it sees, with
-the glyphs each shows and its battery where the system reports one for it; select one to make it rumble, so you can
-tell which is which. There, or in Preferences, **Button Prompts** picks the glyphs (letters, shapes or letters with A on
-the right) instead of following the controller, which helps under Steam Input, where every controller looks like
-Steam's own, and **Swap Confirm and Back** makes the right button confirm and the bottom one go back everywhere in
-fullscreen mode.
+settings: cover size, navigation sounds with a volume slider that left and right turn (here or in Preferences), and
+exiting after a launch. **Controllers** lists the controllers it sees, with the glyphs each shows and its battery where
+the system reports one for it; select one to make it rumble, so you can tell which is which. There, or in Preferences,
+**Button Prompts** picks the glyphs (letters, shapes or letters with A on the right) instead of following the
+controller, which helps under Steam Input, where every controller looks like Steam's own, and **Swap Confirm and Back**
+makes the right button confirm and the bottom one go back everywhere in fullscreen mode.
 
 ### Running in gamescope
 
