@@ -1,13 +1,13 @@
 //! Controller navigation in the main window: directions move focus the way the arrow keys
-//! do (`move-focus` on the window), the cover grid steps through its covers with
-//! `scroll_to`, A activates the focused widget, B closes a menu or dialog or goes back, Y
-//! searches from Home or the library (with the search keyboard in fullscreen mode, which
-//! takes the buttons while it is open), LB/RB and LT/RT switch the fullscreen library's
-//! tabs and sort order, and Guide enters fullscreen mode. The panels come next: in
-//! fullscreen mode Start or Guide toggles the menu drawer, View or X opens the options
-//! sheet for the focused game, and B closes them. While the launch overlay is up it takes
-//! every button, and a held B cancels a game we start. Intents never become synthetic key
-//! events, and only the active window acts on them.
+//! do (`move-focus` on the window), except that left and right turn a focused slider, the
+//! cover grid steps through its covers with `scroll_to`, A activates the focused widget, B
+//! closes a menu or dialog or goes back, Y searches from Home or the library (with the
+//! search keyboard in fullscreen mode, which takes the buttons while it is open), LB/RB and
+//! LT/RT switch the fullscreen library's tabs and sort order, and Guide enters fullscreen
+//! mode. The panels come next: in fullscreen mode Start or Guide toggles the menu drawer,
+//! View or X opens the options sheet for the focused game, and B closes them. While the
+//! launch overlay is up it takes every button, and a held B cancels a game we start.
+//! Intents never become synthetic key events, and only the active window acts on them.
 
 use std::cell::RefCell;
 use std::collections::BTreeSet;
@@ -90,8 +90,12 @@ impl PinduWindow {
         }
         match intent {
             Intent::Navigate(direction) => {
-                self.navigate(direction);
-                self.play_sound(Sound::Move);
+                // A focused slider turns instead, and plays its own sound, at its new
+                // volume, once it rests.
+                if !self.adjust_slider(direction) {
+                    self.navigate(direction);
+                    self.play_sound(Sound::Move);
+                }
             }
             Intent::Activate => {
                 self.activate_focus();
@@ -133,6 +137,22 @@ impl PinduWindow {
             keyboard_focused: self.is_active(),
         }
         .takes_controller()
+    }
+
+    /// Left and right turn the focused slider a step down or up, as the arrow keys do,
+    /// rather than move focus off it; says whether they did.
+    fn adjust_slider(&self, direction: Direction) -> bool {
+        let step = match direction {
+            Direction::Left => gtk::ScrollType::StepLeft,
+            Direction::Right => gtk::ScrollType::StepRight,
+            Direction::Up | Direction::Down => return false,
+        };
+        let Some(slider) = gtk::prelude::GtkWindowExt::focus(self).and_downcast::<gtk::Range>()
+        else {
+            return false;
+        };
+        slider.emit_move_slider(step);
+        true
     }
 
     /// Moves through the open menu, steps through the cover grid when it has focus, and

@@ -21,6 +21,7 @@ use pindu_core::panels::{
 };
 
 use crate::application::PinduApplication;
+use crate::fullscreen::bind_volume_slider;
 use crate::fullscreen_playing::card_return;
 use crate::launch_service::launcher_name;
 use crate::models::GameObject;
@@ -198,14 +199,19 @@ impl PinduWindow {
         self.fill_drawer();
     }
 
-    /// Quick Access's settings: cover size, navigation sounds and exiting after a launch,
-    /// the same settings Preferences changes, applied as they change.
+    /// Quick Access's settings: cover size, navigation sounds and their volume, and exiting
+    /// after a launch, the same settings Preferences changes, applied as they change.
     fn setup_quick_access_settings(&self) {
         let imp = self.imp();
         let settings = self.settings();
         settings
             .bind("navigation-sounds", &*imp.quick_access_sounds_row, "active")
             .build();
+        bind_volume_slider(
+            settings,
+            &imp.quick_access_volume_row,
+            &imp.quick_access_volume,
+        );
         settings
             .bind("exit-after-launch", &*imp.quick_access_exit_row, "active")
             .build();

@@ -250,6 +250,30 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
         title: _("Navigation Sounds");
         subtitle: _("A soft sound when the controller moves, selects or goes back");
       }
+
+      Adw.ActionRow volume_row {
+        title: _("Volume");
+        activatable: false;
+        focusable: false;
+
+        [suffix]
+        Scale volume_scale {
+          hexpand: true;
+          digits: 0;
+          draw-value: false;
+
+          adjustment: Adjustment {
+            lower: 0;
+            upper: 100;
+            step-increment: 5;
+            page-increment: 20;
+          };
+
+          accessibility {
+            label: _("Navigation Sound Volume");
+          }
+        }
+      }
     }
   }
 }

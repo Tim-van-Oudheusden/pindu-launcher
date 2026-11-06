@@ -213,6 +213,10 @@ mod imp {
         #[template_child]
         pub quick_access_sounds_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
+        pub quick_access_volume_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub quick_access_volume: TemplateChild<gtk::Scale>,
+        #[template_child]
         pub quick_access_exit_row: TemplateChild<adw::SwitchRow>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
@@ -226,8 +230,11 @@ mod imp {
         pub grid_cursor: Cell<u32>,
         /// The cover the controller was last on in each view, for fullscreen mode's tabs.
         pub focus_memory: RefCell<FocusMemory<View, GameId>>,
-        /// Fullscreen mode's navigation sounds, made on entering the mode with them on.
+        /// The navigation sounds, made on entering fullscreen mode with them on, or for the
+        /// first sound the volume slider plays.
         pub sounds: OnceCell<NavigationSounds>,
+        /// The sound a moved volume slider plays once it rests a moment.
+        pub volume_preview: RefCell<Option<glib::SourceId>>,
         /// The hints the hint bar shows, and for which controller layout.
         pub hints: RefCell<Option<(Layout, Vec<Hint>)>>,
         /// Whether the sidebar showed before fullscreen mode hid it, to show it again after.

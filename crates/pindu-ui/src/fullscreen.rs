@@ -15,7 +15,7 @@ use gettextrs::ngettext;
 use gtk::{gdk, gio, glib};
 use pindu_core::home::BackgroundContext;
 use pindu_core::keys::{self, Escape, Modifiers};
-use pindu_core::sound::tone_wav;
+use pindu_core::sound::{media_volume, tone_wav};
 use pindu_core::themes::ThemeLayout;
 
 use crate::application::PinduApplication;
@@ -47,7 +47,11 @@ impl PinduWindow {
         let escape_action = gio::ActionEntry::builder("escape")
             .activate(|window: &Self, _, _| window.escape())
             .build();
-        self.add_action_entries([leave, escape_action]);
+        // Quick Access's and Preferences' volume sliders, as they move.
+        let preview = gio::ActionEntry::builder("preview-navigation-sound")
+            .activate(|window: &Self, _, _| window.preview_sound())
+            .build();
+        self.add_action_entries([leave, escape_action, preview]);
         // Esc goes back from a Home section or leaves fullscreen mode once nothing nearer
         // the focus (a dialog, the search entry) took it; F11 is an application accelerator.
         let escape = gtk::ShortcutController::new();
@@ -510,11 +514,65 @@ impl PinduWindow {
         if !self.is_fullscreen() || !self.settings().boolean("navigation-sounds") {
             return;
         }
+        self.play_navigation_sound(sound);
+    }
+
+    /// Plays one sound at the volume a slider has come to rest on, once it has rested
+    /// [`VOLUME_PREVIEW_DELAY`], so a drag or a held direction plays it once; in the
+    /// desktop window too, for Preferences, while the sounds are on.
+    fn preview_sound(&self) {
+        if let Some(source) = self.imp().volume_preview.take() {
+            source.remove();
+        }
+        let source = glib::timeout_add_local_once(
+            VOLUME_PREVIEW_DELAY,
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move || {
+                    // This timer has fired.
+                    window.imp().volume_preview.take();
+                    if window.settings().boolean("navigation-sounds") {
+                        window.play_navigation_sound(Sound::Select);
+                    }
+                }
+            ),
+        );
+        self.imp().volume_preview.replace(Some(source));
+    }
+
+    /// Plays `sound` at the volume the user set, as it is now.
+    fn play_navigation_sound(&self, sound: Sound) {
+        let volume = media_volume(self.settings().int("navigation-sound-volume"));
         self.imp()
             .sounds
             .get_or_init(NavigationSounds::default)
-            .play(sound);
+            .play(sound, volume);
     }
+}
+
+/// How long a volume slider rests before it plays a sound at its new volume.
+const VOLUME_PREVIEW_DELAY: std::time::Duration = std::time::Duration::from_millis(200);
+
+/// Binds a volume slider and its row to the `navigation-sound-volume` setting: the row is
+/// insensitive while the sounds are off, and a moved slider plays a sound at its new volume
+/// (`win.preview-navigation-sound`). Quick Access and Preferences share it.
+pub(crate) fn bind_volume_slider(
+    settings: &gio::Settings,
+    row: &adw::ActionRow,
+    slider: &gtk::Scale,
+) {
+    settings
+        .bind("navigation-sound-volume", &slider.adjustment(), "value")
+        .build();
+    settings
+        .bind("navigation-sounds", row, "sensitive")
+        .get()
+        .build();
+    // Connected once the setting set its first value, which is no move.
+    slider.connect_value_changed(|slider| {
+        let _ = slider.activate_action("win.preview-navigation-sound", None);
+    });
 }
 
 /// The toast for a fullscreen style that GTK found `count` errors in.
@@ -560,10 +618,12 @@ impl Default for NavigationSounds {
 }
 
 impl NavigationSounds {
-    fn play(&self, sound: Sound) {
+    /// Plays `sound` at `volume`, 0 to 1 (`pindu_core::sound::media_volume`).
+    fn play(&self, sound: Sound, volume: f64) {
         let tone = &self.tones[sound as usize];
         let stream = gio::MemoryInputStream::from_bytes(tone);
         let media = gtk::MediaFile::for_input_stream(&stream);
+        media.set_volume(volume);
         media.connect_error_notify(|media| {
             if let Some(error) = media.error() {
                 glib::g_warning!("pindu", "Could not play a navigation sound: {error}");

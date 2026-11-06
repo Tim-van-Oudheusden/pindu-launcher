@@ -1,7 +1,8 @@
 //! The Preferences dialog: General (covers, launching, controller navigation, button prompts
 //! and the confirm and back swap, permissions), Sources (import, folder, sidebar), Artwork
 //! (SteamGridDB), Windows games (default Proton, prefix folder and tools), Proton
-//! (downloaded builds and releases to install) and Fullscreen (start-up, sounds).
+//! (downloaded builds and releases to install) and Fullscreen (start-up, sounds and their
+//! volume).
 //! Everything is GSettings, except the SteamGridDB key, which lives in the keyring,
 //! each source's import switch and folder, which live with the library's other source state,
 //! and the Proton builds, which are folders in our tools folder.
@@ -19,6 +20,7 @@ use pindu_core::sources::sync::IMPORTED_SOURCES;
 
 use crate::config::APP_ID;
 use crate::file_service;
+use crate::fullscreen::bind_volume_slider;
 use crate::permission_service;
 use crate::proton_choice::{FirstChoice, ProtonChoice};
 use crate::proton_downloads_page::ProtonDownloadsPage;
@@ -56,6 +58,10 @@ mod imp {
         pub start_fullscreen_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub sounds_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub volume_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub volume_scale: TemplateChild<gtk::Scale>,
         #[template_child]
         pub tile_size_row: TemplateChild<adw::ComboRow>,
         #[template_child]
@@ -163,6 +169,7 @@ mod imp {
             settings
                 .bind("navigation-sounds", &*self.sounds_row, "active")
                 .build();
+            bind_volume_slider(&settings, &self.volume_row, &self.volume_scale);
             settings
                 .bind("show-titles", &*self.titles_row, "active")
                 .build();

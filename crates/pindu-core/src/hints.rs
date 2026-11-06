@@ -1,7 +1,7 @@
 //! The fullscreen hint bar: what each button does right now for the focused page and
 //! widget, with the glyph that shows the button on the active controller.
 
-use crate::gamepad::{Button, Glyphs, Intent, Layout};
+use crate::gamepad::{Button, Direction, Glyphs, Intent, Layout};
 use crate::osk::Key;
 use crate::panels::{DrawerLevel, OptionsLevel, Panel, QuickAccessLevel};
 
@@ -23,6 +23,8 @@ pub enum Focus {
     Cancel,
     /// A switch, check box or toggle button.
     Toggle,
+    /// A slider, which left and right adjust and A leaves alone.
+    Slider,
     /// Any other widget that activates.
     Other,
 }
@@ -93,6 +95,8 @@ pub enum Action {
     Tabs,
     /// Cycle the sort order back or forward.
     Sort,
+    /// Turn a slider down or up.
+    Adjust,
     /// Open the options for the page's game.
     Options,
     /// Hold the button to cancel the launch.
@@ -110,7 +114,8 @@ pub enum Action {
 }
 
 /// One hint: the button, by its position on the pad, and what it does. A pair of buttons
-/// that step two ways (the shoulders, the triggers) shares one hint.
+/// that step two ways (the shoulders, the triggers, the D-pad's left and right) shares one
+/// hint.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Hint {
     pub button: Button,
@@ -163,7 +168,7 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
         .collect();
     }
     let activate = match context.focus {
-        Focus::Nothing => None,
+        Focus::Nothing | Focus::Slider => None,
         Focus::Game | Focus::Link => Some(Action::Open),
         Focus::Play => Some(Action::Play),
         Focus::Stop => Some(Action::Stop),
@@ -171,6 +176,12 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
         Focus::Toggle => Some(Action::Toggle),
         Focus::Other => Some(Action::Select),
     };
+    // Left and right turn a focused slider rather than move focus off it.
+    let adjust = (context.focus == Focus::Slider).then(|| Hint {
+        button: layout.button(Intent::Navigate(Direction::Left)),
+        pair: Some(layout.button(Intent::Navigate(Direction::Right))),
+        action: Action::Adjust,
+    });
     // A panel over the page closes on B, or steps back from one of its lists; the page's
     // own buttons wait for it, as they wait for a dialog.
     let back = match context.panel {
@@ -199,6 +210,7 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
         })
     };
     [
+        adjust,
         single(Intent::Activate, activate),
         single(Intent::Back, back),
         single(Intent::Search, search),
@@ -515,6 +527,30 @@ mod tests {
             [
                 (Button::South, Action::Toggle),
                 (Button::East, Action::Close)
+            ]
+        );
+    }
+
+    #[test]
+    fn a_focused_slider_adjusts_with_left_and_right_and_a_does_nothing() {
+        let settings = Context {
+            menu: true,
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Settings)),
+            ..context(Focus::Slider)
+        };
+        assert_eq!(
+            hints(settings, Layout::detected(DeviceKind::Xbox)),
+            [
+                Hint {
+                    button: Button::DpadLeft,
+                    pair: Some(Button::DpadRight),
+                    action: Action::Adjust,
+                },
+                Hint {
+                    button: Button::East,
+                    pair: None,
+                    action: Action::Back,
+                },
             ]
         );
     }
