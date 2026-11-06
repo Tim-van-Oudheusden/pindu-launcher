@@ -255,7 +255,8 @@ window.fullscreen-mode .game-actions button:focus-visible {
   font-weight: bold;
 }
 
-.menu-drawer button:focus-visible {
+.menu-drawer button:focus-visible,
+.quick-access .playing-card button:focus-visible {
   outline: 3px solid var(--window-fg-color);
   outline-offset: 3px;
 }

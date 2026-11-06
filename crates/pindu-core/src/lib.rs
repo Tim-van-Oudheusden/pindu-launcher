@@ -31,6 +31,7 @@ pub mod proton;
 pub mod proton_downloads;
 pub mod search;
 pub mod sections;
+pub mod session_time;
 pub mod sound;
 pub mod sources;
 pub mod steamgriddb;
