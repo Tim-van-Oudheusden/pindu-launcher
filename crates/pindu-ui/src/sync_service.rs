@@ -1,4 +1,5 @@
-//! Runs the importers off the main thread and reports progress and problems to the shells.
+//! Runs the importers off the main thread and reports progress, problems and the games
+//! each sync added or found missing to the shells.
 
 use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
@@ -12,7 +13,7 @@ use gtk::subclass::prelude::*;
 use pindu_core::model::{Source, SourceState};
 use pindu_core::paths::default_library_db_path;
 use pindu_core::sources::location::{self, HostDirs};
-use pindu_core::sources::sync::sync_all;
+use pindu_core::sources::sync::{SyncSummary, Tally, sync_all};
 use pindu_core::store::Store;
 
 use crate::sources::source_name;
@@ -30,6 +31,9 @@ mod imp {
         pub syncing: Cell<bool>,
         /// Problems of the last sync, one line per problem.
         pub problems: RefCell<Vec<String>>,
+        /// The games the last sync added, and the games it found missing.
+        pub added: RefCell<Tally>,
+        pub missing: RefCell<Tally>,
     }
 
     #[glib::object_subclass]
@@ -60,6 +64,16 @@ impl SyncService {
     /// Problems of the last sync, one line per problem.
     pub fn problems(&self) -> Vec<String> {
         self.imp().problems.borrow().clone()
+    }
+
+    /// The games the last sync added to the library, and their sources.
+    pub fn added(&self) -> Tally {
+        self.imp().added.borrow().clone()
+    }
+
+    /// The games the last sync found gone from their sources, and those sources.
+    pub fn missing(&self) -> Tally {
+        self.imp().missing.borrow().clone()
     }
 
     /// Each source's stored state: enabled, override, where it was last found.
@@ -119,8 +133,22 @@ impl SyncService {
             let outcome = gtk::gio::spawn_blocking(run_sync)
                 .await
                 .unwrap_or_else(|_| Err(gettext("The import stopped unexpectedly")));
-            let problems = outcome.unwrap_or_else(|message| vec![message]);
-            service.imp().problems.replace(problems);
+            let (problems, added, missing) = match outcome {
+                Ok(summary) => (
+                    summary
+                        .problems
+                        .iter()
+                        .map(|(source, problem)| format!("{}: {problem}", source_name(*source)))
+                        .collect(),
+                    summary.added(),
+                    summary.missing(),
+                ),
+                Err(message) => (vec![message], Tally::default(), Tally::default()),
+            };
+            let imp = service.imp();
+            imp.problems.replace(problems);
+            imp.added.replace(added);
+            imp.missing.replace(missing);
             service.set_syncing(false);
             service.emit_by_name::<()>("finished", &[]);
         });
@@ -149,18 +177,12 @@ impl Default for SyncService {
 }
 
 /// Opens its own connection to the library and syncs every source.
-fn run_sync() -> Result<Vec<String>, String> {
+fn run_sync() -> Result<SyncSummary, String> {
     let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |elapsed| elapsed.as_secs() as i64);
     // GLib reads the local time zone; the core has none of its own.
     let utc_offset = glib::DateTime::now_local().map_or(0, |local| local.utc_offset().as_seconds());
-    let summary = sync_all(&store, &HostDirs::from_env(), now, utc_offset)
-        .map_err(|error| error.to_string())?;
-    Ok(summary
-        .problems
-        .into_iter()
-        .map(|(source, problem)| format!("{}: {problem}", source_name(source)))
-        .collect())
+    sync_all(&store, &HostDirs::from_env(), now, utc_offset).map_err(|error| error.to_string())
 }

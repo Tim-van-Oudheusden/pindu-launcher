@@ -35,6 +35,10 @@ mod imp {
     #[template(resource = "/io/github/tim_van_oudheusden/pindu-launcher/ui/preferences.ui")]
     pub struct PreferencesDialog {
         #[template_child]
+        pub general_page: TemplateChild<adw::PreferencesPage>,
+        #[template_child]
+        pub host_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
         pub host_status: TemplateChild<gtk::Label>,
         #[template_child]
         pub command_row: TemplateChild<adw::ActionRow>,
@@ -246,6 +250,25 @@ impl PreferencesDialog {
         let imp = self.imp();
         self.set_visible_page(&*imp.artwork_page);
         imp.key_row.grab_focus();
+    }
+
+    /// Shows the General page with focus in its Permissions group: whether games may start
+    /// on this computer, and the command that allows it.
+    pub fn show_permissions(&self) {
+        self.set_visible_page(&*self.imp().general_page);
+        // Once the dialog is shown and has given focus to its first row.
+        glib::idle_add_local_once(glib::clone!(
+            #[weak(rename_to = dialog)]
+            self,
+            move || {
+                let imp = dialog.imp();
+                if imp.command_row.is_visible() {
+                    imp.command_row.grab_focus();
+                } else {
+                    imp.host_row.grab_focus();
+                }
+            }
+        ));
     }
 
     fn settings(&self) -> &gio::Settings {

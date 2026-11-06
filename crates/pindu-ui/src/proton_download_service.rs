@@ -5,7 +5,8 @@
 //! An install fetches the release's `.sha512sum` first when it has one, hashes the
 //! tarball as it downloads, unpacks it with `tar` in a hidden work folder beside the
 //! builds and moves the build in with one rename. Installs outlive the Preferences
-//! dialog; a dialog opened later sees them through [`step`].
+//! dialog; a dialog opened later sees them through [`step`], and Quick Access's
+//! notifications tell how each ended unless the user stopped it.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -15,10 +16,13 @@ use std::rc::Rc;
 
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use pindu_core::notifications::Kind;
 use pindu_core::paths::default_tools_dir;
 use pindu_core::proton::{self, ProtonBuild};
 use pindu_core::proton_downloads::{self, Fork, Release, Step};
 use soup::prelude::*;
+
+use crate::application::PinduApplication;
 
 /// How much of a tarball is read, hashed and written at a time.
 const CHUNK: usize = 256 * 1024;
@@ -78,7 +82,7 @@ pub async fn releases(fork: Fork) -> Result<Vec<Release>, String> {
     proton_downloads::parse_releases(fork, &String::from_utf8_lossy(&answer))
 }
 
-/// Downloads, checks and unpacks `release` into our tools folder.
+/// Downloads, checks and unpacks `release` into our tools folder, and posts how it ended.
 pub async fn install(release: Release) -> Result<(), String> {
     let folder = release.folder().to_owned();
     let install = Rc::new(Install {
@@ -102,7 +106,32 @@ pub async fn install(release: Release) -> Result<(), String> {
     let result = run_install(&release, &install, &work).await;
     let _ = gio::spawn_blocking(move || std::fs::remove_dir_all(work)).await;
     RUNNING.with_borrow_mut(|running| running.remove(&folder));
+    if !install.stopped.get() {
+        notify_install(&release.tag, &result);
+    }
     result
+}
+
+/// Posts that the build `name` was installed, or why it was not.
+fn notify_install(name: &str, result: &Result<(), String>) {
+    let Some(application) = gio::Application::default().and_downcast::<PinduApplication>() else {
+        return;
+    };
+    let (kind, title, body) = match result {
+        Ok(()) => (
+            Kind::Download,
+            gettext("{build} installed"),
+            gettext("Windows games can now run with it"),
+        ),
+        Err(error) => (
+            Kind::DownloadFailed,
+            gettext("{build} was not installed"),
+            error.clone(),
+        ),
+    };
+    application
+        .notification_service()
+        .post(kind, &title.replace("{build}", name), &body, None);
 }
 
 /// Removes the build in `folder` from our tools folder.

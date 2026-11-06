@@ -324,6 +324,41 @@ template $PinduWindow: Adw.ApplicationWindow {
                           "navigation-sidebar",
                         ]
 
+                        // With the unread count, which clears once the level is opened.
+                        ListBoxRow quick_access_notifications_row {
+                          action-name: "win.quick-access-notifications";
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "preferences-system-notifications-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Label {
+                              label: _("Notifications");
+                              xalign: 0;
+                              hexpand: true;
+                            }
+
+                            Label quick_access_unread {
+                              visible: false;
+                              valign: center;
+
+                              styles [
+                                "notification-count",
+                                "numeric",
+                              ]
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
+
                         ListBoxRow quick_access_design_row {
                           action-name: "win.quick-access-designs";
 
@@ -371,6 +406,38 @@ template $PinduWindow: Adw.ApplicationWindow {
                             }
                           };
                         }
+                      }
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "notifications";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      Label {
+                        label: _("Notifications");
+                        xalign: 0;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // What happened this session, newest first, or that nothing has;
+                      // filled in code.
+                      ListBox quick_access_notifications {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
                       }
                     };
                   };

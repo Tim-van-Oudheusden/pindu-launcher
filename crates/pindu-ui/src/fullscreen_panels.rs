@@ -5,6 +5,7 @@
 //! `pindu_core::panels`; this fills them, shows them, keeps focus inside the open one and
 //! gives it back after, and does what their entries say. They are widgets in the window
 //! rather than popover menus, which the compositor dismisses on a controller press.
+//! Quick Access's notifications are `fullscreen_notifications`'s.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -69,6 +70,11 @@ impl PinduWindow {
                 window.handle_panel_intent(Intent::QuickAccess);
             })
             .build();
+        let notifications = gio::ActionEntry::builder("quick-access-notifications")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Notifications));
+            })
+            .build();
         let designs = gio::ActionEntry::builder("quick-access-designs")
             .activate(|window: &Self, _, _| {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Designs));
@@ -88,6 +94,7 @@ impl PinduWindow {
             options,
             game_collections,
             quick_access,
+            notifications,
             designs,
             quick_settings,
         ]);
@@ -259,6 +266,7 @@ impl PinduWindow {
         let under = Under {
             game: game.is_some(),
             dialog: self.visible_dialog().is_some(),
+            unread: self.has_unread_notifications(),
         };
         let mut panels = self.imp().panels.get();
         if !panels.handle(intent, under) {
@@ -335,8 +343,10 @@ impl PinduWindow {
         if matches!(open, Some(Panel::Drawer(_))) && !matches!(before, Some(Panel::Drawer(_))) {
             self.fill_drawer();
         }
-        if open == Some(Panel::QuickAccess(QuickAccessLevel::Designs)) {
-            self.fill_designs();
+        match open {
+            Some(Panel::QuickAccess(QuickAccessLevel::Notifications)) => self.show_notifications(),
+            Some(Panel::QuickAccess(QuickAccessLevel::Designs)) => self.fill_designs(),
+            _ => {}
         }
         let drawer = matches!(open, Some(Panel::Drawer(_)));
         let quick_access = matches!(open, Some(Panel::QuickAccess(_)));
@@ -360,6 +370,7 @@ impl PinduWindow {
             Some(Panel::QuickAccess(level)) => {
                 imp.quick_access_stack.set_visible_child_name(match level {
                     QuickAccessLevel::Main => "main",
+                    QuickAccessLevel::Notifications => "notifications",
                     QuickAccessLevel::Designs => "designs",
                     QuickAccessLevel::Settings => "settings",
                 });
@@ -396,6 +407,14 @@ impl PinduWindow {
             ) => Some(imp.drawer_collections_row.get().upcast()),
             (
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::Notifications)),
+            ) => Some(imp.quick_access_notifications_row.get().upcast()),
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::Designs)),
+            ) => Some(imp.quick_access_design_row.get().upcast()),
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Settings)),
             ) => Some(imp.quick_access_settings_row.get().upcast()),
             // The first Playing Now card's Return comes first.
@@ -413,7 +432,10 @@ impl PinduWindow {
                     .and_then(card_return)
             }
             (Some(Panel::QuickAccess(QuickAccessLevel::Main)), _) => {
-                Some(imp.quick_access_design_row.get().upcast())
+                Some(imp.quick_access_notifications_row.get().upcast())
+            }
+            (Some(Panel::QuickAccess(QuickAccessLevel::Notifications)), _) => {
+                first_row(&imp.quick_access_notifications)
             }
             // The design in force.
             (Some(Panel::QuickAccess(QuickAccessLevel::Designs)), _) => {

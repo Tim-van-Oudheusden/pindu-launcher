@@ -23,10 +23,53 @@ pub const IMPORTED_SOURCES: &[Source] = &[
     Source::Desktop,
 ];
 
-/// What a sync of every source could not read, by source.
+/// What a sync of every source could not read, and how it changed the library, by
+/// source.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SyncSummary {
     pub problems: Vec<(Source, String)>,
+    /// Each synced source's changes, in sync order.
+    pub changes: Vec<(Source, Changes)>,
+}
+
+/// The games a sync added, or found missing, and the sources they belong to.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Tally {
+    /// The games, source by source in sync order.
+    pub games: Vec<GameId>,
+    /// The sources with at least one such game, in sync order.
+    pub sources: Vec<Source>,
+}
+
+impl SyncSummary {
+    /// The games that joined the library.
+    pub fn added(&self) -> Tally {
+        self.tally(|changes| &changes.added)
+    }
+
+    /// The games that left the library because their source no longer lists them.
+    pub fn missing(&self) -> Tally {
+        self.tally(|changes| &changes.missing)
+    }
+
+    fn tally(&self, games: impl Fn(&Changes) -> &[GameId]) -> Tally {
+        let mut tally = Tally::default();
+        for (source, changes) in &self.changes {
+            let games = games(changes);
+            if !games.is_empty() {
+                tally.games.extend_from_slice(games);
+                tally.sources.push(*source);
+            }
+        }
+        tally
+    }
+}
+
+/// What a sync of one source could not read, and how it changed the library.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SourceSync {
+    pub problems: Vec<String>,
+    pub changes: Changes,
 }
 
 /// Syncs every enabled source with an importer. `utc_offset` (seconds east of UTC) reads
@@ -43,26 +86,28 @@ pub fn sync_all(
             .source_state(source)?
             .is_none_or(|state| state.enabled);
         if enabled {
-            let problems = sync_source(store, source, dirs, now, utc_offset)?;
+            let synced = sync_source(store, source, dirs, now, utc_offset)?;
             summary
                 .problems
-                .extend(problems.into_iter().map(|problem| (source, problem)));
+                .extend(synced.problems.into_iter().map(|problem| (source, problem)));
+            summary.changes.push((source, synced.changes));
         }
     }
     Ok(summary)
 }
 
 /// Resolves, imports and applies one source, and records the outcome in its
-/// [`SourceState`]. Returns the source's problems: unreadable entries, an incomplete
-/// override, or a source that could not be read at all (whose games are then left as
-/// they were). A source no longer on the machine is an empty source.
+/// [`SourceState`]. Returns the source's problems (unreadable entries, an incomplete
+/// override, or a source that could not be read at all, whose games are then left as
+/// they were) and how its games changed. A source no longer on the machine is an empty
+/// source.
 pub fn sync_source(
     store: &Store,
     source: Source,
     dirs: &HostDirs,
     now: Timestamp,
     utc_offset: i64,
-) -> store::Result<Vec<String>> {
+) -> store::Result<SourceSync> {
     let snapshot = if source == Source::Desktop {
         // Desktop entries come from the host's application folders, not one source folder.
         Ok(desktop::import(dirs))
@@ -73,20 +118,23 @@ pub fn sync_source(
             Err(error) => Err(error.to_string()),
         }
     };
-    let problems = match snapshot {
-        Ok(snapshot) => {
-            apply_snapshot(store, &snapshot, now)?;
-            snapshot.errors
-        }
-        Err(problem) => vec![problem],
+    let synced = match snapshot {
+        Ok(snapshot) => SourceSync {
+            changes: apply_snapshot(store, &snapshot, now)?,
+            problems: snapshot.errors,
+        },
+        Err(problem) => SourceSync {
+            problems: vec![problem],
+            changes: Changes::default(),
+        },
     };
     let mut state = store
         .source_state(source)?
         .unwrap_or_else(|| SourceState::new(source));
     state.last_sync = Some(now);
-    state.errors.clone_from(&problems);
+    state.errors.clone_from(&synced.problems);
     store.set_source_state(&state)?;
-    Ok(problems)
+    Ok(synced)
 }
 
 fn import(source: Source, root: &Path, utc_offset: i64) -> Result<Snapshot, ImportError> {
@@ -99,23 +147,44 @@ fn import(source: Source, root: &Path, utc_offset: i64) -> Result<Snapshot, Impo
     }
 }
 
-/// Writes a snapshot into the library in one transaction.
+/// How a sync of one source changed the library.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Changes {
+    /// Games that joined the library: new ones, and ones back after going missing, in the
+    /// snapshot's order.
+    pub added: Vec<GameId>,
+    /// Games that left it because their source no longer lists them.
+    pub missing: Vec<GameId>,
+}
+
+/// Writes a snapshot into the library in one transaction, and says how the library
+/// changed.
 ///
 /// New games take the source's hidden, favourite and category flags; for games already in
 /// the library those flags are ours and only the source's own fields are refreshed. Games
 /// of the source that the snapshot lacks get `missing_since`, keeping all their data for
 /// when they return; a user-removed game stays removed only while its source lists it.
-pub fn apply_snapshot(store: &Store, snapshot: &Snapshot, now: Timestamp) -> store::Result<()> {
+pub fn apply_snapshot(
+    store: &Store,
+    snapshot: &Snapshot,
+    now: Timestamp,
+) -> store::Result<Changes> {
     store.in_transaction(|store| {
+        let mut changes = Changes::default();
         let mut present = HashSet::new();
         for imported in &snapshot.games {
             let id = GameId::new(snapshot.source, &imported.native_id);
             match store.game(&id)? {
                 Some(mut game) => {
+                    let was_in_library = game.in_library();
                     refresh(&mut game, imported);
+                    if !was_in_library && game.in_library() {
+                        changes.added.push(id.clone());
+                    }
                     store.update_game(&game)?;
                 }
                 None => {
+                    changes.added.push(id.clone());
                     let mut game =
                         Game::new(id.clone(), &imported.title, imported.launch_kind, now);
                     refresh(&mut game, imported);
@@ -155,11 +224,14 @@ pub fn apply_snapshot(store: &Store, snapshot: &Snapshot, now: Timestamp) -> sto
             if present.contains(&game.id) || game.missing_since.is_some() && !game.user_removed {
                 continue;
             }
+            if game.in_library() {
+                changes.missing.push(game.id.clone());
+            }
             game.missing_since.get_or_insert(now);
             game.user_removed = false;
             store.update_game(&game)?;
         }
-        Ok(())
+        Ok(changes)
     })
 }
 
@@ -463,6 +535,50 @@ mod tests {
     }
 
     #[test]
+    fn applying_a_snapshot_names_the_games_that_join_and_leave_the_library() {
+        let (_dir, store) = temp_store();
+
+        let first = apply_snapshot(
+            &store,
+            &snapshot(vec![flagged(false, false, &[]), other_game("2")]),
+            100,
+        )
+        .unwrap();
+        let second = apply_snapshot(&store, &snapshot(vec![other_game("2")]), 200).unwrap();
+        let unchanged = apply_snapshot(&store, &snapshot(vec![other_game("2")]), 300).unwrap();
+        let back = apply_snapshot(
+            &store,
+            &snapshot(vec![flagged(false, false, &[]), other_game("2")]),
+            400,
+        )
+        .unwrap();
+
+        let two = GameId::new(Source::HeroicGog, "2");
+        assert_eq!(
+            first,
+            Changes {
+                added: vec![id(), two],
+                missing: Vec::new(),
+            }
+        );
+        assert_eq!(
+            second,
+            Changes {
+                added: Vec::new(),
+                missing: vec![id()],
+            }
+        );
+        assert_eq!(unchanged, Changes::default());
+        assert_eq!(
+            back,
+            Changes {
+                added: vec![id()],
+                missing: Vec::new(),
+            }
+        );
+    }
+
+    #[test]
     fn missing_since_keeps_the_first_time_the_game_was_missed() {
         let (_dir, store) = temp_store();
         apply_snapshot(&store, &snapshot(vec![flagged(false, false, &[])]), 100).unwrap();
@@ -575,7 +691,8 @@ mod tests {
             100,
             0,
         )
-        .unwrap();
+        .unwrap()
+        .problems;
 
         assert!(problems.is_empty(), "{problems:?}");
         assert!(
@@ -618,7 +735,8 @@ mod tests {
             200,
             0,
         )
-        .unwrap();
+        .unwrap()
+        .problems;
 
         assert_eq!(problems.len(), 1);
         let game = store
@@ -651,7 +769,8 @@ mod tests {
             200,
             0,
         )
-        .unwrap();
+        .unwrap()
+        .problems;
 
         assert!(problems.is_empty());
         let game = store
@@ -672,8 +791,9 @@ mod tests {
         )
         .unwrap();
 
-        let problems =
-            sync_source(&store, Source::Desktop, &host_dirs(dir.path()), 100, 0).unwrap();
+        let problems = sync_source(&store, Source::Desktop, &host_dirs(dir.path()), 100, 0)
+            .unwrap()
+            .problems;
 
         assert!(problems.is_empty(), "{problems:?}");
         let id = GameId::new(Source::Desktop, "neverball");
@@ -705,5 +825,41 @@ mod tests {
         );
         assert_eq!(summary.problems.len(), 1);
         assert_eq!(summary.problems[0].0, Source::HeroicGog);
+    }
+
+    #[test]
+    fn sync_all_tallies_the_games_added_and_missing_and_their_sources() {
+        let (dir, store) = temp_store();
+        sideload_home(dir.path(), SIDELOADED);
+        let applications = dir.path().join("usr/share/applications");
+        std::fs::create_dir_all(&applications).unwrap();
+        std::fs::write(
+            applications.join("neverball.desktop"),
+            "[Desktop Entry]\nType=Application\nName=Neverball\nExec=neverball\nCategories=Game;\n",
+        )
+        .unwrap();
+
+        let first = sync_all(&store, &host_dirs(dir.path()), 100, 0).unwrap();
+        std::fs::remove_dir_all(dir.path().join(".config/heroic")).unwrap();
+        let second = sync_all(&store, &host_dirs(dir.path()), 200, 0).unwrap();
+
+        let side = GameId::new(Source::HeroicSideload, "side");
+        let neverball = GameId::new(Source::Desktop, "neverball");
+        assert_eq!(
+            first.added(),
+            Tally {
+                games: vec![side.clone(), neverball],
+                sources: vec![Source::HeroicSideload, Source::Desktop],
+            }
+        );
+        assert_eq!(first.missing(), Tally::default());
+        assert_eq!(second.added(), Tally::default());
+        assert_eq!(
+            second.missing(),
+            Tally {
+                games: vec![side],
+                sources: vec![Source::HeroicSideload],
+            }
+        );
     }
 }

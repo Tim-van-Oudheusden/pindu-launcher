@@ -255,6 +255,24 @@ window.fullscreen-mode .game-actions button:focus-visible {
   font-weight: bold;
 }
 
+/* Quick Access's notifications: the unread count on its entry, in the accent colour like
+   a badge, and a dot beside each unread notification. */
+.quick-access .notification-count {
+  min-width: 24px;
+  padding: 0 6px;
+  border-radius: 12px;
+  background-color: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+  font-weight: bold;
+}
+
+.quick-access .notification .unread-dot {
+  min-width: 8px;
+  min-height: 8px;
+  border-radius: 4px;
+  background-color: var(--accent-color);
+}
+
 .menu-drawer button:focus-visible,
 .quick-access .playing-card button:focus-visible {
   outline: 3px solid var(--window-fg-color);

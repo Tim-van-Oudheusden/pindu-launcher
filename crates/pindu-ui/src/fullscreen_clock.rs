@@ -66,16 +66,21 @@ impl PinduWindow {
         let Ok(now) = glib::DateTime::now_local() else {
             return;
         };
-        let (am, pm) = (period_name(0), period_name(12));
+        let text = self.clock_text_at(&now);
         let imp = self.imp();
-        let text = clock::clock_text(
-            u32::try_from(now.hour()).unwrap_or_default(),
-            u32::try_from(now.minute()).unwrap_or_default(),
-            imp.clock_format.get(),
-            [&am, &pm],
-        );
         imp.clock.set_label(&text);
         imp.quick_access_clock.set_label(&text);
+    }
+
+    /// The time of day `time` as the clocks show it, in the desktop's clock format.
+    pub(crate) fn clock_text_at(&self, time: &glib::DateTime) -> String {
+        let (am, pm) = (period_name(0), period_name(12));
+        clock::clock_text(
+            u32::try_from(time.hour()).unwrap_or_default(),
+            u32::try_from(time.minute()).unwrap_or_default(),
+            self.imp().clock_format.get(),
+            [&am, &pm],
+        )
     }
 
     /// Reads `clock-format` through the settings portal, which the sandbox lets every app
