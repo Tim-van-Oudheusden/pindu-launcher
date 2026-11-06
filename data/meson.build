@@ -82,8 +82,14 @@ resources = gnome.compile_resources(
 # stay files rather than resources: a design's url() and @import resolve beside its CSS.
 install_subdir('themes', install_dir: pkgdatadir)
 
-# Home's background video, a file rather than a resource so GStreamer streams it from disk.
-install_data('home' / 'background.webm', install_dir: pkgdatadir / 'home')
+# Home's background video in three sizes (`pindu_core::home::BACKGROUND_VIDEOS`), files
+# rather than resources so GStreamer streams them from disk.
+install_data(
+  'home' / 'background-720p.webm',
+  'home' / 'background-1080p.webm',
+  'home' / 'background-1440p.webm',
+  install_dir: pkgdatadir / 'home',
+)
 
 test(
   'validate-desktop',

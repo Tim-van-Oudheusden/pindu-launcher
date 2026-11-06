@@ -386,8 +386,9 @@ impl HomePage {
         self.show_background_playback();
     }
 
-    /// Loads Home's background (`home/background.webm` in the app's data), muted and
-    /// looped. A file that is missing or does not play is logged and leaves the black of
+    /// Loads Home's background (`home/background-*.webm` in the app's data, in the size
+    /// `home::background_video` picks for the window's screen), muted and looped. A file
+    /// that is missing or does not play is logged and leaves the black of
     /// `.home-background`.
     fn load_background(&self) {
         let media = gtk::MediaFile::new();
@@ -424,11 +425,50 @@ impl HomePage {
         let imp = self.imp();
         imp.background.set_paintable(Some(&media));
         imp.background_media.replace(Some(media.clone()));
+        if self.is_mapped() {
+            self.open_background(&media);
+        } else {
+            // Fullscreen mode can start before the window is on a screen: the size is
+            // known once Home shows, so the file is chosen then, once.
+            let handler = std::rc::Rc::new(RefCell::new(None));
+            let id = self.connect_map(glib::clone!(
+                #[strong]
+                handler,
+                #[weak]
+                media,
+                move |page| {
+                    page.open_background(&media);
+                    if let Some(id) = handler.take() {
+                        page.disconnect(id);
+                    }
+                }
+            ));
+            handler.replace(Some(id));
+        }
+    }
+
+    /// Opens Home's background in the size `home::background_video` picks for the screen
+    /// the window is on, muted.
+    fn open_background(&self, media: &gtk::MediaFile) {
         media.set_filename(Some(
-            Path::new(PKGDATADIR).join("home").join("background.webm"),
+            Path::new(PKGDATADIR)
+                .join("home")
+                .join(home::background_video(self.screen_pixels())),
         ));
         // After the file: GStreamer's player, which takes the mute, comes with it.
         media.set_muted(true);
+    }
+
+    /// The size in device pixels of the screen the window is on, once it is shown.
+    fn screen_pixels(&self) -> Option<(i32, i32)> {
+        let surface = self.native()?.surface()?;
+        let monitor = surface.display().monitor_at_surface(&surface)?;
+        let geometry = monitor.geometry();
+        let scale = monitor.scale();
+        Some((
+            (f64::from(geometry.width()) * scale).round() as i32,
+            (f64::from(geometry.height()) * scale).round() as i32,
+        ))
     }
 
     /// Plays, pauses or holds Home's background on its first frame, as

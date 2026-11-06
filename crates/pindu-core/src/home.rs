@@ -146,6 +146,28 @@ pub fn background_playback(context: BackgroundContext) -> Playback {
     }
 }
 
+/// Home's background video in each size it ships in: (width, height) in pixels and the
+/// file in `home/` of the app's data, smallest first.
+pub const BACKGROUND_VIDEOS: [((i32, i32), &str); 3] = [
+    ((1280, 720), "background-720p.webm"),
+    ((1920, 1080), "background-1080p.webm"),
+    ((2560, 1440), "background-1440p.webm"),
+];
+
+/// The file name of Home's background video for a screen of `screen` device pixels
+/// (width, height): the smallest video that fills the screen without being scaled up,
+/// or the largest for a screen bigger than all of them. An unknown screen gets 1080p.
+pub fn background_video(screen: Option<(i32, i32)>) -> &'static str {
+    let Some((width, height)) = screen else {
+        return BACKGROUND_VIDEOS[1].1;
+    };
+    BACKGROUND_VIDEOS
+        .iter()
+        .find(|((w, h), _)| *w >= width && *h >= height)
+        .unwrap_or(&BACKGROUND_VIDEOS[BACKGROUND_VIDEOS.len() - 1])
+        .1
+}
+
 /// The GSettings key of Home's background blur, a `Strength`'s setting.
 pub const BLUR_KEY: &str = "fullscreen-background-blur";
 /// The GSettings key of Home's background dim, a `Strength`'s setting.
@@ -214,6 +236,35 @@ mod tests {
         hidden: false,
         reduced_motion: false,
     };
+
+    #[test]
+    fn the_background_is_the_smallest_video_that_fills_the_screen() {
+        for (screen, file) in [
+            ((1280, 720), "background-720p.webm"),
+            ((1280, 800), "background-1080p.webm"),
+            ((1920, 1080), "background-1080p.webm"),
+            ((1920, 1200), "background-1440p.webm"),
+            ((2560, 1440), "background-1440p.webm"),
+        ] {
+            assert_eq!(background_video(Some(screen)), file, "{screen:?}");
+        }
+    }
+
+    #[test]
+    fn a_screen_bigger_than_every_video_gets_the_largest() {
+        for screen in [(3840, 2160), (1080, 1920)] {
+            assert_eq!(
+                background_video(Some(screen)),
+                "background-1440p.webm",
+                "{screen:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_unknown_screen_gets_the_1080p_background() {
+        assert_eq!(background_video(None), "background-1080p.webm");
+    }
 
     #[test]
     fn the_background_plays_behind_the_first_screen() {
