@@ -116,8 +116,9 @@ window.fullscreen-mode .home-carousel.home-tile-square .jump-title {
   opacity: 0;
 }
 
+/* The Library tile matches the sections' art (`data/home/*.svg`) beside it. */
 window.fullscreen-mode .home-carousel.home-tile-square > .library-tile {
-  background-color: var(--ribbon-pill);
+  background-color: #1c1d21;
 }
 
 /* The logo, or the title, at mid-left; the details below it in grey pills. */
