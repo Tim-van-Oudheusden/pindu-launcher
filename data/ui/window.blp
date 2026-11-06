@@ -226,6 +226,65 @@ template $PinduWindow: Adw.ApplicationWindow {
                 "quick-access",
               ]
 
+              // The status header over every level: the clock, "Offline" while there is no
+              // network, and the battery on a machine that has one.
+              Box {
+                spacing: 18;
+                margin-bottom: 18;
+
+                styles [
+                  "quick-access-status",
+                ]
+
+                Label quick_access_clock {
+                  xalign: 0;
+                  hexpand: true;
+
+                  styles [
+                    "clock",
+                    "numeric",
+                  ]
+                }
+
+                Box quick_access_offline {
+                  spacing: 6;
+                  visible: false;
+                  tooltip-text: _("Artwork downloads wait until you are online");
+
+                  styles [
+                    "offline",
+                  ]
+
+                  Image {
+                    icon-name: "network-offline-symbolic";
+                    accessible-role: presentation;
+                  }
+
+                  Label {
+                    label: _("Offline");
+                  }
+                }
+
+                Box quick_access_battery {
+                  spacing: 6;
+                  visible: false;
+
+                  styles [
+                    "battery",
+                  ]
+
+                  Image quick_access_battery_icon {
+                    accessible-role: presentation;
+                  }
+
+                  Label quick_access_battery_level {
+                    styles [
+                      "numeric",
+                    ]
+                  }
+                }
+              }
+
               Stack quick_access_stack {
                 vexpand: true;
                 transition-type: crossfade;
