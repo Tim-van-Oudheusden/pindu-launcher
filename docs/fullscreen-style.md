@@ -23,9 +23,13 @@ This page is the style contract: the files, the `theme.json` fields and the CSS 
   or Ctrl+2) under **Design**, or set it with
   `gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-design <id>`. Ribbon (`ribbon`) is
   the default; **Adwaita**, an empty id, is no design: the standard libadwaita look.
-- `fullscreen.css` applies while the `fullscreen-custom-style` setting is on.
-- Saving a stylesheet, or another file directly in the design's folder, reloads it at once. Files in
-  subfolders (such as `assets/`) are picked up the next time the stylesheet loads.
+- A design can offer **variants** (below): pick one in Quick Access under **Design** → **Variant**, or set it with
+  `gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-design-variant <variant-id>`. An empty
+  or unknown id picks the design's first variant.
+- `fullscreen.css` applies while the `fullscreen-custom-style` setting is on: Quick Access's **My Stylesheet**
+  switch under **Design**, which can only be turned on once the file exists.
+- Saving a stylesheet, or another file directly in the design's or the variant's folder, reloads it at once.
+  Files in other subfolders (such as `assets/`) are picked up the next time the stylesheet loads.
 - Problems GTK finds in a stylesheet are logged with their line, and fullscreen mode shows a toast with
   their number. The rest of the stylesheet still applies.
 
@@ -36,6 +40,7 @@ themes/my-design/
   theme.json
   theme.css
   assets/…       optional; refer to them as url("assets/bg.svg")
+  mono.css       optional; a variant's stylesheet
   LICENSE        required for designs shipped with Pindu
 ```
 
@@ -54,7 +59,11 @@ themes/my-design/
     "home-tile-size": 112,
     "top-bar": true,
     "home-details": true
-  }
+  },
+  "variants": [
+    { "id": "classic", "name": "Classic" },
+    { "id": "mono", "name": "Monochrome", "stylesheet": "mono.css" }
+  ]
 }
 ```
 
@@ -64,6 +73,7 @@ themes/my-design/
 | `name` | yes | Shown in the Design list. |
 | `description`, `author`, `license` | no | About the design. |
 | `layout` | no | The layout options below. Unknown keys and values are ignored and fall back to the default. |
+| `variants` | no | The looks the design offers within itself, below. |
 
 ### Layout options
 
@@ -77,6 +87,29 @@ CSS restyles widgets but cannot move, add or remove them. These options change w
 | `top-bar` | `false`, `true` | A bar at the top of Home and the library with Home and Library tabs and a clock. |
 | `home-details` | `false`, `true` | A row under Home's title: on the first screen the focused section's number of games, on the second the focused game's playtime, when it was last played and its source. |
 
+### Variants
+
+A design can come in variants, as an ES-DE theme has variants and colour schemes: a lighter palette, a
+layout without details, white instead of the accent colour. Each entry of `variants` has:
+
+| Key | Required | Meaning |
+|---|---|---|
+| `id` | yes | Lowercase letters, digits and dashes; unique within the design. The `fullscreen-design-variant` setting holds it. |
+| `name` | yes | Shown in Quick Access's Variant list. |
+| `stylesheet` | no | A CSS file inside the design's folder, relative to it, loaded after `theme.css` while the variant is chosen. Without one the variant is `theme.css` alone. |
+
+- The first variant is the default: it applies until another is chosen, and when the chosen id is unknown
+  (say, after switching designs). Make it the plain look, usually without a `stylesheet`.
+- Write `theme.css` as a complete design and each variant's stylesheet as changes on top of it: a Pindu
+  launcher older than variants ignores the list and shows `theme.css` alone.
+- A `variants` list Pindu cannot follow skips the whole design, with the reason in the log: it is not a list,
+  an entry lacks an `id` or `name` or repeats an `id`, or a `stylesheet` is missing or lies outside the
+  design's folder (an absolute path, `..`, or a symbolic link out of it).
+- Layout options belong to the design, not a variant.
+
+Panorama is the worked example: **Accent** (`theme.css` alone) and **Monochrome** (`mono.css`, which
+redefines the accent colour variables as white).
+
 ## Writing the CSS
 
 Start every rule with `window.fullscreen-mode`, so it can never match anything in the desktop window, even
@@ -88,7 +121,8 @@ window.fullscreen-mode .home-carousel > button:focus-within {
 }
 ```
 
-The order of the stylesheets, last wins: libadwaita, Pindu's own, the design, your `fullscreen.css`.
+The order of the stylesheets, last wins: libadwaita, Pindu's own, the design, the design's variant, your
+`fullscreen.css`.
 
 GTK's CSS is not the web's: see the [GTK CSS overview](https://docs.gtk.org/gtk4/css-overview.html) and
 [properties](https://docs.gtk.org/gtk4/css-properties.html). There is no `@font-face` (use fonts the
@@ -157,11 +191,23 @@ The background plays muted and looped behind the first screen. It pauses on the 
 game we started runs and while the window is hidden, and holds its first frame outside fullscreen mode and
 while the window is `reduced-motion`.
 
+Quick Access's **Background Blur** and **Background Dim** (each Off, Low or High) put `blur-low` or
+`blur-high` and `dim-low` or `dim-high` on `.home`. Pindu blurs `.home-background` and `.home-hero` with
+`filter: blur()` and darkens them with a translucent black `.home-dim`; restyle those to make the
+strengths your own:
+
+```css
+window.fullscreen-mode .home.blur-high .home-background,
+window.fullscreen-mode .home.blur-high .home-hero { filter: blur(40px) saturate(1.4); }
+window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 / 30%); }
+```
+
 | Name | What |
 |---|---|
-| `.home` | The page; also `.home-sections` on the first screen or `.home-games` on the second, `.home-layout-hero-bottom` or `.home-layout-row-top`, and `.no-art` while no art is shown (always on the first screen) |
-| `.home-background` | Home's animated background, filling the page under the art; black where there is no video, hidden (`opacity: 0`) on the second screen. Dim or blur it with `opacity` or `filter` |
-| `.home-hero` | The focused game's art filling the page; the one showing the current art also has `.shown`, so `transition: opacity` crossfades |
+| `.home` | The page; also `.home-sections` on the first screen or `.home-games` on the second, `.home-layout-hero-bottom` or `.home-layout-row-top`, `.no-art` while no art is shown (always on the first screen), and `.blur-low` or `.blur-high` and `.dim-low` or `.dim-high` as Quick Access's Background Blur and Dim say |
+| `.home-background` | Home's animated background, filling the page under the art; black where there is no video, hidden (`opacity: 0`) on the second screen. Blurred with `filter` under `.blur-*`; a `filter` of your own replaces Pindu's blur |
+| `.home-hero` | The focused game's art filling the page; the one showing the current art also has `.shown`, so `transition: opacity` crossfades. Blurred like `.home-background` |
+| `.home-dim` | A layer over the background and the art, under the shade and the text; transparent until `.dim-low` or `.dim-high` darkens it |
 | `.hero-gradient` | The shade over the art |
 | `.home-title` | The row with the focused section's name, or the game's logo or title |
 | `.home-logo` | The logo, contained in 480×160 unless you grow it with `min-width`/`min-height` |

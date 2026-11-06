@@ -192,6 +192,18 @@ mod imp {
         #[template_child]
         pub quick_access_designs: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub quick_access_variant_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_variants: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_blur: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_dim: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_custom_style: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_custom_style_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
         pub quick_access_settings_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub quick_access_controllers_row: TemplateChild<gtk::ListBoxRow>,

@@ -146,6 +146,61 @@ pub fn background_playback(context: BackgroundContext) -> Playback {
     }
 }
 
+/// The GSettings key of Home's background blur, a `Strength`'s setting.
+pub const BLUR_KEY: &str = "fullscreen-background-blur";
+/// The GSettings key of Home's background dim, a `Strength`'s setting.
+pub const DIM_KEY: &str = "fullscreen-background-dim";
+
+/// How much Home's background (its animated background and the focused game's art) is
+/// blurred or dimmed, as Quick Access sets it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Strength {
+    #[default]
+    Off,
+    Low,
+    High,
+}
+
+impl Strength {
+    pub const ALL: [Self; 3] = [Self::Off, Self::Low, Self::High];
+
+    /// The value the setting holds for it.
+    pub fn setting(self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::Low => "low",
+            Self::High => "high",
+        }
+    }
+
+    /// The strength the setting `value` holds; `Off` for an unknown one.
+    pub fn from_setting(value: &str) -> Self {
+        Self::ALL
+            .into_iter()
+            .find(|strength| strength.setting() == value)
+            .unwrap_or_default()
+    }
+}
+
+/// Every class `background_classes` gives Home.
+pub const BACKGROUND_CLASSES: [&str; 4] = ["blur-low", "blur-high", "dim-low", "dim-high"];
+
+/// The style classes Home carries for its background's `blur` and `dim`, which
+/// `style.css` and designs give their look.
+pub fn background_classes(blur: Strength, dim: Strength) -> Vec<&'static str> {
+    let blur = match blur {
+        Strength::Off => None,
+        Strength::Low => Some("blur-low"),
+        Strength::High => Some("blur-high"),
+    };
+    let dim = match dim {
+        Strength::Off => None,
+        Strength::Low => Some("dim-low"),
+        Strength::High => Some("dim-high"),
+    };
+    blur.into_iter().chain(dim).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -207,6 +262,27 @@ mod tests {
                 Playback::FirstFrame,
                 "{context:?}"
             );
+        }
+    }
+
+    #[test]
+    fn background_strengths_come_from_their_settings() {
+        assert_eq!(Strength::from_setting("off"), Strength::Off);
+        assert_eq!(Strength::from_setting("low"), Strength::Low);
+        assert_eq!(Strength::from_setting("high"), Strength::High);
+        assert_eq!(Strength::from_setting("max"), Strength::Off);
+    }
+
+    #[test]
+    fn blur_and_dim_become_home_s_style_classes() {
+        use Strength::*;
+        assert!(background_classes(Off, Off).is_empty());
+        assert_eq!(background_classes(Low, Off), ["blur-low"]);
+        assert_eq!(background_classes(High, Off), ["blur-high"]);
+        assert_eq!(background_classes(Off, Low), ["dim-low"]);
+        assert_eq!(background_classes(Low, High), ["blur-low", "dim-high"]);
+        for class in background_classes(High, High) {
+            assert!(BACKGROUND_CLASSES.contains(&class), "{class}");
         }
     }
 

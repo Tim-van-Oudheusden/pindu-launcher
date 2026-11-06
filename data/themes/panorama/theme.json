@@ -9,5 +9,9 @@
     "home-tile": "square",
     "home-tile-size": 168,
     "top-bar": true
-  }
+  },
+  "variants": [
+    { "id": "accent", "name": "Accent" },
+    { "id": "mono", "name": "Monochrome", "stylesheet": "mono.css" }
+  ]
 }

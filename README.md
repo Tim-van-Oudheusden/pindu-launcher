@@ -162,8 +162,10 @@ gamescope -f -- flatpak run --nosocket=wayland io.github.tim_van_oudheusden.pind
 ### Styling fullscreen mode
 
 Fullscreen mode has switchable designs (Quick Access → Design): Ribbon, the default, and Panorama ship with the app,
-and Adwaita shows the standard libadwaita look. It also takes your own CSS. Where the files go, the `theme.json` fields
-and the CSS names designs can rely on are in [`docs/fullscreen-style.md`](docs/fullscreen-style.md).
+and Adwaita shows the standard libadwaita look. A design can come in variants, such as Panorama's Monochrome, picked
+under the design. The same level blurs and dims Home's background (Off, Low or High each) and turns **My Stylesheet**,
+your own CSS, on and off. Where the files go, the `theme.json` fields and the CSS names designs can rely on are in
+[`docs/fullscreen-style.md`](docs/fullscreen-style.md).
 
 ## Building from source
 

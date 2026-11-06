@@ -599,6 +599,152 @@ template $PinduWindow: Adw.ApplicationWindow {
                           "boxed-list",
                         ]
                       }
+
+                      // The variants of the design in force, with a check on the one in
+                      // force; filled in code, and hidden for a design without variants.
+                      Label quick_access_variant_title {
+                        label: _("Variant");
+                        xalign: 0;
+                        margin-top: 6;
+                        visible: false;
+
+                        styles [
+                          "heading",
+                        ]
+                      }
+
+                      ListBox quick_access_variants {
+                        selection-mode: none;
+                        visible: false;
+
+                        styles [
+                          "boxed-list",
+                        ]
+                      }
+
+                      // Radio rows on the settings' actions, as Settings has its sizes.
+                      Label {
+                        label: _("Background Blur");
+                        xalign: 0;
+                        margin-top: 6;
+
+                        styles [
+                          "heading",
+                        ]
+                      }
+
+                      ListBox quick_access_blur {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.ActionRow {
+                          title: _("Off");
+                          activatable-widget: blur_off;
+
+                          [prefix]
+                          CheckButton blur_off {
+                            action-name: "win.fullscreen-background-blur";
+                            action-target: "'off'";
+                            can-focus: false;
+                          }
+                        }
+
+                        Adw.ActionRow {
+                          title: _("Low");
+                          activatable-widget: blur_low;
+
+                          [prefix]
+                          CheckButton blur_low {
+                            action-name: "win.fullscreen-background-blur";
+                            action-target: "'low'";
+                            can-focus: false;
+                          }
+                        }
+
+                        Adw.ActionRow {
+                          title: _("High");
+                          activatable-widget: blur_high;
+
+                          [prefix]
+                          CheckButton blur_high {
+                            action-name: "win.fullscreen-background-blur";
+                            action-target: "'high'";
+                            can-focus: false;
+                          }
+                        }
+                      }
+
+                      Label {
+                        label: _("Background Dim");
+                        xalign: 0;
+                        margin-top: 6;
+
+                        styles [
+                          "heading",
+                        ]
+                      }
+
+                      ListBox quick_access_dim {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.ActionRow {
+                          title: _("Off");
+                          activatable-widget: dim_off;
+
+                          [prefix]
+                          CheckButton dim_off {
+                            action-name: "win.fullscreen-background-dim";
+                            action-target: "'off'";
+                            can-focus: false;
+                          }
+                        }
+
+                        Adw.ActionRow {
+                          title: _("Low");
+                          activatable-widget: dim_low;
+
+                          [prefix]
+                          CheckButton dim_low {
+                            action-name: "win.fullscreen-background-dim";
+                            action-target: "'low'";
+                            can-focus: false;
+                          }
+                        }
+
+                        Adw.ActionRow {
+                          title: _("High");
+                          activatable-widget: dim_high;
+
+                          [prefix]
+                          CheckButton dim_high {
+                            action-name: "win.fullscreen-background-dim";
+                            action-target: "'high'";
+                            can-focus: false;
+                          }
+                        }
+                      }
+
+                      // On the `fullscreen-custom-style` setting; insensitive, saying
+                      // where the file goes, while there is no `fullscreen.css`.
+                      ListBox quick_access_custom_style {
+                        selection-mode: none;
+                        margin-top: 6;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.SwitchRow quick_access_custom_style_row {
+                          title: _("My Stylesheet");
+                        }
+                      }
                     };
                   };
                 }

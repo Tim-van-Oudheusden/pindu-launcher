@@ -48,6 +48,16 @@ template $PinduHomePage: Adw.NavigationPage {
       ]
     }
 
+    // Darkens the background and the art under the text while Dim is on (`dim-*`).
+    [overlay]
+    Box {
+      can-target: false;
+
+      styles [
+        "home-dim",
+      ]
+    }
+
     [overlay]
     Box {
       can-target: false;
