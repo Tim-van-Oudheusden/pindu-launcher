@@ -122,6 +122,7 @@ impl PinduWindow {
             imp.quick_access_swap.get(),
             imp.quick_access_sizes.get(),
             imp.quick_access_switches.get(),
+            imp.quick_access_accessibility.get(),
         ] {
             list.connect_keynav_failed(|list, direction| {
                 step_out_of_list(list, direction);
@@ -199,8 +200,9 @@ impl PinduWindow {
         self.fill_drawer();
     }
 
-    /// Quick Access's settings: cover size, navigation sounds and their volume, and exiting
-    /// after a launch, the same settings Preferences changes, applied as they change.
+    /// Quick Access's settings: cover size, navigation sounds and their volume, exiting
+    /// after a launch, Reduce Motion and Larger Text, the same settings Preferences
+    /// changes, applied as they change.
     fn setup_quick_access_settings(&self) {
         let imp = self.imp();
         let settings = self.settings();
@@ -214,6 +216,20 @@ impl PinduWindow {
         );
         settings
             .bind("exit-after-launch", &*imp.quick_access_exit_row, "active")
+            .build();
+        settings
+            .bind(
+                "fullscreen-reduce-motion",
+                &*imp.quick_access_reduce_motion_row,
+                "active",
+            )
+            .build();
+        settings
+            .bind(
+                "fullscreen-large-text",
+                &*imp.quick_access_large_text_row,
+                "active",
+            )
             .build();
         let toggles = [
             imp.tile_small.get(),

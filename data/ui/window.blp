@@ -864,6 +864,32 @@ template $PinduWindow: Adw.ApplicationWindow {
                           title: _("Exit After Launching");
                         }
                       }
+
+                      Label {
+                        label: _("Accessibility");
+                        xalign: 0;
+                        margin-top: 6;
+
+                        styles [
+                          "heading",
+                        ]
+                      }
+
+                      ListBox quick_access_accessibility {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.SwitchRow quick_access_reduce_motion_row {
+                          title: _("Reduce Motion");
+                        }
+
+                        Adw.SwitchRow quick_access_large_text_row {
+                          title: _("Larger Text");
+                        }
+                      }
                     };
                   };
                 }

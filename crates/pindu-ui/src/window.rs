@@ -4,6 +4,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gdk, gio, glib};
+use pindu_core::accessibility::Accessibility;
 use pindu_core::clock::ClockFormat;
 use pindu_core::focus::FocusMemory;
 use pindu_core::gamepad::Layout;
@@ -218,6 +219,12 @@ mod imp {
         pub quick_access_volume: TemplateChild<gtk::Scale>,
         #[template_child]
         pub quick_access_exit_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_accessibility: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_reduce_motion_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_large_text_row: TemplateChild<adw::SwitchRow>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
         /// Every sidebar row with the view it selects and, for sources, its count label.
@@ -352,7 +359,7 @@ impl PinduWindow {
         window.setup_fullscreen_game();
         window.setup_panels();
         window.setup_surprise_me();
-        window.follow_reduced_motion();
+        window.follow_accessibility();
         if let Some(application) = application.downcast_ref::<PinduApplication>() {
             window.setup_controller_navigation(application);
             window.setup_hint_bar(application);
@@ -1275,44 +1282,87 @@ impl PinduWindow {
         let _ = settings.set_boolean("window-maximized", self.is_maximized());
     }
 
-    /// Marks the window `reduced-motion` while the system asks for less motion (animations
-    /// off, or reduced motion in the accessibility settings): `style.css` then drops the
-    /// covers' lift and fades, the search keyboard fades in rather than sliding up, and
-    /// Home's background holds its first frame.
-    fn follow_reduced_motion(&self) {
-        let Some(settings) = gtk::Settings::default() else {
-            return;
+    /// Follows what decides fullscreen mode's motion and type size: the desktop's
+    /// animations and reduced-motion settings and the `fullscreen-reduce-motion` and
+    /// `fullscreen-large-text` settings, applied at once as any of them change.
+    fn follow_accessibility(&self) {
+        if let Some(settings) = gtk::Settings::default() {
+            let update = glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_: &gtk::Settings| window.update_accessibility()
+            );
+            settings.connect_gtk_enable_animations_notify(update.clone());
+            settings.connect_gtk_interface_reduced_motion_notify(update);
+        }
+        for key in [REDUCE_MOTION_KEY, LARGE_TEXT_KEY] {
+            self.settings().connect_changed(
+                Some(key),
+                glib::clone!(
+                    #[weak(rename_to = window)]
+                    self,
+                    move |_, _| window.update_accessibility()
+                ),
+            );
+        }
+        self.update_accessibility();
+    }
+
+    /// Applies `pindu_core::accessibility` to the window. While Pindu moves less, the window
+    /// is `reduced-motion`: `style.css` then drops the covers' lift and fades, the search
+    /// keyboard fades in rather than sliding up, the designs' `prefers-reduced-motion`
+    /// rules apply (no crossfade of Home's hero), and Home's background holds its first
+    /// frame. With larger text in fullscreen mode the window is `large-text`, which
+    /// `style.css` scales fullscreen type up with.
+    pub(crate) fn update_accessibility(&self) {
+        let (animations_enabled, system_reduced_motion) = gtk::Settings::default()
+            .map(|settings| {
+                (
+                    settings.is_gtk_enable_animations(),
+                    settings.gtk_interface_reduced_motion() == gtk::ReducedMotion::Reduce,
+                )
+            })
+            .unwrap_or((true, false));
+        let accessibility = Accessibility {
+            animations_enabled,
+            system_reduced_motion,
+            reduce_motion: self.settings().boolean(REDUCE_MOTION_KEY),
+            large_text: self.settings().boolean(LARGE_TEXT_KEY),
+            fullscreen: self.is_fullscreen(),
         };
-        let update = glib::clone!(
-            #[weak(rename_to = window)]
-            self,
-            move |settings: &gtk::Settings| {
-                let reduce = !settings.is_gtk_enable_animations()
-                    || settings.gtk_interface_reduced_motion() == gtk::ReducedMotion::Reduce;
-                if reduce {
-                    window.add_css_class(REDUCED_MOTION_CLASS);
-                } else {
-                    window.remove_css_class(REDUCED_MOTION_CLASS);
-                }
-                window
-                    .imp()
-                    .keyboard_revealer
-                    .set_transition_type(if reduce {
-                        gtk::RevealerTransitionType::Crossfade
-                    } else {
-                        gtk::RevealerTransitionType::SlideUp
-                    });
-                window.update_home_background();
-            }
-        );
-        update(&settings);
-        settings.connect_gtk_enable_animations_notify(update.clone());
-        settings.connect_gtk_interface_reduced_motion_notify(update);
+        let reduce = accessibility.reduces_motion();
+        set_css_class(self, REDUCED_MOTION_CLASS, reduce);
+        set_css_class(self, LARGE_TEXT_CLASS, accessibility.enlarges_text());
+        self.imp().keyboard_revealer.set_transition_type(if reduce {
+            gtk::RevealerTransitionType::Crossfade
+        } else {
+            gtk::RevealerTransitionType::SlideUp
+        });
+        if let Some(application) = self.application().and_downcast::<PinduApplication>() {
+            application.style_service().set_reduced_motion(reduce);
+        }
+        self.update_home_background();
     }
 }
 
-/// The window's style class while the system asks for reduced motion.
+/// Adds `class` to `widget` when `on`, and takes it off otherwise.
+fn set_css_class(widget: &impl IsA<gtk::Widget>, class: &str, on: bool) {
+    if on {
+        widget.add_css_class(class);
+    } else {
+        widget.remove_css_class(class);
+    }
+}
+
+/// The window's style class while Pindu moves less (`Accessibility::reduces_motion`).
 pub(crate) const REDUCED_MOTION_CLASS: &str = "reduced-motion";
+/// The window's style class while fullscreen mode's type is larger
+/// (`Accessibility::enlarges_text`).
+const LARGE_TEXT_CLASS: &str = "large-text";
+/// The setting that makes fullscreen mode move less.
+const REDUCE_MOTION_KEY: &str = "fullscreen-reduce-motion";
+/// The setting that makes fullscreen mode's type larger.
+const LARGE_TEXT_KEY: &str = "fullscreen-large-text";
 
 /// Horizontal padding around the cover grid and around each tile, as in `style.css`.
 const GRID_PADDING: f64 = 24.0;

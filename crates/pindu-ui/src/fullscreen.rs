@@ -198,7 +198,9 @@ impl PinduWindow {
         self.hide_sidebar_in_fullscreen();
         self.update_top_bars();
         self.update_fullscreen_top_bar();
-        self.update_home_background();
+        // Reduce Motion and Larger Text are fullscreen mode's; this also updates Home's
+        // background.
+        self.update_accessibility();
         if let Some(action) = self
             .lookup_action("fullscreen-mode")
             .and_downcast::<gio::SimpleAction>()
@@ -287,7 +289,7 @@ impl PinduWindow {
 
     /// Tells Home where the window is, for its background (`home::background_playback`):
     /// fullscreen, Home shown, a game we started running, the window hidden or suspended
-    /// (minimized, or covered whole), the system asking for reduced motion.
+    /// (minimized, or covered whole), Pindu moving less (`Accessibility::reduces_motion`).
     pub(crate) fn update_home_background(&self) {
         let imp = self.imp();
         let game_running = self
