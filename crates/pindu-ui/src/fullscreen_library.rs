@@ -1,15 +1,21 @@
 //! Fullscreen mode's library: the library page with tabs (All, Installed, Favourites and
 //! one per collection) in place of the sidebar and the filter row, over the same grid and
 //! models. The shoulder buttons switch tabs, each tab coming back on the cover the
-//! controller was last on there, and the triggers cycle the sort order.
+//! controller was last on there, and the triggers cycle the sort order. Quick Access's
+//! Filters narrow every tab, apart from the desktop window's filter row, with a Filtered
+//! chip beside the tabs meanwhile.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
-use pindu_core::library::{self, SortMode, View};
+use pindu_core::library::{self, Filters, SortMode, View};
 
+use crate::application::PinduApplication;
 use crate::window::{PinduWindow, sort_mode_from_name, sort_mode_name};
+
+/// A toggle of fullscreen mode's filters: the part of [`Filters`] it turns on.
+type FilterField = fn(&mut Filters) -> &mut bool;
 
 impl PinduWindow {
     /// Keeps the tabs in step with the collections and the sort label with the order.
@@ -31,6 +37,78 @@ impl PinduWindow {
             ));
         }
         self.update_sort_label();
+        self.setup_fullscreen_filters();
+    }
+
+    /// Quick Access's Filters: each switch turns its filter on or off at once, and Clear
+    /// Filters turns them all off.
+    fn setup_fullscreen_filters(&self) {
+        for (row, field) in self.filter_rows() {
+            row.connect_active_notify(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |row| {
+                    let mut filters = window.fullscreen_filters();
+                    *field(&mut filters) = row.is_active();
+                    window.set_fullscreen_filters(filters);
+                }
+            ));
+        }
+        let clear = gio::ActionEntry::builder("clear-fullscreen-filters")
+            .activate(|window: &Self, _, _| window.set_fullscreen_filters(Filters::default()))
+            .build();
+        self.add_action_entries([clear]);
+    }
+
+    /// The switches of Quick Access's Filters, each with the filter it turns on.
+    fn filter_rows(&self) -> [(adw::SwitchRow, FilterField); 5] {
+        let imp = self.imp();
+        [
+            (imp.quick_access_installed_row.get(), |filters| {
+                &mut filters.installed
+            }),
+            (imp.quick_access_not_installed_row.get(), |filters| {
+                &mut filters.not_installed
+            }),
+            (imp.quick_access_windows_row.get(), |filters| {
+                &mut filters.windows
+            }),
+            (imp.quick_access_native_row.get(), |filters| {
+                &mut filters.native
+            }),
+            (imp.quick_access_hidden_row.get(), |filters| {
+                &mut filters.hidden
+            }),
+        ]
+    }
+
+    /// Fullscreen mode's filters, which last until the app quits.
+    pub(crate) fn fullscreen_filters(&self) -> Filters {
+        self.application()
+            .and_downcast::<PinduApplication>()
+            .map(|application| application.fullscreen_filters())
+            .unwrap_or_default()
+    }
+
+    /// Applies `filters` to fullscreen mode's library and shows them on the switches.
+    fn set_fullscreen_filters(&self, filters: Filters) {
+        if filters == self.fullscreen_filters() {
+            return;
+        }
+        if let Some(application) = self.application().and_downcast::<PinduApplication>() {
+            application.set_fullscreen_filters(filters);
+        }
+        self.apply_filters();
+        self.show_fullscreen_filters();
+    }
+
+    /// Sets Quick Access's switches to fullscreen mode's filters: each switch then finds
+    /// its filter as it says, so nothing applies again.
+    pub(crate) fn show_fullscreen_filters(&self) {
+        let mut filters = self.fullscreen_filters();
+        for (row, field) in self.filter_rows() {
+            row.set_active(*field(&mut filters));
+        }
     }
 
     /// Shows the tabs instead of the filter row in fullscreen mode, on a view that has a

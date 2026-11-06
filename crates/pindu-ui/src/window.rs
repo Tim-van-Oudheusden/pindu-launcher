@@ -114,6 +114,8 @@ mod imp {
         #[template_child]
         pub sort_label: TemplateChild<gtk::Label>,
         #[template_child]
+        pub filtered_chip: TemplateChild<gtk::Label>,
+        #[template_child]
         pub filter_row: TemplateChild<adw::WrapBox>,
         #[template_child]
         pub installed_filter: TemplateChild<gtk::ToggleButton>,
@@ -237,6 +239,22 @@ mod imp {
         pub quick_access_reduce_motion_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub quick_access_large_text_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_filters_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_filters: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_installed_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_not_installed_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_windows_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_native_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_hidden_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_clear_filters: TemplateChild<gtk::ListBox>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
         /// Every sidebar row with the view it selects and, for sources, its count label.
@@ -617,8 +635,8 @@ impl PinduWindow {
         self.update_content_page();
     }
 
-    /// Applies the filter toggles; fullscreen mode's library has tabs instead, so they wait
-    /// for the desktop window.
+    /// Applies the filters: the desktop window's filter row, or fullscreen mode's own from
+    /// Quick Access, with the Filtered chip beside the tabs while one is on.
     pub(crate) fn apply_filters(&self) {
         let imp = self.imp();
         let toggles = Filters {
@@ -627,10 +645,13 @@ impl PinduWindow {
             favourites: imp.favourites_filter.is_active(),
             windows: imp.windows_filter.is_active(),
             native: imp.native_filter.is_active(),
+            hidden: false,
         };
         imp.clear_filters.set_visible(toggles.any());
+        let fullscreen = self.fullscreen_filters();
+        imp.filtered_chip.set_visible(fullscreen.any());
         let filters = if self.is_fullscreen() {
-            Filters::default()
+            fullscreen
         } else {
             toggles
         };
@@ -639,10 +660,11 @@ impl PinduWindow {
         // The controller comes back on the cover it was last on, wherever it now is.
         imp.grid_cursor.set(self.recall_cover());
         self.update_jump_back_in();
+        self.update_content_page();
     }
 
-    /// The grid when it has games; otherwise the first-run page for an empty library or
-    /// the no-results page.
+    /// The grid when it has games; otherwise the first-run page for an empty library, the
+    /// empty collection, hidden games or filters page, or the no-results page.
     fn update_content_page(&self) {
         let library = self.library();
         let page = if library.model().n_items() > 0 && library.view() == View::PlayHistory {
@@ -657,6 +679,11 @@ impl PinduWindow {
             "empty-collection"
         } else if library.view() == View::Hidden && library.counts().get(View::Hidden) == 0 {
             "no-hidden"
+        } else if self.is_fullscreen()
+            && self.fullscreen_filters().any()
+            && self.imp().search_entry.text().is_empty()
+        {
+            "no-filter-matches"
         } else {
             "no-results"
         };

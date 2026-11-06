@@ -118,6 +118,14 @@ window.fullscreen-mode gridview.library > child:focus-within .cover-frame {
   color: var(--accent-fg-color);
 }
 
+/* The Filtered chip beside the tabs while Quick Access's filters narrow them. */
+.library-tabs .filtered-chip {
+  border-radius: 999px;
+  padding: 4px 14px;
+  background-color: alpha(currentColor, 0.1);
+  font-weight: bold;
+}
+
 /* Fullscreen mode's top bar, which a design turns on: page tabs, the shown one marked, and
    a clock. */
 .fullscreen-top-bar .page-tab {
