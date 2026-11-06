@@ -7,18 +7,21 @@
 //! rather than popover menus, which the compositor dismisses on a controller press.
 //! Quick Access's notifications are `fullscreen_notifications`'s, its Activity and Refresh
 //! Library `fullscreen_activity`'s, its Surprise Me `fullscreen_surprise`'s, its
-//! Controllers `fullscreen_controllers`'s.
+//! Controllers `fullscreen_controllers`'s. Its Design level holds the design, its variant,
+//! Home's background blur and dim, and the user's own stylesheet.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::gamepad::Intent;
+use pindu_core::home::{BLUR_KEY, DIM_KEY};
 use pindu_core::library::View;
 use pindu_core::panels::{
     DrawerEntry, DrawerLevel, GameOption, OptionsLevel, Panel, Panels, QuickAccessLevel, Under,
-    design_choices, drawer_entries, game_options,
+    design_choices, drawer_entries, game_options, variant_choices,
 };
+use pindu_core::paths;
 
 use crate::application::PinduApplication;
 use crate::fullscreen::bind_volume_slider;
@@ -117,6 +120,11 @@ impl PinduWindow {
         // go on to the next list (`fullscreen_playing` takes the drawer's and Quick Access's
         // own lists up to their Playing Now cards).
         for list in [
+            imp.quick_access_designs.get(),
+            imp.quick_access_variants.get(),
+            imp.quick_access_blur.get(),
+            imp.quick_access_dim.get(),
+            imp.quick_access_custom_style.get(),
             imp.quick_access_controllers.get(),
             imp.quick_access_prompts.get(),
             imp.quick_access_swap.get(),
@@ -259,7 +267,8 @@ impl PinduWindow {
 
     /// Quick Access's designs choose through `win.design`, whose state is the design in
     /// force: it checks the matching row, and follows the setting, which Preferences can
-    /// change too.
+    /// change too. Its variants do the same through `win.design-variant`, Blur and Dim
+    /// through their settings' actions, and My Stylesheet is bound to its setting.
     fn setup_quick_access(&self) {
         let design = gio::SimpleAction::new_stateful(
             "design",
@@ -276,20 +285,69 @@ impl PinduWindow {
             }
         ));
         self.add_action(&design);
-        if let Some(application) = self.application().and_downcast::<PinduApplication>() {
-            application
-                .style_service()
-                .connect_design_changed(glib::clone!(
-                    #[weak]
-                    design,
-                    #[weak(rename_to = window)]
-                    self,
-                    move || {
-                        design
-                            .set_state(&window.design_in_force().unwrap_or_default().to_variant());
-                    }
-                ));
-        }
+        let variant = gio::SimpleAction::new_stateful(
+            "design-variant",
+            Some(glib::VariantTy::STRING),
+            &self.variant_in_force().unwrap_or_default().to_variant(),
+        );
+        variant.connect_change_state(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, state| {
+                if let Some(id) = state.and_then(String::from_variant) {
+                    window.choose_variant(&id);
+                }
+            }
+        ));
+        self.add_action(&variant);
+        let settings = self.settings();
+        self.add_action(&settings.create_action(BLUR_KEY));
+        self.add_action(&settings.create_action(DIM_KEY));
+        settings
+            .bind(
+                CUSTOM_STYLE_KEY,
+                &*self.imp().quick_access_custom_style_row,
+                "active",
+            )
+            .build();
+        settings.connect_changed(
+            Some(CUSTOM_STYLE_KEY),
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_, _| window.show_custom_style()
+            ),
+        );
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return;
+        };
+        let service = application.style_service();
+        // Another design has other variants: the list follows while it shows.
+        service.connect_design_changed(glib::clone!(
+            #[weak]
+            design,
+            #[weak]
+            variant,
+            #[weak(rename_to = window)]
+            self,
+            move || {
+                design.set_state(&window.design_in_force().unwrap_or_default().to_variant());
+                variant.set_state(&window.variant_in_force().unwrap_or_default().to_variant());
+                if window.open_panel() == Some(Panel::QuickAccess(QuickAccessLevel::Designs)) {
+                    window.fill_variants();
+                }
+            }
+        ));
+        // The rows follow the action's state, so focus stays on the chosen one.
+        service.connect_variant_changed(glib::clone!(
+            #[weak]
+            variant,
+            #[weak(rename_to = window)]
+            self,
+            move || {
+                variant.set_state(&window.variant_in_force().unwrap_or_default().to_variant());
+            }
+        ));
     }
 
     /// Acts on a controller intent for the panels; says whether they took it. Start, Guide
@@ -575,7 +633,8 @@ impl PinduWindow {
     }
 
     /// Quick Access's designs: Default, then each installed design, with a check on the
-    /// one in force. A design for a newer Pindu launcher shows but cannot be chosen.
+    /// one in force. A design for a newer Pindu launcher shows but cannot be chosen. Then
+    /// the variants of the design in force and My Stylesheet as things now are.
     fn fill_designs(&self) {
         let imp = self.imp();
         let Some(application) = self.application().and_downcast::<PinduApplication>() else {
@@ -584,26 +643,65 @@ impl PinduWindow {
         let service = application.style_service();
         imp.quick_access_designs.remove_all();
         for choice in design_choices(&service.designs(), &service.design()) {
-            let check = gtk::CheckButton::builder()
-                .action_name("win.design")
-                .action_target(&choice.id.to_variant())
-                .can_focus(false)
-                .build();
             let subtitle = if choice.available {
                 choice.description
             } else {
                 needs_newer_launcher()
             };
-            let row = adw::ActionRow::builder()
-                .title(choice.name.unwrap_or_else(no_design_name))
-                .subtitle(subtitle)
-                .use_markup(false)
-                .activatable_widget(&check)
-                .sensitive(choice.available)
-                .build();
-            row.add_prefix(&check);
+            let row = radio_row(
+                "win.design",
+                &choice.id,
+                &choice.name.unwrap_or_else(no_design_name),
+            );
+            row.set_subtitle(&subtitle);
+            row.set_sensitive(choice.available);
             imp.quick_access_designs.append(&row);
         }
+        self.fill_variants();
+        self.show_custom_style();
+    }
+
+    /// The Variant list: the variants of the design in force, with a check on the one in
+    /// force; hidden for a design without variants.
+    fn fill_variants(&self) {
+        let imp = self.imp();
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return;
+        };
+        let service = application.style_service();
+        let choices = variant_choices(&service.designs(), &service.design(), &service.variant());
+        imp.quick_access_variants.remove_all();
+        for choice in &choices {
+            let row = radio_row("win.design-variant", &choice.id, &choice.name);
+            imp.quick_access_variants.append(&row);
+        }
+        imp.quick_access_variant_title
+            .set_visible(!choices.is_empty());
+        imp.quick_access_variants.set_visible(!choices.is_empty());
+    }
+
+    /// My Stylesheet: it can be turned on once there is a `fullscreen.css`, and its
+    /// subtitle says where that goes until there is; on without one, it can still be
+    /// turned off.
+    fn show_custom_style(&self) {
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return;
+        };
+        let service = application.style_service();
+        let exists = service.has_custom_stylesheet();
+        let row = &self.imp().quick_access_custom_style_row;
+        row.set_sensitive(exists || self.settings().boolean(CUSTOM_STYLE_KEY));
+        row.set_subtitle(&if exists {
+            gettext("Your fullscreen.css, over the design")
+        } else {
+            gettext("Create {path} to restyle fullscreen mode").replace(
+                "{path}",
+                &paths::home_relative(
+                    service.custom_stylesheet_path(),
+                    &std::env::home_dir().unwrap_or_default(),
+                ),
+            )
+        });
     }
 
     /// Applies the design `id` (Adwaita, no design, for an empty one) unless it is in force
@@ -615,6 +713,27 @@ impl PinduWindow {
         if let Some(application) = self.application().and_downcast::<PinduApplication>() {
             application.style_service().set_design(id);
         }
+    }
+
+    /// Applies the variant `id` of the design in force unless it is in force already.
+    fn choose_variant(&self, id: &str) {
+        if self.variant_in_force().as_deref() == Some(id) {
+            return;
+        }
+        if let Some(application) = self.application().and_downcast::<PinduApplication>() {
+            application.style_service().set_variant(id);
+        }
+    }
+
+    /// The id of the variant Quick Access checks: the chosen one, or the design's first;
+    /// `None` for a design without variants.
+    fn variant_in_force(&self) -> Option<String> {
+        let application = self.application().and_downcast::<PinduApplication>()?;
+        let service = application.style_service();
+        variant_choices(&service.designs(), &service.design(), &service.variant())
+            .into_iter()
+            .find(|choice| choice.active)
+            .map(|choice| choice.id)
     }
 
     /// The id of the design Quick Access checks: the chosen one if it can apply, or empty
@@ -721,6 +840,26 @@ impl PinduWindow {
 /// leaves in force. A name, so it is not translated.
 fn no_design_name() -> String {
     "Adwaita".to_owned()
+}
+
+/// The setting My Stylesheet turns on: `fullscreen.css` over the design.
+const CUSTOM_STYLE_KEY: &str = "fullscreen-custom-style";
+
+/// A row of Quick Access's design and variant lists: `title`, with a check on the
+/// stateful `action` for `id`, which the row's activation sets.
+fn radio_row(action: &str, id: &str, title: &str) -> adw::ActionRow {
+    let check = gtk::CheckButton::builder()
+        .action_name(action)
+        .action_target(&id.to_variant())
+        .can_focus(false)
+        .build();
+    let row = adw::ActionRow::builder()
+        .title(title)
+        .use_markup(false)
+        .activatable_widget(&check)
+        .build();
+    row.add_prefix(&check);
+    row
 }
 
 /// Why Quick Access cannot apply a design written for a newer style contract.

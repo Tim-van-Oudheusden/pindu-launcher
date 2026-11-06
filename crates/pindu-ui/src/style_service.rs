@@ -1,11 +1,12 @@
-//! Fullscreen mode's stylesheets: the chosen design (a theme folder, `pindu_core::themes`)
-//! and the user's own `fullscreen.css` on top of it. Each has one CSS provider, added to
-//! the display only while it is in force (`pindu_core::custom_style::StyleState`): in
-//! fullscreen mode, without high contrast, and for `fullscreen.css` with the
-//! `fullscreen-custom-style` setting on. So nothing in either can reach the desktop
-//! window. Saving a stylesheet, or another file directly in the design's folder (one it
-//! imports, say), reloads it. The design's layout choices (`ThemeLayout`), which CSS
-//! cannot make, are in force with its stylesheet; choosing the design again rereads them.
+//! Fullscreen mode's stylesheets: the chosen design (a theme folder, `pindu_core::themes`),
+//! its chosen variant's stylesheet after it, and the user's own `fullscreen.css` on top of
+//! both. Each has one CSS provider, added to the display only while it is in force
+//! (`pindu_core::custom_style::StyleState`): in fullscreen mode, without high contrast,
+//! and for `fullscreen.css` with the `fullscreen-custom-style` setting on. So nothing in
+//! any of them can reach the desktop window. Saving a stylesheet, or another file directly
+//! in the design's or the variant's folder (one it imports, say), reloads it. The
+//! design's layout choices (`ThemeLayout`), which CSS cannot make, are in force with its
+//! stylesheet; choosing the design again rereads them.
 
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
@@ -24,6 +25,8 @@ use crate::config::{APP_ID, PKGDATADIR};
 const CUSTOM_STYLE: &str = "fullscreen-custom-style";
 /// The setting that holds the chosen design's id; empty for none.
 const DESIGN: &str = "fullscreen-design";
+/// The setting that holds the chosen variant of the design; empty or unknown for its first.
+const VARIANT: &str = "fullscreen-design-variant";
 
 /// How long changes to a stylesheet must settle before it is read again; editors write a
 /// file in several steps.
@@ -212,6 +215,8 @@ pub struct StyleService {
     custom: Sheet,
     /// The chosen design, under `fullscreen.css`.
     design: Sheet,
+    /// The chosen variant of the design, over the design and under `fullscreen.css`.
+    variant: Sheet,
     custom_path: Rc<PathBuf>,
     /// Where designs are found: the shipped ones, then the user's, which win.
     theme_folders: Rc<[PathBuf; 2]>,
@@ -244,6 +249,11 @@ impl StyleService {
         let service = Self {
             custom: Sheet::new(gtk::STYLE_PROVIDER_PRIORITY_USER, Watch::File, &on_problems),
             design: Sheet::new(
+                gtk::STYLE_PROVIDER_PRIORITY_USER - 2,
+                Watch::Folder,
+                &on_problems,
+            ),
+            variant: Sheet::new(
                 gtk::STYLE_PROVIDER_PRIORITY_USER - 1,
                 Watch::Folder,
                 &on_problems,
@@ -321,8 +331,41 @@ impl StyleService {
             .connect_changed(Some(DESIGN), move |_, _| handler());
     }
 
-    fn sheets(&self) -> [&Sheet; 2] {
-        [&self.custom, &self.design]
+    /// The chosen variant's id, as the setting holds it: empty or unknown for the design's
+    /// first (`Theme::variant`).
+    pub fn variant(&self) -> String {
+        self.settings.string(VARIANT).into()
+    }
+
+    /// Chooses the variant `id` of the design; it applies at once.
+    pub fn set_variant(&self, id: &str) {
+        if let Err(error) = self.settings.set_string(VARIANT, id) {
+            glib::g_warning!(
+                "pindu",
+                "Cannot choose the fullscreen design variant “{id}”: {error}"
+            );
+        }
+    }
+
+    /// Calls `handler` whenever the chosen variant changes.
+    pub fn connect_variant_changed(&self, handler: impl Fn() + 'static) {
+        self.settings
+            .connect_changed(Some(VARIANT), move |_, _| handler());
+    }
+
+    /// Whether there is a `fullscreen.css` for the `fullscreen-custom-style` setting to
+    /// turn on.
+    pub fn has_custom_stylesheet(&self) -> bool {
+        self.custom_path.is_file()
+    }
+
+    /// Where the user's own `fullscreen.css` goes.
+    pub fn custom_stylesheet_path(&self) -> &Path {
+        &self.custom_path
+    }
+
+    fn sheets(&self) -> [&Sheet; 3] {
+        [&self.custom, &self.variant, &self.design]
     }
 
     fn follow_settings(&self) {
@@ -331,9 +374,11 @@ impl StyleService {
             .connect_changed(Some(CUSTOM_STYLE), move |_, _| {
                 service.follow_custom_style()
             });
-        let service = self.clone();
-        self.settings
-            .connect_changed(Some(DESIGN), move |_, _| service.follow_design());
+        for key in [DESIGN, VARIANT] {
+            let service = self.clone();
+            self.settings
+                .connect_changed(Some(key), move |_, _| service.follow_design());
+        }
         self.follow_custom_style();
         self.follow_design();
     }
@@ -350,6 +395,11 @@ impl StyleService {
         let id = self.settings.string(DESIGN);
         let theme = self.design_theme(&id);
         self.design.set_file(theme.as_ref().map(Theme::stylesheet));
+        let variant = theme
+            .as_ref()
+            .and_then(|theme| theme.variant(&self.settings.string(VARIANT)))
+            .and_then(|variant| variant.stylesheet.clone());
+        self.variant.set_file(variant);
         self.design_layout
             .set(theme.map(|theme| theme.layout).unwrap_or_default());
         self.update();
@@ -422,6 +472,7 @@ impl StyleService {
     fn update(&self) {
         let style = *self.style.borrow();
         self.design.show(style.design_applies());
+        self.variant.show(style.design_applies());
         self.custom.show(style.applies());
         let layout = self.layout();
         if self.layout.replace(layout) != layout {

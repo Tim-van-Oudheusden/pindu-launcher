@@ -7,7 +7,9 @@
 //! or `.home-games` for designs, which can choose the tiles' shape and size
 //! (`pindu_core::home`) and crossfade the hero (`.shown`, `.no-art`). Behind the first
 //! screen plays Home's background (`.home-background`), as `home::background_playback`
-//! says for where the window is.
+//! says for where the window is. Quick Access's Blur and Dim name their strength on the
+//! page (`blur-*`, `dim-*`, `home::background_classes`), which blurs the background and
+//! the hero and darkens them under `.home-dim`.
 
 use std::cell::{Cell, RefCell};
 use std::path::Path;
@@ -17,7 +19,7 @@ use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::glib;
 use pindu_core::focus::FocusMemory;
-use pindu_core::home::{self, BackgroundContext, CardArt, Detail, Playback};
+use pindu_core::home::{self, BackgroundContext, CardArt, Detail, Playback, Strength};
 use pindu_core::library::{ArtSet, HistoryGroup};
 use pindu_core::model::GameId;
 use pindu_core::sections::{Section, SectionId};
@@ -306,6 +308,17 @@ impl HomePage {
             if had_focus {
                 self.focus_remembered();
             }
+        }
+    }
+
+    /// Names Home's background `blur` and `dim` on the page for `style.css` and designs.
+    pub fn set_background_look(&self, blur: Strength, dim: Strength) {
+        let page = &self.imp().home;
+        for class in home::BACKGROUND_CLASSES {
+            page.remove_css_class(class);
+        }
+        for class in home::background_classes(blur, dim) {
+            page.add_css_class(class);
         }
     }
 

@@ -1,0 +1,14 @@
+/* Panorama, Monochrome — a variant of Panorama, loaded after its theme.css.
+ *
+ * White where Panorama uses the system accent colour: the focused tile's outline and
+ * glow, the shown tab's underline, Play and the search keyboard's cursor. Panorama's
+ * rules use libadwaita's accent variables, so redefining them here is all it takes.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+window.fullscreen-mode {
+  --accent-color: #ffffff;
+  --accent-bg-color: #f2f2f2;
+  --accent-fg-color: #0d0d0d;
+}

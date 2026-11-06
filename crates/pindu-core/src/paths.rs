@@ -82,6 +82,15 @@ pub fn themes_dir(xdg_config_home: Option<&Path>, home: &Path) -> PathBuf {
         .join("themes")
 }
 
+/// `path` for display, with the `home` folder written as `~`: shorter to read, and the
+/// same for anyone.
+pub fn home_relative(path: &Path, home: &Path) -> String {
+    match path.strip_prefix(home) {
+        Ok(inside) if home.is_absolute() => format!("~/{}", inside.display()),
+        _ => path.display().to_string(),
+    }
+}
+
 /// Splits a document portal path, `/run/user/<uid>/doc/<id>/<name>/<rest…>`, into the
 /// document ID and the parts below the document itself; `None` for any other path.
 pub fn document_portal_parts(path: &Path) -> Option<(String, Vec<PathBuf>)> {
@@ -209,5 +218,25 @@ mod tests {
         let path = themes_dir(Some(Path::new("/config")), Path::new("/home/me"));
 
         assert_eq!(path, Path::new("/config/pindu-launcher/themes"));
+    }
+
+    #[test]
+    fn a_path_in_the_home_folder_is_shown_from_a_tilde() {
+        let home = Path::new("/home/me");
+        assert_eq!(
+            home_relative(
+                Path::new("/home/me/.config/pindu-launcher/fullscreen.css"),
+                home
+            ),
+            "~/.config/pindu-launcher/fullscreen.css"
+        );
+        assert_eq!(
+            home_relative(Path::new("/home/meadow/fullscreen.css"), home),
+            "/home/meadow/fullscreen.css"
+        );
+        assert_eq!(
+            home_relative(Path::new("/etc/fullscreen.css"), home),
+            "/etc/fullscreen.css"
+        );
     }
 }

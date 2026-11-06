@@ -129,6 +129,31 @@
       <summary>Fullscreen design</summary>
       <description>The id of the design fullscreen mode is shown in: a theme folder shipped with the app or in the app's config folder under themes. Empty for Adwaita, the standard look. The desktop window is not affected.</description>
     </key>
+    <key name="fullscreen-design-variant" type="s">
+      <default>''</default>
+      <summary>Fullscreen design variant</summary>
+      <description>The id of the chosen variant of the fullscreen design, for a design that offers variants; its stylesheet applies after the design's own. An empty or unknown id picks the design's first variant.</description>
+    </key>
+    <key name="fullscreen-background-blur" type="s">
+      <choices>
+        <choice value="off"/>
+        <choice value="low"/>
+        <choice value="high"/>
+      </choices>
+      <default>'off'</default>
+      <summary>Fullscreen background blur</summary>
+      <description>How much Home's background and the focused game's art behind it are blurred in fullscreen mode. A design can restyle each strength.</description>
+    </key>
+    <key name="fullscreen-background-dim" type="s">
+      <choices>
+        <choice value="off"/>
+        <choice value="low"/>
+        <choice value="high"/>
+      </choices>
+      <default>'off'</default>
+      <summary>Fullscreen background dim</summary>
+      <description>How much Home's background and the focused game's art behind it are darkened in fullscreen mode. A design can restyle each strength.</description>
+    </key>
     <key name="steamgriddb-prompt-shown" type="b">
       <default>false</default>
       <summary>SteamGridDB prompt shown</summary>

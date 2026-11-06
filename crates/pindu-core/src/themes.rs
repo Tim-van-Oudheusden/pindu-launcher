@@ -4,7 +4,7 @@
 
 use std::fs;
 use std::ops::RangeInclusive;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use serde_json::Value as Json;
 
@@ -25,6 +25,22 @@ pub struct Theme {
     pub contract: u64,
     /// What the theme changes in fullscreen mode's layout, which CSS cannot.
     pub layout: ThemeLayout,
+    /// The looks the theme offers within itself, in its order; empty for a theme with one
+    /// look.
+    pub variants: Vec<Variant>,
+}
+
+/// A look a theme offers within itself (`theme.json` `variants`): its stylesheet loads
+/// after the theme's own `theme.css`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Variant {
+    /// What the `fullscreen-design-variant` setting holds for it: a–z, 0–9 and dashes.
+    pub id: String,
+    /// Shown in Quick Access.
+    pub name: String,
+    /// The variant's stylesheet, inside the theme folder; `None` for a variant that is the
+    /// theme's own look.
+    pub stylesheet: Option<PathBuf>,
 }
 
 /// The layout choices a theme makes in its `theme.json` `layout` object; a missing or
@@ -133,6 +149,15 @@ impl Theme {
     pub fn supported(&self) -> bool {
         self.contract <= CONTRACT
     }
+
+    /// The variant in force when the setting holds `id`: that one, or the theme's first
+    /// for a missing or unknown id; `None` for a theme without variants.
+    pub fn variant(&self, id: &str) -> Option<&Variant> {
+        self.variants
+            .iter()
+            .find(|variant| variant.id == id)
+            .or_else(|| self.variants.first())
+    }
 }
 
 /// The themes in some folders, and the folders that are not valid themes.
@@ -177,11 +202,7 @@ fn read_theme(dir: &Path) -> Result<Theme, String> {
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_default();
-    if id.is_empty()
-        || !id
-            .chars()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
-    {
+    if !is_id(&id) {
         return Err("the folder name may only hold a–z, 0–9 and dashes".to_owned());
     }
     let json = fs::read(dir.join("theme.json")).map_err(|error| format!("theme.json: {error}"))?;
@@ -203,7 +224,88 @@ fn read_theme(dir: &Path) -> Result<Theme, String> {
         dir: dir.to_owned(),
         contract,
         layout: ThemeLayout::from_json(metadata.get("layout")),
+        variants: read_variants(dir, metadata.get("variants"))?,
     })
+}
+
+/// Whether `id` may name a theme or a variant: a–z, 0–9 and dashes.
+fn is_id(id: &str) -> bool {
+    !id.is_empty()
+        && id
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+}
+
+/// The variants in `theme.json`'s `variants` list, if it has one. A list Pindu cannot
+/// follow makes the theme invalid rather than half applied.
+fn read_variants(dir: &Path, variants: Option<&Json>) -> Result<Vec<Variant>, String> {
+    let Some(variants) = variants else {
+        return Ok(Vec::new());
+    };
+    let variants = variants
+        .as_array()
+        .ok_or("theme.json's variants is not a list")?;
+    let mut read: Vec<Variant> = Vec::with_capacity(variants.len());
+    for (index, variant) in variants.iter().enumerate() {
+        let number = index + 1;
+        let text = |key: &str| variant.get(key).and_then(Json::as_str);
+        if !variant.is_object() {
+            return Err(format!("variant {number} is not an object"));
+        }
+        let id = text("id")
+            .filter(|id| is_id(id))
+            .ok_or_else(|| format!("variant {number} needs an id of a–z, 0–9 and dashes"))?;
+        if read.iter().any(|known| known.id == id) {
+            return Err(format!("variant “{id}” is listed twice"));
+        }
+        let name = text("name")
+            .filter(|name| !name.is_empty())
+            .ok_or_else(|| format!("variant “{id}” has no name"))?;
+        let stylesheet = match variant.get("stylesheet") {
+            None => None,
+            Some(Json::String(path)) => Some(
+                variant_stylesheet(dir, path)
+                    .map_err(|reason| format!("variant “{id}”: {reason}"))?,
+            ),
+            Some(_) => return Err(format!("variant “{id}”'s stylesheet is not a path")),
+        };
+        read.push(Variant {
+            id: id.to_owned(),
+            name: name.to_owned(),
+            stylesheet,
+        });
+    }
+    Ok(read)
+}
+
+/// The stylesheet at `path`, relative to the theme folder `dir`, which it may not leave:
+/// not by `..`, an absolute path or a symbolic link.
+fn variant_stylesheet(dir: &Path, path: &str) -> Result<PathBuf, String> {
+    let relative = Path::new(path);
+    let inside = relative
+        .components()
+        .all(|part| matches!(part, Component::Normal(_) | Component::CurDir));
+    if path.is_empty() || !inside {
+        return Err(format!(
+            "the stylesheet {path} is not inside the theme folder"
+        ));
+    }
+    let file = dir.join(relative);
+    let resolved = file
+        .canonicalize()
+        .map_err(|error| format!("the stylesheet {path}: {error}"))?;
+    let folder = dir
+        .canonicalize()
+        .map_err(|error| format!("the theme folder: {error}"))?;
+    if !resolved.starts_with(&folder) {
+        return Err(format!(
+            "the stylesheet {path} is not inside the theme folder"
+        ));
+    }
+    if !resolved.is_file() {
+        return Err(format!("the stylesheet {path} is not a file"));
+    }
+    Ok(file)
 }
 
 #[cfg(test)]
@@ -235,6 +337,10 @@ mod tests {
                 theme.id
             );
         }
+        assert!(
+            found.themes.iter().any(|theme| theme.variants.len() >= 2),
+            "a shipped design is the worked example of variants"
+        );
     }
 
     #[test]
@@ -515,5 +621,162 @@ mod tests {
         assert_eq!(size("fraction"), Some(Some(112)));
         assert_eq!(size("quoted"), Some(None));
         assert_eq!(size("null"), Some(None));
+    }
+
+    fn variant_ids(theme: &Theme) -> Vec<&str> {
+        theme
+            .variants
+            .iter()
+            .map(|variant| variant.id.as_str())
+            .collect()
+    }
+
+    #[test]
+    fn a_theme_lists_its_variants_in_order() {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(
+            user.path(),
+            "duo",
+            r#"{"contract": 1, "name": "Duo", "variants": [
+                {"id": "classic", "name": "Classic"},
+                {"id": "mono", "name": "Monochrome", "stylesheet": "variants/mono.css"}
+            ]}"#,
+        );
+        fs::create_dir(user.path().join("duo/variants")).unwrap();
+        fs::write(user.path().join("duo/variants/mono.css"), "").unwrap();
+
+        let found = discover(&[user.path()]);
+
+        assert!(found.skipped.is_empty(), "{:?}", found.skipped);
+        let theme = &found.themes[0];
+        assert_eq!(variant_ids(theme), ["classic", "mono"]);
+        assert_eq!(theme.variants[0].name, "Classic");
+        assert_eq!(theme.variants[0].stylesheet, None);
+        assert_eq!(theme.variants[1].name, "Monochrome");
+        assert_eq!(
+            theme.variants[1].stylesheet,
+            Some(user.path().join("duo/variants/mono.css"))
+        );
+    }
+
+    #[test]
+    fn a_theme_without_variants_has_none() {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(user.path(), "plain", r#"{"contract": 1, "name": "Plain"}"#);
+        write_theme(
+            user.path(),
+            "empty",
+            r#"{"contract": 1, "name": "Empty", "variants": []}"#,
+        );
+
+        let found = discover(&[user.path()]);
+
+        assert_eq!(found.themes.len(), 2);
+        for theme in &found.themes {
+            assert!(theme.variants.is_empty(), "{}", theme.id);
+            assert_eq!(theme.variant("anything"), None);
+        }
+    }
+
+    #[test]
+    fn a_theme_with_malformed_variants_is_skipped_with_a_reason() {
+        let user = tempfile::tempdir().unwrap();
+        for (id, variants) in [
+            ("not-a-list", r#"{"id": "a", "name": "A"}"#),
+            ("not-an-object", r#"["a"]"#),
+            ("no-id", r#"[{"name": "A"}]"#),
+            ("no-name", r#"[{"id": "a"}]"#),
+            ("empty-name", r#"[{"id": "a", "name": ""}]"#),
+            ("bad-id", r#"[{"id": "Big A", "name": "A"}]"#),
+            (
+                "twice",
+                r#"[{"id": "a", "name": "A"}, {"id": "a", "name": "B"}]"#,
+            ),
+            (
+                "odd-sheet",
+                r#"[{"id": "a", "name": "A", "stylesheet": 3}]"#,
+            ),
+            (
+                "no-sheet",
+                r#"[{"id": "a", "name": "A", "stylesheet": "gone.css"}]"#,
+            ),
+        ] {
+            write_theme(
+                user.path(),
+                id,
+                &format!(r#"{{"contract": 1, "name": "{id}", "variants": {variants}}}"#),
+            );
+        }
+
+        let found = discover(&[user.path()]);
+
+        assert!(found.themes.is_empty(), "{:?}", found.themes);
+        assert_eq!(found.skipped.len(), 9);
+        for (dir, reason) in &found.skipped {
+            assert!(reason.contains("variant"), "{}: {reason}", dir.display());
+        }
+    }
+
+    #[test]
+    fn a_variant_stylesheet_outside_the_theme_folder_is_refused() {
+        let user = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("evil.css"), "").unwrap();
+        write_theme(user.path(), "other", r#"{"contract": 1, "name": "Other"}"#);
+        let absolute = outside.path().join("evil.css");
+        for (id, sheet) in [
+            ("parent", "../other/theme.css".to_owned()),
+            ("nested-parent", "assets/../../other/theme.css".to_owned()),
+            ("absolute", absolute.display().to_string()),
+        ] {
+            write_theme(
+                user.path(),
+                id,
+                &format!(
+                    r#"{{"contract": 1, "name": "{id}", "variants": [{{"id": "a", "name": "A", "stylesheet": {}}}]}}"#,
+                    Json::from(sheet)
+                ),
+            );
+        }
+        write_theme(
+            user.path(),
+            "linked",
+            r#"{"contract": 1, "name": "Linked", "variants": [{"id": "a", "name": "A", "stylesheet": "evil.css"}]}"#,
+        );
+        std::os::unix::fs::symlink(&absolute, user.path().join("linked/evil.css")).unwrap();
+
+        let found = discover(&[user.path()]);
+
+        let ids: Vec<_> = found.themes.iter().map(|theme| theme.id.as_str()).collect();
+        assert_eq!(ids, ["other"]);
+        let mut skipped: Vec<_> = found
+            .skipped
+            .iter()
+            .map(|(dir, _)| dir.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        skipped.sort();
+        assert_eq!(skipped, ["absolute", "linked", "nested-parent", "parent"]);
+    }
+
+    #[test]
+    fn a_missing_or_unknown_variant_falls_back_to_the_first() {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(
+            user.path(),
+            "duo",
+            r#"{"contract": 1, "name": "Duo", "variants": [
+                {"id": "classic", "name": "Classic"},
+                {"id": "mono", "name": "Monochrome"}
+            ]}"#,
+        );
+
+        let found = discover(&[user.path()]);
+
+        let theme = &found.themes[0];
+        let chosen = |id: &str| theme.variant(id).map(|variant| variant.id.as_str());
+        assert_eq!(chosen("mono"), Some("mono"));
+        assert_eq!(chosen("classic"), Some("classic"));
+        assert_eq!(chosen(""), Some("classic"));
+        assert_eq!(chosen("gone"), Some("classic"));
     }
 }

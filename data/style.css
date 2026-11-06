@@ -198,6 +198,27 @@ window.fullscreen-mode .home.home-sections .home-details {
   opacity: 0;
 }
 
+/* Quick Access's Blur and Dim (`blur-low`, `blur-high`, `dim-low`, `dim-high` on `.home`):
+   the background and the focused game's art behind the text blurred, and darkened by the
+   `.home-dim` overlay over them. */
+.home.blur-low .home-background,
+.home.blur-low .home-hero {
+  filter: blur(8px);
+}
+
+.home.blur-high .home-background,
+.home.blur-high .home-hero {
+  filter: blur(24px);
+}
+
+.home.dim-low .home-dim {
+  background-color: rgb(0 0 0 / 35%);
+}
+
+.home.dim-high .home-dim {
+  background-color: rgb(0 0 0 / 65%);
+}
+
 .home-carousel > button {
   transition: transform 120ms ease-out;
 }

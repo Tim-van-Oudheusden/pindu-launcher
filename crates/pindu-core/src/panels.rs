@@ -252,11 +252,45 @@ pub fn design_choices(themes: &[Theme], active: &str) -> Vec<DesignChoice> {
     std::iter::once(default).chain(designs).collect()
 }
 
+/// A variant of the design in force the Quick Access panel offers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VariantChoice {
+    /// What the `fullscreen-design-variant` setting holds for it.
+    pub id: String,
+    pub name: String,
+    /// The variant in force, which the panel checks.
+    pub active: bool,
+}
+
+/// What the Quick Access panel's Variant list offers: the variants of `design` while it is
+/// in force, with the one `variant` names checked, or else the first
+/// (`Theme::variant`). Empty, so no Variant list shows, for Adwaita, a design this Pindu
+/// launcher cannot apply and one without variants.
+pub fn variant_choices(themes: &[Theme], design: &str, variant: &str) -> Vec<VariantChoice> {
+    let Some(theme) = themes
+        .iter()
+        .find(|theme| theme.id == design && theme.supported())
+    else {
+        return Vec::new();
+    };
+    let active = theme.variant(variant).map(|variant| variant.id.as_str());
+    theme
+        .variants
+        .iter()
+        .map(|choice| VariantChoice {
+            id: choice.id.clone(),
+            name: choice.name.clone(),
+            active: Some(choice.id.as_str()) == active,
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::gamepad::Direction;
     use crate::model::{GameId, LaunchKind, Source};
+    use crate::themes::Variant;
 
     const PAGE: Under = Under {
         game: false,
@@ -553,6 +587,7 @@ mod tests {
             dir: format!("/themes/{id}").into(),
             contract,
             layout: Default::default(),
+            variants: Vec::new(),
         }
     }
 
@@ -584,6 +619,61 @@ mod tests {
                 choices.iter().filter(|choice| choice.active).count(),
                 1,
                 "{active:?}"
+            );
+        }
+    }
+
+    fn with_variants(mut theme: Theme, ids: &[&str]) -> Theme {
+        theme.variants = ids
+            .iter()
+            .map(|id| Variant {
+                id: (*id).to_owned(),
+                name: id.to_uppercase(),
+                stylesheet: None,
+            })
+            .collect();
+        theme
+    }
+
+    #[test]
+    fn the_variants_of_the_design_in_force_list_with_the_active_one_checked() {
+        let themes = [with_variants(theme("duo", "Duo", 1), &["classic", "mono"])];
+        let shown = |variant: &str| -> Vec<(String, String, bool)> {
+            variant_choices(&themes, "duo", variant)
+                .into_iter()
+                .map(|choice| (choice.id, choice.name, choice.active))
+                .collect()
+        };
+        assert_eq!(
+            shown("mono"),
+            [
+                ("classic".into(), "CLASSIC".into(), false),
+                ("mono".into(), "MONO".into(), true)
+            ]
+        );
+        for fallback in ["", "gone"] {
+            assert_eq!(
+                shown(fallback)
+                    .iter()
+                    .map(|(id, _, active)| (id.as_str(), *active))
+                    .collect::<Vec<_>>(),
+                [("classic", true), ("mono", false)],
+                "{fallback:?} falls back to the first variant"
+            );
+        }
+    }
+
+    #[test]
+    fn there_are_no_variants_without_a_design_that_offers_them() {
+        let themes = [
+            theme("plain", "Plain", 1),
+            with_variants(theme("future", "Future", 99), &["a", "b"]),
+            with_variants(theme("duo", "Duo", 1), &["a", "b"]),
+        ];
+        for design in ["plain", "future", "", "gone"] {
+            assert!(
+                variant_choices(&themes, design, "a").is_empty(),
+                "{design:?}"
             );
         }
     }
