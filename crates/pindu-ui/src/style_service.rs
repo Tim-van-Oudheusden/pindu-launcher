@@ -235,8 +235,8 @@ impl std::fmt::Debug for StyleService {
 }
 
 impl StyleService {
-    /// Follows the settings, the system style and the motion preference; the stylesheets
-    /// are in force once the window says it is in fullscreen mode.
+    /// Follows the settings and the system style; the stylesheets are in force once the
+    /// window says it is in fullscreen mode, and match `prefers-reduced-motion` as it says.
     pub fn new() -> Self {
         let xdg_config_home = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from);
         let home = std::env::home_dir().unwrap_or_default();
@@ -265,7 +265,6 @@ impl StyleService {
         };
         service.follow_settings();
         service.follow_style_manager();
-        service.follow_reduced_motion();
         service
     }
 
@@ -406,28 +405,17 @@ impl StyleService {
         manager.connect_high_contrast_notify(update);
     }
 
-    /// `prefers-reduced-motion` follows the same preference as the window's
-    /// `reduced-motion` class: animations off, or reduced motion asked for.
-    fn follow_reduced_motion(&self) {
-        let Some(settings) = gtk::Settings::default() else {
-            return;
+    /// Pindu moves less, or no longer (`pindu_core::accessibility`): the stylesheets'
+    /// `prefers-reduced-motion` follows the window's `reduced-motion` class.
+    pub fn set_reduced_motion(&self, reduce: bool) {
+        let motion = if reduce {
+            gtk::ReducedMotion::Reduce
+        } else {
+            gtk::ReducedMotion::NoPreference
         };
-        let service = self.clone();
-        let update = move |settings: &gtk::Settings| {
-            let reduce = !settings.is_gtk_enable_animations()
-                || settings.gtk_interface_reduced_motion() == gtk::ReducedMotion::Reduce;
-            let motion = if reduce {
-                gtk::ReducedMotion::Reduce
-            } else {
-                gtk::ReducedMotion::NoPreference
-            };
-            for sheet in service.sheets() {
-                sheet.provider.set_prefers_reduced_motion(motion);
-            }
-        };
-        update(&settings);
-        settings.connect_gtk_enable_animations_notify(update.clone());
-        settings.connect_gtk_interface_reduced_motion_notify(update);
+        for sheet in self.sheets() {
+            sheet.provider.set_prefers_reduced_motion(motion);
+        }
     }
 
     /// Shows each stylesheet while it is in force, and reports a change of layout.

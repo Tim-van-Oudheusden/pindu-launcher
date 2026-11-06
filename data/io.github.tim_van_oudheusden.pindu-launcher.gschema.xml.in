@@ -109,6 +109,16 @@
       <summary>Navigation sound volume</summary>
       <description>How loud the navigation sounds play, from 0 (silent) to 100 (full).</description>
     </key>
+    <key name="fullscreen-reduce-motion" type="b">
+      <default>false</default>
+      <summary>Reduce motion in fullscreen mode</summary>
+      <description>Hold Home's animated background on its first frame and change art without a crossfade in fullscreen mode. Turning off animations in the system settings does the same.</description>
+    </key>
+    <key name="fullscreen-large-text" type="b">
+      <default>false</default>
+      <summary>Larger text in fullscreen mode</summary>
+      <description>Show fullscreen mode's text about a quarter larger, for reading from across the room. The desktop window is not affected.</description>
+    </key>
     <key name="fullscreen-custom-style" type="b">
       <default>false</default>
       <summary>Custom fullscreen style</summary>

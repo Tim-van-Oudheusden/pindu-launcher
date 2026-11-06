@@ -128,7 +128,8 @@ pub struct BackgroundContext {
     pub game_running: bool,
     /// The window is hidden or minimized.
     pub hidden: bool,
-    /// The system asks for reduced motion.
+    /// Pindu moves less (`accessibility::Accessibility::reduces_motion`): the desktop's
+    /// animations are off, the system asks for reduced motion, or Reduce Motion is on.
     pub reduced_motion: bool,
 }
 

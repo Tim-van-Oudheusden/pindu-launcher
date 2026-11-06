@@ -105,14 +105,23 @@ their `-fg-` partners. Use `--accent-color`, `--accent-bg-color` and `--accent-f
 ### Media queries
 
 `@media (prefers-color-scheme: dark)` follows the system style, and `@media (prefers-reduced-motion: reduce)`
-follows the reduced-motion and animations settings. Turn off your transitions and animations under the
-latter:
+matches while the window is `reduced-motion`: the system's reduced-motion or animations setting, or Pindu's
+own **Reduce Motion** switch. Turn off your transitions and animations under the latter, including the
+`.home-hero` crossfade:
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  window.fullscreen-mode .home-carousel > button { transition: none; }
+  window.fullscreen-mode .home-carousel > button,
+  window.fullscreen-mode .home .home-hero { transition: none; }
 }
 ```
+
+### Larger text
+
+With **Larger Text** on, the window is `large-text` and its type is about a quarter larger: Pindu sets
+`font-size` on `window.fullscreen-mode.large-text`. Size your text in `em` so it follows, and give rows and
+tiles that hold text room to grow (or no fixed height) so nothing is cut off. A design can set its own scale
+under `window.fullscreen-mode.large-text`, or style anything else differently there.
 
 ## Names
 
@@ -125,7 +134,8 @@ controller's position.
 | Name | What |
 |---|---|
 | `window.fullscreen-mode` | The window, while in fullscreen mode |
-| `window.reduced-motion` | The window, while the system asks for less motion |
+| `window.reduced-motion` | The window, while Pindu moves less: the system asks for less motion (reduced motion, or animations off) or **Reduce Motion** is on in fullscreen mode |
+| `window.large-text` | The window, in fullscreen mode while **Larger Text** is on |
 
 **Top bar** (with `top-bar`)
 
@@ -145,7 +155,7 @@ class styles both.
 
 The background plays muted and looped behind the first screen. It pauses on the second screen, while a
 game we started runs and while the window is hidden, and holds its first frame outside fullscreen mode and
-while the system asks for reduced motion.
+while the window is `reduced-motion`.
 
 | Name | What |
 |---|---|

@@ -78,9 +78,14 @@ gridview.library > child {
 }
 
 /* Fullscreen mode: type a step larger for a screen across the room, and the focused cover
-   lifted a little with a ring that hugs it (the tiles have no titles there). */
+   lifted a little with a ring that hugs it (the tiles have no titles there). Larger Text
+   (the window's large-text class) makes it about a quarter larger again. */
 window.fullscreen-mode {
   font-size: 1.35em;
+}
+
+window.fullscreen-mode.large-text {
+  font-size: 1.6875em;
 }
 
 window.fullscreen-mode gridview.library > child {

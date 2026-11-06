@@ -275,5 +275,19 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
         }
       }
     }
+
+    Adw.PreferencesGroup {
+      title: _("Accessibility");
+
+      Adw.SwitchRow reduce_motion_row {
+        title: _("Reduce Motion");
+        subtitle: _("Home's background holds still and art changes without a fade, as when animations are off in the system settings");
+      }
+
+      Adw.SwitchRow large_text_row {
+        title: _("Larger Text");
+        subtitle: _("Text about a quarter larger, to read from across the room");
+      }
+    }
   }
 }

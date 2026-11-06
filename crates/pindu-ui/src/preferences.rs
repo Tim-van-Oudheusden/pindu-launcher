@@ -63,6 +63,10 @@ mod imp {
         #[template_child]
         pub volume_scale: TemplateChild<gtk::Scale>,
         #[template_child]
+        pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub large_text_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
         pub tile_size_row: TemplateChild<adw::ComboRow>,
         #[template_child]
         pub titles_row: TemplateChild<adw::SwitchRow>,
@@ -170,6 +174,16 @@ mod imp {
                 .bind("navigation-sounds", &*self.sounds_row, "active")
                 .build();
             bind_volume_slider(&settings, &self.volume_row, &self.volume_scale);
+            settings
+                .bind(
+                    "fullscreen-reduce-motion",
+                    &*self.reduce_motion_row,
+                    "active",
+                )
+                .build();
+            settings
+                .bind("fullscreen-large-text", &*self.large_text_row, "active")
+                .build();
             settings
                 .bind("show-titles", &*self.titles_row, "active")
                 .build();
