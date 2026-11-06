@@ -6,7 +6,7 @@
 //! gives it back after, and does what their entries say. They are widgets in the window
 //! rather than popover menus, which the compositor dismisses on a controller press.
 //! Quick Access's notifications are `fullscreen_notifications`'s, its Activity and Refresh
-//! Library `fullscreen_activity`'s.
+//! Library `fullscreen_activity`'s, its Surprise Me `fullscreen_surprise`'s.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;

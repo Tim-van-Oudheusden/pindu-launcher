@@ -143,8 +143,13 @@ impl PinduWindow {
         }
         match focus.downcast_ref::<gtk::ListBoxRow>() {
             Some(row) if !row.is_activatable() => Focus::Nothing,
-            // A notification with a target opens it.
-            Some(row) if row.has_css_class("notification") => Focus::Link,
+            // A notification with a target opens it, and Surprise Me opens its pick.
+            Some(row)
+                if row.has_css_class("notification")
+                    || row.action_name().as_deref() == Some("win.surprise-me") =>
+            {
+                Focus::Link
+            }
             // A task the user can cancel, in Quick Access's Activity.
             Some(row) if row.has_css_class("task") => Focus::Cancel,
             _ => Focus::Other,

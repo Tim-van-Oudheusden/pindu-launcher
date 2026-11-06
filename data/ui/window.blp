@@ -410,6 +410,27 @@ template $PinduWindow: Adw.ApplicationWindow {
                           };
                         }
 
+                        // Opens a random installed game's page; unavailable while none is
+                        // installed.
+                        ListBoxRow quick_access_surprise_row {
+                          action-name: "win.surprise-me";
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "media-playlist-shuffle-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Label {
+                              label: _("Surprise Me");
+                              xalign: 0;
+                              hexpand: true;
+                            }
+                          };
+                        }
+
                         ListBoxRow quick_access_design_row {
                           action-name: "win.quick-access-designs";
 

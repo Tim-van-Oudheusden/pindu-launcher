@@ -15,6 +15,7 @@ pub mod fullscreen_notifications;
 pub mod fullscreen_panels;
 pub mod fullscreen_playing;
 pub mod fullscreen_status;
+pub mod fullscreen_surprise;
 pub mod fullscreen_top_bar;
 pub mod game_dialog;
 pub mod game_page;
