@@ -6,7 +6,7 @@ use gettextrs::{gettext, ngettext};
 use gtk::{gdk, gio, glib};
 use pindu_core::clock::ClockFormat;
 use pindu_core::focus::FocusMemory;
-use pindu_core::gamepad::DeviceKind;
+use pindu_core::gamepad::Layout;
 use pindu_core::grid;
 use pindu_core::hints::Hint;
 use pindu_core::launch_overlay::LaunchOverlay;
@@ -193,6 +193,14 @@ mod imp {
         #[template_child]
         pub quick_access_settings_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
+        pub quick_access_controllers_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_controllers: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_prompts: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_swap: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub tile_small: TemplateChild<gtk::CheckButton>,
         #[template_child]
         pub tile_medium: TemplateChild<gtk::CheckButton>,
@@ -220,8 +228,8 @@ mod imp {
         pub focus_memory: RefCell<FocusMemory<View, GameId>>,
         /// Fullscreen mode's navigation sounds, made on entering the mode with them on.
         pub sounds: OnceCell<NavigationSounds>,
-        /// The hints the hint bar shows, and for which kind of controller.
-        pub hints: RefCell<Option<(DeviceKind, Vec<Hint>)>>,
+        /// The hints the hint bar shows, and for which controller layout.
+        pub hints: RefCell<Option<(Layout, Vec<Hint>)>>,
         /// Whether the sidebar showed before fullscreen mode hid it, to show it again after.
         pub sidebar_before_hiding: Cell<Option<bool>>,
         /// Fullscreen mode's library tabs, each with the view it shows.
@@ -345,6 +353,7 @@ impl PinduWindow {
             window.setup_playing_cards(application);
             window.setup_notifications(application);
             window.setup_activity(application, sync_service);
+            window.setup_controllers(application);
         }
         window
     }

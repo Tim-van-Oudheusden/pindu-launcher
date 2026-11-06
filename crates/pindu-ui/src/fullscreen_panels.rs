@@ -6,7 +6,8 @@
 //! gives it back after, and does what their entries say. They are widgets in the window
 //! rather than popover menus, which the compositor dismisses on a controller press.
 //! Quick Access's notifications are `fullscreen_notifications`'s, its Activity and Refresh
-//! Library `fullscreen_activity`'s, its Surprise Me `fullscreen_surprise`'s.
+//! Library `fullscreen_activity`'s, its Surprise Me `fullscreen_surprise`'s, its
+//! Controllers `fullscreen_controllers`'s.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -86,6 +87,11 @@ impl PinduWindow {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Designs));
             })
             .build();
+        let controllers = gio::ActionEntry::builder("quick-access-controllers")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Controllers));
+            })
+            .build();
         let quick_settings = gio::ActionEntry::builder("quick-access-settings")
             .activate(|window: &Self, _, _| {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Settings));
@@ -103,12 +109,16 @@ impl PinduWindow {
             notifications,
             activity,
             designs,
+            controllers,
             quick_settings,
         ]);
-        // Up and Down stop at a list's ends; in Quick Access's settings they go on to the
-        // next list (`fullscreen_playing` takes the drawer's and Quick Access's own lists up
-        // to their Playing Now cards).
+        // Up and Down stop at a list's ends; in Quick Access's Controllers and settings they
+        // go on to the next list (`fullscreen_playing` takes the drawer's and Quick Access's
+        // own lists up to their Playing Now cards).
         for list in [
+            imp.quick_access_controllers.get(),
+            imp.quick_access_prompts.get(),
+            imp.quick_access_swap.get(),
             imp.quick_access_sizes.get(),
             imp.quick_access_switches.get(),
         ] {
@@ -361,6 +371,7 @@ impl PinduWindow {
             Some(Panel::QuickAccess(QuickAccessLevel::Notifications)) => self.show_notifications(),
             Some(Panel::QuickAccess(QuickAccessLevel::Activity)) => self.show_activity(),
             Some(Panel::QuickAccess(QuickAccessLevel::Designs)) => self.fill_designs(),
+            Some(Panel::QuickAccess(QuickAccessLevel::Controllers)) => self.fill_controllers(),
             _ => {}
         }
         let drawer = matches!(open, Some(Panel::Drawer(_)));
@@ -388,6 +399,7 @@ impl PinduWindow {
                     QuickAccessLevel::Notifications => "notifications",
                     QuickAccessLevel::Activity => "activity",
                     QuickAccessLevel::Designs => "designs",
+                    QuickAccessLevel::Controllers => "controllers",
                     QuickAccessLevel::Settings => "settings",
                 });
             }
@@ -434,6 +446,10 @@ impl PinduWindow {
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Designs)),
             ) => Some(imp.quick_access_design_row.get().upcast()),
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::Controllers)),
+            ) => Some(imp.quick_access_controllers_row.get().upcast()),
             (
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Settings)),
@@ -496,6 +512,14 @@ impl PinduWindow {
             }
             (Some(Panel::QuickAccess(QuickAccessLevel::Settings)), _) => {
                 imp.tile_small.ancestor(gtk::ListBoxRow::static_type())
+            }
+            // The first controller that can rumble, or else the first button prompt.
+            (Some(Panel::QuickAccess(QuickAccessLevel::Controllers)), _) => {
+                std::iter::successors(imp.quick_access_controllers.first_child(), |row| {
+                    row.next_sibling()
+                })
+                .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
+                .or_else(|| first_row(&imp.quick_access_prompts))
             }
             (Some(Panel::Options(OptionsLevel::Main)), _) => first_row(&imp.options_list),
             (Some(Panel::Options(OptionsLevel::Collections)), _) => {

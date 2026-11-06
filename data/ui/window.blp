@@ -455,6 +455,30 @@ template $PinduWindow: Adw.ApplicationWindow {
                           };
                         }
 
+                        ListBoxRow quick_access_controllers_row {
+                          action-name: "win.quick-access-controllers";
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "input-gaming-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Label {
+                              label: _("Controllers");
+                              xalign: 0;
+                              hexpand: true;
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
+
                         ListBoxRow quick_access_settings_row {
                           action-name: "win.quick-access-settings";
 
@@ -574,6 +598,164 @@ template $PinduWindow: Adw.ApplicationWindow {
                         styles [
                           "boxed-list",
                         ]
+                      }
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "controllers";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      Label {
+                        label: _("Controllers");
+                        xalign: 0;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // Each connected controller with the glyphs it shows and its
+                      // battery; selecting one rumbles it, and one that cannot rumble is
+                      // unavailable. Filled in code, and again as controllers come and go.
+                      ListBox quick_access_controllers {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+                      }
+
+                      Label {
+                        label: _("Button Prompts");
+                        xalign: 0;
+                        margin-top: 6;
+
+                        styles [
+                          "heading",
+                        ]
+                      }
+
+                      // Radio rows on the settings' actions, as Settings has its sizes.
+                      ListBox quick_access_prompts {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.ActionRow {
+                          title: _("Automatic");
+                          subtitle: _("As the controller shows them");
+                          activatable-widget: prompts_auto;
+
+                          [prefix]
+                          CheckButton prompts_auto {
+                            action-name: "win.controller-prompts";
+                            action-target: "'auto'";
+                            can-focus: false;
+                          }
+                        }
+
+                        Adw.ActionRow {
+                          title: _("Letters");
+                          activatable-widget: prompts_letters;
+
+                          [prefix]
+                          CheckButton prompts_letters {
+                            action-name: "win.controller-prompts";
+                            action-target: "'letters'";
+                            can-focus: false;
+                          }
+                        }
+
+                        Adw.ActionRow {
+                          title: _("Shapes");
+                          activatable-widget: prompts_shapes;
+
+                          [prefix]
+                          CheckButton prompts_shapes {
+                            action-name: "win.controller-prompts";
+                            action-target: "'shapes'";
+                            can-focus: false;
+                          }
+                        }
+
+                        Adw.ActionRow {
+                          title: _("Letters, A on the Right");
+                          activatable-widget: prompts_letters_east;
+
+                          [prefix]
+                          CheckButton prompts_letters_east {
+                            action-name: "win.controller-prompts";
+                            action-target: "'nintendo-letters'";
+                            can-focus: false;
+                          }
+                        }
+                      }
+
+                      Label {
+                        label: _("Swap Confirm and Back");
+                        xalign: 0;
+                        margin-top: 6;
+
+                        styles [
+                          "heading",
+                        ]
+                      }
+
+                      ListBox quick_access_swap {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.ActionRow {
+                          title: _("Automatic");
+                          subtitle: _("Swapped when A is on the right");
+                          activatable-widget: swap_auto;
+
+                          [prefix]
+                          CheckButton swap_auto {
+                            action-name: "win.swap-confirm-back";
+                            action-target: "'auto'";
+                            can-focus: false;
+                          }
+                        }
+
+                        Adw.ActionRow {
+                          title: _("Off");
+                          subtitle: _("The bottom button confirms");
+                          activatable-widget: swap_off;
+
+                          [prefix]
+                          CheckButton swap_off {
+                            action-name: "win.swap-confirm-back";
+                            action-target: "'off'";
+                            can-focus: false;
+                          }
+                        }
+
+                        Adw.ActionRow {
+                          title: _("On");
+                          subtitle: _("The right button confirms");
+                          activatable-widget: swap_on;
+
+                          [prefix]
+                          CheckButton swap_on {
+                            action-name: "win.swap-confirm-back";
+                            action-target: "'on'";
+                            can-focus: false;
+                          }
+                        }
                       }
                     };
                   };

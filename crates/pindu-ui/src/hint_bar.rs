@@ -19,7 +19,7 @@ impl PinduWindow {
     pub(crate) fn setup_hint_bar(&self, application: &PinduApplication) {
         application
             .gamepad_service()
-            .connect_active_kind_notify(glib::clone!(
+            .connect_active_layout_notify(glib::clone!(
                 #[weak(rename_to = window)]
                 self,
                 move |_| window.update_hints()
@@ -43,16 +43,16 @@ impl PinduWindow {
     /// use, and hides the bar otherwise.
     pub(crate) fn update_hints(&self) {
         let imp = self.imp();
-        let kind = self
+        let layout = self
             .application()
             .and_downcast::<PinduApplication>()
-            .and_then(|application| application.gamepad_service().active_kind())
+            .and_then(|application| application.gamepad_service().active_layout())
             .filter(|_| self.is_fullscreen());
-        imp.hint_toolbar.set_reveal_bottom_bars(kind.is_some());
-        let Some(kind) = kind else {
+        imp.hint_toolbar.set_reveal_bottom_bars(layout.is_some());
+        let Some(layout) = layout else {
             return;
         };
-        let shown = Some((kind, hints::hints(self.hint_context(), kind)));
+        let shown = Some((layout, hints::hints(self.hint_context(), layout)));
         if *imp.hints.borrow() == shown {
             return;
         }
@@ -64,12 +64,12 @@ impl PinduWindow {
             let item = gtk::Box::builder().spacing(8).css_classes(["hint"]).build();
             for button in std::iter::once(hint.button).chain(hint.pair) {
                 let glyph = gtk::Image::builder()
-                    .icon_name(hints::glyph(kind, button))
+                    .icon_name(hints::glyph(layout.glyphs, button))
                     .pixel_size(GLYPH_SIZE)
                     .css_classes(["hint-glyph"])
                     .build();
                 glyph.update_property(&[gtk::accessible::Property::Label(&glyph_label(
-                    hints::glyph_name(kind, button),
+                    hints::glyph_name(layout.glyphs, button),
                 ))]);
                 item.append(&glyph);
             }

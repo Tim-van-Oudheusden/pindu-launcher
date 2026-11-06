@@ -7,6 +7,7 @@ pub mod art;
 pub mod art_cache;
 pub mod backup;
 pub mod clock;
+pub mod controllers;
 pub mod custom_style;
 pub mod focus;
 pub mod gamepad;

@@ -52,6 +52,27 @@
       <summary>Navigate the window with a controller</summary>
       <description>Move focus with the D-pad or left stick, open with A and go back with B. Controllers are only opened while this is on.</description>
     </key>
+    <key name="controller-prompts" type="s">
+      <choices>
+        <choice value="auto"/>
+        <choice value="letters"/>
+        <choice value="shapes"/>
+        <choice value="nintendo-letters"/>
+      </choices>
+      <default>'auto'</default>
+      <summary>Button prompts</summary>
+      <description>The glyphs fullscreen mode shows for the controller's buttons. Auto follows the controller: letters with A at the bottom, shapes, or letters with A on the right. Steam Input shows every controller as its own virtual pad, which Auto takes for letters.</description>
+    </key>
+    <key name="swap-confirm-back" type="s">
+      <choices>
+        <choice value="auto"/>
+        <choice value="off"/>
+        <choice value="on"/>
+      </choices>
+      <default>'auto'</default>
+      <summary>Swap confirm and back</summary>
+      <description>Whether the right face button confirms and the bottom one goes back, rather than the other way round. Auto swaps them when the button prompts put A on the right.</description>
+    </key>
     <key name="default-proton" type="s">
       <default>''</default>
       <summary>Default Proton build</summary>

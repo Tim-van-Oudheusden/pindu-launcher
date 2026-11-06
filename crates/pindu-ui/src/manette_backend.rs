@@ -8,7 +8,9 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use gtk::glib::{self, prelude::*};
-use pindu_core::gamepad::{Axis, Button, DeviceId, DeviceKind, GamepadBackend, GamepadEvent};
+use pindu_core::gamepad::{
+    Axis, Button, DeviceId, DeviceKind, GamepadBackend, GamepadEvent, HidIds, Pad, Rumble,
+};
 
 /// Linux input codes libmanette maps buttons and axes to.
 mod code {
@@ -86,6 +88,28 @@ impl GamepadBackend for ManetteBackend {
             drop(monitor);
         }
     }
+
+    fn rumble(&mut self, device: DeviceId, rumble: Rumble) {
+        let Some((_, devices)) = &self.running else {
+            return;
+        };
+        let attached = devices.attached.borrow();
+        let Some(known) = attached.iter().find(|known| known.id == device) else {
+            return;
+        };
+        if !known.device.has_rumble() {
+            return;
+        }
+        let magnitude = |strength: f64| (strength.clamp(0.0, 1.0) * f64::from(u16::MAX)) as u16;
+        let milliseconds = u16::try_from(rumble.duration.as_millis()).unwrap_or(u16::MAX);
+        if !known.device.rumble(
+            magnitude(rumble.strong),
+            magnitude(rumble.weak),
+            milliseconds,
+        ) {
+            glib::g_info!("pindu", "Controller {} did not rumble", device.0);
+        }
+    }
 }
 
 /// The devices seen so far, numbered as they appear.
@@ -114,10 +138,15 @@ impl Devices {
     fn attach(self: &Rc<Self>, device: &manette::Device) {
         let id = DeviceId(self.next_id.replace(self.next_id.get() + 1));
         let steam_deck = device.device_type() == manette::DeviceType::SteamDeck;
+        let guid = device.guid();
         (self.sink)(GamepadEvent::Connected {
             device: id,
-            name: device.name().map(Into::into).unwrap_or_default(),
-            kind: DeviceKind::detect(device.guid().as_deref(), steam_deck),
+            pad: Pad {
+                name: device.name().map(Into::into).unwrap_or_default(),
+                kind: DeviceKind::detect(guid.as_deref(), steam_deck),
+                ids: guid.as_deref().and_then(HidIds::from_guid),
+                rumble: device.has_rumble(),
+            },
         });
         let handlers = vec![
             device.connect_button_press_event({

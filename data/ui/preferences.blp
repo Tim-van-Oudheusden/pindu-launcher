@@ -48,6 +48,34 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
         title: _("Navigate With a Controller");
         subtitle: _("Move with the D-pad or left stick, open with A and go back with B. While this is on, a Steam Deck's own controls work only as a controller.");
       }
+
+      // Brand names are fine here, unlike in fullscreen mode: this is the settings page.
+      Adw.ComboRow prompts_row {
+        title: _("Button Prompts");
+        subtitle: _("The glyphs fullscreen mode shows for the buttons. Under Steam Input every controller looks like Steam's own, which Automatic shows with letters.");
+
+        model: StringList {
+          strings [
+            _("Automatic"),
+            _("Letters (Xbox)"),
+            _("Shapes (PlayStation)"),
+            _("Letters (Nintendo)"),
+          ]
+        };
+      }
+
+      Adw.ComboRow swap_row {
+        title: _("Swap Confirm and Back");
+        subtitle: _("On, the right button opens and the bottom one goes back. Automatic swaps them for Nintendo letters.");
+
+        model: StringList {
+          strings [
+            _("Automatic"),
+            _("Off"),
+            _("On"),
+          ]
+        };
+      }
     }
 
     Adw.PreferencesGroup {

@@ -1,9 +1,10 @@
 //! Turns controller input into app intents, so the shells never see hardware. Devices come
 //! from a [`GamepadBackend`]; [`Intents`] maps their mapped buttons and sticks to intents,
-//! repeats held directions, notices a held Back, and tracks each device's kind for glyphs
-//! and the A/B swap.
+//! repeats held directions, notices a held Back, and keeps the connected pads. Each pad's
+//! [`Layout`] (its glyphs and whether confirm and back swap) comes from its kind and the
+//! user's [`ControllerSettings`], and serves the hints and the intents alike.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::time::Duration;
 
 /// A connected controller, as its backend numbers it.
@@ -75,7 +76,8 @@ pub enum Intent {
     QuickAccess,
 }
 
-/// The kind of controller, which decides its glyphs and whether A and B swap.
+/// The kind of controller, which decides its glyphs and whether A and B swap, unless the
+/// [`ControllerSettings`] say otherwise.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeviceKind {
     Xbox,
@@ -88,6 +90,14 @@ pub enum DeviceKind {
 }
 
 impl DeviceKind {
+    pub const ALL: [Self; 5] = [
+        Self::Xbox,
+        Self::PlayStation,
+        Self::Nintendo,
+        Self::SteamDeck,
+        Self::Generic,
+    ];
+
     /// The kind of a device from its SDL GUID, which holds its USB vendor and product IDs
     /// (little-endian, at bytes 4 and 8), and from whether libmanette drives it as a Steam
     /// Deck.
@@ -95,10 +105,10 @@ impl DeviceKind {
         if steam_deck {
             return Self::SteamDeck;
         }
-        let Some((vendor, product)) = guid.and_then(usb_ids) else {
+        let Some(ids) = guid.and_then(HidIds::from_guid) else {
             return Self::Generic;
         };
-        match (vendor, product) {
+        match (ids.vendor, ids.product) {
             (0x045e, _) => Self::Xbox,
             (0x054c, _) => Self::PlayStation,
             (0x057e, _) => Self::Nintendo,
@@ -109,8 +119,150 @@ impl DeviceKind {
         }
     }
 
-    /// The button that asks for `intent` on this kind of pad, for hints: a Nintendo pad
-    /// confirms with its east button.
+    /// The glyphs printed on this kind of pad. Unknown pads look like Xbox pads, as
+    /// libmanette maps them.
+    pub fn glyphs(self) -> Glyphs {
+        match self {
+            Self::Xbox | Self::Generic => Glyphs::Letters,
+            Self::PlayStation => Glyphs::Shapes,
+            Self::Nintendo => Glyphs::NintendoLetters,
+            Self::SteamDeck => Glyphs::DeckLetters,
+        }
+    }
+}
+
+/// The set of labels the glyphs draw on the buttons, as a kind of pad prints them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Glyphs {
+    /// A south, B east, X west, Y north; LB, RB, LT, RT and RS.
+    Letters,
+    /// The same letters with L1, R1, L2, R2 and R3, as a Steam Deck prints them.
+    DeckLetters,
+    /// Cross, circle, square and triangle; L1, R1, L2, R2 and R3.
+    Shapes,
+    /// A east, B south, X north, Y west; L, R, ZL, ZR and RS.
+    NintendoLetters,
+}
+
+/// The Button Prompts setting: the glyphs to show whatever the pad is, or Auto for the
+/// pad's own.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Prompts {
+    #[default]
+    Auto,
+    Letters,
+    Shapes,
+    /// Letters with A on the east and B on the south.
+    NintendoLetters,
+}
+
+impl Prompts {
+    /// Every choice, in the order the settings list them.
+    pub const ALL: [Self; 4] = [
+        Self::Auto,
+        Self::Letters,
+        Self::Shapes,
+        Self::NintendoLetters,
+    ];
+
+    /// The value of the `controller-prompts` key.
+    pub fn setting(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Letters => "letters",
+            Self::Shapes => "shapes",
+            Self::NintendoLetters => "nintendo-letters",
+        }
+    }
+
+    /// The choice a `controller-prompts` value names; Auto for any other.
+    pub fn from_setting(value: &str) -> Self {
+        Self::ALL
+            .into_iter()
+            .find(|choice| choice.setting() == value)
+            .unwrap_or_default()
+    }
+}
+
+/// The Swap Confirm and Back setting: Auto swaps when the glyphs put A on the east.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Swap {
+    #[default]
+    Auto,
+    Off,
+    On,
+}
+
+impl Swap {
+    /// Every choice, in the order the settings list them.
+    pub const ALL: [Self; 3] = [Self::Auto, Self::Off, Self::On];
+
+    /// The value of the `swap-confirm-back` key.
+    pub fn setting(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Off => "off",
+            Self::On => "on",
+        }
+    }
+
+    /// The choice a `swap-confirm-back` value names; Auto for any other.
+    pub fn from_setting(value: &str) -> Self {
+        Self::ALL
+            .into_iter()
+            .find(|choice| choice.setting() == value)
+            .unwrap_or_default()
+    }
+}
+
+/// The GSettings key of the Button Prompts setting.
+pub const PROMPTS_KEY: &str = "controller-prompts";
+/// The GSettings key of the Swap Confirm and Back setting.
+pub const SWAP_KEY: &str = "swap-confirm-back";
+
+/// What the user chose for the glyphs and the confirm and back buttons.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ControllerSettings {
+    pub prompts: Prompts,
+    pub swap: Swap,
+}
+
+/// How a pad shows and reads its buttons: the glyphs the hints draw, and whether its east
+/// button confirms and its south button goes back. One layout serves the hints and the
+/// intents, so they always agree.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Layout {
+    pub glyphs: Glyphs,
+    /// Whether confirm and back swap: east activates and south goes back.
+    pub swapped: bool,
+}
+
+impl Layout {
+    /// The layout of a pad of `kind` under `settings`. Prompts other than Auto replace
+    /// the pad's glyphs, except that letters on a Steam Deck keep its own shoulder labels;
+    /// Swap Auto swaps when the glyphs put A on the east.
+    pub fn resolve(kind: DeviceKind, settings: ControllerSettings) -> Self {
+        let glyphs = match (settings.prompts, kind) {
+            (Prompts::Auto, _) | (Prompts::Letters, DeviceKind::SteamDeck) => kind.glyphs(),
+            (Prompts::Letters, _) => Glyphs::Letters,
+            (Prompts::Shapes, _) => Glyphs::Shapes,
+            (Prompts::NintendoLetters, _) => Glyphs::NintendoLetters,
+        };
+        let swapped = match settings.swap {
+            Swap::Auto => glyphs == Glyphs::NintendoLetters,
+            Swap::Off => false,
+            Swap::On => true,
+        };
+        Self { glyphs, swapped }
+    }
+
+    /// The layout of a pad of `kind` as the pad itself has it.
+    pub fn detected(kind: DeviceKind) -> Self {
+        Self::resolve(kind, ControllerSettings::default())
+    }
+
+    /// The button that asks for `intent`, for hints: with confirm and back swapped, the
+    /// east button confirms.
     pub fn button(self, intent: Intent) -> Button {
         BUTTONS
             .into_iter()
@@ -118,29 +270,57 @@ impl DeviceKind {
             .expect("every intent has a button")
     }
 
-    /// Where an Xbox pad has the button that does what `button` does on this kind: a
-    /// Nintendo pad's A (east) confirms and its B (south) goes back.
+    /// Where an Xbox pad has the button that does what `button` does in this layout: with
+    /// confirm and back swapped, east confirms and south goes back.
     fn xbox_position(self, button: Button) -> Button {
-        match (self, button) {
-            (Self::Nintendo, Button::East) => Button::South,
-            (Self::Nintendo, Button::South) => Button::East,
+        match button {
+            Button::East if self.swapped => Button::South,
+            Button::South if self.swapped => Button::East,
             _ => button,
         }
     }
 }
 
-/// The USB vendor and product IDs in an SDL GUID.
-fn usb_ids(guid: &str) -> Option<(u16, u16)> {
-    let word = |at: usize| {
-        let bytes = guid.get(at..at + 4)?;
-        let low = u8::from_str_radix(&bytes[..2], 16).ok()?;
-        let high = u8::from_str_radix(&bytes[2..], 16).ok()?;
-        Some(u16::from_le_bytes([low, high]))
-    };
-    if guid.len() != 32 {
-        return None;
+/// The bus and USB vendor and product IDs of a device, as its SDL GUID and the kernel's
+/// HID device names (`0005:054C:0CE6.0007`) hold them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct HidIds {
+    /// The bus: 3 for USB, 5 for Bluetooth.
+    pub bus: u16,
+    pub vendor: u16,
+    pub product: u16,
+}
+
+impl HidIds {
+    /// The IDs in an SDL GUID: bus, vendor and product, little-endian, at bytes 0, 4 and 8.
+    pub fn from_guid(guid: &str) -> Option<Self> {
+        let word = |at: usize| {
+            let bytes = guid.get(at..at + 4)?;
+            let low = u8::from_str_radix(&bytes[..2], 16).ok()?;
+            let high = u8::from_str_radix(&bytes[2..], 16).ok()?;
+            Some(u16::from_le_bytes([low, high]))
+        };
+        if guid.len() != 32 {
+            return None;
+        }
+        Some(Self {
+            bus: word(0)?,
+            vendor: word(8)?,
+            product: word(16)?,
+        })
     }
-    Some((word(8)?, word(16)?))
+}
+
+/// A connected controller, as its backend describes it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Pad {
+    /// The name the device gives, such as "DualSense Wireless Controller".
+    pub name: String,
+    pub kind: DeviceKind,
+    /// Its bus, vendor and product, from its SDL GUID, to find its battery by.
+    pub ids: Option<HidIds>,
+    /// Whether it can rumble.
+    pub rumble: bool,
 }
 
 /// Input from a backend, already mapped to buttons and axes.
@@ -149,8 +329,7 @@ pub enum GamepadEvent {
     /// A device was plugged in, or was already there when the backend started.
     Connected {
         device: DeviceId,
-        name: String,
-        kind: DeviceKind,
+        pad: Pad,
     },
     Disconnected {
         device: DeviceId,
@@ -177,6 +356,22 @@ pub const HOLD_DURATION: Duration = Duration::from_secs(1);
 /// How far a stick must move before it navigates.
 pub const DEADZONE: f64 = 0.5;
 
+/// A rumble: how hard the strong (low-frequency) and weak (high-frequency) motors turn,
+/// from 0 to 1, and for how long.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Rumble {
+    pub strong: f64,
+    pub weak: f64,
+    pub duration: Duration,
+}
+
+/// The short rumble that tells which pad a row of Quick Access's Controllers is.
+pub const IDENTIFY_RUMBLE: Rumble = Rumble {
+    strong: 0.5,
+    weak: 0.5,
+    duration: Duration::from_millis(300),
+};
+
 /// A source of controller events: libmanette 0.2 today, its 1.0 API or SDL3 later. All
 /// device access sits behind this trait.
 pub trait GamepadBackend {
@@ -186,20 +381,25 @@ pub trait GamepadBackend {
 
     /// Stops reporting and lets go of every device, until the next `start`.
     fn stop(&mut self);
+
+    /// Rumbles `device`, if it is connected and can rumble.
+    fn rumble(&mut self, device: DeviceId, rumble: Rumble);
 }
 
 /// Maps controller input to intents.
 #[derive(Debug, Default)]
 pub struct Intents {
-    kinds: HashMap<DeviceId, DeviceKind>,
+    /// The connected pads, by number.
+    pads: BTreeMap<DeviceId, Pad>,
     sticks: HashMap<DeviceId, [f64; 2]>,
     /// The buttons held down, so a trigger that reports each move as a press asks once.
     pressed: HashSet<(DeviceId, Button)>,
     held: Option<Held>,
     /// Back held down, by which device and button, and when it counts as a hold.
     back_held: Option<(DeviceId, Button, Duration)>,
-    /// The device last plugged in or used, whose kind the glyphs show.
+    /// The device last plugged in or used, whose layout the hints show.
     active: Option<DeviceId>,
+    settings: ControllerSettings,
 }
 
 /// The direction being held, and when it next repeats.
@@ -227,13 +427,13 @@ impl Intents {
     /// held directions.
     pub fn handle(&mut self, event: &GamepadEvent, now: Duration) -> Option<Intent> {
         match *event {
-            GamepadEvent::Connected { device, kind, .. } => {
-                self.kinds.insert(device, kind);
+            GamepadEvent::Connected { device, ref pad } => {
+                self.pads.insert(device, pad.clone());
                 self.active = Some(device);
                 None
             }
             GamepadEvent::Disconnected { device } => {
-                self.kinds.remove(&device);
+                self.pads.remove(&device);
                 self.sticks.remove(&device);
                 self.pressed.retain(|(holder, _)| *holder != device);
                 if self.held.is_some_and(|held| held.device == device) {
@@ -243,7 +443,7 @@ impl Intents {
                     self.back_held = None;
                 }
                 if self.active == Some(device) {
-                    self.active = self.kinds.keys().min().copied();
+                    self.active = self.pads.keys().next().copied();
                 }
                 None
             }
@@ -357,17 +557,41 @@ impl Intents {
             .min()
     }
 
-    /// The kind of the device last plugged in or used, for glyphs; `None` without one.
-    pub fn active_kind(&self) -> Option<DeviceKind> {
-        self.kinds.get(&self.active?).copied()
+    /// The layout of the device last plugged in or used, for the hints; `None` without one.
+    pub fn active_layout(&self) -> Option<Layout> {
+        let device = self.active?;
+        self.pads.contains_key(&device).then(|| self.layout(device))
     }
 
-    /// The button as an Xbox pad would place it, after the device kind's A/B swap.
+    /// The connected pads, in the order they were numbered.
+    pub fn pads(&self) -> impl Iterator<Item = (DeviceId, &Pad)> {
+        self.pads.iter().map(|(device, pad)| (*device, pad))
+    }
+
+    /// The glyphs and the confirm and back buttons the user chose, which every device's
+    /// layout follows from now on.
+    pub fn set_settings(&mut self, settings: ControllerSettings) {
+        self.settings = settings;
+    }
+
+    /// The settings every device's layout follows.
+    pub fn settings(&self) -> ControllerSettings {
+        self.settings
+    }
+
+    /// The layout of `device` under the settings; one not yet connected reads as a generic
+    /// pad.
+    fn layout(&self, device: DeviceId) -> Layout {
+        let kind = self
+            .pads
+            .get(&device)
+            .map_or(DeviceKind::Generic, |pad| pad.kind);
+        Layout::resolve(kind, self.settings)
+    }
+
+    /// The button as an Xbox pad would place it, after the device's confirm and back swap.
     fn confirm_and_back_swapped(&self, device: DeviceId, button: Button) -> Button {
-        match self.kinds.get(&device) {
-            Some(kind) => kind.xbox_position(button),
-            None => button,
-        }
+        self.layout(device).xbox_position(button)
     }
 }
 
@@ -535,12 +759,50 @@ mod tests {
         assert_eq!(intents.handle(&pull, ms(50)), Some(Intent::NextSort));
     }
 
+    fn pad(kind: DeviceKind) -> Pad {
+        Pad {
+            name: "Pad".into(),
+            kind,
+            ids: None,
+            rumble: false,
+        }
+    }
+
     fn connected(kind: DeviceKind) -> GamepadEvent {
         GamepadEvent::Connected {
             device: PAD,
-            name: "Pad".into(),
-            kind,
+            pad: pad(kind),
         }
+    }
+
+    #[test]
+    fn the_pads_list_while_plugged_in_and_leave_when_unplugged() {
+        let mut intents = Intents::new();
+        let dualsense = Pad {
+            name: "DualSense Wireless Controller".into(),
+            kind: DeviceKind::PlayStation,
+            ids: HidIds::from_guid("050000004c050000e60c000000810000"),
+            rumble: true,
+        };
+        intents.handle(
+            &GamepadEvent::Connected {
+                device: DeviceId(2),
+                pad: dualsense.clone(),
+            },
+            ms(0),
+        );
+        intents.handle(&connected(DeviceKind::Generic), ms(0));
+
+        assert_eq!(
+            intents.pads().collect::<Vec<_>>(),
+            [(PAD, &pad(DeviceKind::Generic)), (DeviceId(2), &dualsense)]
+        );
+
+        intents.handle(&GamepadEvent::Disconnected { device: PAD }, ms(10));
+        assert_eq!(
+            intents.pads().collect::<Vec<_>>(),
+            [(DeviceId(2), &dualsense)]
+        );
     }
 
     #[test]
@@ -663,31 +925,177 @@ mod tests {
         assert_eq!(DeviceKind::detect(None, true), DeviceKind::SteamDeck);
     }
 
+    /// Every kind, by a match that stops compiling when a kind is added, so the tables
+    /// below have to cover it.
+    fn every_kind() -> [DeviceKind; 5] {
+        let kinds = DeviceKind::ALL;
+        for kind in kinds {
+            match kind {
+                DeviceKind::Xbox
+                | DeviceKind::PlayStation
+                | DeviceKind::Nintendo
+                | DeviceKind::SteamDeck
+                | DeviceKind::Generic => {}
+            }
+        }
+        kinds
+    }
+
+    #[test]
+    fn every_prompt_and_swap_setting_resolves_with_every_kind() {
+        use DeviceKind::{Generic, Nintendo, PlayStation, SteamDeck, Xbox};
+        use Glyphs::{DeckLetters, Letters, NintendoLetters, Shapes};
+        // Each kind with each prompt setting: the glyphs, and whether Auto swaps confirm
+        // and back (when the glyphs put A on the east).
+        let rows = [
+            (Xbox, Prompts::Auto, Letters, false),
+            (Xbox, Prompts::Letters, Letters, false),
+            (Xbox, Prompts::Shapes, Shapes, false),
+            (Xbox, Prompts::NintendoLetters, NintendoLetters, true),
+            (PlayStation, Prompts::Auto, Shapes, false),
+            (PlayStation, Prompts::Letters, Letters, false),
+            (PlayStation, Prompts::Shapes, Shapes, false),
+            (PlayStation, Prompts::NintendoLetters, NintendoLetters, true),
+            (Nintendo, Prompts::Auto, NintendoLetters, true),
+            (Nintendo, Prompts::Letters, Letters, false),
+            (Nintendo, Prompts::Shapes, Shapes, false),
+            (Nintendo, Prompts::NintendoLetters, NintendoLetters, true),
+            // A Steam Deck's letters keep its L1, R1, L2, R2 and R3.
+            (SteamDeck, Prompts::Auto, DeckLetters, false),
+            (SteamDeck, Prompts::Letters, DeckLetters, false),
+            (SteamDeck, Prompts::Shapes, Shapes, false),
+            (SteamDeck, Prompts::NintendoLetters, NintendoLetters, true),
+            (Generic, Prompts::Auto, Letters, false),
+            (Generic, Prompts::Letters, Letters, false),
+            (Generic, Prompts::Shapes, Shapes, false),
+            (Generic, Prompts::NintendoLetters, NintendoLetters, true),
+        ];
+        for kind in every_kind() {
+            for prompts in Prompts::ALL {
+                assert!(
+                    rows.iter().any(|row| (row.0, row.1) == (kind, prompts)),
+                    "{kind:?} with {prompts:?} has no row"
+                );
+            }
+        }
+
+        for (kind, prompts, glyphs, auto_swap) in rows {
+            for (swap, swapped) in [
+                (Swap::Auto, auto_swap),
+                (Swap::Off, false),
+                (Swap::On, true),
+            ] {
+                assert_eq!(
+                    Layout::resolve(kind, ControllerSettings { prompts, swap }),
+                    Layout { glyphs, swapped },
+                    "{kind:?} with {prompts:?} and {swap:?}"
+                );
+            }
+        }
+        assert_eq!(Swap::ALL, [Swap::Auto, Swap::Off, Swap::On]);
+    }
+
+    #[test]
+    fn the_settings_read_and_write_their_gsettings_values() {
+        let prompts = ["auto", "letters", "shapes", "nintendo-letters"];
+        for (choice, value) in Prompts::ALL.into_iter().zip(prompts) {
+            assert_eq!(choice.setting(), value);
+            assert_eq!(Prompts::from_setting(value), choice);
+        }
+        for (choice, value) in Swap::ALL.into_iter().zip(["auto", "off", "on"]) {
+            assert_eq!(choice.setting(), value);
+            assert_eq!(Swap::from_setting(value), choice);
+        }
+        // A value an older or newer schema wrote reads as Auto.
+        assert_eq!(Prompts::from_setting("icons"), Prompts::Auto);
+        assert_eq!(Swap::from_setting(""), Swap::Auto);
+    }
+
     #[test]
     fn glyphs_follow_the_pad_last_plugged_in_or_used() {
         let mut intents = Intents::new();
         let other = DeviceId(2);
         intents.handle(&connected(DeviceKind::Xbox), ms(0));
-        assert_eq!(intents.active_kind(), Some(DeviceKind::Xbox));
+        assert_eq!(glyphs(&intents), Some(Glyphs::Letters));
 
         intents.handle(
             &GamepadEvent::Connected {
                 device: other,
-                name: "DualSense".into(),
-                kind: DeviceKind::PlayStation,
+                pad: pad(DeviceKind::PlayStation),
             },
             ms(0),
         );
-        assert_eq!(intents.active_kind(), Some(DeviceKind::PlayStation));
+        assert_eq!(glyphs(&intents), Some(Glyphs::Shapes));
 
         intents.handle(&press(Button::South), ms(10));
-        assert_eq!(intents.active_kind(), Some(DeviceKind::Xbox));
+        assert_eq!(glyphs(&intents), Some(Glyphs::Letters));
 
         intents.handle(&GamepadEvent::Disconnected { device: PAD }, ms(20));
-        assert_eq!(intents.active_kind(), Some(DeviceKind::PlayStation));
+        assert_eq!(glyphs(&intents), Some(Glyphs::Shapes));
 
         intents.handle(&GamepadEvent::Disconnected { device: other }, ms(30));
-        assert_eq!(intents.active_kind(), None);
+        assert_eq!(glyphs(&intents), None);
+    }
+
+    fn glyphs(intents: &Intents) -> Option<Glyphs> {
+        intents.active_layout().map(|layout| layout.glyphs)
+    }
+
+    #[test]
+    fn with_swap_on_the_east_button_activates_and_the_south_one_goes_back_and_holds() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Xbox), ms(0));
+        intents.set_settings(ControllerSettings {
+            swap: Swap::On,
+            ..ControllerSettings::default()
+        });
+
+        assert_eq!(
+            intents.handle(&press(Button::East), ms(0)),
+            Some(Intent::Activate)
+        );
+        assert_eq!(
+            intents.handle(&press(Button::South), ms(0)),
+            Some(Intent::Back)
+        );
+        assert_eq!(intents.repeat(HOLD_DURATION), Some(Intent::BackHeld));
+    }
+
+    #[test]
+    fn with_swap_off_a_nintendo_pad_activates_with_its_south_button() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Nintendo), ms(0));
+        intents.set_settings(ControllerSettings {
+            swap: Swap::Off,
+            ..ControllerSettings::default()
+        });
+
+        assert_eq!(
+            intents.handle(&press(Button::South), ms(0)),
+            Some(Intent::Activate)
+        );
+        assert_eq!(
+            intents.active_layout(),
+            Some(Layout {
+                glyphs: Glyphs::NintendoLetters,
+                swapped: false
+            })
+        );
+    }
+
+    #[test]
+    fn button_prompts_change_the_active_layout_s_glyphs_at_once() {
+        // Steam Input's virtual pad, which reads as an Xbox pad, holding a DualSense.
+        let steam_pad = DeviceKind::detect(Some("03000000de280000ff11000001000000"), false);
+        let mut intents = Intents::new();
+        intents.handle(&connected(steam_pad), ms(0));
+
+        intents.set_settings(ControllerSettings {
+            prompts: Prompts::Shapes,
+            ..ControllerSettings::default()
+        });
+
+        assert_eq!(glyphs(&intents), Some(Glyphs::Shapes));
     }
 
     #[test]

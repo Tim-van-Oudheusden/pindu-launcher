@@ -1,8 +1,8 @@
 //! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
 //! leaving), the Quick Access panel on the right (notifications, what runs in the
-//! background, the design and a few settings) and the options sheet at the bottom (what
-//! to do with one game). This decides which one is open and at which level, what Start,
-//! Guide, R3, View or X and B do to them, and what each lists.
+//! background, the design, the controllers and a few settings) and the options sheet at
+//! the bottom (what to do with one game). This decides which one is open and at which
+//! level, what Start, Guide, R3, View or X and B do to them, and what each lists.
 
 use crate::gamepad::Intent;
 use crate::launch;
@@ -43,6 +43,8 @@ pub enum QuickAccessLevel {
     Activity,
     /// The designs to pick from.
     Designs,
+    /// The connected controllers, the button prompts and the confirm and back swap.
+    Controllers,
     /// Cover size, navigation sounds and exiting after a launch.
     Settings,
 }
@@ -299,6 +301,7 @@ mod tests {
             QuickAccessLevel::Notifications,
             QuickAccessLevel::Activity,
             QuickAccessLevel::Designs,
+            QuickAccessLevel::Controllers,
             QuickAccessLevel::Settings,
         ] {
             let mut panels = Panels::new();
