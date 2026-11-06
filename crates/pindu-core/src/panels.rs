@@ -1,8 +1,9 @@
 //! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
 //! leaving), the Quick Access panel on the right (notifications, what runs in the
-//! background, the design, the controllers and a few settings) and the options sheet at
-//! the bottom (what to do with one game). This decides which one is open and at which
-//! level, what Start, Guide, R3, View or X and B do to them, and what each lists.
+//! background, the design, the controllers, a few settings, and entries for the page
+//! under it such as the library's filters) and the options sheet at the bottom (what to
+//! do with one game). This decides which one is open and at which level, what Start,
+//! Guide, R3, View or X and B do to them, and what each lists.
 
 use crate::gamepad::Intent;
 use crate::launch;
@@ -47,6 +48,8 @@ pub enum QuickAccessLevel {
     Controllers,
     /// Cover size, navigation sounds and their volume, and exiting after a launch.
     Settings,
+    /// The library filters, while the library is under the panel (see [`page_entries`]).
+    Filters,
 }
 
 /// What lies under the panels when an intent comes in.
@@ -58,6 +61,8 @@ pub struct Under {
     pub dialog: bool,
     /// A notification is unread: Quick Access opens at the notifications.
     pub unread: bool,
+    /// The page is fullscreen mode's library: Quick Access offers its filters.
+    pub library: bool,
 }
 
 /// The panel that is open, if any.
@@ -178,6 +183,23 @@ pub fn drawer_entries(playing: bool, collections: bool) -> Vec<DrawerEntry> {
     .collect()
 }
 
+/// An entry Quick Access adds for the page under it, besides the ones it always has.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PageEntry {
+    /// The library filters, leading to [`QuickAccessLevel::Filters`].
+    Filters,
+}
+
+/// The entries Quick Access adds for the page `under` it, top to bottom: the library's
+/// Filters.
+pub fn page_entries(under: Under) -> Vec<PageEntry> {
+    under
+        .library
+        .then_some(PageEntry::Filters)
+        .into_iter()
+        .collect()
+}
+
 /// An action of the options sheet for one game.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameOption {
@@ -296,16 +318,19 @@ mod tests {
         game: false,
         dialog: false,
         unread: false,
+        library: false,
     };
     const GAME: Under = Under {
         game: true,
         dialog: false,
         unread: false,
+        library: false,
     };
     const DIALOG: Under = Under {
         game: true,
         dialog: true,
         unread: false,
+        library: false,
     };
 
     fn drawer() -> Option<Panel> {
@@ -337,6 +362,7 @@ mod tests {
             QuickAccessLevel::Designs,
             QuickAccessLevel::Controllers,
             QuickAccessLevel::Settings,
+            QuickAccessLevel::Filters,
         ] {
             let mut panels = Panels::new();
             panels.handle(Intent::QuickAccess, PAGE);
@@ -551,6 +577,23 @@ mod tests {
             [Home, Library, ExitFullscreen, Quit],
             "settings live in Quick Access"
         );
+    }
+
+    #[test]
+    fn quick_access_offers_filters_on_the_library_page_only() {
+        let library = Under {
+            library: true,
+            ..PAGE
+        };
+        let library_game = Under {
+            library: true,
+            ..GAME
+        };
+
+        assert_eq!(page_entries(library), [PageEntry::Filters]);
+        assert_eq!(page_entries(library_game), [PageEntry::Filters]);
+        assert!(page_entries(PAGE).is_empty());
+        assert!(page_entries(GAME).is_empty(), "a game page has no filters");
     }
 
     fn game(source: Source, kind: LaunchKind) -> Game {

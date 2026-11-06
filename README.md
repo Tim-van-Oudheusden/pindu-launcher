@@ -131,7 +131,10 @@ fetched or not, Proton downloads and games that need a permission. It opens on t
 library sync, a SteamGridDB artwork fetch or a Proton download runs, its Activity lists them with their progress and
 cancels artwork fetches and Proton downloads (a cancelled download leaves nothing behind). **Refresh Library** reads
 your launchers again, offline like every sync. **Surprise Me** opens the page of an installed game picked at random,
-never the same one twice in a row, so you still choose whether to play. It also switches the design and holds quick
+never the same one twice in a row, so you still choose whether to play. On the library page, **Filters** narrows every
+tab to installed or not installed games, Windows or native ones, and can show hidden games too; a **Filtered** chip
+beside the tabs says so, and **Clear Filters** brings the whole tab back. These filters are apart from the desktop
+window's filter row and last until the app quits. Quick Access also switches the design and holds quick
 settings: cover size, navigation sounds with a volume slider that left and right turn (here or in Preferences),
 exiting after a launch, and under Accessibility **Reduce Motion** (Home's background holds still and art changes
 without a fade, as it also does when the system's animations are off) and **Larger Text** (fullscreen text about a

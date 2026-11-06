@@ -431,6 +431,32 @@ template $PinduWindow: Adw.ApplicationWindow {
                           };
                         }
 
+                        // Shown while fullscreen mode's library is under the panel.
+                        ListBoxRow quick_access_filters_row {
+                          action-name: "win.quick-access-filters";
+                          visible: false;
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "checkbox-checked-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Label {
+                              label: _("Filters");
+                              xalign: 0;
+                              hexpand: true;
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
+
                         ListBoxRow quick_access_design_row {
                           action-name: "win.quick-access-designs";
 
@@ -1039,6 +1065,71 @@ template $PinduWindow: Adw.ApplicationWindow {
                     };
                   };
                 }
+
+                StackPage {
+                  name: "filters";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      Label {
+                        label: _("Filters");
+                        xalign: 0;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // Fullscreen mode's own filters, apart from the desktop window's
+                      // filter row; they narrow every tab as they change.
+                      ListBox quick_access_filters {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.SwitchRow quick_access_installed_row {
+                          title: _("Installed");
+                        }
+
+                        Adw.SwitchRow quick_access_not_installed_row {
+                          title: _("Not Installed");
+                        }
+
+                        Adw.SwitchRow quick_access_windows_row {
+                          title: _("Windows");
+                        }
+
+                        Adw.SwitchRow quick_access_native_row {
+                          title: _("Native");
+                        }
+
+                        Adw.SwitchRow quick_access_hidden_row {
+                          title: _("Show Hidden Games");
+                        }
+                      }
+
+                      ListBox quick_access_clear_filters {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.ButtonRow {
+                          title: _("Clear Filters");
+                          action-name: "win.clear-fullscreen-filters";
+                        }
+                      }
+                    };
+                  };
+                }
               }
             };
 
@@ -1253,6 +1344,17 @@ template $PinduWindow: Adw.ApplicationWindow {
                             };
                           }
 
+                          // Shown while Quick Access's filters narrow the tabs.
+                          Label filtered_chip {
+                            label: _("Filtered");
+                            valign: center;
+                            visible: false;
+
+                            styles [
+                              "filtered-chip",
+                            ]
+                          }
+
                           Box {
                             spacing: 8;
                             valign: center;
@@ -1387,6 +1489,16 @@ template $PinduWindow: Adw.ApplicationWindow {
                               icon-name: "edit-find-symbolic";
                               title: _("No Results Found");
                               description: _("Try a different search or filter");
+                            };
+                          }
+
+                          StackPage {
+                            name: "no-filter-matches";
+
+                            child: Adw.StatusPage {
+                              icon-name: "edit-find-symbolic";
+                              title: _("No Games Match the Filters");
+                              description: _("Clear the filters in Quick Access to see the whole tab");
                             };
                           }
 

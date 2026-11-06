@@ -24,6 +24,7 @@ use crate::task_service::TaskService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
 use pindu_core::backup::ImportSummary;
+use pindu_core::library::Filters;
 use pindu_core::notifications::{Kind, Target};
 use pindu_core::steamgriddb::{self, RunNotice};
 
@@ -64,6 +65,9 @@ mod imp {
         pub notification_service: NotificationService,
         /// What runs in the background, for Quick Access's Activity.
         pub task_service: TaskService,
+        /// Fullscreen mode's library filters, apart from the desktop window's filter row;
+        /// they last until the app quits, through windows closed and opened again.
+        pub fullscreen_filters: std::cell::Cell<Filters>,
     }
 
     #[glib::object_subclass]
@@ -314,6 +318,15 @@ impl PinduApplication {
     /// What runs in the background: syncs, art fetches and Proton downloads.
     pub fn task_service(&self) -> &TaskService {
         &self.imp().task_service
+    }
+
+    /// Fullscreen mode's library filters, as Quick Access set them this run.
+    pub fn fullscreen_filters(&self) -> Filters {
+        self.imp().fullscreen_filters.get()
+    }
+
+    pub fn set_fullscreen_filters(&self, filters: Filters) {
+        self.imp().fullscreen_filters.set(filters);
     }
 
     fn setup_actions(&self) {

@@ -7,8 +7,9 @@
 //! rather than popover menus, which the compositor dismisses on a controller press.
 //! Quick Access's notifications are `fullscreen_notifications`'s, its Activity and Refresh
 //! Library `fullscreen_activity`'s, its Surprise Me `fullscreen_surprise`'s, its
-//! Controllers `fullscreen_controllers`'s. Its Design level holds the design, its variant,
-//! Home's background blur and dim, and the user's own stylesheet.
+//! Controllers `fullscreen_controllers`'s, its Filters (on the library page only)
+//! `fullscreen_library`'s. Its Design level holds the design, its variant, Home's
+//! background blur and dim, and the user's own stylesheet.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -18,8 +19,8 @@ use pindu_core::gamepad::Intent;
 use pindu_core::home::{BLUR_KEY, DIM_KEY};
 use pindu_core::library::View;
 use pindu_core::panels::{
-    DrawerEntry, DrawerLevel, GameOption, OptionsLevel, Panel, Panels, QuickAccessLevel, Under,
-    design_choices, drawer_entries, game_options, variant_choices,
+    DrawerEntry, DrawerLevel, GameOption, OptionsLevel, PageEntry, Panel, Panels, QuickAccessLevel,
+    Under, design_choices, drawer_entries, game_options, page_entries, variant_choices,
 };
 use pindu_core::paths;
 
@@ -101,6 +102,11 @@ impl PinduWindow {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Settings));
             })
             .build();
+        let filters = gio::ActionEntry::builder("quick-access-filters")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Filters));
+            })
+            .build();
         self.add_action_entries([
             close,
             home,
@@ -115,6 +121,7 @@ impl PinduWindow {
             designs,
             controllers,
             quick_settings,
+            filters,
         ]);
         // Up and Down stop at a list's ends; in Quick Access's Controllers and settings they
         // go on to the next list (`fullscreen_playing` takes the drawer's and Quick Access's
@@ -131,6 +138,8 @@ impl PinduWindow {
             imp.quick_access_sizes.get(),
             imp.quick_access_switches.get(),
             imp.quick_access_accessibility.get(),
+            imp.quick_access_filters.get(),
+            imp.quick_access_clear_filters.get(),
         ] {
             list.connect_keynav_failed(|list, direction| {
                 step_out_of_list(list, direction);
@@ -364,6 +373,7 @@ impl PinduWindow {
             game: game.is_some(),
             dialog: self.visible_dialog().is_some(),
             unread: self.has_unread_notifications(),
+            library: self.library_under_panels(),
         };
         let mut panels = self.imp().panels.get();
         if !panels.handle(intent, under) {
@@ -390,6 +400,26 @@ impl PinduWindow {
         let home = imp.navigation_view.visible_page().as_ref()
             == Some(imp.home_page.upcast_ref::<adw::NavigationPage>());
         home.then(|| imp.home_page.focused_game()).flatten()
+    }
+
+    /// Whether fullscreen mode's library is the page under the panels.
+    fn library_under_panels(&self) -> bool {
+        let imp = self.imp();
+        self.is_fullscreen()
+            && imp.navigation_view.visible_page().as_ref() == Some(&*imp.library_page)
+    }
+
+    /// Shows the entries Quick Access adds for the page under it, as it opens.
+    fn show_page_entries(&self) {
+        let under = Under {
+            game: self.focused_game().is_some(),
+            library: self.library_under_panels(),
+            ..Under::default()
+        };
+        let entries = page_entries(under);
+        self.imp()
+            .quick_access_filters_row
+            .set_visible(entries.contains(&PageEntry::Filters));
     }
 
     /// The panel that is open, if any.
@@ -447,11 +477,17 @@ impl PinduWindow {
         if matches!(open, Some(Panel::Drawer(_))) && !matches!(before, Some(Panel::Drawer(_))) {
             self.fill_drawer();
         }
+        if matches!(open, Some(Panel::QuickAccess(_)))
+            && !matches!(before, Some(Panel::QuickAccess(_)))
+        {
+            self.show_page_entries();
+        }
         match open {
             Some(Panel::QuickAccess(QuickAccessLevel::Notifications)) => self.show_notifications(),
             Some(Panel::QuickAccess(QuickAccessLevel::Activity)) => self.show_activity(),
             Some(Panel::QuickAccess(QuickAccessLevel::Designs)) => self.fill_designs(),
             Some(Panel::QuickAccess(QuickAccessLevel::Controllers)) => self.fill_controllers(),
+            Some(Panel::QuickAccess(QuickAccessLevel::Filters)) => self.show_fullscreen_filters(),
             _ => {}
         }
         let drawer = matches!(open, Some(Panel::Drawer(_)));
@@ -481,6 +517,7 @@ impl PinduWindow {
                     QuickAccessLevel::Designs => "designs",
                     QuickAccessLevel::Controllers => "controllers",
                     QuickAccessLevel::Settings => "settings",
+                    QuickAccessLevel::Filters => "filters",
                 });
             }
             None => {
@@ -534,6 +571,10 @@ impl PinduWindow {
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Settings)),
             ) => Some(imp.quick_access_settings_row.get().upcast()),
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::Filters)),
+            ) => Some(imp.quick_access_filters_row.get().upcast()),
             // The first Playing Now card's Return comes first.
             (Some(Panel::Drawer(DrawerLevel::Main)), _) if imp.playing_cards.is_visible() => imp
                 .playing_cards
@@ -592,6 +633,9 @@ impl PinduWindow {
             }
             (Some(Panel::QuickAccess(QuickAccessLevel::Settings)), _) => {
                 imp.tile_small.ancestor(gtk::ListBoxRow::static_type())
+            }
+            (Some(Panel::QuickAccess(QuickAccessLevel::Filters)), _) => {
+                first_row(&imp.quick_access_filters)
             }
             // The first controller that can rumble, or else the first button prompt.
             (Some(Panel::QuickAccess(QuickAccessLevel::Controllers)), _) => {

@@ -291,8 +291,14 @@ impl View {
     /// Whether the view shows `game`, held by the collections `collections`, before any
     /// toggles or search: in the library, hidden only in the Hidden view, and in the view.
     pub fn shows(self, game: &Game, collections: &[i64]) -> bool {
+        self.shows_hidden(game, collections, false)
+    }
+
+    /// [`Self::shows`], with hidden games in every view too when `hidden` (fullscreen
+    /// mode's Show hidden games).
+    fn shows_hidden(self, game: &Game, collections: &[i64], hidden: bool) -> bool {
         game.in_library()
-            && (game.hidden == (self == Self::Hidden))
+            && (game.hidden == (self == Self::Hidden) || hidden && game.hidden)
             && self.includes(game, collections)
     }
 }
@@ -326,8 +332,9 @@ pub fn step_tab(tabs: &[View], current: View, forward: bool) -> Option<View> {
     tabs.get(next).copied()
 }
 
-/// The stacking filter toggles of the library page. Toggles of one kind widen each other
-/// (Installed and Not installed together show both); kinds narrow each other.
+/// The stacking filter toggles of the library page, and of fullscreen mode's Quick Access.
+/// Toggles of one kind widen each other (Installed and Not installed together show both);
+/// kinds narrow each other.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Filters {
     pub installed: bool,
@@ -337,6 +344,9 @@ pub struct Filters {
     pub windows: bool,
     /// Native Linux games.
     pub native: bool,
+    /// Hidden games too, in whichever view (fullscreen mode's Show hidden games); the
+    /// desktop window shows them in their own view instead.
+    pub hidden: bool,
 }
 
 impl Filters {
@@ -412,11 +422,12 @@ impl LibraryFilter {
         change
     }
 
-    /// Whether a game shows: in the library, hidden only in the Hidden view, in the view,
-    /// allowed by the toggles and matching the search. `collections` are the IDs of the collections
-    /// holding the game.
+    /// Whether a game shows: in the library, hidden only in the Hidden view unless the
+    /// toggles show hidden games, in the view, allowed by the toggles and matching the
+    /// search. `collections` are the IDs of the collections holding the game.
     pub fn matches(&self, game: &Game, collections: &[i64], key: &SearchKey) -> bool {
-        self.view.shows(game, collections)
+        self.view
+            .shows_hidden(game, collections, self.filters.hidden)
             && self.filters.includes(game)
             && self.search.matches(&key.0)
     }
@@ -1087,6 +1098,152 @@ mod tests {
             .any()
         );
         assert_eq!(shown_with(Filters::default(), &platform_games()).len(), 3);
+    }
+
+    /// The games a fullscreen tab shows with `filters` on, each held by the collections
+    /// beside it.
+    fn tab_with(view: View, filters: Filters, games: &[(Game, &[i64])]) -> Vec<String> {
+        let mut filter = LibraryFilter::default();
+        filter.set_view(view);
+        filter.set_filters(filters);
+        games
+            .iter()
+            .filter(|(game, collections)| {
+                filter.matches(game, collections, &SearchKey::new(&game.title))
+            })
+            .map(|(game, _)| game.title.clone())
+            .collect()
+    }
+
+    /// Platform games, plus a hidden installed Windows favourite, each with the
+    /// collections holding it.
+    fn tab_games() -> Vec<(Game, &'static [i64])> {
+        use crate::model::Platform;
+        let mut hidden = game("4", "Hidden Windows Installed Favourite", None, 0);
+        hidden.platform = Some(Platform::Windows);
+        hidden.installed = true;
+        hidden.favourite = true;
+        hidden.hidden = true;
+        let collections: [&[i64]; 4] = [&[5], &[], &[5], &[5]];
+        platform_games()
+            .into_iter()
+            .chain([hidden])
+            .zip(collections)
+            .collect()
+    }
+
+    #[test]
+    fn filters_narrow_each_tab_view() {
+        let games = tab_games();
+        let windows = Filters {
+            windows: true,
+            ..Filters::default()
+        };
+        let not_installed = Filters {
+            not_installed: true,
+            ..Filters::default()
+        };
+        let native = Filters {
+            native: true,
+            ..Filters::default()
+        };
+
+        assert_eq!(
+            tab_with(View::All, windows, &games),
+            ["Windows Favourite", "Windows Installed Favourite"]
+        );
+        assert_eq!(
+            tab_with(View::Installed, windows, &games),
+            ["Windows Installed Favourite"]
+        );
+        assert!(tab_with(View::Installed, not_installed, &games).is_empty());
+        assert_eq!(
+            tab_with(View::Favourites, not_installed, &games),
+            ["Windows Favourite"]
+        );
+        assert_eq!(
+            tab_with(View::Collection(5), native, &games),
+            ["Native Installed"]
+        );
+    }
+
+    #[test]
+    fn show_hidden_games_brings_the_tabs_hidden_games_in() {
+        let games = tab_games();
+        let hidden = Filters {
+            hidden: true,
+            ..Filters::default()
+        };
+        let hidden_native = Filters {
+            hidden: true,
+            native: true,
+            ..Filters::default()
+        };
+
+        assert!(hidden.any());
+        assert_eq!(tab_with(View::All, hidden, &games).len(), 4);
+        assert_eq!(
+            tab_with(View::Installed, hidden, &games),
+            [
+                "Native Installed",
+                "Windows Installed Favourite",
+                "Hidden Windows Installed Favourite"
+            ]
+        );
+        assert_eq!(
+            tab_with(View::Collection(5), hidden, &games),
+            [
+                "Native Installed",
+                "Windows Installed Favourite",
+                "Hidden Windows Installed Favourite"
+            ]
+        );
+        // The other toggles still narrow the hidden games.
+        assert_eq!(
+            tab_with(View::All, hidden_native, &games),
+            ["Native Installed"]
+        );
+        // The Hidden view shows hidden games only, either way.
+        assert_eq!(
+            tab_with(View::Hidden, hidden, &games),
+            ["Hidden Windows Installed Favourite"]
+        );
+    }
+
+    #[test]
+    fn filters_stay_across_tabs_and_clearing_restores_each_whole_tab() {
+        let games = tab_games();
+        let mut filter = LibraryFilter::default();
+        filter.set_filters(Filters {
+            windows: true,
+            hidden: true,
+            ..Filters::default()
+        });
+        filter.set_view(View::Favourites);
+        let shown = |filter: &LibraryFilter| -> Vec<String> {
+            games
+                .iter()
+                .filter(|(game, collections)| {
+                    filter.matches(game, collections, &SearchKey::new(&game.title))
+                })
+                .map(|(game, _)| game.title.clone())
+                .collect()
+        };
+
+        assert_eq!(shown(&filter).len(), 3);
+
+        assert_eq!(
+            filter.set_filters(Filters::default()),
+            FilterChange::Different
+        );
+        for view in fullscreen_tabs([5]) {
+            filter.set_view(view);
+            assert_eq!(shown(&filter), tab_with(view, Filters::default(), &games));
+        }
+        assert_eq!(
+            tab_with(View::Favourites, Filters::default(), &games),
+            ["Windows Favourite", "Windows Installed Favourite"]
+        );
     }
 
     #[test]
