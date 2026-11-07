@@ -141,33 +141,61 @@ For the development build, use `io.github.tim_van_oudheusden.pindu-launcher-deve
 
 ## Fullscreen mode
 
-Press <kbd>F11</kbd>, start the app with `--fullscreen`, or turn on **Start in Fullscreen Mode** in Preferences. Move
-with the D-pad or left stick, open with A and go back with B; the hint bar at the bottom names the buttons that work on
-each screen, drawn with the app's own glyphs for the controller you hold. Quick Access (right stick click, the Steam
-Deck's "…" button, or <kbd>Ctrl</kbd>+<kbd>2</kbd>) shows the time, the battery and whether you are offline, the game you
-are playing with how long it has run, and this session's notifications: games a sync added or found missing, artwork
-fetched or not, Proton downloads and games that need a permission. It opens on them while one is unread. While a
-library sync, a SteamGridDB artwork fetch or a Proton download runs, its Activity lists them with their progress and
-cancels artwork fetches and Proton downloads (a cancelled download leaves nothing behind). **Refresh Library** reads
-your launchers again, offline like every sync. **Surprise Me** opens the page of an installed game picked at random,
-never the same one twice in a row, so you still choose whether to play. On the library page, **Filters** narrows every
-tab to installed or not installed games, Windows or native ones, and can show hidden games too; a **Filtered** chip
-beside the tabs says so, and **Clear Filters** brings the whole tab back. These filters are apart from the desktop
-window's filter row and last until the app quits. With a game Pindu runs itself focused, or on its page,
-**Performance** turns its **Performance Overlay** (MangoHud) and **GameMode** on or off from its next launch, the same
-switches its options sheet (View or X) has; store games, whose launcher keeps their settings, have neither, and while
-the game runs the level says a change waits for its next start. Quick Access also switches the design and holds quick
-settings: cover size, navigation sounds with a volume slider that left and right turn (here or in Preferences),
-exiting after a launch, and under Accessibility **Reduce Motion** (Home's background holds still and art changes
-without a fade, as it also does when the system's animations are off) and **Larger Text** (fullscreen text about a
-quarter larger). **Controllers** lists the controllers it sees, with the glyphs each shows and its battery where
-the system reports one for it; select one to make it rumble, so you can tell which is which. There, or in Preferences,
-**Button Prompts** picks the glyphs (letters, shapes or letters with A on the right) instead of following the
-controller, which helps under Steam Input, where every controller looks like Steam's own, and **Swap Confirm and Back**
-makes the right button confirm and the bottom one go back everywhere in fullscreen mode. **Controls** lists everything
-the buttons do, in groups (moving, the library, the panels and launching), with the glyphs of the controller in use and
-the keys that do the same, including the ones the hint bar leaves out, such as holding B to cancel a launch; without a
-controller it lists the keys alone.
+A controller-first view of the same library, for the couch, a TV or a Steam Deck.
+
+**To open it:** press <kbd>F11</kbd>, start the app with `--fullscreen`, or turn on **Start in Fullscreen Mode** in
+Preferences.
+
+### Getting around
+
+- **Move** with the D-pad or left stick, **open** with A and **go back** with B.
+- The **hint bar** at the bottom names the buttons that work on each screen, drawn with the app's own glyphs for the
+  controller you hold.
+- **Controls** in Quick Access lists everything the buttons do, grouped into moving, the library, the panels and
+  launching. It shows the glyphs of the controller in use and the keys that do the same, including ones the hint bar
+  leaves out, such as holding B to cancel a launch. Without a controller it lists the keys alone.
+
+### Quick Access
+
+Open it with a right stick click, the Steam Deck's "…" button, or <kbd>Ctrl</kbd>+<kbd>2</kbd>.
+
+- **Status:** the time, the battery, whether you are offline, and the game you are playing with how long it has run.
+- **Notifications** from this session: games a sync added or found missing, artwork fetched or not, Proton downloads,
+  and games that need a permission. Quick Access opens on them while one is unread.
+- **Activity:** a running library sync, SteamGridDB artwork fetch or Proton download, with its progress. Artwork
+  fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
+- **Refresh Library** reads your launchers again, offline like every sync.
+- **Surprise Me** opens the page of an installed game picked at random, never the same one twice in a row, so you
+  still choose whether to play.
+- **Design** switches the fullscreen design (see [Styling fullscreen mode](#styling-fullscreen-mode)).
+- **Quick settings:** cover size, navigation sounds with a volume slider (left and right turn it, here or in
+  Preferences), and exiting after a launch.
+- **Accessibility:**
+  - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
+    system's animations are off.
+  - **Larger Text:** fullscreen text about a quarter larger.
+
+### Filters
+
+On the library page, **Filters** narrows every tab to installed or not installed games, or to Windows or native ones,
+and can show hidden games too. A **Filtered** chip beside the tabs says a filter is on, and **Clear Filters** brings the
+whole tab back. These filters are separate from the desktop window's filter row and last until the app quits.
+
+### Performance
+
+With a game Pindu runs itself focused, or on its page, **Performance** turns its **Performance Overlay** (MangoHud)
+and **GameMode** on or off from its next launch. Its options sheet (View or X) has the same switches.
+
+- Store games have neither, since their launcher keeps their settings.
+- While the game runs, the panel says a change waits for its next start.
+
+### Controllers
+
+- **Controllers** in Quick Access lists the controllers it sees, with the glyphs each shows and its battery where the
+  system reports one. Select one to make it rumble, so you can tell which is which.
+- **Button Prompts** (there or in Preferences) picks the glyphs instead of following the controller: letters, shapes,
+  or letters with A on the right. This helps under Steam Input, where every controller looks like Steam's own.
+- **Swap Confirm and Back** makes the right button confirm and the bottom one go back everywhere in fullscreen mode.
 
 ### Running in gamescope
 
