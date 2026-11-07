@@ -5,7 +5,7 @@
 %global app_id io.github.tim_van_oudheusden.pindu-launcher
 
 Name:           pindu-launcher
-Version:        0.2.0
+Version:        0.3.0
 Release:        1%{?dist}
 Summary:        Every PC game on your computer in one GNOME library
 
@@ -79,5 +79,8 @@ appstreamcli validate --no-net %{buildroot}%{_metainfodir}/%{app_id}.metainfo.xm
 %{_metainfodir}/%{app_id}.metainfo.xml
 
 %changelog
+* Sat Nov 07 2026 Tim van Oudheusden - 0.3.0-1
+- See https://github.com/Tim-van-Oudheusden/pindu-launcher/releases/tag/v0.3.0
+
 * Sat Nov 07 2026 Tim van Oudheusden - 0.2.0-1
 - See https://github.com/Tim-van-Oudheusden/pindu-launcher/releases/tag/v0.2.0

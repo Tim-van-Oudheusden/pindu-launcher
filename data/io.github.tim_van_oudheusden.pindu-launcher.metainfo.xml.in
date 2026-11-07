@@ -87,6 +87,18 @@
   </supports>
 
   <releases>
+    <release version="0.3.0" date="2026-11-07">
+      <description>
+        <p>Native packages, your own fullscreen style in Preferences, and the start of translations.</p>
+        <ul>
+          <li>Install Pindu launcher as an RPM on Fedora 45 or a DEB on Debian testing and Ubuntu 26.10, next to the Flatpak</li>
+          <li>Turn your own fullscreen stylesheet on, import it, open its folder or reset it in Preferences, which also lists its problems</li>
+          <li>Without umu-launcher, Windows games now say what is missing and how to install it</li>
+          <li>The focused cover in the first row of the fullscreen library is no longer cut off</li>
+          <li>A first, partial Dutch translation; help translate on Weblate</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-11-07">
       <description>
         <p>Windows games, and a fullscreen mode for playing from the couch with a controller.</p>
