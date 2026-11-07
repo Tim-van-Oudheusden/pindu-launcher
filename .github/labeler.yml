@@ -1,0 +1,51 @@
+# Path-based pull request labels, applied by .github/workflows/labeler.yml (actions/labeler).
+# The labels name the areas a pull request touches (AGENTS.md, Issue conventions); its risk
+# tier comes from .github/risk-assessment.yml. `**` matches across directories.
+
+area:core:
+  - changed-files:
+      - any-glob-to-any-file: ['crates/pindu-core/**']
+
+area:import:
+  - changed-files:
+      - any-glob-to-any-file: ['crates/pindu-core/src/sources.rs', 'crates/pindu-core/src/sources/**']
+
+area:art:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'crates/pindu-core/src/art.rs'
+          - 'crates/pindu-core/src/art_cache.rs'
+          - 'crates/pindu-core/src/steamgriddb.rs'
+
+area:launch:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'crates/pindu-core/src/launch.rs'
+          - 'crates/pindu-core/src/umu.rs'
+          - 'crates/pindu-core/src/proton*.rs'
+
+area:gamepad:
+  - changed-files:
+      - any-glob-to-any-file: ['crates/manette/**', 'crates/manette-sys/**', 'crates/pindu-core/src/gamepad.rs']
+
+area:ui:
+  - changed-files:
+      - any-glob-to-any-file: ['crates/pindu-ui/**', 'data/ui/**']
+
+area:packaging:
+  - changed-files:
+      # The build, packaging and release, CI and its gate scripts, and dependencies.
+      - any-glob-to-any-file:
+          - 'build-aux/**'
+          - '.github/**'
+          - 'scripts/**'
+          - 'data/*.in'
+          - 'meson.build'
+          - '**/meson.build'
+          - 'meson.options'
+          - 'Cargo.toml'
+          - 'Cargo.lock'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file: ['docs/**', '*.md']

@@ -1,0 +1,35 @@
+# Policy: what GITHUB_TOKEN may do in each workflow.
+# Evaluated by scripts/workflow-permissions-check.sh, which CI runs through
+# scripts/workflow-permissions-check.test.sh: it fails when a workflow under
+# .github/workflows/ has no rule here, when a rule names a workflow or job that does not
+# exist or has a key other than `jobs`, or when a workflow's `permissions:` blocks differ
+# from its rule in either direction.
+#
+# Every workflow declares a top-level `permissions:` block equal to `default`, so a job
+# without its own block can only read the repository. A rule is:
+#   jobs  the exact `permissions:` block of each job that declares one. A job's block
+#         replaces the top-level one; jobs not listed must not declare a block.
+# A rule of `{}` means the default and no job-level blocks.
+#
+# Widening a grant is a change to this file and to the workflow, both high risk
+# (docs/risk-tiers.md), so the maintainer reviews and merges it.
+
+default:
+  contents: read
+
+workflows:
+  ci.yml: {}
+
+  # actions/labeler reads .github/labeler.yml and labels the pull request.
+  labeler.yml:
+    jobs:
+      label: { contents: read, pull-requests: write }
+
+  # Create the GitHub Release and upload the bundles, sources and packages.
+  release.yml:
+    jobs:
+      publish: { contents: write }
+
+  review.yml: {}
+
+  tier-classifier.yml: {}

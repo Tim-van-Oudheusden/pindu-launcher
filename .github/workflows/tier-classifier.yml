@@ -1,0 +1,62 @@
+name: Change classification
+
+# Classifies each pull request into a risk tier (low / medium / high) from the paths it
+# changes, so reviewers know how closely to look. Informational: the tier lands in the job
+# summary and never fails the run. Tiers and the review each one expects are defined in
+# docs/risk-tiers.md.
+#
+# The classifier and its risk assessment (.github/risk-assessment.yml) come from the base
+# branch, checked out separately, so a pull request cannot lower its own tier by editing
+# them; the pull request's own checkout only supplies the diff.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  classify:
+    name: Risk tier
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out the base branch's classifier
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .tier-base
+          persist-credentials: false
+
+      - name: Classify changed files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -eu
+          classifier=.tier-base/scripts/tier-classify.sh
+          if [ ! -f "$classifier" ]; then
+            # Only the pull request that introduces the classifier has none on its base.
+            echo "::warning title=Risk tier::base branch has no classifier; using this pull request's own copy"
+            classifier=scripts/tier-classify.sh
+          fi
+          # --no-renames: a file moved out of a high-risk path is listed under its old path too.
+          git -c core.quotePath=false diff --name-only --no-renames "${BASE_SHA}...${HEAD_SHA}" > "$RUNNER_TEMP/paths.txt"
+          sh "$classifier" < "$RUNNER_TEMP/paths.txt" > "$RUNNER_TEMP/tier.txt"
+          tier="$(sed -n 's/^tier=//p' "$RUNNER_TEMP/tier.txt")"
+          echo "::notice title=Risk tier::${tier} (see docs/risk-tiers.md)"
+          {
+            echo "## Risk tier: ${tier}"
+            echo
+            echo "Highest tier of any changed file wins; see \`docs/risk-tiers.md\` for what each tier asks of reviewers."
+            echo
+            echo '```'
+            grep -v '^tier=' "$RUNNER_TEMP/tier.txt" || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

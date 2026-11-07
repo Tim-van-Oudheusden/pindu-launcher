@@ -16,6 +16,24 @@ env:
   LINT_EXCEPTIONS: build-aux/flatpak/lint-exceptions.json
 
 jobs:
+  governance:
+    name: Governance scripts and policies
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # The PR review rubric, the risk-tier classifier against .github/risk-assessment.yml and
+      # docs/risk-tiers.md, and every workflow's token grants against
+      # .github/policies/workflow-permissions.yml (yq 4 ships on the runner).
+      - name: Script tests
+        run: |
+          sh scripts/pr-review-check.test.sh
+          sh scripts/tier-classify.test.sh
+          sh scripts/workflow-permissions-check.test.sh
+
   checks:
     name: Rust and Meson checks
     runs-on: ubuntu-latest
