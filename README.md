@@ -30,9 +30,10 @@
 
 ## Status
 
-Early development. Version 0.1.0 is tagged, but there is no release download and no Flathub listing yet: install a CI
-build or build it from source ([Installing](#installing)). Linux only, as a Flatpak on the GNOME 51 runtime. Progress is
-tracked in the [milestones](https://github.com/Tim-van-Oudheusden/pindu-launcher/milestones).
+Early development. Releases ship on [GitHub Releases](https://github.com/Tim-van-Oudheusden/pindu-launcher/releases);
+version 0.1.0 is tagged but has no download yet, so for now install a CI build or build it from source
+([Installing](#installing)). A Flathub listing comes later. Linux only, as a Flatpak on the GNOME 51 runtime. Progress
+is tracked in the [milestones](https://github.com/Tim-van-Oudheusden/pindu-launcher/milestones).
 
 ## About
 
