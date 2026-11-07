@@ -37,9 +37,10 @@
 # ALERTS_IGNORE and AUDIT_IGNORE are space-separated advisory ids accepted
 # after review; record each with its reason and the date to revisit in the
 # workflow that sets them. Diagnostics go to a Failures section and what a row
-# could not check to a Notes section, so stdout stays a clean report. Every
-# check runs even when an earlier one fails; the script exits 1 if any failed,
-# and 2 on a usage error. Needs jq and python3, and gh unless ALERTS_JSON and
+# could not check to a Notes section, so stdout stays a clean report; its last
+# line is always `<!-- nightly-compliance: end -->`. Every check runs even
+# when an earlier one fails; the script exits 1 if any failed, and 2 on a
+# usage error. Needs jq and python3, and gh unless ALERTS_JSON and
 # RULESET_JSON are set.
 set -eu
 
@@ -256,5 +257,9 @@ echo
 echo "## ACMM self-check"
 echo
 printf '%s\n' "$acmm_out"
+# The last line, which Markdown does not show. scripts/compliance-issue.py takes a report without it as cut short (the
+# job timed out or the script stopped early), so the rows it never printed are not read as passing.
+echo
+echo "<!-- nightly-compliance: end -->"
 
 exit "$failed"

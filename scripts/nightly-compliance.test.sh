@@ -128,6 +128,12 @@ expect "every check passing exits 0 and lists every row" 0 \
   "| ACMM codebase level | ✅ pass |" \
   "ACMM codebase level: L0 Prerequisites not met"
 lacks "a clean run has no Failures section" "## Failures"
+# scripts/compliance-issue.py takes a report without this last line as cut short, never as every check passing.
+if [ "$(printf '%s\n' "$out" | tail -n 1)" = "<!-- nightly-compliance: end -->" ]; then
+  ok "the report ends with the end line"
+else
+  not_ok "the report ends with the end line: $out"
+fi
 if [ "$(cat "$tmp/cargo-audit.args")" = "audit --file Cargo.lock" ] &&
   [ "$(cat "$tmp/flatpak.args")" = "remote-info --system flathub org.gnome.Platform//51" ] &&
   [ "$(cat "$tmp/actionlint.args")" = "-no-color" ] && [ "$(cat "$tmp/acmm.args")" = "" ]; then
@@ -143,6 +149,11 @@ run ALERTS_JSON="$tmp/serious-alerts.json"
 expect "open high and critical alerts fail and are listed" 1 "| Dependabot alerts (high+) | ❌ fail |" \
   "## Failures" "- GHSA-high1 (high) zbus: Summary of GHSA-high1 https://example.test/GHSA-high1" \
   "- GHSA-crit1 (critical) zbus"
+if [ "$(printf '%s\n' "$out" | tail -n 1)" = "<!-- nightly-compliance: end -->" ]; then
+  ok "a failing report also ends with the end line"
+else
+  not_ok "a failing report also ends with the end line: $out"
+fi
 
 run ALERTS_JSON="$tmp/serious-alerts.json" ALERTS_IGNORE="GHSA-high1 GHSA-crit1"
 expect "ignored alerts pass" 0 "| Dependabot alerts (high+) | ✅ pass |"
