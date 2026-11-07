@@ -6,7 +6,8 @@
 //! any of them can reach the desktop window. Saving a stylesheet, or another file directly
 //! in the design's or the variant's folder (one it imports, say), reloads it. The
 //! design's layout choices (`ThemeLayout`), which CSS cannot make, are in force with its
-//! stylesheet; choosing the design again rereads them.
+//! stylesheet; choosing the design again rereads them. Preferences imports, resets and
+//! checks `fullscreen.css` here, and hears of its changes whether or not it is on.
 
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
@@ -15,7 +16,7 @@ use std::time::Duration;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
-use pindu_core::custom_style::{self, Severity, StyleProblem, StyleState};
+use pindu_core::custom_style::{self, ProblemSummary, Severity, StyleProblem, StyleState};
 use pindu_core::paths;
 use pindu_core::themes::{self, Theme, ThemeLayout};
 
@@ -35,6 +36,8 @@ const DEBOUNCE: Duration = Duration::from_millis(300);
 type ProblemsHandler = Box<dyn Fn(usize)>;
 type ProblemsHandlers = Rc<RefCell<Vec<ProblemsHandler>>>;
 type LayoutHandlers = Rc<RefCell<Vec<Box<dyn Fn(ThemeLayout)>>>>;
+/// Called after a stylesheet changed on disk; `Break` drops the handler.
+type ChangedHandlers = Rc<RefCell<Vec<Box<dyn Fn() -> glib::ControlFlow>>>>;
 
 /// Which changes in a stylesheet's folder reload it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -67,6 +70,7 @@ struct Sheet {
     watch: Watch,
     state: Rc<RefCell<SheetState>>,
     on_problems: ProblemsHandlers,
+    on_changed: ChangedHandlers,
 }
 
 impl Sheet {
@@ -77,24 +81,15 @@ impl Sheet {
             watch,
             state: Rc::default(),
             on_problems: on_problems.clone(),
+            on_changed: ChangedHandlers::default(),
         };
         let state = Rc::downgrade(&sheet.state);
         sheet
             .provider
             .connect_parsing_error(move |_, section, error| {
-                let Some(state) = state.upgrade() else {
-                    return;
-                };
-                let severity = if error.kind::<gtk::CssParserWarning>().is_some() {
-                    Severity::Warning
-                } else {
-                    Severity::Error
-                };
-                state.borrow_mut().problems.push(StyleProblem {
-                    line: section.start_location().lines(),
-                    message: error.message().to_owned(),
-                    severity,
-                });
+                if let Some(state) = state.upgrade() {
+                    state.borrow_mut().problems.push(problem(section, error));
+                }
             });
         sheet
     }
@@ -171,7 +166,8 @@ impl Sheet {
         }
     }
 
-    /// The stylesheet changed: read it again once changes have settled, if it is shown.
+    /// The stylesheet changed: read it again once changes have settled, if it is shown,
+    /// and tell those who asked.
     fn changed(&self) {
         if let Some(pending) = self.state.borrow_mut().pending.take() {
             pending.remove();
@@ -182,6 +178,15 @@ impl Sheet {
             if sheet.state.borrow().installed {
                 sheet.load();
             }
+            let handlers = std::mem::take(&mut *sheet.on_changed.borrow_mut());
+            let mut kept: Vec<_> = handlers
+                .into_iter()
+                .filter(|handler| handler() == glib::ControlFlow::Continue)
+                .collect();
+            // Handlers connected while these ran.
+            let mut on_changed = sheet.on_changed.borrow_mut();
+            kept.append(&mut on_changed);
+            *on_changed = kept;
         });
         self.state.borrow_mut().pending = Some(id);
     }
@@ -206,6 +211,20 @@ impl Sheet {
                 handler(errors);
             }
         }
+    }
+}
+
+/// A problem GTK reported while parsing a stylesheet.
+fn problem(section: &gtk::CssSection, error: &glib::Error) -> StyleProblem {
+    let severity = if error.kind::<gtk::CssParserWarning>().is_some() {
+        Severity::Warning
+    } else {
+        Severity::Error
+    };
+    StyleProblem {
+        line: section.start_location().lines(),
+        message: error.message().to_owned(),
+        severity,
     }
 }
 
@@ -274,6 +293,14 @@ impl StyleService {
             layout: Rc::default(),
             on_layout: LayoutHandlers::default(),
         };
+        // Watched whether or not it is on, for Preferences to report its problems. In a
+        // folder that exists, so a stylesheet created there is seen at once.
+        if let Err(error) = custom_style::style_folder(&service.custom_path) {
+            glib::g_debug!("pindu", "Cannot create the style folder: {error}");
+        }
+        service
+            .custom
+            .set_file(Some(service.custom_path.as_ref().clone()));
         service.follow_settings();
         service.follow_style_manager();
         service
@@ -365,6 +392,57 @@ impl StyleService {
         &self.custom_path
     }
 
+    /// The folder of `fullscreen.css`, created if it is missing, for the user to open.
+    pub fn custom_stylesheet_folder(&self) -> std::io::Result<PathBuf> {
+        custom_style::style_folder(&self.custom_path).map(Path::to_owned)
+    }
+
+    /// Copies the stylesheet at `picked` in as `fullscreen.css`, keeping one already
+    /// there as `fullscreen.css.bak`; a style in force reloads.
+    pub async fn import_custom_stylesheet(&self, picked: PathBuf) -> Result<(), String> {
+        let style = self.custom_path.as_ref().clone();
+        gio::spawn_blocking(move || custom_style::import_style(&picked, &style))
+            .await
+            .map_err(|_| "the copy stopped unexpectedly".to_owned())?
+            .map_err(|error| error.to_string())
+    }
+
+    /// Turns the `fullscreen-custom-style` setting off, which removes the style at once,
+    /// and moves `fullscreen.css` to `fullscreen.css.bak`.
+    pub fn reset_custom_stylesheet(&self) -> std::io::Result<()> {
+        if let Err(error) = self.settings.set_boolean(CUSTOM_STYLE, false) {
+            glib::g_warning!("pindu", "Cannot turn off the fullscreen style: {error}");
+        }
+        custom_style::reset_style(&self.custom_path)
+    }
+
+    /// What GTK finds wrong with `fullscreen.css` now, read afresh whether or not it is
+    /// in force; nothing without the file.
+    pub fn custom_problems(&self) -> ProblemSummary {
+        if !self.custom_path.is_file() {
+            return ProblemSummary::default();
+        }
+        let problems = Rc::new(RefCell::new(Vec::new()));
+        let provider = gtk::CssProvider::new();
+        provider.connect_parsing_error(glib::clone!(
+            #[strong]
+            problems,
+            move |_, section, error| problems.borrow_mut().push(problem(section, error))
+        ));
+        provider.load_from_path(self.custom_path.as_ref());
+        ProblemSummary::new(&problems.borrow())
+    }
+
+    /// Calls `handler` once changes to `fullscreen.css` have settled, whether or not it
+    /// is in force (it is read again first if it is), until `handler` returns
+    /// `ControlFlow::Break`.
+    pub fn connect_custom_stylesheet_changed(
+        &self,
+        handler: impl Fn() -> glib::ControlFlow + 'static,
+    ) {
+        self.custom.on_changed.borrow_mut().push(Box::new(handler));
+    }
+
     fn sheets(&self) -> [&Sheet; 3] {
         [&self.custom, &self.variant, &self.design]
     }
@@ -385,10 +463,7 @@ impl StyleService {
     }
 
     fn follow_custom_style(&self) {
-        let enabled = self.settings.boolean(CUSTOM_STYLE);
-        self.style.borrow_mut().enabled = enabled;
-        self.custom
-            .set_file(enabled.then(|| self.custom_path.as_ref().clone()));
+        self.style.borrow_mut().enabled = self.settings.boolean(CUSTOM_STYLE);
         self.update();
     }
 

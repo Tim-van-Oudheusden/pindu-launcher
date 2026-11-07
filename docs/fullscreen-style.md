@@ -27,11 +27,17 @@ This page is the style contract: the files, the `theme.json` fields and the CSS 
   `gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-design-variant <variant-id>`. An empty
   or unknown id picks the design's first variant.
 - `fullscreen.css` applies while the `fullscreen-custom-style` setting is on: Quick Access's **My Stylesheet**
-  switch under **Design**, which can only be turned on once the file exists.
+  switch under **Design**, or **Use My Stylesheet** in Preferences → Fullscreen, which can only be turned on
+  once the file exists. Turning it off removes the style at once.
+- Preferences → Fullscreen → **My Stylesheet** also shows where the file goes, opens its folder (creating it
+  if needed) and has **Import Style…**, which copies a stylesheet you pick in as `fullscreen.css`, so its
+  `url()` and `@import` resolve in that folder. **Reset** turns the setting off. Both keep the file they
+  replace as `fullscreen.css.bak`, replacing an older backup.
 - Saving a stylesheet, or another file directly in the design's or the variant's folder, reloads it at once.
   Files in other subfolders (such as `assets/`) are picked up the next time the stylesheet loads.
 - Problems GTK finds in a stylesheet are logged with their line, and fullscreen mode shows a toast with
-  their number. The rest of the stylesheet still applies.
+  their number. For `fullscreen.css`, Preferences shows the number and the first few, updated each time
+  the file changes. The rest of the stylesheet still applies.
 
 ## A design folder
 
