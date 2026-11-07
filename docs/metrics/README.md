@@ -23,7 +23,8 @@ opening a pull request.
 | [Translations](#translations) | Every file with strings is in `POTFILES.in`; the template matches the code | `po` Meson suite, `po/check-pot.sh` | Same | `Rust and Meson checks` |
 | [Versions](#versions) | Meson, Cargo, MetaInfo, RPM and DEB name one version | `versions` Meson test (`build-aux/check-version.sh`) | Every PR and push; on a tag against the tag | `Rust and Meson checks`; Release's `Check the tag against the versions` |
 | [Manifest parity](#manifest-parity) | Release manifest grants exactly the development manifest's permissions and modules | `manifests` Meson test (`build-aux/check-manifests.sh`) | Every PR and push | `Rust and Meson checks` |
-| [UI smoke test](#ui-smoke-test) | The installed app starts and stays up without a panic or GLib critical | `ui-smoke` Meson test (`build-aux/ui-smoke.sh`) | Every PR and push, in both Flatpak builds and every native package | `Flatpak build, …` and `Native package install and UI smoke test` checks |
+| [Tooling tests](#tooling-tests) | The version, manifest and release-notes scripts catch what they are meant to catch | `tooling` Meson suite (`tests/tooling/`) | Every PR and push | `Rust and Meson checks`; inside both Flatpak builds |
+| [UI smoke test](#ui-smoke-test) | The installed app starts and stays up without a panic or GLib critical | `ui-smoke` Meson test (`tests/e2e/ui-smoke.sh`) | Every PR and push, in both Flatpak builds and every native package | `Flatpak build, …` and `Native package install and UI smoke test` checks |
 | [Flatpak build and lint](#flatpak-build-and-lint) | Both manifests build, test and pass `flatpak-builder-lint` | `ci.yml` (`flatpak`), `release.yml` (`flatpak`) | Every PR and push; every release tag | `Flatpak build, UI smoke test and lint (development/release)`; bundle artifacts |
 | [Source tarball](#source-tarball) | `meson dist` vendors the crates and builds and tests offline | `ci.yml` and `release.yml` (`sources`) | Same | `Source tarball with vendored crates`; `sources` artifact |
 | [Native packages](#native-packages) | RPM and DEBs build offline from the tarball, install in clean containers and start | `ci.yml` and `release.yml` (`packages`, `packages-smoke`) | Same | `Native package (…)` and smoke checks; `package-*` artifacts |
@@ -114,9 +115,22 @@ permissions themselves are the maintainer's call ([`SECURITY-AI.md`](../security
 meson test -C _build manifests
 ```
 
+## Tooling tests
+
+The `tooling` Meson suite runs the Python `unittest` files in `tests/tooling/` against the scripts in `build-aux/`:
+`check-version.sh` and `check-manifests.sh` must pass on the repository and fail on temporary copies with a mismatched
+version, a mismatched tag, or a release manifest that gains a permission or a module, and `release-notes.py` must print
+the newest MetaInfo release's notes and fail for an unknown version. A failure means a script no longer does what CI
+and the Release workflow rely on it to do.
+
+```sh
+meson test -C _build --suite tooling
+python3 tests/tooling/test_check_version.py   # one file, without Meson
+```
+
 ## UI smoke test
 
-`build-aux/ui-smoke.sh` starts the installed app with an empty library and settings, on its own D-Bus session, with
+`tests/e2e/ui-smoke.sh` starts the installed app with an empty library and settings, on its own D-Bus session, with
 `G_DEBUG=fatal-criticals`, and fails if it is not still running five seconds later. It needs a display and the
 installed resources, so a plain `meson test` skips it (exit 77); it runs under xvfb in both Flatpak builds and, through
 `build-aux/package-smoke.sh`, in every native package.

@@ -25,5 +25,5 @@ case $package in
     ;;
 esac
 
-xvfb-run -a sh "$here/ui-smoke.sh" /usr/bin/pindu-launcher \
+xvfb-run -a sh "$here/../tests/e2e/ui-smoke.sh" /usr/bin/pindu-launcher \
   /usr/share/pindu-launcher/resources.gresource "$here/../assets/pindu_icon.png"

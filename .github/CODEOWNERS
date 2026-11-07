@@ -11,8 +11,11 @@
 
 # Flatpak manifests and their lint exceptions (sandbox permissions, runtime,
 # modules), the RPM and DEB recipes, and the scripts CI and releases run: the
-# version and manifest checks, crate vendoring, release notes and smoke tests.
+# version and manifest checks, crate vendoring, release notes and package smoke tests.
 /build-aux/                         @Tim-van-Oudheusden
+
+# The end-to-end UI smoke test both Flatpak builds and every native package run.
+/tests/e2e/                         @Tim-van-Oudheusden
 
 # The build: every meson.build (the nested ones drive cargo and register the
 # tests CI runs) and the build options.
