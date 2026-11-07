@@ -180,6 +180,10 @@ The workspace enforces the Rust for Linux lint set (`[workspace.lints]` in `Carg
 - **Prefer the platform and existing dependencies** — the standard library and the GNOME runtime cover most needs
 - **Never upgrade a major version as a side-effect** of another change; major upgrades and GNOME runtime bumps are
   their own PR
+- **Approved CI tools** (not crates; the maintainer's call like dependencies): cargo-llvm-cov 0.9.1, cargo-deny
+  0.20.2, cargo-audit 0.22.2, actionlint 1.7.12, `anthropics/claude-code-action@v1`, and `yq` 4 as preinstalled on
+  GitHub's Ubuntu runners (used, not installed, by the permissions policy check and the merge queue tests). Any other
+  tool needs approval first
 - **`deny.toml` is the dependency policy**: CI's `Dependency policy (cargo-deny)` job fails a crate whose licence it
   does not allow, a source other than crates.io, or a RustSec advisory. Accepting an advisory or a licence is the
   maintainer's call, recorded in `deny.toml` with the reason
