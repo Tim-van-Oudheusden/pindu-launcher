@@ -1,0 +1,10 @@
+{
+  "margin": 2,
+  "floors": {
+    "core": {
+      "lines": 95,
+      "regions": 94,
+      "functions": 94
+    }
+  }
+}

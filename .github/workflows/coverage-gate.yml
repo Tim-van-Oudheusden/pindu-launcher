@@ -1,0 +1,72 @@
+name: Coverage gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # One live run per pull request; pushes to main get a group per commit, so none is cancelled.
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: Unit-test coverage floors
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install the Rust SDK extension
+        run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .cargo-home
+            _build/cargo-target
+          key: coverage-${{ hashFiles('Cargo.lock') }}
+          restore-keys: coverage-
+
+      - name: Test the floor check
+        run: scripts/coverage-check.test.sh
+
+      # In the GNOME 51 SDK, as the checks job in ci.yml. cargo-llvm-cov finds llvm-cov and
+      # llvm-profdata in the rust-stable extension's sysroot (lib/rustlib/<host>/bin). Branch
+      # coverage needs a nightly compiler, so lines, regions and functions are measured.
+      # pindu-ui is GTK code, covered by the UI smoke test instead.
+      - name: Measure pindu-core coverage
+        run: |
+          chown -R "$(id -u):$(id -g)" "$PWD"
+          flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
+            --env=CARGO_HOME="$PWD/.cargo-home" \
+            --env=CARGO_TARGET_DIR="$PWD/_build/cargo-target" \
+            --env=PATH="$PWD/.cargo-home/bin:/usr/lib/sdk/rust-stable/bin:/usr/bin" \
+            --command=sh org.gnome.Sdk//51 -c '
+              set -e
+              cargo install --locked cargo-llvm-cov --version 0.9.1
+              cargo llvm-cov --package pindu-core --json --summary-only --output-path coverage.json
+            '
+
+      # The floors and the tuner's margin live in .github/auto-qa-tuning.json.
+      - name: Check coverage floors
+        run: scripts/coverage-check.sh coverage.json .github/auto-qa-tuning.json
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.json
+          if-no-files-found: ignore
+          retention-days: 14
