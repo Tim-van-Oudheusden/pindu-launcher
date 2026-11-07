@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Read the product spec
+    url: https://github.com/Tim-van-Oudheusden/pindu-launcher/blob/main/docs/Adwaita%20Game%20Library%20%E2%80%94%20Main%20Spec.pdf
+    about: Issues #1–#63 match the spec's issue tables; check whether your idea is already planned there.

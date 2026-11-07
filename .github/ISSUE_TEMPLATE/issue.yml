@@ -1,0 +1,96 @@
+name: Feature, chore or spike
+description: Plan new work for Pindu launcher, in the shape AGENTS.md asks of every issue
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing! Keep the title imperative, e.g. "Import Steam libraries".
+        After filing, apply the labels shown in brackets and set one milestone (M1 to M5, or Nice to have).
+        Found something broken? Use the "Bug report" form instead.
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      description: What kind of work is this?
+      multiple: false
+      options:
+        - Feature, a new user-facing capability (type:feature)
+        - Chore, repository, packaging or tooling upkeep (type:chore)
+        - Spike, a time-boxed investigation ending in a write-up (type:spike)
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which parts of the launcher does it touch?
+      multiple: true
+      options:
+        - Core crate, models, storage and shared services (area:core)
+        - Source importers, resolver and sync (area:import)
+        - Desktop and fullscreen shells (area:ui)
+        - Launch routes, sessions and playtime (area:launch)
+        - Artwork, cache and SteamGridDB (area:art)
+        - Controller input and gamepad service (area:gamepad)
+        - Flatpak, CI, MetaInfo and releases (area:packaging)
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: >-
+        Why this is needed, with a link to the spec section it comes from
+        (docs/Adwaita Game Library — Main Spec.pdf; add `#page=N` to the link).
+      placeholder: |
+        Steam is the first of the two M1 sources. ...
+
+        Spec: [Game sources, importers and launching, p. 6](https://github.com/Tim-van-Oudheusden/pindu-launcher/blob/main/docs/Adwaita%20Game%20Library%20%E2%80%94%20Main%20Spec.pdf#page=6)
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What the work covers.
+      placeholder: |
+        - Detect ...
+        - Read ...
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: A checklist that proves the issue is done.
+      placeholder: |
+        - [ ] Observable behaviour or deliverable
+        - [ ] Fixture tests
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What this issue deliberately leaves out, with the issues that cover it.
+      placeholder: |
+        - Writing to any Steam file
+        - Launching (#17)
+  - type: textarea
+    id: research
+    attributes:
+      label: Research
+      description: Links to the research in docs/ or elsewhere, and notes that shape the approach.
+      placeholder: |
+        - [Research — Heroic Games Launcher](https://github.com/Tim-van-Oudheusden/pindu-launcher/blob/main/docs/Research%20%E2%80%94%20Heroic%20Games%20Launcher.pdf)
+  - type: input
+    id: depends-on
+    attributes:
+      label: Depends on
+      description: Issues that must be closed before this one starts, if any.
+      placeholder: "#8, #17"
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: This is not Flathub submission work, which is human-only (see AGENTS.md, Safety Boundaries)
+          required: true

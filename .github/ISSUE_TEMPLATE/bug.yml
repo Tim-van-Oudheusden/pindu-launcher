@@ -1,0 +1,79 @@
+name: Bug report
+description: Something in Pindu launcher does not work as it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Keep the title short and specific, e.g. "Steam games on a second drive are missing".
+        Please leave out personal data such as account names, keys or full home paths you would rather not share.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Where does it go wrong, if you know?
+      multiple: true
+      options:
+        - Importing games from a launcher (area:import)
+        - Desktop or fullscreen window (area:ui)
+        - Launching games or playtime (area:launch)
+        - Artwork (area:art)
+        - Controller input (area:gamepad)
+        - Installing or packaging (area:packaging)
+        - Library data or settings (area:core)
+        - Not sure
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Pindu launcher
+        2. ...
+        3. See the error
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How you installed it
+      multiple: false
+      options:
+        - Flatpak from a GitHub release
+        - RPM package
+        - DEB package
+        - Built from source
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Version and desktop
+      description: >-
+        For the Flatpak, paste the output of `flatpak info io.github.tim_van_oudheusden.pindu-launcher`;
+        otherwise give the version from the About dialogue. Name your distribution and desktop, and the game
+        launchers involved (Steam, Heroic, ...) and how they are installed (native or Flatpak).
+      placeholder: |
+        Version: 0.1.0
+        Runtime: org.gnome.Platform/x86_64/51
+        Distribution: Fedora 45
+        Desktop: GNOME 51 (Wayland)
+        Launchers: Steam (Flatpak)
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: >-
+        Optional. Run `flatpak run io.github.tim_van_oudheusden.pindu-launcher` (or `pindu-launcher`) from a terminal,
+        reproduce the bug and paste the output.
+      render: text
