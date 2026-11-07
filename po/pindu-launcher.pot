@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 16:09+0100\n"
+"POT-Creation-Date: 2026-11-07 16:59+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -492,6 +492,7 @@ msgid "Unread"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:788
+#: crates/pindu-ui/src/preferences.rs:618
 msgid "Your fullscreen.css, over the design"
 msgstr ""
 
@@ -829,7 +830,7 @@ msgstr ""
 msgid "Playtime · Tracked Here"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:668 crates/pindu-ui/src/preferences.rs:518
+#: crates/pindu-ui/src/game_page.rs:668 crates/pindu-ui/src/preferences.rs:570
 msgid "None yet"
 msgstr ""
 
@@ -1028,69 +1029,119 @@ msgstr ""
 msgid "Could not keep a log of “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:135
+#: crates/pindu-ui/src/preferences.rs:150
 msgid "Command copied"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:263
+#: crates/pindu-ui/src/preferences.rs:315
 msgid "Allowed"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:265
+#: crates/pindu-ui/src/preferences.rs:317
 msgid "Not allowed"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:347
+#: crates/pindu-ui/src/preferences.rs:399
 msgid "Not found on this computer"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:358
+#: crates/pindu-ui/src/preferences.rs:410
 msgid "Import"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:370
+#: crates/pindu-ui/src/preferences.rs:422
 msgid "Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:372
+#: crates/pindu-ui/src/preferences.rs:424
 msgid "Found automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:377 data/ui/game_dialog.blp:62
+#: crates/pindu-ui/src/preferences.rs:429 data/ui/game_dialog.blp:62
 #: data/ui/preferences.blp:187
 msgid "_Choose…"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:383
+#: crates/pindu-ui/src/preferences.rs:435
 msgid "Find Automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:414
+#: crates/pindu-ui/src/preferences.rs:466
 msgid "Show in Sidebar"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:431
+#: crates/pindu-ui/src/preferences.rs:483
 #, rust-format
 msgid "Choose the Folder of {source}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:473
+#: crates/pindu-ui/src/preferences.rs:525
 msgid "Choose the Prefix Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:517
+#: crates/pindu-ui/src/preferences.rs:569
 msgid "A key is stored in your keyring"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:520
+#: crates/pindu-ui/src/preferences.rs:572
 #, rust-format
 msgid "The keyring cannot be used: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:548
+#: crates/pindu-ui/src/preferences.rs:600
 #, rust-format
 msgid "The key was not saved: {error}"
 msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:620
+msgid "Create the style file or import one to turn it on"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:645
+#, rust-format
+msgid "The style folder cannot be created: {error}"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:664
+msgid "Stylesheets"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:670
+msgid "Import Style"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:688
+msgid "Style imported"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:690
+#, rust-format
+msgid "The style was not imported: {error}"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:705
+msgid "Style moved to fullscreen.css.bak"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:706
+msgid "My Stylesheet is off"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:708
+#, rust-format
+msgid "The style was not reset: {error}"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:726 data/ui/preferences.blp:325
+msgid "No Problems"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:729
+#, rust-format
+msgid "{count} Problem"
+msgid_plural "{count} Problems"
+msgstr[0] ""
+msgstr[1] ""
 
 #: crates/pindu-ui/src/proton_choice.rs:96
 #, rust-format
@@ -2420,6 +2471,41 @@ msgstr ""
 msgid "Text about a quarter larger, to read from across the room"
 msgstr ""
 
+#: data/ui/preferences.blp:296 data/ui/window.blp:822
+msgid "My Stylesheet"
+msgstr ""
+
+#: data/ui/preferences.blp:297
+msgid ""
+"Restyle fullscreen mode with your own CSS, over the design. It never reaches "
+"the desktop window, and high contrast turns it off."
+msgstr ""
+
+#: data/ui/preferences.blp:300
+msgid "Use My Stylesheet"
+msgstr ""
+
+#: data/ui/preferences.blp:304
+msgid "Style File"
+msgstr ""
+
+#: data/ui/preferences.blp:310 data/ui/preferences.blp:315
+msgid "Open Style Folder"
+msgstr ""
+
+#: data/ui/preferences.blp:330
+msgid "_Import Style…"
+msgstr ""
+
+#: data/ui/preferences.blp:337
+msgid "_Reset"
+msgstr ""
+
+#: data/ui/preferences.blp:342
+msgid ""
+"Turns My Stylesheet off and renames fullscreen.css to fullscreen.css.bak"
+msgstr ""
+
 #: data/ui/shortcuts-dialog.blp:19
 msgid "Preferences"
 msgstr ""
@@ -2530,10 +2616,6 @@ msgstr ""
 
 #: data/ui/window.blp:758
 msgid "Background Dim"
-msgstr ""
-
-#: data/ui/window.blp:822
-msgid "My Stylesheet"
 msgstr ""
 
 #: data/ui/window.blp:879

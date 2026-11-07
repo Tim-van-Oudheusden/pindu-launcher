@@ -289,5 +289,63 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
         subtitle: _("Text about a quarter larger, to read from across the room");
       }
     }
+
+    // On the `fullscreen-custom-style` setting, as Quick Access's My Stylesheet: it can
+    // be turned on once `fullscreen.css` exists.
+    Adw.PreferencesGroup {
+      title: _("My Stylesheet");
+      description: _("Restyle fullscreen mode with your own CSS, over the design. It never reaches the desktop window, and high contrast turns it off.");
+
+      Adw.SwitchRow custom_style_row {
+        title: _("Use My Stylesheet");
+      }
+
+      Adw.ActionRow style_file_row {
+        title: _("Style File");
+        subtitle-selectable: true;
+
+        [suffix]
+        Button {
+          icon-name: "folder-open-symbolic";
+          tooltip-text: _("Open Style Folder");
+          valign: center;
+          clicked => $open_style_folder() swapped;
+
+          accessibility {
+            label: _("Open Style Folder");
+          }
+
+          styles [
+            "flat",
+          ]
+        }
+      }
+
+      Adw.ActionRow style_problems_row {
+        title: _("No Problems");
+        subtitle-selectable: true;
+      }
+
+      Adw.ButtonRow {
+        title: _("_Import Style…");
+        use-underline: true;
+        start-icon-name: "document-open-symbolic";
+        activated => $import_style() swapped;
+      }
+
+      Adw.ButtonRow reset_style_row {
+        title: _("_Reset");
+        use-underline: true;
+        activated => $reset_style() swapped;
+
+        accessibility {
+          description: _("Turns My Stylesheet off and renames fullscreen.css to fullscreen.css.bak");
+        }
+
+        styles [
+          "destructive-action",
+        ]
+      }
+    }
   }
 }

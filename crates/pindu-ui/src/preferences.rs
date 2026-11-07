@@ -2,7 +2,7 @@
 //! and the confirm and back swap, permissions in the Flatpak), Sources (import, folder,
 //! sidebar), Artwork (SteamGridDB), Windows games (default Proton, prefix folder and tools),
 //! Proton (downloaded builds and releases to install) and Fullscreen (start-up, sounds and
-//! their volume).
+//! their volume, accessibility, and the user's own stylesheet through the style service).
 //! Everything is GSettings, except the SteamGridDB key, which lives in the keyring,
 //! each source's import switch and folder, which live with the library's other source state,
 //! and the Proton builds, which are folders in our tools folder.
@@ -12,12 +12,15 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
-use gettextrs::gettext;
+use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
+use pindu_core::custom_style::ProblemSummary;
 use pindu_core::gamepad::{PROMPTS_KEY, Prompts, SWAP_KEY, Swap};
 use pindu_core::model::{Source, SourceState};
+use pindu_core::paths;
 use pindu_core::sources::sync::IMPORTED_SOURCES;
 
+use crate::application::PinduApplication;
 use crate::config::APP_ID;
 use crate::file_service;
 use crate::fullscreen::bind_volume_slider;
@@ -27,10 +30,14 @@ use crate::proton_downloads_page::ProtonDownloadsPage;
 use crate::proton_launch;
 use crate::sources::{source_icon, source_name};
 use crate::steamgriddb_service;
+use crate::style_service::StyleService;
 use crate::sync_service::SyncService;
 
 /// Tile sizes in the order of the cover size row (and the menu drawer's toggles).
 pub(crate) const TILE_SIZES: [&str; 3] = ["small", "medium", "large"];
+
+/// The setting that turns the user's own fullscreen stylesheet on.
+const CUSTOM_STYLE_KEY: &str = "fullscreen-custom-style";
 
 mod imp {
     use super::*;
@@ -68,6 +75,14 @@ mod imp {
         pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub large_text_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub custom_style_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub style_file_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub style_problems_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub reset_style_row: TemplateChild<adw::ButtonRow>,
         #[template_child]
         pub tile_size_row: TemplateChild<adw::ComboRow>,
         #[template_child]
@@ -157,6 +172,21 @@ mod imp {
                 page.check_releases();
             }
         }
+
+        #[template_callback]
+        fn open_style_folder(&self) {
+            self.obj().open_style_folder();
+        }
+
+        #[template_callback]
+        fn import_style(&self) {
+            self.obj().import_style();
+        }
+
+        #[template_callback]
+        fn reset_style(&self) {
+            self.obj().reset_style();
+        }
     }
 
     impl ObjectImpl for PreferencesDialog {
@@ -186,6 +216,27 @@ mod imp {
             settings
                 .bind("fullscreen-large-text", &*self.large_text_row, "active")
                 .build();
+            settings
+                .bind(CUSTOM_STYLE_KEY, &*self.custom_style_row, "active")
+                .build();
+            settings.connect_changed(
+                Some(CUSTOM_STYLE_KEY),
+                glib::clone!(
+                    #[weak(rename_to = dialog)]
+                    self.obj(),
+                    move |_, _| dialog.show_custom_style()
+                ),
+            );
+            if let Some(service) = style_service() {
+                let dialog = self.obj().downgrade();
+                service.connect_custom_stylesheet_changed(move || match dialog.upgrade() {
+                    Some(dialog) => {
+                        dialog.show_custom_style();
+                        glib::ControlFlow::Continue
+                    }
+                    None => glib::ControlFlow::Break,
+                });
+            }
             settings
                 .bind("show-titles", &*self.titles_row, "active")
                 .build();
@@ -227,6 +278,7 @@ mod imp {
                 Swap::ALL.map(Swap::setting).to_vec(),
             );
             self.settings.set(settings).expect("constructed once");
+            self.obj().show_custom_style();
 
             let proton = proton_launch::defaults().proton_version;
             let choice = ProtonChoice::new(&self.default_proton_row, FirstChoice::Newest, proton);
@@ -550,6 +602,131 @@ impl PreferencesDialog {
             }
         });
     }
+
+    /// My Stylesheet as things now are: it can be turned on once there is a
+    /// `fullscreen.css` (on without one, it can still be turned off), where the file goes,
+    /// and what GTK finds wrong with it.
+    fn show_custom_style(&self) {
+        let Some(service) = style_service() else {
+            return;
+        };
+        let imp = self.imp();
+        let exists = service.has_custom_stylesheet();
+        let usable = exists || self.settings().boolean(CUSTOM_STYLE_KEY);
+        imp.custom_style_row.set_sensitive(usable);
+        imp.custom_style_row.set_subtitle(&if exists {
+            gettext("Your fullscreen.css, over the design")
+        } else {
+            gettext("Create the style file or import one to turn it on")
+        });
+        imp.style_file_row.set_subtitle(&paths::home_relative(
+            service.custom_stylesheet_path(),
+            &std::env::home_dir().unwrap_or_default(),
+        ));
+        imp.reset_style_row.set_sensitive(usable);
+        imp.style_problems_row.set_visible(exists);
+        if exists {
+            let summary = service.custom_problems();
+            imp.style_problems_row.set_title(&problems_title(&summary));
+            imp.style_problems_row
+                .set_subtitle(&summary.first.join("\n"));
+        }
+    }
+
+    /// Opens the folder `fullscreen.css` goes in, creating it first.
+    fn open_style_folder(&self) {
+        let Some(service) = style_service() else {
+            return;
+        };
+        let folder = match service.custom_stylesheet_folder() {
+            Ok(folder) => folder,
+            Err(error) => {
+                self.add_toast(adw::Toast::new(
+                    &gettext("The style folder cannot be created: {error}")
+                        .replace("{error}", &error.to_string()),
+                ));
+                return;
+            }
+        };
+        let root = self.root().and_downcast::<gtk::Window>();
+        let launcher = gtk::FileLauncher::new(Some(&gio::File::for_path(folder)));
+        launcher.launch(root.as_ref(), gio::Cancellable::NONE, |result| {
+            if let Err(error) = result {
+                glib::g_warning!("pindu", "Could not open the style folder: {error}");
+            }
+        });
+    }
+
+    /// Picks a stylesheet through the portal and copies it in as `fullscreen.css`, so its
+    /// `url()` and `@import` resolve in the style folder.
+    fn import_style(&self) {
+        let filter = gtk::FileFilter::new();
+        filter.set_name(Some(&gettext("Stylesheets")));
+        filter.add_mime_type("text/css");
+        filter.add_suffix("css");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&filter);
+        let chooser = gtk::FileDialog::builder()
+            .title(gettext("Import Style"))
+            .filters(&filters)
+            .modal(true)
+            .build();
+        let root = self.root().and_downcast::<gtk::Window>();
+        let dialog = self.downgrade();
+        glib::spawn_future_local(async move {
+            let Ok(file) = chooser.open_future(root.as_ref()).await else {
+                return;
+            };
+            let (Some(path), Some(service)) = (file.path(), style_service()) else {
+                return;
+            };
+            let imported = service.import_custom_stylesheet(path).await;
+            let Some(dialog) = dialog.upgrade() else {
+                return;
+            };
+            let message = match imported {
+                Ok(()) => gettext("Style imported"),
+                Err(error) => {
+                    gettext("The style was not imported: {error}").replace("{error}", &error)
+                }
+            };
+            dialog.add_toast(adw::Toast::new(&message));
+            dialog.show_custom_style();
+        });
+    }
+
+    /// Turns My Stylesheet off and moves `fullscreen.css` aside as `fullscreen.css.bak`.
+    fn reset_style(&self) {
+        let Some(service) = style_service() else {
+            return;
+        };
+        let had_file = service.has_custom_stylesheet();
+        let message = match service.reset_custom_stylesheet() {
+            Ok(()) if had_file => gettext("Style moved to fullscreen.css.bak"),
+            Ok(()) => gettext("My Stylesheet is off"),
+            Err(error) => {
+                gettext("The style was not reset: {error}").replace("{error}", &error.to_string())
+            }
+        };
+        self.add_toast(adw::Toast::new(&message));
+        self.show_custom_style();
+    }
+}
+
+/// The application's style service, which reads and writes `fullscreen.css` for us.
+fn style_service() -> Option<StyleService> {
+    gio::Application::default()
+        .and_downcast::<PinduApplication>()
+        .map(|application| application.style_service().clone())
+}
+
+/// The title of the problems row: how many errors `fullscreen.css` has.
+fn problems_title(summary: &ProblemSummary) -> String {
+    if summary.count == 0 {
+        return gettext("No Problems");
+    }
+    let count = u32::try_from(summary.count).unwrap_or(u32::MAX);
+    ngettext("{count} Problem", "{count} Problems", count).replace("{count}", &count.to_string())
 }
 
 /// Binds `row`'s selection both ways to the string setting `key`, whose values are
