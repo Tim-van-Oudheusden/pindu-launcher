@@ -1,0 +1,73 @@
+name: AI audit trail
+
+# Audit trail of agent work: every pull request merged into main in the reporting window, with its
+# source (scripts/lib/pr-source.jq, the rule every report shares), the agent and model from the
+# body's signature line or the commits' Co-Authored-By trailers, who opened it and who merged it.
+# Computed by scripts/ai-audit-report.sh. The weekly run covers the past 7 days, so consecutive runs
+# leave no gap. The report lands in the run's job summary and, with the raw pull request data, in
+# the ai-audit artifact.
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Reporting window in days
+        required: false
+        default: '7'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: AI audit trail
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # contents: read for the checkout of scripts/; pull-requests: read for `gh pr list`.
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build the audit trail
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DAYS: ${{ inputs.days || '7' }}
+        run: |
+          set -euo pipefail
+          [[ "$DAYS" =~ ^[0-9]+$ ]] || { echo "::error::days must be a whole number, got '$DAYS'"; exit 1; }
+          since="$(date -u -d "${DAYS} days ago" +%Y-%m-%d)"
+          gh pr list --repo "$REPO" --base main --state merged --limit 1000 \
+            --search "merged:>=${since}" \
+            --json number,title,author,headRefName,mergedAt,mergedBy,body > prs.json
+          # `gh pr list --json commits` also asks for every commit's authors, which exceeds GraphQL's
+          # node limit at 100 pull requests a page, so the commit messages come from a query of their own.
+          # shellcheck disable=SC2016 # $q and $endCursor are GraphQL variables, not shell ones
+          gh api graphql --paginate -f q="repo:${REPO} is:pr is:merged base:main merged:>=${since}" -f query='
+            query($q: String!, $endCursor: String) {
+              search(query: $q, type: ISSUE, first: 100, after: $endCursor) {
+                pageInfo { hasNextPage endCursor }
+                nodes { ... on PullRequest { number commits(first: 100) { nodes { commit { messageHeadline messageBody } } } } }
+              }
+            }' > commits.json
+          jq --slurpfile pages commits.json '
+            ([$pages[].data.search.nodes[] | {key: (.number | tostring), value: [.commits.nodes[].commit]}]
+              | from_entries) as $commits
+            | map(. + {commits: ($commits[.number | tostring] // [])})' prs.json > ai-audit-prs.json
+          scripts/ai-audit-report.sh --since "$since" < ai-audit-prs.json > ai-audit.md
+          cat ai-audit.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the audit trail
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-audit
+          path: |
+            ai-audit.md
+            ai-audit-prs.json
+          retention-days: 90

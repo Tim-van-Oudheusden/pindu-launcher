@@ -46,6 +46,7 @@ jobs:
           sh scripts/auto-qa-tuner.test.sh
           sh scripts/quality-report.test.sh
           sh scripts/pr-metrics.test.sh
+          sh scripts/ai-audit-report.test.sh
           sh scripts/apply-review-suggestions.test.sh
 
       # In the GNOME 51 SDK, as the checks job in ci.yml. cargo-llvm-cov finds llvm-cov and

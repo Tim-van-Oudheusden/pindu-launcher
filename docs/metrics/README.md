@@ -27,6 +27,7 @@ opening a pull request.
 | [Flatpak build and lint](#flatpak-build-and-lint) | Both manifests build, test and pass `flatpak-builder-lint` | `ci.yml` (`flatpak`), `release.yml` (`flatpak`) | Every PR and push; every release tag | `Flatpak build, UI smoke test and lint (development/release)`; bundle artifacts |
 | [Source tarball](#source-tarball) | `meson dist` vendors the crates and builds and tests offline | `ci.yml` and `release.yml` (`sources`) | Same | `Source tarball with vendored crates`; `sources` artifact |
 | [Native packages](#native-packages) | RPM and DEBs build offline from the tarball, install in clean containers and start | `ci.yml` and `release.yml` (`packages`, `packages-smoke`) | Same | `Native package (…)` and smoke checks; `package-*` artifacts |
+| [AI audit trail](#ai-audit-trail) | Every PR merged into `main`: source (Hive, Claude Code in CI, Dependabot, other), agent, model, author, merger | `scripts/ai-audit-report.sh` via `ai-audit.yml` | Weekly (Mon 06:17 UTC, past 7 days), manual | Job summary; `ai-audit` artifact (report and raw PR data, kept 90 days) |
 
 ## Formatting
 
@@ -161,6 +162,38 @@ workflows' matrices ([`docs/releasing.md`](../releasing.md)).
 ```sh
 podman run --rm -v "$PWD:/src:Z" -w /src registry.fedoraproject.org/fedora:45 \
   build-aux/rpm/build.sh _dist/meson-dist/pindu-launcher-*.tar.xz packages
+```
+
+## AI audit trail
+
+A record of what reached `main` and who was behind it. Each PR merged in the window (default 7 days) gets one source
+from `scripts/lib/pr-source.jq`, the rule the PR acceptance metric also uses, checked in this order:
+
+- **Hive**: the PR body has a signature line of its own, `— hive: agent=<name> … model=<model> …` or
+  `— omp (Claude Code), model=<model>`, or the PR is authored by the `hive-worker-bee` GitHub App.
+- **Claude Code (CI)**: head branch `claude/*` (`claude.yml`).
+- **Dependabot**: head branch `dependabot/*`.
+- **Other**: anything else, such as the maintainer's own PRs and local agent runs that open a PR under the
+  maintainer's account without a signature.
+
+The agent and model come from the signature line (a local run signs without `agent=`, shown as `—`). Without a model
+there, the model is the name in the commits' `Co-Authored-By: <name> <noreply@anthropic.com>` trailers, which Claude
+Code writes (for example `Claude Opus 4.5`). A trailer names a model but does not change the source.
+
+The report counts merges per source and per merging account (a merge with no recorded merger is listed last as
+unknown), then lists every merge oldest first with its source, agent, model, author, merger, branch and title. The
+weekly run covers the past 7 days, so consecutive runs leave no gap. The workflow fetches the commit messages with a
+GraphQL query of its own, because `gh pr list --json commits` also asks for every commit's authors and exceeds
+GitHub's node limit. The `ai-audit` artifact keeps the report and the raw pull request data (`ai-audit-prs.json`) for
+90 days. `sh scripts/ai-audit-report.test.sh` tests the script, in the coverage gate's **Test the scripts** step.
+
+Run it with a different window from the Actions tab (**AI audit trail → Run workflow → days**), or locally with an
+authenticated `gh`, here without the commits, so models come from signature lines only:
+
+```sh
+since="$(date -u -d '7 days ago' +%Y-%m-%d)"
+gh pr list -R Tim-van-Oudheusden/pindu-launcher --base main --state merged --limit 1000 --search "merged:>=${since}" \
+  --json number,title,author,headRefName,mergedAt,mergedBy,body | scripts/ai-audit-report.sh --since "$since"
 ```
 
 ## Adding a metric
