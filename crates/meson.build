@@ -3,6 +3,13 @@ cargo_options = [
   '--target-dir', meson.project_build_root() / 'cargo-target',
 ]
 
+# A release tarball (`meson dist`, build-aux/dist-vendor.sh) carries the crates in vendor/
+# and a cargo config for them: build from those, without network and with Cargo.lock as is.
+vendor_config = meson.project_source_root() / '.cargo' / 'config.toml'
+if import('fs').is_dir(meson.project_source_root() / 'vendor')
+  cargo_options += ['--offline', '--locked', '--config', vendor_config]
+endif
+
 if get_option('buildtype') == 'release'
   cargo_options += ['--release']
   rust_target = 'release'

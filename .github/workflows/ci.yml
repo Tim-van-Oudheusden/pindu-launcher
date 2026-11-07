@@ -57,6 +57,37 @@ jobs:
               po/check-pot.sh _build
             '
 
+  sources:
+    name: Source tarball with vendored crates
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the Rust SDK extension
+        run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
+
+      # `meson dist` vendors the crates into the tarball (build-aux/dist-vendor.sh), then
+      # builds and tests the tarball offline from them, as a distro builder would.
+      - name: meson dist
+        run: |
+          chown -R "$(id -u):$(id -g)" "$PWD"
+          flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
+            --env=PATH=/usr/lib/sdk/rust-stable/bin:/usr/bin \
+            --command=sh org.gnome.Sdk//51 -c '
+              set -e
+              meson setup _dist
+              meson dist -C _dist --formats xztar
+            '
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sources
+          path: _dist/meson-dist/*.tar.xz
+          if-no-files-found: error
+
   flatpak:
     name: Flatpak build, UI smoke test and lint (${{ matrix.profile }})
     runs-on: ubuntu-latest

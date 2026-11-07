@@ -86,9 +86,42 @@ jobs:
       - name: Lint the build (MetaInfo, desktop file, icons)
         run: flatpak-builder-lint --gha-format --exceptions --user-exceptions "$LINT_EXCEPTIONS" repo repo
 
+  sources:
+    name: Source tarball with vendored crates
+    needs: version
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Install the Rust SDK extension
+        run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
+
+      # As in ci.yml: vendors the crates, then builds and tests the tarball offline.
+      - name: meson dist
+        run: |
+          chown -R "$(id -u):$(id -g)" "$PWD"
+          flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
+            --env=PATH=/usr/lib/sdk/rust-stable/bin:/usr/bin \
+            --command=sh org.gnome.Sdk//51 -c '
+              set -e
+              meson setup _dist
+              meson dist -C _dist --formats xztar
+            '
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sources
+          path: _dist/meson-dist/pindu-launcher-${{ needs.version.outputs.version }}.tar.xz
+          if-no-files-found: error
+
   publish:
     name: Publish the GitHub release
-    needs: [version, flatpak]
+    needs: [version, flatpak, sources]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -103,6 +136,11 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: flatpak-bundle
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sources
           path: dist
 
       - name: Checksums and notes

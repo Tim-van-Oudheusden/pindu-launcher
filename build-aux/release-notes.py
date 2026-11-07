@@ -45,7 +45,9 @@ def notes(version: str, metainfo: Path = METAINFO) -> str:
         f"flatpak install --user ./{bundle}\n"
         f"flatpak run {APP_ID}\n"
         "```\n\n"
-        "`SHA256SUMS` lists the checksum of every file in this release."
+        f"`pindu-launcher-{version}.tar.xz` holds the sources with every crate vendored, so it "
+        "builds with Meson without network. `SHA256SUMS` lists the checksum of every file in "
+        "this release."
     )
     return "\n\n".join(blocks) + "\n"
 
