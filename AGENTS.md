@@ -59,8 +59,13 @@ gh pr create --title "type(scope): summary (#<number>)" --body-file <file>   # L
 - Before working an issue: read it with `gh issue view <number>`, check that its `Depends on` issues are closed and that
   it is not `human-only`, assign it, then branch off an up-to-date `main` as `<type>/<number>-<slug>` (e.g.
   `feat/8-import-steam`)
-- When done: push the branch and open a pull request whose body says `Fixes #<number>`; the maintainer merges it, and
-  the merge closes the issue
+- When done: push the branch and open a pull request whose body says `Fixes #<number>`; the maintainer or the merge
+  queue merges it, and the merge closes the issue
+- The merge queue (`.github/workflows/merge-queue.yml`, `scripts/merge-queue.sh`) merges the oldest ready pull request
+  with a merge commit: same-repo, not a draft, merge state `CLEAN`, none of the labels `hold`, `blocked`,
+  `sentinel-alert` or `automated`, and not high risk by `main`'s `scripts/tier-classify.sh`. It first re-runs rustfmt,
+  clippy, `cargo test` and `meson test` on the pull request merged with the latest `main`, and labels it `hold` with a
+  comment if they fail. Add `hold` to keep a pull request out; remove it to queue the pull request again
 - Issue work lands through a pull request, not a direct push to `main`. `.github/rulesets/main.json` is the ruleset
   that enforces this (pull requests with merge commits, the CI checks it names, no force-push or deletion; admins may
   bypass). Change it through a pull request, then apply it:
