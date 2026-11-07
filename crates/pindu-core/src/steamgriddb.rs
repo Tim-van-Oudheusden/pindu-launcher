@@ -31,17 +31,24 @@ pub enum GameRef {
 /// A game a title search found.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SearchHit {
+    /// SteamGridDB's ID for the game.
     pub id: u64,
+    /// The game's name on SteamGridDB.
     pub name: String,
 }
 
 /// One image of a game.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Image {
+    /// SteamGridDB's ID for the image.
     pub id: u64,
+    /// Where the full image downloads from.
     pub url: String,
+    /// Where a thumbnail of the image downloads from.
     pub thumb: String,
+    /// Width in pixels, 0 when the answer does not give it.
     pub width: u32,
+    /// Height in pixels, 0 when the answer does not give it.
     pub height: u32,
 }
 
@@ -232,6 +239,7 @@ pub struct ArtRun {
     pub games_with_art: usize,
     /// Games asked for before the run ended.
     pub tried: usize,
+    /// How the run ended.
     pub end: RunEnd,
 }
 
@@ -240,8 +248,11 @@ pub struct ArtRun {
 pub enum RunNotice {
     /// This many games got art.
     Added(usize),
+    /// A run the user asked for found no art.
     NoneFound,
+    /// SteamGridDB refused the API key.
     KeyRejected,
+    /// SteamGridDB could not be reached, or kept refusing for a while.
     Unreachable,
 }
 

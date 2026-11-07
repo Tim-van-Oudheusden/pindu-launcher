@@ -6,7 +6,7 @@ use pindu_core::sources::vdf::Value;
 
 /// Copies `tests/fixtures/<name>` into a fresh temporary folder, replacing `@ROOT@` in
 /// every text file with the copy's path so absolute paths in launcher files point inside it.
-pub fn fixture(name: &str) -> (tempfile::TempDir, PathBuf) {
+pub(crate) fn fixture(name: &str) -> (tempfile::TempDir, PathBuf) {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path().to_owned();
     fixture_into(name, &root);
@@ -14,7 +14,7 @@ pub fn fixture(name: &str) -> (tempfile::TempDir, PathBuf) {
 }
 
 /// Copies `tests/fixtures/<name>` into `dest`, replacing `@ROOT@` with `dest`.
-pub fn fixture_into(name: &str, dest: &Path) {
+pub(crate) fn fixture_into(name: &str, dest: &Path) {
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/fixtures")
         .join(name);
@@ -41,7 +41,7 @@ fn copy_tree(from: &Path, to: &Path, root: &Path) {
 
 /// Encodes apps as a Steam `appinfo.vdf` of format version 28 or 29 (29 keeps keys in a
 /// string table at the end of the file).
-pub fn appinfo_bytes(version: u8, apps: &[(u32, Value)]) -> Vec<u8> {
+pub(crate) fn appinfo_bytes(version: u8, apps: &[(u32, Value)]) -> Vec<u8> {
     let mut strings: Vec<String> = Vec::new();
     let mut out = Vec::new();
     // The magic is 0x075644_NN with the version written as hex digits: 28 → 0x28.
@@ -112,7 +112,7 @@ fn encode_map(value: &Value, version: u8, strings: &mut Vec<String>, out: &mut V
 }
 
 /// A map from `(key, value)` pairs, for building appinfo entries.
-pub fn map<const N: usize>(entries: [(&str, Value); N]) -> Value {
+pub(crate) fn map<const N: usize>(entries: [(&str, Value); N]) -> Value {
     Value::Map(
         entries
             .into_iter()
@@ -121,6 +121,6 @@ pub fn map<const N: usize>(entries: [(&str, Value); N]) -> Value {
     )
 }
 
-pub fn text(value: &str) -> Value {
+pub(crate) fn text(value: &str) -> Value {
     Value::Str(value.to_owned())
 }

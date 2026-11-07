@@ -27,8 +27,11 @@ pub enum Route {
 /// folder it runs in.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Command {
+    /// The program and its arguments.
     pub argv: Vec<String>,
+    /// Environment variables set for the command.
     pub environment: BTreeMap<String, String>,
+    /// The folder it runs in, when it needs one.
     pub working_dir: Option<PathBuf>,
 }
 

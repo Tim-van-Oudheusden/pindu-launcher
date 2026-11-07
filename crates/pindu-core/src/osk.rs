@@ -6,17 +6,24 @@ use crate::gamepad::{Direction, Intent};
 /// What a key on the keyboard does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Key {
+    /// Types a character.
     Char(char),
+    /// Types a space.
     Space,
+    /// Deletes the last character.
     Backspace,
+    /// Confirms the search.
     Done,
 }
 
 /// A key where it sits in the grid: its first column and how many columns it covers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Cell {
+    /// The key.
     pub key: Key,
+    /// Its first column, from 0.
     pub column: usize,
+    /// How many columns it covers.
     pub width: usize,
 }
 

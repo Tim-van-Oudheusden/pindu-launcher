@@ -55,10 +55,12 @@ mod imp {
 }
 
 glib::wrapper! {
+    /// Runs the importers and keeps what the last sync found.
     pub struct SyncService(ObjectSubclass<imp::SyncService>);
 }
 
 impl SyncService {
+    /// A service that has not synced yet.
     pub fn new() -> Self {
         glib::Object::new()
     }
@@ -164,6 +166,7 @@ impl SyncService {
         });
     }
 
+    /// Calls `callback` when a sync finishes.
     pub fn connect_finished<F: Fn(&Self) + 'static>(&self, callback: F) -> glib::SignalHandlerId {
         self.connect_local("finished", false, move |values| {
             let service = values[0]

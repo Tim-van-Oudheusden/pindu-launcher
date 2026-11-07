@@ -11,12 +11,16 @@ use crate::gamepad::{Direction, Intent};
 /// A key with the modifiers held with it, by the key's name as GDK has it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Chord {
+    /// The key's GDK name, such as "F10" or "Page_Up".
     pub key: &'static str,
+    /// Whether Ctrl is held.
     pub control: bool,
+    /// Whether Shift is held.
     pub shift: bool,
 }
 
 impl Chord {
+    /// `key` with no modifiers.
     pub const fn plain(key: &'static str) -> Self {
         Self {
             key,
@@ -25,6 +29,7 @@ impl Chord {
         }
     }
 
+    /// `key` with Ctrl held.
     pub const fn control(key: &'static str) -> Self {
         Self {
             control: true,
@@ -32,6 +37,7 @@ impl Chord {
         }
     }
 
+    /// `key` with Shift held.
     pub const fn shift(key: &'static str) -> Self {
         Self {
             shift: true,
@@ -39,6 +45,7 @@ impl Chord {
         }
     }
 
+    /// `key` with Ctrl and Shift held.
     pub const fn control_shift(key: &'static str) -> Self {
         Self {
             control: true,
@@ -99,8 +106,11 @@ pub fn stand_ins(intent: Intent) -> Vec<Chord> {
 /// The modifiers held with a key.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Modifiers {
+    /// Whether Ctrl is held.
     pub control: bool,
+    /// Whether Shift is held.
     pub shift: bool,
+    /// Whether Alt is held.
     pub alt: bool,
 }
 

@@ -2,7 +2,7 @@
 //!
 //! One database at `$XDG_DATA_HOME/pindu-launcher/library.db`, in WAL mode, with ordered
 //! migrations tracked in `PRAGMA user_version`. Migrations are append-only: a released
-//! migration is never edited, a schema change is a new entry in [`MIGRATIONS`].
+//! migration is never edited, a schema change is a new entry in `MIGRATIONS`.
 
 mod artwork;
 mod collections;
@@ -33,12 +33,16 @@ pub const LATEST_SCHEMA_VERSION: u32 = MIGRATIONS.len() as u32;
 /// How long a connection waits for another one's lock before giving up.
 const BUSY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
+/// Why a store operation failed.
 #[derive(Debug)]
 pub enum StoreError {
+    /// An error from SQLite.
     Sqlite(rusqlite::Error),
+    /// The database's folder could not be created.
     Io(std::io::Error),
     /// The database was written by a newer version of the app.
     TooNew {
+        /// The database's schema version.
         version: u32,
     },
     /// The row to update does not exist.
@@ -78,8 +82,10 @@ impl From<rusqlite::Error> for StoreError {
     }
 }
 
+/// A store result, failing with [`StoreError`] by default.
 pub type Result<T, E = StoreError> = std::result::Result<T, E>;
 
+/// The library database: one SQLite connection.
 pub struct Store {
     conn: Connection,
 }
@@ -104,12 +110,14 @@ impl Store {
         Ok(Self { conn })
     }
 
+    /// The database's journal mode, as SQLite names it, such as `wal`.
     pub fn journal_mode(&self) -> Result<String> {
         Ok(self
             .conn
             .pragma_query_value(None, "journal_mode", |row| row.get(0))?)
     }
 
+    /// The database's schema version, from `PRAGMA user_version`.
     pub fn schema_version(&self) -> Result<u32> {
         Ok(self
             .conn

@@ -39,6 +39,7 @@ pub struct Query {
 }
 
 impl Query {
+    /// The query for `text` as typed.
     pub fn new(text: &str) -> Self {
         let text = normalize(text);
         let words = text
@@ -49,6 +50,7 @@ impl Query {
         Self { text, words }
     }
 
+    /// Whether the query is empty, so it matches every title.
     pub fn is_empty(&self) -> bool {
         self.text.is_empty()
     }

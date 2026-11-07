@@ -53,10 +53,15 @@ pub struct TaskId(pub u64);
 /// One running task.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Task {
+    /// Its handle.
     pub id: TaskId,
+    /// What it does.
     pub kind: TaskKind,
+    /// What the list calls it.
     pub label: String,
+    /// How far it is.
     pub progress: Progress,
+    /// Whether the user can cancel it.
     pub cancel: Cancel,
 }
 
@@ -68,6 +73,7 @@ pub struct Tasks {
 }
 
 impl Tasks {
+    /// No tasks.
     pub fn new() -> Self {
         Self::default()
     }

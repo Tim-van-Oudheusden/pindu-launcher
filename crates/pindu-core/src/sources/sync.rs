@@ -27,6 +27,7 @@ pub const IMPORTED_SOURCES: &[Source] = &[
 /// source.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SyncSummary {
+    /// Each problem a source reported, with the source it came from.
     pub problems: Vec<(Source, String)>,
     /// Each synced source's changes, in sync order.
     pub changes: Vec<(Source, Changes)>,
@@ -68,7 +69,9 @@ impl SyncSummary {
 /// What a sync of one source could not read, and how it changed the library.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SourceSync {
+    /// The source's problems, as messages.
     pub problems: Vec<String>,
+    /// How the source's games changed.
     pub changes: Changes,
 }
 

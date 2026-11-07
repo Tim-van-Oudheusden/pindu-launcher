@@ -117,7 +117,10 @@ enum Program {
 
 /// Runs a game's umu `command` and tracks its session from the moment umu starts it. With
 /// `logs`, umu's output, and a Windows game's Proton log, are kept in a new log of the game.
-#[allow(clippy::too_many_arguments)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "each argument is a separate input of one launch; a struct would only rename them"
+)]
 async fn play_command(
     app: &gtk::Application,
     window: Option<gtk::Window>,

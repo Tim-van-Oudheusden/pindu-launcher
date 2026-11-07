@@ -6,8 +6,10 @@ use std::time::Duration;
 /// How the desktop shows the time (`org.gnome.desktop.interface` `clock-format`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ClockFormat {
+    /// `"24h"`: 0 to 23 hours, no period.
     #[default]
     TwentyFourHour,
+    /// `"12h"`: 1 to 12 hours with the locale's AM or PM.
     TwelveHour,
 }
 

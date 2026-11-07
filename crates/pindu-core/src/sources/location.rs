@@ -15,8 +15,11 @@ use crate::store::{self, Store};
 /// The host's home, XDG and system folders, as seen from inside or outside the sandbox.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HostDirs {
+    /// The host's home folder.
     pub home: PathBuf,
+    /// The host's `XDG_DATA_HOME`, `~/.local/share` by default.
     pub data_home: PathBuf,
+    /// The host's `XDG_CONFIG_HOME`, `~/.config` by default.
     pub config_home: PathBuf,
     /// The host's `/usr`: `/run/host/usr` inside Flatpak (`host-os:ro`).
     pub host_usr: PathBuf,
@@ -59,13 +62,19 @@ impl HostDirs {
     }
 }
 
+/// Why a source's data folder could not be resolved.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResolveError {
     /// No candidate folder has every required sub-path: the launcher is not installed,
     /// or the sandbox cannot see it.
     NotFound,
     /// The user's override folder lacks a required sub-path.
-    OverrideIncomplete { path: PathBuf, missing: PathBuf },
+    OverrideIncomplete {
+        /// The override folder.
+        path: PathBuf,
+        /// The first required sub-path it lacks, relative to `path`.
+        missing: PathBuf,
+    },
 }
 
 impl fmt::Display for ResolveError {

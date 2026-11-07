@@ -33,8 +33,11 @@ const PREFIX_PROGRAM_DEPTH: usize = 6;
 /// (umu runs there).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ManualGame {
+    /// The game's title.
     pub title: String,
+    /// The game folder.
     pub folder: PathBuf,
+    /// The program to run, as typed.
     pub executable: String,
     /// Arguments as typed, split with shell-like quoting (no shell is run).
     pub arguments: String,
@@ -56,12 +59,18 @@ pub struct WindowsOptions {
     pub prefix: Option<PathBuf>,
 }
 
+/// Why an action on a game added by hand failed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ManualError {
+    /// The form has no title.
     NoTitle,
+    /// The form has no program.
     NoExecutable,
+    /// The arguments could not be split, and why.
     Arguments(String),
+    /// The store failed, and why.
     Store(String),
+    /// A file could not be read or written, and why.
     Io(String),
 }
 

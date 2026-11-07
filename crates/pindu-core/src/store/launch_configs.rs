@@ -48,6 +48,7 @@ impl Store {
         Ok(())
     }
 
+    /// The launch config of a game, or `None` when it has none.
     pub fn launch_config(&self, game_id: &GameId) -> Result<Option<LaunchConfig>> {
         Ok(self
             .conn
@@ -73,6 +74,7 @@ impl Store {
             .optional()?)
     }
 
+    /// Deletes the launch config of a game, if it has one.
     pub fn delete_launch_config(&self, game_id: &GameId) -> Result<()> {
         self.conn
             .execute("DELETE FROM launch_configs WHERE game_id = ?1", [game_id])?;

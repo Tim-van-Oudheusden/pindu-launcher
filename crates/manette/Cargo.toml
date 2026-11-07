@@ -15,3 +15,6 @@ libc = "0.2"
 
 [features]
 v0_2_10 = ["ffi/v0_2_10"]
+
+[lints]
+workspace = true

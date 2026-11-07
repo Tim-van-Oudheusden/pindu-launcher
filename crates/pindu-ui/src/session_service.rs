@@ -49,6 +49,7 @@ type PlayingHandlers = Rc<RefCell<Vec<Box<dyn Fn(bool)>>>>;
 /// Handlers called whenever a game we started begins or ends.
 type SessionHandlers = Rc<RefCell<Vec<Box<dyn Fn()>>>>;
 
+/// The games we started that are running, and who to tell when that changes.
 #[derive(Clone)]
 pub struct SessionService {
     library: LibraryService,
@@ -67,6 +68,7 @@ impl std::fmt::Debug for SessionService {
 }
 
 impl SessionService {
+    /// A service with nothing running, recording sessions in `library`.
     pub fn new(library: &LibraryService) -> Self {
         Self {
             library: library.clone(),

@@ -18,14 +18,17 @@ const FORMAT: &str = "pindu-launcher-backup";
 /// The backup version this build writes and the newest it reads.
 const VERSION: u64 = 1;
 
+/// Why a backup could not be written or restored.
 #[derive(Debug)]
 pub enum BackupError {
     /// The file is not JSON, or not a backup of ours.
     NotABackup,
     /// Written by a newer version of the app.
     TooNew {
+        /// The backup's format version.
         version: u64,
     },
+    /// The library could not be read or written.
     Store(StoreError),
 }
 
@@ -52,10 +55,15 @@ impl From<StoreError> for BackupError {
 /// What an import restored.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ImportSummary {
+    /// Games added by hand that the library did not have yet.
     pub manual_games: usize,
+    /// Games newly marked as favourites.
     pub favourites: usize,
+    /// Games newly hidden.
     pub hidden: usize,
+    /// Collections created; existing ones with the same name are reused, not counted.
     pub collections: usize,
+    /// Play sessions not already recorded.
     pub sessions: usize,
     /// Games the backup names that this library does not have.
     pub missing_games: usize,

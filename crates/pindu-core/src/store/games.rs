@@ -9,6 +9,7 @@ const COLUMNS: &str = "id, title, sort_title, developer, platform, installed, in
     missing_since, launch_kind, launch_uri, genres, description, steam_launch_dialog";
 
 impl Store {
+    /// Stores a new game; a game with the same ID already stored is an error.
     pub fn insert_game(&self, game: &Game) -> Result<()> {
         self.write_game(
             game,
@@ -74,6 +75,7 @@ impl Store {
         Ok(self.conn.execute(sql, params)?)
     }
 
+    /// The stored game with this ID, or `None` when there is none.
     pub fn game(&self, id: &GameId) -> Result<Option<Game>> {
         Ok(self
             .conn

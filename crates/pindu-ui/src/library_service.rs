@@ -33,10 +33,12 @@ mod imp {
 }
 
 glib::wrapper! {
+    /// Loads the library into the shared model and writes the user's changes to the store.
     pub struct LibraryService(ObjectSubclass<imp::LibraryService>);
 }
 
 impl LibraryService {
+    /// A service with an empty model; [`reload`](Self::reload) fills it.
     pub fn new() -> Self {
         glib::Object::new()
     }
@@ -115,6 +117,7 @@ impl LibraryService {
         .unwrap_or(false)
     }
 
+    /// Takes a game out of "Jump back in".
     pub fn unpin(&self, id: &GameId) {
         self.spawn_edit(id, |game| game.pin_order = None);
     }
@@ -146,6 +149,7 @@ impl LibraryService {
         .await
     }
 
+    /// Renames a collection.
     pub fn rename_collection(&self, id: i64, name: &str) {
         let name = name.to_owned();
         self.spawn_write(move |store| {
@@ -412,5 +416,6 @@ pub enum ImportFailure {
     NotABackup,
     /// Written by a newer version of the app.
     TooNew,
+    /// The import failed; the message says why.
     Failed(String),
 }

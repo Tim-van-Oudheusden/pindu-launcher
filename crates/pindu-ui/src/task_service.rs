@@ -16,6 +16,7 @@ use crate::application::PinduApplication;
 /// Something the shells do when the tasks change.
 type Listener = Box<dyn Fn()>;
 
+/// What runs in the background, shared by the services and the shells.
 #[derive(Clone, Default)]
 pub struct TaskService {
     inner: Rc<Inner>,
@@ -38,6 +39,7 @@ impl std::fmt::Debug for TaskService {
 }
 
 impl TaskService {
+    /// A service with no tasks.
     pub fn new() -> Self {
         Self::default()
     }

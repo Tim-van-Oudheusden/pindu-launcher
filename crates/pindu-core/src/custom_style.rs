@@ -7,7 +7,9 @@ use std::path::Path;
 /// Whether GTK dropped part of the stylesheet or only warned about it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Severity {
+    /// GTK dropped part of the stylesheet.
     Error,
+    /// GTK only warned.
     Warning,
 }
 
@@ -16,7 +18,9 @@ pub enum Severity {
 pub struct StyleProblem {
     /// The line the problem starts on, counted from zero as GTK reports it.
     pub line: usize,
+    /// GTK's description of the problem.
     pub message: String,
+    /// Whether it is an error or a warning.
     pub severity: Severity,
 }
 

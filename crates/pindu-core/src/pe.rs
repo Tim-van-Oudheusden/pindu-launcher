@@ -23,12 +23,14 @@ const MAX_RESOURCE_BYTES: u32 = 64 * 1024 * 1024;
 pub struct ExeInfo {
     /// The product name, or else the file description, from its version resource.
     pub title: Option<String>,
+    /// The program's icon, when it has one.
     pub icon: Option<Icon>,
 }
 
 /// An icon from a Windows program, as an image file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Icon {
+    /// The image file's contents.
     pub bytes: Vec<u8>,
     /// `png` for the PNG images of large icons, else `ico`.
     pub extension: &'static str,
@@ -198,7 +200,11 @@ impl Resources {
             .filter_map(|index| group.get(6 + 14 * index..6 + 14 * (index + 1)))
             // A width of 0 means 256 pixels; more colours win among the same size.
             .max_by_key(|entry| {
-                let width = if entry[0] == 0 { 256 } else { entry[0] as u16 };
+                let width = if entry[0] == 0 {
+                    256
+                } else {
+                    u16::from(entry[0])
+                };
                 (width, u16_at(entry, 6).unwrap_or(0))
             })?;
         let image = self.find(RT_ICON, Some(u16_at(entry, 12)?.into()))?;

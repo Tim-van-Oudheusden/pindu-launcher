@@ -97,6 +97,7 @@ impl Store {
         Ok(())
     }
 
+    /// Takes a game out of a collection; a game not in it changes nothing.
     pub fn remove_from_collection(&self, collection_id: i64, game_id: &GameId) -> Result<()> {
         self.conn.execute(
             "DELETE FROM collection_members WHERE collection_id = ?1 AND game_id = ?2",

@@ -32,16 +32,24 @@ const WINDOWS: u32 = 1;
 /// What the dialog is for.
 #[derive(Debug, Clone, Default)]
 pub enum Mode {
+    /// Adding a game by hand.
     #[default]
     Add,
     /// Editing a game; `manual` games also have their folder and program edited.
-    Edit { id: GameId, manual: bool },
+    Edit {
+        /// The game being edited.
+        id: GameId,
+        /// Whether the game was added by hand.
+        manual: bool,
+    },
 }
 
 /// A pending change to the user's art in one layout.
 #[derive(Debug, Clone)]
 pub enum ArtChange {
+    /// Replace the art with a picked image.
     Set(PickedImage),
+    /// Remove the user's own image.
     Remove,
 }
 
@@ -208,6 +216,7 @@ mod imp {
 }
 
 glib::wrapper! {
+    /// The Add Game and Edit Game dialog.
     pub struct GameDialog(ObjectSubclass<imp::GameDialog>)
         @extends adw::Dialog, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::ShortcutManager;

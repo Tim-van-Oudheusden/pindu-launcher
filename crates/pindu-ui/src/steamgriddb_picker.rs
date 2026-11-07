@@ -19,7 +19,9 @@ const KEY_PAGE: &str = "https://www.steamgriddb.com/profile/preferences/api";
 /// The game to find images for: by Steam app ID when it has one, else by title.
 #[derive(Debug, Clone)]
 pub struct PickerGame {
+    /// The game's Steam app ID, for Steam games.
     pub steam_app_id: Option<u32>,
+    /// The game's title.
     pub title: String,
 }
 

@@ -14,11 +14,15 @@ pub const REFRESH_INTERVAL: Duration = Duration::from_secs(60);
 /// A battery's charging state, from its `status` attribute.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Charge {
+    /// Charging (`Charging`).
     Charging,
+    /// Running on the battery (`Discharging`).
     Discharging,
     /// Plugged in, but not charging (`Not charging`).
     NotCharging,
+    /// Fully charged (`Full`).
     Full,
+    /// Any other status, or none.
     #[default]
     Unknown,
 }
@@ -44,9 +48,13 @@ pub struct Battery {
     pub name: String,
     /// The charge in percent (`capacity`); some peripherals only report a coarse level.
     pub capacity: Option<u8>,
+    /// Its charging state (`status`).
     pub charge: Charge,
+    /// The model's name (`model_name`), when the supply reports one.
     pub model_name: Option<String>,
+    /// The maker's name (`manufacturer`), when the supply reports one.
     pub manufacturer: Option<String>,
+    /// The serial number (`serial_number`), when the supply reports one.
     pub serial_number: Option<String>,
     /// Where the supply's `device` link leads, resolved: the device the battery sits in.
     pub device: Option<PathBuf>,
@@ -71,7 +79,9 @@ impl Battery {
 /// The batteries found: the machine's own, and the peripherals'.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Batteries {
+    /// The machine's own battery: the first by name that is not a peripheral's.
     pub system: Option<Battery>,
+    /// The peripherals' batteries (`scope` `Device`), by name.
     pub peripherals: Vec<Battery>,
 }
 

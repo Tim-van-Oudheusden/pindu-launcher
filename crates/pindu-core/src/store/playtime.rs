@@ -75,6 +75,7 @@ impl Store {
         Ok(())
     }
 
+    /// The source's playtime totals for a game, or `None` when none are stored.
     pub fn imported_playtime(&self, game_id: &GameId) -> Result<Option<ImportedPlaytime>> {
         Ok(self
             .conn

@@ -78,7 +78,12 @@ pub enum Detail {
     Playtime(i64),
     /// When it was last played: its Play history group (today, this week, earlier), and
     /// the time, for a date on an earlier day.
-    LastPlayed { group: HistoryGroup, at: Timestamp },
+    LastPlayed {
+        /// The Play history group.
+        group: HistoryGroup,
+        /// When it was last played.
+        at: Timestamp,
+    },
     /// Where it comes from.
     Source(Source),
     /// How many games a section of Home's first screen holds.
@@ -177,13 +182,17 @@ pub const DIM_KEY: &str = "fullscreen-background-dim";
 /// blurred or dimmed, as Quick Access sets it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Strength {
+    /// Not at all.
     #[default]
     Off,
+    /// A little.
     Low,
+    /// A lot.
     High,
 }
 
 impl Strength {
+    /// Every strength, weakest first.
     pub const ALL: [Self; 3] = [Self::Off, Self::Low, Self::High];
 
     /// The value the setting holds for it.

@@ -14,13 +14,19 @@ use pindu_core::model::{Game, GameId};
 /// when it changes.
 #[derive(Debug)]
 pub struct Entry {
+    /// The game itself.
     pub game: Game,
+    /// The game's art in every layout.
     pub art: ArtSet,
+    /// Total playtime, in seconds.
     pub playtime_secs: i64,
+    /// Where the playtime comes from; `None` when the game was never played.
     pub playtime_origin: Option<PlaytimeOrigin>,
     /// IDs of the collections holding the game.
     pub collections: Vec<i64>,
+    /// The key searches match the title against.
     pub search_key: SearchKey,
+    /// The key the library sorts by.
     pub sort_key: SortKey,
 }
 
@@ -100,10 +106,12 @@ mod imp {
 }
 
 glib::wrapper! {
+    /// One library game.
     pub struct GameObject(ObjectSubclass<imp::GameObject>);
 }
 
 impl GameObject {
+    /// An object holding `entry`.
     pub fn new(entry: LibraryEntry) -> Self {
         let object: Self = glib::Object::new();
         object.imp().entry.replace(Some(Entry::new(entry)));
@@ -117,14 +125,17 @@ impl GameObject {
         })
     }
 
+    /// The game itself.
     pub fn game(&self) -> Ref<'_, Game> {
         Ref::map(self.entry(), |entry| &entry.game)
     }
 
+    /// The game's art.
     pub fn art(&self) -> Ref<'_, ArtSet> {
         Ref::map(self.entry(), |entry| &entry.art)
     }
 
+    /// The game's ID.
     pub fn id(&self) -> GameId {
         self.game().id.clone()
     }
@@ -134,6 +145,7 @@ impl GameObject {
         self.imp().playing.get()
     }
 
+    /// Sets whether a game we started is running, notifying `playing` when it changes.
     pub fn set_playing(&self, playing: bool) {
         if self.imp().playing.replace(playing) != playing {
             self.notify("playing");

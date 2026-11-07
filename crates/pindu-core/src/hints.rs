@@ -35,6 +35,7 @@ pub enum Focus {
 /// under way, and the search keyboard while it is open.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Context {
+    /// What kind of widget has focus.
     pub focus: Focus,
     /// A dialog is open, which B closes.
     pub dialog: bool,
@@ -62,7 +63,9 @@ pub struct Context {
 /// empty, which turns B from deleting into closing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Typing {
+    /// The key the cursor is on.
     pub key: Key,
+    /// Whether the search field is empty.
     pub empty: bool,
 }
 
@@ -81,15 +84,23 @@ pub enum Launching {
 /// What a button does, as the hint bar names it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
+    /// Open the focused game or link.
     Open,
+    /// Start the game.
     Play,
+    /// Stop the running game.
     Stop,
     /// Cancel a background task.
     Cancel,
+    /// Flip the focused switch, check box or toggle button.
     Toggle,
+    /// Activate the focused widget.
     Select,
+    /// Go back to the page below, or step back from a panel's list.
     Back,
+    /// Close the dialog or panel.
     Close,
+    /// Start a search.
     Search,
     /// Switch to the tab before or after.
     Tabs,
@@ -118,9 +129,11 @@ pub enum Action {
 /// hint.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Hint {
+    /// The button; for a pair, the one that steps back.
     pub button: Button,
     /// The button that steps the other way.
     pub pair: Option<Button>,
+    /// What it does.
     pub action: Action,
 }
 
@@ -275,20 +288,33 @@ pub fn glyph(glyphs: Glyphs, button: Button) -> &'static str {
 pub enum GlyphName {
     /// Letters printed on the button, read the same in every language.
     Label(&'static str),
+    /// PlayStation's cross.
     Cross,
+    /// PlayStation's circle.
     Circle,
+    /// PlayStation's square.
     Square,
+    /// PlayStation's triangle.
     Triangle,
+    /// The View button.
     View,
+    /// The Menu button.
     Menu,
+    /// Nintendo's minus button.
     Minus,
+    /// Nintendo's plus button.
     Plus,
+    /// The Guide button.
     Home,
     /// The Steam Deck's "…" button.
     More,
+    /// The D-pad's up.
     DpadUp,
+    /// The D-pad's down.
     DpadDown,
+    /// The D-pad's left.
     DpadLeft,
+    /// The D-pad's right.
     DpadRight,
 }
 

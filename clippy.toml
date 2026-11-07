@@ -1,0 +1,2 @@
+# The kernel's .clippy.toml: the doc lints (`missing_safety_doc`, ...) cover private items too.
+check-private-items = true

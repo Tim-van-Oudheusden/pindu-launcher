@@ -15,15 +15,22 @@ pub struct DeviceId(pub u64);
 /// A on Xbox, Cross on PlayStation and B on Nintendo.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Button {
+    /// A on Xbox, Cross on PlayStation, B on Nintendo.
     South,
+    /// B on Xbox, Circle on PlayStation, A on Nintendo.
     East,
+    /// X on Xbox, Square on PlayStation, Y on Nintendo.
     West,
+    /// Y on Xbox, Triangle on PlayStation, X on Nintendo.
     North,
+    /// LB, L1 or L.
     LeftShoulder,
+    /// RB, R1 or R.
     RightShoulder,
     /// LT, L2 or ZL: a trigger libmanette maps to a button whether the pad reports it as
     /// a button or as an axis.
     LeftTrigger,
+    /// RT, R2 or ZR, mapped to a button like the left trigger.
     RightTrigger,
     /// View, Back, Share or Minus.
     Select,
@@ -35,42 +42,65 @@ pub enum Button {
     RightStick,
     /// The Steam Deck's "…" button (libmanette's `misc1`).
     Misc1,
+    /// The D-pad's up.
     DpadUp,
+    /// The D-pad's down.
     DpadDown,
+    /// The D-pad's left.
     DpadLeft,
+    /// The D-pad's right.
     DpadRight,
 }
 
 /// A stick axis: -1 is left or up, 1 right or down.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Axis {
+    /// The left stick's horizontal axis.
     LeftX,
+    /// The left stick's vertical axis.
     LeftY,
 }
 
+/// A direction focus moves in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
+    /// Up.
     Up,
+    /// Down.
     Down,
+    /// Left.
     Left,
+    /// Right.
     Right,
 }
 
 /// What the user asks the app to do. Intents never become synthetic key events.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Intent {
+    /// Move focus in a direction.
     Navigate(Direction),
+    /// Select the focused item.
     Activate,
+    /// Go back, or close what is open.
     Back,
     /// Back held down for [`HOLD_DURATION`], as long presses ask: it cancels a launch.
     BackHeld,
+    /// Switch to the previous tab.
     PreviousTab,
+    /// Switch to the next tab.
     NextTab,
+    /// Switch to the previous sort order.
     PreviousSort,
+    /// Switch to the next sort order.
     NextSort,
+    /// Start searching.
     Search,
+    /// Open or close the menu drawer.
     Menu,
+    /// Open the focused game's options.
     Options,
+    /// The Guide button: open or close the menu drawer, or from the desktop open fullscreen
+    /// mode.
     Home,
     /// Open or close the Quick Access panel.
     QuickAccess,
@@ -94,16 +124,20 @@ impl Intent {
 /// [`ControllerSettings`] say otherwise.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeviceKind {
+    /// An Xbox pad, or Steam Input's virtual pad.
     Xbox,
+    /// A PlayStation pad.
     PlayStation,
     /// A on the east, B on the south: confirm and back swap.
     Nintendo,
+    /// A Steam Deck's built-in controls.
     SteamDeck,
     /// Anything else, shown with Xbox-style glyphs.
     Generic,
 }
 
 impl DeviceKind {
+    /// Every kind.
     pub const ALL: [Self; 5] = [
         Self::Xbox,
         Self::PlayStation,
@@ -162,9 +196,12 @@ pub enum Glyphs {
 /// pad's own.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Prompts {
+    /// The pad's own glyphs.
     #[default]
     Auto,
+    /// Letters with A on the south, as on Xbox pads.
     Letters,
+    /// PlayStation's cross, circle, square and triangle.
     Shapes,
     /// Letters with A on the east and B on the south.
     NintendoLetters,
@@ -201,9 +238,12 @@ impl Prompts {
 /// The Swap Confirm and Back setting: Auto swaps when the glyphs put A on the east.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Swap {
+    /// Swap when the glyphs put A on the east.
     #[default]
     Auto,
+    /// Never swap.
     Off,
+    /// Always swap.
     On,
 }
 
@@ -237,7 +277,9 @@ pub const SWAP_KEY: &str = "swap-confirm-back";
 /// What the user chose for the glyphs and the confirm and back buttons.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ControllerSettings {
+    /// The Button Prompts setting.
     pub prompts: Prompts,
+    /// The Swap Confirm and Back setting.
     pub swap: Swap,
 }
 
@@ -246,6 +288,7 @@ pub struct ControllerSettings {
 /// intents, so they always agree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Layout {
+    /// The glyphs the hints draw.
     pub glyphs: Glyphs,
     /// Whether confirm and back swap: east activates and south goes back.
     pub swapped: bool,
@@ -302,7 +345,9 @@ impl Layout {
 pub struct HidIds {
     /// The bus: 3 for USB, 5 for Bluetooth.
     pub bus: u16,
+    /// The USB vendor ID.
     pub vendor: u16,
+    /// The USB product ID.
     pub product: u16,
 }
 
@@ -331,6 +376,7 @@ impl HidIds {
 pub struct Pad {
     /// The name the device gives, such as "DualSense Wireless Controller".
     pub name: String,
+    /// The kind of pad, from its IDs.
     pub kind: DeviceKind,
     /// Its bus, vendor and product, from its SDL GUID, to find its battery by.
     pub ids: Option<HidIds>,
@@ -343,21 +389,32 @@ pub struct Pad {
 pub enum GamepadEvent {
     /// A device was plugged in, or was already there when the backend started.
     Connected {
+        /// The device's number.
         device: DeviceId,
+        /// The device as the backend describes it.
         pad: Pad,
     },
+    /// A device was unplugged.
     Disconnected {
+        /// The device's number.
         device: DeviceId,
     },
+    /// A button was pressed or released.
     Button {
+        /// The device's number.
         device: DeviceId,
+        /// The button.
         button: Button,
+        /// Whether it went down rather than up.
         pressed: bool,
     },
     /// A stick axis moved, from -1 to 1.
     Axis {
+        /// The device's number.
         device: DeviceId,
+        /// The axis.
         axis: Axis,
+        /// Where the axis is now, from -1 to 1.
         value: f64,
     },
 }
@@ -375,8 +432,11 @@ pub const DEADZONE: f64 = 0.5;
 /// from 0 to 1, and for how long.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Rumble {
+    /// How hard the strong motor turns, from 0 to 1.
     pub strong: f64,
+    /// How hard the weak motor turns, from 0 to 1.
     pub weak: f64,
+    /// How long it lasts.
     pub duration: Duration,
 }
 
@@ -435,6 +495,7 @@ enum Source {
 }
 
 impl Intents {
+    /// No pads, nothing held and the default settings.
     pub fn new() -> Self {
         Self::default()
     }

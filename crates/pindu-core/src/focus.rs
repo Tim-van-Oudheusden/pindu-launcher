@@ -11,6 +11,7 @@ pub struct FocusMemory<Place, Item> {
 }
 
 impl<Place: Eq + Hash, Item: PartialEq> FocusMemory<Place, Item> {
+    /// Memory with nothing remembered.
     pub fn new() -> Self {
         Self {
             items: HashMap::new(),
