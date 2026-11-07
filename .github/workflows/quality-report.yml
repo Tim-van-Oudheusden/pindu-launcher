@@ -1,0 +1,81 @@
+name: Quality report
+
+# Weekly quality dashboard: each gate (rustfmt, clippy, rustdoc, unit tests, coverage and its
+# floors) and the coverage per module, in the run's job summary (scripts/quality-report.sh). The
+# auto-QA tuner (scripts/auto-qa-tuner.sh) then proposes floors raised to the observed coverage
+# minus the margin. Nothing is committed: the summary shows the proposal, and the tuned
+# .github/auto-qa-tuning.json is an artifact the maintainer reviews and commits through a pull
+# request.
+
+on:
+  schedule:
+    - cron: '47 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Quality report
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install the Rust SDK extension
+        run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .cargo-home
+            _build/cargo-target
+          key: quality-${{ hashFiles('Cargo.lock') }}
+          restore-keys: quality-
+
+      # In the GNOME 51 SDK, as the checks job in ci.yml and the coverage gate run.
+      - name: Generate quality report
+        run: |
+          chown -R "$(id -u):$(id -g)" "$PWD"
+          flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
+            --env=CARGO_HOME="$PWD/.cargo-home" \
+            --env=CARGO_TARGET_DIR="$PWD/_build/cargo-target" \
+            --env=PATH="$PWD/.cargo-home/bin:/usr/lib/sdk/rust-stable/bin:/usr/bin" \
+            --env=GITHUB_SHA="$GITHUB_SHA" \
+            --command=sh org.gnome.Sdk//51 -c '
+              set -e
+              cargo install --locked cargo-llvm-cov --version 0.9.1
+              scripts/quality-report.sh > quality-report.md
+            '
+
+      - name: Propose coverage floors
+        if: always()
+        run: |
+          scripts/auto-qa-tuner.sh --report quality-report.md --write > floor-tuning.md
+          { echo; cat floor-tuning.md; } >> quality-report.md
+
+      - name: Publish job summary
+        if: always()
+        run: cat quality-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload quality report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-report
+          path: quality-report.md
+          retention-days: 90
+
+      - name: Upload tuned coverage floors
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-qa-tuning
+          path: .github/auto-qa-tuning.json
+          retention-days: 90

@@ -38,8 +38,15 @@ jobs:
           key: coverage-${{ hashFiles('Cargo.lock') }}
           restore-keys: coverage-
 
-      - name: Test the floor check
-        run: scripts/coverage-check.test.sh
+      # The floor check and the scripts of the weekly reports and of /apply-suggestions, which have
+      # no pull request trigger of their own.
+      - name: Test the scripts
+        run: |
+          sh scripts/coverage-check.test.sh
+          sh scripts/auto-qa-tuner.test.sh
+          sh scripts/quality-report.test.sh
+          sh scripts/pr-metrics.test.sh
+          sh scripts/apply-review-suggestions.test.sh
 
       # In the GNOME 51 SDK, as the checks job in ci.yml. cargo-llvm-cov finds llvm-cov and
       # llvm-profdata in the rust-stable extension's sysroot (lib/rustlib/<host>/bin). Branch
