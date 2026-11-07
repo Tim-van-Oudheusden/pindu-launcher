@@ -28,7 +28,7 @@ jobs:
       - name: Install the Rust SDK extension
         run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             .cargo-home
