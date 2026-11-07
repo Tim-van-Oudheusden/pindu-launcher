@@ -253,6 +253,12 @@ Every file with translatable strings must be listed in `po/POTFILES.in`; `meson 
 `po/check-pot.sh _build`, which fails when the template's strings differ from the code's (locations and dates are
 ignored).
 
+Translations are meant to come in through [Weblate](https://weblate.org/), which opens pull requests and never pushes
+to `main`. The Weblate project is not set up yet; until it is, send a translation as an ordinary pull request.
+[`docs/translating.md`](docs/translating.md) has the Weblate component settings (gettext PO, file mask `po/*.po`,
+template `po/pindu-launcher.pot`, the "Update LINGUAS file" and msgmerge add-ons) and how to start a translation by
+hand.
+
 ## Tech stack
 
 - **App:** Rust (edition 2024), GTK 4.24 and libadwaita 1.10 through gtk4-rs, UI layout in Blueprint
@@ -300,6 +306,7 @@ so the fullscreen mode is a second presentation of the same library.
 | [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
 | [`docs/releasing.md`](docs/releasing.md) | How to cut a release: versions, notes, the tag and the Release workflow |
 | [`docs/ai-ops-runbook.md`](docs/ai-ops-runbook.md) | Watching, pausing and reverting agent work; CI and Release failures; the `main` ruleset |
+| [`docs/translating.md`](docs/translating.md) | How translations are laid out, the Weblate settings, and translating without Weblate |
 | [`data/screenshots/CREDITS.md`](data/screenshots/CREDITS.md) | Where the demo library's game art comes from, and its licences |
 | [`AGENTS.md`](AGENTS.md) | How AI agents work in this repository |
 | [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md) | Which parts of the project had AI assistance |
