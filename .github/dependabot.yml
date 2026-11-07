@@ -1,0 +1,26 @@
+# Weekly update PRs for the crates in Cargo.lock and the workflow actions.
+# Dependabot only proposes changes; every PR still goes through CI and review, and AGENTS.md's dependency rules apply:
+# the maintainer approves each one. Minor and patch updates come grouped in one PR per ecosystem; majors stay one PR
+# each, so every major upgrade (and with it any GNOME runtime move) is reviewed on its own.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build(deps)
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      github-actions:
+        update-types: [minor, patch]
