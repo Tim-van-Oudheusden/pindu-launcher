@@ -1,0 +1,6 @@
+# Corrections
+
+Correction log for agent work in this repository. Append one line per correction round (tab-separated): ISO date |
+what went wrong | correction + where it is encoded.
+
+Format: `YYYY-MM-DD\t<behaviour>\t<correction (file:rule)>`
