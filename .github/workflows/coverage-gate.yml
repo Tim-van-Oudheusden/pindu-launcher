@@ -47,6 +47,7 @@ jobs:
           sh scripts/quality-report.test.sh
           sh scripts/pr-metrics.test.sh
           sh scripts/apply-review-suggestions.test.sh
+          sh scripts/strategy-report.test.sh
 
       # In the GNOME 51 SDK, as the checks job in ci.yml. cargo-llvm-cov finds llvm-cov and
       # llvm-profdata in the rust-stable extension's sysroot (lib/rustlib/<host>/bin). Branch
