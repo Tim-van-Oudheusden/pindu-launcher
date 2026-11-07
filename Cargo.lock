@@ -1690,7 +1690,7 @@ dependencies = [
 
 [[package]]
 name = "manette"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "glib",
  "libc",
@@ -1699,7 +1699,7 @@ dependencies = [
 
 [[package]]
 name = "manette-sys"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "gio-sys",
  "glib-sys",
@@ -2036,7 +2036,7 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "pindu-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "rusqlite",
  "serde",
@@ -2047,7 +2047,7 @@ dependencies = [
 
 [[package]]
 name = "pindu-ui"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "gettext-rs",
  "glycin",

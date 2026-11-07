@@ -89,7 +89,7 @@ Pick one:
 
   ```sh
   flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-  flatpak install --user ./pindu-launcher-0.2.0-x86_64.flatpak
+  flatpak install --user ./pindu-launcher-0.3.0-x86_64.flatpak
   flatpak run io.github.tim_van_oudheusden.pindu-launcher
   ```
 
@@ -253,11 +253,10 @@ Every file with translatable strings must be listed in `po/POTFILES.in`; `meson 
 `po/check-pot.sh _build`, which fails when the template's strings differ from the code's (locations and dates are
 ignored).
 
-Translations are meant to come in through [Weblate](https://weblate.org/), which opens pull requests and never pushes
-to `main`. The Weblate project is not set up yet; until it is, send a translation as an ordinary pull request.
-[`docs/translating.md`](docs/translating.md) has the Weblate component settings (gettext PO, file mask `po/*.po`,
-template `po/pindu-launcher.pot`, the "Update LINGUAS file" and msgmerge add-ons) and how to start a translation by
-hand.
+Translations come in through [Weblate](https://hosted.weblate.org/projects/pindu-launcher/), which opens pull requests
+and never pushes to `main`; translate there. [`docs/translating.md`](docs/translating.md) has the Weblate component
+settings (gettext PO, file mask `po/*.po`, template `po/pindu-launcher.pot`, the "Update LINGUAS file" and msgmerge
+add-ons) and how to start a translation by hand.
 
 ## Tech stack
 
