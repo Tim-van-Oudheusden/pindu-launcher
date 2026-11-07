@@ -1,0 +1,46 @@
+name: PR metrics
+
+# PR acceptance metric: of the pull requests into main closed in the reporting window, how many
+# were merged and how many closed without merging, for agent work (scripts/lib/pr-source.jq, the
+# rule every report shares) and for the rest. The table lands in the run's job summary.
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Reporting window in days
+        required: false
+        default: '28'
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    name: PR acceptance rate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # contents: read for the checkout of scripts/; pull-requests: read for `gh pr list`.
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Compute acceptance metric
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DAYS: ${{ inputs.days || '28' }}
+        run: |
+          set -euo pipefail
+          [[ "$DAYS" =~ ^[0-9]+$ ]] || { echo "::error::days must be a whole number, got '$DAYS'"; exit 1; }
+          since="$(date -u -d "${DAYS} days ago" +%Y-%m-%d)"
+          gh pr list --repo "$REPO" --base main --state closed --limit 1000 \
+            --search "closed:>=${since}" \
+            --json number,mergedAt,headRefName,author,body > prs.json
+          scripts/pr-metrics.sh --since "$since" --days "$DAYS" < prs.json | tee -a "$GITHUB_STEP_SUMMARY"

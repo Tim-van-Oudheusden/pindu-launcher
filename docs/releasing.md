@@ -11,7 +11,7 @@ flowchart LR
   version --> flatpak[build bundle, meson test, flatpak-builder-lint]
   version --> sources[meson dist: vendor crates, build and test offline]
   sources --> packages[RPM and DEBs, built offline]
-  packages --> smoke[install in clean containers, UI smoke test]
+  packages --> smoke[install in clean containers, UI smoke test, cover decoded through glycin]
   flatpak --> publish[GitHub release: bundle, tarball, packages, SHA256SUMS, notes]
   sources --> publish
   smoke --> publish

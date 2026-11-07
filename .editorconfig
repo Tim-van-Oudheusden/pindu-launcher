@@ -1,0 +1,35 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# rustfmt defaults (rustfmt.toml only sets newline_style): 4 spaces, 100 columns.
+[*.rs]
+indent_size = 4
+max_line_length = 100
+
+[*.{py,sql}]
+indent_size = 4
+
+[*.md]
+max_line_length = 120
+
+# Blueprint, Meson, YAML, TOML, JSON, XML, CSS and shell scripts use 2 spaces (the [*] default).
+
+# debian/rules is a Makefile: recipes need tabs.
+[build-aux/deb/debian/rules]
+indent_style = tab
+
+# Fixtures are copies of other launchers' files; keep their bytes as they are.
+[crates/pindu-core/tests/fixtures/**]
+charset = unset
+end_of_line = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset

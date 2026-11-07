@@ -1,0 +1,58 @@
+# cargo-deny 0.20.2 configuration (https://embarkstudios.github.io/cargo-deny/), run by CI's `Dependency policy
+# (cargo-deny)` job on every pull request: `cargo deny --locked check`.
+
+# The app ships for Linux only (Flatpak and the native packages), so crates that only other platforms pull in are
+# left out of every check.
+[graph]
+targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
+
+# RustSec advisories against Cargo.lock: a vulnerability, an unmaintained or unsound crate, or a yanked version fails
+# the check. An accepted advisory goes in `ignore` with the reason and the date to revisit, and leaves once the
+# dependency that pulls it in moves on. (The nightly `cargo audit` row fails on vulnerabilities only.)
+[advisories]
+yanked = "deny"
+ignore = [
+    # Unmaintained, not vulnerable. paste is a proc macro of glycin-common, glycin-utils and gufo-common (glycin 4);
+    # revisit with the next glycin release, by 2027-05-01.
+    { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained proc macro behind glycin 4; no fix upstream yet" },
+    # Unmaintained since zbus 6 merged them in; zbus 5 (through oo7 0.6, ashpd 0.13 and glycin 4) still uses them.
+    # Revisit when those crates move to zbus 6, by 2027-05-01.
+    { id = "RUSTSEC-2026-0370", reason = "zvariant: merged into zbus 6; oo7, ashpd and glycin are on zbus 5" },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names: merged into zbus 6; oo7, ashpd and glycin are on zbus 5" },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive: merged into zbus 6; oo7, ashpd and glycin are on zbus 5" },
+]
+
+# The licences of the current Linux dependency set; a dependency under any other licence fails the check until the
+# maintainer accepts it here. The workspace crates are GPL-3.0-or-later (#1); no dependency may be.
+[licenses]
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "LGPL-2.1-or-later",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+confidence-threshold = 0.93
+exceptions = [
+    { crate = "manette", allow = ["GPL-3.0-or-later"] },
+    { crate = "manette-sys", allow = ["GPL-3.0-or-later"] },
+    { crate = "pindu-core", allow = ["GPL-3.0-or-later"] },
+    { crate = "pindu-ui", allow = ["GPL-3.0-or-later"] },
+]
+
+# Two versions of one crate only warn: they come from upstream's own pins and cost build time, not safety.
+[bans]
+multiple-versions = "warn"
+
+# Every crate comes from crates.io: no other registry and no git dependency.
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

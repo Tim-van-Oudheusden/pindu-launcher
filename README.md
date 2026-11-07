@@ -253,6 +253,12 @@ Every file with translatable strings must be listed in `po/POTFILES.in`; `meson 
 `po/check-pot.sh _build`, which fails when the template's strings differ from the code's (locations and dates are
 ignored).
 
+Translations are meant to come in through [Weblate](https://weblate.org/), which opens pull requests and never pushes
+to `main`. The Weblate project is not set up yet; until it is, send a translation as an ordinary pull request.
+[`docs/translating.md`](docs/translating.md) has the Weblate component settings (gettext PO, file mask `po/*.po`,
+template `po/pindu-launcher.pot`, the "Update LINGUAS file" and msgmerge add-ons) and how to start a translation by
+hand.
+
 ## Tech stack
 
 - **App:** Rust (edition 2024), GTK 4.24 and libadwaita 1.10 through gtk4-rs, UI layout in Blueprint
@@ -299,16 +305,26 @@ so the fullscreen mode is a second presentation of the same library.
 | [`docs/Research — *.pdf`](docs/) | Research behind the spec: Cartridges, Heroic, Faugus, OpenGamepadUI, Flatpak and Flathub, the GNOME platform |
 | [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
 | [`docs/releasing.md`](docs/releasing.md) | How to cut a release: versions, notes, the tag and the Release workflow |
+| [`docs/ai-ops-runbook.md`](docs/ai-ops-runbook.md) | Watching, pausing and reverting agent work; CI and Release failures; the `main` ruleset |
+| [`docs/translating.md`](docs/translating.md) | How translations are laid out, the Weblate settings, and translating without Weblate |
+| [`docs/agent-tasks/README.md`](docs/agent-tasks/README.md) | How each change traces to its issue: branch, commit, pull request and merge |
 | [`data/screenshots/CREDITS.md`](data/screenshots/CREDITS.md) | Where the demo library's game art comes from, and its licences |
+| [`docs/metrics/README.md`](docs/metrics/README.md) | The gates every change passes, what each measures and how to run it |
+| [`docs/reflections/README.md`](docs/reflections/README.md) | Lessons from past sessions and incidents, and how to write one |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to build, find work and get a change merged |
+| [`SECURITY.md`](SECURITY.md) | How to report a vulnerability, privately |
+| [`docs/security/SECURITY-AI.md`](docs/security/SECURITY-AI.md) | Trust boundaries and safety rules for AI agents |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | How we treat each other, and how to report a problem |
 | [`AGENTS.md`](AGENTS.md) | How AI agents work in this repository |
 | [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md) | Which parts of the project had AI assistance |
 
 ## Contributing
 
 Work is tracked in [GitHub issues](https://github.com/Tim-van-Oudheusden/pindu-launcher/issues), grouped into
-[milestones](https://github.com/Tim-van-Oudheusden/pindu-launcher/milestones). Bug reports are welcome; for code, pick
-an open issue, branch off `main` and open a pull request that passes the checks in
-[Building from source](#building-from-source). AI agents follow [`AGENTS.md`](AGENTS.md).
+[milestones](https://github.com/Tim-van-Oudheusden/pindu-launcher/milestones). Bug reports are welcome; report security
+problems privately as [`SECURITY.md`](SECURITY.md) describes. For code, read [`CONTRIBUTING.md`](CONTRIBUTING.md): how
+to build, pick an issue, work test-first and open a pull request that passes the quality gates. AI agents follow
+[`AGENTS.md`](AGENTS.md), and everyone follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Acknowledgments
 

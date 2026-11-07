@@ -10,6 +10,11 @@ later goal in the Nice to have milestone (#63).
 Blueprint files, GSettings schema, desktop file, MetaInfo and icons. The development manifest arrives with #4 and CI with
 #5; commands below that need those files apply from then on.
 
+This file is authoritative. `CLAUDE.md`, `.github/copilot-instructions.md` and `.cursor/rules/agent-guidance.mdc` are
+short companions that defer to it; `prompts/` holds review and pull request templates, and `.claude/` holds the agent
+permissions (`settings.json`), the `github-issue-flow` skill, the correction log (`memory/corrections.tsv`) and the
+hand-off notes (`session-summary.md`).
+
 ## Spec and Research
 
 - `docs/Adwaita Game Library — Main Spec.pdf` is the product spec; `docs/Research — *.pdf` hold the evidence behind it.
@@ -56,7 +61,11 @@ gh pr create --title "type(scope): summary (#<number>)" --body-file <file>   # L
   `feat/8-import-steam`)
 - When done: push the branch and open a pull request whose body says `Fixes #<number>`; the maintainer merges it, and
   the merge closes the issue
-- Issue work lands through a pull request, not a direct push to `main`
+- Issue work lands through a pull request, not a direct push to `main`. `.github/rulesets/main.json` is the ruleset
+  that enforces this (pull requests with merge commits, the CI checks it names, no force-push or deletion; admins may
+  bypass). Change it through a pull request, then apply it:
+  `gh api -X PUT repos/Tim-van-Oudheusden/pindu-launcher/rulesets/26762163 --input .github/rulesets/main.json`.
+  Renaming a CI job means updating the ruleset's required checks in the same pull request
 
 ## Session Completion
 
@@ -166,3 +175,11 @@ The workspace enforces the Rust for Linux lint set (`[workspace.lints]` in `Carg
 - **Prefer the platform and existing dependencies** — the standard library and the GNOME runtime cover most needs
 - **Never upgrade a major version as a side-effect** of another change; major upgrades and GNOME runtime bumps are
   their own PR
+- **`deny.toml` is the dependency policy**: CI's `Dependency policy (cargo-deny)` job fails a crate whose licence it
+  does not allow, a source other than crates.io, or a RustSec advisory. Accepting an advisory or a licence is the
+  maintainer's call, recorded in `deny.toml` with the reason
+- **Nightly compliance** (`.github/workflows/nightly-compliance.yml`, `scripts/nightly-compliance.sh`) rechecks
+  Dependabot alerts, `cargo audit`, the GNOME runtime's end of life, actionlint, the live ruleset and the ACMM level.
+  A Hive readiness issue that completes an ACMM level raises `DEFAULT_MIN_LEVEL` in `scripts/acmm-self-check.py` in
+  the same PR; the script's tests run with `python3 -m unittest discover -s tests/scripts` and
+  `sh scripts/nightly-compliance.test.sh`

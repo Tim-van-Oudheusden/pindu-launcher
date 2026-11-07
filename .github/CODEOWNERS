@@ -1,0 +1,39 @@
+# Code owners: the maintainer owns the high-risk paths, the ones that decide what CI
+# checks, what the app may do in its sandbox, what gets built and released, which
+# crates it depends on, and what agents are told. A pull request that touches one
+# requests his review. Everything else has no owner.
+#
+# Patterns use .gitignore syntax: a leading `/` anchors to the repository root, a
+# name without `/` matches at any depth, and `*` does not cross `/`.
+
+# CI and release workflows, and this file itself.
+/.github/                           @Tim-van-Oudheusden
+
+# Flatpak manifests and their lint exceptions (sandbox permissions, runtime,
+# modules), the RPM and DEB recipes, and the scripts CI and releases run: the
+# version and manifest checks, crate vendoring, release notes and smoke tests.
+/build-aux/                         @Tim-van-Oudheusden
+
+# The build: every meson.build (the nested ones drive cargo and register the
+# tests CI runs) and the build options.
+meson.build                         @Tim-van-Oudheusden
+/meson.options                      @Tim-van-Oudheusden
+
+# Dependencies and the lint and format policy: every crate's Cargo.toml, the
+# lock file, and the clippy and rustfmt settings.
+Cargo.toml                          @Tim-van-Oudheusden
+/Cargo.lock                         @Tim-van-Oudheusden
+/clippy.toml                        @Tim-van-Oudheusden
+/rustfmt.toml                       @Tim-van-Oudheusden
+
+# Release notes and app metadata, and stored settings.
+/data/*.metainfo.xml.in             @Tim-van-Oudheusden
+/data/*.gschema.xml.in              @Tim-van-Oudheusden
+
+# Agent instructions and the AI disclosure.
+/AGENTS.md                          @Tim-van-Oudheusden
+/AI_DISCLOSURE.md                   @Tim-van-Oudheusden
+/CLAUDE.md                          @Tim-van-Oudheusden
+/.claude/                           @Tim-van-Oudheusden
+/.cursor/                           @Tim-van-Oudheusden
+/prompts/                           @Tim-van-Oudheusden

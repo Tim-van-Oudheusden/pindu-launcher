@@ -162,6 +162,11 @@ window.fullscreen-mode .library-tabs .library-tab:checked {
   font-weight: 500;
 }
 
+/* Room above the first row for the lifted cover's ring and shadow. */
+window.fullscreen-mode gridview.library {
+  padding-top: 32px;
+}
+
 window.fullscreen-mode gridview.library > child {
   opacity: 0.9;
 }

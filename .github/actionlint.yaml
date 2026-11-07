@@ -1,0 +1,7 @@
+# actionlint configuration: https://github.com/rhysd/actionlint/blob/main/docs/config.md
+paths:
+  .github/workflows/nightly-compliance.yml:
+    ignore:
+      # GitHub added the vulnerability-alerts token scope (read Dependabot alerts) after actionlint 1.7.12;
+      # drop this once https://github.com/rhysd/actionlint/issues/713 ships.
+      - 'unknown permission scope "vulnerability-alerts"'

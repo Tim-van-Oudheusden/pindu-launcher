@@ -27,11 +27,17 @@ This page is the style contract: the files, the `theme.json` fields and the CSS 
   `gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-design-variant <variant-id>`. An empty
   or unknown id picks the design's first variant.
 - `fullscreen.css` applies while the `fullscreen-custom-style` setting is on: Quick Access's **My Stylesheet**
-  switch under **Design**, which can only be turned on once the file exists.
+  switch under **Design**, or **Use My Stylesheet** in Preferences → Fullscreen, which can only be turned on
+  once the file exists. Turning it off removes the style at once.
+- Preferences → Fullscreen → **My Stylesheet** also shows where the file goes, opens its folder (creating it
+  if needed) and has **Import Style…**, which copies a stylesheet you pick in as `fullscreen.css`, so its
+  `url()` and `@import` resolve in that folder. **Reset** turns the setting off. Both keep the file they
+  replace as `fullscreen.css.bak`, replacing an older backup.
 - Saving a stylesheet, or another file directly in the design's or the variant's folder, reloads it at once.
   Files in other subfolders (such as `assets/`) are picked up the next time the stylesheet loads.
 - Problems GTK finds in a stylesheet are logged with their line, and fullscreen mode shows a toast with
-  their number. The rest of the stylesheet still applies.
+  their number. For `fullscreen.css`, Preferences shows the number and the first few, updated each time
+  the file changes. The rest of the stylesheet still applies.
 
 ## A design folder
 
@@ -225,6 +231,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.library-tabs` | The bar of tabs and the sort order |
 | `.library-tab` | A tab; the shown one is `:checked` |
 | `.filtered-chip` | The Filtered chip beside the tabs, shown while Quick Access's Filters narrow them |
+| `gridview.library` | The grid of covers; its `padding-top` is the room above the first row, so give a focus `box-shadow` or a larger `transform` enough of it to show whole |
 | `gridview.library > child` | A tile's place in the grid; `:focus-within` on the focused one |
 | `.cover-tile` | A tile: `.cover-frame` (the cover with its badges, which takes the focus ring; give it the cover's `border-radius`), `cover-art` (the cover), `.badge` (source and state), `.play-button`, `label` (the title, absent in fullscreen mode) |
 

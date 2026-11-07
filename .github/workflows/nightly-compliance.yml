@@ -1,0 +1,67 @@
+name: Nightly compliance
+
+# Checks that can go stale without a code change (#245): open Dependabot alerts, new RustSec advisories against
+# Cargo.lock, the GNOME runtime reaching end-of-life on Flathub, actionlint findings, the live branch ruleset drifting
+# from .github/rulesets/main.json, and the ACMM file layout Hive evaluates. scripts/nightly-compliance.sh runs one row
+# per check and fails the run if any row fails; the report lands in the run's job summary.
+#
+# The GITHUB_TOKEN cannot see a ruleset's bypass list, so the ruleset row compares everything else and notes that the
+# bypass actors were not checked.
+
+on:
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  compliance:
+    name: Nightly compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The image the CI builds use: GNOME 51 with flatpak and the flathub remote, plus gh, jq and python3.
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+    # vulnerability-alerts: read lets the GITHUB_TOKEN list Dependabot alerts.
+    permissions:
+      contents: read
+      vulnerability-alerts: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # The tools the maintainer approved, at pinned versions with checked SHA-256 sums. A failed install does not stop
+      # the job: the script then fails the row that needed the tool and still runs every other check.
+      - name: Install cargo-audit 0.22.2 and actionlint 1.7.12
+        continue-on-error: true
+        run: |
+          set -eu
+          bin="$RUNNER_TEMP/bin"
+          mkdir -p "$bin"
+          cd "$RUNNER_TEMP"
+          curl -fsSLO https://github.com/rustsec/rustsec/releases/download/cargo-audit%2Fv0.22.2/cargo-audit-x86_64-unknown-linux-musl-v0.22.2.tgz
+          curl -fsSLO https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          sha256sum -c - <<'EOF'
+          7fb9497f8594b389e5fce5ef9b92db08432996895b2e0c5a0167a69ed445c428  cargo-audit-x86_64-unknown-linux-musl-v0.22.2.tgz
+          8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint_1.7.12_linux_amd64.tar.gz
+          EOF
+          tar -xzf cargo-audit-x86_64-unknown-linux-musl-v0.22.2.tgz --strip-components=1 -C "$bin" \
+            cargo-audit-x86_64-unknown-linux-musl-v0.22.2/cargo-audit
+          tar -xzf actionlint_1.7.12_linux_amd64.tar.gz -C "$bin" actionlint
+          echo "$bin" >> "$GITHUB_PATH"
+
+      - name: Run compliance checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/nightly-compliance.sh > nightly-compliance.md
+
+      - name: Publish job summary
+        if: always()
+        run: cat nightly-compliance.md >> "$GITHUB_STEP_SUMMARY"
