@@ -30,14 +30,7 @@ blueprint_compiler = find_program('blueprint-compiler')
 subdir('data')
 subdir('crates')
 subdir('po')
-
-test(
-  'ui-smoke',
-  find_program('build-aux/ui-smoke.sh'),
-  args: [app_binary, pkgdatadir / 'resources.gresource'],
-  timeout: 60,
-  suite: 'ui',
-)
+subdir('tests')
 
 test('versions', find_program('build-aux/check-version.sh'), suite: 'packaging')
 test('manifests', find_program('build-aux/check-manifests.sh'), suite: 'packaging')

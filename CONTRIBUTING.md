@@ -33,7 +33,8 @@ crates/pindu-core/   the GTK-free core: importers (sources/), the library databa
 crates/pindu-ui/     the GTK shells (binary `pindu-launcher`): services, GObject list models, desktop and fullscreen
 crates/manette*/     libmanette bindings, generated with gir (do not edit the generated code)
 data/                Blueprint files, GSettings schema, desktop file, MetaInfo, icons, fullscreen designs
-build-aux/           Flatpak manifests and lint exceptions, RPM and DEB recipes, version, manifest and smoke checks
+build-aux/           Flatpak manifests and lint exceptions, RPM and DEB recipes, version, manifest and package checks
+tests/               tests for the build-aux/ tooling (tooling/), scripts/ (scripts/) and the UI smoke test (e2e/)
 po/                  gettext: POTFILES.in, the template pindu-launcher.pot, LINGUAS and one .po per language
 docs/                the spec and research PDFs, the fullscreen style contract, releasing, metrics, security
 ```
