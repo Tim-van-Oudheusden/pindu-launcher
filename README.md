@@ -31,8 +31,9 @@
 ## Status
 
 Early development. Releases ship on [GitHub Releases](https://github.com/Tim-van-Oudheusden/pindu-launcher/releases)
-as a Flatpak bundle ([Installing](#installing)); a Flathub listing comes later. Linux only, on the GNOME 51 runtime.
-Progress is tracked in the [milestones](https://github.com/Tim-van-Oudheusden/pindu-launcher/milestones).
+as a Flatpak bundle, with native packages for Fedora 45, Debian testing and Ubuntu 26.10 ([Installing](#installing));
+a Flathub listing comes later. Linux only. Progress is tracked in the
+[milestones](https://github.com/Tim-van-Oudheusden/pindu-launcher/milestones).
 
 ## About
 
@@ -93,6 +94,13 @@ Pick one:
   ```
 
   A bundle does not update itself: install the next release's bundle the same way.
+- **Install a native package** on Fedora 45, Debian testing or Ubuntu 26.10, the distros with GTK 4.24 and
+  libadwaita 1.10. Each release has `pindu-launcher-<version>-1.fc45.x86_64.rpm`,
+  `pindu-launcher-<version>-debian-testing-amd64.deb` and `pindu-launcher-<version>-ubuntu-26.10-amd64.deb`; install
+  the one for your system with `sudo dnf install ./<file>` or `sudo apt install ./<file>`. Native packages run without
+  the Flatpak sandbox and do not update themselves, and Windows games need
+  [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher#installing), which these distros do not
+  package.
 - **Download a CI build.** Every CI run uploads a development bundle of the latest code as the
   `pindu-launcher-devel-x86_64.flatpak` artifact. Open a recent run of the
   [`CI` workflow](https://github.com/Tim-van-Oudheusden/pindu-launcher/actions/workflows/ci.yml) (you must be signed in

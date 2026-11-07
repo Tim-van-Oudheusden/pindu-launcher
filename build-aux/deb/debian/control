@@ -1,0 +1,39 @@
+Source: pindu-launcher
+Section: games
+Priority: optional
+Maintainer: Tim van Oudheusden <118523958+Tim-van-Oudheusden@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 13),
+               meson (>= 1.6.0),
+               cargo,
+               rustc (>= 1.93),
+               blueprint-compiler,
+               gettext,
+               desktop-file-utils,
+               appstream,
+               libglib2.0-dev,
+               libglib2.0-bin,
+               libgtk-4-dev (>= 4.24),
+               libadwaita-1-dev (>= 1.10),
+               libmanette-0.2-dev (>= 0.2.10),
+               libsoup-3.0-dev,
+               libsqlite3-dev,
+               libfontconfig-dev,
+               libseccomp-dev,
+               pkgconf
+Standards-Version: 4.7.2
+Homepage: https://github.com/Tim-van-Oudheusden/pindu-launcher
+Rules-Requires-Root: no
+
+Package: pindu-launcher
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, glycin-loaders, bubblewrap
+Recommends: gamemode
+Description: every PC game on your computer in one GNOME library
+ Pindu launcher gathers every game on your computer into one library, whichever
+ launcher installed it: Steam, Heroic, Lutris, Bottles, Faugus, installed apps and
+ games you add yourself. Browse covers, pick up where you left off and start any
+ game with one click, or switch to the fullscreen mode and do the same from the
+ couch with a controller.
+ .
+ Windows games run through umu-launcher, which has no Debian package; see
+ https://github.com/Open-Wine-Components/umu-launcher#installing
