@@ -94,6 +94,24 @@ template $PinduGameDialog: Adw.Dialog {
           description: _("Windows games run through Proton, each in a prefix: a folder that holds its Windows files and saves.");
           visible: false;
 
+          // Shown when umu-run is missing: a native install without umu-launcher.
+          Adw.ActionRow umu_row {
+            title: _("umu-launcher Is Not Installed");
+            subtitle: _("Windows games and their installers run through it");
+            visible: false;
+
+            [prefix]
+            Image {
+              icon-name: "dialog-warning-symbolic";
+            }
+
+            [suffix]
+            LinkButton umu_link {
+              label: _("How to Install");
+              valign: center;
+            }
+          }
+
           Adw.ComboRow proton_row {
             title: _("Proton");
 
