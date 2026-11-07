@@ -153,6 +153,11 @@ window.fullscreen-mode .cover-tile .cover-frame {
   border-radius: 4px;
 }
 
+/* Room above the first row for the lifted cover's ring and glow. */
+window.fullscreen-mode gridview.library {
+  padding-top: 48px;
+}
+
 window.fullscreen-mode gridview.library > child {
   border-radius: 6px;
 }
