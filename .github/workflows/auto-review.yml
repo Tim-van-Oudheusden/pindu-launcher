@@ -1,0 +1,159 @@
+name: Apply review suggestions
+
+# Automated review application: the repository owner comments `/apply-suggestions`
+# on a pull request and this workflow commits every ```suggestion block that
+# reviewers with write access left on the PR's current diff. What is applied and
+# what is skipped is listed in the header of scripts/apply-review-suggestions.sh.
+#
+# Security: only a comment by the repository owner (author association OWNER)
+# starts the job; from anyone else the job is skipped. Fork PRs are refused, a
+# head committed after the command comment is refused, and the apply script runs
+# from the default branch, so no code from the PR is executed. Event text
+# reaches shell steps only through env. GITHUB_TOKEN reaches only the steps that
+# call GitHub; the PR checkout keeps no credentials, so the token is supplied to
+# the final push alone. Commit dates come from the pusher, so the date check
+# stops a push racing the comment, not a pusher who backdates commits (who
+# already has write access, since fork PRs are refused).
+#
+# Pushes made with GITHUB_TOKEN do not start new workflow runs, so CI re-runs on
+# the PR's next push (or a manual re-run), not on the suggestions commit itself.
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    name: Apply review suggestions
+    if: >-
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/apply-suggestions') &&
+      github.event.comment.author_association == 'OWNER'
+    # On the job, not the workflow: a workflow-level group is taken before this `if`, so a burst of other comments
+    # would replace a pending /apply-suggestions run.
+    concurrency:
+      group: auto-review-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # Push the suggestions commit to the PR branch.
+      contents: write
+      # React to the command and post the report comment.
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash
+    env:
+      REPO: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.issue.number }}
+      COMMENT_ID: ${{ github.event.comment.id }}
+      COMMENT_AT: ${{ github.event.comment.created_at }}
+    steps:
+      - name: Acknowledge command
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api "repos/$REPO/issues/comments/$COMMENT_ID/reactions" -f content=eyes --silent
+
+      - name: Resolve pull request head
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/pulls/$PR_NUMBER" > pr.json
+          if [ "$(jq -r '.head.repo.full_name' pr.json)" != "$REPO" ]; then
+            echo "::error::Fork pull requests are not supported; apply the suggestions on the fork."
+            exit 1
+          fi
+          sha="$(jq -r '.head.sha' pr.json)"
+          # Only check out a head the commenter could have seen: a commit made
+          # after the comment was not part of what they asked to apply.
+          commit_at="$(gh api "repos/$REPO/commits/$sha" --jq '.commit.committer.date')"
+          # Parsed outside the test so an unreadable date stops the step (set -e).
+          commit_epoch="$(date -d "$commit_at" +%s)"
+          comment_epoch="$(date -d "$COMMENT_AT" +%s)"
+          if [ "$commit_epoch" -gt "$comment_epoch" ]; then
+            echo "::error::The pull request head ($sha) was committed after the /apply-suggestions comment; comment again to apply suggestions to it."
+            exit 1
+          fi
+          echo "ref=$(jq -r '.head.ref' pr.json)" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Check out apply script (default branch)
+        uses: actions/checkout@v4
+        with:
+          path: trusted
+          persist-credentials: false
+
+      - name: Check out pull request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
+          path: pr
+          persist-credentials: false
+
+      - name: Fetch review comments
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/comments" --jq '.[]' \
+            | jq -s . > "$RUNNER_TEMP/comments.json"
+
+      - name: Apply suggestions
+        working-directory: pr
+        env:
+          COMMENTS_FILE: ${{ runner.temp }}/comments.json
+        run: |
+          set -euo pipefail
+          sh ../trusted/scripts/apply-review-suggestions.sh | tee "$RUNNER_TEMP/report.txt"
+
+      - name: Commit suggestions
+        id: commit
+        working-directory: pr
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "Nothing to commit." | tee -a "$RUNNER_TEMP/report.txt"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(review): apply review suggestions (#$PR_NUMBER)"
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Push to the pull request branch
+        if: steps.commit.outputs.committed == 'true'
+        working-directory: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ steps.pr.outputs.ref }}
+        run: |
+          set -euo pipefail
+          # The commit sits on the checked-out SHA, so the push is not a fast
+          # forward and fails if the branch moved meanwhile: suggestions are never
+          # applied to lines they were not written for.
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" \
+            push origin "HEAD:refs/heads/$HEAD_REF"
+
+      - name: Report on the pull request
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Apply review suggestions ($JOB_STATUS)"
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/report.txt" 2>/dev/null || echo "no report: see the workflow run"
+            echo '```'
+            echo
+            echo "[Workflow run]($GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID)"
+          } | tee -a "$GITHUB_STEP_SUMMARY" > comment.md
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file comment.md
