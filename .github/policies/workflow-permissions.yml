@@ -18,12 +18,54 @@ default:
   contents: read
 
 workflows:
+  # Weekly report of which agent and model are behind each merged pull request.
+  ai-audit.yml:
+    jobs:
+      audit: { contents: read, pull-requests: read }
+
+  # Opens, updates and closes the nightly compliance issue from the run's report artifact.
+  auto-issues.yml:
+    jobs:
+      compliance-issue: { actions: read, contents: read, issues: write }
+
+  # Commits review suggestion blocks to the pull request's branch on /apply-suggestions.
+  auto-review.yml:
+    jobs:
+      apply: { contents: write, pull-requests: write }
+
   ci.yml: {}
+
+  # Claude Code pushes `claude/*` branches, opens pull requests and answers on issues;
+  # id-token is the action's OIDC exchange.
+  claude.yml:
+    jobs:
+      claude: { contents: write, id-token: write, issues: write, pull-requests: write }
+
+  coverage-gate.yml: {}
 
   # actions/labeler reads .github/labeler.yml and labels the pull request.
   labeler.yml:
     jobs:
       label: { contents: read, pull-requests: write }
+
+  # pick reads pull requests; land merges, closes issues and starts main's workflows;
+  # reject labels `hold`, comments and starts the next queue run.
+  merge-queue.yml:
+    jobs:
+      pick: { contents: read, pull-requests: read }
+      land: { actions: write, contents: write, issues: write, pull-requests: write }
+      reject: { actions: write, contents: read, issues: write, pull-requests: write }
+
+  # Reads Dependabot alerts for the supply-chain row.
+  nightly-compliance.yml:
+    jobs:
+      compliance: { contents: read, vulnerability-alerts: read }
+
+  pr-metrics.yml:
+    jobs:
+      acceptance: { contents: read, pull-requests: read }
+
+  quality-report.yml: {}
 
   # Create the GitHub Release and upload the bundles, sources and packages.
   release.yml:
@@ -31,5 +73,9 @@ workflows:
       publish: { contents: write }
 
   review.yml: {}
+
+  strategy-report.yml:
+    jobs:
+      report: { contents: read, issues: read, pull-requests: read }
 
   tier-classifier.yml: {}

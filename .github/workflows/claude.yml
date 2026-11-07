@@ -16,8 +16,9 @@ on:
   pull_request_review:
     types: [submitted]
 
-# The job asks for what it needs itself.
-permissions: {}
+# Read-only by default, as every workflow; the job asks for what it needs itself.
+permissions:
+  contents: read
 
 concurrency:
   # A newer event in a busy group replaces the pending one, and the group is resolved

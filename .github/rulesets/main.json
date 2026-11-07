@@ -4,7 +4,9 @@
   "enforcement": "active",
   "conditions": {
     "ref_name": {
-      "include": ["~DEFAULT_BRANCH"],
+      "include": [
+        "~DEFAULT_BRANCH"
+      ],
       "exclude": []
     }
   },
@@ -30,7 +32,9 @@
         "require_code_owner_review": false,
         "require_last_push_approval": false,
         "required_review_thread_resolution": true,
-        "allowed_merge_methods": ["merge"]
+        "allowed_merge_methods": [
+          "merge"
+        ]
       }
     },
     {
@@ -39,14 +43,58 @@
         "strict_required_status_checks_policy": false,
         "do_not_enforce_on_create": false,
         "required_status_checks": [
-          { "context": "Rust and Meson checks", "integration_id": 15368 },
-          { "context": "Source tarball with vendored crates", "integration_id": 15368 },
-          { "context": "Flatpak build, UI smoke test and lint (development)", "integration_id": 15368 },
-          { "context": "Flatpak build, UI smoke test and lint (release)", "integration_id": 15368 },
-          { "context": "Native package install and UI smoke test (fedora-45)", "integration_id": 15368 },
-          { "context": "Native package install and UI smoke test (debian-testing)", "integration_id": 15368 },
-          { "context": "Native package install and UI smoke test (ubuntu-26.10)", "integration_id": 15368 },
-          { "context": "Merge queue script tests", "integration_id": 15368 }
+          {
+            "context": "Rust and Meson checks",
+            "integration_id": 15368
+          },
+          {
+            "context": "Source tarball with vendored crates",
+            "integration_id": 15368
+          },
+          {
+            "context": "Flatpak build, UI smoke test and lint (development)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Flatpak build, UI smoke test and lint (release)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Native package install and UI smoke test (fedora-45)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Native package install and UI smoke test (debian-testing)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Native package install and UI smoke test (ubuntu-26.10)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Merge queue script tests",
+            "integration_id": 15368
+          },
+          {
+            "context": "Governance scripts and policies",
+            "integration_id": 15368
+          },
+          {
+            "context": "Dependency policy (cargo-deny)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Script tests",
+            "integration_id": 15368
+          },
+          {
+            "context": "PR review rubric",
+            "integration_id": 15368
+          },
+          {
+            "context": "Unit-test coverage floors",
+            "integration_id": 15368
+          }
         ]
       }
     }
