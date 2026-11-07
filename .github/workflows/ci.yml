@@ -174,13 +174,18 @@ jobs:
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
-      # The runner's preinstalled SDKs, mounted so the build can delete them: the image
-      # and a release build of the app do not fit in the disk space left otherwise.
       volumes:
+        # The runner's preinstalled SDKs, mounted so the build can delete them: the image
+        # and a release build of the app do not fit in the disk space left otherwise.
         - /usr/local/lib/android:/runner-sdks/android
         - /usr/share/dotnet:/runner-sdks/dotnet
         - /opt/hostedtoolcache:/runner-sdks/toolcache
         - /usr/local/.ghcup:/runner-sdks/ghcup
+        # The image's system installation, copied by Docker into a new named volume (#150).
+        # Updating a runtime renames its old deployment directory, and on runners whose
+        # overlayfs has redirect_dir off, renaming a directory from an image layer fails
+        # with EXDEV ("Invalid cross-device link"). On a volume it is a plain rename.
+        - flatpak-installation:/var/lib/flatpak
     steps:
       - name: Free disk space
         run: |
