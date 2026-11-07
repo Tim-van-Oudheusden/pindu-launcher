@@ -26,7 +26,7 @@ jobs:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install the Rust SDK extension
         run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
@@ -64,7 +64,7 @@ jobs:
     name: Dependency policy (cargo-deny)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # cargo-deny 0.20.2, a maintainer-approved tool, with its published SHA-256. It only reads Cargo.lock and
       # `cargo metadata`, which resolves the workspace without the GNOME libraries, so the runner's cargo is enough.
@@ -85,7 +85,7 @@ jobs:
     name: Script tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The repository scripts' own tests; python3, jq and shellcheck come with the runner.
       - name: Python script tests
@@ -104,7 +104,7 @@ jobs:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install the Rust SDK extension
         run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
@@ -150,7 +150,7 @@ jobs:
     container:
       image: ${{ matrix.image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v4
         with:
@@ -187,7 +187,7 @@ jobs:
       # namespaces in an unprivileged container.
       options: --privileged
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v4
         with:
@@ -236,7 +236,7 @@ jobs:
           rm -rf /runner-sdks/*/*
           df -h / | tail -1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Runs `meson test` inside the build, under xvfb, after the install: this is
       # where the UI smoke test runs. The bundle is uploaded as an artifact.
