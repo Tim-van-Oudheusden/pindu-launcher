@@ -1,0 +1,191 @@
+# Release manifest for Pindu launcher: the stable app that GitHub releases ship as a
+# Flatpak bundle (.github/workflows/release.yml). Not the Flathub manifest: that one is a
+# person's work (#63), and this one allows network access during the build.
+#
+# Build and install from the repo root:
+#   flatpak-builder --user --install --force-clean build-dir \
+#     build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml
+#   flatpak run io.github.tim_van_oudheusden.pindu-launcher
+#
+# finish-args and the bundled modules match the development manifest's; only the ID, the
+# profile, the build type and the debug environment differ.
+
+id: io.github.tim_van_oudheusden.pindu-launcher
+runtime: org.gnome.Platform
+runtime-version: '51'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: pindu-launcher
+
+finish-args:
+  # Display: Wayland, plus X11 through Xwayland, which most Windows games need
+  - --socket=wayland
+  - --socket=x11
+  - --share=ipc
+  # All devices: the GPU, controllers (also through hidraw, as on the Steam
+  # Deck) for games and for the fullscreen mode's navigation
+  - --device=all
+  # Game sound
+  - --socket=pulseaudio
+  # Cover art and metadata downloads
+  - --share=network
+
+  # Read-only access to other launchers' libraries, for the importers
+  # Steam (native, then Flatpak)
+  - --filesystem=~/.steam:ro
+  - --filesystem=xdg-data/Steam:ro
+  - --filesystem=~/.var/app/com.valvesoftware.Steam/data/Steam:ro
+  # Heroic
+  - --filesystem=xdg-config/heroic:ro
+  - --filesystem=~/.var/app/com.heroicgameslauncher.hgl/config/heroic:ro
+  # Lutris
+  - --filesystem=xdg-data/lutris:ro
+  - --filesystem=~/.var/app/net.lutris.Lutris/data/lutris:ro
+  # Bottles
+  - --filesystem=xdg-data/bottles:ro
+  - --filesystem=~/.var/app/com.usebottles.bottles/data/bottles:ro
+  # Faugus
+  - --filesystem=xdg-data/faugus-launcher:ro
+  - --filesystem=~/.var/app/io.github.Faugus.faugus-launcher/data/faugus-launcher:ro
+  # Desktop entries and installed Flatpaks
+  - --filesystem=xdg-data/applications:ro
+  - --filesystem=host-os:ro
+  - --filesystem=/var/lib/flatpak/exports:ro
+  - --filesystem=xdg-data/flatpak/exports:ro
+
+  # Running Windows games with Proton through umu
+  # 32-bit programs: many Windows games and parts of Wine are 32-bit
+  - --allow=multiarch
+  # Debugging system calls such as ptrace, which some games and anti-cheat use
+  - --allow=devel
+  # One /dev/shm for all of the app's sandboxes, which Proton's Steam Runtime
+  # container needs for shared memory
+  - --allow=per-app-dev-shm
+  # umu keeps the Steam Runtime here, shared with a umu outside the sandbox
+  - --filesystem=xdg-data/umu:create
+  # Wine prefixes, and games added from an installer
+  - --filesystem=~/Games:create
+
+
+add-extensions:
+  # 32-bit runtime libraries, for Proton and 32-bit games
+  org.freedesktop.Platform.Compat.i386:
+    directory: lib/i386-linux-gnu
+    version: '26.08'
+  # 32-bit graphics drivers, matching the host's GL driver
+  org.freedesktop.Platform.GL32:
+    directory: lib/i386-linux-gnu/GL
+    version: '1.4'
+    versions: 26.08;26.08-extra;1.4
+    subdirectories: true
+    no-autodownload: true
+    autodelete: false
+    add-ld-path: lib
+    merge-dirs: vulkan/icd.d;glvnd/egl_vendor.d;egl/egl_external_platform.d;OpenCL/vendors;lib/dri;lib/d3d;lib/gbm;vulkan/explicit_layer.d;vulkan/implicit_layer.d;vdpau
+    download-if: active-gl-driver
+    enable-if: active-gl-driver
+    autoprune-unless: active-gl-driver
+  # The MangoHud performance overlay, for the per-game setting
+  org.freedesktop.Platform.VulkanLayer.MangoHud:
+    directory: lib/extensions/vulkan/MangoHud
+    version: '26.08'
+    autodelete: false
+
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  # Lets cargo download crates during local builds. A Flathub build has no
+  # network and needs vendored crates (cargo-sources.json) instead.
+  build-args:
+    - --share=network
+  env:
+    RUST_BACKTRACE: '1'
+  test-args:
+    - --socket=x11
+    - --share=network
+
+modules:
+  # Mount points for the extensions above, and the 32-bit library path
+  - name: extension-mount-points
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/lib/i386-linux-gnu/GL /app/lib/extensions/vulkan/MangoHud
+      - install -Dm644 ld.so.conf -t /app/etc/
+    sources:
+      - type: inline
+        dest-filename: ld.so.conf
+        contents: |
+          /app/lib/i386-linux-gnu
+
+  # umu-launcher runs Windows games with Proton. Its zipapp release runs on the
+  # runtime's Python, so Python needn't be bundled.
+  - name: umu-launcher
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 umu-run /app/bin/umu-run
+      - install -Dm644 LICENSE /app/share/licenses/umu-launcher/LICENSE
+    sources:
+      - type: archive
+        url: https://github.com/Open-Wine-Components/umu-launcher/releases/download/1.4.4/umu-launcher-1.4.4-zipapp.tar
+        sha256: eb590691841f7fad3fc3ad8fd5db4ccb87849fe7948e62b28ece7a4ee48cc851
+        strip-components: 1
+        x-checker-data:
+          type: json
+          is-important: true
+          url: https://api.github.com/repos/Open-Wine-Components/umu-launcher/releases/latest
+          version-query: .tag_name
+          url-query: '"https://github.com/Open-Wine-Components/umu-launcher/releases/download/" + $version + "/umu-launcher-" + $version + "-zipapp.tar"'
+      - type: file
+        url: https://raw.githubusercontent.com/Open-Wine-Components/umu-launcher/cf3d1b107147480c447ffbfb3f789dc74335074c/LICENSE
+        sha256: 3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986
+
+  # GameMode for the per-game setting: libgamemode, which asks the GameMode portal when
+  # it runs in a sandbox, so no D-Bus talk-name is needed, and gamemoderun, which
+  # preloads it into the game. The daemon runs on the host and is not built.
+  - name: gamemode
+    # Feral's release tarball builds with Meson
+    buildsystem: meson
+    config-opts:
+      # Only the client libraries libgamemode and libgamemodeauto: no daemon, so no
+      # systemd, inih or polkit files either
+      - -Dwith-sd-bus-provider=no-daemon
+      # No sample programs
+      - -Dwith-examples=false
+      # No daemon test utilities
+      - -Dwith-util=false
+    post-install:
+      # Meson installs gamemoderun only with the daemon, so it is installed here
+      - install -Dm755 ../data/gamemoderun -t /app/bin
+      # Its licence, as for umu-launcher
+      - install -Dm644 ../LICENSE.txt /app/share/licenses/gamemode/LICENSE
+    cleanup:
+      # The header and pkg-config files only serve building against libgamemode
+      - /include
+      - /lib/pkgconfig
+    sources:
+      # The official release tarball; the checksum is the one in Feral's sha256sums.txt
+      - type: archive
+        url: https://github.com/FeralInteractive/gamemode/releases/download/1.8.2/gamemode-1.8.2.tar.xz
+        sha256: 98cd1bcf6101c92fe87f974c7776af23c7e18f29ce6ecfe572b1c39dcde5c181
+        # Lets flatpak-external-data-checker offer new releases, as for umu-launcher
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/FeralInteractive/gamemode/releases/latest
+          version-query: .tag_name
+          url-query: '"https://github.com/FeralInteractive/gamemode/releases/download/" + $version + "/gamemode-" + $version + ".tar.xz"'
+
+  - name: pindu-launcher
+    buildsystem: meson
+    run-tests: true
+    config-opts:
+      # flatpak-builder passes no build type, and Meson's default is debug
+      - --buildtype=release
+      - -Dprofile=default
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - target
+          - build-dir
+          - _build
+          - .flatpak-builder

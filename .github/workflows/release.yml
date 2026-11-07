@@ -1,0 +1,121 @@
+name: Release
+
+# A `v*` tag publishes a GitHub release: the stable Flatpak bundle, its checksums and notes
+# from the MetaInfo. Running it by hand rebuilds an existing tag's release (for example after
+# a failed upload) and replaces its files. docs/releasing.md is the runbook.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build and publish, for example v0.2.0
+        required: true
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+  MANIFEST: build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml
+  LINT_EXCEPTIONS: build-aux/flatpak/lint-exceptions.json
+
+jobs:
+  version:
+    name: Check the tag against the versions
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      # Fails before anything is built when the tag, meson.build, Cargo.toml and the
+      # MetaInfo's newest <release> disagree, or the release has no notes.
+      - id: version
+        run: |
+          build-aux/check-version.sh "$TAG"
+          version="${TAG#v}"
+          build-aux/release-notes.py "$version" >/dev/null
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  flatpak:
+    name: Flatpak bundle, tests and lint
+    needs: version
+    runs-on: ubuntu-latest
+    # As in ci.yml: the GNOME 51 image, and the runner's preinstalled SDKs mounted so the
+    # build can delete them for disk space.
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+      volumes:
+        - /usr/local/lib/android:/runner-sdks/android
+        - /usr/share/dotnet:/runner-sdks/dotnet
+        - /opt/hostedtoolcache:/runner-sdks/toolcache
+        - /usr/local/.ghcup:/runner-sdks/ghcup
+    steps:
+      - name: Free disk space
+        run: |
+          df -h / | tail -1
+          rm -rf /runner-sdks/*/*
+          df -h / | tail -1
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      # Runs `meson test` inside the build under xvfb, including the UI smoke test. No
+      # cache: a release builds from clean sources.
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: ${{ env.MANIFEST }}
+          bundle: pindu-launcher-${{ needs.version.outputs.version }}-x86_64.flatpak
+          artifact-name: flatpak-bundle
+          branch: stable
+          run-tests: true
+          cache: false
+
+      - name: Lint the manifest
+        run: flatpak-builder-lint --gha-format --exceptions --user-exceptions "$LINT_EXCEPTIONS" manifest "$MANIFEST"
+
+      - name: Lint the build (MetaInfo, desktop file, icons)
+        run: flatpak-builder-lint --gha-format --exceptions --user-exceptions "$LINT_EXCEPTIONS" repo repo
+
+  publish:
+    name: Publish the GitHub release
+    needs: [version, flatpak]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: flatpak-bundle
+          path: dist
+
+      - name: Checksums and notes
+        run: |
+          (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)
+          build-aux/release-notes.py "$VERSION" > notes.md
+
+      # A new tag gets a new release; a rerun replaces the files of the existing one.
+      - name: Publish
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+            gh release edit "$TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" dist/* --verify-tag --title "Pindu launcher $VERSION" --notes-file notes.md
+          fi

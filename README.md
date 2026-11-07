@@ -214,6 +214,10 @@ CI builds the same manifest, runs the tests in it (including a UI smoke test und
 build with `flatpak-builder-lint`, and uploads the bundle. The lint exceptions in
 `build-aux/flatpak/lint-exceptions.json` each say why.
 
+The release manifest, `build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml`, builds the stable app that
+GitHub releases ship. It has the development manifest's permissions and modules, which a Meson test checks; CI builds
+it on every pull request too. [`docs/releasing.md`](docs/releasing.md) says how to cut a release.
+
 ## Translating
 
 Translations are gettext `.po` files in `po/`, one per language listed in `po/LINGUAS`, made from the template
@@ -272,6 +276,7 @@ so the fullscreen mode is a second presentation of the same library.
 | [`docs/Adwaita Game Library — Main Spec.pdf`](docs/) | The product spec: scope, design and the issue plan |
 | [`docs/Research — *.pdf`](docs/) | Research behind the spec: Cartridges, Heroic, Faugus, OpenGamepadUI, Flatpak and Flathub, the GNOME platform |
 | [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
+| [`docs/releasing.md`](docs/releasing.md) | How to cut a release: versions, notes, the tag and the Release workflow |
 | [`data/screenshots/CREDITS.md`](data/screenshots/CREDITS.md) | Where the demo library's game art comes from, and its licences |
 | [`AGENTS.md`](AGENTS.md) | How AI agents work in this repository |
 | [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md) | Which parts of the project had AI assistance |

@@ -139,6 +139,8 @@ The workspace enforces the Rust for Linux lint set (`[workspace.lints]` in `Carg
 ## Git and Version Management
 
 - Commits follow the Conventional Commits specification; one commit per issue, referencing the issue number.
+- Releases follow `docs/releasing.md`: versions and MetaInfo notes land through a pull request, then a `vX.Y.Z` tag
+  on `main` runs the Release workflow. Never move or reuse a published tag.
 
 ## Testing
 
