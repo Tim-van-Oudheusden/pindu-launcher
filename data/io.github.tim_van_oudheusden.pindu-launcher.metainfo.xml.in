@@ -87,6 +87,21 @@
   </supports>
 
   <releases>
+    <release version="0.2.0" date="2026-11-07">
+      <description>
+        <p>Windows games, and a fullscreen mode for playing from the couch with a controller.</p>
+        <ul>
+          <li>Add a Windows game from its .exe or installer and play it with Proton, with launch settings and logs for each game</li>
+          <li>Download GE-Proton and Proton-CachyOS builds from Preferences</li>
+          <li>Run native games in the Steam Linux Runtime, and turn on MangoHud or GameMode for a game</li>
+          <li>A fullscreen mode with Home, Library and game pages, an on-screen keyboard for search and a Quick Access panel</li>
+          <li>Fullscreen designs, Ribbon and Panorama, with variants, and your own stylesheet</li>
+          <li>Reduce Motion, Larger Text and a volume for navigation sounds in fullscreen mode</li>
+          <li>Control the desktop window and its menus with a controller</li>
+          <li>SteamGridDB art arrives as soon as you save your key</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-11-04">
       <description>
         <p>The first release.</p>

@@ -23,9 +23,11 @@ flowchart LR
    `data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in`: one `<p>` and a `<ul>` of user-visible changes
    since the last tag (`git log vPREVIOUS..`). The same text becomes the release notes on GitHub and in software
    centres, so write it for users. Preview it with `build-aux/release-notes.py X.Y.Z`.
-4. **Check** with `meson test -C _build`: its `versions` test fails while the three versions disagree.
-5. **Land it** through a pull request as usual.
-6. **Tag the merge commit** on `main` and push the tag:
+4. **Refresh the translation template**, which carries the MetaInfo strings: `meson compile -C _build
+   pindu-launcher-pot`. CI's `po/check-pot.sh` fails otherwise.
+5. **Check** with `meson test -C _build`: its `versions` test fails while the three versions disagree.
+6. **Land it** through a pull request as usual.
+7. **Tag the merge commit** on `main` and push the tag:
 
    ```sh
    git switch main && git pull
@@ -33,7 +35,7 @@ flowchart LR
    git push origin vX.Y.Z
    ```
 
-7. **Watch the [Release workflow](https://github.com/Tim-van-Oudheusden/pindu-launcher/actions/workflows/release.yml)**.
+8. **Watch the [Release workflow](https://github.com/Tim-van-Oudheusden/pindu-launcher/actions/workflows/release.yml)**.
    When it is green, the [release](https://github.com/Tim-van-Oudheusden/pindu-launcher/releases) has
    `pindu-launcher-X.Y.Z-x86_64.flatpak`, `pindu-launcher-X.Y.Z.tar.xz` and `SHA256SUMS`. Install the bundle (the
    notes say how), start it, and check that it opens and imports a library.
