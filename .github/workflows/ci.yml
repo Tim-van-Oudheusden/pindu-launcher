@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The merge queue starts CI on main after each merge (scripts/merge-queue.sh): a merge made
+  # with GITHUB_TOKEN starts no push run.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -252,3 +255,17 @@ jobs:
 
       - name: Lint the build (MetaInfo, desktop file, icons)
         run: flatpak-builder-lint --gha-format --exceptions --user-exceptions "$LINT_EXCEPTIONS" repo repo
+
+  merge-queue:
+    name: Merge queue script tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # scripts/merge-queue.sh against a stub gh and throwaway repositories, and
+      # .github/workflows/merge-queue.yml against the script (jq and yq 4 ship on the runner).
+      - name: Script tests
+        run: sh scripts/merge-queue.test.sh
