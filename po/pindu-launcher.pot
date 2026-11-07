@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 15:46+0100\n"
+"POT-Creation-Date: 2026-11-07 16:09+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1897,24 +1897,72 @@ msgid "Light and dark style"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:92
-msgid "The first release."
+msgid ""
+"Windows games, and a fullscreen mode for playing from the couch with a "
+"controller."
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:94
+msgid ""
+"Add a Windows game from its .exe or installer and play it with Proton, with "
+"launch settings and logs for each game"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:95
+msgid "Download GE-Proton and Proton-CachyOS builds from Preferences"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:96
+msgid ""
+"Run native games in the Steam Linux Runtime, and turn on MangoHud or "
+"GameMode for a game"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:97
+msgid ""
+"A fullscreen mode with Home, Library and game pages, an on-screen keyboard "
+"for search and a Quick Access panel"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:98
+msgid ""
+"Fullscreen designs, Ribbon and Panorama, with variants, and your own "
+"stylesheet"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:99
+msgid ""
+"Reduce Motion, Larger Text and a volume for navigation sounds in fullscreen "
+"mode"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:100
+msgid "Control the desktop window and its menus with a controller"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:101
+msgid "SteamGridDB art arrives as soon as you save your key"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:107
+msgid "The first release."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:109
 msgid ""
 "One library for Steam, Heroic, Lutris, Bottles, Faugus, installed apps and "
 "games you add yourself"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:95
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:110
 msgid "Collections, favourites, Jump Back In and play history"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:96
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:111
 msgid "Artwork from your launchers, your own files or SteamGridDB"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:97
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:112
 msgid "Search from GNOME Shell"
 msgstr ""
 
