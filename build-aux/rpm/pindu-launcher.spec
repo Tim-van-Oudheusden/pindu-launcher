@@ -58,15 +58,14 @@ switch to the fullscreen mode and do the same from the couch with a controller.
 
 %install
 %meson_install
+%find_lang %{name}
 
 %check
 %meson_test
 desktop-file-validate %{buildroot}%{_datadir}/applications/%{app_id}.desktop
 appstreamcli validate --no-net %{buildroot}%{_metainfodir}/%{app_id}.metainfo.xml
 
-# No translations yet (po/LINGUAS is empty). With the first one, add `%find_lang %{name}`
-# to %install and `-f %{name}.lang` here: rpmbuild fails on the unpackaged .mo until then.
-%files
+%files -f %{name}.lang
 %license LICENSE
 %doc README.md
 %{_bindir}/%{name}
