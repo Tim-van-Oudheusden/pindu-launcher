@@ -91,7 +91,7 @@ jobs:
         run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
 
       # Under _build, which git ignores, so Claude cannot commit the caches.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             _build/cargo-home
