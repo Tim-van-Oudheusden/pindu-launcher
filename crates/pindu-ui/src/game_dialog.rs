@@ -1,7 +1,8 @@
 //! The Add Game and Edit Game dialog. Games added by hand get their type (native or
 //! Windows), folder, program, title and options here, native games whether they run on
 //! the host instead of in the Steam Linux Runtime, and Windows games their Proton build,
-//! prefix and installer; every game can get its own cover, banner and logo.
+//! prefix and installer, with a note when umu-launcher is missing; every game can get its
+//! own cover, banner and logo.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::collections::HashMap;
@@ -88,6 +89,10 @@ mod imp {
         pub program_icon: gtk::Image,
         #[template_child]
         pub windows_group: TemplateChild<adw::PreferencesGroup>,
+        #[template_child]
+        pub umu_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub umu_link: TemplateChild<gtk::LinkButton>,
         #[template_child]
         pub proton_row: TemplateChild<adw::ComboRow>,
         #[template_child]
@@ -202,6 +207,8 @@ mod imp {
                 move |_| dialog.kind_changed()
             ));
             dialog.set_prefix(None);
+            self.umu_row.set_visible(!proton_launch::umu_installed());
+            self.umu_link.set_uri(proton_launch::UMU_INSTALL_URI);
             self.proton
                 .set(ProtonChoice::new(
                     &self.proton_row,

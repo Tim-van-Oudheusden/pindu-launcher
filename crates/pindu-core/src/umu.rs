@@ -1,8 +1,10 @@
-//! Follows umu's setup of the Steam Linux Runtime through its log lines, so a first start
-//! shows its download instead of looking stuck. umu exits successfully even when the
+//! Finds `umu-run`, which native installs need from umu-launcher (the Flatpak bundles it),
+//! and follows umu's setup of the Steam Linux Runtime through its log lines, so a first
+//! start shows its download instead of looking stuck. umu exits successfully even when the
 //! setup fails, so its log is the only sign of how the setup went.
 
-use std::path::PathBuf;
+use std::ffi::OsStr;
+use std::path::{Path, PathBuf};
 
 /// A step of umu's runtime setup, in the order a first start goes through them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -80,6 +82,28 @@ pub fn downloaded_bytes(dirs: &[PathBuf]) -> Option<u64> {
         })
         .and_then(|file| file.metadata().ok())
         .map(|metadata| metadata.len())
+}
+
+/// The program umu-launcher installs, which every start through umu runs.
+pub const RUN: &str = "umu-run";
+
+/// Where `umu-run` is: in the first folder of `path`, a `PATH` value, where
+/// `is_executable` finds it. Empty and relative entries, which name the current folder,
+/// are passed over. `None` when umu-launcher is not installed.
+pub fn find_run(path: &OsStr, is_executable: impl Fn(&Path) -> bool) -> Option<PathBuf> {
+    std::env::split_paths(path)
+        .filter(|folder| folder.is_absolute())
+        .map(|folder| folder.join(RUN))
+        .find(|file| is_executable(file))
+}
+
+/// Whether `file` is a program that can run: a file, or a link to one, with an execute
+/// bit set. The check [`find_run`] makes on this computer.
+pub fn is_executable(file: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+
+    std::fs::metadata(file)
+        .is_ok_and(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
 }
 
 #[cfg(test)]
@@ -174,5 +198,47 @@ mod tests {
         std::fs::write(other.join("unrelated.parts"), [0; 99]).unwrap();
 
         assert_eq!(downloaded_bytes(&dirs), Some(1234));
+    }
+
+    #[test]
+    fn umu_run_is_found_in_the_first_path_folder_that_has_it() {
+        let path = OsStr::new("/usr/local/bin:/home/me/.local/bin:/usr/bin");
+        let has_umu = |file: &Path| {
+            file == Path::new("/home/me/.local/bin/umu-run")
+                || file == Path::new("/usr/bin/umu-run")
+        };
+
+        assert_eq!(
+            find_run(path, has_umu),
+            Some(PathBuf::from("/home/me/.local/bin/umu-run"))
+        );
+    }
+
+    #[test]
+    fn without_umu_run_in_an_absolute_path_folder_there_is_none() {
+        // Empty and relative entries name the current folder, not an installed umu.
+        let path = OsStr::new(":bin:/usr/bin");
+        let in_current_folder =
+            |file: &Path| file == Path::new("umu-run") || file == Path::new("bin/umu-run");
+
+        assert_eq!(find_run(path, in_current_folder), None);
+        assert_eq!(find_run(OsStr::new(""), |_| true), None);
+    }
+
+    #[test]
+    fn only_a_file_with_an_execute_bit_counts_as_installed() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let bin = tempfile::tempdir().unwrap();
+        let file = bin.path().join(RUN);
+        assert!(!is_executable(&file));
+
+        std::fs::write(&file, "#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(!is_executable(&file));
+
+        std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(is_executable(&file));
+        assert!(!is_executable(bin.path()));
     }
 }
