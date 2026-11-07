@@ -1,8 +1,8 @@
 //! The Preferences dialog: General (covers, launching, controller navigation, button prompts
-//! and the confirm and back swap, permissions), Sources (import, folder, sidebar), Artwork
-//! (SteamGridDB), Windows games (default Proton, prefix folder and tools), Proton
-//! (downloaded builds and releases to install) and Fullscreen (start-up, sounds and their
-//! volume).
+//! and the confirm and back swap, permissions in the Flatpak), Sources (import, folder,
+//! sidebar), Artwork (SteamGridDB), Windows games (default Proton, prefix folder and tools),
+//! Proton (downloaded builds and releases to install) and Fullscreen (start-up, sounds and
+//! their volume).
 //! Everything is GSettings, except the SteamGridDB key, which lives in the keyring,
 //! each source's import switch and folder, which live with the library's other source state,
 //! and the Proton builds, which are folders in our tools folder.
@@ -40,6 +40,8 @@ mod imp {
     pub struct PreferencesDialog {
         #[template_child]
         pub general_page: TemplateChild<adw::PreferencesPage>,
+        #[template_child]
+        pub permissions_group: TemplateChild<adw::PreferencesGroup>,
         #[template_child]
         pub host_row: TemplateChild<adw::ActionRow>,
         #[template_child]
@@ -253,6 +255,9 @@ mod imp {
                 .expect("constructed once");
             self.obj().show_prefix_folder();
 
+            // Outside Flatpak there is no sandbox, so games always start on this computer.
+            self.permissions_group
+                .set_visible(permission_service::in_flatpak());
             let allowed = permission_service::host_spawn_allowed();
             self.host_status.set_label(&if allowed {
                 gettext("Allowed")

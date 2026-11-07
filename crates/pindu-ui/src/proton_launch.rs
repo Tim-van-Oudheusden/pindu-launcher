@@ -1,7 +1,8 @@
 //! Runs Windows games through umu and Proton, and native games in the Steam Linux Runtime
 //! through umu, inside the sandbox, as our child. umu's log is read as it comes, so a first
 //! start, which downloads the Steam Linux Runtime, shows its progress, and a missing
-//! internet connection is said plainly instead of the game silently not starting.
+//! internet connection is said plainly instead of the game silently not starting. So is a
+//! missing `umu-run` in a native install, where umu-launcher is the user's to install.
 //!
 //! A game's play session runs from umu reporting the game starting until umu exits: umu
 //! waits for its container, whose `pv-adverb` reaps every process of the prefix, so a
@@ -41,7 +42,8 @@ const PROGRESS_INTERVAL: Duration = Duration::from_millis(250);
 /// Starts a Windows game with the Proton build and prefix its launch config names, or the
 /// defaults from Preferences, and tracks its session from the moment umu starts it. The
 /// app stays up while the game runs, since the game writes its log to us. With `logs`,
-/// umu's output and Proton's log are kept in a new log of the game.
+/// umu's output and Proton's log are kept in a new log of the game. Without `umu-run`, a
+/// dialog explains what is missing instead.
 pub fn play(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
@@ -51,6 +53,9 @@ pub fn play(
     logs: bool,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
+    if explain_missing_umu(app, window, &game.title) {
+        return;
+    }
     let (app, window) = (app.clone(), window.cloned());
     let hold = app.hold();
     let defaults = defaults();
@@ -87,7 +92,7 @@ pub fn play(
 /// Starts a native game in the Steam Linux Runtime with umu's `command` (see
 /// [`proton::runtime_command`]), and tracks its session from the moment umu starts it, as
 /// [`play`] does a Windows game's. With `logs`, umu's output, the game's included, is kept
-/// in a new log of the game.
+/// in a new log of the game. Without `umu-run`, a dialog explains what is missing instead.
 pub fn play_native(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
@@ -97,6 +102,9 @@ pub fn play_native(
     logs: bool,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
+    if explain_missing_umu(app, window, &game.title) {
+        return;
+    }
     let (app, window) = (app.clone(), window.cloned());
     let hold = app.hold();
     glib::spawn_future_local(async move {
@@ -267,7 +275,8 @@ fn end_in_runtime(launch: &Command) {
 }
 
 /// Runs a game's installer through umu in the prefix the game will use, with the named
-/// Proton build or the default one, and waits until it exits. Returns whether it ran.
+/// Proton build or the default one, and waits until it exits. Returns whether it ran;
+/// without `umu-run`, a dialog explains what is missing instead.
 pub async fn run_installer(
     app: &gtk::Application,
     window: Option<gtk::Window>,
@@ -280,6 +289,9 @@ pub async fn run_installer(
     let title = installer
         .file_name()
         .map_or_else(String::new, |name| name.to_string_lossy().into_owned());
+    if explain_missing_umu(app, window.as_ref(), &title) {
+        return false;
+    }
     let defaults = defaults();
     let found = gio::spawn_blocking(move || {
         proton::installer_command(
@@ -328,6 +340,59 @@ pub fn defaults() -> proton::Defaults {
         mangohud: settings.boolean("default-mangohud"),
         gamemode: settings.boolean("default-gamemode"),
     }
+}
+
+/// umu-launcher's install instructions, linked wherever a missing `umu-run` is explained.
+pub const UMU_INSTALL_URI: &str = "https://github.com/Open-Wine-Components/umu-launcher#installing";
+
+/// Whether `umu-run`, which every start through umu runs, is on `PATH`. The Flatpak
+/// bundles it; a native install needs umu-launcher.
+pub fn umu_installed() -> bool {
+    std::env::var_os("PATH").is_some_and(|path| umu::find_run(&path, umu::is_executable).is_some())
+}
+
+/// Explains, instead of failing, that the game or installer titled `title` runs through
+/// umu-launcher and that it is not installed, with a link to its install instructions.
+/// Returns whether it is missing. A launch without a window opens one to explain it.
+fn explain_missing_umu(app: &gtk::Application, window: Option<&gtk::Window>, title: &str) -> bool {
+    if umu_installed() {
+        return false;
+    }
+    glib::g_warning!("pindu", "Cannot start “{title}”: umu-run is not on PATH");
+    let dialog = adw::AlertDialog::new(
+        Some(&gettext("umu-launcher Needed")),
+        Some(
+            &gettext(
+                "“{title}” runs through umu-launcher, which is not installed on this \
+                 computer. Install it, then try again.",
+            )
+            .replace("{title}", title),
+        ),
+    );
+    dialog.add_responses(&[
+        ("close", &gettext("_Close")),
+        ("install", &gettext("_How to Install")),
+    ]);
+    dialog.set_response_appearance("install", adw::ResponseAppearance::Suggested);
+    dialog.set_default_response(Some("install"));
+    dialog.set_close_response("close");
+    if window.is_none() && app.active_window().is_none() {
+        app.activate();
+    }
+    let parent = window.cloned().or_else(|| app.active_window());
+    dialog.present(parent.as_ref());
+    dialog.connect_response(Some("install"), move |_, _| {
+        gtk::UriLauncher::new(UMU_INSTALL_URI).launch(
+            parent.as_ref(),
+            gio::Cancellable::NONE,
+            |result| {
+                if let Err(error) = result {
+                    glib::g_warning!("pindu", "Could not open {UMU_INSTALL_URI}: {error}");
+                }
+            },
+        );
+    });
+    true
 }
 
 /// Runs a program through umu as our child and follows its log until umu exits, keeping
