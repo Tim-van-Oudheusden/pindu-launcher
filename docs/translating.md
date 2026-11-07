@@ -35,19 +35,24 @@ server and component, so the repository does not have one.)
 
 ### Component
 
-Create one component, preferably from the Hosted Weblate GitHub App ("Connect GitHub account"), which gives Weblate
-access to clone the repository, open pull requests and receive push notifications without a separate webhook.
+The component uses the Hosted Weblate GitHub App, installed on this repository only. Through it Weblate clones the
+repository, sees new commits on `main` without a webhook and opens pull requests as `hosted-weblate[bot]`.
+
+Until the first `po/*.po` file exists, Weblate's discovery offers no gettext option, so the component is set up with
+"Specify configuration manually" and the values below.
 
 | Setting | Value |
 | --- | --- |
 | Source code repository | `https://github.com/Tim-van-Oudheusden/pindu-launcher.git` |
 | Repository branch | `main` |
 | Version control system | GitHub pull requests |
-| Repository push URL | empty (Weblate opens pull requests from its fork) |
+| Repository push URL | empty (the GitHub App pushes its own branch) |
 | Push branch | empty |
 | File format | gettext PO file |
 | File mask | `po/*.po` |
 | Monolingual base language file | empty (PO is bilingual) |
+| Intermediate language file | empty (only for monolingual formats) |
+| Edit base file | off |
 | Template for new translations | `po/pindu-launcher.pot` |
 | Language filter | default (`^[^.]+$`) |
 | Source language | English |
@@ -55,12 +60,14 @@ access to clone the repository, open pull requests and receive push notification
 | Adding new translation | Create new language file |
 | Manage strings | off: strings come from the code through the template, so strings added on Weblate would be lost |
 | Push on commit | on, so each batch of translations becomes a pull request |
-| Push on update | off if Weblate's pull requests are squash-merged, so upstream changes alone do not start CI runs |
+| Push on update | on: merges into `main` are merge commits, so the pull request can follow `main` |
 | Lock on error | on |
 
-Weblate's built-in commit messages follow Conventional Commits, which matches the rest of the history.
+The App titles its pull requests `chore(l10n): update translations`. That is a Conventional Commits title, and the
+`PR review rubric` asks bot authors for nothing more, since a translation update works no issue.
 
-Translations never go straight to `main`: Weblate's pull requests pass the same CI and review as any other.
+Translations never go straight to `main`: Weblate's pull requests pass the same CI as any other. `po/` is medium risk
+([`risk-tiers.md`](risk-tiers.md)), so once every check passes the merge queue may merge them without a person.
 
 ### Add-ons
 
