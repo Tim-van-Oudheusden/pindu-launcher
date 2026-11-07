@@ -12,7 +12,8 @@ repository.
 
 | Automation | Runs as | Starts on | Can it change `main`? |
 | --- | --- | --- | --- |
-| CI (`.github/workflows/ci.yml`) | `GITHUB_TOKEN`, `contents: read` | Every pull request and every push to `main` | No; it only reads and uploads artifacts |
+| CI (`.github/workflows/ci.yml`) | `GITHUB_TOKEN`, `contents: read` | Every pull request, every push to `main`, and a manual run (the merge queue starts one after each merge) | No; it only reads and uploads artifacts |
+| Merge queue (`.github/workflows/merge-queue.yml`, `scripts/merge-queue.sh`) | `GITHUB_TOKEN`; `pick` reads pull requests, `land` and `reject` write | A pull request workflow succeeds, a draft is marked ready, a person removes `hold`, `blocked`, `sentinel-alert` or `automated`, or a manual run | Yes: it merges one ready, not high-risk pull request at a time, after re-running the Rust and Meson checks on it merged with `main` |
 | Release (`.github/workflows/release.yml`) | `GITHUB_TOKEN`; only its `publish` job has `contents: write` | A pushed `v*` tag, or a manual run for an existing tag | No; it publishes a GitHub release for the tag ([`releasing.md`](releasing.md)) |
 | Hive agents | The `hive-worker-bee` GitHub App, outside this repository | Hive's scheduler and the Hive dashboard, at the operational level the maintainer set (L2–L3 to start, #237) | Only through a pull request that passes the ruleset |
 | Local CLI agents (Claude Code, Copilot, Cursor and others) | The maintainer's own `gh` login and SSH key | A session the maintainer starts | Only through a pull request (`AGENTS.md`, "Sessions with GitHub Issues") |
@@ -51,12 +52,40 @@ check on `main`, so the pull request cannot merge until it passes.
   "Safety Boundaries").
 - **A job fails for a reason outside the change** (a network error, a runner out of disk): `gh run rerun <run-id>
   --failed`. If it fails the same way twice, treat it as a real failure and file an issue.
+- **`Merge queue script tests`:** `scripts/merge-queue.test.sh` failed; run it locally (it needs git, jq and yq 4).
 
 ### CI fails on `main`
 
 Something merged that does not pass on top of a change merged in the meantime, or the platform moved. File an issue
 (`gh issue create`, label `type:chore`), fix it through a pull request, or revert the merge that broke it
 ([Reverting agent work](#reverting-agent-work)). Do not tag a release from a red `main`.
+
+### A pull request is not merging
+
+The merge queue's runs say why (`gh run list --workflow merge-queue.yml`, then the `pick` job's notices). It takes the
+oldest pull request that meets every condition:
+
+1. **Labels:** none of `hold`, `blocked`, `sentinel-alert` or `automated` (`gh pr view <N> --json labels`), and not a
+   draft.
+2. **Merge state:** `gh pr view <N> --json mergeStateStatus` must be `CLEAN`. `BLOCKED` means a required check failed
+   or has not run, or a review thread is unresolved; `BEHIND` and `DIRTY` mean the branch needs a rebase or a conflict
+   fixed. `UNSTABLE` means every required check passed but another check is red or pending; the queue logs
+   `#<N> is UNSTABLE` as a notice. Re-run that check if it failed on infrastructure, otherwise fix what it found.
+3. **High risk:** the queue leaves high-risk pull requests for the maintainer and logs `#<N> is high risk`. The tier
+   comes from `main`'s `scripts/tier-classify.sh` and `.github/risk-assessment.yml`; while `main` lacks either, every
+   pull request counts as high risk and the queue logs that instead.
+4. **Fork:** the queue never picks a pull request from a fork.
+
+If the pull request meets every condition and still waits, no event has started the queue since it became ready (a
+label a bot removed starts no run). Drain the queue by hand with `gh workflow run merge-queue.yml`.
+
+### The merge queue put `hold` on a pull request
+
+Its comment links the run: rustfmt, clippy, `cargo test` or `meson test` failed on the pull request merged with the
+latest `main`, usually because of a change merged in the meantime. Rebase, fix it, push, then
+`gh pr edit <N> --remove-label hold` to queue it again. If a queue run merged a pull request but failed to start a
+workflow, its `::error` names the command to start it by hand; an issue it could not close is a warning to close it by
+hand.
 
 ### The Release workflow fails
 
@@ -90,6 +119,8 @@ To pause agent work, for example during an incident or while a bad instruction g
 | Hive, hard stop | Revoke the `hive-worker-bee` App's access to this repository in the repository's GitHub App settings | Reinstall the App |
 | Hive on one issue | Remove its claim label and unassign the issue (`gh issue edit <N> --remove-label <label> --remove-assignee <login>`) | Hive can claim it again |
 | A labelled hand-off | Remove the label that hands issues to an agent (for example `ai-fix-requested`, once #246 adds it): `gh issue edit <N> --remove-label <label>` | Add it again |
+| Automatic merges by the merge queue | `gh workflow disable merge-queue.yml` | `gh workflow enable merge-queue.yml`, then `gh workflow run merge-queue.yml` |
+| One pull request in the merge queue | `gh pr edit <N> --add-label hold` | `gh pr edit <N> --remove-label hold` |
 | A workflow | `gh workflow disable <file>` | `gh workflow enable <file>` |
 | One pull request | Convert it to a draft (`gh pr ready <N> --undo`) and say why in a comment | `gh pr ready <N>` |
 | A local CLI agent | End the session | — |
@@ -122,7 +153,8 @@ request:
 - no deletion of `main` and no force pushes;
 - changes only through a pull request, merged with a merge commit, with every review thread resolved;
 - every CI job is a required check: `Rust and Meson checks`, `Source tarball with vendored crates`, both
-  `Flatpak build, UI smoke test and lint` jobs and the three `Native package install and UI smoke test` jobs.
+  `Flatpak build, UI smoke test and lint` jobs, the three `Native package install and UI smoke test` jobs and
+  `Merge queue script tests`.
 
 Repository admins can bypass it (#237). Only the maintainer is an admin; agent tokens and Apps never get the admin role.
 The bypass is for emergencies the checks cannot pass by design, such as a broken runner image; when the maintainer

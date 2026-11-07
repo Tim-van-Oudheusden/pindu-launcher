@@ -9,7 +9,7 @@
 # stores a resized copy in the art cache only after the decode succeeds. The image must
 # be bigger than a tile.
 #
-# Usage: ui-smoke.sh APP RESOURCES [COVER]
+# Usage: tests/e2e/ui-smoke.sh APP RESOURCES [COVER]
 app=$1
 resources=$2
 cover=${3-}

@@ -45,7 +45,8 @@
           { "context": "Flatpak build, UI smoke test and lint (release)", "integration_id": 15368 },
           { "context": "Native package install and UI smoke test (fedora-45)", "integration_id": 15368 },
           { "context": "Native package install and UI smoke test (debian-testing)", "integration_id": 15368 },
-          { "context": "Native package install and UI smoke test (ubuntu-26.10)", "integration_id": 15368 }
+          { "context": "Native package install and UI smoke test (ubuntu-26.10)", "integration_id": 15368 },
+          { "context": "Merge queue script tests", "integration_id": 15368 }
         ]
       }
     }

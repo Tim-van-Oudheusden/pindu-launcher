@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The merge queue starts CI on main after each merge (scripts/merge-queue.sh): a merge made
+  # with GITHUB_TOKEN starts no push run.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -41,12 +44,12 @@ jobs:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install the Rust SDK extension
         run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             .cargo-home
@@ -79,7 +82,7 @@ jobs:
     name: Dependency policy (cargo-deny)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # cargo-deny 0.20.2, a maintainer-approved tool, with its published SHA-256. It only reads Cargo.lock and
       # `cargo metadata`, which resolves the workspace without the GNOME libraries, so the runner's cargo is enough.
@@ -100,7 +103,7 @@ jobs:
     name: Script tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The repository scripts' own tests; python3, jq and shellcheck come with the runner.
       - name: Python script tests
@@ -119,7 +122,7 @@ jobs:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install the Rust SDK extension
         run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
@@ -137,7 +140,7 @@ jobs:
               meson dist -C _dist --formats xztar
             '
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sources
           path: _dist/meson-dist/*.tar.xz
@@ -165,9 +168,9 @@ jobs:
     container:
       image: ${{ matrix.image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: sources
           path: sources
@@ -175,7 +178,7 @@ jobs:
       - name: Build
         run: ${{ matrix.build }} sources/pindu-launcher-*.tar.xz packages ${{ matrix.target }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: package-${{ matrix.target }}
           path: packages/*
@@ -202,9 +205,9 @@ jobs:
       # namespaces in an unprivileged container.
       options: --privileged
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: package-${{ matrix.target }}
           path: packages
@@ -251,7 +254,7 @@ jobs:
           rm -rf /runner-sdks/*/*
           df -h / | tail -1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Runs `meson test` inside the build, under xvfb, after the install: this is
       # where the UI smoke test runs. The bundle is uploaded as an artifact.
@@ -270,3 +273,17 @@ jobs:
 
       - name: Lint the build (MetaInfo, desktop file, icons)
         run: flatpak-builder-lint --gha-format --exceptions --user-exceptions "$LINT_EXCEPTIONS" repo repo
+
+  merge-queue:
+    name: Merge queue script tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # scripts/merge-queue.sh against a stub gh and throwaway repositories, and
+      # .github/workflows/merge-queue.yml against the script (jq and yq 4 ship on the runner).
+      - name: Script tests
+        run: sh scripts/merge-queue.test.sh

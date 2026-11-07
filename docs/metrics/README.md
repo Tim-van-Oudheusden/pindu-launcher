@@ -23,10 +23,12 @@ opening a pull request.
 | [Translations](#translations) | Every file with strings is in `POTFILES.in`; the template matches the code | `po` Meson suite, `po/check-pot.sh` | Same | `Rust and Meson checks` |
 | [Versions](#versions) | Meson, Cargo, MetaInfo, RPM and DEB name one version | `versions` Meson test (`build-aux/check-version.sh`) | Every PR and push; on a tag against the tag | `Rust and Meson checks`; Release's `Check the tag against the versions` |
 | [Manifest parity](#manifest-parity) | Release manifest grants exactly the development manifest's permissions and modules | `manifests` Meson test (`build-aux/check-manifests.sh`) | Every PR and push | `Rust and Meson checks` |
-| [UI smoke test](#ui-smoke-test) | The installed app starts and stays up without a panic or GLib critical | `ui-smoke` Meson test (`build-aux/ui-smoke.sh`) | Every PR and push, in both Flatpak builds and every native package | `Flatpak build, …` and `Native package install and UI smoke test` checks |
+| [Tooling tests](#tooling-tests) | The version, manifest and release-notes scripts catch what they are meant to catch | `tooling` Meson suite (`tests/tooling/`) | Every PR and push | `Rust and Meson checks`; inside both Flatpak builds |
+| [UI smoke test](#ui-smoke-test) | The installed app starts and stays up without a panic or GLib critical | `ui-smoke` Meson test (`tests/e2e/ui-smoke.sh`) | Every PR and push, in both Flatpak builds and every native package | `Flatpak build, …` and `Native package install and UI smoke test` checks |
 | [Flatpak build and lint](#flatpak-build-and-lint) | Both manifests build, test and pass `flatpak-builder-lint` | `ci.yml` (`flatpak`), `release.yml` (`flatpak`) | Every PR and push; every release tag | `Flatpak build, UI smoke test and lint (development/release)`; bundle artifacts |
 | [Source tarball](#source-tarball) | `meson dist` vendors the crates and builds and tests offline | `ci.yml` and `release.yml` (`sources`) | Same | `Source tarball with vendored crates`; `sources` artifact |
 | [Native packages](#native-packages) | RPM and DEBs build offline from the tarball, install in clean containers and start | `ci.yml` and `release.yml` (`packages`, `packages-smoke`) | Same | `Native package (…)` and smoke checks; `package-*` artifacts |
+| [AI audit trail](#ai-audit-trail) | Every PR merged into `main`: source (Hive, Claude Code in CI, Dependabot, other), agent, model, author, merger | `scripts/ai-audit-report.sh` via `ai-audit.yml` | Weekly (Mon 06:17 UTC, past 7 days), manual | Job summary; `ai-audit` artifact (report and raw PR data, kept 90 days) |
 
 ## Formatting
 
@@ -114,9 +116,22 @@ permissions themselves are the maintainer's call ([`SECURITY-AI.md`](../security
 meson test -C _build manifests
 ```
 
+## Tooling tests
+
+The `tooling` Meson suite runs the Python `unittest` files in `tests/tooling/` against the scripts in `build-aux/`:
+`check-version.sh` and `check-manifests.sh` must pass on the repository and fail on temporary copies with a mismatched
+version, a mismatched tag, or a release manifest that gains a permission or a module, and `release-notes.py` must print
+the newest MetaInfo release's notes and fail for an unknown version. A failure means a script no longer does what CI
+and the Release workflow rely on it to do.
+
+```sh
+meson test -C _build --suite tooling
+python3 tests/tooling/test_check_version.py   # one file, without Meson
+```
+
 ## UI smoke test
 
-`build-aux/ui-smoke.sh` starts the installed app with an empty library and settings, on its own D-Bus session, with
+`tests/e2e/ui-smoke.sh` starts the installed app with an empty library and settings, on its own D-Bus session, with
 `G_DEBUG=fatal-criticals`, and fails if it is not still running five seconds later. It needs a display and the
 installed resources, so a plain `meson test` skips it (exit 77); it runs under xvfb in both Flatpak builds and, through
 `build-aux/package-smoke.sh`, in every native package.
@@ -161,6 +176,38 @@ workflows' matrices ([`docs/releasing.md`](../releasing.md)).
 ```sh
 podman run --rm -v "$PWD:/src:Z" -w /src registry.fedoraproject.org/fedora:45 \
   build-aux/rpm/build.sh _dist/meson-dist/pindu-launcher-*.tar.xz packages
+```
+
+## AI audit trail
+
+A record of what reached `main` and who was behind it. Each PR merged in the window (default 7 days) gets one source
+from `scripts/lib/pr-source.jq`, the rule the PR acceptance metric also uses, checked in this order:
+
+- **Hive**: the PR body has a signature line of its own, `— hive: agent=<name> … model=<model> …` or
+  `— omp (Claude Code), model=<model>`, or the PR is authored by the `hive-worker-bee` GitHub App.
+- **Claude Code (CI)**: head branch `claude/*` (`claude.yml`).
+- **Dependabot**: head branch `dependabot/*`.
+- **Other**: anything else, such as the maintainer's own PRs and local agent runs that open a PR under the
+  maintainer's account without a signature.
+
+The agent and model come from the signature line (a local run signs without `agent=`, shown as `—`). Without a model
+there, the model is the name in the commits' `Co-Authored-By: <name> <noreply@anthropic.com>` trailers, which Claude
+Code writes (for example `Claude Opus 4.5`). A trailer names a model but does not change the source.
+
+The report counts merges per source and per merging account (a merge with no recorded merger is listed last as
+unknown), then lists every merge oldest first with its source, agent, model, author, merger, branch and title. The
+weekly run covers the past 7 days, so consecutive runs leave no gap. The workflow fetches the commit messages with a
+GraphQL query of its own, because `gh pr list --json commits` also asks for every commit's authors and exceeds
+GitHub's node limit. The `ai-audit` artifact keeps the report and the raw pull request data (`ai-audit-prs.json`) for
+90 days. `sh scripts/ai-audit-report.test.sh` tests the script, in the coverage gate's **Test the scripts** step.
+
+Run it with a different window from the Actions tab (**AI audit trail → Run workflow → days**), or locally with an
+authenticated `gh`, here without the commits, so models come from signature lines only:
+
+```sh
+since="$(date -u -d '7 days ago' +%Y-%m-%d)"
+gh pr list -R Tim-van-Oudheusden/pindu-launcher --base main --state merged --limit 1000 --search "merged:>=${since}" \
+  --json number,title,author,headRefName,mergedAt,mergedBy,body | scripts/ai-audit-report.sh --since "$since"
 ```
 
 ## Adding a metric

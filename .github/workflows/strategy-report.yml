@@ -1,0 +1,57 @@
+name: Strategy report
+
+# Strategic dashboard: where the project is heading rather than how one change fared. Milestone
+# progress with each milestone's gate, issue flow over the reporting window, the open backlog by
+# area and type, pull requests by source (scripts/lib/pr-source.jq, the rule every report shares)
+# and the ACMM criteria still missing per level, computed by scripts/strategy-report.sh. The
+# report lands in the run's job summary.
+
+on:
+  schedule:
+    - cron: '32 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Reporting window in days
+        required: false
+        default: '28'
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Strategy report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # contents: read for the checkout of scripts/; issues: read for `gh issue list` and the
+    # milestones API; pull-requests: read for `gh pr list`.
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Generate strategy report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DAYS: ${{ inputs.days || '28' }}
+        run: |
+          set -euo pipefail
+          [[ "$DAYS" =~ ^[0-9]+$ ]] || { echo "::error::days must be a whole number, got '$DAYS'"; exit 1; }
+          since="$(date -u -d "${DAYS} days ago" +%Y-%m-%d)"
+          gh api --paginate "repos/${REPO}/milestones?state=all&per_page=100" | jq -s add > milestones.json
+          gh issue list --repo "$REPO" --state all --limit 10000 \
+            --json number,title,state,labels,createdAt,closedAt,body > issues.json
+          # A pull request opened or merged in the window was updated in it.
+          gh pr list --repo "$REPO" --base main --state all --limit 1000 \
+            --search "updated:>=${since}" \
+            --json number,createdAt,mergedAt,headRefName,author,body > prs.json
+          # --min-level 0: the report shows the level; nightly compliance enforces it.
+          python3 scripts/acmm-self-check.py --min-level 0 > acmm.txt
+          scripts/strategy-report.sh --since "$since" --milestones milestones.json --issues issues.json \
+            --prs prs.json --acmm acmm.txt | tee -a "$GITHUB_STEP_SUMMARY"

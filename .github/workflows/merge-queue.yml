@@ -1,0 +1,206 @@
+name: Merge queue
+
+# Merges ready pull requests into main one at a time. GitHub's own merge queue needs an
+# organisation-owned repository, so this one runs on Actions:
+#
+#   pick   - scripts/merge-queue.sh next: the oldest same-repo, non-draft pull request without
+#            a `hold`, `blocked`, `sentinel-alert` or `automated` label, in merge state CLEAN
+#            (no check red or pending, required or not) and not high risk by main's
+#            scripts/tier-classify.sh (docs/risk-tiers.md). Until main has the classifier and
+#            .github/risk-assessment.yml, every pull request counts as high risk.
+#   verify - merges that pull request onto the current main and runs the fast part of CI's
+#            Rust and Meson checks on the result in the GNOME 51 SDK, with a read-only token:
+#            rustfmt, clippy, the unit tests and the Meson tests.
+#   land   - merges the pull request with a merge commit if neither it nor main moved, closes
+#            the issues it links with `Fixes #N`, then starts main's push workflows (merges
+#            made with GITHUB_TOKEN close no issue and start no workflow).
+#   reject - a pull request that failed verification gets `hold` and a comment.
+#
+# Land and reject start the next run, so the queue drains one pull request at a time. Runs
+# whenever a workflow on pull requests succeeds, a draft is marked ready, or a person removes
+# one of those labels; workflow_dispatch drains it on demand. Pause it with
+# `gh workflow disable merge-queue.yml` (docs/ai-ops-runbook.md).
+#
+# Security: no step with write access runs code from a pull request; pick, land and reject run
+# main's scripts. Fork pull requests are never picked, and their events (which get a
+# read-only token) neither start pick nor join the queue's concurrency group, so they cannot
+# replace a pending run. A `pull_request` event runs this file as the pull request has it,
+# which gives a same-repo author nothing beyond the write access they already have. Pull
+# request fields reach shell steps only through env.
+
+on:
+  # workflow_run matches workflows by name. CI holds every required check, and Coverage gate
+  # and PR review rubric are meant to; scripts/merge-queue.test.sh fails when a workflow
+  # holding a required check is missing here. Change classification and Labeler hold no
+  # required check, but CLEAN waits for them too, so the queue also looks again when one of
+  # them finishes last (Dailies#400).
+  workflow_run:
+    workflows: [CI, Coverage gate, PR review rubric, Change classification, Labeler]
+    types: [completed]
+  pull_request:
+    types: [ready_for_review, unlabeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run drains the queue at a time; a newer pending run replaces an older pending one,
+# which is fine since every run looks at all open pull requests. Events that cannot make a
+# pull request ready (another label removed, a label a bot removed, a failed run, any event
+# from a fork) get their own group, so they never replace a pending run that would merge.
+# The label list here and in pick's `if` is KEEP_OUT_LABELS in scripts/merge-queue.sh;
+# scripts/merge-queue.test.sh fails when either copy differs from it.
+concurrency:
+  group: >-
+    ${{
+      (github.event_name == 'workflow_dispatch'
+        || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+        || (github.event_name == 'pull_request'
+            && github.event.pull_request.head.repo.full_name == github.repository
+            && (github.event.action == 'ready_for_review'
+                || (github.event.sender.type == 'User'
+                    && contains(fromJSON('["hold", "blocked", "sentinel-alert", "automated"]'), github.event.label.name)))))
+      && 'merge-queue' || format('merge-queue-ignored-{0}', github.run_id)
+    }}
+  cancel-in-progress: false
+
+jobs:
+  pick:
+    name: Pick next pull request
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+      || (github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository
+          && (github.event.action == 'ready_for_review'
+              || (github.event.sender.type == 'User'
+                  && contains(fromJSON('["hold", "blocked", "sentinel-alert", "automated"]'), github.event.label.name))))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # List pull requests and read their merge state; fetch their heads to rate their risk.
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      number: ${{ steps.next.outputs.number }}
+      head: ${{ steps.next.outputs.head }}
+      main: ${{ steps.next.outputs.main }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Pick the oldest ready pull request
+        id: next
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: sh scripts/merge-queue.sh next
+
+  verify:
+    name: Rust and Meson checks on latest main
+    needs: pick
+    if: needs.pick.outputs.number != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.pick.outputs.main }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Inside the SDK's sandbox root can only write files root owns, and the checkout belongs
+      # to the runner's user; owning it also lets git work on it.
+      - name: Merge the pull request onto main
+        env:
+          NUMBER: ${{ needs.pick.outputs.number }}
+          HEAD_SHA: ${{ needs.pick.outputs.head }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          chown -R "$(id -u):$(id -g)" "$PWD"
+          git fetch --no-tags "$REPO_URL" "$HEAD_SHA"
+          git -c user.name="merge-queue" -c user.email="merge-queue@users.noreply.github.com" \
+            merge --no-ff --no-edit -m "Merge #${NUMBER} onto main" "$HEAD_SHA"
+
+      - name: Install the Rust SDK extension
+        run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
+
+      # Restore only: the pull request's code runs here and must not write a cache main uses.
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            .cargo-home
+            _build/cargo-target
+          key: checks-${{ hashFiles('Cargo.lock') }}
+          restore-keys: checks-
+
+      # The fast part of ci.yml's `checks` job; rustdoc, the translation template check, the
+      # packages and the Flatpak builds are not re-run here.
+      - name: rustfmt, clippy, unit tests and Meson tests
+        run: |
+          flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
+            --env=CARGO_HOME="$PWD/.cargo-home" \
+            --env=CARGO_TARGET_DIR="$PWD/_build/cargo-target" \
+            --env=PATH=/usr/lib/sdk/rust-stable/bin:/usr/bin \
+            --command=sh org.gnome.Sdk//51 -c '
+              set -e
+              cargo fmt --all --check
+              cargo clippy --workspace --all-targets -- -D warnings
+              cargo test --workspace
+              meson setup --reconfigure _build || meson setup _build
+              meson test -C _build --print-errorlogs
+            '
+
+  land:
+    name: Merge
+    needs: [pick, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Merge the verified pull request, close the issues it links, start main's push
+    # workflows and the next queue run.
+    permissions:
+      actions: write
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Merge if nothing moved
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ needs.pick.outputs.number }}
+          HEAD_SHA: ${{ needs.pick.outputs.head }}
+          MAIN_SHA: ${{ needs.pick.outputs.main }}
+        run: sh scripts/merge-queue.sh land "$NUMBER" "$HEAD_SHA" "$MAIN_SHA"
+
+  reject:
+    name: Hold failed pull request
+    needs: [pick, verify]
+    if: always() && needs.verify.result == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Label and comment on the failed pull request, start the next queue run.
+    permissions:
+      actions: write
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Hold and comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ needs.pick.outputs.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: sh scripts/merge-queue.sh reject "$NUMBER" "$RUN_URL"

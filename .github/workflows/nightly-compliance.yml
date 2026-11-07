@@ -3,7 +3,8 @@ name: Nightly compliance
 # Checks that can go stale without a code change (#245): open Dependabot alerts, new RustSec advisories against
 # Cargo.lock, the GNOME runtime reaching end-of-life on Flathub, actionlint findings, the live branch ruleset drifting
 # from .github/rulesets/main.json, and the ACMM file layout Hive evaluates. scripts/nightly-compliance.sh runs one row
-# per check and fails the run if any row fails; the report lands in the run's job summary.
+# per check and fails the run if any row fails; the report lands in the run's job summary and in its `nightly-compliance`
+# artifact, from which .github/workflows/auto-issues.yml opens, updates or closes the tracking issue.
 #
 # The GITHUB_TOKEN cannot see a ruleset's bypass list, so the ruleset row compares everything else and notes that the
 # bypass actors were not checked.
@@ -33,7 +34,7 @@ jobs:
       contents: read
       vulnerability-alerts: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -65,3 +66,11 @@ jobs:
       - name: Publish job summary
         if: always()
         run: cat nightly-compliance.md >> "$GITHUB_STEP_SUMMARY"
+
+      # Uploaded even after a failing check, so auto-issues.yml can list the failing rows in the issue.
+      - name: Upload compliance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-compliance
+          path: nightly-compliance.md
