@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+# Built from the release tarball, whose vendor/ holds every crate, so the build needs no
+# network (crates/meson.build switches cargo to --offline).
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@ --buildsystem=meson
+
+override_dh_auto_configure:
+	dh_auto_configure -- --buildtype=release
+
+# dh_clean deletes *.orig files, but cargo checks every vendored crate's Cargo.toml.orig
+override_dh_clean:
+	dh_clean -XCargo.toml.orig

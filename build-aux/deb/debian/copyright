@@ -1,0 +1,18 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: pindu-launcher
+Source: https://github.com/Tim-van-Oudheusden/pindu-launcher
+
+Files: *
+Copyright: Tim van Oudheusden
+License: GPL-3.0-or-later
+
+Files: vendor/*
+Copyright: The authors of each crate, as named in its Cargo.toml
+License: various
+ The vendored Rust crates are under MIT, Apache-2.0, MPL-2.0 or LGPL-2.1-or-later,
+ BSD-2-Clause, BSD-3-Clause, Zlib, ISC, Unicode-3.0, IJG, Unlicense or 0BSD, as each
+ crate's Cargo.toml and licence files in vendor/ state.
+
+License: GPL-3.0-or-later
+ On Debian systems, the full text of the GNU General Public License version 3 can be
+ found in /usr/share/common-licenses/GPL-3.

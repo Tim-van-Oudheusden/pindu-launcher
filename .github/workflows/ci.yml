@@ -88,6 +88,72 @@ jobs:
           path: _dist/meson-dist/*.tar.xz
           if-no-files-found: error
 
+  packages:
+    name: Native package (${{ matrix.target }})
+    needs: sources
+    runs-on: ubuntu-latest
+    # Distros that ship GTK 4.24 and libadwaita 1.10 (#232). Each builds offline from the
+    # tarball's vendored crates, in its own container.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: fedora-45
+            image: registry.fedoraproject.org/fedora:45
+            build: build-aux/rpm/build.sh
+          - target: debian-testing
+            image: docker.io/library/debian:testing
+            build: build-aux/deb/build.sh
+          - target: ubuntu-26.10
+            image: docker.io/library/ubuntu:26.10
+            build: build-aux/deb/build.sh
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sources
+          path: sources
+
+      - name: Build
+        run: ${{ matrix.build }} sources/pindu-launcher-*.tar.xz packages ${{ matrix.target }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.target }}
+          path: packages/*
+          if-no-files-found: error
+
+  packages-smoke:
+    name: Native package install and UI smoke test (${{ matrix.target }})
+    needs: packages
+    runs-on: ubuntu-latest
+    # A clean container: the package must pull in everything it needs to start.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: fedora-45
+            image: registry.fedoraproject.org/fedora:45
+          - target: debian-testing
+            image: docker.io/library/debian:testing
+          - target: ubuntu-26.10
+            image: docker.io/library/ubuntu:26.10
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-${{ matrix.target }}
+          path: packages
+
+      - name: Install and start
+        run: build-aux/package-smoke.sh packages/*
+
   flatpak:
     name: Flatpak build, UI smoke test and lint (${{ matrix.profile }})
     runs-on: ubuntu-latest
