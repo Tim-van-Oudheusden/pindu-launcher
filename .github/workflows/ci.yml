@@ -143,6 +143,9 @@ jobs:
             image: docker.io/library/ubuntu:26.10
     container:
       image: ${{ matrix.image }}
+      # glycin decodes the test cover in a bubblewrap sandbox, which cannot set up its
+      # namespaces in an unprivileged container.
+      options: --privileged
     steps:
       - uses: actions/checkout@v4
 
