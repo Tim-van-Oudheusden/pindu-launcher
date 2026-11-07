@@ -124,6 +124,8 @@ Never force-push, and never say "ready to push when you are" — push the branch
 ## Git and Version Management
 
 - Commits follow the Conventional Commits specification; one commit per issue, referencing the issue number.
+- Releases follow `docs/releasing.md`: versions and MetaInfo notes land through a pull request, then a `vX.Y.Z` tag
+  on `main` runs the Release workflow. Never move or reuse a published tag.
 
 ## Testing
 

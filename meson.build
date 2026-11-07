@@ -39,6 +39,9 @@ test(
   suite: 'ui',
 )
 
+test('versions', find_program('build-aux/check-version.sh'), suite: 'packaging')
+test('manifests', find_program('build-aux/check-manifests.sh'), suite: 'packaging')
+
 gnome.post_install(
   glib_compile_schemas: true,
   gtk_update_icon_cache: true,

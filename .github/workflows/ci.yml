@@ -13,7 +13,6 @@ permissions:
   contents: read
 
 env:
-  MANIFEST: build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher-devel.yml
   LINT_EXCEPTIONS: build-aux/flatpak/lint-exceptions.json
 
 jobs:
@@ -57,8 +56,22 @@ jobs:
             '
 
   flatpak:
-    name: Flatpak build, UI smoke test and lint
+    name: Flatpak build, UI smoke test and lint (${{ matrix.profile }})
     runs-on: ubuntu-latest
+    # The release manifest builds on every pull request too, so a broken one fails here and
+    # not when a release is tagged.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: development
+            manifest: build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher-devel.yml
+            bundle: pindu-launcher-devel.flatpak
+          - profile: release
+            manifest: build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml
+            bundle: pindu-launcher.flatpak
+    env:
+      MANIFEST: ${{ matrix.manifest }}
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
@@ -82,10 +95,10 @@ jobs:
       # where the UI smoke test runs. The bundle is uploaded as an artifact.
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          manifest-path: ${{ env.MANIFEST }}
-          bundle: pindu-launcher-devel.flatpak
+          manifest-path: ${{ matrix.manifest }}
+          bundle: ${{ matrix.bundle }}
           run-tests: true
-          cache-key: flatpak-builder-${{ github.sha }}
+          cache-key: flatpak-builder-${{ matrix.profile }}-${{ github.sha }}
 
       # Blocking. The local exceptions only cover the importers' read-only access to
       # other launchers' data, which the spec needs, and what a private dev build
