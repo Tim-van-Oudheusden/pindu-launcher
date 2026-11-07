@@ -56,7 +56,11 @@ gh pr create --title "type(scope): summary (#<number>)" --body-file <file>   # L
   `feat/8-import-steam`)
 - When done: push the branch and open a pull request whose body says `Fixes #<number>`; the maintainer merges it, and
   the merge closes the issue
-- Issue work lands through a pull request, not a direct push to `main`
+- Issue work lands through a pull request, not a direct push to `main`. `.github/rulesets/main.json` is the ruleset
+  that enforces this (pull requests with merge commits, the CI checks it names, no force-push or deletion; admins may
+  bypass). Change it through a pull request, then apply it:
+  `gh api -X PUT repos/Tim-van-Oudheusden/pindu-launcher/rulesets/26762163 --input .github/rulesets/main.json`.
+  Renaming a CI job means updating the ruleset's required checks in the same pull request
 
 ## Session Completion
 
