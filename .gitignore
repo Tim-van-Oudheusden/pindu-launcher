@@ -2,3 +2,4 @@
 /target/
 /.flatpak-builder/
 /_flatpak/
+__pycache__/

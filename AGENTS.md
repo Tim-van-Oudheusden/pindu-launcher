@@ -166,3 +166,11 @@ The workspace enforces the Rust for Linux lint set (`[workspace.lints]` in `Carg
 - **Prefer the platform and existing dependencies** — the standard library and the GNOME runtime cover most needs
 - **Never upgrade a major version as a side-effect** of another change; major upgrades and GNOME runtime bumps are
   their own PR
+- **`deny.toml` is the dependency policy**: CI's `Dependency policy (cargo-deny)` job fails a crate whose licence it
+  does not allow, a source other than crates.io, or a RustSec advisory. Accepting an advisory or a licence is the
+  maintainer's call, recorded in `deny.toml` with the reason
+- **Nightly compliance** (`.github/workflows/nightly-compliance.yml`, `scripts/nightly-compliance.sh`) rechecks
+  Dependabot alerts, `cargo audit`, the GNOME runtime's end of life, actionlint, the live ruleset and the ACMM level.
+  A Hive readiness issue that completes an ACMM level raises `DEFAULT_MIN_LEVEL` in `scripts/acmm-self-check.py` in
+  the same PR; the script's tests run with `python3 -m unittest discover -s tests/scripts` and
+  `sh scripts/nightly-compliance.test.sh`

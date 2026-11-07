@@ -57,6 +57,43 @@ jobs:
               po/check-pot.sh _build
             '
 
+  deny:
+    name: Dependency policy (cargo-deny)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # cargo-deny 0.20.2, a maintainer-approved tool, with its published SHA-256. It only reads Cargo.lock and
+      # `cargo metadata`, which resolves the workspace without the GNOME libraries, so the runner's cargo is enough.
+      - name: Install cargo-deny 0.20.2
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSLO https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz
+          echo "9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f  cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz" | sha256sum -c -
+          tar -xzf cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz --strip-components=1 \
+            cargo-deny-0.20.2-x86_64-unknown-linux-musl/cargo-deny
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      # Advisories, licences, bans and sources, as deny.toml sets them.
+      - name: cargo deny check
+        run: cargo-deny --locked check
+
+  scripts:
+    name: Script tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The repository scripts' own tests; python3, jq and shellcheck come with the runner.
+      - name: Python script tests
+        run: python3 -m unittest discover -s tests/scripts -v
+
+      - name: Shell script tests
+        run: sh scripts/nightly-compliance.test.sh
+
+      - name: shellcheck
+        run: shellcheck scripts/*.sh
+
   sources:
     name: Source tarball with vendored crates
     runs-on: ubuntu-latest
