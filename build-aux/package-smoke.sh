@@ -1,13 +1,14 @@
 #!/bin/sh
 # Installs a native package in a clean Fedora, Debian or Ubuntu container, with the
 # dependencies it declares, and runs the UI smoke test on it under Xvfb: the app must start
-# from the installed files and keep running.
+# from the installed files, keep running and decode a cover through glycin, which checks
+# that the distribution's glycin loaders work with the glycin crate the app is built with.
 #
 # Usage: build-aux/package-smoke.sh PACKAGE (an .rpm or a .deb)
 set -eu
 
 package=$(realpath "$1")
-smoke=$(cd "$(dirname "$0")" && pwd)/ui-smoke.sh
+here=$(cd "$(dirname "$0")" && pwd)
 
 case $package in
   *.rpm)
@@ -24,4 +25,5 @@ case $package in
     ;;
 esac
 
-xvfb-run -a sh "$smoke" /usr/bin/pindu-launcher /usr/share/pindu-launcher/resources.gresource
+xvfb-run -a sh "$here/ui-smoke.sh" /usr/bin/pindu-launcher \
+  /usr/share/pindu-launcher/resources.gresource "$here/../assets/pindu_icon.png"
