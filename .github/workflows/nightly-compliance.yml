@@ -70,7 +70,7 @@ jobs:
       # Uploaded even after a failing check, so auto-issues.yml can list the failing rows in the issue.
       - name: Upload compliance report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nightly-compliance
           path: nightly-compliance.md
