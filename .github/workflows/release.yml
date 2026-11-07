@@ -48,8 +48,9 @@ jobs:
     name: Flatpak bundle, tests and lint
     needs: version
     runs-on: ubuntu-latest
-    # As in ci.yml: the GNOME 51 image, and the runner's preinstalled SDKs mounted so the
-    # build can delete them for disk space.
+    # As in ci.yml: the GNOME 51 image, the runner's preinstalled SDKs mounted so the build
+    # can delete them for disk space, and the image's Flatpak installation on a named volume
+    # so updating the SDK does not fail with EXDEV (#150).
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
@@ -58,6 +59,7 @@ jobs:
         - /usr/share/dotnet:/runner-sdks/dotnet
         - /opt/hostedtoolcache:/runner-sdks/toolcache
         - /usr/local/.ghcup:/runner-sdks/ghcup
+        - flatpak-installation:/var/lib/flatpak
     steps:
       - name: Free disk space
         run: |
