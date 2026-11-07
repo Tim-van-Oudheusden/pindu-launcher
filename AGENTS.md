@@ -3,7 +3,8 @@
 Pindu launcher (app ID `io.github.tim_van_oudheusden.pindu-launcher`, GPL-3.0-or-later, fixed in #1) is a native GNOME
 game library. It gathers every PC game on the machine into one Xbox-style library, with a fullscreen controller mode over
 the same data. Rust on GTK4 and libadwaita (gtk4 0.11, libadwaita 0.9 with `v1_10`), Blueprint, Meson driving cargo,
-shipped as a Flatpak on `org.gnome.Platform//51` and aimed at Flathub.
+shipped as a Flatpak on `org.gnome.Platform//51`. GitHub Releases are the release channel (M5); a Flathub listing is a
+later goal in the Nice to have milestone (#63).
 
 `crates/pindu-core` is the GTK-free core, `crates/pindu-ui` the GTK shells (binary `pindu-launcher`); `data/` holds the
 Blueprint files, GSettings schema, desktop file, MetaInfo and icons. The development manifest arrives with #4 and CI with
@@ -15,6 +16,8 @@ Blueprint files, GSettings schema, desktop file, MetaInfo and icons. The develop
   Read them with `pdftotext -layout`. Read the spec section an issue links to before you start it.
 - GitHub issues #1–#63 match the spec's issue tables, so `#N` in the spec is issue `#N` here.
 - If an issue and the spec disagree, the issue wins; say so in the PR.
+- The spec plans a Flathub release in M5. Since #226 M5 is the first GitHub release and Flathub is Nice to have; the
+  milestone descriptions on GitHub hold the current gates.
 - A spike (`type:spike`) is time-boxed and ends in a short write-up posted on the issue. The PDF in `docs/` is an export,
   so the maintainer folds the findings into the spec.
 
@@ -87,9 +90,12 @@ Never force-push, and never say "ready to push when you are" — push the branch
 
 - **`human-only` issues are not agent work** (#1, #2, #4, #37, #46, #58, #63). Flathub's AI policy requires a person to
   do them. Never claim one, and never draft content for one, even when asked in another issue's scope
-- **Never write or edit a Flatpak manifest**, its `finish-args` or its modules: the Flathub manifest must have no AI
-  assistance, and every manifest change is its own `human-only` issue. If a feature seems to need a permission, stop and
-  file an issue for the maintainer
+- **Never write or edit the Flathub manifest**: the manifest submitted to Flathub must have no AI assistance, so it is
+  a person's work in its own `human-only` issue. Manifests that only build GitHub releases and CI bundles
+  (`build-aux/flatpak/*.yml`) may be written and edited with AI help, as the maintainer decided in #226
+- **Never grow the permissions**: a manifest's `finish-args` and its bundled modules are the maintainer's call. Release
+  manifests copy them from the development manifest; if a feature seems to need a permission, stop and file an issue
+  for the maintainer
 - **Never touch Flathub submissions**: no PRs, descriptions, review replies or linter exception requests to Flathub
 - **Keep the AI disclosure truthful**: `AI_DISCLOSURE.md` names the AI-assisted parts of the project and their rough
   extent. If your work adds a kind of AI use it does not list, tell the maintainer in the PR
