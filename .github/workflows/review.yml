@@ -1,0 +1,52 @@
+name: PR review rubric
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  rubric:
+    # Meant to be a required check of the main ruleset (.github/rulesets/main.json); keep the name in sync.
+    name: PR review rubric
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # The title and body are untrusted input: they reach the script only through env.
+      - name: Check title and issue link
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: scripts/pr-review-check.sh
+
+      - name: Reviewer rubric
+        if: always()
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ## Reviewer rubric
+
+          Automated above: a Conventional Commits title ending with its issue, and a linked issue
+          (`Fixes #N`, or `Refs #N`). CI covers rustfmt, clippy, rustdoc, the unit and Meson tests,
+          the Flatpak and native package builds with their UI smoke tests, flatpak-builder-lint,
+          and the governance scripts. The risk tier is in the `Risk tier` job summary
+          (docs/risk-tiers.md).
+
+          Check by hand:
+
+          - [ ] **TDD evidence**: the PR shows a test that failed before the change and passes after.
+          - [ ] **Behaviour, not implementation**: tests assert observable output; parsers run against fixture trees.
+          - [ ] **No test tampering**: no test deleted, `#[ignore]`d or weakened, no `#[allow]` added to silence a failure.
+          - [ ] **Scope**: one issue per PR, one commit referencing it; unrelated changes split out.
+          - [ ] **Dependencies**: none added, upgraded or removed without the maintainer's approval.
+          - [ ] **Adwaita first**: stock libadwaita widgets and style classes, layout in Blueprint, no custom theme; usable with the keyboard alone.
+          - [ ] **Rust for Linux lints**: docs on public items, `// SAFETY:` comments, `#[expect(..., reason = "...")]` rather than `#[allow]`.
+          - [ ] **No new permissions**: no new `finish-args` or bundled modules, and the Flathub manifest is untouched.
+          - [ ] **AI disclosure**: AI_DISCLOSURE.md still names every kind of AI use, or the PR says what it adds.
+          EOF
