@@ -308,15 +308,22 @@ so the fullscreen mode is a second presentation of the same library.
 | [`docs/ai-ops-runbook.md`](docs/ai-ops-runbook.md) | Watching, pausing and reverting agent work; CI and Release failures; the `main` ruleset |
 | [`docs/translating.md`](docs/translating.md) | How translations are laid out, the Weblate settings, and translating without Weblate |
 | [`data/screenshots/CREDITS.md`](data/screenshots/CREDITS.md) | Where the demo library's game art comes from, and its licences |
+| [`docs/metrics/README.md`](docs/metrics/README.md) | The gates every change passes, what each measures and how to run it |
+| [`docs/reflections/README.md`](docs/reflections/README.md) | Lessons from past sessions and incidents, and how to write one |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to build, find work and get a change merged |
+| [`SECURITY.md`](SECURITY.md) | How to report a vulnerability, privately |
+| [`docs/security/SECURITY-AI.md`](docs/security/SECURITY-AI.md) | Trust boundaries and safety rules for AI agents |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | How we treat each other, and how to report a problem |
 | [`AGENTS.md`](AGENTS.md) | How AI agents work in this repository |
 | [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md) | Which parts of the project had AI assistance |
 
 ## Contributing
 
 Work is tracked in [GitHub issues](https://github.com/Tim-van-Oudheusden/pindu-launcher/issues), grouped into
-[milestones](https://github.com/Tim-van-Oudheusden/pindu-launcher/milestones). Bug reports are welcome; for code, pick
-an open issue, branch off `main` and open a pull request that passes the checks in
-[Building from source](#building-from-source). AI agents follow [`AGENTS.md`](AGENTS.md).
+[milestones](https://github.com/Tim-van-Oudheusden/pindu-launcher/milestones). Bug reports are welcome; report security
+problems privately as [`SECURITY.md`](SECURITY.md) describes. For code, read [`CONTRIBUTING.md`](CONTRIBUTING.md): how
+to build, pick an issue, work test-first and open a pull request that passes the quality gates. AI agents follow
+[`AGENTS.md`](AGENTS.md), and everyone follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Acknowledgments
 
