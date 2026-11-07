@@ -14,14 +14,18 @@ use crate::themes::Theme;
 /// A panel over the page, at one of its levels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Panel {
+    /// The menu drawer on the left.
     Drawer(DrawerLevel),
+    /// The options sheet for one game at the bottom.
     Options(OptionsLevel),
+    /// The Quick Access panel on the right.
     QuickAccess(QuickAccessLevel),
 }
 
 /// What the drawer shows: its entries, or the collections one of them leads to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DrawerLevel {
+    /// The drawer's entries.
     Main,
     /// The collections, each opening its tab in the library.
     Collections,
@@ -31,13 +35,16 @@ pub enum DrawerLevel {
 /// take it out of.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptionsLevel {
+    /// The game's actions.
     Main,
+    /// The collections to add the game to or take it out of.
     Collections,
 }
 
 /// What the Quick Access panel shows: its entries, or the list one of them leads to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QuickAccessLevel {
+    /// The panel's entries.
     Main,
     /// The session's notifications, newest first.
     Notifications,
@@ -81,6 +88,7 @@ pub struct Panels {
 }
 
 impl Panels {
+    /// No panel open.
     pub fn new() -> Self {
         Self::default()
     }
@@ -166,10 +174,15 @@ impl Panels {
 pub enum DrawerEntry {
     /// A card for a game we started that is running, with Return and Stop.
     PlayingNow,
+    /// Go to Home.
     Home,
+    /// Go to the library.
     Library,
+    /// Lead to the collections ([`DrawerLevel::Collections`]).
     Collections,
+    /// Leave fullscreen mode for the desktop window.
     ExitFullscreen,
+    /// Quit Pindu.
     Quit,
 }
 
@@ -218,14 +231,19 @@ pub fn page_entries(under: Under) -> Vec<PageEntry> {
 /// An action of the options sheet for one game.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameOption {
+    /// Start the game.
     Play,
     /// Stop a game we started, which runs.
     Stop,
+    /// Mark the game a favourite.
     AddToFavourites,
+    /// Take the game out of the favourites.
     RemoveFromFavourites,
     /// Lead to the collections, to add the game to or take it out of.
     Collections,
+    /// Hide the game.
     Hide,
+    /// Show the hidden game again.
     Unhide,
     /// Open the game in its store launcher, when it has one.
     OpenInLauncher,
@@ -258,6 +276,7 @@ pub struct DesignChoice {
     pub id: String,
     /// The theme's name; `None` for Adwaita, which the shell names.
     pub name: Option<String>,
+    /// The theme's description; empty for Adwaita.
     pub description: String,
     /// The design in force, which the panel checks.
     pub active: bool,
@@ -294,6 +313,7 @@ pub fn design_choices(themes: &[Theme], active: &str) -> Vec<DesignChoice> {
 pub struct VariantChoice {
     /// What the `fullscreen-design-variant` setting holds for it.
     pub id: String,
+    /// The variant's name.
     pub name: String,
     /// The variant in force, which the panel checks.
     pub active: bool,

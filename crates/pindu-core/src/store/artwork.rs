@@ -41,6 +41,7 @@ impl Store {
         Ok(artwork)
     }
 
+    /// Deletes the stored image of a game for one layout and origin, if there is one.
     pub fn delete_artwork(
         &self,
         game_id: &GameId,

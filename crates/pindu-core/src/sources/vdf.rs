@@ -8,9 +8,13 @@ use std::fmt;
 /// does.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
+    /// A string.
     Str(String),
+    /// An integer; only the binary form stores these.
     Int(i64),
+    /// A 32-bit float; only the binary form stores these.
     Float(f32),
+    /// Child entries, in file order.
     Map(Vec<(String, Value)>),
 }
 
@@ -36,6 +40,7 @@ impl Value {
         self.get(key).and_then(Value::as_str)
     }
 
+    /// The text of a string value.
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Self::Str(text) => Some(text),
@@ -61,9 +66,12 @@ impl Value {
     }
 }
 
+/// Malformed KeyValues, text or binary.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParseError {
+    /// Where parsing stopped, in bytes from the start of the input.
     pub offset: usize,
+    /// What was wrong there.
     pub message: &'static str,
 }
 

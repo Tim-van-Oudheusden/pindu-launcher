@@ -192,7 +192,8 @@ meson test -C _build
 | Command | What it does |
 | --- | --- |
 | `cargo fmt --all --check` | Formatting check |
-| `cargo clippy --workspace --all-targets -- -D warnings` | Lints, with warnings as errors |
+| `cargo clippy --workspace --all-targets -- -D warnings` | Lints (the Rust for Linux set in `Cargo.toml`), with warnings as errors |
+| `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` | Rustdoc lints and documentation on every public item |
 | `cargo test --workspace` | Unit tests; the core crate's tests need no display |
 | `meson test -C _build` | Meson tests, including the translation file checks |
 | `meson compile -C _build pindu-launcher-pot` | Refreshes the translation template |

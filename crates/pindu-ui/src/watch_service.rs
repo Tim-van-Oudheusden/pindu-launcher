@@ -24,6 +24,7 @@ struct State {
     pending: Option<glib::SourceId>,
 }
 
+/// Resyncs the library when a source's key files change.
 #[derive(Debug, Clone)]
 pub struct WatchService {
     sync: SyncService,

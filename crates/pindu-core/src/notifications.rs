@@ -39,7 +39,9 @@ pub enum Target {
 /// One entry of the log.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Notification {
+    /// What it is about.
     pub kind: Kind,
+    /// Its title, saying what happened.
     pub title: String,
     /// More about it; may be empty.
     pub body: String,
@@ -47,6 +49,7 @@ pub struct Notification {
     pub time: Timestamp,
     /// Whether the user has seen it.
     pub read: bool,
+    /// What picking it opens; `None` when it opens nothing.
     pub target: Option<Target>,
 }
 
@@ -79,6 +82,7 @@ pub struct Log {
 }
 
 impl Log {
+    /// An empty log.
     pub fn new() -> Self {
         Self::default()
     }

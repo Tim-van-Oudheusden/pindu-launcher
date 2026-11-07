@@ -1,3 +1,6 @@
+//! The application: starts the shared services, handles `--launch` and `--fullscreen`,
+//! registers the Shell search provider and owns the app-wide actions.
+
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
@@ -258,12 +261,14 @@ mod imp {
 }
 
 glib::wrapper! {
+    /// The Pindu application, holding the services every window shares.
     pub struct PinduApplication(ObjectSubclass<imp::PinduApplication>)
         @extends gio::Application, gtk::Application, adw::Application,
         @implements gio::ActionGroup, gio::ActionMap;
 }
 
 impl PinduApplication {
+    /// The application with Pindu's ID and resources.
     pub fn new() -> Self {
         glib::Object::builder()
             .property("application-id", APP_ID)
@@ -326,6 +331,7 @@ impl PinduApplication {
         self.imp().fullscreen_filters.get()
     }
 
+    /// Keeps fullscreen mode's library filters until the app quits.
     pub fn set_fullscreen_filters(&self, filters: Filters) {
         self.imp().fullscreen_filters.set(filters);
     }

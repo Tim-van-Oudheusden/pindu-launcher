@@ -12,6 +12,7 @@ use pindu_core::power::{self, Batteries, REFRESH_INTERVAL, SYSFS_POWER_SUPPLY};
 /// Something the shells do when the batteries change.
 type Listener = Box<dyn Fn(&Batteries)>;
 
+/// The batteries the kernel reports, kept up to date for the shells.
 #[derive(Clone)]
 pub struct PowerService {
     inner: Rc<Inner>,

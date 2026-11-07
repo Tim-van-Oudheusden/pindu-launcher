@@ -243,6 +243,7 @@ pub struct SteamGridDb {
 }
 
 impl SteamGridDb {
+    /// A client using the API key `key`.
     pub fn new(key: String) -> Self {
         let session = soup::Session::new();
         session.set_user_agent(concat!("pindu-launcher/", env!("CARGO_PKG_VERSION")));

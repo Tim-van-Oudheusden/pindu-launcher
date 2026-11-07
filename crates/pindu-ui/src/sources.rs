@@ -3,6 +3,7 @@
 use gettextrs::gettext;
 use pindu_core::model::Source;
 
+/// The name of a source as the user sees it.
 pub fn source_name(source: Source) -> String {
     match source {
         Source::Steam => "Steam".to_owned(),

@@ -209,6 +209,7 @@ impl Sheet {
     }
 }
 
+/// Fullscreen mode's stylesheets: the chosen design, its variant and `fullscreen.css`.
 #[derive(Clone)]
 pub struct StyleService {
     /// The user's own `fullscreen.css`, which has the last word.

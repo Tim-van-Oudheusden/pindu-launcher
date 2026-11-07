@@ -24,6 +24,7 @@ impl Store {
         Ok(())
     }
 
+    /// What we know about a source, or `None` when nothing is stored for it yet.
     pub fn source_state(&self, source: Source) -> Result<Option<SourceState>> {
         Ok(self
             .conn

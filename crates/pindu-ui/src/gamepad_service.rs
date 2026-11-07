@@ -24,6 +24,7 @@ type LayoutListener = Box<dyn Fn(Option<Layout>)>;
 /// Something the shells do when a pad comes or goes, or the settings change how they show.
 type PadsListener = Box<dyn Fn()>;
 
+/// Turns controller input into intents and hands them to the shells' listeners.
 #[derive(Clone)]
 pub struct GamepadService {
     inner: Rc<Inner>,
@@ -53,6 +54,7 @@ impl std::fmt::Debug for GamepadService {
 }
 
 impl GamepadService {
+    /// A service reading events from `backend`, with the controller settings applied.
     pub fn new(backend: Box<dyn GamepadBackend>) -> Self {
         let settings = gio::Settings::new(APP_ID);
         let mut intents = Intents::new();

@@ -1,3 +1,6 @@
+//! The main window: the desktop library with its sidebar, search and grid, and fullscreen
+//! mode with its Home page, top bar, panels and controller navigation.
+
 use std::cell::{Cell, RefCell};
 
 use adw::prelude::*;
@@ -387,6 +390,7 @@ mod imp {
 }
 
 glib::wrapper! {
+    /// The main window, in desktop or fullscreen mode.
     pub struct PinduWindow(ObjectSubclass<imp::PinduWindow>)
         @extends gtk::Widget, gtk::Window, gtk::ApplicationWindow, adw::ApplicationWindow,
         @implements gio::ActionGroup, gio::ActionMap, gtk::Accessible, gtk::Buildable,
@@ -394,6 +398,7 @@ glib::wrapper! {
 }
 
 impl PinduWindow {
+    /// A window of `application` showing `library`, following `sync_service`'s progress.
     pub fn new(
         application: &adw::Application,
         sync_service: &SyncService,
@@ -435,10 +440,12 @@ impl PinduWindow {
         window
     }
 
+    /// The library's search entry.
     pub fn search_entry(&self) -> gtk::SearchEntry {
         self.imp().search_entry.get()
     }
 
+    /// The library model the window shows.
     pub fn library(&self) -> &LibraryModel {
         self.imp().library.get().expect("set on construction")
     }

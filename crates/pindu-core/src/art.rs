@@ -30,9 +30,13 @@ pub fn best(artwork: &[Artwork], layout: ArtLayout, prefer_steamgriddb: bool) ->
 /// A rectangle in a tile's coordinates.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Rect {
+    /// The left edge.
     pub x: f32,
+    /// The top edge.
     pub y: f32,
+    /// The width.
     pub width: f32,
+    /// The height.
     pub height: f32,
 }
 
@@ -42,7 +46,12 @@ pub enum Placement {
     /// Scale to cover the box and crop the overflow evenly.
     Fill(Rect),
     /// Draw a blurred copy covering the box, then the art scaled to fit inside it.
-    FitOnBlur { background: Rect, foreground: Rect },
+    FitOnBlur {
+        /// Where the blurred copy goes.
+        background: Rect,
+        /// Where the art goes.
+        foreground: Rect,
+    },
 }
 
 /// Places `art_width`×`art_height` art in a `box_width`×`box_height` cover: it fills when

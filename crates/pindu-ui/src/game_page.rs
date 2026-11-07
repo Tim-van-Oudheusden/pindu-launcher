@@ -182,12 +182,14 @@ mod imp {
 }
 
 glib::wrapper! {
+    /// The page of one game.
     pub struct GamePage(ObjectSubclass<imp::GamePage>)
         @extends adw::NavigationPage, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
 impl GamePage {
+    /// A page showing the game in `object`.
     pub fn new(object: &GameObject, library: &LibraryService) -> Self {
         let page: Self = glib::Object::new();
         page.show(object, library);

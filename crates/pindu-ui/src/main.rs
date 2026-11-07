@@ -1,3 +1,6 @@
+//! The Pindu launcher binary: sets up gettext, loads the resources and runs
+//! [`PinduApplication`].
+
 use gettextrs::{LocaleCategory, bind_textdomain_codeset, bindtextdomain, setlocale, textdomain};
 use gtk::prelude::*;
 use gtk::{gio, glib};

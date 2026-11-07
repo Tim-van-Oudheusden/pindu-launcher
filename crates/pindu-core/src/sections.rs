@@ -10,7 +10,9 @@ use crate::model::{Collection, Game, GameId, Source};
 pub enum SectionId {
     /// The "Jump back in" games: pins, then the most recently played.
     RecentlyPlayed,
+    /// The user's favourites.
     Favourites,
+    /// Installed games.
     Installed,
     /// The games of one launcher.
     Source(Source),
@@ -54,8 +56,11 @@ const COLLECTION_PREFIX: &str = "collection-";
 /// a collection (the shell names the others), and its games in the order they show.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Section {
+    /// What the section holds.
     pub id: SectionId,
+    /// The collection's name; `None` for the other sections.
     pub title: Option<String>,
+    /// The section's games, in the order they show.
     pub games: Vec<GameId>,
 }
 

@@ -113,10 +113,12 @@ mod imp {
 }
 
 glib::wrapper! {
+    /// The library's games, sorted and filtered for the shells.
     pub struct LibraryModel(ObjectSubclass<imp::LibraryModel>);
 }
 
 impl LibraryModel {
+    /// An empty model.
     pub fn new() -> Self {
         glib::Object::new()
     }
@@ -323,6 +325,7 @@ impl LibraryModel {
         self.imp().filter.changed(change);
     }
 
+    /// Sorts the games by `mode`; re-sorts only when it changes.
     pub fn set_sort_mode(&self, mode: SortMode) {
         let imp = self.imp();
         if imp.sort_mode.replace(mode) != mode {

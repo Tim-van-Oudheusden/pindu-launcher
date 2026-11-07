@@ -115,12 +115,14 @@ fn append(snapshot: &gtk::Snapshot, texture: &gdk::Texture, rect: Rect, scale: f
 }
 
 glib::wrapper! {
+    /// A game's cover or icon, drawn to fill its box.
     pub struct CoverArt(ObjectSubclass<imp::CoverArt>)
         @extends gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
 impl CoverArt {
+    /// A widget with no art yet.
     pub fn new() -> Self {
         glib::Object::new()
     }

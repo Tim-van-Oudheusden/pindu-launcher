@@ -10,7 +10,9 @@ use crate::power::Battery;
 /// A connected pad as the Controllers level shows it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Controller {
+    /// The pad's number.
     pub device: DeviceId,
+    /// The name the device gives.
     pub name: String,
     /// The glyphs the hints show for it.
     pub glyphs: Glyphs,

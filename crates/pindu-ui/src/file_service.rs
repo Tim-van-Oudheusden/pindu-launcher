@@ -14,7 +14,9 @@ const MAX_ART_BYTES: usize = 32 * 1024 * 1024;
 /// An image the user picked, with the file extension to store it under.
 #[derive(Debug, Clone)]
 pub struct PickedImage {
+    /// The image file's contents.
     pub bytes: Vec<u8>,
+    /// The file extension, without the dot.
     pub extension: String,
 }
 

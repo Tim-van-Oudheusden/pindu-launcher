@@ -21,6 +21,7 @@ pub enum FirstChoice {
     Default,
 }
 
+/// A Proton combo row and the builds it lists.
 #[derive(Debug)]
 pub struct ProtonChoice {
     row: adw::ComboRow,

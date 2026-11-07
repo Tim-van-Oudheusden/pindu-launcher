@@ -17,7 +17,9 @@ pub const CONTRACT: u64 = 1;
 pub struct Theme {
     /// The folder's name, which the `fullscreen-design` setting holds.
     pub id: String,
+    /// The theme's name, from `theme.json`.
     pub name: String,
+    /// The theme's description, from `theme.json`; empty when it gives none.
     pub description: String,
     /// The theme folder.
     pub dir: PathBuf,
@@ -90,12 +92,14 @@ pub enum TileShape {
     /// Wide cards with the hero art.
     #[default]
     Landscape,
+    /// Square cards.
     Square,
     /// Tall cards with the cover art.
     Portrait,
 }
 
 impl TileShape {
+    /// Every shape, the default first.
     pub const ALL: [Self; 3] = [Self::Landscape, Self::Square, Self::Portrait];
 
     /// The shape's name in `theme.json`, also its CSS class's suffix.
@@ -123,6 +127,7 @@ pub enum HomeLayout {
 }
 
 impl HomeLayout {
+    /// Every layout, the default first.
     pub const ALL: [Self; 2] = [Self::HeroBottom, Self::RowTop];
 
     /// The layout's name in `theme.json`, also its CSS class's suffix.
@@ -163,6 +168,7 @@ impl Theme {
 /// The themes in some folders, and the folders that are not valid themes.
 #[derive(Debug, Default)]
 pub struct Discovery {
+    /// The themes found, sorted by name.
     pub themes: Vec<Theme>,
     /// A theme folder that could not be used, and why.
     pub skipped: Vec<(PathBuf, String)>,

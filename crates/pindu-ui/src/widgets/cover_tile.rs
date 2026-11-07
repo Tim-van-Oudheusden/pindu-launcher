@@ -18,9 +18,12 @@ use crate::sources::{source_icon, source_name};
 /// The three tile sizes, as cover width and height in logical pixels.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum TileSize {
+    /// 150 × 225.
     Small,
+    /// 200 × 300.
     #[default]
     Medium,
+    /// 250 × 375.
     Large,
 }
 
@@ -34,6 +37,7 @@ impl TileSize {
         }
     }
 
+    /// The cover's width and height, in logical pixels.
     pub fn cover_size(self) -> (i32, i32) {
         match self {
             Self::Small => (150, 225),
@@ -126,6 +130,7 @@ mod imp {
 }
 
 glib::wrapper! {
+    /// One game's tile in the library grid.
     pub struct CoverTile(ObjectSubclass<imp::CoverTile>)
         @extends gtk::Box, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
@@ -230,6 +235,7 @@ impl CoverTile {
         imp.play_button.set_action_name(Some(action));
     }
 
+    /// Stops showing the bound game and clears the art.
     pub fn unbind(&self) {
         let imp = self.imp();
         if let Some((game, handlers)) = imp.bound.take() {

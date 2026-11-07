@@ -64,6 +64,7 @@ Work is NOT complete until the issue branch is pushed and its pull request is op
    ```sh
    cargo fmt --all --check
    cargo clippy --workspace --all-targets -- -D warnings
+   RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
    cargo test --workspace
    meson setup _build && meson test -C _build
    ```
@@ -114,6 +115,20 @@ Never force-push, and never say "ready to push when you are" — push the branch
   are fetched and cached when online
 - **Honest sandbox**: a missing permission is explained in place, never shown as a launch failure
 - **Gamepad intents never become synthetic key events**; all device access sits behind the `GamepadBackend` trait
+
+## Lints
+
+The workspace enforces the Rust for Linux lint set (`[workspace.lints]` in `Cargo.toml`, from the kernel's
+`rust_common_flags`, `.clippy.toml` and coding guidelines), with warnings as errors in CI:
+
+- **Document every public item**, in plain sentences; `missing_docs` covers fields, variants and consts too
+- **Every `unsafe` block has a `// SAFETY:` comment** saying why it is sound; every `unsafe fn` has a `# Safety` section
+- **`pub` only when reachable** from the crate root; otherwise `pub(crate)` (`unreachable_pub`)
+- **`#[expect(lint, reason = "...")]`, never `#[allow]`**, and only when the code is right and the lint is wrong;
+  never to silence a real finding
+- **No `dbg!`**, and no raw pointer `as` casts: use `cast()`, `cast_mut()`, `cast_const()` and `From`
+- Generated FFI is exempt, as the kernel's `bindings` crate is: `manette-sys` does not opt in, and manette's `auto`
+  module carries one `#[expect]`. Regenerate it with gir rather than edit it
 
 ## Git and Version Management
 

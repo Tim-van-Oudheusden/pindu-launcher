@@ -21,6 +21,7 @@ pub enum Group {
 }
 
 impl Group {
+    /// Every group, in the order the list shows them.
     pub const ALL: [Self; 4] = [Self::Moving, Self::Library, Self::Panels, Self::Launching];
 }
 
@@ -28,18 +29,22 @@ impl Group {
 /// for it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Control {
+    /// The intent.
     pub intent: Intent,
     /// The button on the active controller; `None` without one.
     pub button: Option<Button>,
     /// Whether the button is held down rather than pressed.
     pub held: bool,
+    /// The keys that stand in for it, shortcuts first; empty without any.
     pub keys: Vec<Chord>,
 }
 
 /// A group with its rows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Section {
+    /// The group.
     pub group: Group,
+    /// Its rows, in the order the intents come.
     pub controls: Vec<Control>,
 }
 

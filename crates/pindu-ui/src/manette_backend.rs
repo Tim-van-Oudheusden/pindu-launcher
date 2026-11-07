@@ -14,28 +14,28 @@ use pindu_core::gamepad::{
 
 /// Linux input codes libmanette maps buttons and axes to.
 mod code {
-    pub const BTN_SOUTH: u16 = 0x130;
-    pub const BTN_EAST: u16 = 0x131;
-    pub const BTN_NORTH: u16 = 0x133;
-    pub const BTN_WEST: u16 = 0x134;
-    pub const BTN_TL: u16 = 0x136;
-    pub const BTN_TR: u16 = 0x137;
-    pub const BTN_TL2: u16 = 0x138;
-    pub const BTN_TR2: u16 = 0x139;
-    pub const BTN_SELECT: u16 = 0x13a;
-    pub const BTN_START: u16 = 0x13b;
-    pub const BTN_MODE: u16 = 0x13c;
-    pub const BTN_THUMBR: u16 = 0x13e;
-    pub const BTN_DPAD_UP: u16 = 0x220;
-    pub const BTN_DPAD_DOWN: u16 = 0x221;
-    pub const BTN_DPAD_LEFT: u16 = 0x222;
-    pub const BTN_DPAD_RIGHT: u16 = 0x223;
+    pub(crate) const BTN_SOUTH: u16 = 0x130;
+    pub(crate) const BTN_EAST: u16 = 0x131;
+    pub(crate) const BTN_NORTH: u16 = 0x133;
+    pub(crate) const BTN_WEST: u16 = 0x134;
+    pub(crate) const BTN_TL: u16 = 0x136;
+    pub(crate) const BTN_TR: u16 = 0x137;
+    pub(crate) const BTN_TL2: u16 = 0x138;
+    pub(crate) const BTN_TR2: u16 = 0x139;
+    pub(crate) const BTN_SELECT: u16 = 0x13a;
+    pub(crate) const BTN_START: u16 = 0x13b;
+    pub(crate) const BTN_MODE: u16 = 0x13c;
+    pub(crate) const BTN_THUMBR: u16 = 0x13e;
+    pub(crate) const BTN_DPAD_UP: u16 = 0x220;
+    pub(crate) const BTN_DPAD_DOWN: u16 = 0x221;
+    pub(crate) const BTN_DPAD_LEFT: u16 = 0x222;
+    pub(crate) const BTN_DPAD_RIGHT: u16 = 0x223;
     /// What libmanette maps `misc1` to, and its Steam Deck driver the "…" button.
-    pub const BTN_TRIGGER_HAPPY5: u16 = 0x2c4;
-    pub const ABS_X: u16 = 0x00;
-    pub const ABS_Y: u16 = 0x01;
-    pub const ABS_HAT0X: u16 = 0x10;
-    pub const ABS_HAT0Y: u16 = 0x11;
+    pub(crate) const BTN_TRIGGER_HAPPY5: u16 = 0x2c4;
+    pub(crate) const ABS_X: u16 = 0x00;
+    pub(crate) const ABS_Y: u16 = 0x01;
+    pub(crate) const ABS_HAT0X: u16 = 0x10;
+    pub(crate) const ABS_HAT0Y: u16 = 0x11;
 }
 
 /// Controllers through libmanette's monitor. Nothing is opened until [`start`]: libmanette
@@ -50,6 +50,7 @@ pub struct ManetteBackend {
 }
 
 impl ManetteBackend {
+    /// A backend with no controllers open.
     pub fn new() -> Self {
         Self::default()
     }

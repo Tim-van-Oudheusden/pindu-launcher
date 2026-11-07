@@ -19,7 +19,11 @@ pub struct SessionTimeWords<'a> {
 
 /// The time a session that began at `started_at` has run at `now`, in `words`: whole
 /// minutes, and hours once it has run one. A clock set back counts as no time.
-pub fn session_time_text(started_at: Timestamp, now: Timestamp, words: SessionTimeWords) -> String {
+pub fn session_time_text(
+    started_at: Timestamp,
+    now: Timestamp,
+    words: SessionTimeWords<'_>,
+) -> String {
     let minutes = elapsed(started_at, now) / 60;
     match (minutes / 60, minutes % 60) {
         (0, 0) => words.under_a_minute.to_owned(),
@@ -47,7 +51,7 @@ fn elapsed(started_at: Timestamp, now: Timestamp) -> i64 {
 mod tests {
     use super::*;
 
-    const WORDS: SessionTimeWords = SessionTimeWords {
+    const WORDS: SessionTimeWords<'static> = SessionTimeWords {
         under_a_minute: "Under a minute",
         minutes: "{minutes} min",
         hours: "{hours} h {minutes} min",

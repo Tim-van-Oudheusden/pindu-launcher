@@ -280,6 +280,7 @@ mod imp {
 }
 
 glib::wrapper! {
+    /// Fullscreen mode's Home page.
     pub struct HomePage(ObjectSubclass<imp::HomePage>)
         @extends adw::NavigationPage, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;

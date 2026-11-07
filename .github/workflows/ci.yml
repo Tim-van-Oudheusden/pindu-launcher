@@ -39,7 +39,8 @@ jobs:
 
       # Everything runs in the GNOME 51 SDK, as local builds do. Inside its sandbox root
       # can only write files root owns, and the checkout belongs to the runner's user.
-      - name: rustfmt, clippy, unit tests and Meson tests
+      # The lint set lives in Cargo.toml's [workspace.lints]; `cargo doc` runs its rustdoc lints.
+      - name: rustfmt, clippy, rustdoc, unit tests and Meson tests
         run: |
           chown -R "$(id -u):$(id -g)" "$PWD"
           flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
@@ -50,6 +51,7 @@ jobs:
               set -e
               cargo fmt --all --check
               cargo clippy --workspace --all-targets -- -D warnings
+              RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
               cargo test --workspace
               meson setup --reconfigure _build || meson setup _build
               meson test -C _build --print-errorlogs

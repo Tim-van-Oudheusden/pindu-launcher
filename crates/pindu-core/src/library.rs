@@ -13,10 +13,15 @@ use crate::store::{self, Store};
 /// The image chosen for each layout of a game.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ArtSet {
+    /// The portrait cover.
     pub cover: Option<PathBuf>,
+    /// The wide hero banner.
     pub hero: Option<PathBuf>,
+    /// The logo.
     pub logo: Option<PathBuf>,
+    /// The icon.
     pub icon: Option<PathBuf>,
+    /// The square grid.
     pub square: Option<PathBuf>,
 }
 
@@ -37,8 +42,11 @@ impl ArtSet {
 /// A game with its art and total playtime, as the library views show it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LibraryEntry {
+    /// The game.
     pub game: Game,
+    /// The image chosen for each layout.
     pub art: ArtSet,
+    /// Total playtime in seconds; 0 when never played.
     pub playtime_secs: i64,
     /// Where the playtime comes from; `None` when the game was never played.
     pub playtime_origin: Option<PlaytimeOrigin>,
@@ -49,7 +57,9 @@ pub struct LibraryEntry {
 /// Whose playtime a game shows: its source's own total, or our sessions. Never both.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PlaytimeOrigin {
+    /// The total the source tracks itself.
     Source(Source),
+    /// The sum of our own play sessions.
     Sessions,
 }
 
@@ -90,8 +100,11 @@ pub fn load(store: &Store, prefer_steamgriddb: bool) -> store::Result<Vec<Librar
 /// The groups of the Play history page.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum HistoryGroup {
+    /// Played today.
     Today,
+    /// Played in the six days before today.
     ThisWeek,
+    /// Played before that.
     Earlier,
 }
 
@@ -106,8 +119,9 @@ pub fn history_group(last_played: Timestamp, now: Timestamp, utc_offset: i64) ->
     }
 }
 
-/// How many games the "Jump back in" row shows, and how many of them can be pinned.
+/// How many games the "Jump back in" row shows.
 pub const JUMP_BACK_IN_SIZE: usize = 6;
+/// How many games of the "Jump back in" row can be pinned.
 pub const MAX_PINS: u8 = 3;
 
 /// The "Jump back in" row: pinned games in their pin order, then the most recently
@@ -172,7 +186,9 @@ pub enum SortMode {
     /// Most recently played first; games never played follow by name.
     #[default]
     LastPlayed,
+    /// By name, A to Z.
     NameAscending,
+    /// By name, Z to A.
     NameDescending,
     /// Newest first.
     RecentlyAdded,
@@ -212,6 +228,7 @@ pub struct SortKey {
 }
 
 impl SortKey {
+    /// The sort key of `game`, with its total playtime in seconds.
     pub fn new(game: &Game, playtime_secs: i64) -> Self {
         Self {
             name: search::sort_name(&game.sort_title),
@@ -243,6 +260,7 @@ pub fn compare(mode: SortMode, a: &SortKey, b: &SortKey) -> Ordering {
 pub struct SearchKey(String);
 
 impl SearchKey {
+    /// The search key of `title`.
     pub fn new(title: &str) -> Self {
         Self(search::normalize(title))
     }
@@ -251,23 +269,29 @@ impl SearchKey {
 /// How a filter changed, so list models can re-check only the games that can change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FilterChange {
+    /// The same games show as before.
     Unchanged,
     /// Only games shown before can be dropped.
     MoreStrict,
     /// Only games hidden before can appear.
     LessStrict,
+    /// Any game can appear or be dropped.
     Different,
 }
 
 /// The library views of the sidebar.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum View {
+    /// Every game in the library but the hidden ones.
     #[default]
     All,
+    /// Installed games.
     Installed,
+    /// The user's favourites.
     Favourites,
     /// Games that have been played.
     PlayHistory,
+    /// Games from one source.
     Source(Source),
     /// A user collection, by ID.
     Collection(i64),
@@ -337,8 +361,11 @@ pub fn step_tab(tabs: &[View], current: View, forward: bool) -> Option<View> {
 /// kinds narrow each other.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Filters {
+    /// Installed games.
     pub installed: bool,
+    /// Games that are not installed.
     pub not_installed: bool,
+    /// Only the user's favourites.
     pub favourites: bool,
     /// Windows games, run through Proton.
     pub windows: bool,
@@ -462,6 +489,7 @@ impl Counts {
         Self(counts)
     }
 
+    /// How many games `view` shows.
     pub fn get(&self, view: View) -> u32 {
         self.0.get(&view).copied().unwrap_or_default()
     }

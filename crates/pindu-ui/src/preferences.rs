@@ -271,12 +271,14 @@ mod imp {
 }
 
 glib::wrapper! {
+    /// The Preferences dialog.
     pub struct PreferencesDialog(ObjectSubclass<imp::PreferencesDialog>)
         @extends adw::PreferencesDialog, adw::Dialog, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::ShortcutManager;
 }
 
 impl PreferencesDialog {
+    /// A dialog whose source settings read and change the sources through `sync`.
     pub fn new(sync: &SyncService) -> Self {
         let dialog: Self = glib::Object::new();
         dialog.imp().sync.set(sync.clone()).expect("new dialog");

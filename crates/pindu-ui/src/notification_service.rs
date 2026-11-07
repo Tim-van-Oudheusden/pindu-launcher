@@ -12,6 +12,7 @@ use crate::launch_service::now;
 /// Something the shells do when the log changes.
 type Listener = Box<dyn Fn()>;
 
+/// The session's notifications, shared by the services and the shells.
 #[derive(Clone, Default)]
 pub struct NotificationService {
     inner: Rc<Inner>,
@@ -32,6 +33,7 @@ impl std::fmt::Debug for NotificationService {
 }
 
 impl NotificationService {
+    /// A service with no notifications.
     pub fn new() -> Self {
         Self::default()
     }

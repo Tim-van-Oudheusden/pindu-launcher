@@ -11,22 +11,29 @@ use serde_json::Value as Json;
 /// A Proton fork whose releases can be downloaded.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Fork {
+    /// GloriousEggroll's GE-Proton.
     GeProton,
+    /// CachyOS's Proton-CachyOS.
     CachyOs,
 }
 
 /// A file attached to a release.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Asset {
+    /// The file name.
     pub name: String,
+    /// Where the file downloads from.
     pub url: String,
+    /// The file's size, in bytes.
     pub size: u64,
 }
 
 /// A release with a tarball for this machine.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Release {
+    /// The fork the release belongs to.
     pub fork: Fork,
+    /// The release's Git tag.
     pub tag: String,
     /// When it was published, as GitHub gives it (ISO 8601, UTC).
     pub published_at: String,
@@ -40,6 +47,7 @@ pub struct Release {
 const LISTED_RELEASES: u32 = 10;
 
 impl Fork {
+    /// Every fork, in the order they are listed.
     pub const ALL: [Self; 2] = [Self::GeProton, Self::CachyOs];
 
     /// The fork's GitHub repository.
@@ -151,9 +159,13 @@ pub fn expected_sha512(text: &str, file: &str) -> Option<String> {
 /// Where an install is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Step {
-    /// Downloading the tarball, which is hashed as it comes: `received` of `total` bytes,
-    /// `total` 0 when unknown.
-    Downloading { received: u64, total: u64 },
+    /// Downloading the tarball, which is hashed as it comes.
+    Downloading {
+        /// Bytes received so far.
+        received: u64,
+        /// The tarball's size in bytes, or 0 when unknown.
+        total: u64,
+    },
     /// Unpacking the checked tarball into the tools folder.
     Unpacking,
 }
@@ -173,8 +185,11 @@ impl Step {
 /// Whether a release is in our tools folder.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InstallState {
+    /// Not installed, and no install runs.
     Available,
+    /// An install runs, at this step.
     Installing(Step),
+    /// Its folder is in the tools folder.
     Installed,
 }
 
