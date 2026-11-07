@@ -42,6 +42,9 @@ test(
 test('versions', find_program('build-aux/check-version.sh'), suite: 'packaging')
 test('manifests', find_program('build-aux/check-manifests.sh'), suite: 'packaging')
 
+# Release tarballs carry the crates, for builders without network (docs/releasing.md)
+meson.add_dist_script('build-aux/dist-vendor.sh', cargo)
+
 gnome.post_install(
   glib_compile_schemas: true,
   gtk_update_icon_cache: true,

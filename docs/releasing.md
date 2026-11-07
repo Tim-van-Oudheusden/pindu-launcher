@@ -1,14 +1,16 @@
 # Releasing
 
 GitHub Releases are the release channel. A `v*` tag runs `.github/workflows/release.yml`, which builds the stable
-Flatpak from `build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml` and publishes it with checksums and
-notes. Nothing is uploaded by hand.
+Flatpak from `build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml` and a source tarball with the crates
+vendored (`meson dist`), and publishes both with checksums and notes. Nothing is uploaded by hand.
 
 ```mermaid
 flowchart LR
   tag[push tag vX.Y.Z] --> version[check tag = meson = Cargo = MetaInfo]
   version --> flatpak[build bundle, meson test, flatpak-builder-lint]
-  flatpak --> publish[GitHub release: bundle, SHA256SUMS, notes]
+  version --> sources[meson dist: vendor crates, build and test offline]
+  flatpak --> publish[GitHub release: bundle, tarball, SHA256SUMS, notes]
+  sources --> publish
 ```
 
 ## Cut a release
@@ -33,8 +35,8 @@ flowchart LR
 
 7. **Watch the [Release workflow](https://github.com/Tim-van-Oudheusden/pindu-launcher/actions/workflows/release.yml)**.
    When it is green, the [release](https://github.com/Tim-van-Oudheusden/pindu-launcher/releases) has
-   `pindu-launcher-X.Y.Z-x86_64.flatpak` and `SHA256SUMS`. Install the bundle (the notes say how), start it, and check
-   that it opens and imports a library.
+   `pindu-launcher-X.Y.Z-x86_64.flatpak`, `pindu-launcher-X.Y.Z.tar.xz` and `SHA256SUMS`. Install the bundle (the
+   notes say how), start it, and check that it opens and imports a library.
 
 ## When something goes wrong
 

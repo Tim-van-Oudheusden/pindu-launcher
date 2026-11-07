@@ -179,8 +179,9 @@ your own CSS, on and off. Where the files go, the `theme.json` fields and the CS
 
 ## Building from source
 
-The build needs GTK 4.24, libadwaita 1.10, blueprint-compiler, Meson and Rust 1.93 or newer, all of which the
-`org.gnome.Sdk//51` runtime with the `rust-stable` extension provides.
+The build needs GTK 4.24, libadwaita 1.10, libmanette 0.2.10, blueprint-compiler, Meson and Rust 1.93 or newer, all
+of which the `org.gnome.Sdk//51` runtime with the `rust-stable` extension provides. Fedora 45, Debian testing and
+Ubuntu 26.10 ship them too.
 
 ```sh
 git clone https://github.com/Tim-van-Oudheusden/pindu-launcher.git
@@ -189,6 +190,9 @@ meson setup _build
 meson compile -C _build
 meson test -C _build
 ```
+
+Each release also has `pindu-launcher-X.Y.Z.tar.xz`, made by `meson dist`: the sources with every crate vendored, so
+the same Meson commands build it without network, as distro package builders need.
 
 | Command | What it does |
 | --- | --- |
