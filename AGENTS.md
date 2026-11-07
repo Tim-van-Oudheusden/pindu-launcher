@@ -10,6 +10,11 @@ later goal in the Nice to have milestone (#63).
 Blueprint files, GSettings schema, desktop file, MetaInfo and icons. The development manifest arrives with #4 and CI with
 #5; commands below that need those files apply from then on.
 
+This file is authoritative. `CLAUDE.md`, `.github/copilot-instructions.md` and `.cursor/rules/agent-guidance.mdc` are
+short companions that defer to it; `prompts/` holds review and pull request templates, and `.claude/` holds the agent
+permissions (`settings.json`), the `github-issue-flow` skill, the correction log (`memory/corrections.tsv`) and the
+hand-off notes (`session-summary.md`).
+
 ## Spec and Research
 
 - `docs/Adwaita Game Library — Main Spec.pdf` is the product spec; `docs/Research — *.pdf` hold the evidence behind it.
