@@ -30,10 +30,9 @@
 
 ## Status
 
-Early development. Releases ship on [GitHub Releases](https://github.com/Tim-van-Oudheusden/pindu-launcher/releases);
-version 0.1.0 is tagged but has no download yet, so for now install a CI build or build it from source
-([Installing](#installing)). A Flathub listing comes later. Linux only, as a Flatpak on the GNOME 51 runtime. Progress
-is tracked in the [milestones](https://github.com/Tim-van-Oudheusden/pindu-launcher/milestones).
+Early development. Releases ship on [GitHub Releases](https://github.com/Tim-van-Oudheusden/pindu-launcher/releases)
+as a Flatpak bundle ([Installing](#installing)); a Flathub listing comes later. Linux only, on the GNOME 51 runtime.
+Progress is tracked in the [milestones](https://github.com/Tim-van-Oudheusden/pindu-launcher/milestones).
 
 ## About
 
@@ -83,6 +82,17 @@ The importers read each launcher's data read-only and never its credentials.
 
 Pick one:
 
+- **Download a release.** Each [release](https://github.com/Tim-van-Oudheusden/pindu-launcher/releases/latest) has a
+  `pindu-launcher-<version>-x86_64.flatpak` bundle and a `SHA256SUMS` file. The bundle needs the GNOME 51 runtime,
+  which Flatpak installs from Flathub, so add the Flathub remote first:
+
+  ```sh
+  flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  flatpak install --user ./pindu-launcher-0.2.0-x86_64.flatpak
+  flatpak run io.github.tim_van_oudheusden.pindu-launcher
+  ```
+
+  A bundle does not update itself: install the next release's bundle the same way.
 - **Download a CI build.** Every CI run uploads a development bundle of the latest code as the
   `pindu-launcher-devel-x86_64.flatpak` artifact. Open a recent run of the
   [`CI` workflow](https://github.com/Tim-van-Oudheusden/pindu-launcher/actions/workflows/ci.yml) (you must be signed in
