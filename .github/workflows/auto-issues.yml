@@ -1,0 +1,63 @@
+name: Auto issues
+
+# Turns each Nightly compliance run on main into an issue (#250). A failing check opens, or updates, the one
+# `ci: nightly compliance: N failing checks` issue, labelled `automated`, `area:packaging` and `type:chore`, and the
+# first run where every check passes again closes it. scripts/compliance-issue.py does the work from the run's
+# `nightly-compliance` report artifact.
+#
+# workflow_run runs this file from main with this repository's token, so the job only takes Nightly compliance runs
+# of main in this repository, which only the schedule and maintainers start. The report is data for the issue body,
+# never code: the job checks out main and runs nothing from the artifact.
+
+on:
+  workflow_run:
+    workflows: [Nightly compliance]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  # One run at a time, so two quick runs never both open the issue.
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  compliance-issue:
+    name: Sync the nightly compliance issue
+    # A cancelled or skipped run says nothing about the checks.
+    if: >-
+      github.event.workflow_run.head_branch == 'main'
+      && github.event.workflow_run.head_repository.full_name == github.repository
+      && (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # actions: read lets download-artifact read the compliance run's artifact; issues: write lets the script open,
+    # update, comment on and close the issue.
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # A run that failed before its upload has no report; the script then opens the issue saying so.
+      - name: Download the compliance report
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: nightly-compliance
+          path: ${{ runner.temp }}/compliance
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      # The runner's python3; the script needs only the standard library.
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: >-
+          python3 -I scripts/compliance-issue.py --report "$RUNNER_TEMP/compliance/nightly-compliance.md"
+          --run-url "$RUN_URL"

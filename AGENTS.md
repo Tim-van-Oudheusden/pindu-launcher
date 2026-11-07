@@ -180,6 +180,9 @@ The workspace enforces the Rust for Linux lint set (`[workspace.lints]` in `Carg
   maintainer's call, recorded in `deny.toml` with the reason
 - **Nightly compliance** (`.github/workflows/nightly-compliance.yml`, `scripts/nightly-compliance.sh`) rechecks
   Dependabot alerts, `cargo audit`, the GNOME runtime's end of life, actionlint, the live ruleset and the ACMM level.
+  After each run on `main`, `.github/workflows/auto-issues.yml` (`scripts/compliance-issue.py`) opens or updates one
+  `ci: nightly compliance: N failing checks` issue labelled `automated`, and closes it once every check passes; fix
+  the failing checks rather than closing it by hand.
   A Hive readiness issue that completes an ACMM level raises `DEFAULT_MIN_LEVEL` in `scripts/acmm-self-check.py` in
-  the same PR; the script's tests run with `python3 -m unittest discover -s tests/scripts` and
+  the same PR; the scripts' tests run with `python3 -m unittest discover -s tests/scripts` and
   `sh scripts/nightly-compliance.test.sh`
