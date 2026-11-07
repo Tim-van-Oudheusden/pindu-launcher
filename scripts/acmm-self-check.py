@@ -30,10 +30,9 @@ from typing import NamedTuple
 
 # A level passes when at least this share of its criteria pass (acmmLevelThreshold in api_acmm_eval.go).
 LEVEL_THRESHOLD = 0.70
-# The level this repository has reached, so the self-check fails when a change drops it. It starts at 0 (L0
-# prerequisites unmet, as on 2026-11-07); every Hive readiness issue (milestone "Hive readiness", #237) that completes a
-# level raises it in the same pull request, up to 6 once Hive's target of L6 is met.
-DEFAULT_MIN_LEVEL = 0
+# The level this repository has reached, so the self-check fails when a change drops it. Hive's target is L6, which the
+# Hive readiness issues (#237) completed on 2026-11-07; the maintainer set the minimum to 6 then (#290).
+DEFAULT_MIN_LEVEL = 6
 MAX_LEVEL = 6
 
 # acmmLevelNames: the name of each codebase level. 0 is not a level of its own; it means the L1 prerequisites are unmet.

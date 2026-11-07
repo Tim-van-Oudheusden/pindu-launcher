@@ -12,6 +12,7 @@ targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]
 [advisories]
 yanked = "deny"
 ignore = [
+    # Accepted by the maintainer on 2026-11-07 (#290).
     # Unmaintained, not vulnerable. paste is a proc macro of glycin-common, glycin-utils and gufo-common (glycin 4);
     # revisit with the next glycin release, by 2027-05-01.
     { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained proc macro behind glycin 4; no fix upstream yet" },
