@@ -225,6 +225,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.library-tabs` | The bar of tabs and the sort order |
 | `.library-tab` | A tab; the shown one is `:checked` |
 | `.filtered-chip` | The Filtered chip beside the tabs, shown while Quick Access's Filters narrow them |
+| `gridview.library` | The grid of covers; its `padding-top` is the room above the first row, so give a focus `box-shadow` or a larger `transform` enough of it to show whole |
 | `gridview.library > child` | A tile's place in the grid; `:focus-within` on the focused one |
 | `.cover-tile` | A tile: `.cover-frame` (the cover with its badges, which takes the focus ring; give it the cover's `border-radius`), `cover-art` (the cover), `.badge` (source and state), `.play-button`, `label` (the title, absent in fullscreen mode) |
 
