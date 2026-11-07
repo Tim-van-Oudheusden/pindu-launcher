@@ -8,56 +8,58 @@ msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-07 16:59+0100\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"PO-Revision-Date: 2026-11-07 18:15+0000\n"
+"Last-Translator: Tim <tim-van-oudheusden@users.noreply.hosted.weblate.org>\n"
+"Language-Team: Dutch <https://hosted.weblate.org/projects/pindu-launcher/"
+"pindu-translate-component/nl/>\n"
 "Language: nl\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 2026.11.2.dev0\n"
 
 #: crates/pindu-ui/src/application.rs:102
 msgid "Start a game by its ID, without opening the window"
-msgstr ""
+msgstr "Begin een game op basis van zijn ID, zonder het scherm te openen"
 
 #: crates/pindu-ui/src/application.rs:110
 msgid "Open the window in fullscreen mode"
-msgstr ""
+msgstr "Openen in Volledig Scherm modus"
 
 #: crates/pindu-ui/src/application.rs:503
 msgid "Getting artwork from SteamGridDB…"
-msgstr ""
+msgstr "SteamGridDB kunstwerken aan het ophalen…"
 
 #: crates/pindu-ui/src/application.rs:546
 #, rust-format
 msgid "Added one game"
 msgid_plural "Added {count} games"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Een game toegevoegd"
+msgstr[1] "{count} games toegevoegd"
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
 #: crates/pindu-ui/src/application.rs:549
 #, rust-format
 msgid "From {sources}"
-msgstr ""
+msgstr "Van {sources}"
 
 #: crates/pindu-ui/src/application.rs:560
 #, rust-format
 msgid "One game is missing"
 msgid_plural "{count} games are missing"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Eén game ontbreekt"
+msgstr[1] "{count} games ontbreken"
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
 #: crates/pindu-ui/src/application.rs:566
 #, rust-format
 msgid "No longer listed by {sources}"
-msgstr ""
+msgstr "Niet meer bekend bij {sources}"
 
 #: crates/pindu-ui/src/application.rs:603
 msgid "Game Art From SteamGridDB"
-msgstr ""
+msgstr "Game Kunst Van SteamGridDB"
 
 #: crates/pindu-ui/src/application.rs:605
 msgid ""
@@ -65,221 +67,225 @@ msgid ""
 "To use it, make a free account on steamgriddb.com and add your own API key "
 "in Preferences; it is kept in your keyring."
 msgstr ""
+"SteamGridDB heeft hoezen, spandoeken en logos voor games waarbij deze "
+"ontbreken. Om het te gebruiken moet je een gratis account aanmaken op "
+"steamgriddb.com en je eigen API sleutel in Voorkeuren toevoegen. Dit wordt "
+"opgeslagen in je de keyring."
 
 #: crates/pindu-ui/src/application.rs:611
 msgid "_Not Now"
-msgstr ""
+msgstr "_Niet Nu"
 
 #: crates/pindu-ui/src/application.rs:612
 msgid "_Open Settings"
-msgstr ""
+msgstr "_Instellingen Openen"
 
 #: crates/pindu-ui/src/application.rs:636
 msgid "Export Library"
-msgstr ""
+msgstr "Bibliotheek Exporteren"
 
 #: crates/pindu-ui/src/application.rs:651
 msgid "Library exported"
-msgstr ""
+msgstr "Bibliotheek geëxporteerd"
 
 #: crates/pindu-ui/src/application.rs:653
 #, rust-format
 msgid "Could not export the library: {error}"
-msgstr ""
+msgstr "Kon de bibliotheek niet exporteren: {error}"
 
 #: crates/pindu-ui/src/application.rs:667
 msgid "Library Backups"
-msgstr ""
+msgstr "Bibliotheek Backups"
 
 #: crates/pindu-ui/src/application.rs:672
 msgid "Import Backup"
-msgstr ""
+msgstr "Backup Importeren"
 
 #: crates/pindu-ui/src/application.rs:685
 msgid "This file is not a library backup"
-msgstr ""
+msgstr "Dit bestand is geen bibliotheek backup"
 
 #: crates/pindu-ui/src/application.rs:687
 msgid "This backup is from a newer version of Pindu launcher"
-msgstr ""
+msgstr "Deze backup is van een nieuwere versie van Pindu launcher"
 
 #: crates/pindu-ui/src/application.rs:690
 #, rust-format
 msgid "Could not import the backup: {error}"
-msgstr ""
+msgstr "Kon de backup niet importeren: {error}"
 
 #: crates/pindu-ui/src/application.rs:754
 #: data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in:2
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:7
 #: data/ui/window.blp:5 data/ui/window.blp:1277
 msgid "Pindu launcher"
-msgstr ""
+msgstr "Pindu launcher"
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
 #: crates/pindu-ui/src/application.rs:762
 msgid "translator-credits"
-msgstr ""
+msgstr "vertaler-credits"
 
 #: crates/pindu-ui/src/application.rs:779
 #, rust-format
 msgid "Added artwork for one game"
 msgid_plural "Added artwork for {count} games"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Kunstwerk voor een game toegevoegd"
+msgstr[1] "Kunstwerk voor {count} games toegevoegd"
 
 #: crates/pindu-ui/src/application.rs:784
 msgid "No new artwork found"
-msgstr ""
+msgstr "Geen nieuw kunstwerk kunnen vinden"
 
 #: crates/pindu-ui/src/application.rs:785
 msgid "SteamGridDB did not accept the key"
-msgstr ""
+msgstr "SteamGridDB heeft de sleutel niet geaccepteerd"
 
 #: crates/pindu-ui/src/application.rs:786
 msgid "Could not reach SteamGridDB"
-msgstr ""
+msgstr "Kon SteamGridDB niet bereiken"
 
 #: crates/pindu-ui/src/application.rs:798
 msgid "Nothing new to restore"
-msgstr ""
+msgstr "Niks om te herstellen op dit moment"
 
 #: crates/pindu-ui/src/application.rs:800
 msgid "Backup restored"
-msgstr ""
+msgstr "Backup hersteld"
 
 #: crates/pindu-ui/src/application.rs:806
 #, rust-format
 msgid "one game in it is not in this library"
 msgid_plural "{count} games in it are not in this library"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "een game hierin is niet in deze bibliotheek"
+msgstr[1] "{count} games hierin zijn niet in deze bibliotheek"
 
 #: crates/pindu-ui/src/application.rs:811
 #, rust-format
 msgid "{result}; {note}"
-msgstr ""
+msgstr "{result}; {note}"
 
 #: crates/pindu-ui/src/collection_actions.rs:17
 msgid "_Add to Collection"
-msgstr ""
+msgstr "_Toevoegen aan Collectie"
 
 #: crates/pindu-ui/src/collection_actions.rs:39
 #: crates/pindu-ui/src/fullscreen_panels.rs:896
 msgid "_New Collection…"
-msgstr ""
+msgstr "_Nieuwe Collectie…"
 
 #: crates/pindu-ui/src/collection_actions.rs:56
 #, rust-format
 msgid "Remove from “{collection}”"
-msgstr ""
+msgstr "Verwijderd uit “{collection}”"
 
 #: crates/pindu-ui/src/collection_actions.rs:129 data/ui/window.blp:1345
 msgid "New Collection"
-msgstr ""
+msgstr "Nieuwe Collectie"
 
 #: crates/pindu-ui/src/collection_actions.rs:130
 msgid "_Create"
-msgstr ""
+msgstr "_Creeër"
 
 #: crates/pindu-ui/src/collection_actions.rs:142
 #, rust-format
 msgid "Created “{collection}”"
-msgstr ""
+msgstr "“{collection}” gecreëerd"
 
 #: crates/pindu-ui/src/collection_actions.rs:155
 msgid "Rename Collection"
-msgstr ""
+msgstr "Collectie Hernoemen"
 
 #: crates/pindu-ui/src/collection_actions.rs:156
 msgid "_Rename"
-msgstr ""
+msgstr "_Hernoemen"
 
 #: crates/pindu-ui/src/collection_actions.rs:184
 #, rust-format
 msgid "Deleted “{collection}”"
-msgstr ""
+msgstr "“{collection}” verwijderd"
 
 #: crates/pindu-ui/src/collection_actions.rs:185
 #: crates/pindu-ui/src/collection_actions.rs:210
 #: crates/pindu-ui/src/window.rs:888 crates/pindu-ui/src/window.rs:902
 msgid "_Undo"
-msgstr ""
+msgstr "_Ongedaan Maken"
 
 #: crates/pindu-ui/src/collection_actions.rs:204
 #, rust-format
 msgid "Added to “{collection}”"
-msgstr ""
+msgstr "Toegevoegd aan “{collection}”"
 
 #: crates/pindu-ui/src/collection_actions.rs:206
 #, rust-format
 msgid "Removed from “{collection}”"
-msgstr ""
+msgstr "Verwijderd van “{collection}”"
 
 #: crates/pindu-ui/src/collection_actions.rs:230
 msgid "Name"
-msgstr ""
+msgstr "Naam"
 
 #: crates/pindu-ui/src/collection_actions.rs:239
 #: crates/pindu-ui/src/game_dialog.rs:807
 #: crates/pindu-ui/src/proton_downloads_page.rs:227
 #: crates/pindu-ui/src/proton_launch.rs:628 data/ui/game_dialog.blp:16
 msgid "_Cancel"
-msgstr ""
+msgstr "_Annuleren"
 
 #: crates/pindu-ui/src/fullscreen.rs:603
 #, rust-format
 msgid "Your fullscreen style has a problem"
 msgid_plural "Your fullscreen style has {count} problems"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Je Volledig Scherm stijl heeft een probleem"
+msgstr[1] "Je Volledig Scherm stijl heeft {count} problemen"
 
 #: crates/pindu-ui/src/fullscreen_activity.rs:244
 #: crates/pindu-ui/src/hint_bar.rs:169
 msgid "Cancel"
-msgstr ""
+msgstr "Annuleren"
 
 #: crates/pindu-ui/src/fullscreen_activity.rs:285
 msgid "Cancelling…"
-msgstr ""
+msgstr "Aan het annuleren…"
 
 #: crates/pindu-ui/src/fullscreen_activity.rs:286
 msgid "Reading your launchers"
-msgstr ""
+msgstr "Je Launchers aan het uitlezen"
 
 #: crates/pindu-ui/src/fullscreen_activity.rs:289
 msgid "Downloading"
-msgstr ""
+msgstr "Downloaden"
 
 #: crates/pindu-ui/src/fullscreen_activity.rs:290
 msgid "Installing"
-msgstr ""
+msgstr "Installeren"
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:88
 msgid "No Controllers Connected"
-msgstr ""
+msgstr "Geen Controller Gedetecteerd"
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:114 data/ui/preferences.blp:45
 msgid "Controller"
-msgstr ""
+msgstr "Controller"
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:128
 msgid "Rumble to tell which controller this is"
-msgstr ""
+msgstr "Rumble activeren om deze controller te detecteren"
 
 #. Translators: a battery's charge; {percent} is a number from 0 to 100.
 #: crates/pindu-ui/src/fullscreen_controllers.rs:151
 #: crates/pindu-ui/src/fullscreen_status.rs:58
 #, rust-format
 msgid "{percent} %"
-msgstr ""
+msgstr "{percent} %"
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:167 data/ui/window.blp:891
 msgid "Letters"
-msgstr ""
+msgstr "Letters"
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:168 data/ui/window.blp:903
 msgid "Shapes"
-msgstr ""
+msgstr "Vormen"
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:169 data/ui/window.blp:915
 msgid "Letters, A on the Right"
