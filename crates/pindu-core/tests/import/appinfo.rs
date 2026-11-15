@@ -65,3 +65,30 @@ fn a_truncated_file_is_an_error() {
 
     assert!(read_appinfo(&bytes[..bytes.len() - 10], |_| true).is_err());
 }
+
+#[test]
+fn maps_nested_too_deeply_are_an_error_not_a_stack_overflow() {
+    let depth = 100_000;
+    // Built by hand: the support encoder recurses once per level, as the parser did.
+    let mut body = Vec::new();
+    body.extend_from_slice(&[0; 4 + 4 + 8 + 20 + 4 + 20]); // entry header, format 28 and up
+    for _ in 0..depth {
+        body.push(0x00); // map
+        body.extend_from_slice(&0u32.to_le_bytes()); // key "a", string table index 0
+    }
+    body.extend(std::iter::repeat_n(0x08, depth + 1)); // end of each map and of the root
+    let mut bytes = vec![0x29, 0x44, 0x56, 0x07];
+    bytes.extend_from_slice(&1u32.to_le_bytes()); // universe
+    let table_offset = 4 + 4 + 8 + 4 + 4 + body.len() + 4;
+    bytes.extend_from_slice(&(table_offset as i64).to_le_bytes());
+    bytes.extend_from_slice(&570u32.to_le_bytes());
+    bytes.extend_from_slice(&(body.len() as u32).to_le_bytes());
+    bytes.extend_from_slice(&body);
+    bytes.extend_from_slice(&0u32.to_le_bytes()); // end of apps
+    bytes.extend_from_slice(&1u32.to_le_bytes()); // one string
+    bytes.extend_from_slice(b"a\0");
+
+    let error = read_appinfo(&bytes, |_| true).unwrap_err();
+
+    assert_eq!(error.message, "maps nested too deeply");
+}

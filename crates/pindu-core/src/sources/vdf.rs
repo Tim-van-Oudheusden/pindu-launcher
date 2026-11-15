@@ -83,10 +83,14 @@ impl fmt::Display for ParseError {
 
 impl std::error::Error for ParseError {}
 
+/// How many maps deep KeyValues may nest. Real Steam files stay well under 20; the limit
+/// keeps a malformed or hostile file from overflowing the stack of the parsing thread.
+const MAX_DEPTH: usize = 64;
+
 /// Parses text KeyValues into a map of its top-level entries.
 pub fn parse_text(text: &str) -> Result<Value, ParseError> {
     let mut lexer = Lexer { text, pos: 0 };
-    let entries = lexer.entries(false)?;
+    let entries = lexer.entries(0)?;
     Ok(Value::Map(entries))
 }
 
@@ -109,8 +113,13 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Reads `key value` pairs until `}` (when nested) or the end of the text.
-    fn entries(&mut self, nested: bool) -> Result<Vec<(String, Value)>, ParseError> {
+    /// Reads `key value` pairs until `}` (when nested, `depth` above 0) or the end of the
+    /// text.
+    fn entries(&mut self, depth: usize) -> Result<Vec<(String, Value)>, ParseError> {
+        if depth > MAX_DEPTH {
+            return Err(self.error("maps nested too deeply"));
+        }
+        let nested = depth > 0;
         let mut entries = Vec::new();
         loop {
             let key = match self.token()? {
@@ -121,7 +130,7 @@ impl<'a> Lexer<'a> {
                 Some(_) => return Err(self.error("expected a key")),
             };
             let value = match self.token()? {
-                Some(Token::Open) => Value::Map(self.entries(true)?),
+                Some(Token::Open) => Value::Map(self.entries(depth + 1)?),
                 Some(Token::Text(text)) => Value::Str(text.into_owned()),
                 _ => return Err(self.error("expected a value")),
             };
@@ -256,7 +265,7 @@ pub fn read_appinfo(
                 bytes: &bytes[..end],
                 pos: reader.pos + header,
             };
-            let root = entry.binary_map(&strings)?;
+            let root = entry.binary_map(&strings, 0)?;
             let info = match root.get("appinfo") {
                 Some(info) => info.clone(),
                 None => root,
@@ -323,8 +332,11 @@ impl Reader<'_> {
             .ok_or_else(|| self.error("key outside the string table"))
     }
 
-    /// Reads typed entries until the end-of-map marker.
-    fn binary_map(&mut self, strings: &[String]) -> Result<Value, ParseError> {
+    /// Reads typed entries until the end-of-map marker; `depth` counts the maps around it.
+    fn binary_map(&mut self, strings: &[String], depth: usize) -> Result<Value, ParseError> {
+        if depth > MAX_DEPTH {
+            return Err(self.error("maps nested too deeply"));
+        }
         let mut entries = Vec::new();
         loop {
             let kind = self.u8()?;
@@ -333,7 +345,7 @@ impl Reader<'_> {
             }
             let key = self.key(strings)?;
             let value = match kind {
-                0x00 => self.binary_map(strings)?,
+                0x00 => self.binary_map(strings, depth + 1)?,
                 0x01 => Value::Str(self.cstring()?),
                 // int32, pointer and colour are all four-byte integers
                 0x02 | 0x04 | 0x06 => Value::Int(i64::from(self.take().map(i32::from_le_bytes)?)),
@@ -406,6 +418,16 @@ mod tests {
     #[test]
     fn text_with_a_key_and_no_value_is_an_error() {
         assert!(parse_text(r#""a" { "b" }"#).is_err());
+    }
+
+    #[test]
+    fn text_nested_too_deeply_is_an_error_not_a_stack_overflow() {
+        let depth = 100_000;
+        let text = r#""a" {"#.repeat(depth) + &"}".repeat(depth);
+
+        let error = parse_text(&text).unwrap_err();
+
+        assert_eq!(error.message, "maps nested too deeply");
     }
 
     #[test]
