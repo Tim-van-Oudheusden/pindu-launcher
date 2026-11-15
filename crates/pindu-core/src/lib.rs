@@ -4,6 +4,7 @@
 //! `cargo test` against fixture trees, without a display.
 
 pub mod accessibility;
+pub mod arch;
 pub mod art;
 pub mod art_cache;
 pub mod backup;

@@ -17,6 +17,7 @@ use std::rc::Rc;
 
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use pindu_core::arch::Arch;
 use pindu_core::notifications::Kind;
 use pindu_core::paths::default_tools_dir;
 use pindu_core::proton::{self, ProtonBuild};
@@ -88,14 +89,14 @@ pub fn stop(folder: &str) {
     }
 }
 
-/// The builds in our tools folder, newest first. Leftovers of interrupted installs and
-/// removals are deleted on the way.
+/// The builds in our tools folder made for this machine, newest first. Leftovers of
+/// interrupted installs and removals are deleted on the way.
 pub async fn installed() -> Vec<ProtonBuild> {
     let running = running();
     gio::spawn_blocking(move || {
         let tools = default_tools_dir();
         proton_downloads::clean_leftovers(&tools, &running);
-        proton::discover(&[tools])
+        proton::discover(&[tools], Arch::host())
     })
     .await
     .unwrap_or_default()
@@ -104,7 +105,7 @@ pub async fn installed() -> Vec<ProtonBuild> {
 /// The newest releases of `fork` that have a tarball for this machine.
 pub async fn releases(fork: Fork) -> Result<Vec<Release>, String> {
     let answer = get(&fork.releases_url()).await?;
-    proton_downloads::parse_releases(fork, &String::from_utf8_lossy(&answer))
+    proton_downloads::parse_releases(fork, Arch::host(), &String::from_utf8_lossy(&answer))
 }
 
 /// Downloads, checks and unpacks `release` into our tools folder, and posts how it ended.
