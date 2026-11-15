@@ -147,14 +147,17 @@ jobs:
           if-no-files-found: error
 
   packages:
-    name: Native package (${{ matrix.target }})
+    name: Native package (${{ matrix.target }}${{ matrix.suffix }})
     needs: sources
-    runs-on: ubuntu-latest
-    # Distros that ship GTK 4.24 and libadwaita 1.10 (#232). Each builds offline from the
-    # tarball's vendored crates, in its own container.
+    runs-on: ${{ matrix.runner }}
+    # Distros that ship GTK 4.24 and libadwaita 1.10 (#232), for x86_64 and aarch64 (#303).
+    # Each builds offline from the tarball's vendored crates, in its own container, on a
+    # runner of its own architecture.
     strategy:
       fail-fast: false
       matrix:
+        target: [fedora-45, debian-testing, ubuntu-26.10]
+        arch: [x86_64, aarch64]
         include:
           - target: fedora-45
             image: registry.fedoraproject.org/fedora:45
@@ -165,6 +168,13 @@ jobs:
           - target: ubuntu-26.10
             image: docker.io/library/ubuntu:26.10
             build: build-aux/deb/build.sh
+          # x86_64 keeps the plain job names, which are required checks.
+          - arch: x86_64
+            runner: ubuntu-latest
+            suffix: ''
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            suffix: ', aarch64'
     container:
       image: ${{ matrix.image }}
     steps:
@@ -180,18 +190,20 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: package-${{ matrix.target }}
+          name: package-${{ matrix.target }}-${{ matrix.arch }}
           path: packages/*
           if-no-files-found: error
 
   packages-smoke:
-    name: Native package install and UI smoke test (${{ matrix.target }})
+    name: Native package install and UI smoke test (${{ matrix.target }}${{ matrix.suffix }})
     needs: packages
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     # A clean container: the package must pull in everything it needs to start.
     strategy:
       fail-fast: false
       matrix:
+        target: [fedora-45, debian-testing, ubuntu-26.10]
+        arch: [x86_64, aarch64]
         include:
           - target: fedora-45
             image: registry.fedoraproject.org/fedora:45
@@ -199,6 +211,12 @@ jobs:
             image: docker.io/library/debian:testing
           - target: ubuntu-26.10
             image: docker.io/library/ubuntu:26.10
+          - arch: x86_64
+            runner: ubuntu-latest
+            suffix: ''
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            suffix: ', aarch64'
     container:
       image: ${{ matrix.image }}
       # glycin decodes the test cover in a bubblewrap sandbox, which cannot set up its
@@ -209,20 +227,23 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          name: package-${{ matrix.target }}
+          name: package-${{ matrix.target }}-${{ matrix.arch }}
           path: packages
 
       - name: Install and start
         run: build-aux/package-smoke.sh packages/*
 
   flatpak:
-    name: Flatpak build, UI smoke test and lint (${{ matrix.profile }})
-    runs-on: ubuntu-latest
+    name: Flatpak build, UI smoke test and lint (${{ matrix.profile }}${{ matrix.suffix }})
+    runs-on: ${{ matrix.runner }}
     # The release manifest builds on every pull request too, so a broken one fails here and
-    # not when a release is tagged.
+    # not when a release is tagged. aarch64 builds natively on GitHub's arm64 runners (#303);
+    # the manifests are the same for both architectures.
     strategy:
       fail-fast: false
       matrix:
+        profile: [development, release]
+        arch: [x86_64, aarch64]
         include:
           - profile: development
             manifest: build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher-devel.yml
@@ -230,6 +251,12 @@ jobs:
           - profile: release
             manifest: build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml
             bundle: pindu-launcher.flatpak
+          - arch: x86_64
+            runner: ubuntu-latest
+            suffix: ''
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            suffix: ', aarch64'
     env:
       MANIFEST: ${{ matrix.manifest }}
     container:
@@ -257,13 +284,15 @@ jobs:
       - uses: actions/checkout@v7
 
       # Runs `meson test` inside the build, under xvfb, after the install: this is
-      # where the UI smoke test runs. The bundle is uploaded as an artifact.
+      # where `cargo test` and the UI smoke test run. The bundle is uploaded as the
+      # artifact pindu-launcher[-devel]-<arch>.flatpak.
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           manifest-path: ${{ matrix.manifest }}
           bundle: ${{ matrix.bundle }}
+          arch: ${{ matrix.arch }}
           run-tests: true
-          cache-key: flatpak-builder-${{ matrix.profile }}-${{ github.sha }}
+          cache-key: flatpak-builder-${{ matrix.profile }}-${{ matrix.arch }}-${{ github.sha }}
 
       # Blocking. The local exceptions only cover the importers' read-only access to
       # other launchers' data, which the spec needs, and what a private dev build

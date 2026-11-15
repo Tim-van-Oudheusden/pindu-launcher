@@ -1,7 +1,7 @@
 #!/bin/sh
 # Builds the RPM from a release tarball (`meson dist`, crates vendored), as root in a Fedora
 # container: installs the spec's build dependencies, then runs rpmbuild, which needs no
-# network. The package lands in OUTDIR as pindu-launcher-X.Y.Z-1.fcNN.x86_64.rpm.
+# network. The package lands in OUTDIR as pindu-launcher-X.Y.Z-1.fcNN.ARCH.rpm.
 #
 # Usage: build-aux/rpm/build.sh TARBALL OUTDIR
 set -eu

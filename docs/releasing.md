@@ -3,6 +3,7 @@
 GitHub Releases are the release channel. A `v*` tag runs `.github/workflows/release.yml`, which builds the stable
 Flatpak from `build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml`, a source tarball with the crates
 vendored (`meson dist`), and from that tarball an RPM for Fedora 45 and `.deb`s for Debian testing and Ubuntu 26.10.
+The bundle and the packages are built for x86_64 and aarch64, each natively on a GitHub runner of that architecture.
 It publishes them with checksums and notes. Nothing is uploaded by hand.
 
 ```mermaid
@@ -41,10 +42,11 @@ flowchart LR
    ```
 
 8. **Watch the [Release workflow](https://github.com/Tim-van-Oudheusden/pindu-launcher/actions/workflows/release.yml)**.
-   When it is green, the [release](https://github.com/Tim-van-Oudheusden/pindu-launcher/releases) has
-   `pindu-launcher-X.Y.Z-x86_64.flatpak`, `pindu-launcher-X.Y.Z.tar.xz`, `pindu-launcher-X.Y.Z-1.fc45.x86_64.rpm`,
-   `pindu-launcher-X.Y.Z-debian-testing-amd64.deb`, `pindu-launcher-X.Y.Z-ubuntu-26.10-amd64.deb` and `SHA256SUMS`.
-   Install the bundle (the notes say how), start it, and check that it opens and imports a library.
+   When it is green, the [release](https://github.com/Tim-van-Oudheusden/pindu-launcher/releases) has, for each
+   architecture, `pindu-launcher-X.Y.Z-<x86_64|aarch64>.flatpak`, `pindu-launcher-X.Y.Z-1.fc45.<x86_64|aarch64>.rpm`,
+   `pindu-launcher-X.Y.Z-debian-testing-<amd64|arm64>.deb` and `pindu-launcher-X.Y.Z-ubuntu-26.10-<amd64|arm64>.deb`,
+   plus `pindu-launcher-X.Y.Z.tar.xz` and `SHA256SUMS`. Install the bundle (the notes say how), start it, and check
+   that it opens and imports a library.
 
 The native packages target the distros that ship GTK 4.24 and libadwaita 1.10 (#232). When a new Fedora, Debian or
 Ubuntu release qualifies, add it to the `packages` and `packages-smoke` matrices in both workflows and to the table in

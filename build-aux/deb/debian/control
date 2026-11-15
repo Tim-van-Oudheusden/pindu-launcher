@@ -25,7 +25,7 @@ Homepage: https://github.com/Tim-van-Oudheusden/pindu-launcher
 Rules-Requires-Root: no
 
 Package: pindu-launcher
-Architecture: amd64
+Architecture: amd64 arm64
 Depends: ${shlibs:Depends}, ${misc:Depends}, glycin-loaders, bubblewrap
 Recommends: gamemode
 Description: every PC game on your computer in one GNOME library

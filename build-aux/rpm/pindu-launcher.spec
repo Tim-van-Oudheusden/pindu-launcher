@@ -10,12 +10,13 @@ Release:        1%{?dist}
 Summary:        Every PC game on your computer in one GNOME library
 
 # The app is GPL-3.0-or-later; the rest are the licences of the vendored crates that
-# build for Linux (cargo metadata --filter-platform x86_64-unknown-linux-gnu).
+# build for Linux (cargo metadata --filter-platform x86_64-unknown-linux-gnu; aarch64 builds
+# a subset of those crates).
 License:        GPL-3.0-or-later AND MIT AND Apache-2.0 AND (MIT OR Apache-2.0) AND (MPL-2.0 OR LGPL-2.1-or-later) AND BSD-3-Clause AND BSD-2-Clause AND Zlib AND ISC AND Unicode-3.0 AND IJG AND (Unlicense OR MIT) AND (0BSD OR MIT OR Apache-2.0) AND (Apache-2.0 WITH LLVM-exception)
 URL:            https://github.com/Tim-van-Oudheusden/pindu-launcher
 Source0:        %{url}/releases/download/v%{version}/%{name}-%{version}.tar.xz
 
-ExclusiveArch:  x86_64
+ExclusiveArch:  x86_64 aarch64
 
 BuildRequires:  meson >= 1.6.0
 BuildRequires:  cargo

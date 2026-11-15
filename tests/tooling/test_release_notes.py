@@ -45,8 +45,13 @@ class ReleaseNotesTest(unittest.TestCase):
         for item in items:
             self.assertIn(f"- {flat(item)}\n", result.stdout)
         self.assertIn("## Install", result.stdout)
-        bundle = f"pindu-launcher-{version}-x86_64.flatpak"
-        self.assertIn(f"flatpak install --user ./{bundle}", result.stdout)
+        for arch in ("x86_64", "aarch64"):
+            bundle = f"pindu-launcher-{version}-{arch}.flatpak"
+            self.assertIn(f"flatpak install --user ./{bundle}", result.stdout)
+            self.assertIn(f"pindu-launcher-{version}-1.fc45.{arch}.rpm", result.stdout)
+        for arch in ("amd64", "arm64"):
+            for distro in ("debian-testing", "ubuntu-26.10"):
+                self.assertIn(f"pindu-launcher-{version}-{distro}-{arch}.deb", result.stdout)
         self.assertIn(f"pindu-launcher-{version}.tar.xz", result.stdout)
 
     def test_fails_for_an_unknown_version(self) -> None:
