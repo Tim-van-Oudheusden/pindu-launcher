@@ -284,6 +284,12 @@ impl GamePage {
             imp.launch_target
                 .replace(Some((library.clone(), game.id.clone())));
             self.connect_launch_settings(settings);
+            // The stored setting stays, so it works again once MangoHud is installed.
+            if !permission_service::mangohud_works(game) {
+                imp.mangohud_row.set_sensitive(false);
+                imp.mangohud_row
+                    .set_subtitle(&gettext("MangoHud is not installed"));
+            }
             self.load_launch_settings();
         }
 

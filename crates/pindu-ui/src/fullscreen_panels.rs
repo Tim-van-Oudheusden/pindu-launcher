@@ -676,8 +676,12 @@ impl PinduWindow {
             (Some(Panel::QuickAccess(QuickAccessLevel::Filters)), _) => {
                 first_row(&imp.quick_access_filters)
             }
+            // The first switch that works: MangoHud's cannot when it is not installed.
             (Some(Panel::QuickAccess(QuickAccessLevel::Performance)), _) => {
-                first_row(&imp.quick_access_performance)
+                std::iter::successors(imp.quick_access_performance.first_child(), |row| {
+                    row.next_sibling()
+                })
+                .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
             }
             // The first controller that can rumble, or else the first button prompt.
             (Some(Panel::QuickAccess(QuickAccessLevel::Controllers)), _) => {

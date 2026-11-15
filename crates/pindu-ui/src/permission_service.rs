@@ -1,6 +1,6 @@
 //! Which permission tiers the sandbox has, checked once at start-up.
 
-use std::sync::OnceLock;
+use std::sync::{LazyLock, OnceLock};
 
 use pindu_core::model::Game;
 use pindu_core::permissions;
@@ -26,6 +26,19 @@ pub fn in_flatpak() -> bool {
 /// Whether starting `game` needs a permission the sandbox lacks.
 pub fn needs_permission(game: &Game) -> bool {
     permissions::needs_host_spawn(game.launch_kind) && !host_spawn_allowed()
+}
+
+/// Where the Flatpak mounts the MangoHud Vulkan-layer extension.
+const MANGOHUD_LAYER_DIR: &str = "/app/lib/extensions/vulkan/MangoHud";
+
+/// Whether `game`'s MangoHud switch can work. In Flatpak the extension's folder is read
+/// once; installing it needs a restart, as the extension is mounted at start-up.
+pub fn mangohud_works(game: &Game) -> bool {
+    static LAYER: LazyLock<bool> = LazyLock::new(|| {
+        permissions::mangohud_layer_installed(std::path::Path::new(MANGOHUD_LAYER_DIR))
+    });
+    let in_flatpak = in_flatpak();
+    permissions::mangohud_works(game.launch_kind, in_flatpak, in_flatpak && *LAYER)
 }
 
 /// The command that grants host spawn to this app.
