@@ -101,7 +101,7 @@ Pick one:
   or `arm64`); install the one for your system with `sudo dnf install ./<file>` or `sudo apt install ./<file>`. Native
   packages run without the Flatpak sandbox and do not update themselves, and Windows games need
   [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher#installing), which these distros do not
-  package.
+  package. The MangoHud switch needs your distro's `mangohud` package.
 - **Download a CI build.** Every CI run uploads a development bundle of the latest code as the
   `pindu-launcher-devel-x86_64.flatpak` and `pindu-launcher-devel-aarch64.flatpak` artifacts. Open a recent run of the
   [`CI` workflow](https://github.com/Tim-van-Oudheusden/pindu-launcher/actions/workflows/ci.yml) (you must be signed in
@@ -189,6 +189,10 @@ and **GameMode** on or off from its next launch. Its options sheet (View or X) h
 
 - Store games have neither, since their launcher keeps their settings.
 - While the game runs, the panel says a change waits for its next start.
+- In the Flatpak, Windows games and games in the Steam Linux Runtime get MangoHud from the
+  `org.freedesktop.Platform.VulkanLayer.MangoHud` extension, which Flathub builds for x86_64 only. Games started on the
+  host, and every game in a native package, use the system's `mangohud`. Without the extension, the switch of a
+  Windows or Steam Runtime game is greyed out and says MangoHud is not installed; the game keeps its setting.
 
 ### Controllers
 
