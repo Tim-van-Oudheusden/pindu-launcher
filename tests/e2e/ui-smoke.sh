@@ -9,7 +9,18 @@
 # stores a resized copy in the art cache only after the decode succeeds. The image must
 # be bigger than a tile.
 #
-# Usage: tests/e2e/ui-smoke.sh APP RESOURCES [COVER]
+# With --fullscreen APP_ID the app starts in fullscreen mode (`--fullscreen`) with the
+# navigation sounds on, so Home shows its animated background, and plays one navigation
+# sound (win.preview-navigation-sound, sent over the app's D-Bus session with gdbus).
+# GStreamer plays both through GTK, so a missing GStreamer plug-in shows here: the test
+# fails when the log says the background or a sound could not play.
+#
+# Usage: tests/e2e/ui-smoke.sh [--fullscreen APP_ID] APP RESOURCES [COVER]
+app_id=
+if [ "${1-}" = --fullscreen ]; then
+  app_id=$2
+  shift 2
+fi
 app=$1
 resources=$2
 cover=${3-}
@@ -38,10 +49,21 @@ if [ -n "$cover" ]; then
   export G_MESSAGES_DEBUG=pindu
 fi
 
+app_args=
+if [ -n "$app_id" ]; then
+  app_args=--fullscreen
+  # Settings in a key file instead of memory, so the sounds are on from the start.
+  export GSETTINGS_BACKEND=keyfile
+  mkdir -p "$XDG_CONFIG_HOME/glib-2.0/settings"
+  printf '[%s]\nnavigation-sounds=true\n' "$(echo "$app_id" | tr . /)" \
+    > "$XDG_CONFIG_HOME/glib-2.0/settings/keyfile"
+fi
+
 # The app is a GApplication and needs a session bus of its own, so a running copy of
 # the app does not take over.
-dbus-run-session -- sh -c '"$1" & echo $! > "$2/pid"; wait $!' sh "$app" "$tmp" \
-  > "$tmp/log" 2>&1 &
+dbus-run-session -- sh -c \
+  'echo "$DBUS_SESSION_BUS_ADDRESS" > "$2/bus"; "$1" $3 & echo $! > "$2/pid"; wait $!' \
+  sh "$app" "$tmp" "$app_args" > "$tmp/log" 2>&1 &
 session=$!
 
 sleep 5
@@ -65,6 +87,23 @@ if [ -n "$cover" ]; then
     sleep 1
   done
 fi
+fullscreen_state=
+sound_asked=
+if [ -n "$app_id" ]; then
+  # The window's actions, on the app's own session bus: whether the window is in
+  # fullscreen mode, where Home plays its background, and a navigation sound.
+  bus=$(cat "$tmp/bus")
+  window=/$(echo "$app_id" | tr .- /_)/window/1
+  fullscreen_state=$(DBUS_SESSION_BUS_ADDRESS=$bus gdbus call --session --dest "$app_id" \
+    --object-path "$window" --method org.gtk.Actions.Describe fullscreen-mode)
+  if DBUS_SESSION_BUS_ADDRESS=$bus gdbus call --session --dest "$app_id" \
+    --object-path "$window" --method org.gtk.Actions.Activate preview-navigation-sound \
+    '[]' '{}' > /dev/null; then
+    sound_asked=yes
+  fi
+  # The sound starts 200 ms after the request (VOLUME_PREVIEW_DELAY) and lasts 60 ms.
+  sleep 2
+fi
 kill "$pid"
 wait "$session" 2>/dev/null
 cat "$tmp/log"
@@ -74,6 +113,26 @@ if grep -q "panicked" "$tmp/log"; then
 fi
 if [ -n "$cover" ] && [ -z "$decoded" ]; then
   echo "The app did not decode the cover through glycin"
+  exit 1
+fi
+if [ -n "$app_id" ]; then
+  case $fullscreen_state in
+    *'[<true>]'*) ;;
+    *)
+      echo "The window was not in fullscreen mode (win.fullscreen-mode: ${fullscreen_state:-unknown})"
+      exit 1
+      ;;
+  esac
+  if [ -z "$sound_asked" ]; then
+    echo "The app did not take win.preview-navigation-sound"
+    exit 1
+  fi
+fi
+# GStreamer plays Home's background and the navigation sounds; a missing plug-in shows up
+# as one of these.
+if grep -q -e "Could not play Home's background" -e "Could not play a navigation sound" \
+  "$tmp/log"; then
+  echo "GStreamer could not play Home's background or a navigation sound: is a plug-in missing?"
   exit 1
 fi
 echo "The app started and kept running"

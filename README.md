@@ -234,6 +234,11 @@ The build needs GTK 4.24, libadwaita 1.10, libmanette 0.2.10, blueprint-compiler
 of which the `org.gnome.Sdk//51` runtime with the `rust-stable` extension provides. Fedora 45, Debian testing and
 Ubuntu 26.10 ship them too.
 
+To run, the app also needs GStreamer's good plug-ins (`gstreamer1-plugins-good` on Fedora, `gstreamer1.0-plugins-good`
+on Debian and Ubuntu): fullscreen mode's Home background is VP9 video in Matroska and the navigation sounds are WAV, both
+played through GTK's GStreamer backend. Without them the background stays black and the sounds are silent. The Flatpak
+runtime and the native packages bring them.
+
 ```sh
 git clone https://github.com/Tim-van-Oudheusden/pindu-launcher.git
 cd pindu-launcher
