@@ -39,10 +39,25 @@ fn copy_tree(from: &Path, to: &Path, root: &Path) {
     }
 }
 
-/// Encodes apps as a Steam `appinfo.vdf` of format version 28 or 29 (29 keeps keys in a
-/// string table at the end of the file).
+/// Encodes apps as a Steam `appinfo.vdf` of format version 27, 28 or 29 (28 adds a binary
+/// SHA-1 to each entry header; 29 keeps keys in a string table at the end of the file).
 pub(crate) fn appinfo_bytes(version: u8, apps: &[(u32, Value)]) -> Vec<u8> {
     let mut strings: Vec<String> = Vec::new();
+    let maps: Vec<(u32, Vec<u8>)> = apps
+        .iter()
+        .map(|(app_id, value)| {
+            let root = Value::Map(vec![("appinfo".into(), value.clone())]);
+            let mut map = Vec::new();
+            encode_map(&root, version, &mut strings, &mut map);
+            (*app_id, map)
+        })
+        .collect();
+    appinfo_file(version, &maps, &strings)
+}
+
+/// Wraps already encoded binary root maps, one per app, as an `appinfo.vdf` of format
+/// version 27, 28 or 29; `strings` is the key table that format 29 writes at the end.
+pub(crate) fn appinfo_file(version: u8, apps: &[(u32, Vec<u8>)], strings: &[String]) -> Vec<u8> {
     let mut out = Vec::new();
     // The magic is 0x075644_NN with the version written as hex digits: 28 → 0x28.
     let version_tag = (version / 10) * 16 + version % 10;
@@ -52,16 +67,17 @@ pub(crate) fn appinfo_bytes(version: u8, apps: &[(u32, Value)]) -> Vec<u8> {
     if version >= 29 {
         out.extend_from_slice(&0i64.to_le_bytes());
     }
-    for (app_id, value) in apps {
+    for (app_id, map) in apps {
         let mut body = Vec::new();
         body.extend_from_slice(&2u32.to_le_bytes()); // info state
         body.extend_from_slice(&1_700_000_000u32.to_le_bytes()); // last updated
         body.extend_from_slice(&0u64.to_le_bytes()); // PICS token
         body.extend_from_slice(&[0; 20]); // text SHA-1
         body.extend_from_slice(&1u32.to_le_bytes()); // change number
-        body.extend_from_slice(&[0; 20]); // binary SHA-1
-        let root = Value::Map(vec![("appinfo".into(), value.clone())]);
-        encode_map(&root, version, &mut strings, &mut body);
+        if version >= 28 {
+            body.extend_from_slice(&[0; 20]); // binary SHA-1
+        }
+        body.extend_from_slice(map);
         out.extend_from_slice(&app_id.to_le_bytes());
         out.extend_from_slice(&(body.len() as u32).to_le_bytes());
         out.extend_from_slice(&body);
@@ -71,7 +87,7 @@ pub(crate) fn appinfo_bytes(version: u8, apps: &[(u32, Value)]) -> Vec<u8> {
         let offset = out.len() as i64;
         out[table_offset_at..table_offset_at + 8].copy_from_slice(&offset.to_le_bytes());
         out.extend_from_slice(&(strings.len() as u32).to_le_bytes());
-        for string in &strings {
+        for string in strings {
             out.extend_from_slice(string.as_bytes());
             out.push(0);
         }
