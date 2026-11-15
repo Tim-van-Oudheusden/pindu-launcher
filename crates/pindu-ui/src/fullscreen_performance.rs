@@ -4,7 +4,8 @@
 //! own launch settings for its next launch (`Store::set_performance_tool`). The window
 //! keeps one state for one game, read once from the store, and every switch shows it, so
 //! Quick Access and the sheet always agree. While the game runs, Quick Access's level says
-//! a change applies from its next launch.
+//! a change applies from its next launch. Where MangoHud cannot work for the game
+//! (`permission_service::mangohud_works`), its switches are insensitive and say why.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -13,6 +14,7 @@ use gtk::glib;
 use pindu_core::model::PerformanceTool;
 
 use crate::models::GameObject;
+use crate::permission_service;
 use crate::window::PinduWindow;
 
 /// The tools in the order the window keeps their state and lists their switches.
@@ -97,7 +99,23 @@ impl PinduWindow {
         }
         imp.quick_access_performance_title
             .set_label(&gettext("Performance for {game}").replace("{game}", &game.game().title));
+        self.show_overlay_works(permission_service::mangohud_works(&game.game()));
         self.show_performance_note();
+    }
+
+    /// The Performance Overlay switches say MangoHud is not installed where it cannot work
+    /// for the game. The stored setting stays, so it works again once it is installed.
+    fn show_overlay_works(&self, works: bool) {
+        let subtitle = if works {
+            gettext("MangoHud")
+        } else {
+            gettext("MangoHud is not installed")
+        };
+        let [overlay, _] = self.performance_rows();
+        for row in overlay {
+            row.set_sensitive(works);
+            row.set_subtitle(&subtitle);
+        }
     }
 
     /// Lets go of the game the switches were for.
