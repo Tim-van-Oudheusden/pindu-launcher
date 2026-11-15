@@ -1,0 +1,5 @@
+# Waivers for Hive's ACMM Eval (Dailies' docs/research/hive-acmm.md section 4.2). A waiver marks a criterion that Hive
+# itself satisfies; it never advances a level, and scripts/acmm-self-check.py ignores it. Empty on purpose: add one only
+# if claude.yml is dropped for Hive's own agents (then waive acmm:ai-fix-workflow and acmm:copilot-review-apply), each
+# with id, satisfied_by and reason. tests/scripts/test_acmm_self_check.py checks every entry.
+waivers: []

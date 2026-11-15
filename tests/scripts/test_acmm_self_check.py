@@ -6,6 +6,8 @@ Run with: python3 -m unittest discover -s tests/scripts
 import contextlib
 import importlib.util
 import io
+import json
+import subprocess
 import tempfile
 import unittest
 from collections import Counter
@@ -14,6 +16,7 @@ from types import ModuleType
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "acmm-self-check.py"
+WAIVERS = ROOT / ".acmm.yml"
 
 
 def load_script() -> ModuleType:
@@ -197,6 +200,23 @@ class MainTest(TreeTestCase):
 
     def test_root_defaults_to_this_checkout(self) -> None:
         self.assertEqual(acmm.parse_args([]).root, ROOT)
+
+
+class WaiverFileTest(unittest.TestCase):
+    def test_the_waiver_file_names_real_criteria_with_every_field(self) -> None:
+        # Hive reads .acmm.yml from the repository root. yq (mikefarah, v4) comes with GitHub's Ubuntu runners.
+        converted = subprocess.run(
+            ["yq", "--output-format=json", ".", str(WAIVERS)], capture_output=True, check=True, text=True
+        )
+        waivers = json.loads(converted.stdout)["waivers"]
+        self.assertIsInstance(waivers, list)
+        keys = {criterion.key for criterion in acmm.CRITERIA}
+        for waiver in waivers:
+            with self.subTest(waiver=waiver):
+                for field in ("id", "satisfied_by", "reason"):
+                    self.assertIsInstance(waiver.get(field), str)
+                    self.assertTrue(waiver[field].strip())
+                self.assertIn(waiver["id"], keys)
 
 
 if __name__ == "__main__":
