@@ -9,7 +9,7 @@
 [![CI](https://github.com/Tim-van-Oudheusden/pindu-launcher/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Tim-van-Oudheusden/pindu-launcher/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/github/v/tag/Tim-van-Oudheusden/pindu-launcher?label=version)](https://github.com/Tim-van-Oudheusden/pindu-launcher/tags)
 [![GNOME 51](https://img.shields.io/badge/GNOME-51-4A86CF?logo=gnome&logoColor=white)](#building-from-source)
-[![Flatpak](https://img.shields.io/badge/Flatpak-x86__64-4A90D9?logo=flatpak&logoColor=white)](#installing)
+[![Flatpak](https://img.shields.io/badge/Flatpak-x86__64%20%7C%20aarch64-4A90D9?logo=flatpak&logoColor=white)](#installing)
 [![Rust 1.93+](https://img.shields.io/badge/Rust-1.93%2B-CE422B?logo=rust&logoColor=white)](#tech-stack)
 [![Licence](https://img.shields.io/github/license/Tim-van-Oudheusden/pindu-launcher)](LICENSE)
 [![Last commit](https://img.shields.io/github/last-commit/Tim-van-Oudheusden/pindu-launcher)](https://github.com/Tim-van-Oudheusden/pindu-launcher/commits/main)
@@ -84,8 +84,9 @@ The importers read each launcher's data read-only and never its credentials.
 Pick one:
 
 - **Download a release.** Each [release](https://github.com/Tim-van-Oudheusden/pindu-launcher/releases/latest) has a
-  `pindu-launcher-<version>-x86_64.flatpak` bundle and a `SHA256SUMS` file. The bundle needs the GNOME 51 runtime,
-  which Flatpak installs from Flathub, so add the Flathub remote first:
+  `pindu-launcher-<version>-x86_64.flatpak` bundle, a `pindu-launcher-<version>-aarch64.flatpak` bundle for 64-bit
+  ARM, and a `SHA256SUMS` file. The bundle needs the GNOME 51 runtime, which Flatpak installs from Flathub, so add the
+  Flathub remote first:
 
   ```sh
   flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
@@ -95,17 +96,17 @@ Pick one:
 
   A bundle does not update itself: install the next release's bundle the same way.
 - **Install a native package** on Fedora 45, Debian testing or Ubuntu 26.10, the distros with GTK 4.24 and
-  libadwaita 1.10. Each release has `pindu-launcher-<version>-1.fc45.x86_64.rpm`,
-  `pindu-launcher-<version>-debian-testing-amd64.deb` and `pindu-launcher-<version>-ubuntu-26.10-amd64.deb`; install
-  the one for your system with `sudo dnf install ./<file>` or `sudo apt install ./<file>`. Native packages run without
-  the Flatpak sandbox and do not update themselves, and Windows games need
+  libadwaita 1.10. Each release has `pindu-launcher-<version>-1.fc45.<arch>.rpm` (`x86_64` or `aarch64`),
+  `pindu-launcher-<version>-debian-testing-<arch>.deb` and `pindu-launcher-<version>-ubuntu-26.10-<arch>.deb` (`amd64`
+  or `arm64`); install the one for your system with `sudo dnf install ./<file>` or `sudo apt install ./<file>`. Native
+  packages run without the Flatpak sandbox and do not update themselves, and Windows games need
   [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher#installing), which these distros do not
   package.
 - **Download a CI build.** Every CI run uploads a development bundle of the latest code as the
-  `pindu-launcher-devel-x86_64.flatpak` artifact. Open a recent run of the
+  `pindu-launcher-devel-x86_64.flatpak` and `pindu-launcher-devel-aarch64.flatpak` artifacts. Open a recent run of the
   [`CI` workflow](https://github.com/Tim-van-Oudheusden/pindu-launcher/actions/workflows/ci.yml) (you must be signed in
-  to GitHub), download the artifact and unzip it. The bundle needs the GNOME 51 runtime, which Flatpak installs from
-  Flathub, so add the Flathub remote first:
+  to GitHub), download the artifact for your machine and unzip it. The bundle needs the GNOME 51 runtime, which
+  Flatpak installs from Flathub, so add the Flathub remote first:
 
   ```sh
   flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo

@@ -45,12 +45,21 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
   flatpak:
-    name: Flatpak bundle, tests and lint
+    name: Flatpak bundle, tests and lint (${{ matrix.arch }})
     needs: version
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     # As in ci.yml: the GNOME 51 image, the runner's preinstalled SDKs mounted so the build
     # can delete them for disk space, and the image's Flatpak installation on a named volume
-    # so updating the SDK does not fail with EXDEV (#150).
+    # so updating the SDK does not fail with EXDEV (#150). Each architecture builds natively
+    # on a runner of its own (#303).
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
@@ -76,8 +85,9 @@ jobs:
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           manifest-path: ${{ env.MANIFEST }}
-          bundle: pindu-launcher-${{ needs.version.outputs.version }}-x86_64.flatpak
-          artifact-name: flatpak-bundle
+          bundle: pindu-launcher-${{ needs.version.outputs.version }}-${{ matrix.arch }}.flatpak
+          artifact-name: flatpak-bundle-${{ matrix.arch }}
+          arch: ${{ matrix.arch }}
           branch: stable
           run-tests: true
           cache: false
@@ -122,14 +132,17 @@ jobs:
           if-no-files-found: error
 
   packages:
-    name: Native package (${{ matrix.target }})
+    name: Native package (${{ matrix.target }}${{ matrix.suffix }})
     needs: sources
-    runs-on: ubuntu-latest
-    # Distros that ship GTK 4.24 and libadwaita 1.10 (#232). Each builds offline from the
-    # tarball's vendored crates, in its own container.
+    runs-on: ${{ matrix.runner }}
+    # Distros that ship GTK 4.24 and libadwaita 1.10 (#232), for x86_64 and aarch64 (#303).
+    # Each builds offline from the tarball's vendored crates, in its own container, on a
+    # runner of its own architecture.
     strategy:
       fail-fast: false
       matrix:
+        target: [fedora-45, debian-testing, ubuntu-26.10]
+        arch: [x86_64, aarch64]
         include:
           - target: fedora-45
             image: registry.fedoraproject.org/fedora:45
@@ -140,6 +153,13 @@ jobs:
           - target: ubuntu-26.10
             image: docker.io/library/ubuntu:26.10
             build: build-aux/deb/build.sh
+          # The job names match ci.yml's.
+          - arch: x86_64
+            runner: ubuntu-latest
+            suffix: ''
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            suffix: ', aarch64'
     container:
       image: ${{ matrix.image }}
     steps:
@@ -157,18 +177,20 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: package-${{ matrix.target }}
+          name: package-${{ matrix.target }}-${{ matrix.arch }}
           path: packages/*
           if-no-files-found: error
 
   packages-smoke:
-    name: Native package install and UI smoke test (${{ matrix.target }})
+    name: Native package install and UI smoke test (${{ matrix.target }}${{ matrix.suffix }})
     needs: packages
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     # A clean container: the package must pull in everything it needs to start.
     strategy:
       fail-fast: false
       matrix:
+        target: [fedora-45, debian-testing, ubuntu-26.10]
+        arch: [x86_64, aarch64]
         include:
           - target: fedora-45
             image: registry.fedoraproject.org/fedora:45
@@ -176,6 +198,12 @@ jobs:
             image: docker.io/library/debian:testing
           - target: ubuntu-26.10
             image: docker.io/library/ubuntu:26.10
+          - arch: x86_64
+            runner: ubuntu-latest
+            suffix: ''
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            suffix: ', aarch64'
     container:
       image: ${{ matrix.image }}
       # glycin decodes the test cover in a bubblewrap sandbox, which cannot set up its
@@ -188,7 +216,7 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          name: package-${{ matrix.target }}
+          name: package-${{ matrix.target }}-${{ matrix.arch }}
           path: packages
 
       - name: Install and start
@@ -210,7 +238,8 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          name: flatpak-bundle
+          pattern: flatpak-bundle-*
+          merge-multiple: true
           path: dist
 
       - uses: actions/download-artifact@v8
