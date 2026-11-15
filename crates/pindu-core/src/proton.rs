@@ -9,6 +9,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+use crate::arch::Arch;
 use crate::launch::{self, Command};
 use crate::model::{Game, LaunchConfig, Source};
 use crate::paths::document_root;
@@ -51,9 +52,9 @@ pub fn tool_dirs(dirs: &HostDirs, ours: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
-/// Every Proton build in `dirs`, newest first. A build found in several folders counts
-/// once, from the first folder searched.
-pub fn discover(dirs: &[PathBuf]) -> Vec<ProtonBuild> {
+/// Every Proton build in `dirs` made for `arch`, newest first. A build found in several
+/// folders counts once, from the first folder searched.
+pub fn discover(dirs: &[PathBuf], arch: Arch) -> Vec<ProtonBuild> {
     let mut seen = HashSet::new();
     let mut builds: Vec<ProtonBuild> = dirs
         .iter()
@@ -63,7 +64,7 @@ pub fn discover(dirs: &[PathBuf]) -> Vec<ProtonBuild> {
             paths.sort();
             paths
         })
-        .filter_map(|path| read_build(&path))
+        .filter_map(|path| read_build(&path, arch))
         .filter(|build| seen.insert(build.name.clone()))
         .collect();
     builds.sort_by(|a, b| {
@@ -74,15 +75,19 @@ pub fn discover(dirs: &[PathBuf]) -> Vec<ProtonBuild> {
     builds
 }
 
-/// A tool folder that holds a Proton build: its manifest names the `proton` layer and
-/// its `proton` script is there, so half-unpacked downloads and other tools are skipped.
-fn read_build(path: &Path) -> Option<ProtonBuild> {
+/// A tool folder that holds a Proton build for `arch`: its manifest names the `proton`
+/// layer and a runtime for `arch`, and its `proton` script is there, so half-unpacked
+/// downloads, other tools and builds for other machines are skipped.
+fn read_build(path: &Path, arch: Arch) -> Option<ProtonBuild> {
     let manifest =
         vdf::parse_text(&std::fs::read_to_string(path.join("toolmanifest.vdf")).ok()?).ok()?;
     let layer = manifest
         .path(&["manifest", "compatmanager_layer_name"])?
         .as_str()?;
-    if layer != "proton" || !path.join("proton").is_file() {
+    let runtime = manifest
+        .path(&["manifest", "require_tool_appid"])
+        .and_then(|appid| appid.as_str());
+    if layer != "proton" || runtime_arch(runtime) != arch || !path.join("proton").is_file() {
         return None;
     }
     let folder = path.file_name()?.to_string_lossy().into_owned();
@@ -103,6 +108,18 @@ fn read_build(path: &Path) -> Option<ProtonBuild> {
         wineserver: path.join(wine).join("bin/wineserver"),
         built_at,
     })
+}
+
+/// The architecture of the Steam Linux Runtime whose app ID a build's manifest gives as
+/// `require_tool_appid`. Only Steam Linux Runtime 4.0 (arm64) marks an aarch64 build.
+/// Every other build is an x86_64 one: those that name none, as every build before the
+/// arm64 ones did, those that name an x86_64 runtime (2.0 soldier, 3.0 sniper, 4.0), and
+/// those that name a runtime newer than this table, so new x86_64 builds stay offered.
+fn runtime_arch(appid: Option<&str>) -> Arch {
+    match appid {
+        Some("4185400") => Arch::Aarch64,
+        _ => Arch::X86_64,
+    }
 }
 
 /// The internal and display names of the first tool in `compatibilitytool.vdf`.
@@ -815,5 +832,75 @@ mod tests {
         ));
         assert!(!runs_for(&launch, &environ(&["HOME=/home/me"])));
         assert!(!runs_for(&launch, b""));
+    }
+
+    /// Puts a Proton build in `tools/<folder>` whose manifest asks for the Steam Linux
+    /// Runtime with `runtime` as its app ID, or for none.
+    fn tool(tools: &Path, folder: &str, runtime: Option<&str>) {
+        let path = tools.join(folder);
+        std::fs::create_dir_all(&path).unwrap();
+        let require = runtime
+            .map(|appid| format!("\"require_tool_appid\" \"{appid}\"\n"))
+            .unwrap_or_default();
+        std::fs::write(
+            path.join("toolmanifest.vdf"),
+            format!(
+                "\"manifest\"\n{{\n\"version\" \"2\"\n\"commandline\" \"/proton %verb%\"\n\
+                 {require}\"compatmanager_layer_name\" \"proton\"\n}}\n"
+            ),
+        )
+        .unwrap();
+        std::fs::write(path.join("proton"), "").unwrap();
+    }
+
+    fn names(builds: &[ProtonBuild]) -> Vec<&str> {
+        builds.iter().map(|build| build.name.as_str()).collect()
+    }
+
+    #[test]
+    fn on_aarch64_only_builds_made_for_arm64_are_found() {
+        let tools = tempfile::tempdir().unwrap();
+        tool(tools.path(), "GE-Proton11-12-aarch64", Some("4185400"));
+        tool(tools.path(), "GE-Proton11-12-x86_64", Some("4183110"));
+        tool(tools.path(), "GE-Proton10-28", Some("1628350"));
+        tool(tools.path(), "Proton-7.0", Some("1391110"));
+        tool(tools.path(), "Proton-5.0", None);
+
+        let builds = discover(&[tools.path().to_owned()], Arch::Aarch64);
+
+        assert_eq!(names(&builds), ["GE-Proton11-12-aarch64"]);
+    }
+
+    #[test]
+    fn on_x86_64_builds_made_for_arm64_are_skipped() {
+        let tools = tempfile::tempdir().unwrap();
+        tool(tools.path(), "GE-Proton11-12-aarch64", Some("4185400"));
+        tool(tools.path(), "GE-Proton11-12-x86_64", Some("4183110"));
+        tool(tools.path(), "GE-Proton10-28", Some("1628350"));
+        tool(tools.path(), "Proton-7.0", Some("1391110"));
+        tool(tools.path(), "Proton-5.0", None);
+
+        let builds = discover(&[tools.path().to_owned()], Arch::X86_64);
+
+        assert_eq!(
+            names(&builds),
+            [
+                "GE-Proton10-28",
+                "GE-Proton11-12-x86_64",
+                "Proton-5.0",
+                "Proton-7.0"
+            ]
+        );
+    }
+
+    #[test]
+    fn builds_that_ask_for_a_runtime_we_do_not_know_are_taken_for_x86_64_ones() {
+        let tools = tempfile::tempdir().unwrap();
+        tool(tools.path(), "Proton-Future", Some("9999999"));
+        let dirs = [tools.path().to_owned()];
+
+        assert_eq!(names(&discover(&dirs, Arch::X86_64)), ["Proton-Future"]);
+        assert_eq!(discover(&dirs, Arch::Aarch64), []);
+        assert_eq!(discover(&dirs, Arch::Other), []);
     }
 }

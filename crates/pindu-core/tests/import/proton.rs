@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use pindu_core::arch::Arch;
 use pindu_core::proton;
 use pindu_core::sources::location::HostDirs;
 
@@ -28,7 +29,10 @@ fn home() -> (tempfile::TempDir, PathBuf) {
 fn proton_is_found_in_native_and_flatpak_steam_and_our_tools_folder_newest_first() {
     let (_dir, home) = home();
 
-    let builds = proton::discover(&proton::tool_dirs(&host_dirs(&home), &home.join(OURS)));
+    let builds = proton::discover(
+        &proton::tool_dirs(&host_dirs(&home), &home.join(OURS)),
+        Arch::X86_64,
+    );
 
     let names: Vec<(&str, &str)> = builds
         .iter()
@@ -60,5 +64,28 @@ fn proton_is_found_in_native_and_flatpak_steam_and_our_tools_folder_newest_first
     assert_eq!(
         builds[1].wineserver,
         home.join(OURS).join("Proton-Ours-1/dist/bin/wineserver")
+    );
+}
+
+#[test]
+fn on_aarch64_only_arm64_proton_is_found() {
+    let (_dir, home) = home();
+
+    let builds = proton::discover(
+        &proton::tool_dirs(&host_dirs(&home), &home.join(OURS)),
+        Arch::Aarch64,
+    );
+
+    let names: Vec<(&str, &str)> = builds
+        .iter()
+        .map(|build| (build.name.as_str(), build.display_name.as_str()))
+        .collect();
+    assert_eq!(
+        names,
+        [("GE-Proton11-12-aarch64", "GE-Proton11-12 (arm64)")]
+    );
+    assert_eq!(
+        builds[0].path,
+        home.join(OURS).join("GE-Proton11-12-aarch64")
     );
 }

@@ -24,6 +24,7 @@ use std::time::Duration;
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use pindu_core::arch::Arch;
 use pindu_core::launch::{self, Command};
 use pindu_core::model::{Game, LaunchConfig};
 use pindu_core::paths::{default_prefixes_dir, default_tools_dir};
@@ -316,12 +317,12 @@ pub async fn run_installer(
     }
 }
 
-/// The Proton builds on this machine, newest first.
+/// The Proton builds on this machine made for its architecture, newest first.
 pub fn builds() -> Vec<proton::ProtonBuild> {
-    proton::discover(&proton::tool_dirs(
-        &HostDirs::from_env(),
-        &default_tools_dir(),
-    ))
+    proton::discover(
+        &proton::tool_dirs(&HostDirs::from_env(), &default_tools_dir()),
+        Arch::host(),
+    )
 }
 
 /// The Windows games defaults from Preferences. An empty build name stands for the

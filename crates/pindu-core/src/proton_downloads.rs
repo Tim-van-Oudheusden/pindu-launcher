@@ -1,12 +1,15 @@
 //! Proton builds to download into our tools folder: GE-Proton and Proton-CachyOS releases
-//! from the GitHub releases API, the tarball and checksum each one offers for x86_64, and
-//! what is installed. The HTTP calls, the download and the unpacking live in the UI's
-//! services, and run only when the user asks in Preferences, never when a game starts.
+//! from the GitHub releases API, the tarball and checksum each one offers for this
+//! machine's architecture, and what is installed. The HTTP calls, the download and the
+//! unpacking live in the UI's services, and run only when the user asks in Preferences,
+//! never when a game starts.
 
 use std::io;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value as Json;
+
+use crate::arch::Arch;
 
 /// A Proton fork whose releases can be downloaded.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,7 +40,7 @@ pub struct Release {
     pub tag: String,
     /// When it was published, as GitHub gives it (ISO 8601, UTC).
     pub published_at: String,
-    /// The x86_64 tarball.
+    /// The tarball made for the architecture the release was listed for.
     pub tarball: Asset,
     /// The `.sha512sum` file published with the tarball, if the release has one.
     pub checksum: Option<Asset>,
@@ -77,9 +80,10 @@ impl Release {
 /// The tarball endings releases use; the `.tar.zst` some GE-Proton releases add is skipped.
 const TARBALL_ENDINGS: [&str; 2] = [".tar.gz", ".tar.xz"];
 
-/// The releases in a GitHub releases API answer that have an x86_64 tarball, as listed.
-/// Drafts and prereleases are left out.
-pub fn parse_releases(fork: Fork, json: &str) -> Result<Vec<Release>, String> {
+/// The releases in a GitHub releases API answer that have a tarball for `arch`, as listed.
+/// Drafts and prereleases are left out, and on an architecture no build is made for, so is
+/// every release.
+pub fn parse_releases(fork: Fork, arch: Arch, json: &str) -> Result<Vec<Release>, String> {
     let answer: Json = serde_json::from_str(json).map_err(|error| error.to_string())?;
     let releases = answer
         .as_array()
@@ -90,11 +94,11 @@ pub fn parse_releases(fork: Fork, json: &str) -> Result<Vec<Release>, String> {
             !release["draft"].as_bool().unwrap_or(true)
                 && !release["prerelease"].as_bool().unwrap_or(true)
         })
-        .filter_map(|release| parse_release(fork, release))
+        .filter_map(|release| parse_release(fork, arch, release))
         .collect())
 }
 
-fn parse_release(fork: Fork, release: &Json) -> Option<Release> {
+fn parse_release(fork: Fork, arch: Arch, release: &Json) -> Option<Release> {
     let tag = release["tag_name"].as_str()?;
     let assets: Vec<Asset> = release["assets"]
         .as_array()?
@@ -107,16 +111,7 @@ fn parse_release(fork: Fork, release: &Json) -> Option<Release> {
             })
         })
         .collect();
-    // Newer releases name the architecture; older GE-Proton ones only had x86_64.
-    let tarball = assets
-        .iter()
-        .find(|asset| tarball_stem(&asset.name).is_some_and(|stem| stem.ends_with("-x86_64")))
-        .or_else(|| {
-            assets
-                .iter()
-                .find(|asset| tarball_stem(&asset.name) == Some(tag))
-        })?
-        .clone();
+    let tarball = tarball(&assets, tag, arch)?.clone();
     let stem = tarball_stem(&tarball.name)?;
     let checksum = assets
         .iter()
@@ -129,6 +124,26 @@ fn parse_release(fork: Fork, release: &Json) -> Option<Release> {
         tarball,
         checksum,
     })
+}
+
+/// The tarball among a release's `assets` that is made for `arch`. Newer releases end the
+/// tarball's name with the architecture: `-x86_64`, and `-aarch64` (GE-Proton) or `-arm64`
+/// (Proton-CachyOS). Older GE-Proton ones only had x86_64, named after the release's `tag`.
+fn tarball<'a>(assets: &'a [Asset], tag: &str, arch: Arch) -> Option<&'a Asset> {
+    let ending_with = |suffix: &str| {
+        assets
+            .iter()
+            .find(|asset| tarball_stem(&asset.name).is_some_and(|stem| stem.ends_with(suffix)))
+    };
+    match arch {
+        Arch::X86_64 => ending_with("-x86_64").or_else(|| {
+            assets
+                .iter()
+                .find(|asset| tarball_stem(&asset.name) == Some(tag))
+        }),
+        Arch::Aarch64 => ending_with("-aarch64").or_else(|| ending_with("-arm64")),
+        Arch::Other => None,
+    }
 }
 
 /// A tarball's name without its ending, which must make a plain folder name; `None` for
@@ -301,7 +316,8 @@ mod tests {
 
     #[test]
     fn ge_proton_releases_offer_their_x86_64_tarball_and_checksum() {
-        let releases = parse_releases(Fork::GeProton, &fixture("ge-proton.json")).unwrap();
+        let releases =
+            parse_releases(Fork::GeProton, Arch::X86_64, &fixture("ge-proton.json")).unwrap();
         let download = "https://github.com/GloriousEggroll/proton-ge-custom/releases/download";
         assert_eq!(
             releases[0],
@@ -325,7 +341,8 @@ mod tests {
 
     #[test]
     fn older_ge_proton_releases_offer_their_unnamed_gzip_tarball() {
-        let releases = parse_releases(Fork::GeProton, &fixture("ge-proton.json")).unwrap();
+        let releases =
+            parse_releases(Fork::GeProton, Arch::X86_64, &fixture("ge-proton.json")).unwrap();
         assert_eq!(releases[1].tag, "GE-Proton10-28");
         assert_eq!(releases[1].tarball.name, "GE-Proton10-28.tar.gz");
         assert_eq!(
@@ -339,7 +356,8 @@ mod tests {
 
     #[test]
     fn proton_cachyos_releases_offer_the_plain_x86_64_tarball() {
-        let releases = parse_releases(Fork::CachyOs, &fixture("proton-cachyos.json")).unwrap();
+        let releases =
+            parse_releases(Fork::CachyOs, Arch::X86_64, &fixture("proton-cachyos.json")).unwrap();
         let names: Vec<&str> = releases
             .iter()
             .map(|release| release.tarball.name.as_str())
@@ -356,6 +374,73 @@ mod tests {
     }
 
     #[test]
+    fn on_aarch64_ge_proton_releases_offer_their_aarch64_tarball_and_checksum() {
+        let releases =
+            parse_releases(Fork::GeProton, Arch::Aarch64, &fixture("ge-proton.json")).unwrap();
+        let download = "https://github.com/GloriousEggroll/proton-ge-custom/releases/download";
+        assert_eq!(
+            releases,
+            [Release {
+                fork: Fork::GeProton,
+                tag: "GE-Proton11-12".into(),
+                published_at: "2026-11-03T07:19:38Z".into(),
+                tarball: Asset {
+                    name: "GE-Proton11-12-aarch64.tar.gz".into(),
+                    url: format!("{download}/GE-Proton11-12/GE-Proton11-12-aarch64.tar.gz"),
+                    size: 650_286_473,
+                },
+                checksum: Some(Asset {
+                    name: "GE-Proton11-12-aarch64.sha512sum".into(),
+                    url: format!("{download}/GE-Proton11-12/GE-Proton11-12-aarch64.sha512sum"),
+                    size: 160,
+                }),
+            }]
+        );
+    }
+
+    #[test]
+    fn on_aarch64_proton_cachyos_releases_offer_their_arm64_tarball_and_checksum() {
+        let releases = parse_releases(
+            Fork::CachyOs,
+            Arch::Aarch64,
+            &fixture("proton-cachyos.json"),
+        )
+        .unwrap();
+        let download = "https://github.com/CachyOS/proton-cachyos/releases/download\
+                        /cachyos-11.0-20261015-slr";
+        assert_eq!(
+            releases,
+            [Release {
+                fork: Fork::CachyOs,
+                tag: "cachyos-11.0-20261015-slr".into(),
+                published_at: "2026-10-20T21:21:40Z".into(),
+                tarball: Asset {
+                    name: "proton-cachyos-11.0-20261015-slr-arm64.tar.xz".into(),
+                    url: format!("{download}/proton-cachyos-11.0-20261015-slr-arm64.tar.xz"),
+                    size: 367_630_532,
+                },
+                checksum: Some(Asset {
+                    name: "proton-cachyos-11.0-20261015-slr-arm64.sha512sum".into(),
+                    url: format!("{download}/proton-cachyos-11.0-20261015-slr-arm64.sha512sum"),
+                    size: 176,
+                }),
+            }]
+        );
+    }
+
+    #[test]
+    fn on_other_architectures_no_release_is_listed() {
+        assert_eq!(
+            parse_releases(Fork::GeProton, Arch::Other, &fixture("ge-proton.json")),
+            Ok(Vec::new())
+        );
+        assert_eq!(
+            parse_releases(Fork::CachyOs, Arch::Other, &fixture("proton-cachyos.json")),
+            Ok(Vec::new())
+        );
+    }
+
+    #[test]
     fn drafts_prereleases_and_releases_without_a_tarball_are_left_out() {
         let json = r#"[
             {"tag_name": "a", "draft": true, "prerelease": false, "published_at": "2026-01-01T00:00:00Z",
@@ -365,13 +450,21 @@ mod tests {
             {"tag_name": "c", "draft": false, "prerelease": false, "published_at": "2026-01-01T00:00:00Z",
              "assets": [{"name": "c-aarch64.tar.gz", "size": 1, "browser_download_url": "https://x/c"}]}
         ]"#;
-        assert_eq!(parse_releases(Fork::GeProton, json), Ok(Vec::new()));
+        assert_eq!(
+            parse_releases(Fork::GeProton, Arch::X86_64, json),
+            Ok(Vec::new())
+        );
     }
 
     #[test]
     fn an_answer_that_is_not_a_release_list_is_an_error() {
         assert!(
-            parse_releases(Fork::GeProton, r#"{"message": "API rate limit exceeded"}"#).is_err()
+            parse_releases(
+                Fork::GeProton,
+                Arch::X86_64,
+                r#"{"message": "API rate limit exceeded"}"#
+            )
+            .is_err()
         );
     }
 
@@ -411,10 +504,11 @@ mod tests {
 
     #[test]
     fn a_release_installs_into_the_folder_its_tarball_unpacks_to() {
-        let ge = parse_releases(Fork::GeProton, &fixture("ge-proton.json")).unwrap();
+        let ge = parse_releases(Fork::GeProton, Arch::X86_64, &fixture("ge-proton.json")).unwrap();
         assert_eq!(ge[0].folder(), "GE-Proton11-12-x86_64");
         assert_eq!(ge[1].folder(), "GE-Proton10-28");
-        let cachyos = parse_releases(Fork::CachyOs, &fixture("proton-cachyos.json")).unwrap();
+        let cachyos =
+            parse_releases(Fork::CachyOs, Arch::X86_64, &fixture("proton-cachyos.json")).unwrap();
         assert_eq!(
             cachyos[0].folder(),
             "proton-cachyos-11.0-20261015-slr-x86_64"
@@ -423,7 +517,8 @@ mod tests {
 
     #[test]
     fn a_release_is_installed_once_its_folder_is_in_the_tools_folder() {
-        let releases = parse_releases(Fork::GeProton, &fixture("ge-proton.json")).unwrap();
+        let releases =
+            parse_releases(Fork::GeProton, Arch::X86_64, &fixture("ge-proton.json")).unwrap();
         let installed = vec!["GE-Proton10-28".to_owned(), "Other".to_owned()];
         assert_eq!(
             install_state(&releases[0], &installed, None),
