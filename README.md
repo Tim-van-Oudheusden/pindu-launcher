@@ -388,7 +388,8 @@ add-ons) and how to start a translation by hand.
 - **Windows games:** umu-launcher and Proton, with GameMode and MangoHud
 - **Build and packaging:** Meson driving cargo, Flatpak on `org.gnome.Platform//51`
 - **CI:** GitHub Actions running rustfmt, clippy, the tests, the Flatpak build with a UI smoke test, and
-  `flatpak-builder-lint`
+  `flatpak-builder-lint` on every pull request; after each merge and nightly, the release and aarch64 Flatpaks, the
+  source tarball and the native packages with their own smoke tests
 
 ## Architecture
 

@@ -20,7 +20,9 @@
 # UNSTABLE stays out; review threads resolved), and not high risk by main's
 # scripts/tier-classify.sh and .github/risk-assessment.yml (docs/risk-tiers.md): high-risk
 # changes wait for the maintainer. While main lacks either file, every pull request counts as
-# high risk and the queue merges nothing.
+# high risk and the queue merges nothing. Nothing merges either while the last finished
+# Packaging run on main (.github/workflows/packaging.yml, the checks that run after the merge)
+# failed; merge-queue.yml looks again when one passes.
 # Needs gh authenticated (GH_TOKEN) and pointed at the repository (GH_REPO, or run from a
 # checkout). Exits 2 on a wrong command line.
 set -eu
@@ -37,8 +39,8 @@ KEEP_OUT_LABELS='hold blocked sentinel-alert automated'
 HOLD_LABEL="${KEEP_OUT_LABELS%% *}"
 # Every workflow that runs on a push to main (release.yml runs on tags only); each needs a
 # workflow_dispatch trigger. scripts/merge-queue.test.sh checks both against the workflows'
-# own triggers. One missing from main (coverage-gate.yml before #241 lands) is not started.
-MAIN_PUSH_WORKFLOWS='ci.yml coverage-gate.yml'
+# own triggers. One missing from main (packaging.yml before #362 lands) is not started.
+MAIN_PUSH_WORKFLOWS='ci.yml coverage-gate.yml packaging.yml'
 
 # jq test that a pull request carries no label that keeps it out.
 unheld='all(.labels[]; '
@@ -114,6 +116,14 @@ EOF
 next() {
   if [ ! -f "$root/scripts/tier-classify.sh" ] || [ ! -f "$root/.github/risk-assessment.yml" ]; then
     echo "::notice title=Merge queue::main has no scripts/tier-classify.sh or .github/risk-assessment.yml, so every pull request counts as high risk and waits for the maintainer"
+    return 0
+  fi
+  # Runs still going have no conclusion, and a pending run a newer one replaced is cancelled,
+  # so the last finished run is the first with any other conclusion.
+  packaging="$(gh run list --workflow packaging.yml --branch main --limit 50 --json conclusion \
+    --jq '[.[].conclusion | select(. != "" and . != "cancelled" and . != "skipped")][0] // ""')"
+  if [ -n "$packaging" ] && [ "$packaging" != success ]; then
+    echo "::notice title=Merge queue::the last finished Packaging run on main failed ($packaging), so nothing merges until it passes again; fix main by hand or re-run it (docs/ai-ops-runbook.md)"
     return 0
   fi
   # gh lists open pull requests by default; --jq runs gh's built-in jq, so the runner needs

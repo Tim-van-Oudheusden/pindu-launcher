@@ -48,27 +48,7 @@
             "integration_id": 15368
           },
           {
-            "context": "Source tarball with vendored crates",
-            "integration_id": 15368
-          },
-          {
             "context": "Flatpak build, UI smoke test and lint (development)",
-            "integration_id": 15368
-          },
-          {
-            "context": "Flatpak build, UI smoke test and lint (release)",
-            "integration_id": 15368
-          },
-          {
-            "context": "Native package install and UI smoke test (fedora-45)",
-            "integration_id": 15368
-          },
-          {
-            "context": "Native package install and UI smoke test (debian-testing)",
-            "integration_id": 15368
-          },
-          {
-            "context": "Native package install and UI smoke test (ubuntu-26.10)",
             "integration_id": 15368
           },
           {

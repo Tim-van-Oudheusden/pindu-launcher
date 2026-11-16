@@ -1,0 +1,243 @@
+name: Packaging
+
+# The slow checks, run after the merge instead of on every pull request (#362): the source
+# tarball with vendored crates, the native packages built offline from it with their install and
+# UI smoke tests, and the release and aarch64 Flatpak builds. ci.yml's required checks cover the
+# rest on each pull request, the development Flatpak build on x86_64 included, and release.yml
+# runs every one of these builds again on each tag.
+#
+# Runs on every push to main (the merge queue starts it after each merge: a merge made with
+# GITHUB_TOKEN starts no push run), nightly, so a moving distro image such as Debian testing
+# shows up without a merge, and by hand. A failure on main opens or comments on the one
+# `ci: Packaging failing on main` issue (scripts/packaging-issue.sh), and the merge queue merges
+# nothing until a run on main passes again (scripts/merge-queue.sh); that run closes the issue.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '41 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  # One run at a time; a newer pending run replaces an older pending one, so a burst of merges
+  # is built once, at its newest commit.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  LINT_EXCEPTIONS: build-aux/flatpak/lint-exceptions.json
+
+jobs:
+  sources:
+    name: Source tarball with vendored crates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install the Rust SDK extension
+        run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
+
+      # `meson dist` vendors the crates into the tarball (build-aux/dist-vendor.sh), then
+      # builds and tests the tarball offline from them, as a distro builder would.
+      - name: meson dist
+        run: |
+          chown -R "$(id -u):$(id -g)" "$PWD"
+          flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
+            --env=PATH=/usr/lib/sdk/rust-stable/bin:/usr/bin \
+            --command=sh org.gnome.Sdk//51 -c '
+              set -e
+              meson setup _dist
+              meson dist -C _dist --formats xztar
+            '
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sources
+          path: _dist/meson-dist/*.tar.xz
+          if-no-files-found: error
+
+  packages:
+    name: Native package (${{ matrix.target }}${{ matrix.suffix }})
+    needs: sources
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    # Distros that ship GTK 4.24 and libadwaita 1.10 (#232), for x86_64 and aarch64 (#303).
+    # Each builds offline from the tarball's vendored crates, in its own container, on a
+    # runner of its own architecture.
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [fedora-45, debian-testing, ubuntu-26.10]
+        arch: [x86_64, aarch64]
+        include:
+          - target: fedora-45
+            image: registry.fedoraproject.org/fedora:45
+            build: build-aux/rpm/build.sh
+          - target: debian-testing
+            image: docker.io/library/debian:testing
+            build: build-aux/deb/build.sh
+          - target: ubuntu-26.10
+            image: docker.io/library/ubuntu:26.10
+            build: build-aux/deb/build.sh
+          # x86_64 keeps the plain job names, as in release.yml.
+          - arch: x86_64
+            runner: ubuntu-latest
+            suffix: ''
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            suffix: ', aarch64'
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: sources
+          path: sources
+
+      - name: Build
+        run: ${{ matrix.build }} sources/pindu-launcher-*.tar.xz packages ${{ matrix.target }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package-${{ matrix.target }}-${{ matrix.arch }}
+          path: packages/*
+          if-no-files-found: error
+
+  packages-smoke:
+    name: Native package install and UI smoke test (${{ matrix.target }}${{ matrix.suffix }})
+    needs: packages
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    # A clean container: the package must pull in everything it needs to start.
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [fedora-45, debian-testing, ubuntu-26.10]
+        arch: [x86_64, aarch64]
+        include:
+          - target: fedora-45
+            image: registry.fedoraproject.org/fedora:45
+          - target: debian-testing
+            image: docker.io/library/debian:testing
+          - target: ubuntu-26.10
+            image: docker.io/library/ubuntu:26.10
+          - arch: x86_64
+            runner: ubuntu-latest
+            suffix: ''
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            suffix: ', aarch64'
+    container:
+      image: ${{ matrix.image }}
+      # glycin decodes the test cover in a bubblewrap sandbox, which cannot set up its
+      # namespaces in an unprivileged container.
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: package-${{ matrix.target }}-${{ matrix.arch }}
+          path: packages
+
+      - name: Install and start
+        run: build-aux/package-smoke.sh packages/*
+
+  flatpak:
+    name: Flatpak build, UI smoke test and lint (${{ matrix.profile }}${{ matrix.suffix }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    # Every pull request builds the development manifest on x86_64 (ci.yml); here the release
+    # manifest, so a broken one fails before a release is tagged, and both on aarch64, which
+    # builds natively on GitHub's arm64 runners (#303).
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: development
+            manifest: build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher-devel.yml
+            bundle: pindu-launcher-devel.flatpak
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+            suffix: ', aarch64'
+          - profile: release
+            manifest: build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml
+            bundle: pindu-launcher.flatpak
+            arch: x86_64
+            runner: ubuntu-latest
+            suffix: ''
+          - profile: release
+            manifest: build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml
+            bundle: pindu-launcher.flatpak
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+            suffix: ', aarch64'
+    env:
+      MANIFEST: ${{ matrix.manifest }}
+    # As in ci.yml's flatpak job, which says why each volume is there.
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+      volumes:
+        - /usr/local/lib/android:/runner-sdks/android
+        - /usr/share/dotnet:/runner-sdks/dotnet
+        - /opt/hostedtoolcache:/runner-sdks/toolcache
+        - /usr/local/.ghcup:/runner-sdks/ghcup
+        - flatpak-installation:/var/lib/flatpak
+    steps:
+      - name: Free disk space
+        run: |
+          df -h / | tail -1
+          rm -rf /runner-sdks/*/*
+          df -h / | tail -1
+
+      - uses: actions/checkout@v7
+
+      # Runs `meson test` inside the build under xvfb, including the UI smoke test.
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: ${{ matrix.manifest }}
+          bundle: ${{ matrix.bundle }}
+          arch: ${{ matrix.arch }}
+          run-tests: true
+
+      - name: Lint the manifest
+        run: flatpak-builder-lint --gha-format --exceptions --user-exceptions "$LINT_EXCEPTIONS" manifest "$MANIFEST"
+
+      - name: Lint the build (MetaInfo, desktop file, icons)
+        run: flatpak-builder-lint --gha-format --exceptions --user-exceptions "$LINT_EXCEPTIONS" repo repo
+
+  issue:
+    name: Sync the Packaging issue
+    needs: [sources, packages, packages-smoke, flatpak]
+    # Only main's runs speak for main; a cancelled run, replaced by a newer one, says nothing.
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # issues: write lets the script open, comment on and close the issue.
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # A failed build skips the jobs that need it, so one failure anywhere fails the run.
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ contains(needs.*.result, 'failure') && 'failure' || 'success' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: sh scripts/packaging-issue.sh "$RESULT" "$RUN_URL"

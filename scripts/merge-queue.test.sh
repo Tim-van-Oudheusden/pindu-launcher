@@ -71,11 +71,12 @@ keep_out_labels="$(script_list KEEP_OUT_LABELS)"
 main_push_workflows="$(script_list MAIN_PUSH_WORKFLOWS)"
 
 # Stands in for the gh CLI. `gh pr list` and `gh pr view <n>` answer from $FAKE_DIR/prs.json,
-# filtered through `--jq` as gh does. Every other call is appended to $FAKE_DIR/calls.log, one
-# line per call. A call fails when it starts with the text in $FAKE_DIR/fail, or only the first
-# such call does if $FAKE_DIR/fail-once exists. While $FAKE_DIR/unknown-<n> holds a count above
-# 0, asking for the merge state of pull request <n> answers UNKNOWN, as GitHub does before it
-# has computed it, and takes one off the count.
+# and `gh run list --workflow <w> --branch <b>` from $FAKE_DIR/runs/<w>@<b>.json (no runs if it
+# is missing), filtered through `--jq` as gh does. Every other call is appended to
+# $FAKE_DIR/calls.log, one line per call. A call fails when it starts with the text in
+# $FAKE_DIR/fail, or only the first such call does if $FAKE_DIR/fail-once exists. While
+# $FAKE_DIR/unknown-<n> holds a count above 0, asking for the merge state of pull request <n>
+# answers UNKNOWN, as GitHub does before it has computed it, and takes one off the count.
 cat >"$tmp/gh" <<'EOF'
 #!/bin/sh
 set -eu
@@ -85,6 +86,31 @@ fails() {
   case "$*" in "$prefix"*) ;; *) return 1 ;; esac
   [ ! -f "$FAKE_DIR/fail-once" ] || rm "$FAKE_DIR/fail"
 }
+if [ "$1" = run ] && [ "$2" = list ]; then
+  if fails "$@"; then
+    echo "gh: HTTP 502" >&2
+    exit 1
+  fi
+  shift 2
+  workflow=''
+  branch=''
+  filter=.
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --workflow) workflow="$2" ;;
+      --branch) branch="$2" ;;
+      --jq) filter="$2" ;;
+    esac
+    shift 2
+  done
+  runs="$FAKE_DIR/runs/$workflow@$branch.json"
+  if [ -f "$runs" ]; then
+    jq -r "$filter" "$runs"
+  else
+    echo '[]' | jq -r "$filter"
+  fi
+  exit 0
+fi
 if [ "$1" = pr ] && { [ "$2" = list ] || [ "$2" = view ]; }; then
   if fails "$@"; then
     echo "gh: HTTP 502" >&2
@@ -214,6 +240,12 @@ fail_first_call_starting_with() {
 # unknown_merge_state <number> <times>: GitHub answers UNKNOWN for the next <times> asks.
 unknown_merge_state() {
   echo "$2" >"$work/unknown-$1"
+}
+
+# packaging_runs <json>: the Packaging runs on main, newest first, as `gh run list` has them.
+packaging_runs() {
+  mkdir -p "$work/runs"
+  printf '%s' "$1" >"$work/runs/packaging.yml@main.json"
 }
 
 # run_queue <args>...: clones origin's main as the workflow checks it out, with this
@@ -402,6 +434,35 @@ fail_calls_starting_with 'pr view 7 --json mergeStateStatus'
 run_queue next
 check 'next fails when a merge state cannot be read' 1 "$status"
 check 'next picks nothing when a merge state cannot be read' '' "$outputs"
+
+# Packaging builds the source tarball and the packages after each merge. While its last finished
+# run on main failed, main does not package, and merging more would pile changes on the break.
+# Runs still going have no conclusion yet; a pending run that a newer one replaced is cancelled.
+new_queue packaging-red
+add_pr 7
+listing '[{"number":7}]'
+packaging_runs '[{"conclusion":""},{"conclusion":"cancelled"},{"conclusion":"failure"},{"conclusion":"success"}]'
+run_queue next
+check 'next picks nothing while the last finished Packaging run on main failed' '' "$outputs"
+check 'next passes while Packaging is red on main' 0 "$status"
+check_has 'next says why the queue waits' "$out" \
+  '::notice title=Merge queue::the last finished Packaging run on main failed'
+
+new_queue packaging-green
+add_pr 7
+listing '[{"number":7}]'
+packaging_runs '[{"conclusion":""},{"conclusion":"cancelled"},{"conclusion":"success"},{"conclusion":"failure"}]'
+run_queue next
+check 'next picks again once the last finished Packaging run on main passed' \
+  "number=7${nl}head=$(head_of 7)${nl}main=$(main_sha)" "$outputs"
+
+new_queue packaging-unread
+add_pr 7
+listing '[{"number":7}]'
+fail_calls_starting_with 'run list'
+run_queue next
+check 'next fails when the Packaging runs cannot be read' 1 "$status"
+check 'next picks nothing when the Packaging runs cannot be read' '' "$outputs"
 
 # --- land ------------------------------------------------------------------------------------
 
@@ -603,6 +664,14 @@ EOF
     not_ok "the queue does not watch $name ($(basename "$file")), which holds a required check"
   fi
 done
+
+# A Packaging run that passes again on main is what lets a paused queue merge.
+packaging_name="$(yq '.name' "$root/.github/workflows/packaging.yml")"
+if printf '%s\n' "$watched" | grep -qxF "$packaging_name"; then
+  ok "the queue looks again when $packaging_name passes"
+else
+  not_ok "the queue does not watch $packaging_name, whose failure pauses it"
+fi
 
 # A merge made with GITHUB_TOKEN starts no push workflow, so land starts each one, and `gh
 # workflow run` fails on a workflow without a workflow_dispatch trigger.

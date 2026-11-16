@@ -61,6 +61,11 @@ workflows:
     jobs:
       compliance: { contents: read, vulnerability-alerts: read }
 
+  # Opens, comments on and closes the `ci: Packaging failing on main` issue.
+  packaging.yml:
+    jobs:
+      issue: { contents: read, issues: write }
+
   pr-metrics.yml:
     jobs:
       acceptance: { contents: read, pull-requests: read }

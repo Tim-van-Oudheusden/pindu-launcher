@@ -8,12 +8,14 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-15, #303/#304/#305 (aarch64): specced arm64 support into three issues. #303 builds, tests and releases the
-  Flatpak bundle and the RPM/DEBs for aarch64 too, natively on `ubuntu-24.04-arm` (repo is public, so free); #304
-  makes Proton downloads and discovery pick builds for the host architecture; #305 explains a MangoHud switch that
-  cannot work in the sandbox (Flathub has no aarch64 `VulkanLayer.MangoHud`).
-- Open: the aarch64 CI jobs are not required checks yet; adding them to `.github/rulesets/main.json` is the
-  maintainer's call once they have run green.
-- Gotcha: Flathub has no aarch64 `Compat.i386`, `GL32` (26.08) or MangoHud; `add-extensions` entries without a ref
-  resolve to nothing, so the manifests stay identical on both architectures. umu-launcher 1.4.4 handles aarch64
-  itself (Steam Linux Runtime 4.0 arm64, app 4185400). This host has no meson: run gates inside `org.gnome.Sdk//51`.
+- 2026-11-16, #362 (CI speed): PR CI took 17–20 min, almost all of it the serial chain source tarball → native
+  packages → package smoke tests; the Rust checks finish in ~3 min. Split CI in two: `ci.yml` keeps the required
+  checks plus the development Flatpak on x86_64 (skipped for docs/`po/*.po`-only PRs via `scripts/needs-build.sh`);
+  the new `packaging.yml` runs the tarball, native packages and release/aarch64 Flatpaks on each push to `main`,
+  nightly and by hand. A red Packaging run on `main` pauses the merge queue (`scripts/merge-queue.sh next`) and opens
+  the `ci: Packaging failing on main` issue (`scripts/packaging-issue.sh`).
+- Open: the maintainer merges #362 by hand and applies `.github/rulesets/main.json` at the same time
+  (`gh api -X PUT …/rulesets/26762163`): the live ruleset still requires checks that no longer run on pull requests,
+  so every pull request waits on them until it is applied.
+- Gotcha: a required check must not be a matrix job that can be skipped (its name stays unexpanded), and a job-level
+  `if` that reads another job's output needs `!cancelled()` so a failed producer does not skip it into a pass.

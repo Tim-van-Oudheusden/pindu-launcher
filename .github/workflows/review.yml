@@ -34,9 +34,10 @@ jobs:
 
           Automated above: a Conventional Commits title ending with its issue, and a linked issue
           (`Fixes #N`, or `Refs #N`). CI covers rustfmt, clippy, rustdoc, the unit and Meson tests,
-          the Flatpak and native package builds with their UI smoke tests, flatpak-builder-lint,
-          and the governance scripts. The risk tier is in the `Risk tier` job summary
-          (docs/risk-tiers.md).
+          the development Flatpak build with its UI smoke test and flatpak-builder-lint, and the
+          governance scripts; after the merge, Packaging builds the source tarball, the native
+          packages and the release and aarch64 Flatpaks. The risk tier is in the `Risk tier` job
+          summary (docs/risk-tiers.md).
 
           Check by hand:
 

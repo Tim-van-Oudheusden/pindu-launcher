@@ -116,7 +116,7 @@ jobs:
       - name: Install the Rust SDK extension
         run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
 
-      # As in ci.yml: vendors the crates, then builds and tests the tarball offline.
+      # As in packaging.yml: vendors the crates, then builds and tests the tarball offline.
       - name: meson dist
         run: |
           chown -R "$(id -u):$(id -g)" "$PWD"
@@ -157,7 +157,7 @@ jobs:
           - target: ubuntu-26.10
             image: docker.io/library/ubuntu:26.10
             build: build-aux/deb/build.sh
-          # The job names match ci.yml's.
+          # The job names match packaging.yml's.
           - arch: x86_64
             runner: ubuntu-latest
             suffix: ''
