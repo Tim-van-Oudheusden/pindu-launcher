@@ -3,8 +3,13 @@
 //! Wi-Fi device and its state, Wi-Fi's switch, and the Wi-Fi networks in range, which a
 //! scan looks for as the level opens. A new network is joined by selecting it, after its
 //! passphrase where it needs one; a saved one opens to Connect and Forget (asked first).
-//! The window shows [`NetworkService`]'s state and calls it; it never talks to
-//! NetworkManager itself.
+//! The level is [`PinduNetworkLevel`], with its own Blueprint
+//! (`data/ui/fullscreen_network.blp`); the window keeps the entry, which sits in Quick
+//! Access's shared list, and the level's `win.network-join` and `win.network-forget`.
+//! Both show [`NetworkService`]'s state and call it; neither talks to NetworkManager
+//! itself.
+
+use std::cell::RefCell;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -19,6 +24,64 @@ use pindu_core::system::network::{
 use crate::application::PinduApplication;
 use crate::network_service::NetworkService;
 use crate::window::PinduWindow;
+
+mod imp {
+    use super::*;
+
+    #[derive(Debug, Default, gtk::CompositeTemplate)]
+    #[template(resource = "/io/github/tim_van_oudheusden/pindu-launcher/ui/fullscreen_network.ui")]
+    pub struct PinduNetworkLevel {
+        #[template_child]
+        pub quick_access_network_devices: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_wifi_radio: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_wifi_switch: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_wifi_blocked: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub quick_access_wifi_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_wifi_networks: TemplateChild<gtk::ListBox>,
+        /// The dialog asking for a Wi-Fi passphrase, with the prompt it shows.
+        pub network_prompt: RefCell<Option<(adw::AlertDialog, Prompt)>>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for PinduNetworkLevel {
+        const NAME: &'static str = "PinduNetworkLevel";
+        type Type = super::PinduNetworkLevel;
+        type ParentType = adw::Bin;
+
+        fn class_init(klass: &mut Self::Class) {
+            klass.bind_template();
+        }
+
+        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
+            obj.init_template();
+        }
+    }
+
+    impl ObjectImpl for PinduNetworkLevel {
+        fn constructed(&self) {
+            self.parent_constructed();
+            self.obj().setup();
+        }
+    }
+
+    impl WidgetImpl for PinduNetworkLevel {}
+
+    impl BinImpl for PinduNetworkLevel {}
+}
+
+glib::wrapper! {
+    /// Quick Access's Network level: the wired and Wi-Fi devices, Wi-Fi's switch and the
+    /// Wi-Fi networks in range. It is the `"network"` page of the window's Quick Access
+    /// stack.
+    pub struct PinduNetworkLevel(ObjectSubclass<imp::PinduNetworkLevel>)
+        @extends adw::Bin, gtk::Widget,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
+}
 
 impl PinduWindow {
     /// Adds the level's actions, and shows the entry as the network is and as it changes.
@@ -38,41 +101,12 @@ impl PinduWindow {
             .parameter_type(Some(glib::VariantTy::BYTE_STRING))
             .activate(|window: &Self, _, target| {
                 if let Some(ssid) = target.and_then(|target| target.get::<Vec<u8>>()) {
-                    window.ask_forget_network(&ssid);
+                    let level = &window.imp().quick_access_network_level;
+                    level.ask_forget(&ssid);
                 }
             })
             .build();
         self.add_action_entries([join, forget]);
-        let imp = self.imp();
-        // Named as the network rows are, so focus finds them again after a refill.
-        imp.quick_access_wifi_switch.set_widget_name("radio:switch");
-        imp.quick_access_wifi_blocked
-            .set_widget_name("radio:blocked");
-        imp.quick_access_wifi_switch
-            .connect_active_notify(glib::clone!(
-                #[weak(rename_to = window)]
-                self,
-                move |switch| {
-                    // Showing the state sets the switch too; only the user's flip asks.
-                    let Some(service) = window.network_service() else {
-                        return;
-                    };
-                    if switch.is_active() != (service.state().radio == Radio::On) {
-                        service.set_wireless(switch.is_active());
-                    }
-                }
-            ));
-        let placeholder = gtk::Label::builder()
-            .label(gettext("Looking for networks…"))
-            .wrap(true)
-            .margin_top(12)
-            .margin_bottom(12)
-            .margin_start(12)
-            .margin_end(12)
-            .css_classes(["dim-label"])
-            .build();
-        imp.quick_access_wifi_networks
-            .set_placeholder(Some(&placeholder));
         let Some(service) = self.network_service() else {
             return;
         };
@@ -96,19 +130,7 @@ impl PinduWindow {
 
     /// Where focus goes on the level: the first device, or else Wi-Fi's switch.
     pub(crate) fn network_focus(&self) -> Option<gtk::Widget> {
-        let imp = self.imp();
-        imp.quick_access_network_devices
-            .row_at_index(0)
-            .map(|row| row.upcast())
-            .or_else(|| {
-                let switch = &imp.quick_access_wifi_switch;
-                let row: gtk::Widget = if switch.is_visible() {
-                    switch.get().upcast()
-                } else {
-                    imp.quick_access_wifi_blocked.get().upcast()
-                };
-                imp.quick_access_wifi_radio.is_visible().then_some(row)
-            })
+        self.imp().quick_access_network_level.focus_target()
     }
 
     fn network_service(&self) -> Option<NetworkService> {
@@ -131,7 +153,8 @@ impl PinduWindow {
             imp.quick_access_network_subtitle
                 .set_label(&summary_text(summary));
         }
-        self.show_network_prompt(state.prompt.as_ref());
+        imp.quick_access_network_level
+            .show_prompt(state.prompt.as_ref());
         if self.open_panel() != Some(Panel::QuickAccess(QuickAccessLevel::Network)) {
             return;
         }
@@ -142,11 +165,93 @@ impl PinduWindow {
         self.fill_network(state);
     }
 
-    /// The level's rows for `state`, keeping focus on the row it was on and saved networks
-    /// open as they were.
+    /// Fills the level for `state`, and puts focus back in the panel when the row it was on
+    /// is gone.
     fn fill_network(&self, state: &NetworkState) {
+        if self.imp().quick_access_network_level.fill(state) {
+            self.focus_panel(None);
+        }
+    }
+}
+
+impl PinduNetworkLevel {
+    /// Names the rows controller focus finds again after a refill, gives the networks
+    /// their placeholder, and turns Wi-Fi on or off as the user flips its switch.
+    fn setup(&self) {
         let imp = self.imp();
-        let focused = self.network_focused_row();
+        // Named as the network rows are, so focus finds them again after a refill.
+        imp.quick_access_wifi_switch.set_widget_name("radio:switch");
+        imp.quick_access_wifi_blocked
+            .set_widget_name("radio:blocked");
+        imp.quick_access_wifi_switch
+            .connect_active_notify(glib::clone!(
+                #[weak(rename_to = level)]
+                self,
+                move |switch| {
+                    // Showing the state sets the switch too; only the user's flip asks.
+                    let Some(service) = level.network_service() else {
+                        return;
+                    };
+                    if switch.is_active() != (service.state().radio == Radio::On) {
+                        service.set_wireless(switch.is_active());
+                    }
+                }
+            ));
+        let placeholder = gtk::Label::builder()
+            .label(gettext("Looking for networks…"))
+            .wrap(true)
+            .margin_top(12)
+            .margin_bottom(12)
+            .margin_start(12)
+            .margin_end(12)
+            .css_classes(["dim-label"])
+            .build();
+        imp.quick_access_wifi_networks
+            .set_placeholder(Some(&placeholder));
+    }
+
+    /// The level's lists, whose Up and Down go on to the next list at their ends.
+    pub(crate) fn lists(&self) -> [gtk::ListBox; 3] {
+        let imp = self.imp();
+        [
+            imp.quick_access_network_devices.get(),
+            imp.quick_access_wifi_radio.get(),
+            imp.quick_access_wifi_networks.get(),
+        ]
+    }
+
+    /// Where focus goes on the level: the first device, or else Wi-Fi's switch.
+    pub(crate) fn focus_target(&self) -> Option<gtk::Widget> {
+        let imp = self.imp();
+        imp.quick_access_network_devices
+            .row_at_index(0)
+            .map(|row| row.upcast())
+            .or_else(|| {
+                let switch = &imp.quick_access_wifi_switch;
+                let row: gtk::Widget = if switch.is_visible() {
+                    switch.get().upcast()
+                } else {
+                    imp.quick_access_wifi_blocked.get().upcast()
+                };
+                imp.quick_access_wifi_radio.is_visible().then_some(row)
+            })
+    }
+
+    /// The service, through the application of the window the level is in.
+    fn network_service(&self) -> Option<NetworkService> {
+        self.root()
+            .and_downcast::<gtk::Window>()
+            .and_then(|window| window.application())
+            .and_downcast::<PinduApplication>()
+            .map(|application| application.network_service().clone())
+    }
+
+    /// The level's rows for `state`, keeping focus on the row it was on and saved networks
+    /// open as they were. Returns whether focus was on a row that is gone, with no row to
+    /// take its place, so the window must put it somewhere.
+    pub(crate) fn fill(&self, state: &NetworkState) -> bool {
+        let imp = self.imp();
+        let focused = self.focused_row();
 
         let devices = &imp.quick_access_network_devices;
         devices.remove_all();
@@ -203,22 +308,17 @@ impl PinduWindow {
                 Some(target) => {
                     target.grab_focus();
                 }
-                None => self.focus_panel(None),
+                None => return true,
             }
         }
+        false
     }
 
     /// The name of the level's row that has focus, which filling the level again takes
     /// away; `None` when focus is elsewhere.
-    fn network_focused_row(&self) -> Option<String> {
-        let imp = self.imp();
-        let focus = gtk::prelude::GtkWindowExt::focus(self)?;
-        let lists = [
-            imp.quick_access_network_devices.get(),
-            imp.quick_access_wifi_radio.get(),
-            imp.quick_access_wifi_networks.get(),
-        ];
-        if !lists.iter().any(|list| focus.is_ancestor(list)) {
+    fn focused_row(&self) -> Option<String> {
+        let focus = gtk::prelude::RootExt::focus(&self.root()?)?;
+        if !self.lists().iter().any(|list| focus.is_ancestor(list)) {
             return None;
         }
         // The rows the level names; an expander row's header inside it has no name.
@@ -229,7 +329,7 @@ impl PinduWindow {
 
     /// Asks for the passphrase the section wants in a dialog, or closes the dialog once it
     /// no longer wants one.
-    fn show_network_prompt(&self, prompt: Option<&Prompt>) {
+    pub(crate) fn show_prompt(&self, prompt: Option<&Prompt>) {
         let imp = self.imp();
         let shown = imp.network_prompt.borrow().clone();
         if shown.as_ref().map(|(_, shown)| shown) == prompt {
@@ -247,10 +347,10 @@ impl PinduWindow {
         dialog.connect_response(
             None,
             glib::clone!(
-                #[weak(rename_to = window)]
+                #[weak(rename_to = level)]
                 self,
                 move |_, response| {
-                    let Some(service) = window.network_service() else {
+                    let Some(service) = level.network_service() else {
                         return;
                     };
                     // A dialog closing for a prompt gone or replaced answers nothing.
@@ -259,7 +359,7 @@ impl PinduWindow {
                     }
                     // The dialog closes itself after its response; the answer changing the
                     // prompt must not close it again.
-                    window.imp().network_prompt.replace(None);
+                    level.imp().network_prompt.replace(None);
                     if response == "join" {
                         service.enter(Some(&entry.text()));
                     } else {
@@ -267,15 +367,15 @@ impl PinduWindow {
                     }
                     // A passphrase that cannot fit again leaves the prompt as it was, which
                     // tells no listener; ask again here.
-                    window.show_network_prompt(service.state().prompt.as_ref());
+                    level.show_prompt(service.state().prompt.as_ref());
                 }
             ),
         );
         dialog.connect_closed(glib::clone!(
-            #[weak(rename_to = window)]
+            #[weak(rename_to = level)]
             self,
             move |dialog| {
-                let imp = window.imp();
+                let imp = level.imp();
                 let ours = imp
                     .network_prompt
                     .borrow()
@@ -288,11 +388,12 @@ impl PinduWindow {
         ));
         imp.network_prompt
             .replace(Some((dialog.clone(), prompt.clone())));
-        dialog.present(Some(self));
+        // On the window the level is in.
+        dialog.present(self.root().as_ref());
     }
 
     /// Asks before forgetting a saved network: joining it again takes its passphrase.
-    fn ask_forget_network(&self, ssid: &[u8]) {
+    pub(crate) fn ask_forget(&self, ssid: &[u8]) {
         let Some(service) = self.network_service() else {
             return;
         };
@@ -321,7 +422,7 @@ impl PinduWindow {
         dialog.set_response_appearance("forget", adw::ResponseAppearance::Destructive);
         let ssid = ssid.to_vec();
         dialog.connect_response(Some("forget"), move |_, _| service.forget(&ssid));
-        dialog.present(Some(self));
+        dialog.present(self.root().as_ref());
     }
 }
 

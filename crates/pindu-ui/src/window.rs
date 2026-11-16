@@ -27,6 +27,7 @@ use pindu_core::tasks::Task;
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
 use crate::fullscreen::NavigationSounds;
+use crate::fullscreen_network::PinduNetworkLevel;
 use crate::game_page::GamePage;
 use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
@@ -309,17 +310,7 @@ mod imp {
         #[template_child]
         pub quick_access_network_subtitle: TemplateChild<gtk::Label>,
         #[template_child]
-        pub quick_access_network_devices: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_wifi_radio: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_wifi_switch: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub quick_access_wifi_blocked: TemplateChild<adw::ActionRow>,
-        #[template_child]
-        pub quick_access_wifi_title: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub quick_access_wifi_networks: TemplateChild<gtk::ListBox>,
+        pub quick_access_network_level: TemplateChild<PinduNetworkLevel>,
         #[template_child]
         pub quick_access_bluetooth_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
@@ -411,9 +402,6 @@ mod imp {
         pub performance_tools: Cell<Option<[bool; 2]>>,
         /// Whether the switches are being set to show those, rather than by the user.
         pub performance_filling: Cell<bool>,
-        /// The dialog asking for a Wi-Fi passphrase, with the prompt it shows.
-        pub network_prompt:
-            RefCell<Option<(adw::AlertDialog, pindu_core::system::network::Prompt)>>,
     }
 
     #[glib::object_subclass]
@@ -424,6 +412,7 @@ mod imp {
 
         fn class_init(klass: &mut Self::Class) {
             HomePage::ensure_type();
+            PinduNetworkLevel::ensure_type();
             klass.bind_template();
         }
 

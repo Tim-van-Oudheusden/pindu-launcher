@@ -146,20 +146,24 @@ Each section is a service in `pindu-ui` over a backend trait in `pindu-core`, as
 (`GamepadBackend` in `pindu-core`, `ManetteBackend` in `pindu-ui`). The shells observe the services' models and call
 the services; they never talk to the bus or spawn a process themselves.
 
-| Section | Core module (pure logic and the trait) | UI backend | UI service |
-| --- | --- | --- | --- |
-| Availability | `system` (the rules in [What is available](#what-is-available), from facts the backends report) | | |
-| Power | `system::power` (`PowerBackend`) | `logind_backend.rs` | `system_power_service.rs` |
-| Network | `system::network` (`NetworkBackend`) | `networkmanager_backend.rs` | `network_service.rs` |
-| Bluetooth | `system::bluetooth` (`BluetoothBackend`) | `bluez_backend.rs` | `bluetooth_service.rs` |
-| Audio output | `system::audio` (`AudioBackend`, `pw-dump` parser) | `wireplumber_backend.rs` | `audio_output_service.rs` |
-| OS updates | `system::update` (`UpdateBackend`, `bootc status` parser) | `pindu_os_backend.rs` | `system_update_service.rs` |
+| Section | Core module (pure logic and the trait) | UI backend | UI service | UI level |
+| --- | --- | --- | --- | --- |
+| Availability | `system` (the rules in [What is available](#what-is-available), from facts the backends report) | | | |
+| Power | `system::power` (`PowerBackend`) | `logind_backend.rs` | `system_power_service.rs` | not yet moved (#338) |
+| Network | `system::network` (`NetworkBackend`) | `networkmanager_backend.rs` | `network_service.rs` | `PinduNetworkLevel` (`fullscreen_network.rs`), `data/ui/fullscreen_network.blp` |
+| Bluetooth | `system::bluetooth` (`BluetoothBackend`) | `bluez_backend.rs` | `bluetooth_service.rs` | not yet moved (#338) |
+| Audio output | `system::audio` (`AudioBackend`, `pw-dump` parser) | `wireplumber_backend.rs` | `audio_output_service.rs` | not yet moved (#338) |
+| OS updates | `system::update` (`UpdateBackend`, `bootc status` parser) | `pindu_os_backend.rs` | `system_update_service.rs` | not yet moved (#338) |
 
 - The backends report results through callbacks on the main thread, like `GamepadBackend::start`'s sink, so the core
   stays free of GLib and every flow (join a network, pair a device, roll back) is tested in `pindu-core` with a fake
   backend.
 - The existing `power` module (batteries from sysfs) keeps its name; the new power actions live in `system::power`.
 - The panel's levels and entries extend `panels.rs` (`DrawerLevel`, `QuickAccessLevel`, `drawer_entries`).
+- Each section's level is its own composite widget with its own Blueprint (the UI level column), a single child of its
+  page in `window.blp`, as `HomePage` is. The section's entry stays in `window.blp`, in the panel's shared list. Moving
+  a level keeps its action names (`win.*`), the widget names controller focus finds its rows by, and the style classes
+  in [Fullscreen style](fullscreen-style.md); its rows stay direct children of their list boxes.
 
 ## Pindu OS side
 
