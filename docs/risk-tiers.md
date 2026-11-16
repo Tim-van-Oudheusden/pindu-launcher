@@ -3,8 +3,8 @@
 Every pull request is classified into one of three risk tiers from the paths it changes.
 `.github/workflows/tier-classifier.yml` runs `scripts/tier-classify.sh` on each pull request and posts the tier, plus
 every changed file with its own tier, to the `Risk tier` job summary. The classification never fails the run: it tells
-reviewers how closely to look. The maintainer merges every pull request (AGENTS.md); a high-risk one only after the
-review below.
+reviewers how closely to look. The merge queue merges a low- or medium-risk pull request once every check passes; the
+maintainer merges a high-risk one, only after the review below (AGENTS.md).
 
 The **highest tier of any changed file wins**, so one workflow edit makes the whole pull request high risk. A path that
 matches no rule is **medium**, so a new kind of file that configures a gate, the build or the sandbox needs a high rule

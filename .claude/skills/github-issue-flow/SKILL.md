@@ -49,5 +49,5 @@ Issue work lands through a pull request, never a direct push to `main`.
 3. Open the PR, using `prompts/pull-request.md` for the body:
    `gh pr create --title "type(scope): summary (#<number>)" --body-file <file>`. The body says `Fixes #<number>`.
 4. Confirm `git status` shows up to date with `origin/<branch>`, overwrite the "Latest session" section of
-   `.claude/session-summary.md` in the issue's commit, and hand off the PR URL. The maintainer merges it, and the merge
-   closes the issue.
+   `.claude/session-summary.md` in the issue's commit, and hand off the PR URL. The maintainer or the merge queue merges
+   it, and the merge closes the issue.
