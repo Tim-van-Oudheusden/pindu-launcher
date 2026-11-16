@@ -40,6 +40,10 @@ BuildRequires:  pkgconfig(libseccomp)
 Requires:       glycin-loaders
 Requires:       bubblewrap
 Requires:       hicolor-icon-theme
+# Fullscreen Home's background (VP9 in Matroska) and the navigation sounds (WAV) play
+# through GTK's GStreamer backend; gtk4 pulls in only the base plug-ins, and the Matroska
+# demuxer, VP9 decoder and WAV parser are in the good ones
+Requires:       gstreamer1-plugins-good
 # GameMode for games that turn it on; umu-launcher, which runs Windows games, has no
 # Fedora package: https://github.com/Open-Wine-Components/umu-launcher#installing
 Recommends:     gamemode

@@ -134,7 +134,10 @@ python3 tests/tooling/test_check_version.py   # one file, without Meson
 `tests/e2e/ui-smoke.sh` starts the installed app with an empty library and settings, on its own D-Bus session, with
 `G_DEBUG=fatal-criticals`, and fails if it is not still running five seconds later. It needs a display and the
 installed resources, so a plain `meson test` skips it (exit 77); it runs under xvfb in both Flatpak builds and, through
-`build-aux/package-smoke.sh`, in every native package.
+`build-aux/package-smoke.sh`, in every native package. With `--fullscreen APP_ID` it starts the app in fullscreen mode
+with the navigation sounds on and plays one, and fails if the window is not in fullscreen mode or the log says Home's
+background or the sound could not play, which is how a missing GStreamer plug-in shows; the native package smoke test
+runs it that way too.
 
 ```sh
 meson test -C _build ui-smoke   # after meson install, with a display
@@ -169,9 +172,10 @@ meson setup _dist && meson dist -C _dist --formats xztar
 
 `build-aux/rpm/build.sh` and `build-aux/deb/build.sh` build an RPM for Fedora 45 and DEBs for Debian testing and
 Ubuntu 26.10 offline from the tarball, each in its distribution's container. `build-aux/package-smoke.sh` then installs
-each package in a clean container with only the dependencies it declares and runs the UI smoke test under Xvfb. A
-failure means a package misses a dependency or a file. When a new distribution release qualifies, add it to both
-workflows' matrices ([`docs/releasing.md`](../releasing.md)).
+each package in a clean container with only the dependencies it declares and runs the UI smoke test under Xvfb, once
+as it starts and once in fullscreen mode. A failure means a package misses a dependency (a glycin loader or a GStreamer
+plug-in, say) or a file. When a new distribution release qualifies, add it to both workflows' matrices
+([`docs/releasing.md`](../releasing.md)).
 
 ```sh
 podman run --rm -v "$PWD:/src:Z" -w /src registry.fedoraproject.org/fedora:45 \
