@@ -9,6 +9,7 @@ crates/pindu-ui/src/fullscreen_controllers.rs
 crates/pindu-ui/src/fullscreen_controls.rs
 crates/pindu-ui/src/fullscreen_game.rs
 crates/pindu-ui/src/fullscreen_library.rs
+crates/pindu-ui/src/fullscreen_network.rs
 crates/pindu-ui/src/fullscreen_notifications.rs
 crates/pindu-ui/src/fullscreen_panels.rs
 crates/pindu-ui/src/fullscreen_performance.rs
@@ -21,6 +22,7 @@ crates/pindu-ui/src/hint_bar.rs
 crates/pindu-ui/src/home_page.rs
 crates/pindu-ui/src/launch_service.rs
 crates/pindu-ui/src/log_service.rs
+crates/pindu-ui/src/network_service.rs
 crates/pindu-ui/src/preferences.rs
 crates/pindu-ui/src/proton_choice.rs
 crates/pindu-ui/src/proton_download_service.rs

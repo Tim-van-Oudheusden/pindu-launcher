@@ -14,6 +14,7 @@ use crate::launch_service;
 use crate::library_service::{ImportFailure, LibraryService};
 use crate::manette_backend::ManetteBackend;
 use crate::models::GameObject;
+use crate::network_service::NetworkService;
 use crate::notification_service::NotificationService;
 use crate::permission_service;
 use crate::power_service::PowerService;
@@ -71,6 +72,8 @@ mod imp {
         pub bluetooth_service: OnceCell<BluetoothService>,
         /// OS updates on Pindu OS, for Quick Access's System Update.
         pub system_update_service: OnceCell<SystemUpdateService>,
+        /// The network, for Quick Access's Network.
+        pub network_service: OnceCell<NetworkService>,
         /// What happened in the background this session, for Quick Access.
         pub notification_service: NotificationService,
         /// What runs in the background, for Quick Access's Activity.
@@ -163,6 +166,9 @@ mod imp {
                 .expect("start-up runs once");
             self.system_update_service
                 .set(SystemUpdateService::new(&self.notification_service))
+                .expect("start-up runs once");
+            self.network_service
+                .set(NetworkService::new(&self.notification_service))
                 .expect("start-up runs once");
             // Loaded here, not on the first window: Shell search and --launch need the
             // library when no window opens.
@@ -340,6 +346,14 @@ impl PinduApplication {
     pub fn system_update_service(&self) -> &SystemUpdateService {
         self.imp()
             .system_update_service
+            .get()
+            .expect("the application has started")
+    }
+
+    /// The network.
+    pub fn network_service(&self) -> &NetworkService {
+        self.imp()
+            .network_service
             .get()
             .expect("the application has started")
     }
