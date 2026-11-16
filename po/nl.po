@@ -214,7 +214,10 @@ msgstr "Naam"
 #: crates/pindu-ui/src/collection_actions.rs:239
 #: crates/pindu-ui/src/game_dialog.rs:807
 #: crates/pindu-ui/src/proton_downloads_page.rs:227
-#: crates/pindu-ui/src/proton_launch.rs:628 data/ui/game_dialog.blp:16
+#: crates/pindu-ui/src/proton_launch.rs:628
+#: crates/pindu-ui/src/fullscreen_system_update.rs:169
+#: data/ui/game_dialog.blp:16 crates/pindu-ui/src/fullscreen_bluetooth.rs:315
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:472
 msgid "_Cancel"
 msgstr "_Annuleren"
 
@@ -589,6 +592,226 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_status.rs:64
 msgid "Fully charged"
+msgstr ""
+
+#: crates/pindu-ui/src/bluetooth_service.rs:28
+msgid "Could not turn Bluetooth on"
+msgstr ""
+
+#: crates/pindu-ui/src/bluetooth_service.rs:31
+msgid "Could not turn Bluetooth off"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a
+#. controller's.
+#: crates/pindu-ui/src/bluetooth_service.rs:36
+msgid "Could not pair {device}"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a
+#. controller's.
+#: crates/pindu-ui/src/bluetooth_service.rs:42
+msgid "Could not connect {device}"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a
+#. controller's.
+#: crates/pindu-ui/src/bluetooth_service.rs:48
+msgid "Could not disconnect {device}"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a
+#. controller's.
+#: crates/pindu-ui/src/bluetooth_service.rs:54
+msgid "Could not forget {device}"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:75
+msgid "Looking for devices…"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a controller's.
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:307
+msgid "Forget {device}?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:309
+msgid ""
+"It disconnects, and has to be paired again before it can connect. If it is "
+"the controller in use, use another one to pair it."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:316
+msgid "_Forget"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:334
+#, fuzzy
+#| msgid "No Controllers Connected"
+msgid "No devices connected"
+msgstr "Geen Controller Gedetecteerd"
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:336
+msgid "Blocked"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:352
+#, fuzzy
+#| msgid "Cancelling…"
+msgid "Pairing…"
+msgstr "Aan het annuleren…"
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:353
+#, fuzzy
+#| msgid "Cancelling…"
+msgid "Connecting…"
+msgstr "Aan het annuleren…"
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:354
+msgid "Disconnecting…"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:355
+msgid "Forgetting…"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:356
+msgid "Connected"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:357
+msgid "Paired"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:393
+msgid "Disconnect"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:399
+msgid "Connect"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:411
+msgid "Forget"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a controller's.
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:453
+msgid "Pair With {device}?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:454
+msgid "Pair if the device shows this code too."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:459
+msgid "_Refuse"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:459
+msgid "_Pair"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a keyboard's.
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:466
+msgid "Type This Code on {device}"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:467
+msgid "Then press Enter on it."
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name.
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:478
+msgid "{device} Asks for a Code"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:480
+msgid ""
+"Typing a code with the controller is not possible yet, so this device cannot "
+"pair here."
+msgstr ""
+
+#: data/ui/window.blp:603 data/ui/window.blp:1419 data/ui/window.blp:1436
+#: data/ui/window.blp:1440
+msgid "Bluetooth"
+msgstr ""
+
+#: data/ui/window.blp:1441
+msgid "Turned off by airplane mode or a hardware switch"
+msgstr ""
+
+#: data/ui/window.blp:1447
+msgid "Paired Devices"
+msgstr ""
+
+#: data/ui/window.blp:1467
+msgid "Found Devices"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:78
+msgid "Update ready"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:115
+#, fuzzy
+#| msgid "Installing"
+msgid "Installed Version"
+msgstr "Installeren"
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:124
+msgid "Update Ready"
+msgstr ""
+
+#. Translators: {version} is an OS version, such as 45.20261101.0.
+#: crates/pindu-ui/src/fullscreen_system_update.rs:150
+msgid "Roll Back to {version}?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:151
+msgid "Roll Back to the Previous Version?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:155
+msgid ""
+"The console restarts into that version, and the update waiting for the next "
+"start is discarded. The version it runs now stays installed, so you can go "
+"back to it."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:159
+msgid ""
+"The console restarts into that version. The version it runs now stays "
+"installed, so you can go back to it."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:170
+msgid "_Roll Back"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:230
+msgid "Restart to Update"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:235
+msgid "Restart"
+msgstr ""
+
+#. Translators: {version} is an OS version, such as 45.20261101.0.
+#: crates/pindu-ui/src/fullscreen_system_update.rs:242
+msgid "Roll Back to {version}"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:243
+msgid "Roll Back to the Previous Version"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:260
+msgid "Rolling Back…"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:261
+msgid "Restarting…"
 msgstr ""
 
 #: crates/pindu-ui/src/game_dialog.rs:238 data/ui/shortcuts-dialog.blp:14
@@ -972,6 +1195,7 @@ msgstr ""
 #: crates/pindu-ui/src/launch_service.rs:196
 #: crates/pindu-ui/src/proton_launch.rs:373
 #: crates/pindu-ui/src/proton_launch.rs:602 crates/pindu-ui/src/window.rs:1336
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:485
 msgid "_Close"
 msgstr ""
 
@@ -1447,6 +1671,16 @@ msgstr ""
 #: crates/pindu-ui/src/sync_service.rs:144
 msgid "The import stopped unexpectedly"
 msgstr ""
+
+#: crates/pindu-ui/src/system_update_service.rs:32
+msgid "Could not roll back"
+msgstr ""
+
+#: crates/pindu-ui/src/system_update_service.rs:41
+#, fuzzy
+#| msgid "Could not reach SteamGridDB"
+msgid "Could not restart"
+msgstr "Kon SteamGridDB niet bereiken"
 
 #: crates/pindu-ui/src/widgets/cover_tile.rs:215
 #: crates/pindu-ui/src/widgets/cover_tile.rs:348
@@ -2252,7 +2486,7 @@ msgid ""
 msgstr ""
 
 #: data/ui/preferences.blp:74 data/ui/window.blp:721 data/ui/window.blp:775
-#: data/ui/window.blp:958
+#: data/ui/window.blp:958 crates/pindu-ui/src/fullscreen_bluetooth.rs:335
 msgid "Off"
 msgstr ""
 
@@ -2556,6 +2790,10 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+#: data/ui/window.blp:603 data/ui/window.blp:1323
+msgid "System Update"
+msgstr ""
+
 #: data/ui/window.blp:683
 msgid "Variant"
 msgstr ""
@@ -2614,6 +2852,10 @@ msgstr ""
 
 #: data/ui/window.blp:1245 data/ui/window.blp:1751
 msgid "Performance Overlay"
+msgstr ""
+
+#: data/ui/window.blp:1343
+msgid "The previous version starts next time."
 msgstr ""
 
 #: data/ui/window.blp:1286 data/ui/window.blp:1402
