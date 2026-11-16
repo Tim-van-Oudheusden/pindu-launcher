@@ -1,0 +1,75 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Quick Access's Network level, the "network" page of the window's quick_access_stack.
+// Its entry row stays in the window's shared Quick Access list.
+template $PinduNetworkLevel: Adw.Bin {
+  child: ScrolledWindow {
+    hscrollbar-policy: never;
+
+    child: Box {
+      orientation: vertical;
+      spacing: 12;
+
+      Label {
+        label: _("Network");
+        xalign: 0;
+
+        styles [
+          "title-3",
+        ]
+      }
+
+      // One row per wired and Wi-Fi device with its state; filled in
+      // code.
+      ListBox quick_access_network_devices {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+
+      // Wi-Fi's switch, or what blocks it; hidden without a Wi-Fi
+      // device.
+      ListBox quick_access_wifi_radio {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+
+        Adw.SwitchRow quick_access_wifi_switch {
+          title: _("Wi-Fi");
+        }
+
+        Adw.ActionRow quick_access_wifi_blocked {
+          title: _("Wi-Fi");
+          subtitle: _("Turned off by a hardware switch");
+          visible: false;
+        }
+      }
+
+      Label quick_access_wifi_title {
+        label: _("Wi-Fi Networks");
+        xalign: 0;
+        margin-top: 6;
+
+        styles [
+          "heading",
+        ]
+      }
+
+      // The networks in range, strongest first; the one in use is
+      // checked, saved ones open to Connect and Forget. Filled in code,
+      // and again as NetworkManager reports changes.
+      ListBox quick_access_wifi_networks {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+    };
+  };
+}
