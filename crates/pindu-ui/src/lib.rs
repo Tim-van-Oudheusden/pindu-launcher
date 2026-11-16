@@ -50,6 +50,7 @@ pub mod proton_downloads_page;
 pub mod proton_launch;
 pub mod search_keyboard;
 pub mod search_provider;
+pub mod secret_dialog;
 pub mod session_service;
 pub mod sources;
 pub mod steamgriddb_picker;
