@@ -13,7 +13,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::ngettext;
 use gtk::{gdk, gio, glib};
-use pindu_core::home::{BLUR_KEY, BackgroundContext, DIM_KEY, Strength};
+use pindu_core::home::{BACKGROUND_VIDEO_KEY, BLUR_KEY, BackgroundContext, DIM_KEY, Strength};
 use pindu_core::keys::{self, Escape, Modifiers};
 use pindu_core::sound::{media_volume, tone_wav};
 use pindu_core::themes::ThemeLayout;
@@ -295,6 +295,14 @@ impl PinduWindow {
         self.update_home();
         self.connect_suspended_notify(|window| window.update_home_background());
         self.connect_visible_notify(|window| window.update_home_background());
+        self.settings().connect_changed(
+            Some(BACKGROUND_VIDEO_KEY),
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_, _| window.update_home_background()
+            ),
+        );
         if let Some(application) = self.application().and_downcast::<PinduApplication>() {
             application
                 .session_service()
@@ -308,7 +316,8 @@ impl PinduWindow {
 
     /// Tells Home where the window is, for its background (`home::background_playback`):
     /// fullscreen, Home shown, a game we started running, the window hidden or suspended
-    /// (minimized, or covered whole), Pindu moving less (`Accessibility::reduces_motion`).
+    /// (minimized, or covered whole), Pindu moving less (`Accessibility::reduces_motion`),
+    /// the video turned off (`home::BACKGROUND_VIDEO_KEY`).
     pub(crate) fn update_home_background(&self) {
         let imp = self.imp();
         let game_running = self
@@ -322,6 +331,7 @@ impl PinduWindow {
             game_running,
             hidden: !self.is_visible() || self.is_suspended(),
             reduced_motion: self.has_css_class(REDUCED_MOTION_CLASS),
+            video_off: !self.settings().boolean(BACKGROUND_VIDEO_KEY),
         });
     }
 

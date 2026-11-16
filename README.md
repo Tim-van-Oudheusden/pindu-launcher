@@ -321,7 +321,10 @@ Ubuntu 26.10 ship them too.
 To run, the app also needs GStreamer's good plug-ins (`gstreamer1-plugins-good` on Fedora, `gstreamer1.0-plugins-good`
 on Debian and Ubuntu): fullscreen mode's Home background is VP9 video in Matroska and the navigation sounds are WAV, both
 played through GTK's GStreamer backend. Without them the background stays black and the sounds are silent. The Flatpak
-runtime and the native packages bring them.
+runtime and the native packages bring them. A background video that fails to play is dropped until the app restarts.
+Where GPU video playback takes the whole app down instead, as on some virtual machines with 3D acceleration, turn the
+video off and Home shows a plain background:
+`gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-background-video false`.
 
 ```sh
 git clone https://github.com/Tim-van-Oudheusden/pindu-launcher.git

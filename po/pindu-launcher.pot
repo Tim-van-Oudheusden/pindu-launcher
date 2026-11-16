@@ -2111,72 +2111,83 @@ msgid ""
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:119
-msgid "Larger text in fullscreen mode"
+msgid "Animated background in fullscreen mode"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:120
+msgid ""
+"Play Home's animated background video in fullscreen mode. Turn it off on "
+"systems where GPU video playback is unreliable, such as some virtual machines "
+"with 3D acceleration; Home then shows a plain background."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:124
+msgid "Larger text in fullscreen mode"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:125
 msgid ""
 "Show fullscreen mode's text about a quarter larger, for reading from across "
 "the room. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:124
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:129
 msgid "Custom fullscreen style"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:125
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:130
 msgid ""
 "Restyle fullscreen mode with your own stylesheet, fullscreen.css in the "
 "app's config folder. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:129
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:134
 msgid "Fullscreen design"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:130
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:135
 msgid ""
 "The id of the design fullscreen mode is shown in: a theme folder shipped "
 "with the app or in the app's config folder under themes. Empty for Adwaita, "
 "the standard look. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:134
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:139
 msgid "Fullscreen design variant"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:135
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:140
 msgid ""
 "The id of the chosen variant of the fullscreen design, for a design that "
 "offers variants; its stylesheet applies after the design's own. An empty or "
 "unknown id picks the design's first variant."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:144
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:149
 msgid "Fullscreen background blur"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:145
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:150
 msgid ""
 "How much Home's background and the focused game's art behind it are blurred "
 "in fullscreen mode. A design can restyle each strength."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:154
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:159
 msgid "Fullscreen background dim"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:155
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:160
 msgid ""
 "How much Home's background and the focused game's art behind it are darkened "
 "in fullscreen mode. A design can restyle each strength."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:159
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:164
 msgid "SteamGridDB prompt shown"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:160
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:165
 msgid ""
 "Whether the window has offered, once, to set up a SteamGridDB API key for "
 "game art."

@@ -114,6 +114,11 @@
       <summary>Reduce motion in fullscreen mode</summary>
       <description>Hold Home's animated background on its first frame and change art without a crossfade in fullscreen mode. Turning off animations in the system settings does the same.</description>
     </key>
+    <key name="fullscreen-background-video" type="b">
+      <default>true</default>
+      <summary>Animated background in fullscreen mode</summary>
+      <description>Play Home's animated background video in fullscreen mode. Turn it off on systems where GPU video playback is unreliable, such as some virtual machines with 3D acceleration; Home then shows a plain background.</description>
+    </key>
     <key name="fullscreen-large-text" type="b">
       <default>false</default>
       <summary>Larger text in fullscreen mode</summary>

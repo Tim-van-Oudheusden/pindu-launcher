@@ -120,6 +120,8 @@ pub enum Playback {
     Pause,
     /// Holds its first frame.
     FirstFrame,
+    /// Has no video: its stream is dropped, and Home shows `.home-background`'s own colour.
+    Off,
 }
 
 /// Where the window is, as far as Home's background is concerned.
@@ -136,13 +138,28 @@ pub struct BackgroundContext {
     /// Pindu moves less (`accessibility::Accessibility::reduces_motion`): the desktop's
     /// animations are off, the system asks for reduced motion, or Reduce Motion is on.
     pub reduced_motion: bool,
+    /// The background video is turned off (`BACKGROUND_VIDEO_KEY`), or it failed to play
+    /// since Pindu started.
+    pub video_off: bool,
 }
 
-/// What Home's background does in `context`: it holds its first frame outside fullscreen
-/// mode and under reduced motion, pauses behind a section's games, a running game or a
-/// hidden window, and plays behind the first screen.
+/// The GSettings key that turns Home's background video on or off. Off, Pindu never
+/// starts GStreamer for it, for systems whose GL video path takes the app down.
+pub const BACKGROUND_VIDEO_KEY: &str = "fullscreen-background-video";
+
+/// Whether Home loads its background video in `context`, if it has not yet: once the
+/// window is in fullscreen mode, unless the video is off.
+pub fn loads_background(context: BackgroundContext) -> bool {
+    context.fullscreen && !context.video_off
+}
+
+/// What Home's background does in `context`: it has no video when the video is off, holds
+/// its first frame outside fullscreen mode and under reduced motion, pauses behind a
+/// section's games, a running game or a hidden window, and plays behind the first screen.
 pub fn background_playback(context: BackgroundContext) -> Playback {
-    if !context.fullscreen || context.reduced_motion {
+    if context.video_off {
+        Playback::Off
+    } else if !context.fullscreen || context.reduced_motion {
         Playback::FirstFrame
     } else if !context.first_screen || context.game_running || context.hidden {
         Playback::Pause
@@ -244,6 +261,7 @@ mod tests {
         game_running: false,
         hidden: false,
         reduced_motion: false,
+        video_off: false,
     };
 
     #[test]
@@ -323,6 +341,54 @@ mod tests {
                 "{context:?}"
             );
         }
+    }
+
+    #[test]
+    fn a_background_video_that_is_off_has_no_video_wherever_the_window_is() {
+        for context in [
+            ON_FIRST_SCREEN,
+            BackgroundContext {
+                first_screen: false,
+                ..ON_FIRST_SCREEN
+            },
+            BackgroundContext {
+                fullscreen: false,
+                ..ON_FIRST_SCREEN
+            },
+            BackgroundContext {
+                reduced_motion: true,
+                ..ON_FIRST_SCREEN
+            },
+            BackgroundContext {
+                game_running: true,
+                hidden: true,
+                ..ON_FIRST_SCREEN
+            },
+        ] {
+            let context = BackgroundContext {
+                video_off: true,
+                ..context
+            };
+            assert_eq!(background_playback(context), Playback::Off, "{context:?}");
+        }
+    }
+
+    #[test]
+    fn the_background_loads_in_fullscreen_mode_unless_the_video_is_off() {
+        assert!(loads_background(ON_FIRST_SCREEN));
+        assert!(loads_background(BackgroundContext {
+            first_screen: false,
+            reduced_motion: true,
+            ..ON_FIRST_SCREEN
+        }));
+        assert!(!loads_background(BackgroundContext {
+            fullscreen: false,
+            ..ON_FIRST_SCREEN
+        }));
+        assert!(!loads_background(BackgroundContext {
+            video_off: true,
+            ..ON_FIRST_SCREEN
+        }));
     }
 
     #[test]

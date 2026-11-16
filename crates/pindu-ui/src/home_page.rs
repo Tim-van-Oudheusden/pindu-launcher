@@ -7,9 +7,10 @@
 //! or `.home-games` for designs, which can choose the tiles' shape and size
 //! (`pindu_core::home`) and crossfade the hero (`.shown`, `.no-art`). Behind the first
 //! screen plays Home's background (`.home-background`), as `home::background_playback`
-//! says for where the window is. Quick Access's Blur and Dim name their strength on the
-//! page (`blur-*`, `dim-*`, `home::background_classes`), which blurs the background and
-//! the hero and darkens them under `.home-dim`.
+//! says for where the window is; a video that fails to play is dropped for the rest of
+//! the run, and `home::BACKGROUND_VIDEO_KEY` turns it off. Quick Access's Blur and Dim
+//! name their strength on the page (`blur-*`, `dim-*`, `home::background_classes`), which
+//! blurs the background and the hero and darkens them under `.home-dim`.
 
 use std::cell::{Cell, RefCell};
 use std::path::Path;
@@ -180,6 +181,9 @@ mod imp {
         pub background_media: RefCell<Option<gtk::MediaFile>>,
         /// Where the window is, as the window last said (`set_background_context`).
         pub background_context: Cell<BackgroundContext>,
+        /// Whether Home's background video failed to play since Pindu started, which
+        /// keeps it off for the rest of the run.
+        pub background_failed: Cell<bool>,
         #[template_child]
         pub hero_a: TemplateChild<gtk::Picture>,
         #[template_child]
@@ -381,16 +385,30 @@ impl HomePage {
     pub fn set_background_context(&self, context: BackgroundContext) {
         let imp = self.imp();
         imp.background_context.set(context);
-        if context.fullscreen && imp.background_media.borrow().is_none() {
+        if home::loads_background(self.background_context())
+            && imp.background_media.borrow().is_none()
+        {
             self.load_background();
         }
         self.show_background_playback();
     }
 
+    /// Where the window is for Home's background, with what only the page knows: whether
+    /// its first screen shows, and whether the video failed to play.
+    fn background_context(&self) -> BackgroundContext {
+        let imp = self.imp();
+        let context = imp.background_context.get();
+        BackgroundContext {
+            first_screen: context.first_screen && imp.open.get().is_none(),
+            video_off: context.video_off || imp.background_failed.get(),
+            ..context
+        }
+    }
+
     /// Loads Home's background (`home/background-*.webm` in the app's data, in the size
     /// `home::background_video` picks for the window's screen), muted and looped. A file
-    /// that is missing or does not play is logged and leaves the black of
-    /// `.home-background`.
+    /// that is missing or does not play is logged, its stream dropped, and leaves the black
+    /// of `.home-background` for the rest of the run.
     fn load_background(&self) {
         let media = gtk::MediaFile::new();
         // Looped by hand: with `loop` set, GTK's GStreamer player on GNOME 51 stops on the
@@ -411,9 +429,15 @@ impl HomePage {
             move |media| {
                 if let Some(error) = media.error() {
                     glib::g_warning!("pindu", "Could not play Home's background: {error}");
-                    page.imp()
-                        .background
-                        .set_paintable(gtk::gdk::Paintable::NONE);
+                    let imp = page.imp();
+                    imp.background_failed.set(true);
+                    imp.background.set_paintable(gtk::gdk::Paintable::NONE);
+                    // Dropped once GTK has finished telling of the error, not while it does.
+                    glib::idle_add_local_once(glib::clone!(
+                        #[weak]
+                        page,
+                        move || page.show_background_playback()
+                    ));
                 }
             }
         ));
@@ -472,19 +496,14 @@ impl HomePage {
         ))
     }
 
-    /// Plays, pauses or holds Home's background on its first frame, as
+    /// Plays, pauses or holds Home's background on its first frame, or drops it, as
     /// `home::background_playback` says for where the window is and the screen shown.
     fn show_background_playback(&self) {
         let imp = self.imp();
         let Some(media) = imp.background_media.borrow().clone() else {
             return;
         };
-        let context = imp.background_context.get();
-        let context = BackgroundContext {
-            first_screen: context.first_screen && imp.open.get().is_none(),
-            ..context
-        };
-        match home::background_playback(context) {
+        match home::background_playback(self.background_context()) {
             Playback::Play => media.play(),
             Playback::Pause => media.pause(),
             Playback::FirstFrame => {
@@ -492,6 +511,12 @@ impl HomePage {
                 if media.is_seekable() && media.timestamp() != 0 {
                     media.seek(0);
                 }
+            }
+            Playback::Off => {
+                // Clearing the file stops GStreamer's pipeline; nothing decodes after.
+                imp.background.set_paintable(gtk::gdk::Paintable::NONE);
+                imp.background_media.replace(None);
+                media.clear();
             }
         }
     }
