@@ -156,6 +156,10 @@ msgstr[1] "{count} games hierin zijn niet in deze bibliotheek"
 msgid "{result}; {note}"
 msgstr "{result}; {note}"
 
+#: crates/pindu-ui/src/audio_output_service.rs:33
+msgid "Could not change the sound output"
+msgstr ""
+
 #: crates/pindu-ui/src/collection_actions.rs:17
 msgid "_Add to Collection"
 msgstr "_Toevoegen aan Collectie"
@@ -2871,6 +2875,10 @@ msgstr ""
 
 #: data/ui/window.blp:571 data/ui/window.blp:1028
 msgid "Settings"
+msgstr ""
+
+#: data/ui/window.blp:745 data/ui/window.blp:1507
+msgid "Sound Output"
 msgstr ""
 
 #: data/ui/window.blp:603 data/ui/window.blp:1323
