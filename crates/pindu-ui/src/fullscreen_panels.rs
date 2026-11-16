@@ -626,10 +626,9 @@ impl PinduWindow {
                 Some(Panel::Drawer(DrawerLevel::Main)),
                 Some(Panel::Drawer(DrawerLevel::Collections)),
             ) => Some(imp.drawer_collections_row.get().upcast()),
-            (
-                Some(Panel::Drawer(DrawerLevel::Main)),
-                Some(Panel::Drawer(DrawerLevel::Power)),
-            ) => Some(imp.drawer_power_row.get().upcast()),
+            (Some(Panel::Drawer(DrawerLevel::Main)), Some(Panel::Drawer(DrawerLevel::Power))) => {
+                Some(imp.drawer_power_row.get().upcast())
+            }
             (
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Notifications)),
