@@ -87,6 +87,21 @@
   </supports>
 
   <releases>
+    <release version="0.4.0" date="2026-11-16">
+      <description>
+        <p>Release files for ARM (aarch64), a fix for a crash on Steam libraries, and more in the fullscreen Quick Access panel.</p>
+        <ul>
+          <li>Flatpak, RPM and DEB release files are now built for aarch64 (ARM) as well as x86_64</li>
+          <li>Fixed a crash when importing a Steam library with deeply nested data</li>
+          <li>Windows games use a Proton build made for your machine's architecture</li>
+          <li>Turning on MangoHud now explains when it cannot work inside the sandbox</li>
+          <li>Quick Access in fullscreen mode gains Network, Bluetooth, System Update, Sound Output and Power sections</li>
+          <li>The on-screen keyboard has capitals and symbols, and a dialog for entering passphrases</li>
+          <li>The RPM and DEB packages now depend on GStreamer's good plug-ins</li>
+          <li>Updated translations</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-11-07">
       <description>
         <p>Native packages, your own fullscreen style in Preferences, and the start of translations.</p>
