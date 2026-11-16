@@ -36,7 +36,8 @@ data/                Blueprint files, GSettings schema, desktop file, MetaInfo, 
 build-aux/           Flatpak manifests and lint exceptions, RPM and DEB recipes, version, manifest and package checks
 tests/               tests for the build-aux/ tooling (tooling/), scripts/ (scripts/) and the UI smoke test (e2e/)
 po/                  gettext: POTFILES.in, the template pindu-launcher.pot, LINGUAS and one .po per language
-docs/                the spec and research PDFs, the fullscreen style contract, releasing, metrics, security
+docs/                the spec and research PDFs, the fullscreen style contract, the system panel spec, releasing,
+                     metrics, security
 ```
 
 Logic that needs no GTK goes in `pindu-core`, so it is tested without a display; `pindu-ui` stays a thin shell that
