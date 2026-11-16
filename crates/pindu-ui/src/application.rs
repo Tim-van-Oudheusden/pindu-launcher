@@ -6,6 +6,7 @@ use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
 
+use crate::audio_output_service::AudioOutputService;
 use crate::bluetooth_service::BluetoothService;
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
 use crate::game_dialog::GameDialog;
@@ -71,6 +72,8 @@ mod imp {
         pub power_service: OnceCell<PowerService>,
         /// Bluetooth, for Quick Access's Bluetooth.
         pub bluetooth_service: OnceCell<BluetoothService>,
+        /// The audio outputs, for Quick Access's Sound Output.
+        pub audio_output_service: OnceCell<AudioOutputService>,
         /// OS updates on Pindu OS, for Quick Access's System Update.
         pub system_update_service: OnceCell<SystemUpdateService>,
         /// The network, for Quick Access's Network.
@@ -166,6 +169,9 @@ mod imp {
                 .expect("start-up runs once");
             self.bluetooth_service
                 .set(BluetoothService::new(&self.notification_service))
+                .expect("start-up runs once");
+            self.audio_output_service
+                .set(AudioOutputService::new(&self.notification_service))
                 .expect("start-up runs once");
             self.system_update_service
                 .set(SystemUpdateService::new(&self.notification_service))
@@ -344,6 +350,14 @@ impl PinduApplication {
     pub fn bluetooth_service(&self) -> &BluetoothService {
         self.imp()
             .bluetooth_service
+            .get()
+            .expect("the application has started")
+    }
+
+    /// The audio outputs and the one in use.
+    pub fn audio_output_service(&self) -> &AudioOutputService {
+        self.imp()
+            .audio_output_service
             .get()
             .expect("the application has started")
     }

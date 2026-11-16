@@ -1,0 +1,223 @@
+[
+  {
+    "id": 0,
+    "type": "PipeWire:Interface:Core",
+    "version": 4,
+    "permissions": [
+      "r",
+      "w",
+      "x",
+      "m"
+    ],
+    "info": {
+      "cookie": 1847288932,
+      "user-name": "pindu",
+      "host-name": "pindu-os",
+      "version": "1.4.9",
+      "name": "pipewire-0",
+      "change-mask": [
+        "props"
+      ],
+      "props": {
+        "config.name": "pipewire.conf",
+        "core.name": "pipewire-0",
+        "object.id": 0,
+        "object.serial": 0
+      }
+    }
+  },
+  {
+    "id": 31,
+    "type": "PipeWire:Interface:Metadata",
+    "version": 3,
+    "permissions": [
+      "r",
+      "w",
+      "x",
+      "m"
+    ],
+    "props": {
+      "client.id": 33,
+      "factory.id": 12,
+      "metadata.name": "settings",
+      "object.serial": 131
+    },
+    "metadata": [
+      {
+        "subject": 0,
+        "key": "clock.rate",
+        "type": "Spa:Int",
+        "value": 48000
+      },
+      {
+        "subject": 0,
+        "key": "clock.quantum",
+        "type": "Spa:Int",
+        "value": 1024
+      }
+    ]
+  },
+  {
+    "id": 33,
+    "type": "PipeWire:Interface:Client",
+    "version": 3,
+    "permissions": [
+      "r",
+      "w",
+      "x",
+      "m"
+    ],
+    "info": {
+      "change-mask": [
+        "props"
+      ],
+      "props": {
+        "application.name": "WirePlumber",
+        "client.api": "pipewire",
+        "object.id": 33,
+        "object.serial": 133
+      }
+    }
+  },
+  {
+    "id": 47,
+    "type": "PipeWire:Interface:Device",
+    "version": 3,
+    "permissions": [
+      "r",
+      "w",
+      "x",
+      "m"
+    ],
+    "info": {
+      "change-mask": [
+        "props",
+        "params"
+      ],
+      "props": {
+        "device.api": "alsa",
+        "device.description": "Built-in Audio",
+        "device.name": "alsa_card.pci-0000_00_1f.3",
+        "media.class": "Audio/Device",
+        "object.id": 47,
+        "object.serial": 147
+      },
+      "params": {}
+    }
+  },
+  {
+    "id": 56,
+    "type": "PipeWire:Interface:Node",
+    "version": 3,
+    "permissions": [
+      "r",
+      "w",
+      "x",
+      "m"
+    ],
+    "info": {
+      "max-input-ports": 2,
+      "max-output-ports": 0,
+      "change-mask": [
+        "input-ports",
+        "output-ports",
+        "state",
+        "props",
+        "params"
+      ],
+      "n-input-ports": 2,
+      "n-output-ports": 0,
+      "state": "suspended",
+      "error": null,
+      "props": {
+        "device.id": 47,
+        "media.class": "Audio/Sink",
+        "node.description": "Built-in Audio Analog Stereo",
+        "node.name": "alsa_output.pci-0000_00_1f.3.analog-stereo",
+        "node.nick": "ALC257 Analog",
+        "object.id": 56,
+        "object.serial": 156
+      },
+      "params": {}
+    }
+  },
+  {
+    "id": 57,
+    "type": "PipeWire:Interface:Node",
+    "version": 3,
+    "permissions": [
+      "r",
+      "w",
+      "x",
+      "m"
+    ],
+    "info": {
+      "max-input-ports": 0,
+      "max-output-ports": 2,
+      "change-mask": [
+        "input-ports",
+        "output-ports",
+        "state",
+        "props",
+        "params"
+      ],
+      "n-input-ports": 0,
+      "n-output-ports": 2,
+      "state": "suspended",
+      "error": null,
+      "props": {
+        "device.id": 47,
+        "media.class": "Audio/Source",
+        "node.description": "Built-in Audio Analog Stereo",
+        "node.name": "alsa_input.pci-0000_00_1f.3.analog-stereo",
+        "node.nick": "ALC257 Analog",
+        "object.id": 57,
+        "object.serial": 157
+      },
+      "params": {}
+    }
+  },
+  {
+    "id": 40,
+    "type": "PipeWire:Interface:Metadata",
+    "version": 3,
+    "permissions": [
+      "r",
+      "w",
+      "x",
+      "m"
+    ],
+    "props": {
+      "client.id": 33,
+      "factory.id": 12,
+      "metadata.name": "default",
+      "object.serial": 140
+    },
+    "metadata": [
+      {
+        "subject": 0,
+        "key": "default.configured.audio.sink",
+        "type": "Spa:String:JSON",
+        "value": {
+          "name": "alsa_output.pci-0000_00_1f.3.analog-stereo"
+        }
+      },
+      {
+        "subject": 0,
+        "key": "default.audio.sink",
+        "type": "Spa:String:JSON",
+        "value": {
+          "name": "alsa_output.pci-0000_00_1f.3.analog-stereo"
+        }
+      },
+      {
+        "subject": 0,
+        "key": "default.audio.source",
+        "type": "Spa:String:JSON",
+        "value": {
+          "name": "alsa_input.pci-0000_00_1f.3.analog-stereo"
+        }
+      }
+    ]
+  }
+]

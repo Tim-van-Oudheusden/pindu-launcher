@@ -8,6 +8,7 @@
 //! or shown insensitive because the system does not allow it. A missing service or
 //! permission is never shown as an error.
 
+pub mod audio;
 pub mod bluetooth;
 pub mod network;
 pub mod power;

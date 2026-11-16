@@ -40,6 +40,10 @@ BuildRequires:  pkgconfig(libseccomp)
 Requires:       glycin-loaders
 Requires:       bubblewrap
 Requires:       hicolor-icon-theme
+# Fullscreen mode's Sound Output lists the outputs with pw-dump and sets the default
+# with wpctl
+Requires:       pipewire-utils
+Requires:       wireplumber
 # Fullscreen Home's background (VP9 in Matroska) and the navigation sounds (WAV) play
 # through GTK's GStreamer backend; gtk4 pulls in only the base plug-ins, and the Matroska
 # demuxer, VP9 decoder and WAV parser are in the good ones

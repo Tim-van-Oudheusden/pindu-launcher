@@ -722,6 +722,48 @@ template $PinduWindow: Adw.ApplicationWindow {
                           };
                         }
 
+                        // Shown where PipeWire's tools run and find an output, with the
+                        // output in use under it.
+                        ListBoxRow quick_access_sound_output_row {
+                          action-name: "win.quick-access-sound-output";
+                          visible: false;
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "audio-volume-high-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Box {
+                              orientation: vertical;
+                              valign: center;
+                              hexpand: true;
+
+                              Label {
+                                label: _("Sound Output");
+                                xalign: 0;
+                              }
+
+                              Label quick_access_sound_output_subtitle {
+                                xalign: 0;
+                                ellipsize: end;
+
+                                styles [
+                                  "caption",
+                                  "dim-label",
+                                ]
+                              }
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
+
                         // Shown on Pindu OS: the installed version, or that an update waits
                         // for the next start.
                         ListBoxRow quick_access_system_update_row {
@@ -1445,6 +1487,38 @@ template $PinduWindow: Adw.ApplicationWindow {
 
                         styles [
                           "dim-label",
+                        ]
+                      }
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "sound-output";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      Label {
+                        label: _("Sound Output");
+                        xalign: 0;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // Each output with a check on the one in use; choosing one makes it
+                      // the default. Filled in code, and again as the outputs change.
+                      ListBox quick_access_sound_outputs {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
                         ]
                       }
                     };

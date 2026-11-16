@@ -116,7 +116,9 @@ Service: PipeWire with WirePlumber, on the session's own sockets. Neither has a 
   `node.description`; the default one is checked. The level reads the dump again whenever it opens, as the batteries
   are read again when Quick Access opens.
 - **Choose.** Choosing an output runs `wpctl set-default <id>`. WirePlumber stores the choice, so it outlasts a reboot.
-  Streams that follow the default (games do) move to it.
+  Streams that follow the default (games do) move to it. One runs at a time: a choice made while one runs waits for
+  it, only the latest of those is sent, and once none is left the level checks the output last written, so the last
+  choice made is the default that stays.
 - **Not offered:** volume (the controller's volume keys and the game's own setting do that), card profiles (WirePlumber
   picks one per card), inputs.
 - `pw-dump` comes with `pipewire-utils` on Fedora and `pipewire-bin` on Debian and Ubuntu; `wpctl` with

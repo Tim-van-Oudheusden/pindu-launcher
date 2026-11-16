@@ -190,6 +190,11 @@ Open it with a right stick click, the Steam Deck's "…" button, or <kbd>Ctrl</k
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
   - **Larger Text:** fullscreen text about a quarter larger.
+- **Sound Output**, subtitled with the output in use, lists the outputs PipeWire has (speakers, a television over
+  HDMI, a receiver, a Bluetooth headset) with a check on the one in use. Choose one to make it the default; WirePlumber
+  keeps the choice after a restart, and games that follow the default move to it. It reads the outputs with `pw-dump`
+  and sets the default with `wpctl`, which the native packages pull in. The Flatpak has neither, so there the entry
+  is not shown.
 
 ### Filters
 

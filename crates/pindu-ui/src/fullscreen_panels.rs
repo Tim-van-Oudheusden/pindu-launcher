@@ -11,7 +11,8 @@
 //! Filters (on the library page only) `fullscreen_library`'s, its Performance (for a game we
 //! run ourselves, which the options sheet has too) `fullscreen_performance`'s, its Network
 //! `fullscreen_network`'s, its Bluetooth (where BlueZ has an adapter)
-//! `fullscreen_bluetooth`'s, its System Update (on Pindu OS only)
+//! `fullscreen_bluetooth`'s, its Sound Output (where PipeWire's tools run)
+//! `fullscreen_sound_output`'s, its System Update (on Pindu OS only)
 //! `fullscreen_system_update`'s. Its Design level holds the design, its variant, Home's
 //! background blur and dim, and the user's own stylesheet. The drawer's Power level is
 //! `fullscreen_power`'s.
@@ -129,6 +130,11 @@ impl PinduWindow {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Bluetooth));
             })
             .build();
+        let sound_output = gio::ActionEntry::builder("quick-access-sound-output")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::SoundOutput));
+            })
+            .build();
         let system_update = gio::ActionEntry::builder("quick-access-system-update")
             .activate(|window: &Self, _, _| {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::SystemUpdate));
@@ -157,6 +163,7 @@ impl PinduWindow {
             filters,
             performance,
             bluetooth,
+            sound_output,
             system_update,
             network,
         ]);
@@ -555,6 +562,7 @@ impl PinduWindow {
             Some(Panel::QuickAccess(QuickAccessLevel::Controls)) => self.fill_controls(),
             Some(Panel::QuickAccess(QuickAccessLevel::Filters)) => self.show_fullscreen_filters(),
             Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)) => self.show_bluetooth(),
+            Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)) => self.show_sound_output(),
             Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)) => self.show_system_update(),
             Some(Panel::QuickAccess(QuickAccessLevel::Network)) => self.show_network(),
             Some(Panel::Drawer(DrawerLevel::Power)) => self.show_power(),
@@ -592,6 +600,7 @@ impl PinduWindow {
                     QuickAccessLevel::Filters => "filters",
                     QuickAccessLevel::Performance => "performance",
                     QuickAccessLevel::Bluetooth => "bluetooth",
+                    QuickAccessLevel::SoundOutput => "sound-output",
                     QuickAccessLevel::SystemUpdate => "system-update",
                     QuickAccessLevel::Network => "network",
                 });
@@ -666,6 +675,10 @@ impl PinduWindow {
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)),
             ) => Some(imp.quick_access_bluetooth_row.get().upcast()),
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)),
+            ) => Some(imp.quick_access_sound_output_row.get().upcast()),
             (
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)),
@@ -745,6 +758,10 @@ impl PinduWindow {
                 .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
             }
             (Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)), _) => self.bluetooth_focus(),
+            // The output in use.
+            (Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)), _) => {
+                self.sound_output_focus()
+            }
             (Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)), _) => {
                 self.system_update_focus()
             }
