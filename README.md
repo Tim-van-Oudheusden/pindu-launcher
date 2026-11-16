@@ -147,6 +147,18 @@ A controller-first view of the same library, for the couch, a TV or a Steam Deck
 **To open it:** press <kbd>F11</kbd>, start the app with `--fullscreen`, or turn on **Start in Fullscreen Mode** in
 Preferences.
 
+<p align="center">
+  <img src="docs/screenshots/fullscreen-1-home.webp" width="820" alt="Fullscreen Home in the Ribbon design: the Home and Library tabs and the clock across the top, a row of square tiles of recently played games with Drop Duchy focused, and Drop Duchy's art filling the screen behind its logo, 5 hours of playtime, This Week and Steam">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/fullscreen-2-panorama.webp" width="405" alt="Fullscreen Home in the Panorama design: Slay the Spire's art across the screen, with a row of square tiles of recently played games along the bottom and Slay the Spire focused">
+  <img src="docs/screenshots/fullscreen-3-library.webp" width="405" alt="The fullscreen library: the tabs All, Installed and Favourites, sorted by Last Played, over a grid of game covers with Drop Duchy focused and its Play button showing">
+  <br>
+  <img src="docs/screenshots/fullscreen-4-game-page.webp" width="405" alt="Drop Duchy's fullscreen game page: its art and logo, the Play button with favourite, add to collection and menu buttons, and the launcher (Steam), 5 hours of playtime, last played and added dates and the size">
+  <img src="docs/screenshots/fullscreen-5-quick-access.webp" width="405" alt="Quick Access open over a game page: the time, then Notifications, Refresh Library, Surprise Me, Design, Controllers, Controls and Settings">
+</p>
+
 ### Getting around
 
 - **Move** with the D-pad or left stick, **open** with A and **go back** with B.
@@ -472,3 +484,4 @@ trademarks belong to their owners.
 | `data/home/` (fullscreen Home's art) | [GPL-3.0-or-later](data/home/LICENSE) |
 | `docs/brand/readme-banner.svg` | [GPL-3.0-or-later](LICENSE); the outlined text is [Adwaita Sans](https://gitlab.gnome.org/GNOME/adwaita-fonts), SIL Open Font License 1.1 |
 | Game art in `data/screenshots/` | Each game's own licence, listed in [`CREDITS.md`](data/screenshots/CREDITS.md) |
+| Game art in `docs/screenshots/` | Belongs to each game's publisher; shown as Pindu launcher displays a real library |
