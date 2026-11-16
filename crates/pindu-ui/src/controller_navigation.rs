@@ -6,8 +6,10 @@
 //! LT/RT switch the fullscreen library's tabs and sort order, and Guide enters fullscreen
 //! mode. The panels come next: in fullscreen mode Start or Guide toggles the menu drawer,
 //! View or X opens the options sheet for the focused game, and B closes them. While the
-//! launch overlay is up it takes every button, and a held B cancels a game we start.
-//! Intents never become synthetic key events, and only the active window acts on them.
+//! launch overlay is up it takes every button, and a held B cancels a game we start. The
+//! passphrase dialog's keyboard takes every button while the dialog is open, as the search
+//! keyboard does. Intents never become synthetic key events, and only the active window
+//! acts on them.
 
 use std::cell::RefCell;
 use std::collections::BTreeSet;
@@ -74,8 +76,9 @@ impl PinduWindow {
             }
             return;
         }
-        // The search keyboard takes every button while it is open, Start included.
-        if self.search_keyboard_intent(intent) {
+        // The passphrase dialog's keyboard and the search keyboard take every button while
+        // they are open, Start included.
+        if self.secret_dialog_intent(intent) || self.search_keyboard_intent(intent) {
             return;
         }
         if self.handle_panel_intent(intent) {

@@ -26,8 +26,11 @@ Rules-Requires-Root: no
 
 Package: pindu-launcher
 Architecture: amd64 arm64
-Depends: ${shlibs:Depends}, ${misc:Depends}, glycin-loaders, bubblewrap, pipewire-bin,
- wireplumber
+# gstreamer1.0-plugins-good: fullscreen Home's background (VP9 in Matroska) and the
+# navigation sounds (WAV) play through GTK's GStreamer backend, and libgtk-4-1 pulls in
+# no GStreamer plug-ins
+Depends: ${shlibs:Depends}, ${misc:Depends}, glycin-loaders, bubblewrap,
+ gstreamer1.0-plugins-good, pipewire-bin, wireplumber
 Recommends: gamemode
 Description: every PC game on your computer in one GNOME library
  Pindu launcher gathers every game on your computer into one library, whichever

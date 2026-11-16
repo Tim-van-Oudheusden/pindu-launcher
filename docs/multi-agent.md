@@ -1,7 +1,7 @@
 # Multi-agent orchestration
 
 Several kinds of agent work on Pindu launcher: CLI agents in the maintainer's sessions, Claude Code in CI, the
-repository's own workflows and, once the maintainer connects it (#249), Hive. None of them directs the others. They
+repository's own workflows and Hive (#249). None of them directs the others. They
 coordinate through GitHub:
 
 - **Issues** are the one work queue.
@@ -21,7 +21,7 @@ and undo it is in [`ai-ops-runbook.md`](ai-ops-runbook.md); how a change traces 
 | Maintainer | `Tim-van-Oudheusden` | Everything below | Decisions, `human-only` issues, merges of high-risk changes, release tags |
 | CLI agents (Claude Code, Copilot, Cursor) | The maintainer's local sessions | The issue the maintainer points them at | Pull requests on `<type>/<number>-<slug>` branches |
 | Claude Code in CI | `.github/workflows/claude.yml` | The `ai-fix-requested` label applied by a person or by Hive's App, or `@claude` from the owner or a collaborator | Pull requests on `claude/*` branches; answers on the issue or pull request |
-| Hive agents (after #249) | The `hive-worker-bee` GitHub App | Hive's routing over this repository's issues, at the operational level the maintainer sets (L2–L3 to start, #237) | Issues, pull requests and `[ACMM Ln]` gap issues |
+| Hive agents | The `hive-worker-bee` GitHub App | Hive's routing over this repository's issues, at the operational level the maintainer sets (L2–L3 to start, #237) | Issues, pull requests and `[ACMM Ln]` gap issues |
 | Workflows | `GITHUB_TOKEN` | Schedules and repository events | The issues and pull requests in [Work the workflows generate](#work-the-workflows-generate) |
 | Dependabot | `app/dependabot` | `Cargo.lock` and the pinned actions | Version-bump pull requests |
 
