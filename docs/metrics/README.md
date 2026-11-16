@@ -24,10 +24,10 @@ opening a pull request.
 | [Versions](#versions) | Meson, Cargo, MetaInfo, RPM and DEB name one version | `versions` Meson test (`build-aux/check-version.sh`) | Every PR and push; on a tag against the tag | `Rust and Meson checks`; Release's `Check the tag against the versions` |
 | [Manifest parity](#manifest-parity) | Release manifest grants exactly the development manifest's permissions and modules | `manifests` Meson test (`build-aux/check-manifests.sh`) | Every PR and push | `Rust and Meson checks` |
 | [Tooling tests](#tooling-tests) | The version, manifest and release-notes scripts catch what they are meant to catch | `tooling` Meson suite (`tests/tooling/`) | Every PR and push | `Rust and Meson checks`; inside both Flatpak builds |
-| [UI smoke test](#ui-smoke-test) | The installed app starts and stays up without a panic or GLib critical | `ui-smoke` Meson test (`tests/e2e/ui-smoke.sh`) | Every PR and push, in both Flatpak builds and every native package | `Flatpak build, …` and `Native package install and UI smoke test` checks |
-| [Flatpak build and lint](#flatpak-build-and-lint) | Both manifests build, test and pass `flatpak-builder-lint` | `ci.yml` (`flatpak`), `release.yml` (`flatpak`) | Every PR and push; every release tag | `Flatpak build, UI smoke test and lint (development/release)`; bundle artifacts |
-| [Source tarball](#source-tarball) | `meson dist` vendors the crates and builds and tests offline | `ci.yml` and `release.yml` (`sources`) | Same | `Source tarball with vendored crates`; `sources` artifact |
-| [Native packages](#native-packages) | RPM and DEBs build offline from the tarball, install in clean containers and start | `ci.yml` and `release.yml` (`packages`, `packages-smoke`) | Same | `Native package (…)` and smoke checks; `package-*` artifacts |
+| [UI smoke test](#ui-smoke-test) | The installed app starts and stays up without a panic or GLib critical | `ui-smoke` Meson test (`tests/e2e/ui-smoke.sh`) | The development Flatpak on every PR; every Flatpak build and native package on every push to `main`, nightly and on every tag | `Flatpak build, …` and `Native package install and UI smoke test` checks |
+| [Flatpak build and lint](#flatpak-build-and-lint) | Both manifests build, test and pass `flatpak-builder-lint` | `ci.yml` (`flatpak`: development, x86_64), `packaging.yml` (`flatpak`: release, and both on aarch64), `release.yml` (`flatpak`) | Development on every PR (skipped when only docs or translations change); all on every push to `main`, nightly and every release tag | `Flatpak build, UI smoke test and lint (…)`; bundle artifacts |
+| [Source tarball](#source-tarball) | `meson dist` vendors the crates and builds and tests offline | `packaging.yml` and `release.yml` (`sources`) | Every push to `main`, nightly, every release tag | `Source tarball with vendored crates`; `sources` artifact |
+| [Native packages](#native-packages) | RPM and DEBs build offline from the tarball, install in clean containers and start | `packaging.yml` and `release.yml` (`packages`, `packages-smoke`) | Same | `Native package (…)` and smoke checks; `package-*` artifacts |
 | [AI audit trail](#ai-audit-trail) | Every PR merged into `main`: source (Hive, Claude Code in CI, Dependabot, other), agent, model, author, merger | `scripts/ai-audit-report.sh` via `ai-audit.yml` | Weekly (Mon 06:17 UTC, past 7 days), manual | Job summary; `ai-audit` artifact (report and raw PR data, kept 90 days) |
 
 ## Formatting
@@ -145,11 +145,12 @@ meson test -C _build ui-smoke   # after meson install, with a display
 
 ## Flatpak build and lint
 
-The `flatpak` job builds the development and the release manifest with `flatpak-builder` and `run-tests`, so the Meson
-tests, the UI smoke test included, run inside the GNOME 51 SDK after the install. It then lints the manifest and the
+The `flatpak` jobs build the development and the release manifest with `flatpak-builder` and `run-tests`, so the Meson
+tests, the UI smoke test included, run inside the GNOME 51 SDK after the install. They then lint the manifest and the
 exported repository (MetaInfo, desktop file, icons) with `flatpak-builder-lint`; the exceptions in
-`build-aux/flatpak/lint-exceptions.json` each say why. The development bundle is uploaded as an artifact
-([Installing](../../README.md#installing)).
+`build-aux/flatpak/lint-exceptions.json` each say why. CI builds the development manifest on x86_64 for every pull
+request; Packaging builds the release manifest and both on aarch64 after the merge (#362). The development bundle is
+uploaded as an artifact ([Installing](../../README.md#installing)).
 
 ```sh
 flatpak-builder --user --install --force-clean _flatpak \
@@ -174,8 +175,9 @@ meson setup _dist && meson dist -C _dist --formats xztar
 Ubuntu 26.10 offline from the tarball, each in its distribution's container. `build-aux/package-smoke.sh` then installs
 each package in a clean container with only the dependencies it declares and runs the UI smoke test under Xvfb, once
 as it starts and once in fullscreen mode. A failure means a package misses a dependency (a glycin loader or a GStreamer
-plug-in, say) or a file. When a new distribution release qualifies, add it to both workflows' matrices
-([`docs/releasing.md`](../releasing.md)).
+plug-in, say) or a file. Packaging runs them after each merge and nightly, and a failure there pauses the merge queue
+([AI operations runbook](../ai-ops-runbook.md#packaging-fails-on-main)). When a new distribution release qualifies,
+add it to the matrices of `packaging.yml` and `release.yml` ([`docs/releasing.md`](../releasing.md)).
 
 ```sh
 podman run --rm -v "$PWD:/src:Z" -w /src registry.fedoraproject.org/fedora:45 \

@@ -53,11 +53,12 @@ Follow-up work becomes a new issue (`gh issue create`), never a TODO in the code
 | Workflow | When | Produces |
 | --- | --- | --- |
 | `ci.yml` | Every pull request and push to `main` | The required checks |
+| `packaging.yml` | Every push to `main`, nightly, or by hand | The source tarball, native packages and release and aarch64 Flatpaks; opens or closes the `ci: Packaging failing on main` issue |
 | `review.yml`, `tier-classifier.yml`, `labeler.yml` | Every pull request | The `PR review rubric` check, the risk tier ([`risk-tiers.md`](risk-tiers.md)) and area labels |
 | `coverage-gate.yml` | Every pull request | The `Unit-test coverage floors` check |
 | `nightly-compliance.yml` | Daily, or by hand | A report of supply-chain, runtime, workflow, ruleset and ACMM checks |
 | `auto-issues.yml` | After each nightly run on `main` | Opens, updates or closes the `ci: nightly compliance: N failing checks` issue |
-| `merge-queue.yml` | When a required check finishes, a draft is marked ready, or a keep-out label is removed | Merges the oldest ready, non-high-risk pull request; labels `hold` on a failed verification |
+| `merge-queue.yml` | When a required check finishes, Packaging passes on `main`, a draft is marked ready, or a keep-out label is removed | Merges the oldest ready, non-high-risk pull request while Packaging is green on `main`; labels `hold` on a failed verification |
 | `auto-review.yml` | The maintainer comments `/apply-suggestions` | A commit with the review's suggestion blocks |
 | `claude.yml` | `ai-fix-requested` or `@claude` | Pull requests on `claude/*` branches |
 | `pr-metrics.yml`, `quality-report.yml`, `strategy-report.yml`, `ai-audit.yml` | Weekly, or by hand | Job-summary reports (see [Measuring it](#measuring-it)) |

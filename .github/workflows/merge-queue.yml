@@ -7,7 +7,8 @@ name: Merge queue
 #            a `hold`, `blocked`, `sentinel-alert` or `automated` label, in merge state CLEAN
 #            (no check red or pending, required or not) and not high risk by main's
 #            scripts/tier-classify.sh (docs/risk-tiers.md). Until main has the classifier and
-#            .github/risk-assessment.yml, every pull request counts as high risk.
+#            .github/risk-assessment.yml, every pull request counts as high risk. Picks nothing
+#            while the last finished Packaging run on main failed (packaging.yml).
 #   verify - merges that pull request onto the current main and runs the fast part of CI's
 #            Rust and Meson checks on the result in the GNOME 51 SDK, with a read-only token:
 #            rustfmt, clippy, the unit tests and the Meson tests.
@@ -33,9 +34,10 @@ on:
   # and PR review rubric are meant to; scripts/merge-queue.test.sh fails when a workflow
   # holding a required check is missing here. Change classification and Labeler hold no
   # required check, but CLEAN waits for them too, so the queue also looks again when one of
-  # them finishes last (Dailies#400).
+  # them finishes last (Dailies#400). Packaging runs on main: pick merges nothing while its
+  # last run there failed, so a run that passes starts the queue again (#362).
   workflow_run:
-    workflows: [CI, Coverage gate, PR review rubric, Change classification, Labeler]
+    workflows: [CI, Coverage gate, PR review rubric, Change classification, Labeler, Packaging]
     types: [completed]
   pull_request:
     types: [ready_for_review, unlabeled]

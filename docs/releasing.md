@@ -49,8 +49,8 @@ flowchart LR
    that it opens and imports a library.
 
 The native packages target the distros that ship GTK 4.24 and libadwaita 1.10 (#232). When a new Fedora, Debian or
-Ubuntu release qualifies, add it to the `packages` and `packages-smoke` matrices in both workflows and to the table in
-`build-aux/release-notes.py`.
+Ubuntu release qualifies, add it to the `packages` and `packages-smoke` matrices in `packaging.yml` and `release.yml`
+and to the table in `build-aux/release-notes.py`.
 
 ## When something goes wrong
 

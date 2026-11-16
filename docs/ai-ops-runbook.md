@@ -13,6 +13,7 @@ repository.
 | Automation | Runs as | Starts on | Can it change `main`? |
 | --- | --- | --- | --- |
 | CI (`.github/workflows/ci.yml`) | `GITHUB_TOKEN`, `contents: read` | Every pull request, every push to `main`, and a manual run (the merge queue starts one after each merge) | No; it only reads and uploads artifacts |
+| Packaging (`.github/workflows/packaging.yml`, `scripts/packaging-issue.sh`) | `GITHUB_TOKEN`, `contents: read`; its `issue` job has `issues: write` | Every push to `main` (the merge queue starts one after each merge), nightly at 02:41 UTC, and a manual run | No; it builds and uploads artifacts, and opens or closes the `ci: Packaging failing on main` issue |
 | Merge queue (`.github/workflows/merge-queue.yml`, `scripts/merge-queue.sh`) | `GITHUB_TOKEN`; `pick` reads pull requests, `land` and `reject` write | A pull request workflow succeeds, a draft is marked ready, a person removes `hold`, `blocked`, `sentinel-alert` or `automated`, or a manual run | Yes: it merges one ready, not high-risk pull request at a time, after re-running the Rust and Meson checks on it merged with `main` |
 | Release (`.github/workflows/release.yml`) | `GITHUB_TOKEN`; only its `publish` job has `contents: write` | A pushed `v*` tag, or a manual run for an existing tag | No; it publishes a GitHub release for the tag ([`releasing.md`](releasing.md)) |
 | Hive agents | The `hive-worker-bee` GitHub App, outside this repository | Hive's scheduler and the Hive dashboard, at the operational level the maintainer set (L2–L3 to start, #237) | Only through a pull request that passes the ruleset |
@@ -29,7 +30,7 @@ to [Stopping the agents](#stopping-the-agents).
 | Who holds an issue? | Its assignee, or Hive's claim comment and label | `gh issue view <N> --json assignees,labels,comments` |
 | What has Hive done? | Pull requests and issues by its App | `gh pr list --state all --author app/hive-worker-bee` |
 | Is a pull request ready to merge? | The ruleset's required checks and the merge state | `gh pr checks <N>`, `gh pr view <N> --json mergeStateStatus` |
-| Is `main` healthy? | CI runs on `main` | `gh run list --workflow ci.yml --branch main --limit 10` |
+| Is `main` healthy? | CI and Packaging runs on `main` | `gh run list --workflow ci.yml --branch main --limit 10`, `gh run list --workflow packaging.yml --branch main --limit 10` |
 | Did a release publish? | Release runs and the release's files | `gh run list --workflow release.yml`, `gh release view vX.Y.Z` |
 | How does an issue link to its change? | The issue → branch → commit → pull request chain | `gh issue view <N> --json closedByPullRequestsReferences` |
 
@@ -42,14 +43,11 @@ check on `main`, so the pull request cannot merge until it passes.
 
 - **`Rust and Meson checks`:** formatting, clippy, rustdoc, unit tests or Meson tests. Run the same gates locally
   (`AGENTS.md`, "Session Completion") and fix the code. Never weaken a test or add `#[allow]` to get green.
-- **`Source tarball with vendored crates`:** `meson dist` vendors the crates and builds the tarball offline. A
-  dependency change that does not vendor, or a file `meson dist` misses, fails here.
-- **`Native package (…)` and `Native package install and UI smoke test (…)`:** the RPM or a DEB does not build from the
-  tarball, or the installed package does not start in a clean container (`build-aux/package-smoke.sh`).
-- **`Flatpak build, UI smoke test and lint (…)`:** the manifest does not build, `meson test` fails inside the build
-  (the UI smoke test runs there), or `flatpak-builder-lint` reports a new problem. Fix the cause; an entry in
+- **`Flatpak build, UI smoke test and lint (development)`:** the manifest does not build, `meson test` fails inside the
+  build (the UI smoke test runs there), or `flatpak-builder-lint` reports a new problem. Fix the cause; an entry in
   `build-aux/flatpak/lint-exceptions.json` is the maintainer's call, like any change to `finish-args` (`AGENTS.md`,
-  "Safety Boundaries").
+  "Safety Boundaries"). A pull request that only changes `docs/`, Markdown, `po/*.po`, `prompts/` or `.claude/` skips
+  this build (`scripts/needs-build.sh`), and the skipped job counts as passed.
 - **A job fails for a reason outside the change** (a network error, a runner out of disk): `gh run rerun <run-id>
   --failed`. If it fails the same way twice, treat it as a real failure and file an issue.
 - **`Merge queue script tests`:** `scripts/merge-queue.test.sh` failed; run it locally (it needs git, jq and yq 4).
@@ -59,6 +57,26 @@ check on `main`, so the pull request cannot merge until it passes.
 Something merged that does not pass on top of a change merged in the meantime, or the platform moved. File an issue
 (`gh issue create`, label `type:chore`), fix it through a pull request, or revert the merge that broke it
 ([Reverting agent work](#reverting-agent-work)). Do not tag a release from a red `main`.
+
+### Packaging fails on `main`
+
+The source tarball, the native packages and the release and aarch64 Flatpak builds run after the merge, in Packaging
+(#362), not on each pull request. A failed run on `main` opens the `ci: Packaging failing on main` issue (or comments on
+it), and the merge queue merges nothing until a Packaging run on `main` passes again; its `pick` job logs `the last
+finished Packaging run on main failed`. The run that passes closes the issue and starts the queue.
+
+- **`Source tarball with vendored crates`:** `meson dist` vendors the crates and builds the tarball offline. A
+  dependency change that does not vendor, or a file `meson dist` misses, fails here.
+- **`Native package (…)` and `Native package install and UI smoke test (…)`:** the RPM or a DEB does not build from the
+  tarball, or the installed package does not start in a clean container (`build-aux/package-smoke.sh`). The nightly run
+  catches a distro image that moved (Debian testing) without a merge.
+- **`Flatpak build, UI smoke test and lint (…)`:** as on a pull request, for the release manifest or on aarch64.
+- **A job fails for a reason outside the change:** `gh run rerun <run-id> --failed`; a green rerun closes the issue and
+  restarts the queue.
+
+Otherwise fix it through a pull request, or revert the merge that broke it. The queue is paused, so the maintainer
+merges the fix by hand once its required checks pass; the Packaging run that push starts closes the issue. Do not tag a
+release while Packaging is red.
 
 ### A pull request is not merging
 
@@ -75,6 +93,8 @@ oldest pull request that meets every condition:
    comes from `main`'s `scripts/tier-classify.sh` and `.github/risk-assessment.yml`; while `main` lacks either, every
    pull request counts as high risk and the queue logs that instead.
 4. **Fork:** the queue never picks a pull request from a fork.
+5. **Packaging on `main`:** while the last finished Packaging run on `main` failed, the queue picks nothing
+   ([Packaging fails on `main`](#packaging-fails-on-main)).
 
 If the pull request meets every condition and still waits, no event has started the queue since it became ready (a
 label a bot removed starts no run). Drain the queue by hand with `gh workflow run merge-queue.yml`.
@@ -152,9 +172,10 @@ request:
 
 - no deletion of `main` and no force pushes;
 - changes only through a pull request, merged with a merge commit, with every review thread resolved;
-- every CI job is a required check: `Rust and Meson checks`, `Source tarball with vendored crates`, both
-  `Flatpak build, UI smoke test and lint` jobs, the three `Native package install and UI smoke test` jobs and
-  `Merge queue script tests`.
+- the required checks: `Rust and Meson checks`, `Flatpak build, UI smoke test and lint (development)`,
+  `Merge queue script tests`, `Governance scripts and policies`, `Dependency policy (cargo-deny)`, `Script tests`,
+  `PR review rubric` and `Unit-test coverage floors`. Packaging's builds run after the merge and are not required
+  checks; a red Packaging run pauses the merge queue instead.
 
 Repository admins can bypass it (#237). Only the maintainer is an admin; agent tokens and Apps never get the admin role.
 The bypass is for emergencies the checks cannot pass by design, such as a broken runner image; when the maintainer

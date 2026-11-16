@@ -1,5 +1,11 @@
 name: CI
 
+# The checks every pull request waits for, all of them required (.github/rulesets/main.json):
+# rustfmt, clippy, rustdoc, the unit and Meson tests, the dependency policy, the scripts' tests
+# and the development Flatpak build on x86_64 with its UI smoke test. The slow builds (the source
+# tarball, the native packages, the release and aarch64 Flatpaks) run after the merge in
+# packaging.yml (#362).
+
 on:
   push:
     branches: [main]
@@ -113,159 +119,55 @@ jobs:
         run: python3 -m unittest discover -s tests/scripts -v
 
       - name: Shell script tests
-        run: sh scripts/nightly-compliance.test.sh
+        run: |
+          sh scripts/nightly-compliance.test.sh
+          sh scripts/needs-build.test.sh
+          sh scripts/packaging-issue.test.sh
 
       - name: shellcheck
         run: shellcheck scripts/*.sh
 
-  sources:
-    name: Source tarball with vendored crates
+  changes:
+    name: Changed paths
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
-      options: --privileged
+    timeout-minutes: 5
+    outputs:
+      build: ${{ steps.paths.outputs.build }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Install the Rust SDK extension
-        run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
-
-      # `meson dist` vendors the crates into the tarball (build-aux/dist-vendor.sh), then
-      # builds and tests the tarball offline from them, as a distro builder would.
-      - name: meson dist
+      # A pull request that only changes documentation or translations skips the Flatpak build
+      # (scripts/needs-build.sh); a skipped job passes as a required check. Pushes and manual
+      # runs always build.
+      - name: Does the change need the Flatpak build?
+        id: paths
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          chown -R "$(id -u):$(id -g)" "$PWD"
-          flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
-            --env=PATH=/usr/lib/sdk/rust-stable/bin:/usr/bin \
-            --command=sh org.gnome.Sdk//51 -c '
-              set -e
-              meson setup _dist
-              meson dist -C _dist --formats xztar
-            '
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: sources
-          path: _dist/meson-dist/*.tar.xz
-          if-no-files-found: error
-
-  packages:
-    name: Native package (${{ matrix.target }}${{ matrix.suffix }})
-    needs: sources
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 30
-    # Distros that ship GTK 4.24 and libadwaita 1.10 (#232), for x86_64 and aarch64 (#303).
-    # Each builds offline from the tarball's vendored crates, in its own container, on a
-    # runner of its own architecture.
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [fedora-45, debian-testing, ubuntu-26.10]
-        arch: [x86_64, aarch64]
-        include:
-          - target: fedora-45
-            image: registry.fedoraproject.org/fedora:45
-            build: build-aux/rpm/build.sh
-          - target: debian-testing
-            image: docker.io/library/debian:testing
-            build: build-aux/deb/build.sh
-          - target: ubuntu-26.10
-            image: docker.io/library/ubuntu:26.10
-            build: build-aux/deb/build.sh
-          # x86_64 keeps the plain job names, which are required checks.
-          - arch: x86_64
-            runner: ubuntu-latest
-            suffix: ''
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
-            suffix: ', aarch64'
-    container:
-      image: ${{ matrix.image }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: sources
-          path: sources
-
-      - name: Build
-        run: ${{ matrix.build }} sources/pindu-launcher-*.tar.xz packages ${{ matrix.target }}
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: package-${{ matrix.target }}-${{ matrix.arch }}
-          path: packages/*
-          if-no-files-found: error
-
-  packages-smoke:
-    name: Native package install and UI smoke test (${{ matrix.target }}${{ matrix.suffix }})
-    needs: packages
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 15
-    # A clean container: the package must pull in everything it needs to start.
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [fedora-45, debian-testing, ubuntu-26.10]
-        arch: [x86_64, aarch64]
-        include:
-          - target: fedora-45
-            image: registry.fedoraproject.org/fedora:45
-          - target: debian-testing
-            image: docker.io/library/debian:testing
-          - target: ubuntu-26.10
-            image: docker.io/library/ubuntu:26.10
-          - arch: x86_64
-            runner: ubuntu-latest
-            suffix: ''
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
-            suffix: ', aarch64'
-    container:
-      image: ${{ matrix.image }}
-      # glycin decodes the test cover in a bubblewrap sandbox, which cannot set up its
-      # namespaces in an unprivileged container.
-      options: --privileged
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: package-${{ matrix.target }}-${{ matrix.arch }}
-          path: packages
-
-      - name: Install and start
-        run: build-aux/package-smoke.sh packages/*
+          set -eu
+          if [ -z "$BASE_SHA" ]; then
+            echo build=true >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git -c core.quotePath=false diff --name-only --no-renames "${BASE_SHA}...${HEAD_SHA}" \
+            | sh scripts/needs-build.sh | tee -a "$GITHUB_OUTPUT"
 
   flatpak:
-    name: Flatpak build, UI smoke test and lint (${{ matrix.profile }}${{ matrix.suffix }})
-    runs-on: ${{ matrix.runner }}
+    name: Flatpak build, UI smoke test and lint (development)
+    needs: changes
+    # Only an answer of `false` skips the build: if `changes` failed, the build still runs.
+    if: ${{ !cancelled() && needs.changes.outputs.build != 'false' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 45
-    # The release manifest builds on every pull request too, so a broken one fails here and
-    # not when a release is tagged. aarch64 builds natively on GitHub's arm64 runners (#303);
-    # the manifests are the same for both architectures.
-    strategy:
-      fail-fast: false
-      matrix:
-        profile: [development, release]
-        arch: [x86_64, aarch64]
-        include:
-          - profile: development
-            manifest: build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher-devel.yml
-            bundle: pindu-launcher-devel.flatpak
-          - profile: release
-            manifest: build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml
-            bundle: pindu-launcher.flatpak
-          - arch: x86_64
-            runner: ubuntu-latest
-            suffix: ''
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
-            suffix: ', aarch64'
+    # The development manifest on x86_64; packaging.yml builds the release manifest and both on
+    # aarch64 after the merge. Not a matrix: a skipped matrix job reports its name unexpanded,
+    # so the required check would never pass.
     env:
-      MANIFEST: ${{ matrix.manifest }}
+      MANIFEST: build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher-devel.yml
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
@@ -295,9 +197,9 @@ jobs:
       # artifact pindu-launcher[-devel]-<arch>.flatpak.
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          manifest-path: ${{ matrix.manifest }}
-          bundle: ${{ matrix.bundle }}
-          arch: ${{ matrix.arch }}
+          manifest-path: ${{ env.MANIFEST }}
+          bundle: pindu-launcher-devel.flatpak
+          arch: x86_64
           run-tests: true
 
       # Blocking. The local exceptions only cover the importers' read-only access to

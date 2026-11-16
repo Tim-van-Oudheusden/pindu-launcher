@@ -65,7 +65,10 @@ gh pr create --title "type(scope): summary (#<number>)" --body-file <file>   # L
   with a merge commit: same-repo, not a draft, merge state `CLEAN`, none of the labels `hold`, `blocked`,
   `sentinel-alert` or `automated`, and not high risk by `main`'s `scripts/tier-classify.sh`. It first re-runs rustfmt,
   clippy, `cargo test` and `meson test` on the pull request merged with the latest `main`, and labels it `hold` with a
-  comment if they fail. Add `hold` to keep a pull request out; remove it to queue the pull request again
+  comment if they fail. Add `hold` to keep a pull request out; remove it to queue the pull request again. It merges
+  nothing while the last Packaging run on `main` failed (`.github/workflows/packaging.yml`: the source tarball, the
+  native packages and the release and aarch64 Flatpaks, built after the merge and nightly rather than on each pull
+  request); that run opens a `ci: Packaging failing on main` issue, and the fix is merged by hand
 - Issue work lands through a pull request, not a direct push to `main`. `.github/rulesets/main.json` is the ruleset
   that enforces this (pull requests with merge commits, the CI checks it names, no force-push or deletion; admins may
   bypass). Change it through a pull request, then apply it:
