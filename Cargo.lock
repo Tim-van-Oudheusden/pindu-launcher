@@ -1690,7 +1690,7 @@ dependencies = [
 
 [[package]]
 name = "manette"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "glib",
  "libc",
@@ -1699,7 +1699,7 @@ dependencies = [
 
 [[package]]
 name = "manette-sys"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "gio-sys",
  "glib-sys",
