@@ -162,7 +162,8 @@ Open it with a right stick click, the Steam Deck's "…" button, or <kbd>Ctrl</k
 
 - **Status:** the time, the battery, whether you are offline, and the game you are playing with how long it has run.
 - **Notifications** from this session: games a sync added or found missing, artwork fetched or not, Proton downloads,
-  and games that need a permission. Quick Access opens on them while one is unread.
+  games that need a permission, and a rollback or restart the system refused. Quick Access opens on them while one is
+  unread.
 - **Activity:** a running library sync, SteamGridDB artwork fetch or Proton download, with its progress. Artwork
   fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
 - **Refresh Library** reads your launchers again, offline like every sync.
@@ -193,6 +194,20 @@ and **GameMode** on or off from its next launch. Its options sheet (View or X) h
   `org.freedesktop.Platform.VulkanLayer.MangoHud` extension, which Flathub builds for x86_64 only. Games started on the
   host, and every game in a native package, use the system's `mangohud`. Without the extension, the switch of a
   Windows or Steam Runtime game is greyed out and says MangoHud is not installed; the game keeps its setting.
+
+### System Update
+
+On [Pindu OS](https://github.com/Tim-van-Oudheusden/pindu-os), Quick Access has a **System Update** entry, subtitled
+with the installed version, or with "Update ready" once an update has downloaded. Pindu OS installs updates when the
+console restarts, so the entry never restarts it by itself.
+
+- **Restart to Update** restarts into the update that is waiting.
+- **Roll Back to *version*** goes back to the previous version after asking: the console restarts into it, and the
+  version it ran stays installed to go back to. An update waiting at that moment is discarded.
+- With a rollback queued, the entry says the previous version starts next time and offers **Restart**.
+- If the system refuses to roll back or restart, a notification says why.
+
+Elsewhere, another distribution or the Flatpak, the entry does not show.
 
 ### Controllers
 

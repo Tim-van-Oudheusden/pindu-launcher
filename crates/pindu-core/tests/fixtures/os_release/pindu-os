@@ -1,0 +1,12 @@
+NAME="Pindu OS"
+VERSION="45.20261108.0"
+ID=pindu-os
+ID_LIKE=fedora
+VERSION_ID=45
+PRETTY_NAME="Pindu OS 45.20261108.0"
+VARIANT_ID=prod
+IMAGE_ID=pindu-os
+IMAGE_VERSION=45.20261108.0
+DEFAULT_HOSTNAME=pindu
+ANSI_COLOR="0;38;2;53;132;228"
+HOME_URL="https://github.com/Tim-van-Oudheusden/pindu-os"

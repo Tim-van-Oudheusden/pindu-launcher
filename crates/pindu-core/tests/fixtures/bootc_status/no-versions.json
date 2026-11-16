@@ -1,0 +1,91 @@
+{
+  "apiVersion": "org.containers.bootc/v1",
+  "kind": "BootcHost",
+  "metadata": {
+    "name": "host"
+  },
+  "spec": {
+    "image": {
+      "image": "ghcr.io/tim-van-oudheusden/pindu-os:stable",
+      "transport": "registry",
+      "signature": "containerPolicy"
+    },
+    "bootOrder": "default"
+  },
+  "status": {
+    "staged": {
+      "image": {
+        "image": {
+          "image": "ghcr.io/tim-van-oudheusden/pindu-os:stable",
+          "transport": "registry",
+          "signature": "containerPolicy"
+        },
+        "version": null,
+        "timestamp": "2026-11-01T04:12:09Z",
+        "imageDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "architecture": "amd64"
+      },
+      "cachedUpdate": null,
+      "incompatible": false,
+      "pinned": false,
+      "softRebootCapable": false,
+      "downloadOnly": false,
+      "store": "ostreeContainer",
+      "ostree": {
+        "stateroot": "default",
+        "checksum": "3333333333333333333333333333333333333333333333333333333333333333",
+        "deploySerial": 0
+      }
+    },
+    "booted": {
+      "image": {
+        "image": {
+          "image": "ghcr.io/tim-van-oudheusden/pindu-os:stable",
+          "transport": "registry",
+          "signature": "containerPolicy"
+        },
+        "version": null,
+        "timestamp": "2026-11-01T04:12:09Z",
+        "imageDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "architecture": "amd64"
+      },
+      "cachedUpdate": null,
+      "incompatible": false,
+      "pinned": false,
+      "softRebootCapable": false,
+      "downloadOnly": false,
+      "store": "ostreeContainer",
+      "ostree": {
+        "stateroot": "default",
+        "checksum": "2222222222222222222222222222222222222222222222222222222222222222",
+        "deploySerial": 0
+      }
+    },
+    "rollback": {
+      "image": {
+        "image": {
+          "image": "ghcr.io/tim-van-oudheusden/pindu-os:stable",
+          "transport": "registry",
+          "signature": "containerPolicy"
+        },
+        "version": null,
+        "timestamp": "2026-11-01T04:12:09Z",
+        "imageDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "architecture": "amd64"
+      },
+      "cachedUpdate": null,
+      "incompatible": false,
+      "pinned": false,
+      "softRebootCapable": false,
+      "downloadOnly": false,
+      "store": "ostreeContainer",
+      "ostree": {
+        "stateroot": "default",
+        "checksum": "1111111111111111111111111111111111111111111111111111111111111111",
+        "deploySerial": 0
+      }
+    },
+    "rollbackQueued": false,
+    "type": "bootcHost"
+  }
+}

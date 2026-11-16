@@ -12,6 +12,7 @@ crates/pindu-ui/src/fullscreen_panels.rs
 crates/pindu-ui/src/fullscreen_performance.rs
 crates/pindu-ui/src/fullscreen_playing.rs
 crates/pindu-ui/src/fullscreen_status.rs
+crates/pindu-ui/src/fullscreen_system_update.rs
 crates/pindu-ui/src/game_dialog.rs
 crates/pindu-ui/src/game_page.rs
 crates/pindu-ui/src/hint_bar.rs
@@ -30,6 +31,7 @@ crates/pindu-ui/src/sources.rs
 crates/pindu-ui/src/steamgriddb_picker.rs
 crates/pindu-ui/src/steamgriddb_service.rs
 crates/pindu-ui/src/sync_service.rs
+crates/pindu-ui/src/system_update_service.rs
 crates/pindu-ui/src/widgets/cover_tile.rs
 crates/pindu-ui/src/window.rs
 data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in
