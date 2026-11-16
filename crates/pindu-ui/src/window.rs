@@ -290,6 +290,24 @@ mod imp {
         pub quick_access_rollback_note: TemplateChild<gtk::Label>,
         #[template_child]
         pub quick_access_system_actions: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_network_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_network_icon: TemplateChild<gtk::Image>,
+        #[template_child]
+        pub quick_access_network_subtitle: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_network_devices: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_wifi_radio: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_wifi_switch: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_wifi_blocked: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub quick_access_wifi_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_wifi_networks: TemplateChild<gtk::ListBox>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
         /// Every sidebar row with the view it selects and, for sources, its count label.
@@ -359,6 +377,9 @@ mod imp {
         pub performance_tools: Cell<Option<[bool; 2]>>,
         /// Whether the switches are being set to show those, rather than by the user.
         pub performance_filling: Cell<bool>,
+        /// The dialog asking for a Wi-Fi passphrase, with the prompt it shows.
+        pub network_prompt:
+            RefCell<Option<(adw::AlertDialog, pindu_core::system::network::Prompt)>>,
     }
 
     #[glib::object_subclass]

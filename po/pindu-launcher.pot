@@ -2926,3 +2926,158 @@ msgstr ""
 #: data/ui/window.blp:1927
 msgid "_About Pindu launcher"
 msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:66
+msgid "Looking for networks…"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/fullscreen_network.rs:310
+#, rust-format
+msgid "Forget {network}?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:312
+msgid ""
+"Its passphrase is removed, and the console no longer joins it by itself."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:319
+msgid "_Forget"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:340
+#: crates/pindu-ui/src/fullscreen_network.rs:350
+msgid "Wired"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:343
+msgid "Not allowed on this system"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:351 data/ui/window.blp:1447
+#: data/ui/window.blp:1451
+msgid "Wi-Fi"
+msgstr ""
+
+#. Translators: {device} is "Wired" or "Wi-Fi", {interface} its name, such as wlan0.
+#: crates/pindu-ui/src/fullscreen_network.rs:355
+#, rust-format
+msgid "{device} ({interface})"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/fullscreen_network.rs:364
+#, rust-format
+msgid "Connected to {network}"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:366
+#: crates/pindu-ui/src/fullscreen_network.rs:404
+msgid "Connected"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:367
+#: crates/pindu-ui/src/fullscreen_network.rs:402
+msgid "Connecting…"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:368
+msgid "Disconnected"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:369
+msgid "Cable unplugged"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:403
+msgid "Forgetting…"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:405
+msgid "Saved"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:406
+msgid "Set up on another device"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:429
+msgid "Connect"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:438
+msgid "Forget"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:512
+msgid "Wrong passphrase. Try again."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:514
+msgid "A passphrase has 8 to 63 characters."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:516
+msgid "Enter the network's passphrase."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:522
+msgid "Passphrase"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/fullscreen_network.rs:525
+#, rust-format
+msgid "Join {network}"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:531
+msgid "_Join"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/network_service.rs:30
+#, rust-format
+msgid "Could not join {network}"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/network_service.rs:38
+#, rust-format
+msgid "Could not forget {network}"
+msgstr ""
+
+#: crates/pindu-ui/src/network_service.rs:44
+msgid "Could not switch Wi-Fi"
+msgstr ""
+
+#: crates/pindu-ui/src/network_service.rs:93
+msgid "The saved passphrase was not accepted."
+msgstr ""
+
+#: crates/pindu-ui/src/network_service.rs:94
+msgid "The network is out of range."
+msgstr ""
+
+#: crates/pindu-ui/src/network_service.rs:95
+msgid "The network gave no address."
+msgstr ""
+
+#. Translators: {reason} is a number NetworkManager gives for a failed connection.
+#: crates/pindu-ui/src/network_service.rs:97
+#, rust-format
+msgid "The connection failed (reason {reason})."
+msgstr ""
+
+#: data/ui/window.blp:603 data/ui/window.blp:1419
+msgid "Network"
+msgstr ""
+
+#: data/ui/window.blp:1452
+msgid "Turned off by a hardware switch"
+msgstr ""
+
+#: data/ui/window.blp:1458
+msgid "Wi-Fi Networks"
+msgstr ""

@@ -1,8 +1,8 @@
 //! The session's notifications, which Quick Access lists: what happened in the background
 //! while the user may not have been looking (a sync that found games, artwork fetched or
 //! not, a Proton build installed or not, a game that needs a permission, a rollback or
-//! restart the system refused). Kept in memory for the running session only, newest first,
-//! at most [`CAPACITY`] of them.
+//! restart the system refused, a network that could not be joined). Kept in memory for the
+//! running session only, newest first, at most [`CAPACITY`] of them.
 
 use std::collections::VecDeque;
 
@@ -28,6 +28,8 @@ pub enum Kind {
     Permission,
     /// The system did not roll back or restart when the user asked.
     SystemFailed,
+    /// A network could not be joined or forgotten, or Wi-Fi switched on or off.
+    NetworkFailed,
 }
 
 /// What a notification opens when the user picks it.

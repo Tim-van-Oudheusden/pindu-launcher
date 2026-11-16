@@ -1,9 +1,9 @@
 //! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
 //! leaving), the Quick Access panel on the right (notifications, what runs in the
-//! background, the design, the controllers and what each button does, a few settings, OS
-//! updates on Pindu OS, and entries for the page under it such as the library's filters and
-//! a focused game's performance switches) and the options sheet at the bottom (what to do
-//! with one game).
+//! background, the design, the controllers and what each button does, a few settings, the
+//! network, OS updates on Pindu OS, and entries for the page under it such as the library's
+//! filters and a focused game's performance switches) and the options sheet at the bottom
+//! (what to do with one game).
 //! This decides which one is open and at which level, what Start, Guide, R3, View or X and
 //! B do to them, and what each lists.
 
@@ -67,6 +67,9 @@ pub enum QuickAccessLevel {
     /// The installed OS version, an update waiting for the next start and the version to
     /// roll back to, on Pindu OS (see [`crate::system::update`]).
     SystemUpdate,
+    /// The wired and Wi-Fi devices and the Wi-Fi networks in range, to join or forget (see
+    /// [`crate::system::network`]).
+    Network,
 }
 
 /// What lies under the panels when an intent comes in.
@@ -408,6 +411,7 @@ mod tests {
             QuickAccessLevel::Filters,
             QuickAccessLevel::Performance,
             QuickAccessLevel::SystemUpdate,
+            QuickAccessLevel::Network,
         ] {
             let mut panels = Panels::new();
             panels.handle(Intent::QuickAccess, PAGE);
