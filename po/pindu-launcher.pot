@@ -160,6 +160,10 @@ msgstr[1] ""
 msgid "{result}; {note}"
 msgstr ""
 
+#: crates/pindu-ui/src/audio_output_service.rs:33
+msgid "Could not change the sound output"
+msgstr ""
+
 #: crates/pindu-ui/src/collection_actions.rs:17
 msgid "_Add to Collection"
 msgstr ""
@@ -2711,7 +2715,11 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: data/ui/window.blp:603 data/ui/window.blp:1323
+#: data/ui/window.blp:603 data/ui/window.blp:1365
+msgid "Sound Output"
+msgstr ""
+
+#: data/ui/window.blp:645 data/ui/window.blp:1397
 msgid "System Update"
 msgstr ""
 

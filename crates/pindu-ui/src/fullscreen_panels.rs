@@ -9,9 +9,10 @@
 //! Library `fullscreen_activity`'s, its Surprise Me `fullscreen_surprise`'s, its
 //! Controllers `fullscreen_controllers`'s, its Controls `fullscreen_controls`'s, its
 //! Filters (on the library page only) `fullscreen_library`'s, its Performance (for a game we
-//! run ourselves, which the options sheet has too) `fullscreen_performance`'s, its System
-//! Update (on Pindu OS only) `fullscreen_system_update`'s. Its Design level holds the
-//! design, its variant, Home's background blur and dim, and the user's own stylesheet.
+//! run ourselves, which the options sheet has too) `fullscreen_performance`'s, its Sound
+//! Output (where PipeWire's tools run) `fullscreen_sound_output`'s, its System Update (on
+//! Pindu OS only) `fullscreen_system_update`'s. Its Design level holds the design, its
+//! variant, Home's background blur and dim, and the user's own stylesheet.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -121,6 +122,11 @@ impl PinduWindow {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Performance));
             })
             .build();
+        let sound_output = gio::ActionEntry::builder("quick-access-sound-output")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::SoundOutput));
+            })
+            .build();
         let system_update = gio::ActionEntry::builder("quick-access-system-update")
             .activate(|window: &Self, _, _| {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::SystemUpdate));
@@ -143,6 +149,7 @@ impl PinduWindow {
             quick_settings,
             filters,
             performance,
+            sound_output,
             system_update,
         ]);
         // Up and Down stop at a list's ends; in Quick Access's Controllers, settings and
@@ -527,6 +534,7 @@ impl PinduWindow {
             Some(Panel::QuickAccess(QuickAccessLevel::Controllers)) => self.fill_controllers(),
             Some(Panel::QuickAccess(QuickAccessLevel::Controls)) => self.fill_controls(),
             Some(Panel::QuickAccess(QuickAccessLevel::Filters)) => self.show_fullscreen_filters(),
+            Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)) => self.show_sound_output(),
             Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)) => self.show_system_update(),
             _ => {}
         }
@@ -560,6 +568,7 @@ impl PinduWindow {
                     QuickAccessLevel::Settings => "settings",
                     QuickAccessLevel::Filters => "filters",
                     QuickAccessLevel::Performance => "performance",
+                    QuickAccessLevel::SoundOutput => "sound-output",
                     QuickAccessLevel::SystemUpdate => "system-update",
                 });
             }
@@ -626,6 +635,10 @@ impl PinduWindow {
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Performance)),
             ) => Some(imp.quick_access_performance_row.get().upcast()),
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)),
+            ) => Some(imp.quick_access_sound_output_row.get().upcast()),
             (
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)),
@@ -698,6 +711,10 @@ impl PinduWindow {
                     row.next_sibling()
                 })
                 .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
+            }
+            // The output in use.
+            (Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)), _) => {
+                self.sound_output_focus()
             }
             (Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)), _) => {
                 self.system_update_focus()

@@ -2,6 +2,7 @@
 //! gettext and resources and runs [`application::PinduApplication`].
 
 pub mod application;
+pub mod audio_output_service;
 pub mod collection_actions;
 pub mod config;
 pub mod controller_navigation;
@@ -17,6 +18,7 @@ pub mod fullscreen_notifications;
 pub mod fullscreen_panels;
 pub mod fullscreen_performance;
 pub mod fullscreen_playing;
+pub mod fullscreen_sound_output;
 pub mod fullscreen_status;
 pub mod fullscreen_surprise;
 pub mod fullscreen_system_update;
@@ -53,3 +55,4 @@ pub mod task_service;
 pub mod watch_service;
 pub mod widgets;
 pub mod window;
+pub mod wireplumber_backend;

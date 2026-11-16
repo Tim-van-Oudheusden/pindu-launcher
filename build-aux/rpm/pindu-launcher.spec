@@ -40,6 +40,10 @@ BuildRequires:  pkgconfig(libseccomp)
 Requires:       glycin-loaders
 Requires:       bubblewrap
 Requires:       hicolor-icon-theme
+# Fullscreen mode's Sound Output lists the outputs with pw-dump and sets the default
+# with wpctl
+Requires:       pipewire-utils
+Requires:       wireplumber
 # GameMode for games that turn it on; umu-launcher, which runs Windows games, has no
 # Fedora package: https://github.com/Open-Wine-Components/umu-launcher#installing
 Recommends:     gamemode

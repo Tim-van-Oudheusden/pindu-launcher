@@ -20,6 +20,7 @@ use pindu_core::library::{
 use pindu_core::model::{GameId, Source, Timestamp};
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{GameOption, Panels};
+use pindu_core::system::audio::Output;
 use pindu_core::tasks::Task;
 
 use crate::application::PinduApplication;
@@ -281,6 +282,12 @@ mod imp {
         #[template_child]
         pub quick_access_performance_note: TemplateChild<gtk::Label>,
         #[template_child]
+        pub quick_access_sound_output_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_sound_output_subtitle: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_sound_outputs: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub quick_access_system_update_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub quick_access_system_update_subtitle: TemplateChild<gtk::Label>,
@@ -334,6 +341,8 @@ mod imp {
         pub game_options: RefCell<Vec<GameOption>>,
         /// The intents Quick Access's Controls lists, in its rows' order across its groups.
         pub shown_controls: RefCell<Vec<Intent>>,
+        /// The outputs Quick Access's Sound Output lists, in its rows' order.
+        pub sound_outputs: RefCell<Vec<Output>>,
         /// The widget that had focus before a panel opened, to give it back after.
         pub focus_before_panel: glib::WeakRef<gtk::Widget>,
         /// Fullscreen mode's clocks: their format, their next tick while one shows, and
@@ -446,6 +455,7 @@ impl PinduWindow {
             window.setup_activity(application, sync_service);
             window.setup_controllers(application);
             window.setup_controls(application);
+            window.setup_sound_output(application);
         }
         window
     }
