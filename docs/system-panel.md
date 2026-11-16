@@ -151,7 +151,7 @@ the services; they never talk to the bus or spawn a process themselves.
 | Availability | `system` (the rules in [What is available](#what-is-available), from facts the backends report) | | | |
 | Power | `system::power` (`PowerBackend`) | `logind_backend.rs` | `system_power_service.rs` | not yet moved (#338) |
 | Network | `system::network` (`NetworkBackend`) | `networkmanager_backend.rs` | `network_service.rs` | `PinduNetworkLevel` (`fullscreen_network.rs`), `data/ui/fullscreen_network.blp` |
-| Bluetooth | `system::bluetooth` (`BluetoothBackend`) | `bluez_backend.rs` | `bluetooth_service.rs` | not yet moved (#338) |
+| Bluetooth | `system::bluetooth` (`BluetoothBackend`) | `bluez_backend.rs` | `bluetooth_service.rs` | `PinduBluetoothLevel` (`fullscreen_bluetooth.rs`), `data/ui/fullscreen_bluetooth.blp` |
 | Audio output | `system::audio` (`AudioBackend`, `pw-dump` parser) | `wireplumber_backend.rs` | `audio_output_service.rs` | not yet moved (#338) |
 | OS updates | `system::update` (`UpdateBackend`, `bootc status` parser) | `pindu_os_backend.rs` | `system_update_service.rs` | not yet moved (#338) |
 

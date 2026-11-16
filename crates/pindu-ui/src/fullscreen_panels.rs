@@ -172,6 +172,8 @@ impl PinduWindow {
         // (`fullscreen_playing` takes the drawer's and Quick Access's own lists up to their
         // Playing Now cards).
         let [network_devices, wifi_radio, wifi_networks] = imp.quick_access_network_level.lists();
+        let [bluetooth_adapter, bluetooth_paired, bluetooth_found] =
+            imp.quick_access_bluetooth_level.lists();
         for list in [
             imp.quick_access_designs.get(),
             imp.quick_access_variants.get(),
@@ -188,9 +190,9 @@ impl PinduWindow {
             imp.quick_access_clear_filters.get(),
             imp.options_list.get(),
             imp.options_performance.get(),
-            imp.quick_access_bluetooth_adapter.get(),
-            imp.quick_access_bluetooth_paired.get(),
-            imp.quick_access_bluetooth_found.get(),
+            bluetooth_adapter,
+            bluetooth_paired,
+            bluetooth_found,
             imp.quick_access_system_versions.get(),
             imp.quick_access_system_actions.get(),
             network_devices,

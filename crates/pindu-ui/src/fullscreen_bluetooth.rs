@@ -4,8 +4,12 @@
 //! Forget, asked first) and the devices found nearby, which a press pairs and connects.
 //! While the level is open discovery and the pairing agent run, and what the agent asks
 //! shows in a dialog: a code to confirm (A confirms, B refuses) or a code to type on the
-//! device. The window shows [`BluetoothService`]'s state and calls it; it never talks to
-//! BlueZ itself.
+//! device. The level is [`PinduBluetoothLevel`], with its own Blueprint
+//! (`data/ui/fullscreen_bluetooth.blp`); the window keeps the entry, which sits in Quick
+//! Access's shared list, and the level's `win.bluetooth-*` actions. Both show
+//! [`BluetoothService`]'s state and call it; neither talks to BlueZ itself.
+
+use std::cell::RefCell;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -20,6 +24,68 @@ use crate::window::PinduWindow;
 
 /// The icon of a device whose own icon the theme lacks.
 const FALLBACK_ICON: &str = "bluetooth-active-symbolic";
+
+mod imp {
+    use super::*;
+
+    #[derive(Debug, Default, gtk::CompositeTemplate)]
+    #[template(
+        resource = "/io/github/tim_van_oudheusden/pindu-launcher/ui/fullscreen_bluetooth.ui"
+    )]
+    pub struct PinduBluetoothLevel {
+        #[template_child]
+        pub quick_access_bluetooth_adapter: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_bluetooth_switch: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_bluetooth_blocked: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub quick_access_bluetooth_paired_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_bluetooth_paired: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_bluetooth_found_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_bluetooth_found: TemplateChild<gtk::ListBox>,
+        /// The dialog showing what Bluetooth's pairing agent asks, with what it shows.
+        pub bluetooth_prompt: RefCell<Option<(adw::AlertDialog, Prompt)>>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for PinduBluetoothLevel {
+        const NAME: &'static str = "PinduBluetoothLevel";
+        type Type = super::PinduBluetoothLevel;
+        type ParentType = adw::Bin;
+
+        fn class_init(klass: &mut Self::Class) {
+            klass.bind_template();
+        }
+
+        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
+            obj.init_template();
+        }
+    }
+
+    impl ObjectImpl for PinduBluetoothLevel {
+        fn constructed(&self) {
+            self.parent_constructed();
+            self.obj().setup();
+        }
+    }
+
+    impl WidgetImpl for PinduBluetoothLevel {}
+
+    impl BinImpl for PinduBluetoothLevel {}
+}
+
+glib::wrapper! {
+    /// Quick Access's Bluetooth level: the radio's switch, the paired devices and the
+    /// devices found nearby. It is the `"bluetooth"` page of the window's Quick Access
+    /// stack.
+    pub struct PinduBluetoothLevel(ObjectSubclass<imp::PinduBluetoothLevel>)
+        @extends adw::Bin, gtk::Widget,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
+}
 
 impl PinduWindow {
     /// Adds the level's actions, and shows the entry as the section is and as it changes.
@@ -41,7 +107,8 @@ impl PinduWindow {
             .parameter_type(Some(glib::VariantTy::STRING))
             .activate(|window: &Self, _, target| {
                 if let Some(device) = target.and_then(|target| target.str()) {
-                    window.ask_forget(device);
+                    let level = &window.imp().quick_access_bluetooth_level;
+                    level.ask_forget(device);
                 }
             })
             .build();
@@ -51,37 +118,6 @@ impl PinduWindow {
             device_action("bluetooth-disconnect", BluetoothService::disconnect),
             forget,
         ]);
-        let imp = self.imp();
-        // Named as the device rows are, so focus finds them again after a refill.
-        imp.quick_access_bluetooth_switch
-            .set_widget_name("adapter:switch");
-        imp.quick_access_bluetooth_blocked
-            .set_widget_name("adapter:blocked");
-        imp.quick_access_bluetooth_switch
-            .connect_active_notify(glib::clone!(
-                #[weak(rename_to = window)]
-                self,
-                move |switch| {
-                    // Showing the state sets the switch too; only the user's flip asks.
-                    let Some(service) = window.bluetooth_service() else {
-                        return;
-                    };
-                    if switch.is_active() != switch_on(service.state().power) {
-                        service.set_powered(switch.is_active());
-                    }
-                }
-            ));
-        let placeholder = gtk::Label::builder()
-            .label(gettext("Looking for devices…"))
-            .wrap(true)
-            .margin_top(12)
-            .margin_bottom(12)
-            .margin_start(12)
-            .margin_end(12)
-            .css_classes(["dim-label"])
-            .build();
-        imp.quick_access_bluetooth_found
-            .set_placeholder(Some(&placeholder));
         let Some(service) = self.bluetooth_service() else {
             return;
         };
@@ -112,13 +148,7 @@ impl PinduWindow {
 
     /// Where focus goes on the level: the switch, or what blocks the radio.
     pub(crate) fn bluetooth_focus(&self) -> Option<gtk::Widget> {
-        let imp = self.imp();
-        let switch = &imp.quick_access_bluetooth_switch;
-        Some(if switch.is_visible() {
-            switch.get().upcast()
-        } else {
-            imp.quick_access_bluetooth_blocked.get().upcast()
-        })
+        self.imp().quick_access_bluetooth_level.focus_target()
     }
 
     fn bluetooth_service(&self) -> Option<BluetoothService> {
@@ -135,7 +165,8 @@ impl PinduWindow {
         imp.quick_access_bluetooth_row.set_visible(state.available);
         imp.quick_access_bluetooth_subtitle
             .set_label(&summary_text(&state.summary()));
-        self.show_bluetooth_prompt(state.prompt.as_ref());
+        imp.quick_access_bluetooth_level
+            .show_prompt(state.prompt.as_ref());
         if self.open_panel() != Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)) {
             return;
         }
@@ -146,11 +177,88 @@ impl PinduWindow {
         self.fill_bluetooth(state);
     }
 
-    /// The level's rows for `state`, keeping focus on the row it was on and paired devices
-    /// open as they were.
+    /// Fills the level for `state`, and puts focus back in the panel when the row it was on
+    /// is gone.
     fn fill_bluetooth(&self, state: &BluetoothState) {
+        if self.imp().quick_access_bluetooth_level.fill(state) {
+            self.focus_panel(None);
+        }
+    }
+}
+
+impl PinduBluetoothLevel {
+    /// Names the rows controller focus finds again after a refill, gives the found devices
+    /// their placeholder, and turns the radio on or off as the user flips its switch.
+    fn setup(&self) {
         let imp = self.imp();
-        let focused = self.bluetooth_focused_row();
+        // Named as the device rows are, so focus finds them again after a refill.
+        imp.quick_access_bluetooth_switch
+            .set_widget_name("adapter:switch");
+        imp.quick_access_bluetooth_blocked
+            .set_widget_name("adapter:blocked");
+        imp.quick_access_bluetooth_switch
+            .connect_active_notify(glib::clone!(
+                #[weak(rename_to = level)]
+                self,
+                move |switch| {
+                    // Showing the state sets the switch too; only the user's flip asks.
+                    let Some(service) = level.bluetooth_service() else {
+                        return;
+                    };
+                    if switch.is_active() != switch_on(service.state().power) {
+                        service.set_powered(switch.is_active());
+                    }
+                }
+            ));
+        let placeholder = gtk::Label::builder()
+            .label(gettext("Looking for devices…"))
+            .wrap(true)
+            .margin_top(12)
+            .margin_bottom(12)
+            .margin_start(12)
+            .margin_end(12)
+            .css_classes(["dim-label"])
+            .build();
+        imp.quick_access_bluetooth_found
+            .set_placeholder(Some(&placeholder));
+    }
+
+    /// The level's lists, whose Up and Down go on to the next list at their ends.
+    pub(crate) fn lists(&self) -> [gtk::ListBox; 3] {
+        let imp = self.imp();
+        [
+            imp.quick_access_bluetooth_adapter.get(),
+            imp.quick_access_bluetooth_paired.get(),
+            imp.quick_access_bluetooth_found.get(),
+        ]
+    }
+
+    /// Where focus goes on the level: the switch, or what blocks the radio.
+    pub(crate) fn focus_target(&self) -> Option<gtk::Widget> {
+        let imp = self.imp();
+        let switch = &imp.quick_access_bluetooth_switch;
+        Some(if switch.is_visible() {
+            switch.get().upcast()
+        } else {
+            imp.quick_access_bluetooth_blocked.get().upcast()
+        })
+    }
+
+    /// The service, through the application of the window the level is in.
+    fn bluetooth_service(&self) -> Option<BluetoothService> {
+        self.root()
+            .and_downcast::<gtk::Window>()
+            .and_then(|window| window.application())
+            .and_downcast::<PinduApplication>()
+            .map(|application| application.bluetooth_service().clone())
+    }
+
+    /// The level's rows for `state`, keeping focus on the row it was on and paired devices
+    /// open as they were. Returns whether focus was on a row that is gone, with no row to
+    /// take its place, so the window must put it somewhere.
+    pub(crate) fn fill(&self, state: &BluetoothState) -> bool {
+        let imp = self.imp();
+        let focused = self.focused_row();
         let paired = &imp.quick_access_bluetooth_paired;
         let expanded: Vec<glib::GString> = rows(paired)
             .filter_map(|row| row.downcast::<adw::ExpanderRow>().ok())
@@ -200,22 +308,17 @@ impl PinduWindow {
                 Some(target) => {
                     target.grab_focus();
                 }
-                None => self.focus_panel(None),
+                None => return true,
             }
         }
+        false
     }
 
     /// The name of the level's row that has focus, which filling the level again takes
     /// away; `None` when focus is elsewhere.
-    fn bluetooth_focused_row(&self) -> Option<String> {
-        let imp = self.imp();
-        let focus = gtk::prelude::GtkWindowExt::focus(self)?;
-        let lists = [
-            imp.quick_access_bluetooth_adapter.get(),
-            imp.quick_access_bluetooth_paired.get(),
-            imp.quick_access_bluetooth_found.get(),
-        ];
-        if !lists.iter().any(|list| focus.is_ancestor(list)) {
+    fn focused_row(&self) -> Option<String> {
+        let focus = gtk::prelude::RootExt::focus(&self.root()?)?;
+        if !self.lists().iter().any(|list| focus.is_ancestor(list)) {
             return None;
         }
         // The rows the level names; an expander row's header inside it has no name.
@@ -226,7 +329,7 @@ impl PinduWindow {
 
     /// Shows what the pairing agent asks in a dialog, or closes the dialog once it no
     /// longer asks.
-    fn show_bluetooth_prompt(&self, prompt: Option<&Prompt>) {
+    pub(crate) fn show_prompt(&self, prompt: Option<&Prompt>) {
         let imp = self.imp();
         let shown = imp.bluetooth_prompt.borrow().clone();
         if shown.as_ref().map(|(_, shown)| shown) == prompt {
@@ -244,10 +347,10 @@ impl PinduWindow {
         dialog.connect_response(
             None,
             glib::clone!(
-                #[weak(rename_to = window)]
+                #[weak(rename_to = level)]
                 self,
                 move |_, response| {
-                    let Some(service) = window.bluetooth_service() else {
+                    let Some(service) = level.bluetooth_service() else {
                         return;
                     };
                     // A dialog closing for a prompt gone or replaced answers nothing.
@@ -256,7 +359,7 @@ impl PinduWindow {
                     }
                     // The dialog closes itself after its response; the answer taking the
                     // prompt away must not close it again.
-                    window.imp().bluetooth_prompt.replace(None);
+                    level.imp().bluetooth_prompt.replace(None);
                     match answered {
                         Prompt::Confirm { .. } => service.confirm(response == "pair"),
                         Prompt::Show { .. } => service.dismiss(),
@@ -268,10 +371,10 @@ impl PinduWindow {
             ),
         );
         dialog.connect_closed(glib::clone!(
-            #[weak(rename_to = window)]
+            #[weak(rename_to = level)]
             self,
             move |dialog| {
-                let imp = window.imp();
+                let imp = level.imp();
                 let ours = imp
                     .bluetooth_prompt
                     .borrow()
@@ -284,12 +387,13 @@ impl PinduWindow {
         ));
         imp.bluetooth_prompt
             .replace(Some((dialog.clone(), prompt.clone())));
-        dialog.present(Some(self));
+        // On the window the level is in.
+        dialog.present(self.root().as_ref());
     }
 
     /// Asks before forgetting a paired device: pairing it again takes a controller, and it
     /// may be the one in use.
-    fn ask_forget(&self, device: &str) {
+    pub(crate) fn ask_forget(&self, device: &str) {
         let Some(service) = self.bluetooth_service() else {
             return;
         };
@@ -318,7 +422,7 @@ impl PinduWindow {
         dialog.set_response_appearance("forget", adw::ResponseAppearance::Destructive);
         let device = device.to_owned();
         dialog.connect_response(Some("forget"), move |_, _| service.forget(&device));
-        dialog.present(Some(self));
+        dialog.present(self.root().as_ref());
     }
 }
 
