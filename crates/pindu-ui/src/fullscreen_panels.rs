@@ -9,9 +9,9 @@
 //! Library `fullscreen_activity`'s, its Surprise Me `fullscreen_surprise`'s, its
 //! Controllers `fullscreen_controllers`'s, its Controls `fullscreen_controls`'s, its
 //! Filters (on the library page only) `fullscreen_library`'s, its Performance (for a game we
-//! run ourselves, which the options sheet has too) `fullscreen_performance`'s. Its Design
-//! level holds the design, its variant, Home's background blur and dim, and the user's own
-//! stylesheet.
+//! run ourselves, which the options sheet has too) `fullscreen_performance`'s, its System
+//! Update (on Pindu OS only) `fullscreen_system_update`'s. Its Design level holds the
+//! design, its variant, Home's background blur and dim, and the user's own stylesheet.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -121,6 +121,11 @@ impl PinduWindow {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Performance));
             })
             .build();
+        let system_update = gio::ActionEntry::builder("quick-access-system-update")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::SystemUpdate));
+            })
+            .build();
         self.add_action_entries([
             close,
             home,
@@ -138,10 +143,12 @@ impl PinduWindow {
             quick_settings,
             filters,
             performance,
+            system_update,
         ]);
-        // Up and Down stop at a list's ends; in Quick Access's Controllers and settings and
-        // the options sheet they go on to the next list (`fullscreen_playing` takes the
-        // drawer's and Quick Access's own lists up to their Playing Now cards).
+        // Up and Down stop at a list's ends; in Quick Access's Controllers, settings and
+        // System Update and the options sheet they go on to the next list
+        // (`fullscreen_playing` takes the drawer's and Quick Access's own lists up to their
+        // Playing Now cards).
         for list in [
             imp.quick_access_designs.get(),
             imp.quick_access_variants.get(),
@@ -158,6 +165,8 @@ impl PinduWindow {
             imp.quick_access_clear_filters.get(),
             imp.options_list.get(),
             imp.options_performance.get(),
+            imp.quick_access_system_versions.get(),
+            imp.quick_access_system_actions.get(),
         ] {
             list.connect_keynav_failed(|list, direction| {
                 step_out_of_list(list, direction);
@@ -233,6 +242,7 @@ impl PinduWindow {
         self.setup_quick_access_settings();
         self.setup_quick_access();
         self.setup_performance();
+        self.setup_system_update();
         self.fill_drawer();
     }
 
@@ -468,7 +478,7 @@ impl PinduWindow {
         self.show_panel(Panel::Options(level));
     }
 
-    fn show_panel(&self, panel: Panel) {
+    pub(crate) fn show_panel(&self, panel: Panel) {
         let mut panels = self.imp().panels.get();
         panels.show(panel);
         self.set_panels(panels);
@@ -517,6 +527,7 @@ impl PinduWindow {
             Some(Panel::QuickAccess(QuickAccessLevel::Controllers)) => self.fill_controllers(),
             Some(Panel::QuickAccess(QuickAccessLevel::Controls)) => self.fill_controls(),
             Some(Panel::QuickAccess(QuickAccessLevel::Filters)) => self.show_fullscreen_filters(),
+            Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)) => self.show_system_update(),
             _ => {}
         }
         let drawer = matches!(open, Some(Panel::Drawer(_)));
@@ -549,6 +560,7 @@ impl PinduWindow {
                     QuickAccessLevel::Settings => "settings",
                     QuickAccessLevel::Filters => "filters",
                     QuickAccessLevel::Performance => "performance",
+                    QuickAccessLevel::SystemUpdate => "system-update",
                 });
             }
             None => {
@@ -614,6 +626,10 @@ impl PinduWindow {
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Performance)),
             ) => Some(imp.quick_access_performance_row.get().upcast()),
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)),
+            ) => Some(imp.quick_access_system_update_row.get().upcast()),
             // The first Playing Now card's Return comes first.
             (Some(Panel::Drawer(DrawerLevel::Main)), _) if imp.playing_cards.is_visible() => imp
                 .playing_cards
@@ -682,6 +698,9 @@ impl PinduWindow {
                     row.next_sibling()
                 })
                 .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
+            }
+            (Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)), _) => {
+                self.system_update_focus()
             }
             // The first controller that can rumble, or else the first button prompt.
             (Some(Panel::QuickAccess(QuickAccessLevel::Controllers)), _) => {

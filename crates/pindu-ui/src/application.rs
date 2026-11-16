@@ -23,6 +23,7 @@ use crate::sources::source_list;
 use crate::steamgriddb_service;
 use crate::style_service::StyleService;
 use crate::sync_service::SyncService;
+use crate::system_update_service::SystemUpdateService;
 use crate::task_service::TaskService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
@@ -65,6 +66,8 @@ mod imp {
         pub style_service: OnceCell<StyleService>,
         /// The batteries, for Quick Access's header.
         pub power_service: OnceCell<PowerService>,
+        /// OS updates on Pindu OS, for Quick Access's System Update.
+        pub system_update_service: OnceCell<SystemUpdateService>,
         /// What happened in the background this session, for Quick Access.
         pub notification_service: NotificationService,
         /// What runs in the background, for Quick Access's Activity.
@@ -151,6 +154,9 @@ mod imp {
                 .expect("start-up runs once");
             self.power_service
                 .set(PowerService::new())
+                .expect("start-up runs once");
+            self.system_update_service
+                .set(SystemUpdateService::new(&self.notification_service))
                 .expect("start-up runs once");
             // Loaded here, not on the first window: Shell search and --launch need the
             // library when no window opens.
@@ -312,6 +318,14 @@ impl PinduApplication {
     pub fn power_service(&self) -> &PowerService {
         self.imp()
             .power_service
+            .get()
+            .expect("the application has started")
+    }
+
+    /// OS updates on Pindu OS.
+    pub fn system_update_service(&self) -> &SystemUpdateService {
+        self.imp()
+            .system_update_service
             .get()
             .expect("the application has started")
     }

@@ -167,5 +167,6 @@ fn kind_icon(kind: Kind) -> &'static str {
         Kind::Download => "folder-download-symbolic",
         Kind::DownloadFailed => "dialog-warning-symbolic",
         Kind::Permission => "system-lock-screen-symbolic",
+        Kind::SystemFailed => "dialog-warning-symbolic",
     }
 }

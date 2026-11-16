@@ -1,0 +1,10 @@
+NAME="Fedora Linux"
+VERSION="45 (Workstation Edition)"
+RELEASE_TYPE=stable
+ID=fedora
+VERSION_ID=45
+PRETTY_NAME="Fedora Linux 45 (Workstation Edition)"
+ANSI_COLOR="0;38;2;60;110;180"
+CPE_NAME="cpe:/o:fedoraproject:fedora:45"
+VARIANT="Workstation Edition"
+VARIANT_ID=workstation

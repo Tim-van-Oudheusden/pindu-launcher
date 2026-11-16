@@ -579,6 +579,48 @@ template $PinduWindow: Adw.ApplicationWindow {
                             }
                           };
                         }
+
+                        // Shown on Pindu OS: the installed version, or that an update waits
+                        // for the next start.
+                        ListBoxRow quick_access_system_update_row {
+                          action-name: "win.quick-access-system-update";
+                          visible: false;
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "software-update-available-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Box {
+                              orientation: vertical;
+                              valign: center;
+                              hexpand: true;
+
+                              Label {
+                                label: _("System Update");
+                                xalign: 0;
+                              }
+
+                              Label quick_access_system_update_subtitle {
+                                xalign: 0;
+                                ellipsize: end;
+
+                                styles [
+                                  "caption",
+                                  "dim-label",
+                                ]
+                              }
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
                       }
                     };
                   };
@@ -1261,6 +1303,60 @@ template $PinduWindow: Adw.ApplicationWindow {
 
                         styles [
                           "dim-label",
+                        ]
+                      }
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "system-update";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      Label {
+                        label: _("System Update");
+                        xalign: 0;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // The installed version, and the update waiting for the next start;
+                      // filled in code.
+                      ListBox quick_access_system_versions {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+                      }
+
+                      // Shown while a rollback is queued.
+                      Label quick_access_rollback_note {
+                        label: _("The previous version starts next time.");
+                        xalign: 0;
+                        wrap: true;
+                        visible: false;
+
+                        styles [
+                          "dim-label",
+                        ]
+                      }
+
+                      // Restart to Update, Roll Back or Restart, as bootc's status allows,
+                      // or what runs; filled in code.
+                      ListBox quick_access_system_actions {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
                         ]
                       }
                     };

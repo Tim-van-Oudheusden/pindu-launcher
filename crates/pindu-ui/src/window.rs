@@ -280,6 +280,16 @@ mod imp {
         pub quick_access_gamemode_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub quick_access_performance_note: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_system_update_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_system_update_subtitle: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_system_versions: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_rollback_note: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_system_actions: TemplateChild<gtk::ListBox>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
         /// Every sidebar row with the view it selects and, for sources, its count label.

@@ -223,7 +223,8 @@ msgstr ""
 #: crates/pindu-ui/src/collection_actions.rs:239
 #: crates/pindu-ui/src/game_dialog.rs:807
 #: crates/pindu-ui/src/proton_downloads_page.rs:227
-#: crates/pindu-ui/src/proton_launch.rs:628 data/ui/game_dialog.blp:16
+#: crates/pindu-ui/src/proton_launch.rs:628
+#: crates/pindu-ui/src/fullscreen_system_update.rs:169 data/ui/game_dialog.blp:16
 msgid "_Cancel"
 msgstr ""
 
@@ -614,6 +615,71 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_status.rs:64
 msgid "Fully charged"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:78
+msgid "Update ready"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:115
+msgid "Installed Version"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:124
+msgid "Update Ready"
+msgstr ""
+
+#. Translators: {version} is an OS version, such as 45.20261101.0.
+#: crates/pindu-ui/src/fullscreen_system_update.rs:150
+#, rust-format
+msgid "Roll Back to {version}?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:151
+msgid "Roll Back to the Previous Version?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:155
+msgid ""
+"The console restarts into that version, and the update waiting for the next "
+"start is discarded. The version it runs now stays installed, so you can go "
+"back to it."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:159
+msgid ""
+"The console restarts into that version. The version it runs now stays "
+"installed, so you can go back to it."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:170
+msgid "_Roll Back"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:230
+msgid "Restart to Update"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:235
+msgid "Restart"
+msgstr ""
+
+#. Translators: {version} is an OS version, such as 45.20261101.0.
+#: crates/pindu-ui/src/fullscreen_system_update.rs:242
+#, rust-format
+msgid "Roll Back to {version}"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:243
+msgid "Roll Back to the Previous Version"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:260
+msgid "Rolling Back…"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:261
+msgid "Restarting…"
 msgstr ""
 
 #: crates/pindu-ui/src/game_dialog.rs:238 data/ui/shortcuts-dialog.blp:14
@@ -1521,6 +1587,14 @@ msgstr ""
 
 #: crates/pindu-ui/src/sync_service.rs:144
 msgid "The import stopped unexpectedly"
+msgstr ""
+
+#: crates/pindu-ui/src/system_update_service.rs:32
+msgid "Could not roll back"
+msgstr ""
+
+#: crates/pindu-ui/src/system_update_service.rs:41
+msgid "Could not restart"
 msgstr ""
 
 #: crates/pindu-ui/src/widgets/cover_tile.rs:215
@@ -2637,6 +2711,10 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+#: data/ui/window.blp:603 data/ui/window.blp:1323
+msgid "System Update"
+msgstr ""
+
 #: data/ui/window.blp:683
 msgid "Variant"
 msgstr ""
@@ -2695,6 +2773,10 @@ msgstr ""
 
 #: data/ui/window.blp:1245 data/ui/window.blp:1751
 msgid "Performance Overlay"
+msgstr ""
+
+#: data/ui/window.blp:1343
+msgid "The previous version starts next time."
 msgstr ""
 
 #: data/ui/window.blp:1286 data/ui/window.blp:1402

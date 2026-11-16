@@ -1,0 +1,45 @@
+{
+  "apiVersion": "org.containers.bootc/v1",
+  "kind": "BootcHost",
+  "metadata": {
+    "name": "host"
+  },
+  "spec": {
+    "image": {
+      "image": "ghcr.io/tim-van-oudheusden/pindu-os:stable",
+      "transport": "registry",
+      "signature": "containerPolicy"
+    },
+    "bootOrder": "default"
+  },
+  "status": {
+    "staged": null,
+    "booted": {
+      "image": {
+        "image": {
+          "image": "ghcr.io/tim-van-oudheusden/pindu-os:stable",
+          "transport": "registry",
+          "signature": "containerPolicy"
+        },
+        "version": "45.20261108.0",
+        "timestamp": "2026-11-01T04:12:09Z",
+        "imageDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "architecture": "amd64"
+      },
+      "cachedUpdate": null,
+      "incompatible": false,
+      "pinned": false,
+      "softRebootCapable": false,
+      "downloadOnly": false,
+      "store": "ostreeContainer",
+      "ostree": {
+        "stateroot": "default",
+        "checksum": "2222222222222222222222222222222222222222222222222222222222222222",
+        "deploySerial": 0
+      }
+    },
+    "rollback": null,
+    "rollbackQueued": false,
+    "type": "bootcHost"
+  }
+}

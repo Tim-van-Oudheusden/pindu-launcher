@@ -41,6 +41,7 @@ pub mod sound;
 pub mod sources;
 pub mod steamgriddb;
 pub mod store;
+pub mod system;
 pub mod tasks;
 pub mod themes;
 pub mod umu;
