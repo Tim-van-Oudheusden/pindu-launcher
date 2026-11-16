@@ -1997,4 +1997,134 @@ mod tests {
 
         assert!(fake.calls().is_empty());
     }
+
+    #[test]
+    fn an_agent_that_fails_to_register_is_reported_and_not_retried_until_the_level_opens_again() {
+        let (bluetooth, fake, failures) = section(nearby());
+        bluetooth.open();
+        fake.finish(&Call::StartDiscovery, Ok(()));
+        fake.finish(&Call::RegisterAgent, Err("Already Exists".to_owned()));
+        fake.calls();
+
+        fake.report(powered(vec![found(PAD, "Pad")]));
+        assert!(fake.calls().is_empty());
+        assert_eq!(
+            failures.borrow().as_slice(),
+            [Failure::Agent("Already Exists".to_owned())]
+        );
+
+        bluetooth.close();
+        assert_eq!(
+            fake.calls(),
+            [Call::StopDiscovery],
+            "no agent to unregister"
+        );
+        bluetooth.open();
+        assert_eq!(fake.calls(), [Call::RegisterAgent, Call::StartDiscovery]);
+    }
+
+    #[test]
+    fn discovery_or_the_agent_that_fails_to_end_on_close_is_reported() {
+        let (bluetooth, fake, failures) = opened(nearby());
+
+        bluetooth.close();
+        fake.finish(&Call::StopDiscovery, Err("Not Authorized".to_owned()));
+        fake.finish(&Call::UnregisterAgent, Err("Does Not Exist".to_owned()));
+
+        assert_eq!(
+            failures.borrow().as_slice(),
+            [
+                Failure::Discovery("Not Authorized".to_owned()),
+                Failure::Agent("Does Not Exist".to_owned()),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_device_that_cannot_be_trusted_is_reported_and_not_connected() {
+        let (bluetooth, fake, failures) = opened(nearby());
+        let headset = path(HEADSET);
+        bluetooth.connect(&headset);
+        fake.calls();
+
+        fake.finish(&Call::Trust(headset), Err("Failed".to_owned()));
+
+        assert!(fake.calls().is_empty());
+        assert_eq!(bluetooth.state().pending, None);
+        assert_eq!(
+            failures.borrow().as_slice(),
+            [Failure::Connect {
+                device: "Headset".to_owned(),
+                error: "Failed".to_owned(),
+            }]
+        );
+    }
+
+    #[test]
+    fn forgetting_that_fails_is_reported_with_the_device_name() {
+        let (bluetooth, fake, failures) = opened(powered(vec![paired(PAD, "Pad", false)]));
+        let pad = path(PAD);
+
+        bluetooth.forget(&pad);
+        fake.finish(&Call::Remove(pad), Err("Does Not Exist".to_owned()));
+
+        assert_eq!(bluetooth.state().pending, None);
+        assert_eq!(
+            failures.borrow().as_slice(),
+            [Failure::Forget {
+                device: "Pad".to_owned(),
+                error: "Does Not Exist".to_owned(),
+            }]
+        );
+    }
+
+    #[test]
+    fn a_new_request_refuses_the_passkey_request_waiting() {
+        let (bluetooth, fake, _) = opened(nearby());
+        let (reply, answer) = answer::<u32>();
+        fake.ask(AgentRequest::Passkey {
+            device: path(PAD),
+            reply,
+        });
+
+        fake.ask(AgentRequest::DisplayPasskey {
+            device: path(PAD),
+            passkey: 42,
+        });
+
+        assert_eq!(*answer.borrow(), Some(None));
+        assert_eq!(
+            bluetooth.state().prompt,
+            Some(Prompt::Show {
+                device: "Wireless Controller".to_owned(),
+                code: "000042".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn devices_whose_names_differ_only_in_case_are_ordered_by_address() {
+        let (bluetooth, _, _) = section(powered(vec![
+            found("00:00:00:00:00:01", "pad"),
+            paired("00:00:00:00:00:04", "Buds", false),
+            found("00:00:00:00:00:02", "Pad"),
+            paired("00:00:00:00:00:03", "buds", false),
+        ]));
+        let state = bluetooth.state();
+        let addresses = |devices: &[Device]| -> Vec<String> {
+            devices
+                .iter()
+                .map(|device| device.address.clone())
+                .collect()
+        };
+
+        assert_eq!(
+            addresses(&state.paired),
+            ["00:00:00:00:00:03", "00:00:00:00:00:04"]
+        );
+        assert_eq!(
+            addresses(&state.found),
+            ["00:00:00:00:00:01", "00:00:00:00:00:02"]
+        );
+    }
 }
