@@ -292,7 +292,6 @@ jobs:
           bundle: ${{ matrix.bundle }}
           arch: ${{ matrix.arch }}
           run-tests: true
-          cache-key: flatpak-builder-${{ matrix.profile }}-${{ matrix.arch }}-${{ github.sha }}
 
       # Blocking. The local exceptions only cover the importers' read-only access to
       # other launchers' data, which the spec needs, and what a private dev build
