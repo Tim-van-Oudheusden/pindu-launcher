@@ -86,15 +86,17 @@ AI-suggested libraries are a known attack vector: hallucinated crate names get r
 
 ## Destructive and irreversible actions
 
-- Never force-push, and never push to `main`: work lands through a pull request the maintainer merges.
+- Never force-push, and never push to `main`: work lands through a pull request that the merge queue or the maintainer
+  merges.
 - Never move, delete or reuse a published release tag ([`docs/releasing.md`](../releasing.md)).
 - Never write outside the task's working tree, and never touch the user's real session state, installed launchers or
   game data while testing; use fixtures and temporary prefixes.
 
 ## Review of agent-written changes
 
-Agent changes go through the same gates as human ones ([`docs/metrics/README.md`](../metrics/README.md)), and the
-maintainer reviews and merges every pull request. Look harder at changes to:
+Agent changes go through the same gates as human ones ([`docs/metrics/README.md`](../metrics/README.md)). The merge
+queue merges low- and medium-risk pull requests once every check passes; the maintainer reviews and merges every
+high-risk one ([`docs/risk-tiers.md`](../risk-tiers.md)). Look harder at changes to:
 
 - `.github/workflows/`: keep `permissions:` least-privilege, don't run pull request code under `pull_request_target`,
   and pass event fields through `env:` rather than interpolating them into `run:`

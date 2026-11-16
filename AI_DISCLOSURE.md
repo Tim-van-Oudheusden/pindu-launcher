@@ -13,7 +13,7 @@ Packaging: help with the Flatpak manifests, the RPM and DEB recipes and the work
 manifest for Flathub is written by a person, without AI assistance.
 Documentation: help with writing the project's documentation, such as the README, the contributor and security
 guides, the runbooks and the release notes.
-Automation: AI agents (Claude Code in CI, and Hive once the maintainer connects it) may open issues and pull requests
+Automation: AI agents (Claude Code in CI, and Hive) may open issues and pull requests
 on their own. They follow AGENTS.md and cannot push to main. Low- and medium-risk pull requests can be merged by the
 merge queue once every check passes; high-risk changes (workflows, build and packaging files, agent instructions)
 wait for the maintainer's review.
