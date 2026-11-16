@@ -13,7 +13,8 @@
 //! `fullscreen_network`'s, its Bluetooth (where BlueZ has an adapter)
 //! `fullscreen_bluetooth`'s, its System Update (on Pindu OS only)
 //! `fullscreen_system_update`'s. Its Design level holds the design, its variant, Home's
-//! background blur and dim, and the user's own stylesheet.
+//! background blur and dim, and the user's own stylesheet. The drawer's Power level is
+//! `fullscreen_power`'s.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -265,6 +266,7 @@ impl PinduWindow {
         self.setup_bluetooth();
         self.setup_system_update();
         self.setup_network();
+        self.setup_power();
         self.fill_drawer();
     }
 
@@ -555,6 +557,7 @@ impl PinduWindow {
             Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)) => self.show_bluetooth(),
             Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)) => self.show_system_update(),
             Some(Panel::QuickAccess(QuickAccessLevel::Network)) => self.show_network(),
+            Some(Panel::Drawer(DrawerLevel::Power)) => self.show_power(),
             _ => {}
         }
         let drawer = matches!(open, Some(Panel::Drawer(_)));
@@ -571,6 +574,7 @@ impl PinduWindow {
             Some(Panel::Drawer(level)) => imp.drawer_stack.set_visible_child_name(match level {
                 DrawerLevel::Main => "main",
                 DrawerLevel::Collections => "collections",
+                DrawerLevel::Power => "power",
             }),
             Some(Panel::Options(level)) => imp.options_stack.set_visible_child_name(match level {
                 OptionsLevel::Main => "main",
@@ -622,6 +626,9 @@ impl PinduWindow {
                 Some(Panel::Drawer(DrawerLevel::Main)),
                 Some(Panel::Drawer(DrawerLevel::Collections)),
             ) => Some(imp.drawer_collections_row.get().upcast()),
+            (Some(Panel::Drawer(DrawerLevel::Main)), Some(Panel::Drawer(DrawerLevel::Power))) => {
+                Some(imp.drawer_power_row.get().upcast())
+            }
             (
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Notifications)),
@@ -723,6 +730,7 @@ impl PinduWindow {
             (Some(Panel::Drawer(DrawerLevel::Collections)), _) => {
                 first_row(&imp.drawer_collections)
             }
+            (Some(Panel::Drawer(DrawerLevel::Power)), _) => self.power_focus(),
             (Some(Panel::QuickAccess(QuickAccessLevel::Settings)), _) => {
                 imp.tile_small.ancestor(gtk::ListBoxRow::static_type())
             }
@@ -767,17 +775,23 @@ impl PinduWindow {
         }
     }
 
-    /// The drawer's collections. Its Playing Now cards are `fill_playing_cards`'s.
+    /// The drawer's collections and its Power entry. Its Playing Now cards are
+    /// `fill_playing_cards`'s.
     fn fill_drawer(&self) {
         let imp = self.imp();
-        let playing = self
-            .application()
-            .and_downcast::<PinduApplication>()
+        let application = self.application().and_downcast::<PinduApplication>();
+        let playing = application
+            .as_ref()
             .is_some_and(|application| application.session_service().any_playing());
+        let power = application
+            .as_ref()
+            .is_some_and(|application| application.system_power_service().state().shown());
         let collections = self.library().collections();
-        let entries = drawer_entries(playing, !collections.is_empty());
+        let entries = drawer_entries(playing, !collections.is_empty(), power);
         imp.drawer_collections_row
             .set_visible(entries.contains(&DrawerEntry::Collections));
+        imp.drawer_power_row
+            .set_visible(entries.contains(&DrawerEntry::Power));
         imp.drawer_collections.remove_all();
         for collection in &collections {
             let row = drawer_row("folder-symbolic", &collection.name);

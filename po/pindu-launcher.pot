@@ -227,6 +227,7 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_system_update.rs:169 data/ui/game_dialog.blp:16
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:315
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:472
+#: crates/pindu-ui/src/fullscreen_power.rs:146
 msgid "_Cancel"
 msgstr ""
 
@@ -603,6 +604,38 @@ msgstr ""
 msgid "_Stop"
 msgstr ""
 
+#. Translators: {game} is the title of the game that runs.
+#: crates/pindu-ui/src/fullscreen_power.rs:131
+#, rust-format
+msgid "Power off while {game} is running?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_power.rs:132
+msgid "_Power Off"
+msgstr ""
+
+#. Translators: {game} is the title of the game that runs.
+#: crates/pindu-ui/src/fullscreen_power.rs:136
+#, rust-format
+msgid "Restart while {game} is running?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_power.rs:137
+msgid "_Restart"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_power.rs:142
+msgid "Unsaved progress is lost."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_power.rs:173
+msgid "Suspend"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_power.rs:183
+msgid "Power Off"
+msgstr ""
+
 #: crates/pindu-ui/src/fullscreen_status.rs:61
 msgid "Charging"
 msgstr ""
@@ -828,6 +861,7 @@ msgid "Restart to Update"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_system_update.rs:235
+#: crates/pindu-ui/src/fullscreen_power.rs:178
 msgid "Restart"
 msgstr ""
 
@@ -1757,11 +1791,26 @@ msgstr ""
 msgid "The import stopped unexpectedly"
 msgstr ""
 
+#. Translators: {holders} names programs, such as "GNOME Software, Steam".
+#: crates/pindu-ui/src/system_power_service.rs:28
+#, rust-format
+msgid "Stopped by {holders}"
+msgstr ""
+
+#: crates/pindu-ui/src/system_power_service.rs:60
+msgid "Could not suspend"
+msgstr ""
+
+#: crates/pindu-ui/src/system_power_service.rs:62
+msgid "Could not power off"
+msgstr ""
+
 #: crates/pindu-ui/src/system_update_service.rs:32
 msgid "Could not roll back"
 msgstr ""
 
 #: crates/pindu-ui/src/system_update_service.rs:41
+#: crates/pindu-ui/src/system_power_service.rs:61
 msgid "Could not restart"
 msgstr ""
 
@@ -2800,6 +2849,10 @@ msgstr ""
 msgid "Quit"
 msgstr ""
 
+#: data/ui/window.blp:188 data/ui/window.blp:245
+msgid "Power"
+msgstr ""
+
 #: data/ui/shortcuts-dialog.blp:38 data/ui/window.blp:1411
 msgid "Toggle Sidebar"
 msgstr ""
@@ -3117,6 +3170,7 @@ msgid "Wired"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_network.rs:343
+#: crates/pindu-ui/src/fullscreen_power.rs:203
 msgid "Not allowed on this system"
 msgstr ""
 

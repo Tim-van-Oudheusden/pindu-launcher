@@ -153,18 +153,10 @@ pub enum Event {
     },
 }
 
-/// Whether the section shows.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Availability {
-    /// NetworkManager is not there: the Flatpak, or a system without it.
-    #[default]
-    Hidden,
-    /// NetworkManager is there, but polkit does not let the session control it: the entry
-    /// shows, insensitive, saying so.
-    Denied,
-    /// The section shows.
-    Shown,
-}
+/// Whether the section shows, by the system panel's shared rules: hidden without
+/// NetworkManager (the Flatpak, or a system without it), denied when polkit does not let
+/// the session control it.
+pub use super::Availability;
 
 /// What a device row says about its device.
 #[derive(Debug, Clone, PartialEq, Eq)]
