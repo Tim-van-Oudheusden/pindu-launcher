@@ -673,8 +673,8 @@ mod tests {
         let mut keyboard = Keyboard::passphrase();
         let mut text = String::new();
         for character in passphrase.chars() {
-            keyboard = reach(keyboard, character)
-                .unwrap_or_else(|| panic!("no key types {character:?}"));
+            keyboard =
+                reach(keyboard, character).unwrap_or_else(|| panic!("no key types {character:?}"));
             match keyboard.handle(Activate, &text) {
                 Outcome::Edit(edited) => text = edited,
                 outcome => panic!("{character:?} gave {outcome:?}"),
