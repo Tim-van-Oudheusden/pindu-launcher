@@ -150,6 +150,10 @@ mod imp {
         #[template_child]
         pub drawer_collections: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub drawer_power_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub drawer_power: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub options_panel: TemplateChild<gtk::Box>,
         #[template_child]
         pub options_title: TemplateChild<gtk::Label>,

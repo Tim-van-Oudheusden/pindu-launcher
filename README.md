@@ -156,6 +156,19 @@ Preferences.
   launching. It shows the glyphs of the controller in use and the keys that do the same, including ones the hint bar
   leaves out, such as holding B to cancel a launch. Without a controller it lists the keys alone.
 
+### Power
+
+Where the system lets you, the menu drawer (Start or Guide) has a **Power** entry after **Quit**, leading to
+**Suspend**, **Restart** and **Power Off**, so a console without a keyboard can be turned off with a controller. B steps
+back to the drawer's entries.
+
+- An action the system does not allow is greyed out and says so; one the machine cannot do at all is not listed.
+- While a game Pindu started is running, Restart and Power Off ask first, since its unsaved progress would be lost.
+  Suspend does not ask: the game carries on when the machine wakes.
+- When a program holds the machine on (an update installing, for example), a notification names it.
+
+The Flatpak has no access to the system bus, so the entry does not show there; use the desktop's own power menu.
+
 ### Quick Access
 
 Open it with a right stick click, the Steam Deck's "…" button, or <kbd>Ctrl</kbd>+<kbd>2</kbd>.
@@ -163,7 +176,8 @@ Open it with a right stick click, the Steam Deck's "…" button, or <kbd>Ctrl</k
 - **Status:** the time, the battery, whether you are offline, and the game you are playing with how long it has run.
 - **Notifications** from this session: games a sync added or found missing, artwork fetched or not, Proton downloads,
   games that need a permission, a Bluetooth device that did not pair, connect, disconnect or go, a rollback or restart
-  the system refused, and a network that could not be joined. Quick Access opens on them while one is unread.
+  the system refused, a network that could not be joined, and a program that kept the machine from suspending,
+  restarting or powering off. Quick Access opens on them while one is unread.
 - **Activity:** a running library sync, SteamGridDB artwork fetch or Proton download, with its progress. Artwork
   fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
 - **Refresh Library** reads your launchers again, offline like every sync.

@@ -170,5 +170,6 @@ fn kind_icon(kind: Kind) -> &'static str {
         Kind::SystemFailed => "dialog-warning-symbolic",
         Kind::BluetoothFailed => "bluetooth-disabled-symbolic",
         Kind::NetworkFailed => "network-offline-symbolic",
+        Kind::PowerInhibited => "system-shutdown-symbolic",
     }
 }
