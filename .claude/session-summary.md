@@ -8,14 +8,12 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-16, #362 (CI speed): PR CI took 17–20 min, almost all of it the serial chain source tarball → native
-  packages → package smoke tests; the Rust checks finish in ~3 min. Split CI in two: `ci.yml` keeps the required
-  checks plus the development Flatpak on x86_64 (skipped for docs/`po/*.po`-only PRs via `scripts/needs-build.sh`);
-  the new `packaging.yml` runs the tarball, native packages and release/aarch64 Flatpaks on each push to `main`,
-  nightly and by hand. A red Packaging run on `main` pauses the merge queue (`scripts/merge-queue.sh next`) and opens
-  the `ci: Packaging failing on main` issue (`scripts/packaging-issue.sh`).
-- Open: the maintainer merges #362 by hand and applies `.github/rulesets/main.json` at the same time
-  (`gh api -X PUT …/rulesets/26762163`): the live ruleset still requires checks that no longer run on pull requests,
-  so every pull request waits on them until it is applied.
-- Gotcha: a required check must not be a matrix job that can be skipped (its name stays unexpanded), and a job-level
-  `if` that reads another job's output needs `!cancelled()` so a failed producer does not skip it into a pass.
+- 2026-11-16, #359 (fullscreen abort on virtio-gpu with Venus): reproduced in QEMU (`virtio-vga-gl,venus=true`) on
+  the Pindu OS dev image. The abort is not GStreamer's: GTK 4.24's Vulkan renderer imports each frame of Home's
+  background video as a dmabuf, Venus's `vkGetMemoryResourcePropertiesMESA` fails on the host, and Venus `abort()`s
+  (`vn_relax`). `pindu_core::renderer` reads `/sys/class/drm` and `main` sets `GSK_RENDERER=gl` (unless the user set
+  it) on a virtio-gpu with virgl 3D; GTK picks GL there anyway when Venus is off, so only Venus changes.
+- Gotcha: QEMU with virgl/Venus runs in the `development` distrobox (installed `qemu-device-display-virtio-*-gl`,
+  `qemu-ui-egl-headless`, `virglrenderer` there); the Rust gates run in `org.gnome.Sdk//51` with the rust-stable
+  extension (the host lacks the -devel libraries). The dev disk image of 2026-11-15 does not bring the session back
+  after the launcher exits (pindu-os#23 is newer), so each check needs a fresh boot.
