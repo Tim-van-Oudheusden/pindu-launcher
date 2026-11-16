@@ -218,6 +218,7 @@ msgstr "Naam"
 #: crates/pindu-ui/src/fullscreen_system_update.rs:169
 #: data/ui/game_dialog.blp:16 crates/pindu-ui/src/fullscreen_bluetooth.rs:315
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:472
+#: crates/pindu-ui/src/fullscreen_power.rs:146
 msgid "_Cancel"
 msgstr "_Annuleren"
 
@@ -578,6 +579,36 @@ msgstr ""
 msgid "_Stop"
 msgstr ""
 
+#. Translators: {game} is the title of the game that runs.
+#: crates/pindu-ui/src/fullscreen_power.rs:131
+msgid "Power off while {game} is running?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_power.rs:132
+msgid "_Power Off"
+msgstr ""
+
+#. Translators: {game} is the title of the game that runs.
+#: crates/pindu-ui/src/fullscreen_power.rs:136
+msgid "Restart while {game} is running?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_power.rs:137
+msgid "_Restart"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_power.rs:142
+msgid "Unsaved progress is lost."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_power.rs:173
+msgid "Suspend"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_power.rs:183
+msgid "Power Off"
+msgstr ""
+
 #: crates/pindu-ui/src/fullscreen_status.rs:61
 msgid "Charging"
 msgstr ""
@@ -642,6 +673,7 @@ msgid ""
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:316
+#: crates/pindu-ui/src/fullscreen_network.rs:319
 msgid "_Forget"
 msgstr ""
 
@@ -662,6 +694,8 @@ msgid "Pairing…"
 msgstr "Aan het annuleren…"
 
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:353
+#: crates/pindu-ui/src/fullscreen_network.rs:367
+#: crates/pindu-ui/src/fullscreen_network.rs:402
 #, fuzzy
 #| msgid "Cancelling…"
 msgid "Connecting…"
@@ -672,10 +706,13 @@ msgid "Disconnecting…"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:355
+#: crates/pindu-ui/src/fullscreen_network.rs:403
 msgid "Forgetting…"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:356
+#: crates/pindu-ui/src/fullscreen_network.rs:366
+#: crates/pindu-ui/src/fullscreen_network.rs:404
 msgid "Connected"
 msgstr ""
 
@@ -688,10 +725,12 @@ msgid "Disconnect"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:399
+#: crates/pindu-ui/src/fullscreen_network.rs:429
 msgid "Connect"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:411
+#: crates/pindu-ui/src/fullscreen_network.rs:438
 msgid "Forget"
 msgstr ""
 
@@ -794,6 +833,7 @@ msgid "Restart to Update"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_system_update.rs:235
+#: crates/pindu-ui/src/fullscreen_power.rs:178
 msgid "Restart"
 msgstr ""
 
@@ -1672,11 +1712,29 @@ msgstr ""
 msgid "The import stopped unexpectedly"
 msgstr ""
 
+#. Translators: {holders} names programs, such as "GNOME Software, Steam".
+#: crates/pindu-ui/src/system_power_service.rs:28
+msgid "Stopped by {holders}"
+msgstr ""
+
+#: crates/pindu-ui/src/system_power_service.rs:60
+#, fuzzy
+#| msgid "Could not reach SteamGridDB"
+msgid "Could not suspend"
+msgstr "Kon SteamGridDB niet bereiken"
+
+#: crates/pindu-ui/src/system_power_service.rs:62
+#, fuzzy
+#| msgid "Could not reach SteamGridDB"
+msgid "Could not power off"
+msgstr "Kon SteamGridDB niet bereiken"
+
 #: crates/pindu-ui/src/system_update_service.rs:32
 msgid "Could not roll back"
 msgstr ""
 
 #: crates/pindu-ui/src/system_update_service.rs:41
+#: crates/pindu-ui/src/system_power_service.rs:61
 #, fuzzy
 #| msgid "Could not reach SteamGridDB"
 msgid "Could not restart"
@@ -2710,6 +2768,10 @@ msgstr ""
 msgid "Quit"
 msgstr ""
 
+#: data/ui/window.blp:188 data/ui/window.blp:245
+msgid "Power"
+msgstr ""
+
 #: data/ui/shortcuts-dialog.blp:38 data/ui/window.blp:1411
 msgid "Toggle Sidebar"
 msgstr ""
@@ -3004,4 +3066,135 @@ msgstr ""
 
 #: data/ui/window.blp:1927
 msgid "_About Pindu launcher"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:66
+msgid "Looking for networks…"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/fullscreen_network.rs:310
+msgid "Forget {network}?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:312
+msgid ""
+"Its passphrase is removed, and the console no longer joins it by itself."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:340
+#: crates/pindu-ui/src/fullscreen_network.rs:350
+msgid "Wired"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:343
+#: crates/pindu-ui/src/fullscreen_power.rs:203
+msgid "Not allowed on this system"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:351 data/ui/window.blp:1447
+#: data/ui/window.blp:1451
+msgid "Wi-Fi"
+msgstr ""
+
+#. Translators: {device} is "Wired" or "Wi-Fi", {interface} its name, such as wlan0.
+#: crates/pindu-ui/src/fullscreen_network.rs:355
+msgid "{device} ({interface})"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/fullscreen_network.rs:364
+msgid "Connected to {network}"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:368
+#, fuzzy
+#| msgid "No Controllers Connected"
+msgid "Disconnected"
+msgstr "Geen Controller Gedetecteerd"
+
+#: crates/pindu-ui/src/fullscreen_network.rs:369
+msgid "Cable unplugged"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:405
+msgid "Saved"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:406
+msgid "Set up on another device"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:512
+msgid "Wrong passphrase. Try again."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:514
+msgid "A passphrase has 8 to 63 characters."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:516
+msgid "Enter the network's passphrase."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:522
+msgid "Passphrase"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/fullscreen_network.rs:525
+msgid "Join {network}"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:531
+msgid "_Join"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/network_service.rs:30
+#, fuzzy
+#| msgid "Could not reach SteamGridDB"
+msgid "Could not join {network}"
+msgstr "Kon SteamGridDB niet bereiken"
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/network_service.rs:38
+#, fuzzy
+#| msgid "Could not reach SteamGridDB"
+msgid "Could not forget {network}"
+msgstr "Kon SteamGridDB niet bereiken"
+
+#: crates/pindu-ui/src/network_service.rs:44
+#, fuzzy
+#| msgid "Could not reach SteamGridDB"
+msgid "Could not switch Wi-Fi"
+msgstr "Kon SteamGridDB niet bereiken"
+
+#: crates/pindu-ui/src/network_service.rs:93
+msgid "The saved passphrase was not accepted."
+msgstr ""
+
+#: crates/pindu-ui/src/network_service.rs:94
+msgid "The network is out of range."
+msgstr ""
+
+#: crates/pindu-ui/src/network_service.rs:95
+msgid "The network gave no address."
+msgstr ""
+
+#. Translators: {reason} is a number NetworkManager gives for a failed connection.
+#: crates/pindu-ui/src/network_service.rs:97
+msgid "The connection failed (reason {reason})."
+msgstr ""
+
+#: data/ui/window.blp:603 data/ui/window.blp:1419
+msgid "Network"
+msgstr ""
+
+#: data/ui/window.blp:1452
+msgid "Turned off by a hardware switch"
+msgstr ""
+
+#: data/ui/window.blp:1458
+msgid "Wi-Fi Networks"
 msgstr ""
