@@ -149,7 +149,9 @@ impl SyncService {
                         glib::g_warning!("pindu", "Could not import from {source}: {problem}");
                     }
                 }
-                Err(message) => glib::g_warning!("pindu", "Could not refresh the library: {message}"),
+                Err(message) => {
+                    glib::g_warning!("pindu", "Could not refresh the library: {message}")
+                }
             }
             let (problems, added, missing) = match outcome {
                 Ok(summary) => (
