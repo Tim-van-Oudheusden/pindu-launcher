@@ -185,8 +185,15 @@ pub struct SoundOutput {
 struct Inner {
     backend: Box<dyn AudioBackend>,
     state: RefCell<AudioState>,
-    /// Counts the choices made, so a read that started before one does not undo it.
+    /// Counts the choices made and the writes ended, so a read that started before one
+    /// does not undo it.
     choices: Cell<u64>,
+    /// The output a `wpctl set-default` is running for: one runs at a time, so the last
+    /// choice is the last one made.
+    writing: Cell<Option<u32>>,
+    /// The latest choice made while one was running, sent once it ends; the ones between
+    /// are skipped.
+    queued: Cell<Option<u32>>,
     listeners: RefCell<Vec<Listener>>,
     failure_listeners: RefCell<Vec<FailureListener>>,
 }
@@ -208,6 +215,8 @@ impl SoundOutput {
                 backend,
                 state: RefCell::default(),
                 choices: Cell::new(0),
+                writing: Cell::new(None),
+                queued: Cell::new(None),
                 listeners: RefCell::default(),
                 failure_listeners: RefCell::default(),
             }),
@@ -247,6 +256,8 @@ impl SoundOutput {
 
     /// Makes the output with id `id` the default. The level checks it at once; a choice
     /// that fails is reported, and the outputs are read again to show the default as it is.
+    /// One choice is sent at a time: one made while another runs waits for it, and only the
+    /// latest of those is sent, so the last choice made is the one that stays.
     pub fn choose(&self, id: u32) {
         {
             let mut state = self.inner.state.borrow_mut();
@@ -258,16 +269,60 @@ impl SoundOutput {
         }
         self.inner.choices.set(self.inner.choices.get() + 1);
         self.changed();
+        match self.inner.writing.get() {
+            None => self.write(id),
+            // The one running already makes `id` the default.
+            Some(writing) if writing == id => self.inner.queued.set(None),
+            Some(_) => self.inner.queued.set(Some(id)),
+        }
+    }
+
+    /// Runs `wpctl set-default` for `id`, then sends the choice made meanwhile, if any.
+    /// Once none is left, the default shown is the one written, or, when that write
+    /// failed, the one read again.
+    fn write(&self, id: u32) {
+        self.inner.writing.set(Some(id));
         let weak = self.downgrade();
         self.inner.backend.set_default(
             id,
             Box::new(move |result| {
-                if let (Some(output), Err(error)) = (upgrade(&weak), result) {
-                    output.fail(&Failure::Choose(error));
+                let Some(output) = upgrade(&weak) else {
+                    return;
+                };
+                if let Err(error) = &result {
+                    output.fail(&Failure::Choose(error.clone()));
+                }
+                if let Some(next) = output.inner.queued.take() {
+                    output.write(next);
+                    return;
+                }
+                output.inner.writing.set(None);
+                // A read that started before this write ended may show the default before it.
+                output.inner.choices.set(output.inner.choices.get() + 1);
+                if result.is_err() {
                     output.refresh();
+                } else {
+                    output.written(id);
                 }
             }),
         );
+    }
+
+    /// The write for `id` ended and was the last: the level checks `id`, even if a read
+    /// made meanwhile showed the default from before it.
+    fn written(&self, id: u32) {
+        let changed = {
+            let mut state = self.inner.state.borrow_mut();
+            let known = state.outputs.outputs.iter().any(|output| output.id == id);
+            let changed = state.available && known && state.outputs.default != Some(id);
+            if changed {
+                state.outputs.default = Some(id);
+            }
+            changed
+        };
+        if changed {
+            self.changed();
+        }
     }
 
     /// Takes what the backend read: the section shows while the tools ran and found an
@@ -473,6 +528,8 @@ mod tests {
         reads: RefCell<Vec<ReadDone>>,
         read_count: Cell<usize>,
         choices: RefCell<Vec<(u32, Done)>>,
+        /// The output the choices finished so far made the default, last one wins.
+        default: Cell<Option<u32>>,
     }
 
     struct FakeBackend(Rc<Fake>);
@@ -500,7 +557,10 @@ mod tests {
         }
 
         fn finish_choice(&self, result: Result<(), String>) {
-            let (_, done) = self.choices.borrow_mut().remove(0);
+            let (id, done) = self.choices.borrow_mut().remove(0);
+            if result.is_ok() {
+                self.default.set(Some(id));
+            }
             done(result);
         }
 
@@ -716,5 +776,87 @@ mod tests {
         section.fake.finish_read(text("several-outputs"));
 
         assert_eq!(section.output.state().outputs.default, Some(61));
+    }
+
+    #[test]
+    fn a_choice_made_while_another_is_pending_is_applied_after_it() {
+        let section = section(text("several-outputs"));
+        section.output.choose(63);
+
+        section.output.choose(56);
+
+        assert_eq!(section.fake.chosen(), [63]);
+        assert_eq!(section.output.state().outputs.default, Some(56));
+        section.fake.finish_choice(Ok(()));
+        assert_eq!(section.fake.chosen(), [56]);
+        assert_eq!(section.output.state().outputs.default, Some(56));
+        section.fake.finish_choice(Ok(()));
+        assert!(section.fake.chosen().is_empty());
+        assert_eq!(section.fake.default.get(), Some(56));
+        assert_eq!(section.output.state().outputs.default, Some(56));
+        assert!(section.failures.borrow().is_empty());
+    }
+
+    #[test]
+    fn only_the_latest_of_the_choices_made_while_one_is_pending_is_sent() {
+        let section = section(text("several-outputs"));
+        section.output.choose(63);
+        section.output.choose(56);
+
+        section.output.choose(61);
+        section.fake.finish_choice(Ok(()));
+
+        assert_eq!(section.fake.chosen(), [61]);
+        section.fake.finish_choice(Ok(()));
+        assert_eq!(section.fake.default.get(), Some(61));
+        assert_eq!(section.output.state().outputs.default, Some(61));
+    }
+
+    #[test]
+    fn choosing_the_pending_output_again_sends_nothing_more() {
+        let section = section(text("several-outputs"));
+        section.output.choose(63);
+        section.output.choose(56);
+
+        section.output.choose(63);
+        section.fake.finish_choice(Ok(()));
+
+        assert!(section.fake.chosen().is_empty());
+        assert_eq!(section.fake.default.get(), Some(63));
+        assert_eq!(section.output.state().outputs.default, Some(63));
+    }
+
+    #[test]
+    fn a_pending_choice_that_fails_is_reported_and_the_next_one_is_sent() {
+        let section = section(text("several-outputs"));
+        section.output.choose(63);
+        section.output.choose(56);
+
+        section
+            .fake
+            .finish_choice(Err("Object '63' not found".to_owned()));
+
+        assert_eq!(
+            *section.failures.borrow(),
+            [Failure::Choose("Object '63' not found".to_owned())]
+        );
+        assert_eq!(section.fake.chosen(), [56]);
+        assert_eq!(section.fake.read_count.get(), 1);
+        assert_eq!(section.output.state().outputs.default, Some(56));
+        section.fake.finish_choice(Ok(()));
+        assert_eq!(section.fake.default.get(), Some(56));
+        assert_eq!(section.output.state().outputs.default, Some(56));
+    }
+
+    #[test]
+    fn a_read_made_while_a_choice_runs_is_corrected_once_it_ends() {
+        let section = section(text("several-outputs"));
+        section.output.choose(63);
+        section.output.refresh();
+        assert_eq!(section.output.state().outputs.default, Some(61));
+
+        section.fake.finish_choice(Ok(()));
+
+        assert_eq!(section.output.state().outputs.default, Some(63));
     }
 }
