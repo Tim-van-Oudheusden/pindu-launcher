@@ -2,12 +2,15 @@
 //! gettext and resources and runs [`application::PinduApplication`].
 
 pub mod application;
+pub mod bluetooth_service;
+pub mod bluez_backend;
 pub mod collection_actions;
 pub mod config;
 pub mod controller_navigation;
 pub mod file_service;
 pub mod fullscreen;
 pub mod fullscreen_activity;
+pub mod fullscreen_bluetooth;
 pub mod fullscreen_clock;
 pub mod fullscreen_controllers;
 pub mod fullscreen_controls;

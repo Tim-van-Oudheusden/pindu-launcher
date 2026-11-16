@@ -580,6 +580,48 @@ template $PinduWindow: Adw.ApplicationWindow {
                           };
                         }
 
+                        // Shown where BlueZ has an adapter: the connected devices, or how
+                        // the radio is.
+                        ListBoxRow quick_access_bluetooth_row {
+                          action-name: "win.quick-access-bluetooth";
+                          visible: false;
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "bluetooth-active-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Box {
+                              orientation: vertical;
+                              valign: center;
+                              hexpand: true;
+
+                              Label {
+                                label: _("Bluetooth");
+                                xalign: 0;
+                              }
+
+                              Label quick_access_bluetooth_subtitle {
+                                xalign: 0;
+                                ellipsize: end;
+
+                                styles [
+                                  "caption",
+                                  "dim-label",
+                                ]
+                              }
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
+
                         // Shown on Pindu OS: the installed version, or that an update waits
                         // for the next start.
                         ListBoxRow quick_access_system_update_row {
@@ -1353,6 +1395,87 @@ template $PinduWindow: Adw.ApplicationWindow {
                       // Restart to Update, Roll Back or Restart, as bootc's status allows,
                       // or what runs; filled in code.
                       ListBox quick_access_system_actions {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+                      }
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "bluetooth";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      Label {
+                        label: _("Bluetooth");
+                        xalign: 0;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // The radio's switch, or what blocks it.
+                      ListBox quick_access_bluetooth_adapter {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.SwitchRow quick_access_bluetooth_switch {
+                          title: _("Bluetooth");
+                        }
+
+                        Adw.ActionRow quick_access_bluetooth_blocked {
+                          title: _("Bluetooth");
+                          subtitle: _("Turned off by airplane mode or a hardware switch");
+                          visible: false;
+                        }
+                      }
+
+                      Label quick_access_bluetooth_paired_title {
+                        label: _("Paired Devices");
+                        xalign: 0;
+                        margin-top: 6;
+
+                        styles [
+                          "heading",
+                        ]
+                      }
+
+                      // Each paired device, which opens to Connect or Disconnect and
+                      // Forget; filled in code, and again as BlueZ reports changes.
+                      ListBox quick_access_bluetooth_paired {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+                      }
+
+                      Label quick_access_bluetooth_found_title {
+                        label: _("Found Devices");
+                        xalign: 0;
+                        margin-top: 6;
+
+                        styles [
+                          "heading",
+                        ]
+                      }
+
+                      // The devices found nearby while the level is open; selecting one
+                      // pairs and connects it. Filled in code.
+                      ListBox quick_access_bluetooth_found {
                         selection-mode: none;
 
                         styles [

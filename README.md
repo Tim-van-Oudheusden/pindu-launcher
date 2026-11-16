@@ -162,8 +162,8 @@ Open it with a right stick click, the Steam Deck's "…" button, or <kbd>Ctrl</k
 
 - **Status:** the time, the battery, whether you are offline, and the game you are playing with how long it has run.
 - **Notifications** from this session: games a sync added or found missing, artwork fetched or not, Proton downloads,
-  games that need a permission, and a rollback or restart the system refused. Quick Access opens on them while one is
-  unread.
+  games that need a permission, a Bluetooth device that did not pair, connect, disconnect or go, and a rollback or
+  restart the system refused. Quick Access opens on them while one is unread.
 - **Activity:** a running library sync, SteamGridDB artwork fetch or Proton download, with its progress. Artwork
   fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
 - **Refresh Library** reads your launchers again, offline like every sync.
@@ -194,6 +194,24 @@ and **GameMode** on or off from its next launch. Its options sheet (View or X) h
   `org.freedesktop.Platform.VulkanLayer.MangoHud` extension, which Flathub builds for x86_64 only. Games started on the
   host, and every game in a native package, use the system's `mangohud`. Without the extension, the switch of a
   Windows or Steam Runtime game is greyed out and says MangoHud is not installed; the game keeps its setting.
+
+### Bluetooth
+
+Where [BlueZ](https://www.bluez.org/) runs and the machine has a Bluetooth adapter, Quick Access has a **Bluetooth**
+entry, subtitled with the connected devices, or with whether Bluetooth is off or blocked. Its level pairs a wireless
+controller or headset with a controller only.
+
+- A switch turns Bluetooth on or off. When airplane mode or a hardware switch blocks the radio, the level says so
+  instead.
+- **Paired Devices** come first. Each opens to **Connect** or **Disconnect**, and **Forget**, which asks first: a
+  forgotten device has to be paired again.
+- **Found Devices** lists what is nearby while the level is open; the search stops when it closes. Selecting one
+  pairs it, trusts it so that it reconnects by itself after a restart, and connects it.
+- When a device asks to compare a code, the code shows: A pairs, B refuses. A keyboard gets a code to type on it.
+  A device that asks for a PIN cannot pair here yet.
+- If something does not work, a notification says why.
+
+The Flatpak has no access to the system bus, so the entry does not show there; use the desktop's Bluetooth settings.
 
 ### System Update
 

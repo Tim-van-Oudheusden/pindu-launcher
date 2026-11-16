@@ -20,6 +20,7 @@ use pindu_core::library::{
 use pindu_core::model::{GameId, Source, Timestamp};
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{GameOption, Panels};
+use pindu_core::system::bluetooth::Prompt;
 use pindu_core::tasks::Task;
 
 use crate::application::PinduApplication;
@@ -290,6 +291,24 @@ mod imp {
         pub quick_access_rollback_note: TemplateChild<gtk::Label>,
         #[template_child]
         pub quick_access_system_actions: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_bluetooth_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_bluetooth_subtitle: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_bluetooth_adapter: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_bluetooth_switch: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_bluetooth_blocked: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub quick_access_bluetooth_paired_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_bluetooth_paired: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_bluetooth_found_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_bluetooth_found: TemplateChild<gtk::ListBox>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
         /// Every sidebar row with the view it selects and, for sources, its count label.
@@ -328,6 +347,8 @@ mod imp {
         pub launch_game: RefCell<Option<(GameObject, glib::SignalHandlerId)>>,
         /// Fullscreen mode's menu drawer, Quick Access or options sheet, whichever is open.
         pub panels: Cell<Panels>,
+        /// The dialog showing what Bluetooth's pairing agent asks, with what it shows.
+        pub bluetooth_prompt: RefCell<Option<(adw::AlertDialog, Prompt)>>,
         /// The game the options sheet is for.
         pub options_game: RefCell<Option<GameObject>>,
         /// The options the sheet lists for that game, in its rows' order.
