@@ -1997,4 +1997,123 @@ mod tests {
 
         assert!(fake.calls().is_empty());
     }
+
+    #[test]
+    fn an_agent_that_fails_to_register_is_reported_and_not_retried_until_the_level_opens_again() {
+        let (bluetooth, fake, failures) = section(nearby());
+        bluetooth.open();
+        fake.finish(&Call::StartDiscovery, Ok(()));
+        fake.finish(&Call::RegisterAgent, Err("AlreadyExists".to_owned()));
+        fake.calls();
+
+        fake.report(powered(vec![found(PAD, "Pad")]));
+        assert!(fake.calls().is_empty());
+        assert_eq!(
+            failures.borrow().as_slice(),
+            [Failure::Agent("AlreadyExists".to_owned())]
+        );
+
+        bluetooth.close();
+        assert_eq!(fake.calls(), [Call::StopDiscovery], "nothing to unregister");
+        bluetooth.open();
+        assert_eq!(fake.calls(), [Call::RegisterAgent, Call::StartDiscovery]);
+    }
+
+    #[test]
+    fn ending_discovery_or_the_agent_that_fails_is_reported() {
+        let (bluetooth, fake, failures) = opened(nearby());
+
+        bluetooth.close();
+        fake.finish(&Call::StopDiscovery, Err("NotReady".to_owned()));
+        fake.finish(&Call::UnregisterAgent, Err("DoesNotExist".to_owned()));
+
+        assert_eq!(
+            failures.borrow().as_slice(),
+            [
+                Failure::Discovery("NotReady".to_owned()),
+                Failure::Agent("DoesNotExist".to_owned()),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_paired_device_that_cannot_be_trusted_is_reported_and_not_connected() {
+        let (bluetooth, fake, failures) = opened(nearby());
+        let headset = path(HEADSET);
+
+        bluetooth.connect(&headset);
+        fake.calls();
+        fake.finish(&Call::Trust(headset), Err("Failed".to_owned()));
+
+        assert!(fake.calls().is_empty());
+        assert_eq!(bluetooth.state().pending, None);
+        assert_eq!(
+            failures.borrow().as_slice(),
+            [Failure::Connect {
+                device: "Headset".to_owned(),
+                error: "Failed".to_owned(),
+            }]
+        );
+    }
+
+    #[test]
+    fn forgetting_that_fails_is_reported_with_the_device_name() {
+        let (bluetooth, fake, failures) = opened(powered(vec![paired(PAD, "Pad", false)]));
+        let pad = path(PAD);
+
+        bluetooth.forget(&pad);
+        fake.finish(&Call::Remove(pad), Err("DoesNotExist".to_owned()));
+
+        assert_eq!(bluetooth.state().pending, None);
+        assert_eq!(
+            failures.borrow().as_slice(),
+            [Failure::Forget {
+                device: "Pad".to_owned(),
+                error: "DoesNotExist".to_owned(),
+            }]
+        );
+    }
+
+    #[test]
+    fn a_new_request_refuses_the_passkey_request_waiting() {
+        let (bluetooth, fake, _) = opened(nearby());
+        let (reply, waiting) = answer::<u32>();
+        fake.ask(AgentRequest::Passkey {
+            device: path(PAD),
+            reply,
+        });
+        let (reply, _) = answer();
+
+        fake.ask(AgentRequest::Confirm {
+            device: path(PAD),
+            passkey: 7,
+            reply,
+        });
+
+        assert_eq!(*waiting.borrow(), Some(None));
+        assert_eq!(
+            bluetooth.state().prompt,
+            Some(Prompt::Confirm {
+                device: "Wireless Controller".to_owned(),
+                passkey: "000007".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn devices_with_the_same_name_are_ordered_by_address() {
+        let (bluetooth, _, _) = section(powered(vec![
+            found("00:00:00:00:00:02", "Pad"),
+            found("00:00:00:00:00:01", "pad"),
+        ]));
+
+        let addresses: Vec<String> = bluetooth
+            .state()
+            .found
+            .iter()
+            .map(|device| device.address.clone())
+            .collect();
+
+        assert_eq!(addresses, ["00:00:00:00:00:01", "00:00:00:00:00:02"]);
+    }
 }
