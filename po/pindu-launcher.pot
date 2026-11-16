@@ -228,6 +228,7 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:315
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:472
 #: crates/pindu-ui/src/fullscreen_power.rs:146
+#: data/ui/secret_dialog.blp:17
 msgid "_Cancel"
 msgstr ""
 
@@ -539,6 +540,7 @@ msgid "Collections"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:986
+#: crates/pindu-ui/src/search_keyboard.rs:174
 msgid "Hide"
 msgstr ""
 
@@ -1653,6 +1655,22 @@ msgstr ""
 
 #: crates/pindu-ui/src/search_keyboard.rs:166
 msgid "Space"
+msgstr ""
+
+#: crates/pindu-ui/src/search_keyboard.rs:173
+msgid "Show"
+msgstr ""
+
+#: crates/pindu-ui/src/search_keyboard.rs:181
+msgid "Capitals"
+msgstr ""
+
+#: crates/pindu-ui/src/search_keyboard.rs:182
+msgid "Symbols"
+msgstr ""
+
+#: crates/pindu-ui/src/search_keyboard.rs:183
+msgid "Lowercase"
 msgstr ""
 
 #: crates/pindu-ui/src/search_provider.rs:156
@@ -2835,6 +2853,10 @@ msgstr ""
 #: data/ui/preferences.blp:342
 msgid ""
 "Turns My Stylesheet off and renames fullscreen.css to fullscreen.css.bak"
+msgstr ""
+
+#: data/ui/secret_dialog.blp:24
+msgid "_Done"
 msgstr ""
 
 #: data/ui/shortcuts-dialog.blp:19

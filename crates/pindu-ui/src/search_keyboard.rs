@@ -9,13 +9,13 @@ use gettextrs::gettext;
 use gtk::glib;
 use pindu_core::gamepad::Intent;
 use pindu_core::hints::Typing;
-use pindu_core::osk::{self, Key, Keyboard, Outcome};
+use pindu_core::osk::{self, Key, Keyboard, Layer, Outcome};
 
 use crate::fullscreen::Sound;
 use crate::window::PinduWindow;
 
 /// The style class that marks the key under the cursor.
-const CURSOR_CLASS: &str = "cursor";
+pub(crate) const CURSOR_CLASS: &str = "cursor";
 
 impl PinduWindow {
     /// Lays out the keys, and closes the keyboard once the search entry loses focus or the
@@ -27,7 +27,7 @@ impl PinduWindow {
             let mut labels = Vec::new();
             for cell in cells {
                 let label = gtk::Label::builder()
-                    .label(key_label(cell.key))
+                    .label(key_label(cell.key, false))
                     .css_classes(["osk-key"])
                     .build();
                 imp.keyboard_grid.attach(
@@ -121,7 +121,8 @@ impl PinduWindow {
                 self.focus_page();
                 self.play_sound(Sound::Select);
             }
-            Outcome::Ignored => {}
+            // The search keyboard has one layer and never hides the text.
+            Outcome::Layer | Outcome::Reveal | Outcome::Ignored => {}
         }
         self.update_hints();
         true
@@ -153,18 +154,33 @@ impl PinduWindow {
             }
         }
         self.announce(
-            &key_label(keyboard.key()),
+            &key_name(keyboard.key(), keyboard.hidden()),
             gtk::AccessibleAnnouncementPriority::Medium,
         );
     }
 }
 
-/// What a key shows.
-fn key_label(key: Key) -> String {
+/// What a key shows, on a keyboard that hides the text or not.
+pub(crate) fn key_label(key: Key, hidden: bool) -> String {
     match key {
         Key::Char(character) => character.to_string(),
         Key::Space => gettext("Space"),
         Key::Backspace => gettext("Delete"),
         Key::Done => gettext("Done"),
+        Key::Layer(Layer::Upper) => "ABC".to_owned(),
+        Key::Layer(Layer::Symbols) => "#+=".to_owned(),
+        Key::Layer(Layer::Lower | Layer::Search) => "abc".to_owned(),
+        Key::Reveal if hidden => gettext("Show"),
+        Key::Reveal => gettext("Hide"),
+    }
+}
+
+/// What screen readers say for a key: its label, or the layer a layer key switches to.
+pub(crate) fn key_name(key: Key, hidden: bool) -> String {
+    match key {
+        Key::Layer(Layer::Upper) => gettext("Capitals"),
+        Key::Layer(Layer::Symbols) => gettext("Symbols"),
+        Key::Layer(Layer::Lower | Layer::Search) => gettext("Lowercase"),
+        key => key_label(key, hidden),
     }
 }

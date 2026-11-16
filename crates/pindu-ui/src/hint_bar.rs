@@ -111,7 +111,9 @@ impl PinduWindow {
             menu: self.is_fullscreen(),
             panel: self.open_panel(),
             launching: self.launching(),
-            keyboard: self.search_keyboard_typing(),
+            keyboard: self
+                .secret_dialog_typing()
+                .or_else(|| self.search_keyboard_typing()),
         }
     }
 

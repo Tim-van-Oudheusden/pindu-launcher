@@ -55,12 +55,13 @@ pub struct Context {
     pub panel: Option<Panel>,
     /// The launch overlay is up.
     pub launching: Launching,
-    /// The search keyboard is open, which takes the buttons.
+    /// The search keyboard or the passphrase dialog is open, which takes the buttons.
     pub keyboard: Option<Typing>,
 }
 
-/// The open search keyboard: the key its cursor is on and whether the search field is
-/// empty, which turns B from deleting into closing.
+/// The open on-screen keyboard, over the search field or in the passphrase dialog: the
+/// key its cursor is on and whether the field is empty, which turns B from deleting into
+/// closing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Typing {
     /// The key the cursor is on.
@@ -158,13 +159,15 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
             action,
         })
     };
-    // The open keyboard takes the buttons: A types its key, B deletes until the field is
-    // empty and then closes it, Start confirms.
+    // The open keyboard takes the buttons: A types its key (or switches layers, or shows
+    // or hides the text), B deletes until the field is empty and then closes it, Start
+    // confirms.
     if let Some(typing) = context.keyboard {
         let activate = match typing.key {
             Key::Char(_) | Key::Space => Action::Type,
             Key::Backspace => Action::Delete,
             Key::Done => Action::Done,
+            Key::Layer(_) | Key::Reveal => Action::Select,
         };
         let back = if typing.empty {
             Action::Close
@@ -366,6 +369,7 @@ pub fn glyph_name(glyphs: Glyphs, button: Button) -> GlyphName {
 mod tests {
     use super::*;
     use crate::gamepad::{ControllerSettings, DeviceKind, Prompts, Swap};
+    use crate::osk::Layer;
 
     fn context(focus: Focus) -> Context {
         Context {
@@ -760,6 +764,32 @@ mod tests {
         assert_eq!(
             actions(typing(Key::Done, false), DeviceKind::Xbox)[0],
             (Button::South, Action::Done)
+        );
+    }
+
+    #[test]
+    fn the_passphrase_keyboard_selects_its_layer_and_show_keys_with_a() {
+        let typing = |key, empty| Context {
+            dialog: true,
+            keyboard: Some(Typing { key, empty }),
+            ..context(Focus::Other)
+        };
+        let symbols = Key::Layer(Layer::Symbols);
+        assert_eq!(
+            actions(typing(symbols, true), DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Close),
+                (Button::Start, Action::Done)
+            ]
+        );
+        assert_eq!(
+            actions(typing(Key::Reveal, false), DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Delete),
+                (Button::Start, Action::Done)
+            ]
         );
     }
 
