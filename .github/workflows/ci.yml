@@ -40,6 +40,7 @@ jobs:
   checks:
     name: Rust and Meson checks
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
@@ -81,6 +82,7 @@ jobs:
   deny:
     name: Dependency policy (cargo-deny)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -102,6 +104,7 @@ jobs:
   scripts:
     name: Script tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -118,6 +121,7 @@ jobs:
   sources:
     name: Source tarball with vendored crates
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
@@ -150,6 +154,7 @@ jobs:
     name: Native package (${{ matrix.target }}${{ matrix.suffix }})
     needs: sources
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
     # Distros that ship GTK 4.24 and libadwaita 1.10 (#232), for x86_64 and aarch64 (#303).
     # Each builds offline from the tarball's vendored crates, in its own container, on a
     # runner of its own architecture.
@@ -198,6 +203,7 @@ jobs:
     name: Native package install and UI smoke test (${{ matrix.target }}${{ matrix.suffix }})
     needs: packages
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
     # A clean container: the package must pull in everything it needs to start.
     strategy:
       fail-fast: false
@@ -236,6 +242,7 @@ jobs:
   flatpak:
     name: Flatpak build, UI smoke test and lint (${{ matrix.profile }}${{ matrix.suffix }})
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
     # The release manifest builds on every pull request too, so a broken one fails here and
     # not when a release is tagged. aarch64 builds natively on GitHub's arm64 runners (#303);
     # the manifests are the same for both architectures.

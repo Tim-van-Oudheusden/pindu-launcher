@@ -28,6 +28,7 @@ jobs:
   version:
     name: Check the tag against the versions
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -48,6 +49,7 @@ jobs:
     name: Flatpak bundle, tests and lint (${{ matrix.arch }})
     needs: version
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
     # As in ci.yml: the GNOME 51 image, the runner's preinstalled SDKs mounted so the build
     # can delete them for disk space, and the image's Flatpak installation on a named volume
     # so updating the SDK does not fail with EXDEV (#150). Each architecture builds natively
@@ -102,6 +104,7 @@ jobs:
     name: Source tarball with vendored crates
     needs: version
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
@@ -135,6 +138,7 @@ jobs:
     name: Native package (${{ matrix.target }}${{ matrix.suffix }})
     needs: sources
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
     # Distros that ship GTK 4.24 and libadwaita 1.10 (#232), for x86_64 and aarch64 (#303).
     # Each builds offline from the tarball's vendored crates, in its own container, on a
     # runner of its own architecture.
@@ -185,6 +189,7 @@ jobs:
     name: Native package install and UI smoke test (${{ matrix.target }}${{ matrix.suffix }})
     needs: packages
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
     # A clean container: the package must pull in everything it needs to start.
     strategy:
       fail-fast: false
@@ -226,6 +231,7 @@ jobs:
     name: Publish the GitHub release
     needs: [version, flatpak, sources, packages-smoke]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     env:
