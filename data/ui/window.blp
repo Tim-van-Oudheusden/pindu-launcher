@@ -169,6 +169,33 @@ template $PinduWindow: Adw.ApplicationWindow {
                           }
                         };
                       }
+
+                      // Shown where logind lets the session suspend, restart or power off;
+                      // never in the Flatpak, which has no system bus.
+                      ListBoxRow drawer_power_row {
+                        action-name: "win.drawer-power";
+                        visible: false;
+
+                        child: Box {
+                          spacing: 16;
+
+                          Image {
+                            icon-name: "system-shutdown-symbolic";
+                            accessible-role: presentation;
+                          }
+
+                          Label {
+                            label: _("Power");
+                            xalign: 0;
+                            hexpand: true;
+                          }
+
+                          Image {
+                            icon-name: "go-next-symbolic";
+                            accessible-role: presentation;
+                          }
+                        };
+                      }
                     }
                   };
                 };
@@ -194,6 +221,37 @@ template $PinduWindow: Adw.ApplicationWindow {
                     }
 
                     ListBox drawer_collections {
+                      selection-mode: none;
+
+                      styles [
+                        "navigation-sidebar",
+                      ]
+                    }
+                  };
+                };
+              }
+
+              StackPage {
+                name: "power";
+
+                child: ScrolledWindow {
+                  hscrollbar-policy: never;
+
+                  child: Box {
+                    orientation: vertical;
+                    spacing: 12;
+
+                    Label {
+                      label: _("Power");
+                      xalign: 0;
+
+                      styles [
+                        "title-3",
+                      ]
+                    }
+
+                    // Suspend, Restart and Power Off, filled from what logind allows.
+                    ListBox drawer_power {
                       selection-mode: none;
 
                       styles [
@@ -571,6 +629,90 @@ template $PinduWindow: Adw.ApplicationWindow {
                               label: _("Settings");
                               xalign: 0;
                               hexpand: true;
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
+
+                        // Shown where NetworkManager runs: the connection in use, or that
+                        // the system does not allow changing it (then insensitive).
+                        ListBoxRow quick_access_network_row {
+                          action-name: "win.quick-access-network";
+                          visible: false;
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image quick_access_network_icon {
+                              icon-name: "network-wired-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Box {
+                              orientation: vertical;
+                              valign: center;
+                              hexpand: true;
+
+                              Label {
+                                label: _("Network");
+                                xalign: 0;
+                              }
+
+                              Label quick_access_network_subtitle {
+                                xalign: 0;
+                                ellipsize: end;
+
+                                styles [
+                                  "caption",
+                                  "dim-label",
+                                ]
+                              }
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
+
+                        // Shown where BlueZ has an adapter: the connected devices, or how
+                        // the radio is.
+                        ListBoxRow quick_access_bluetooth_row {
+                          action-name: "win.quick-access-bluetooth";
+                          visible: false;
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "bluetooth-active-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Box {
+                              orientation: vertical;
+                              valign: center;
+                              hexpand: true;
+
+                              Label {
+                                label: _("Bluetooth");
+                                xalign: 0;
+                              }
+
+                              Label quick_access_bluetooth_subtitle {
+                                xalign: 0;
+                                ellipsize: end;
+
+                                styles [
+                                  "caption",
+                                  "dim-label",
+                                ]
+                              }
                             }
 
                             Image {
@@ -1427,6 +1569,160 @@ template $PinduWindow: Adw.ApplicationWindow {
                       // Restart to Update, Roll Back or Restart, as bootc's status allows,
                       // or what runs; filled in code.
                       ListBox quick_access_system_actions {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+                      }
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "network";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      Label {
+                        label: _("Network");
+                        xalign: 0;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // One row per wired and Wi-Fi device with its state; filled in
+                      // code.
+                      ListBox quick_access_network_devices {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+                      }
+
+                      // Wi-Fi's switch, or what blocks it; hidden without a Wi-Fi
+                      // device.
+                      ListBox quick_access_wifi_radio {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.SwitchRow quick_access_wifi_switch {
+                          title: _("Wi-Fi");
+                        }
+
+                        Adw.ActionRow quick_access_wifi_blocked {
+                          title: _("Wi-Fi");
+                          subtitle: _("Turned off by a hardware switch");
+                          visible: false;
+                        }
+                      }
+
+                      Label quick_access_wifi_title {
+                        label: _("Wi-Fi Networks");
+                        xalign: 0;
+                        margin-top: 6;
+
+                        styles [
+                          "heading",
+                        ]
+                      }
+
+                      // The networks in range, strongest first; the one in use is
+                      // checked, saved ones open to Connect and Forget. Filled in code,
+                      // and again as NetworkManager reports changes.
+                      ListBox quick_access_wifi_networks {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+                      }
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "bluetooth";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      Label {
+                        label: _("Bluetooth");
+                        xalign: 0;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // The radio's switch, or what blocks it.
+                      ListBox quick_access_bluetooth_adapter {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.SwitchRow quick_access_bluetooth_switch {
+                          title: _("Bluetooth");
+                        }
+
+                        Adw.ActionRow quick_access_bluetooth_blocked {
+                          title: _("Bluetooth");
+                          subtitle: _("Turned off by airplane mode or a hardware switch");
+                          visible: false;
+                        }
+                      }
+
+                      Label quick_access_bluetooth_paired_title {
+                        label: _("Paired Devices");
+                        xalign: 0;
+                        margin-top: 6;
+
+                        styles [
+                          "heading",
+                        ]
+                      }
+
+                      // Each paired device, which opens to Connect or Disconnect and
+                      // Forget; filled in code, and again as BlueZ reports changes.
+                      ListBox quick_access_bluetooth_paired {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+                      }
+
+                      Label quick_access_bluetooth_found_title {
+                        label: _("Found Devices");
+                        xalign: 0;
+                        margin-top: 6;
+
+                        styles [
+                          "heading",
+                        ]
+                      }
+
+                      // The devices found nearby while the level is open; selecting one
+                      // pairs and connects it. Filled in code.
+                      ListBox quick_access_bluetooth_found {
                         selection-mode: none;
 
                         styles [

@@ -9,10 +9,13 @@
 //! Library `fullscreen_activity`'s, its Surprise Me `fullscreen_surprise`'s, its
 //! Controllers `fullscreen_controllers`'s, its Controls `fullscreen_controls`'s, its
 //! Filters (on the library page only) `fullscreen_library`'s, its Performance (for a game we
-//! run ourselves, which the options sheet has too) `fullscreen_performance`'s, its Sound
-//! Output (where PipeWire's tools run) `fullscreen_sound_output`'s, its System Update (on
-//! Pindu OS only) `fullscreen_system_update`'s. Its Design level holds the design, its
-//! variant, Home's background blur and dim, and the user's own stylesheet.
+//! run ourselves, which the options sheet has too) `fullscreen_performance`'s, its Network
+//! `fullscreen_network`'s, its Bluetooth (where BlueZ has an adapter)
+//! `fullscreen_bluetooth`'s, its Sound Output (where PipeWire's tools run)
+//! `fullscreen_sound_output`'s, its System Update (on Pindu OS only)
+//! `fullscreen_system_update`'s. Its Design level holds the design, its variant, Home's
+//! background blur and dim, and the user's own stylesheet. The drawer's Power level is
+//! `fullscreen_power`'s.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -122,6 +125,11 @@ impl PinduWindow {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Performance));
             })
             .build();
+        let bluetooth = gio::ActionEntry::builder("quick-access-bluetooth")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Bluetooth));
+            })
+            .build();
         let sound_output = gio::ActionEntry::builder("quick-access-sound-output")
             .activate(|window: &Self, _, _| {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::SoundOutput));
@@ -130,6 +138,11 @@ impl PinduWindow {
         let system_update = gio::ActionEntry::builder("quick-access-system-update")
             .activate(|window: &Self, _, _| {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::SystemUpdate));
+            })
+            .build();
+        let network = gio::ActionEntry::builder("quick-access-network")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Network));
             })
             .build();
         self.add_action_entries([
@@ -149,11 +162,13 @@ impl PinduWindow {
             quick_settings,
             filters,
             performance,
+            bluetooth,
             sound_output,
             system_update,
+            network,
         ]);
-        // Up and Down stop at a list's ends; in Quick Access's Controllers, settings and
-        // System Update and the options sheet they go on to the next list
+        // Up and Down stop at a list's ends; in Quick Access's Controllers, settings,
+        // Network, Bluetooth and System Update and the options sheet they go on to the next list
         // (`fullscreen_playing` takes the drawer's and Quick Access's own lists up to their
         // Playing Now cards).
         for list in [
@@ -172,8 +187,14 @@ impl PinduWindow {
             imp.quick_access_clear_filters.get(),
             imp.options_list.get(),
             imp.options_performance.get(),
+            imp.quick_access_bluetooth_adapter.get(),
+            imp.quick_access_bluetooth_paired.get(),
+            imp.quick_access_bluetooth_found.get(),
             imp.quick_access_system_versions.get(),
             imp.quick_access_system_actions.get(),
+            imp.quick_access_network_devices.get(),
+            imp.quick_access_wifi_radio.get(),
+            imp.quick_access_wifi_networks.get(),
         ] {
             list.connect_keynav_failed(|list, direction| {
                 step_out_of_list(list, direction);
@@ -249,7 +270,10 @@ impl PinduWindow {
         self.setup_quick_access_settings();
         self.setup_quick_access();
         self.setup_performance();
+        self.setup_bluetooth();
         self.setup_system_update();
+        self.setup_network();
+        self.setup_power();
         self.fill_drawer();
     }
 
@@ -527,6 +551,9 @@ impl PinduWindow {
         {
             self.show_page_entries();
         }
+        if before == Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)) {
+            self.leave_bluetooth();
+        }
         match open {
             Some(Panel::QuickAccess(QuickAccessLevel::Notifications)) => self.show_notifications(),
             Some(Panel::QuickAccess(QuickAccessLevel::Activity)) => self.show_activity(),
@@ -534,8 +561,11 @@ impl PinduWindow {
             Some(Panel::QuickAccess(QuickAccessLevel::Controllers)) => self.fill_controllers(),
             Some(Panel::QuickAccess(QuickAccessLevel::Controls)) => self.fill_controls(),
             Some(Panel::QuickAccess(QuickAccessLevel::Filters)) => self.show_fullscreen_filters(),
+            Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)) => self.show_bluetooth(),
             Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)) => self.show_sound_output(),
             Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)) => self.show_system_update(),
+            Some(Panel::QuickAccess(QuickAccessLevel::Network)) => self.show_network(),
+            Some(Panel::Drawer(DrawerLevel::Power)) => self.show_power(),
             _ => {}
         }
         let drawer = matches!(open, Some(Panel::Drawer(_)));
@@ -552,6 +582,7 @@ impl PinduWindow {
             Some(Panel::Drawer(level)) => imp.drawer_stack.set_visible_child_name(match level {
                 DrawerLevel::Main => "main",
                 DrawerLevel::Collections => "collections",
+                DrawerLevel::Power => "power",
             }),
             Some(Panel::Options(level)) => imp.options_stack.set_visible_child_name(match level {
                 OptionsLevel::Main => "main",
@@ -568,8 +599,10 @@ impl PinduWindow {
                     QuickAccessLevel::Settings => "settings",
                     QuickAccessLevel::Filters => "filters",
                     QuickAccessLevel::Performance => "performance",
+                    QuickAccessLevel::Bluetooth => "bluetooth",
                     QuickAccessLevel::SoundOutput => "sound-output",
                     QuickAccessLevel::SystemUpdate => "system-update",
+                    QuickAccessLevel::Network => "network",
                 });
             }
             None => {
@@ -602,6 +635,9 @@ impl PinduWindow {
                 Some(Panel::Drawer(DrawerLevel::Main)),
                 Some(Panel::Drawer(DrawerLevel::Collections)),
             ) => Some(imp.drawer_collections_row.get().upcast()),
+            (Some(Panel::Drawer(DrawerLevel::Main)), Some(Panel::Drawer(DrawerLevel::Power))) => {
+                Some(imp.drawer_power_row.get().upcast())
+            }
             (
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Notifications)),
@@ -637,12 +673,20 @@ impl PinduWindow {
             ) => Some(imp.quick_access_performance_row.get().upcast()),
             (
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)),
+            ) => Some(imp.quick_access_bluetooth_row.get().upcast()),
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)),
             ) => Some(imp.quick_access_sound_output_row.get().upcast()),
             (
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)),
             ) => Some(imp.quick_access_system_update_row.get().upcast()),
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::Network)),
+            ) => Some(imp.quick_access_network_row.get().upcast()),
             // The first Playing Now card's Return comes first.
             (Some(Panel::Drawer(DrawerLevel::Main)), _) if imp.playing_cards.is_visible() => imp
                 .playing_cards
@@ -699,6 +743,7 @@ impl PinduWindow {
             (Some(Panel::Drawer(DrawerLevel::Collections)), _) => {
                 first_row(&imp.drawer_collections)
             }
+            (Some(Panel::Drawer(DrawerLevel::Power)), _) => self.power_focus(),
             (Some(Panel::QuickAccess(QuickAccessLevel::Settings)), _) => {
                 imp.tile_small.ancestor(gtk::ListBoxRow::static_type())
             }
@@ -712,6 +757,7 @@ impl PinduWindow {
                 })
                 .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
             }
+            (Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)), _) => self.bluetooth_focus(),
             // The output in use.
             (Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)), _) => {
                 self.sound_output_focus()
@@ -719,6 +765,7 @@ impl PinduWindow {
             (Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)), _) => {
                 self.system_update_focus()
             }
+            (Some(Panel::QuickAccess(QuickAccessLevel::Network)), _) => self.network_focus(),
             // The first controller that can rumble, or else the first button prompt.
             (Some(Panel::QuickAccess(QuickAccessLevel::Controllers)), _) => {
                 std::iter::successors(imp.quick_access_controllers.first_child(), |row| {
@@ -745,17 +792,23 @@ impl PinduWindow {
         }
     }
 
-    /// The drawer's collections. Its Playing Now cards are `fill_playing_cards`'s.
+    /// The drawer's collections and its Power entry. Its Playing Now cards are
+    /// `fill_playing_cards`'s.
     fn fill_drawer(&self) {
         let imp = self.imp();
-        let playing = self
-            .application()
-            .and_downcast::<PinduApplication>()
+        let application = self.application().and_downcast::<PinduApplication>();
+        let playing = application
+            .as_ref()
             .is_some_and(|application| application.session_service().any_playing());
+        let power = application
+            .as_ref()
+            .is_some_and(|application| application.system_power_service().state().shown());
         let collections = self.library().collections();
-        let entries = drawer_entries(playing, !collections.is_empty());
+        let entries = drawer_entries(playing, !collections.is_empty(), power);
         imp.drawer_collections_row
             .set_visible(entries.contains(&DrawerEntry::Collections));
+        imp.drawer_power_row
+            .set_visible(entries.contains(&DrawerEntry::Power));
         imp.drawer_collections.remove_all();
         for collection in &collections {
             let row = drawer_row("folder-symbolic", &collection.name);

@@ -21,6 +21,7 @@ use pindu_core::model::{GameId, Source, Timestamp};
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{GameOption, Panels};
 use pindu_core::system::audio::Output;
+use pindu_core::system::bluetooth::Prompt;
 use pindu_core::tasks::Task;
 
 use crate::application::PinduApplication;
@@ -149,6 +150,10 @@ mod imp {
         pub drawer_collections_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub drawer_collections: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub drawer_power_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub drawer_power: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub options_panel: TemplateChild<gtk::Box>,
         #[template_child]
@@ -297,6 +302,42 @@ mod imp {
         pub quick_access_rollback_note: TemplateChild<gtk::Label>,
         #[template_child]
         pub quick_access_system_actions: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_network_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_network_icon: TemplateChild<gtk::Image>,
+        #[template_child]
+        pub quick_access_network_subtitle: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_network_devices: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_wifi_radio: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_wifi_switch: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_wifi_blocked: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub quick_access_wifi_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_wifi_networks: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_bluetooth_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_bluetooth_subtitle: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_bluetooth_adapter: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_bluetooth_switch: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub quick_access_bluetooth_blocked: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub quick_access_bluetooth_paired_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_bluetooth_paired: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_bluetooth_found_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_bluetooth_found: TemplateChild<gtk::ListBox>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
         /// Every sidebar row with the view it selects and, for sources, its count label.
@@ -335,6 +376,8 @@ mod imp {
         pub launch_game: RefCell<Option<(GameObject, glib::SignalHandlerId)>>,
         /// Fullscreen mode's menu drawer, Quick Access or options sheet, whichever is open.
         pub panels: Cell<Panels>,
+        /// The dialog showing what Bluetooth's pairing agent asks, with what it shows.
+        pub bluetooth_prompt: RefCell<Option<(adw::AlertDialog, Prompt)>>,
         /// The game the options sheet is for.
         pub options_game: RefCell<Option<GameObject>>,
         /// The options the sheet lists for that game, in its rows' order.
@@ -368,6 +411,9 @@ mod imp {
         pub performance_tools: Cell<Option<[bool; 2]>>,
         /// Whether the switches are being set to show those, rather than by the user.
         pub performance_filling: Cell<bool>,
+        /// The dialog asking for a Wi-Fi passphrase, with the prompt it shows.
+        pub network_prompt:
+            RefCell<Option<(adw::AlertDialog, pindu_core::system::network::Prompt)>>,
     }
 
     #[glib::object_subclass]

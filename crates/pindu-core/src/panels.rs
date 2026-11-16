@@ -1,10 +1,9 @@
 //! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
-//! leaving), the Quick Access panel on the right (notifications, what runs in the
-//! background, the design, the controllers and what each button does, a few settings, the
-//! sound output, OS updates on Pindu OS, and entries for the page under it such as the
-//! library's filters and a focused game's performance switches) and the options sheet at the
-//! bottom (what to do
-//! with one game).
+//! leaving, and the machine's power), the Quick Access panel on the right (notifications,
+//! what runs in the background, the design, the controllers and what each button does, a
+//! few settings, the network, Bluetooth, the sound output, OS updates on Pindu OS, and
+//! entries for the page under it such as the library's filters and a focused game's
+//! performance switches) and the options sheet at the bottom (what to do with one game).
 //! This decides which one is open and at which level, what Start, Guide, R3, View or X and
 //! B do to them, and what each lists.
 
@@ -24,13 +23,16 @@ pub enum Panel {
     QuickAccess(QuickAccessLevel),
 }
 
-/// What the drawer shows: its entries, or the collections one of them leads to.
+/// What the drawer shows: its entries, or the list one of them leads to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DrawerLevel {
     /// The drawer's entries.
     Main,
     /// The collections, each opening its tab in the library.
     Collections,
+    /// Suspend, Restart and Power Off, as logind allows them (see
+    /// [`crate::system::power`]).
+    Power,
 }
 
 /// What the options sheet shows: the game's actions, or its collections to add it to or
@@ -65,6 +67,12 @@ pub enum QuickAccessLevel {
     /// The Performance Overlay (MangoHud) and GameMode switches of the focused game, one
     /// we run ourselves (see [`page_entries`]).
     Performance,
+    /// The wired and Wi-Fi devices and the Wi-Fi networks in range, to join or forget (see
+    /// [`crate::system::network`]).
+    Network,
+    /// The Bluetooth adapter's switch, the paired devices and the ones found nearby (see
+    /// [`crate::system::bluetooth`]).
+    Bluetooth,
     /// The audio outputs, with a check on the one in use; choosing one makes it the
     /// default (see [`crate::system::audio`]).
     SoundOutput,
@@ -192,14 +200,19 @@ pub enum DrawerEntry {
     ExitFullscreen,
     /// Quit Pindu.
     Quit,
+    /// Lead to suspending, restarting and powering off the machine
+    /// ([`DrawerLevel::Power`]).
+    Power,
 }
 
 /// The drawer's entries, top to bottom: a Playing Now card while a game we started runs,
-/// and Collections when there are any.
-pub fn drawer_entries(playing: bool, collections: bool) -> Vec<DrawerEntry> {
+/// Collections when there are any, and Power after Quit when the system lets the session
+/// suspend, restart or power off (never in the Flatpak, which has no system bus).
+pub fn drawer_entries(playing: bool, collections: bool, power: bool) -> Vec<DrawerEntry> {
     use DrawerEntry::*;
     let playing = playing.then_some(PlayingNow);
     let collections = collections.then_some(Collections);
+    let power = power.then_some(Power);
     [
         playing,
         Some(Home),
@@ -207,6 +220,7 @@ pub fn drawer_entries(playing: bool, collections: bool) -> Vec<DrawerEntry> {
         collections,
         Some(ExitFullscreen),
         Some(Quit),
+        power,
     ]
     .into_iter()
     .flatten()
@@ -411,6 +425,8 @@ mod tests {
             QuickAccessLevel::Settings,
             QuickAccessLevel::Filters,
             QuickAccessLevel::Performance,
+            QuickAccessLevel::Network,
+            QuickAccessLevel::Bluetooth,
             QuickAccessLevel::SoundOutput,
             QuickAccessLevel::SystemUpdate,
         ] {
@@ -616,16 +632,40 @@ mod tests {
     }
 
     #[test]
+    fn b_leaves_the_power_level_for_the_drawer_s_entries_first() {
+        let mut panels = Panels::new();
+        panels.handle(Intent::Menu, PAGE);
+        panels.show(Panel::Drawer(DrawerLevel::Power));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), drawer());
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), None);
+    }
+
+    #[test]
     fn the_drawer_lists_playing_now_first_and_collections_when_there_are_any() {
         use DrawerEntry::*;
         assert_eq!(
-            drawer_entries(true, true),
+            drawer_entries(true, true, false),
             [PlayingNow, Home, Library, Collections, ExitFullscreen, Quit]
         );
         assert_eq!(
-            drawer_entries(false, false),
+            drawer_entries(false, false, false),
             [Home, Library, ExitFullscreen, Quit],
             "settings live in Quick Access"
+        );
+    }
+
+    #[test]
+    fn the_drawer_lists_power_after_quit_when_the_system_allows_it() {
+        use DrawerEntry::*;
+        assert_eq!(
+            drawer_entries(false, false, true),
+            [Home, Library, ExitFullscreen, Quit, Power]
+        );
+        assert_eq!(
+            drawer_entries(true, false, true),
+            [PlayingNow, Home, Library, ExitFullscreen, Quit, Power]
         );
     }
 

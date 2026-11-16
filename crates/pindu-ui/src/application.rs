@@ -7,6 +7,7 @@ use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
 
 use crate::audio_output_service::AudioOutputService;
+use crate::bluetooth_service::BluetoothService;
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
 use crate::game_dialog::GameDialog;
 use crate::gamepad_service::GamepadService;
@@ -14,6 +15,7 @@ use crate::launch_service;
 use crate::library_service::{ImportFailure, LibraryService};
 use crate::manette_backend::ManetteBackend;
 use crate::models::GameObject;
+use crate::network_service::NetworkService;
 use crate::notification_service::NotificationService;
 use crate::permission_service;
 use crate::power_service::PowerService;
@@ -24,6 +26,7 @@ use crate::sources::source_list;
 use crate::steamgriddb_service;
 use crate::style_service::StyleService;
 use crate::sync_service::SyncService;
+use crate::system_power_service::SystemPowerService;
 use crate::system_update_service::SystemUpdateService;
 use crate::task_service::TaskService;
 use crate::watch_service::WatchService;
@@ -67,10 +70,16 @@ mod imp {
         pub style_service: OnceCell<StyleService>,
         /// The batteries, for Quick Access's header.
         pub power_service: OnceCell<PowerService>,
+        /// Bluetooth, for Quick Access's Bluetooth.
+        pub bluetooth_service: OnceCell<BluetoothService>,
         /// The audio outputs, for Quick Access's Sound Output.
         pub audio_output_service: OnceCell<AudioOutputService>,
         /// OS updates on Pindu OS, for Quick Access's System Update.
         pub system_update_service: OnceCell<SystemUpdateService>,
+        /// The network, for Quick Access's Network.
+        pub network_service: OnceCell<NetworkService>,
+        /// Suspend, restart and power off, for the drawer's Power.
+        pub system_power_service: OnceCell<SystemPowerService>,
         /// What happened in the background this session, for Quick Access.
         pub notification_service: NotificationService,
         /// What runs in the background, for Quick Access's Activity.
@@ -158,11 +167,20 @@ mod imp {
             self.power_service
                 .set(PowerService::new())
                 .expect("start-up runs once");
+            self.bluetooth_service
+                .set(BluetoothService::new(&self.notification_service))
+                .expect("start-up runs once");
             self.audio_output_service
                 .set(AudioOutputService::new(&self.notification_service))
                 .expect("start-up runs once");
             self.system_update_service
                 .set(SystemUpdateService::new(&self.notification_service))
+                .expect("start-up runs once");
+            self.network_service
+                .set(NetworkService::new(&self.notification_service))
+                .expect("start-up runs once");
+            self.system_power_service
+                .set(SystemPowerService::new(&self.notification_service))
                 .expect("start-up runs once");
             // Loaded here, not on the first window: Shell search and --launch need the
             // library when no window opens.
@@ -328,6 +346,14 @@ impl PinduApplication {
             .expect("the application has started")
     }
 
+    /// Bluetooth.
+    pub fn bluetooth_service(&self) -> &BluetoothService {
+        self.imp()
+            .bluetooth_service
+            .get()
+            .expect("the application has started")
+    }
+
     /// The audio outputs and the one in use.
     pub fn audio_output_service(&self) -> &AudioOutputService {
         self.imp()
@@ -340,6 +366,22 @@ impl PinduApplication {
     pub fn system_update_service(&self) -> &SystemUpdateService {
         self.imp()
             .system_update_service
+            .get()
+            .expect("the application has started")
+    }
+
+    /// The network.
+    pub fn network_service(&self) -> &NetworkService {
+        self.imp()
+            .network_service
+            .get()
+            .expect("the application has started")
+    }
+
+    /// Suspend, restart and power off.
+    pub fn system_power_service(&self) -> &SystemPowerService {
+        self.imp()
+            .system_power_service
             .get()
             .expect("the application has started")
     }

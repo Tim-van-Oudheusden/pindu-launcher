@@ -156,14 +156,28 @@ Preferences.
   launching. It shows the glyphs of the controller in use and the keys that do the same, including ones the hint bar
   leaves out, such as holding B to cancel a launch. Without a controller it lists the keys alone.
 
+### Power
+
+Where the system lets you, the menu drawer (Start or Guide) has a **Power** entry after **Quit**, leading to
+**Suspend**, **Restart** and **Power Off**, so a console without a keyboard can be turned off with a controller. B steps
+back to the drawer's entries.
+
+- An action the system does not allow is greyed out and says so; one the machine cannot do at all is not listed.
+- While a game Pindu started is running, Restart and Power Off ask first, since its unsaved progress would be lost.
+  Suspend does not ask: the game carries on when the machine wakes.
+- When a program holds the machine on (an update installing, for example), a notification names it.
+
+The Flatpak has no access to the system bus, so the entry does not show there; use the desktop's own power menu.
+
 ### Quick Access
 
 Open it with a right stick click, the Steam Deck's "…" button, or <kbd>Ctrl</kbd>+<kbd>2</kbd>.
 
 - **Status:** the time, the battery, whether you are offline, and the game you are playing with how long it has run.
 - **Notifications** from this session: games a sync added or found missing, artwork fetched or not, Proton downloads,
-  games that need a permission, and a rollback or restart the system refused. Quick Access opens on them while one is
-  unread.
+  games that need a permission, a Bluetooth device that did not pair, connect, disconnect or go, a rollback or restart
+  the system refused, a network that could not be joined, and a program that kept the machine from suspending,
+  restarting or powering off. Quick Access opens on them while one is unread.
 - **Activity:** a running library sync, SteamGridDB artwork fetch or Proton download, with its progress. Artwork
   fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
 - **Refresh Library** reads your launchers again, offline like every sync.
@@ -199,6 +213,44 @@ and **GameMode** on or off from its next launch. Its options sheet (View or X) h
   `org.freedesktop.Platform.VulkanLayer.MangoHud` extension, which Flathub builds for x86_64 only. Games started on the
   host, and every game in a native package, use the system's `mangohud`. Without the extension, the switch of a
   Windows or Steam Runtime game is greyed out and says MangoHud is not installed; the game keeps its setting.
+
+### Network
+
+Where NetworkManager runs, Quick Access has a **Network** entry, subtitled with the connection in use: `Wired`, the
+Wi-Fi network's name, or `Offline`.
+
+- Its level shows each wired and Wi-Fi device with its state (connected, connecting, disconnected, cable unplugged),
+  Wi-Fi's switch, and the Wi-Fi networks in range, strongest first. Opening it looks for networks. The network in use
+  is checked, and saved ones say **Saved**.
+- Selecting a new network joins it. An open one joins at once; a WPA/WPA2 or WPA3 personal one asks for its passphrase
+  first. The connection is saved for every user of the machine with the passphrase in it, so it comes back after a
+  restart before anyone logs in. A wrong passphrase is asked for again, and the connection it made is deleted.
+- A saved network opens to **Connect** and **Forget**, which deletes its connection after asking.
+- Enterprise (802.1X) networks are listed but greyed out, to be set up on another device. Hidden networks, static
+  addresses, VPNs and proxies are not offered.
+- If the system does not let the session change the network, the entry is greyed out and says so. Without a Wi-Fi
+  device the level has the wired state only.
+
+For now the passphrase is typed with a keyboard: the on-screen keyboard cannot type one yet. The Flatpak has no access
+to the system bus, so the entry does not show there.
+
+### Bluetooth
+
+Where [BlueZ](https://www.bluez.org/) runs and the machine has a Bluetooth adapter, Quick Access has a **Bluetooth**
+entry, subtitled with the connected devices, or with whether Bluetooth is off or blocked. Its level pairs a wireless
+controller or headset with a controller only.
+
+- A switch turns Bluetooth on or off. When airplane mode or a hardware switch blocks the radio, the level says so
+  instead.
+- **Paired Devices** come first. Each opens to **Connect** or **Disconnect**, and **Forget**, which asks first: a
+  forgotten device has to be paired again.
+- **Found Devices** lists what is nearby while the level is open; the search stops when it closes. Selecting one
+  pairs it, trusts it so that it reconnects by itself after a restart, and connects it.
+- When a device asks to compare a code, the code shows: A pairs, B refuses. A keyboard gets a code to type on it.
+  A device that asks for a PIN cannot pair here yet.
+- If something does not work, a notification says why.
+
+The Flatpak has no access to the system bus, so the entry does not show there; use the desktop's Bluetooth settings.
 
 ### System Update
 

@@ -1,17 +1,21 @@
 crates/pindu-ui/src/application.rs
 crates/pindu-ui/src/audio_output_service.rs
+crates/pindu-ui/src/bluetooth_service.rs
 crates/pindu-ui/src/collection_actions.rs
 crates/pindu-ui/src/file_service.rs
 crates/pindu-ui/src/fullscreen.rs
 crates/pindu-ui/src/fullscreen_activity.rs
+crates/pindu-ui/src/fullscreen_bluetooth.rs
 crates/pindu-ui/src/fullscreen_controllers.rs
 crates/pindu-ui/src/fullscreen_controls.rs
 crates/pindu-ui/src/fullscreen_game.rs
 crates/pindu-ui/src/fullscreen_library.rs
+crates/pindu-ui/src/fullscreen_network.rs
 crates/pindu-ui/src/fullscreen_notifications.rs
 crates/pindu-ui/src/fullscreen_panels.rs
 crates/pindu-ui/src/fullscreen_performance.rs
 crates/pindu-ui/src/fullscreen_playing.rs
+crates/pindu-ui/src/fullscreen_power.rs
 crates/pindu-ui/src/fullscreen_status.rs
 crates/pindu-ui/src/fullscreen_system_update.rs
 crates/pindu-ui/src/game_dialog.rs
@@ -20,6 +24,7 @@ crates/pindu-ui/src/hint_bar.rs
 crates/pindu-ui/src/home_page.rs
 crates/pindu-ui/src/launch_service.rs
 crates/pindu-ui/src/log_service.rs
+crates/pindu-ui/src/network_service.rs
 crates/pindu-ui/src/preferences.rs
 crates/pindu-ui/src/proton_choice.rs
 crates/pindu-ui/src/proton_download_service.rs
@@ -32,6 +37,7 @@ crates/pindu-ui/src/sources.rs
 crates/pindu-ui/src/steamgriddb_picker.rs
 crates/pindu-ui/src/steamgriddb_service.rs
 crates/pindu-ui/src/sync_service.rs
+crates/pindu-ui/src/system_power_service.rs
 crates/pindu-ui/src/system_update_service.rs
 crates/pindu-ui/src/widgets/cover_tile.rs
 crates/pindu-ui/src/window.rs
