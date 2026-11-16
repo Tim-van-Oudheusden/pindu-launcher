@@ -142,6 +142,15 @@ impl SyncService {
             let outcome = gtk::gio::spawn_blocking(run_sync)
                 .await
                 .unwrap_or_else(|_| Err(gettext("The import stopped unexpectedly")));
+            // The toast is the only other place these show up; keep them in the journal too.
+            match &outcome {
+                Ok(summary) => {
+                    for (source, problem) in &summary.problems {
+                        glib::g_warning!("pindu", "Could not import from {source}: {problem}");
+                    }
+                }
+                Err(message) => glib::g_warning!("pindu", "Could not refresh the library: {message}"),
+            }
             let (problems, added, missing) = match outcome {
                 Ok(summary) => (
                     summary
