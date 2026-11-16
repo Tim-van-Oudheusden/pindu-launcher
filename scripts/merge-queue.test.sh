@@ -215,7 +215,7 @@ move_main() {
 }
 
 # listing <json>: what gh lists, from entries with a number and optionally isDraft,
-# isCrossRepository, labels, mergeStateStatus and closingIssues (issue numbers).
+# isCrossRepository, labels, mergeStateStatus, state and closingIssues (issue numbers).
 listing() {
   jq -n --argjson prs "$1" --argjson heads "{$heads}" '[$prs[] | {
     number,
@@ -224,6 +224,7 @@ listing() {
     isCrossRepository: (.isCrossRepository // false),
     labels: [(.labels // [])[] | {name: .}],
     mergeStateStatus: (.mergeStateStatus // "CLEAN"),
+    state: (.state // "OPEN"),
     closingIssuesReferences: [(.closingIssues // [])[] | {number: ., url: "https://github.com/owner/pindu/issues/\(.)"}]
   }]' >"$work/prs.json"
 }
@@ -494,6 +495,24 @@ fail_calls_starting_with 'pr merge'
 run_queue land 7 "$(head_of 7)" "$(main_sha)"
 check 'land fails when the merge is refused' 1 "$status"
 check 'land closes nothing and starts nothing when the merge is refused' "$(merge_call 7)" "$calls"
+check_has 'land says the merge did not land when it is refused' "$out" \
+  '::error title=Merge queue::gh failed merging #7 and GitHub does not show it merged'
+
+# gh can lose GitHub's answer after the merge went through, and fail with only `EOF` (merge
+# queue run 43885181841). The merge landed, so its issues, main's gates and the next run must
+# not be skipped.
+new_queue land-lost-answer
+add_pr 7
+listing '[{"number":7,"state":"MERGED","closingIssues":[12]}]'
+fail_calls_starting_with 'pr merge'
+run_queue land 7 "$(head_of 7)" "$(main_sha)"
+check 'land passes when gh fails on a merge that landed' 0 "$status"
+check 'land closes the linked issues and starts main push workflows and the next run when gh fails on a merge that landed' \
+  "$(merge_call 7)
+issue close https://github.com/owner/pindu/issues/12 --reason completed --comment Closed by #7, which the merge queue merged.
+$(starts)" "$calls"
+check_has 'land warns that gh failed on a merge that landed' "$out" \
+  '::warning title=Merge queue::gh failed merging #7, but GitHub shows it merged'
 
 # GitHub does not close an issue linked with `Fixes #N` when GITHUB_TOKEN merges.
 new_queue land-closes

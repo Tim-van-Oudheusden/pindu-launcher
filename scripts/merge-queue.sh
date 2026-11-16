@@ -181,8 +181,18 @@ land() {
     return 0
   fi
 
-  # --match-head-commit refuses the merge if the branch moved past what was verified.
-  gh pr merge "$1" --merge --match-head-commit "$2"
+  # --match-head-commit refuses the merge if the branch moved past what was verified. gh can
+  # also fail after GitHub merged (its answer lost, `EOF`); only a merge GitHub does not show
+  # at the verified head stops land here.
+  if ! gh pr merge "$1" --merge --match-head-commit "$2"; then
+    merged="$(gh pr view "$1" --json state,headRefOid \
+      --jq ".state == \"MERGED\" and .headRefOid == \"$2\"")" || merged=false
+    if [ "$merged" != true ]; then
+      echo "::error title=Merge queue::gh failed merging #$1 and GitHub does not show it merged at $2; not landed"
+      return 1
+    fi
+    echo "::warning title=Merge queue::gh failed merging #$1, but GitHub shows it merged; carrying on"
+  fi
   close_linked_issues "$1"
   # The merge has landed, so a workflow that will not start must not stop the others or the
   # next run. The run still fails: a gate that never ran on main leaves no other trace,
