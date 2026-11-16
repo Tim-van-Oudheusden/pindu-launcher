@@ -9,9 +9,10 @@
 //! Library `fullscreen_activity`'s, its Surprise Me `fullscreen_surprise`'s, its
 //! Controllers `fullscreen_controllers`'s, its Controls `fullscreen_controls`'s, its
 //! Filters (on the library page only) `fullscreen_library`'s, its Performance (for a game we
-//! run ourselves, which the options sheet has too) `fullscreen_performance`'s, its System
-//! Update (on Pindu OS only) `fullscreen_system_update`'s. Its Design level holds the
-//! design, its variant, Home's background blur and dim, and the user's own stylesheet.
+//! run ourselves, which the options sheet has too) `fullscreen_performance`'s, its Bluetooth
+//! (where BlueZ has an adapter) `fullscreen_bluetooth`'s, its System Update (on Pindu OS
+//! only) `fullscreen_system_update`'s. Its Design level holds the design, its variant,
+//! Home's background blur and dim, and the user's own stylesheet.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -121,6 +122,11 @@ impl PinduWindow {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::Performance));
             })
             .build();
+        let bluetooth = gio::ActionEntry::builder("quick-access-bluetooth")
+            .activate(|window: &Self, _, _| {
+                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Bluetooth));
+            })
+            .build();
         let system_update = gio::ActionEntry::builder("quick-access-system-update")
             .activate(|window: &Self, _, _| {
                 window.show_panel(Panel::QuickAccess(QuickAccessLevel::SystemUpdate));
@@ -143,10 +149,11 @@ impl PinduWindow {
             quick_settings,
             filters,
             performance,
+            bluetooth,
             system_update,
         ]);
-        // Up and Down stop at a list's ends; in Quick Access's Controllers, settings and
-        // System Update and the options sheet they go on to the next list
+        // Up and Down stop at a list's ends; in Quick Access's Controllers, settings,
+        // Bluetooth and System Update and the options sheet they go on to the next list
         // (`fullscreen_playing` takes the drawer's and Quick Access's own lists up to their
         // Playing Now cards).
         for list in [
@@ -165,6 +172,9 @@ impl PinduWindow {
             imp.quick_access_clear_filters.get(),
             imp.options_list.get(),
             imp.options_performance.get(),
+            imp.quick_access_bluetooth_adapter.get(),
+            imp.quick_access_bluetooth_paired.get(),
+            imp.quick_access_bluetooth_found.get(),
             imp.quick_access_system_versions.get(),
             imp.quick_access_system_actions.get(),
         ] {
@@ -242,6 +252,7 @@ impl PinduWindow {
         self.setup_quick_access_settings();
         self.setup_quick_access();
         self.setup_performance();
+        self.setup_bluetooth();
         self.setup_system_update();
         self.fill_drawer();
     }
@@ -520,6 +531,9 @@ impl PinduWindow {
         {
             self.show_page_entries();
         }
+        if before == Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)) {
+            self.leave_bluetooth();
+        }
         match open {
             Some(Panel::QuickAccess(QuickAccessLevel::Notifications)) => self.show_notifications(),
             Some(Panel::QuickAccess(QuickAccessLevel::Activity)) => self.show_activity(),
@@ -527,6 +541,7 @@ impl PinduWindow {
             Some(Panel::QuickAccess(QuickAccessLevel::Controllers)) => self.fill_controllers(),
             Some(Panel::QuickAccess(QuickAccessLevel::Controls)) => self.fill_controls(),
             Some(Panel::QuickAccess(QuickAccessLevel::Filters)) => self.show_fullscreen_filters(),
+            Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)) => self.show_bluetooth(),
             Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)) => self.show_system_update(),
             _ => {}
         }
@@ -560,6 +575,7 @@ impl PinduWindow {
                     QuickAccessLevel::Settings => "settings",
                     QuickAccessLevel::Filters => "filters",
                     QuickAccessLevel::Performance => "performance",
+                    QuickAccessLevel::Bluetooth => "bluetooth",
                     QuickAccessLevel::SystemUpdate => "system-update",
                 });
             }
@@ -626,6 +642,10 @@ impl PinduWindow {
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Performance)),
             ) => Some(imp.quick_access_performance_row.get().upcast()),
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)),
+            ) => Some(imp.quick_access_bluetooth_row.get().upcast()),
             (
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)),
@@ -699,6 +719,7 @@ impl PinduWindow {
                 })
                 .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
             }
+            (Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)), _) => self.bluetooth_focus(),
             (Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)), _) => {
                 self.system_update_focus()
             }

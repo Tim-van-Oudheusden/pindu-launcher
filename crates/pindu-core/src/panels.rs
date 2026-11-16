@@ -1,9 +1,9 @@
 //! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
 //! leaving), the Quick Access panel on the right (notifications, what runs in the
-//! background, the design, the controllers and what each button does, a few settings, OS
-//! updates on Pindu OS, and entries for the page under it such as the library's filters and
-//! a focused game's performance switches) and the options sheet at the bottom (what to do
-//! with one game).
+//! background, the design, the controllers and what each button does, a few settings,
+//! Bluetooth, OS updates on Pindu OS, and entries for the page under it such as the
+//! library's filters and a focused game's performance switches) and the options sheet at the
+//! bottom (what to do with one game).
 //! This decides which one is open and at which level, what Start, Guide, R3, View or X and
 //! B do to them, and what each lists.
 
@@ -64,6 +64,9 @@ pub enum QuickAccessLevel {
     /// The Performance Overlay (MangoHud) and GameMode switches of the focused game, one
     /// we run ourselves (see [`page_entries`]).
     Performance,
+    /// The Bluetooth adapter's switch, the paired devices and the ones found nearby (see
+    /// [`crate::system::bluetooth`]).
+    Bluetooth,
     /// The installed OS version, an update waiting for the next start and the version to
     /// roll back to, on Pindu OS (see [`crate::system::update`]).
     SystemUpdate,
@@ -407,6 +410,7 @@ mod tests {
             QuickAccessLevel::Settings,
             QuickAccessLevel::Filters,
             QuickAccessLevel::Performance,
+            QuickAccessLevel::Bluetooth,
             QuickAccessLevel::SystemUpdate,
         ] {
             let mut panels = Panels::new();
