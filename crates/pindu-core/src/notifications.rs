@@ -1,8 +1,9 @@
 //! The session's notifications, which Quick Access lists: what happened in the background
 //! while the user may not have been looking (a sync that found games, artwork fetched or
 //! not, a Proton build installed or not, a game that needs a permission, a Bluetooth device
-//! that did not pair, connect, disconnect or go, a rollback or restart the system refused).
-//! Kept in memory for the running session only, newest first, at most [`CAPACITY`] of them.
+//! that did not pair, connect, disconnect or go, a rollback or restart the system refused, a
+//! network that could not be joined). Kept in memory for the running session only, newest
+//! first, at most [`CAPACITY`] of them.
 
 use std::collections::VecDeque;
 
@@ -31,6 +32,8 @@ pub enum Kind {
     /// Bluetooth did not turn on or off, or a device did not pair, connect, disconnect or
     /// go when the user asked.
     BluetoothFailed,
+    /// A network could not be joined or forgotten, or Wi-Fi switched on or off.
+    NetworkFailed,
 }
 
 /// What a notification opens when the user picks it.

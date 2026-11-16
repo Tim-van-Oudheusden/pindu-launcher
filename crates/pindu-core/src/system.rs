@@ -3,4 +3,5 @@
 //! of the backend a UI service drives here, so every flow is tested with a fake backend.
 
 pub mod bluetooth;
+pub mod network;
 pub mod update;

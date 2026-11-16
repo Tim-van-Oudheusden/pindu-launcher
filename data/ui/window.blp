@@ -580,6 +580,48 @@ template $PinduWindow: Adw.ApplicationWindow {
                           };
                         }
 
+                        // Shown where NetworkManager runs: the connection in use, or that
+                        // the system does not allow changing it (then insensitive).
+                        ListBoxRow quick_access_network_row {
+                          action-name: "win.quick-access-network";
+                          visible: false;
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image quick_access_network_icon {
+                              icon-name: "network-wired-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Box {
+                              orientation: vertical;
+                              valign: center;
+                              hexpand: true;
+
+                              Label {
+                                label: _("Network");
+                                xalign: 0;
+                              }
+
+                              Label quick_access_network_subtitle {
+                                xalign: 0;
+                                ellipsize: end;
+
+                                styles [
+                                  "caption",
+                                  "dim-label",
+                                ]
+                              }
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
+
                         // Shown where BlueZ has an adapter: the connected devices, or how
                         // the radio is.
                         ListBoxRow quick_access_bluetooth_row {
@@ -1395,6 +1437,79 @@ template $PinduWindow: Adw.ApplicationWindow {
                       // Restart to Update, Roll Back or Restart, as bootc's status allows,
                       // or what runs; filled in code.
                       ListBox quick_access_system_actions {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+                      }
+                    };
+                  };
+                }
+
+                StackPage {
+                  name: "network";
+
+                  child: ScrolledWindow {
+                    hscrollbar-policy: never;
+
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 12;
+
+                      Label {
+                        label: _("Network");
+                        xalign: 0;
+
+                        styles [
+                          "title-3",
+                        ]
+                      }
+
+                      // One row per wired and Wi-Fi device with its state; filled in
+                      // code.
+                      ListBox quick_access_network_devices {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+                      }
+
+                      // Wi-Fi's switch, or what blocks it; hidden without a Wi-Fi
+                      // device.
+                      ListBox quick_access_wifi_radio {
+                        selection-mode: none;
+
+                        styles [
+                          "boxed-list",
+                        ]
+
+                        Adw.SwitchRow quick_access_wifi_switch {
+                          title: _("Wi-Fi");
+                        }
+
+                        Adw.ActionRow quick_access_wifi_blocked {
+                          title: _("Wi-Fi");
+                          subtitle: _("Turned off by a hardware switch");
+                          visible: false;
+                        }
+                      }
+
+                      Label quick_access_wifi_title {
+                        label: _("Wi-Fi Networks");
+                        xalign: 0;
+                        margin-top: 6;
+
+                        styles [
+                          "heading",
+                        ]
+                      }
+
+                      // The networks in range, strongest first; the one in use is
+                      // checked, saved ones open to Connect and Forget. Filled in code,
+                      // and again as NetworkManager reports changes.
+                      ListBox quick_access_wifi_networks {
                         selection-mode: none;
 
                         styles [
