@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-18 00:16+0100\n"
+"POT-Creation-Date: 2026-11-18 00:17+0100\n"
 "PO-Revision-Date: 2026-11-07 18:15+0000\n"
 "Last-Translator: Tim <tim-van-oudheusden@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/pindu-launcher/"
@@ -610,7 +610,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controls.rs:217
 #: crates/pindu-ui/src/home_page.rs:912 data/ui/home_page.blp:185
-#: data/ui/menu_drawer.blp:80 data/ui/preferences.blp:10
+#: data/ui/menu_drawer.blp:100 data/ui/preferences.blp:10
 #: data/ui/shortcuts-dialog.blp:35 data/ui/window.blp:62 data/ui/window.blp:161
 msgid "Library"
 msgstr ""
@@ -860,8 +860,8 @@ msgstr ""
 msgid "Remove from Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:554 data/ui/menu_drawer.blp:98
-#: data/ui/menu_drawer.blp:188 data/ui/window.blp:118
+#: crates/pindu-ui/src/fullscreen_panels.rs:554 data/ui/menu_drawer.blp:118
+#: data/ui/menu_drawer.blp:208 data/ui/window.blp:118
 msgid "Collections"
 msgstr ""
 
@@ -1372,7 +1372,7 @@ msgid "Plus"
 msgstr ""
 
 #: crates/pindu-ui/src/hint_bar.rs:228 data/ui/home_page.blp:5
-#: data/ui/menu_drawer.blp:62 data/ui/window.blp:151
+#: data/ui/menu_drawer.blp:82 data/ui/window.blp:151
 msgid "Home"
 msgstr ""
 
@@ -1466,6 +1466,10 @@ msgstr ""
 #. / What a toast says when "Play with Logs" starts a game without its log.
 #: crates/pindu-ui/src/log_service.rs:109
 msgid "Could not keep a log of “{title}”"
+msgstr ""
+
+#: crates/pindu-ui/src/menu_drawer.rs:187
+msgid "Untitled Window"
 msgstr ""
 
 #. Translators: {network} is a Wi-Fi network's name.
@@ -2701,7 +2705,7 @@ msgstr ""
 msgid "Wi-Fi Networks"
 msgstr ""
 
-#: data/ui/fullscreen_power.blp:15 data/ui/menu_drawer.blp:161
+#: data/ui/fullscreen_power.blp:15 data/ui/menu_drawer.blp:181
 msgid "Power"
 msgstr ""
 
@@ -2731,8 +2735,8 @@ msgid "Native"
 msgstr ""
 
 #: data/ui/game_dialog.blp:45 data/ui/game_dialog.blp:93
-#: data/ui/preferences.blp:156 data/ui/quick_access.blp:1170
-#: data/ui/window.blp:315
+#: data/ui/menu_drawer.blp:45 data/ui/preferences.blp:156
+#: data/ui/quick_access.blp:1170 data/ui/window.blp:315
 msgid "Windows"
 msgstr ""
 
@@ -2897,11 +2901,11 @@ msgstr ""
 msgid "Wrapper Command, Such as taskset -c 0-3"
 msgstr ""
 
-#: data/ui/menu_drawer.blp:122
+#: data/ui/menu_drawer.blp:142
 msgid "Exit Fullscreen Mode"
 msgstr ""
 
-#: data/ui/menu_drawer.blp:140 data/ui/shortcuts-dialog.blp:29
+#: data/ui/menu_drawer.blp:160 data/ui/shortcuts-dialog.blp:29
 msgid "Quit"
 msgstr ""
 
