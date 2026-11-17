@@ -243,8 +243,8 @@ Wi-Fi network's name, or `Offline`.
 - If the system does not let the session change the network, the entry is greyed out and says so. Without a Wi-Fi
   device the level has the wired state only.
 
-For now the passphrase is typed with a keyboard: the on-screen keyboard cannot type one yet. The Flatpak has no access
-to the system bus, so the entry does not show there.
+The on-screen keyboard has a passphrase dialog with capitals and symbols, but the join dialog does not open it yet: the
+passphrase is typed with a keyboard. The Flatpak has no access to the system bus, so the entry does not show there.
 
 ### Bluetooth
 
