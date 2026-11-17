@@ -321,6 +321,14 @@ gamescope -f -- flatpak run --nosocket=wayland io.github.tim_van_oudheusden.pind
   (`gamescope -W 3840 -H 2160 -w 1920 -h 1080 -f -- …`) or scale the app (`flatpak run --env=GDK_SCALE=2 …`).
 - `--expose-wayland` is not recommended. The app then runs as a Wayland client, but gamescope doesn't make its window
   fullscreen: the window keeps its desktop size, and gamescope scales it up to the screen.
+- Once the app starts a game, the controller is the game's: the app acts on no button but Guide, and its hint bar shows
+  only Guide, "Back to Pindu". Guide, the app's window gaining focus again after it lost it, a key in fullscreen mode, or
+  the last game the app runs ending gives the controller back. A nested gamescope needs this most: there the app's window
+  keeps gamescope's focus while a game plays on the desktop.
+- In a gamescope nested in a desktop session, a store game opens wherever its store's launcher runs. The desktop starts
+  Steam, Heroic or Lutris through the OpenURI portal, so they and their games open on the desktop, not in gamescope; a
+  Steam client starting from a `steam://` link also shows its own window first. A gamescope session has no such desktop
+  and keeps them in gamescope.
 
 gamescope's `--steam` mode, which gamescope-session-plus and SteamOS-like sessions use, shows only windows that carry
 an app ID, and only the ones its focus list on the root names. The app then takes Steam's place, so this works too:
@@ -346,8 +354,6 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   game and answered with the controller there. A passphrase still unanswered as Quick Access closes moves to the app's
   window and comes back when Quick Access opens again; closing it while pairing refuses, as leaving Bluetooth does. The
   controller still reaches the game while it is open.
-- Games the app hands to their store's launcher (Steam, Heroic, Lutris, Bottles) are not brought to the front yet.
-- Games the app hands to their store's launcher (Steam, Heroic, Lutris, Bottles) are not brought to the front yet.
 - With `MANGOHUD_CONFIGFILE` naming a file the app can write, as gamescope-session-plus and `gamescope --steam
   --mangoapp` set it, the Performance Overlay switch drives their MangoApp instead of wrapping games in `mangohud`: the
   app rewrites the file in place with `preset=2` or `no_display` for the game in front, when it comes to the front and

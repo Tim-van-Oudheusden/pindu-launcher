@@ -54,7 +54,13 @@ impl PinduWindow {
         let Some(layout) = layout else {
             return;
         };
-        let shown = Some((layout, hints::hints(self.hint_context(), layout)));
+        // While a game we started has the controller, only Guide does anything here.
+        let hints = if imp.game_control.get().game_has_controller() {
+            hints::playing_hints(layout)
+        } else {
+            hints::hints(self.hint_context(), layout)
+        };
+        let shown = Some((layout, hints));
         if *imp.hints.borrow() == shown {
             return;
         }
@@ -201,6 +207,7 @@ fn action_label(action: Action) -> String {
         Action::Type => gettext("Type"),
         Action::Delete => gettext("Delete"),
         Action::Done => gettext("Done"),
+        Action::BackToLauncher => gettext("Back to Pindu"),
     }
 }
 

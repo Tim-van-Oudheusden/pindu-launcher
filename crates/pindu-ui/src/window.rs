@@ -9,6 +9,7 @@ use gettextrs::{gettext, ngettext};
 use gtk::{gdk, gio, glib};
 use pindu_core::accessibility::Accessibility;
 use pindu_core::focus::FocusMemory;
+use pindu_core::game_control::GameControl;
 use pindu_core::gamepad::Layout;
 use pindu_core::grid;
 use pindu_core::hints::Hint;
@@ -194,6 +195,9 @@ mod imp {
         pub volume_preview: RefCell<Option<glib::SourceId>>,
         /// The hints the hint bar shows, and for which controller layout.
         pub hints: RefCell<Option<(Layout, Vec<Hint>)>>,
+        /// Whether a game the launcher started has the controller, which only Guide, the
+        /// window's focus coming back or the last game ending gives back.
+        pub game_control: Cell<GameControl>,
         /// Whether the sidebar showed before fullscreen mode hid it, to show it again after.
         pub sidebar_before_hiding: Cell<Option<bool>>,
         /// Fullscreen mode's library tabs, each with the view it shows.

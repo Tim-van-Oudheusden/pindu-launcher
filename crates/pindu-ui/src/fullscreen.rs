@@ -86,6 +86,9 @@ impl PinduWindow {
                 else {
                     return glib::Propagation::Proceed;
                 };
+                // The keyboard is never the game's: a key gives the window the
+                // controller back too.
+                window.give_controller_back();
                 window.handle_intent(intent);
                 glib::Propagation::Stop
             }
