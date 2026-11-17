@@ -384,6 +384,11 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   from the Steam Flatpak) instead of through the OpenURI portal, so a Steam client that is not running yet starts
   without its library window; one that runs already gets the link as before. Its prompts still show. Without host
   access the link goes through the portal.
+  expecting it, the game counts as playing: its page offers Return instead of Play, its options sheet Return and Stop,
+  and it has a Playing Now card with Return and Stop. Return, or Play from anywhere else, brings it back to the front
+  without handing it to the store again. Stop, which the app cannot do by signalling a process outside its sandbox,
+  asks every window with the game's app ID, its store launcher's too, to close (`WM_DELETE_WINDOW`), and ends the X11
+  clients of the ones still there 5 seconds later (`XKillClient`); the Steam client itself keeps running.
 - A Steam client that a Steam game starts inside the session tags its own windows (in a `--steam` gamescope it runs as
   Big Picture, one window) as app 769, as the app's window is, and writes the focus list itself. The app therefore pins
   its window (`GAMESCOPECTRL_BASELAYER_WINDOW`) whenever it should be in front, including while a game it wants in

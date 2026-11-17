@@ -311,7 +311,7 @@ pub enum Playing {
     /// We started it and it runs: the launcher can stop it.
     Started,
     /// Its store launcher runs it, in a `--steam` gamescope where the launcher sees its
-    /// windows: the launcher can bring it back to the front, but not stop it.
+    /// windows: the launcher can bring it back to the front, and stop it by closing them.
     InStore,
 }
 
@@ -320,7 +320,8 @@ pub enum Playing {
 pub enum GameOption {
     /// Start the game.
     Play,
-    /// Stop a game we started, which runs.
+    /// Stop a game that runs: end one we started, or close the windows of one its store
+    /// launcher runs.
     Stop,
     /// Bring back a game its store launcher runs.
     Return,
@@ -347,6 +348,7 @@ pub fn game_options(game: &Game, playing: Playing) -> Vec<GameOption> {
             Playing::Started => Stop,
             Playing::InStore => Return,
         }),
+        (playing == Playing::InStore).then_some(Stop),
         Some(if game.favourite {
             RemoveFromFavourites
         } else {
@@ -852,12 +854,19 @@ mod tests {
     }
 
     #[test]
-    fn a_game_its_store_launcher_runs_offers_return_instead_of_play() {
+    fn a_game_its_store_launcher_runs_offers_return_and_stop_instead_of_play() {
         use GameOption::*;
         let steam = game(Source::Steam, LaunchKind::StoreUri);
         assert_eq!(
             game_options(&steam, Playing::InStore),
-            [Return, AddToFavourites, Collections, Hide, OpenInLauncher]
+            [
+                Return,
+                Stop,
+                AddToFavourites,
+                Collections,
+                Hide,
+                OpenInLauncher
+            ]
         );
     }
 
