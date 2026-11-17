@@ -34,6 +34,9 @@ struct Running {
     started_at: Timestamp,
     /// What Stop does for this game.
     stop: Rc<dyn Fn()>,
+    /// The game's process ID, when it runs in our PID namespace: outside Flatpak, where
+    /// it is our child rather than `flatpak-spawn`'s.
+    pid: Option<u32>,
     _hold: gio::ApplicationHoldGuard,
 }
 
@@ -117,6 +120,15 @@ impl SessionService {
         self.running.borrow().contains_key(id)
     }
 
+    /// The process ID of a game we started that runs, when it is in our PID namespace,
+    /// so gamescope's service can match its windows' `_NET_WM_PID`.
+    pub fn pid(&self, id: &GameId) -> Option<u32> {
+        self.running
+            .borrow()
+            .get(id)
+            .and_then(|running| running.pid)
+    }
+
     /// The games we started that run, each with when its session began, the first
     /// started first.
     pub fn sessions(&self) -> Vec<(GameId, Timestamp)> {
@@ -156,11 +168,16 @@ impl SessionService {
     ) {
         let first = self.running.borrow().is_empty();
         let started_at = now();
+        let pid = (!permission_service::in_flatpak())
+            .then(|| child.identifier())
+            .flatten()
+            .and_then(|pid| pid.parse().ok());
         self.running.borrow_mut().insert(
             id.clone(),
             Running {
                 started_at,
                 stop: Rc::new(stop),
+                pid,
                 _hold: app.hold(),
             },
         );

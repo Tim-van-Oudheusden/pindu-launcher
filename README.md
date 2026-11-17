@@ -318,6 +318,26 @@ gamescope -f -- flatpak run --nosocket=wayland io.github.tim_van_oudheusden.pind
 - `--expose-wayland` is not recommended. The app then runs as a Wayland client, but gamescope doesn't make its window
   fullscreen: the window keeps its desktop size, and gamescope scales it up to the screen.
 
+gamescope's `--steam` mode, which gamescope-session-plus and SteamOS-like sessions use, shows only windows that carry
+an app ID, and only the ones its focus list on the root names. The app then takes Steam's place, so this works too:
+
+```sh
+gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheusden.pindu-launcher --fullscreen
+```
+
+- The app notices `--steam` mode by itself (gamescope's `GAMESCOPE_FOCUSED_APP` on the root) and only then marks its
+  window as app 769, Steam's ID, and writes the focus list (`GAMESCOPECTRL_BASELAYER_APPID`). In a plain gamescope or
+  on a desktop it writes nothing.
+- A game the app starts gets an app ID of its own on its window (`STEAM_GAME`): its Steam app ID for a Steam game,
+  otherwise a stable ID with the high bit set. Its window is recognised by the window class the app gives it, by its
+  process when the app is not sandboxed, or as the only new window while one game runs. The game comes to the front when
+  it starts, and the app when it ends.
+- Guide during play brings the app to the front, with the menu drawer open on Playing Now; Return there brings the game
+  back.
+- Games the app hands to their store's launcher (Steam, Heroic, Lutris, Bottles) are not brought to the front yet.
+- Tested with gamescope 3.17.0 (`gamescope --backend headless --steam --xwayland-count 2`). gamescope's `--steam`
+  protocol is undocumented and may change between releases.
+
 ### Styling fullscreen mode
 
 Fullscreen mode has switchable designs (Quick Access → Design): Ribbon, the default, and Panorama ship with the app,
