@@ -21,8 +21,8 @@ max_line_length = 120
 
 # Blueprint, Meson, YAML, TOML, JSON, XML, CSS and shell scripts use 2 spaces (the [*] default).
 
-# debian/rules is a Makefile: recipes need tabs.
-[build-aux/deb/debian/rules]
+# debian/rules and COPR's Makefile are Makefiles: recipes need tabs.
+[{build-aux/deb/debian/rules,.copr/Makefile}]
 indent_style = tab
 
 # Fixtures are copies of other launchers' files; keep their bytes as they are.

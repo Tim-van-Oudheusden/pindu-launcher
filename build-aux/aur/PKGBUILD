@@ -1,0 +1,82 @@
+# Maintainer: Tim van Oudheusden <118523958+Tim-van-Oudheusden@users.noreply.github.com>
+#
+# AUR recipe (#382), built offline from the release tarball (pindu-launcher-X.Y.Z.tar.xz,
+# made by `meson dist` with the crates vendored): crates/meson.build builds from vendor/
+# with --offline --locked when it is there. The dependencies mirror
+# build-aux/rpm/pindu-launcher.spec. Bump with docs/releasing.md, then regenerate .SRCINFO
+# with `makepkg --printsrcinfo > .SRCINFO`.
+
+pkgname=pindu-launcher
+pkgver=0.4.1
+pkgrel=1
+pkgdesc='Every PC game on your computer in one GNOME library'
+arch=(x86_64 aarch64)
+url='https://github.com/Tim-van-Oudheusden/pindu-launcher'
+# The app is GPL-3.0-or-later; the rest are the licences of the vendored crates (see the
+# RPM spec's License).
+license=(
+  'GPL-3.0-or-later'
+  'MIT'
+  'Apache-2.0'
+  'MIT OR Apache-2.0'
+  'MPL-2.0 OR LGPL-2.1-or-later'
+  'BSD-3-Clause'
+  'BSD-2-Clause'
+  'Zlib'
+  'ISC'
+  'Unicode-3.0'
+  'IJG'
+  'Unlicense OR MIT'
+  '0BSD OR MIT OR Apache-2.0'
+  'Apache-2.0 WITH LLVM-exception'
+)
+depends=(
+  gcc-libs
+  glib2
+  glibc
+  gtk4
+  libadwaita
+  libmanette
+  libsoup3
+  sqlite
+  fontconfig
+  libseccomp
+  # Image decoding loads glycin's loaders, sandboxed with bubblewrap, at runtime
+  glycin
+  bubblewrap
+  hicolor-icon-theme
+  # Fullscreen mode's Sound Output: pw-dump lists the outputs, wpctl sets the default
+  pipewire
+  wireplumber
+  # Fullscreen Home's background (VP9 in Matroska) and the navigation sounds (WAV) play
+  # through GTK's GStreamer backend; the demuxer, decoder and parser are in the good ones
+  gst-plugins-good
+)
+makedepends=(
+  appstream
+  blueprint-compiler
+  cargo
+  desktop-file-utils
+  gettext
+  meson
+)
+checkdepends=(python)
+optdepends=(
+  'gamemode: GameMode for games that turn it on'
+  'umu-launcher: run Windows games'
+)
+source=("$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.xz")
+sha256sums=('09593ee49f722392510636150ce86f257ae69859a560785dd104e0b65d4193ae')
+
+build() {
+  arch-meson "$pkgname-$pkgver" build --buildtype=release
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}

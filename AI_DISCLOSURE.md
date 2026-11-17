@@ -18,8 +18,8 @@ explains the method and the command that repeats it.
 - **Tests**: unit, integration and end-to-end tests, and the test fixtures.
 - **CI and tooling**: the GitHub Actions workflows, the scripts in `scripts/` and `build-aux/`, and the repository's
   governance files (rulesets, risk tiers, policies, templates).
-- **Packaging**: the release and development Flatpak manifests after their hand-written start, the RPM and DEB recipes
-  and the release workflows. The Flathub manifest gets no AI assistance (see below).
+- **Packaging**: the release and development Flatpak manifests after their hand-written start, the RPM and DEB recipes,
+  the COPR, AUR and nixpkgs recipes and the release workflows. The Flathub manifest gets no AI assistance (see below).
 - **Documentation**: the README, the contributor, security and translation guides, the runbooks, the agent
   instructions and the release notes.
 - **Translations**: agents mark strings for translation and regenerate the template `po/pindu-launcher.pot`. The
