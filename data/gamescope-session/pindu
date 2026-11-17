@@ -1,0 +1,26 @@
+# gamescope-session-plus client for Pindu launcher's fullscreen mode: the login entry
+# gamescope-session-pindu.desktop runs `gamescope-session-plus pindu`, which sources this
+# file with every variable exported, starts gamescope in --steam mode and runs $CLIENTCMD.
+# The session ends when the client exits.
+
+# --session: this process is the session's client, so closing its window does not quit,
+# and the Power level offers Switch to Desktop.
+CLIENTCMD="pindu-launcher --fullscreen --session"
+
+# MangoApp's settings file, in a folder of the launcher's own instead of the /tmp file
+# gamescope-session-plus made for Steam, which it no longer needs. It starts hidden.
+case $MANGOHUD_CONFIGFILE in
+  /tmp/mangohud.*) rm -f "$MANGOHUD_CONFIGFILE" ;;
+esac
+MANGOHUD_CONFIGFILE="$XDG_RUNTIME_DIR/pindu-launcher/mangohud.conf"
+mkdir -p "$XDG_RUNTIME_DIR/pindu-launcher"
+echo no_display >"$MANGOHUD_CONFIGFILE"
+
+# After several sessions in a row ended within a minute, gamescope-session-plus calls this
+# instead of starting the session again: fall back to the desktop where the distribution
+# can pick it.
+short_session_recover() {
+  if [ -x /usr/lib/os-session-select ]; then
+    /usr/lib/os-session-select desktop
+  fi
+}

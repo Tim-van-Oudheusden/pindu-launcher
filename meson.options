@@ -5,3 +5,10 @@ option(
   value: 'default',
   description: 'Development builds get the -devel app ID and the nightly app icon',
 )
+
+option(
+  'gamescope-session',
+  type: 'boolean',
+  value: false,
+  description: 'Install the gamescope-session-plus client and login entry (distribution packages, not the Flatpak)',
+)
