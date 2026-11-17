@@ -166,10 +166,14 @@ impl PinduQuickAccess {
     /// the section is gone.
     fn show_bluetooth_state(&self, state: &BluetoothState) {
         let imp = self.imp();
-        imp.bluetooth_row.set_visible(state.available);
+        imp.bluetooth_row
+            .set_visible(state.available && !self.over_game());
         imp.bluetooth_subtitle
             .set_label(&summary_text(&state.summary()));
-        imp.bluetooth_level.show_prompt(state.prompt.as_ref());
+        // Over a game the main window shows what the pairing agent asks.
+        if !self.over_game() {
+            imp.bluetooth_level.show_prompt(state.prompt.as_ref());
+        }
         if self.level() != Some(QuickAccessLevel::Bluetooth) {
             return;
         }

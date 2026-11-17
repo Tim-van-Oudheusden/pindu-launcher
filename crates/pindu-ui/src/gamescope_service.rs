@@ -1,6 +1,8 @@
 //! Speaks gamescope's `--steam` focus protocol, where the launcher takes Steam's place: its
 //! main window is app 769, it writes the base layer list on the root, tags the windows of
-//! the games it started with their app IDs, and reads back who is in front. The decisions
+//! the games it started with their app IDs, and reads back who is in front. With a game in
+//! front it opens Quick Access over the game in its overlay window, which it marks
+//! `STEAM_OVERLAY` and opens and closes by opacity and `STEAM_INPUT_FOCUS`. The decisions
 //! are `pindu_core::gamescope`'s; this is the only module that touches X11, on GDK's own
 //! connection.
 //!
@@ -16,7 +18,7 @@ use gdk4_x11::{X11Display, X11Surface};
 use gtk::glib;
 use gtk::prelude::*;
 use pindu_core::gamescope::{
-    self, ExpectedGame, Front, InGameIntent, STEAM_APP_ID, WindowFacts, Xid,
+    self, ExpectedGame, Front, InGameIntent, STEAM_APP_ID, WindowFacts, Xid, overlay,
 };
 use pindu_core::model::GameId;
 
@@ -35,6 +37,12 @@ const STEAM_GAME: &str = "STEAM_GAME";
 const NET_WM_PID: &str = "_NET_WM_PID";
 /// A window's instance and class names.
 const WM_CLASS: &str = "WM_CLASS";
+/// Marks a window as an overlay, which is never a base layer.
+const STEAM_OVERLAY: &str = "STEAM_OVERLAY";
+/// Whether an overlay holds the keyboard and pointer.
+const STEAM_INPUT_FOCUS: &str = "STEAM_INPUT_FOCUS";
+/// A window's opacity; gamescope leaves an overlay at 0 out of composition.
+const NET_WM_WINDOW_OPACITY: &str = "_NET_WM_WINDOW_OPACITY";
 
 /// How many items a property read takes at most: a focus list or a window class is far
 /// shorter.
@@ -42,6 +50,8 @@ const MAX_ITEMS: c_long = 1024;
 
 /// Something the shells do when who is in front changes.
 type FrontListener = Box<dyn Fn(Front)>;
+/// Something the overlay does when Quick Access opens or closes over the game.
+type QuickAccessListener = Box<dyn Fn(bool)>;
 
 /// gamescope's `--steam` protocol for the launcher, or nothing outside such a gamescope.
 #[derive(Clone)]
@@ -69,12 +79,19 @@ struct Inner {
     /// Who gamescope shows, as `GAMESCOPE_FOCUSED_APP_GFX` says.
     front: Cell<Front>,
     front_listeners: RefCell<Vec<FrontListener>>,
+    /// Whether Guide asked for the launcher, rather than a link or a game that ended.
+    by_guide: Cell<bool>,
+    /// The window Quick Access opens in over a game, once there is one.
+    overlay: glib::WeakRef<gtk::Window>,
+    /// Whether Quick Access is open over the game.
+    quick_access_open: Cell<bool>,
+    quick_access_listeners: RefCell<Vec<QuickAccessListener>>,
 }
 
 impl GamescopeService {
     /// A service for the default display that follows the games `sessions` runs and reads
-    /// Guide from `gamepad`; inert unless the display is X11 and gamescope runs with
-    /// `--steam`.
+    /// Guide and Misc1 from `gamepad`; inert unless the display is X11 and gamescope runs
+    /// with `--steam`.
     pub fn new(sessions: &SessionService, gamepad: &GamepadService) -> Self {
         let x11 = X11::steam_mode_display();
         let service = Self {
@@ -85,6 +102,10 @@ impl GamescopeService {
                 wanted: Cell::new(Front::Launcher),
                 front: Cell::new(Front::Launcher),
                 front_listeners: RefCell::default(),
+                by_guide: Cell::new(false),
+                overlay: glib::WeakRef::new(),
+                quick_access_open: Cell::new(false),
+                quick_access_listeners: RefCell::default(),
             }),
         };
         let Some(x11) = &service.inner.x11 else {
@@ -107,8 +128,13 @@ impl GamescopeService {
                 return;
             };
             let in_game = matches!(inner.front.get(), Front::Game(_));
-            if in_game && gamescope::in_game_intent(button) == Some(InGameIntent::ShowLauncher) {
-                GamescopeService { inner }.ask_for(Front::Launcher);
+            let Some(intent) = gamescope::in_game_intent(button).filter(|_| in_game) else {
+                return;
+            };
+            let service = GamescopeService { inner };
+            service.set_quick_access_open(overlay::open_after(service.quick_access_open(), intent));
+            if intent == InGameIntent::ShowLauncher {
+                service.ask_for(Front::Launcher, true);
             }
         });
         service.write_base_layer();
@@ -136,6 +162,90 @@ impl GamescopeService {
             tag(window);
         }
         window.connect_realize(move |window| tag(window));
+    }
+
+    /// Whether gamescope runs with `--steam`, so the service speaks its protocol.
+    pub fn is_active(&self) -> bool {
+        self.inner.x11.is_some()
+    }
+
+    /// Makes `window` the overlay Quick Access opens in over a game: once it is realized
+    /// it is marked `STEAM_OVERLAY` and closed, see-through and leaving input to the game,
+    /// and Misc1 opens it while a game is in front. It never gets an app ID, so the game
+    /// stays the base layer while it is open.
+    pub fn attach_overlay(&self, window: &impl IsA<gtk::Window>) {
+        if self.inner.x11.is_none() {
+            return;
+        }
+        let window = window.upcast_ref::<gtk::Window>();
+        self.inner.overlay.set(Some(window));
+        let weak = Rc::downgrade(&self.inner);
+        window.connect_realize(move |_| {
+            if let Some(inner) = weak.upgrade() {
+                GamescopeService { inner }.write_overlay();
+            }
+        });
+        if window.is_realized() {
+            self.write_overlay();
+        }
+    }
+
+    /// Whether Quick Access is open over the game in front.
+    pub fn quick_access_open(&self) -> bool {
+        self.inner.quick_access_open.get()
+    }
+
+    /// Opens Quick Access over the game in front, or closes it. It opens only while a game
+    /// we started is in front and the overlay window is there.
+    pub fn set_quick_access_open(&self, open: bool) {
+        let open = open
+            && matches!(self.inner.front.get(), Front::Game(_))
+            && self.inner.overlay.upgrade().is_some();
+        if self.inner.quick_access_open.replace(open) == open {
+            return;
+        }
+        glib::g_debug!(
+            "pindu",
+            "gamescope: Quick Access open over the game: {open}"
+        );
+        self.write_overlay();
+        for listener in self.inner.quick_access_listeners.borrow().iter() {
+            listener(open);
+        }
+    }
+
+    /// Calls `listener` whenever Quick Access opens or closes over the game.
+    pub fn connect_quick_access_changed(&self, listener: impl Fn(bool) + 'static) {
+        self.inner
+            .quick_access_listeners
+            .borrow_mut()
+            .push(Box::new(listener));
+    }
+
+    /// The game we started that gamescope shows, while one is in front.
+    pub fn game_in_front(&self) -> Option<GameId> {
+        let Front::Game(app_id) = self.inner.front.get() else {
+            return None;
+        };
+        self.inner
+            .running
+            .borrow()
+            .iter()
+            .find(|&&(_, id)| id == app_id)
+            .map(|(game, _)| game.clone())
+    }
+
+    /// Brings the launcher to the front for what a link in Quick Access over the game
+    /// leads to, closing Quick Access there.
+    pub fn show_launcher(&self) {
+        self.set_quick_access_open(false);
+        self.ask_for(Front::Launcher, false);
+    }
+
+    /// Whether Guide over a game asked for the launcher, which the launcher shows in front
+    /// now or soon: then the drawer opens on the Playing Now cards.
+    pub fn launcher_by_guide(&self) -> bool {
+        self.inner.by_guide.get() && self.inner.wanted.get() == Front::Launcher
     }
 
     /// Who gamescope shows: the launcher, or a game we started.
@@ -168,7 +278,7 @@ impl GamescopeService {
             .find(|(game, _)| game == id)
             .map(|&(_, app_id)| app_id);
         if let Some(app_id) = app_id {
-            self.ask_for(Front::Game(app_id));
+            self.ask_for(Front::Game(app_id), false);
         }
     }
 
@@ -189,14 +299,33 @@ impl GamescopeService {
         self.inner.running.replace(running);
         let wanted =
             gamescope::front_after_sessions(self.inner.wanted.get(), &before, &self.running_ids());
-        self.inner.wanted.set(wanted);
+        if self.inner.wanted.replace(wanted) != wanted {
+            self.inner.by_guide.set(false);
+        }
         self.write_base_layer();
     }
 
-    fn ask_for(&self, front: Front) {
+    /// Asks gamescope to show `front`, for Guide (`by_guide`) or otherwise.
+    fn ask_for(&self, front: Front, by_guide: bool) {
         glib::g_debug!("pindu", "gamescope: asking for {front:?} in front");
         self.inner.wanted.set(front);
+        self.inner.by_guide.set(by_guide);
         self.write_base_layer();
+    }
+
+    /// Writes the overlay window's properties for Quick Access open or closed.
+    fn write_overlay(&self) {
+        let (Some(x11), Some(window)) = (&self.inner.x11, self.inner.overlay.upgrade()) else {
+            return;
+        };
+        let Some(surface) = window.surface().and_downcast::<X11Surface>() else {
+            return;
+        };
+        let xid = surface.xid();
+        let props = overlay::overlay_props(self.inner.quick_access_open.get());
+        x11.write_cardinals(xid, STEAM_OVERLAY, &[props.steam_overlay]);
+        x11.write_cardinals(xid, NET_WM_WINDOW_OPACITY, &[props.opacity]);
+        x11.write_cardinals(xid, STEAM_INPUT_FOCUS, &[props.input_focus]);
     }
 
     fn running_ids(&self) -> Vec<u32> {
@@ -237,6 +366,8 @@ impl GamescopeService {
         if self.inner.front.replace(front) == front {
             return;
         }
+        // Quick Access belongs to the game it opened over.
+        self.set_quick_access_open(false);
         glib::g_debug!("pindu", "gamescope: {front:?} in front");
         for listener in self.inner.front_listeners.borrow().iter() {
             listener(front);

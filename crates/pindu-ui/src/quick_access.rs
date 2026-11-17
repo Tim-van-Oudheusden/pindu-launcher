@@ -11,7 +11,8 @@
 //! asks of the host through its signals: close (`close-requested`), lead to a level
 //! (`level-requested`), leave Activity once nothing runs (`activity-ended`), show a game
 //! (`game-requested`) and apply fullscreen mode's changed library filters
-//! (`filters-changed`).
+//! (`filters-changed`). Over a running game (`quick_access_overlay`) it leaves out the
+//! entries that need the main window ([`PinduQuickAccess::set_over_game`]).
 //!
 //! The levels are filled by: Notifications `fullscreen_notifications`, Activity and Refresh
 //! Library `fullscreen_activity`, Surprise Me `fullscreen_surprise`, Controllers
@@ -227,6 +228,8 @@ mod imp {
         pub activity_pulse: RefCell<Option<glib::SourceId>>,
         /// The game Surprise Me picked last, which it does not pick again next time.
         pub surprise_previous: RefCell<Option<GameId>>,
+        /// Whether the panel is hosted over a running game.
+        pub over_game: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -335,6 +338,19 @@ impl PinduQuickAccess {
         self.setup_sound_output(application, actions);
         self.setup_system_update(application, actions);
         self.setup_add_store(application);
+    }
+
+    /// Hosts the panel over a running game, before [`Self::setup`]: it leaves out the
+    /// entries that need the main window, Surprise Me (it leads to a library page), Network
+    /// and Bluetooth (their passphrase and PIN dialog is the main window's) and Add a Store
+    /// (its flow is the main window's).
+    pub fn set_over_game(&self) {
+        let imp = self.imp();
+        imp.over_game.set(true);
+        imp.surprise_row.set_visible(false);
+        imp.add_store_row.set_visible(false);
+        imp.network_row.set_visible(false);
+        imp.bluetooth_row.set_visible(false);
     }
 
     /// Shows what Quick Access adds for the page under it, as it opens: `entries` from
@@ -545,6 +561,11 @@ impl PinduQuickAccess {
 
     pub(crate) fn application(&self) -> Option<PinduApplication> {
         self.imp().application.upgrade()
+    }
+
+    /// Whether the panel is hosted over a running game (see [`Self::set_over_game`]).
+    pub(crate) fn over_game(&self) -> bool {
+        self.imp().over_game.get()
     }
 
     pub(crate) fn settings(&self) -> &gio::Settings {

@@ -1,12 +1,14 @@
 //! Fullscreen mode's hint bar: what each controller button does right now, with the active
 //! controller's glyphs. Which hints show is `pindu_core::hints`; this follows the focused
-//! widget, the shown page, open dialogs and the active controller, and draws the bar.
+//! widget, the shown page, open dialogs and the active controller, and draws the bar. Quick
+//! Access over a game (`quick_access_overlay`) draws its own bar the same way.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
-use pindu_core::hints::{self, Action, Context, Focus, GlyphName};
+use pindu_core::gamepad::Layout;
+use pindu_core::hints::{self, Action, Context, Focus, GlyphName, Hint};
 
 use crate::application::PinduApplication;
 use crate::window::PinduWindow;
@@ -56,29 +58,8 @@ impl PinduWindow {
         if *imp.hints.borrow() == shown {
             return;
         }
-        while let Some(child) = imp.hint_bar.first_child() {
-            imp.hint_bar.remove(&child);
-        }
-        for hint in shown.iter().flat_map(|(_, hints)| hints) {
-            // Named for fullscreen designs: `.hint` holds `.hint-glyph`s and a `.hint-label`.
-            let item = gtk::Box::builder().spacing(8).css_classes(["hint"]).build();
-            for button in std::iter::once(hint.button).chain(hint.pair) {
-                let glyph = gtk::Image::builder()
-                    .icon_name(hints::glyph(layout.glyphs, button))
-                    .pixel_size(GLYPH_SIZE)
-                    .css_classes(["hint-glyph"])
-                    .build();
-                glyph.update_property(&[gtk::accessible::Property::Label(&glyph_label(
-                    hints::glyph_name(layout.glyphs, button),
-                ))]);
-                item.append(&glyph);
-            }
-            let label = gtk::Label::builder()
-                .label(action_label(hint.action))
-                .css_classes(["hint-label"])
-                .build();
-            item.append(&label);
-            imp.hint_bar.append(&item);
+        if let Some((layout, hints)) = &shown {
+            fill_hint_bar(&imp.hint_bar, hints, *layout);
         }
         imp.hints.replace(shown);
     }
@@ -122,43 +103,79 @@ impl PinduWindow {
         let Some(focus) = gtk::prelude::GtkWindowExt::focus(self) else {
             return Focus::Nothing;
         };
-        if self.focused_tile().is_some() || focus.has_css_class("jump-card") {
+        if self.focused_tile().is_some() {
             return Focus::Game;
         }
-        if focus.is::<gtk::Range>() {
-            return Focus::Slider;
+        focus_kind(&focus)
+    }
+}
+
+/// What A does to `focus`, a widget outside the cover grid.
+pub(crate) fn focus_kind(focus: &gtk::Widget) -> Focus {
+    if focus.has_css_class("jump-card") {
+        return Focus::Game;
+    }
+    if focus.is::<gtk::Range>() {
+        return Focus::Slider;
+    }
+    if let Some(button) = focus.downcast_ref::<gtk::Button>() {
+        match button.action_name().as_deref() {
+            Some("app.play") => return Focus::Play,
+            Some("app.stop") => return Focus::Stop,
+            _ => {}
         }
-        if let Some(button) = focus.downcast_ref::<gtk::Button>() {
-            match button.action_name().as_deref() {
-                Some("app.play") => return Focus::Play,
-                Some("app.stop") => return Focus::Stop,
-                _ => {}
-            }
-        }
-        // Menu buttons and view switcher tabs are toggle buttons that open or pick
-        // something rather than switch it.
-        let picks = focus.ancestor(gtk::MenuButton::static_type()).is_some()
-            || focus.ancestor(adw::ViewSwitcher::static_type()).is_some();
-        if focus.is::<gtk::Switch>()
-            || focus.is::<gtk::CheckButton>()
-            || focus.is::<adw::SwitchRow>()
-            || (focus.is::<gtk::ToggleButton>() && !picks)
+    }
+    // Menu buttons and view switcher tabs are toggle buttons that open or pick
+    // something rather than switch it.
+    let picks = focus.ancestor(gtk::MenuButton::static_type()).is_some()
+        || focus.ancestor(adw::ViewSwitcher::static_type()).is_some();
+    if focus.is::<gtk::Switch>()
+        || focus.is::<gtk::CheckButton>()
+        || focus.is::<adw::SwitchRow>()
+        || (focus.is::<gtk::ToggleButton>() && !picks)
+    {
+        return Focus::Toggle;
+    }
+    match focus.downcast_ref::<gtk::ListBoxRow>() {
+        Some(row) if !row.is_activatable() => Focus::Nothing,
+        // A notification with a target opens it, and Surprise Me opens its pick.
+        Some(row)
+            if row.has_css_class("notification")
+                || row.action_name().as_deref() == Some("win.surprise-me") =>
         {
-            return Focus::Toggle;
+            Focus::Link
         }
-        match focus.downcast_ref::<gtk::ListBoxRow>() {
-            Some(row) if !row.is_activatable() => Focus::Nothing,
-            // A notification with a target opens it, and Surprise Me opens its pick.
-            Some(row)
-                if row.has_css_class("notification")
-                    || row.action_name().as_deref() == Some("win.surprise-me") =>
-            {
-                Focus::Link
-            }
-            // A task the user can cancel, in Quick Access's Activity.
-            Some(row) if row.has_css_class("task") => Focus::Cancel,
-            _ => Focus::Other,
+        // A task the user can cancel, in Quick Access's Activity.
+        Some(row) if row.has_css_class("task") => Focus::Cancel,
+        _ => Focus::Other,
+    }
+}
+
+/// Draws `hints` into `bar` with the glyphs of `layout`.
+pub(crate) fn fill_hint_bar(bar: &gtk::Box, hints: &[Hint], layout: Layout) {
+    while let Some(child) = bar.first_child() {
+        bar.remove(&child);
+    }
+    for hint in hints {
+        // Named for fullscreen designs: `.hint` holds `.hint-glyph`s and a `.hint-label`.
+        let item = gtk::Box::builder().spacing(8).css_classes(["hint"]).build();
+        for button in std::iter::once(hint.button).chain(hint.pair) {
+            let glyph = gtk::Image::builder()
+                .icon_name(hints::glyph(layout.glyphs, button))
+                .pixel_size(GLYPH_SIZE)
+                .css_classes(["hint-glyph"])
+                .build();
+            glyph.update_property(&[gtk::accessible::Property::Label(&glyph_label(
+                hints::glyph_name(layout.glyphs, button),
+            ))]);
+            item.append(&glyph);
         }
+        let label = gtk::Label::builder()
+            .label(action_label(hint.action))
+            .css_classes(["hint-label"])
+            .build();
+        item.append(&label);
+        bar.append(&item);
     }
 }
 
