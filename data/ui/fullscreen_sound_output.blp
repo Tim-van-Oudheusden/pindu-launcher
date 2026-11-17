@@ -1,0 +1,34 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Quick Access's Sound Output level, the "sound-output" page of the window's
+// quick_access_stack. Its entry row stays in the window's shared Quick Access list.
+template $PinduSoundOutputLevel: Adw.Bin {
+  child: ScrolledWindow {
+    hscrollbar-policy: never;
+
+    child: Box {
+      orientation: vertical;
+      spacing: 12;
+
+      Label {
+        label: _("Sound Output");
+        xalign: 0;
+
+        styles [
+          "title-3",
+        ]
+      }
+
+      // Each output with a check on the one in use; choosing one makes it
+      // the default. Filled in code, and again as the outputs change.
+      ListBox quick_access_sound_outputs {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+    };
+  };
+}
