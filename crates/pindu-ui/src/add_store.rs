@@ -2,8 +2,9 @@
 //! Store level in fullscreen mode, and the Add a Store dialog on the desktop, which the
 //! empty library offers too. Both are a [`PinduAddStoreLevel`], with its own Blueprint
 //! (`data/ui/add_store.blp`), filled from [`AddStoreService`]'s state; the window keeps
-//! the actions its rows call and opens it as the mode needs. Every row is a list row, so a
-//! controller alone gets through the flow with Up, Down, A and B.
+//! the actions their rows call and the dialog, opens the flow as the mode needs, and Quick
+//! Access fills its level. Every row is a list row, so a controller alone gets through the
+//! flow with Up, Down, A and B.
 
 use std::cell::RefCell;
 
@@ -16,6 +17,7 @@ use pindu_core::panels::{Panel, QuickAccessLevel};
 
 use crate::add_store_service::{AddStoreService, next_step, store_description, store_name};
 use crate::application::PinduApplication;
+use crate::quick_access::PinduQuickAccess;
 use crate::window::PinduWindow;
 
 /// What the level's rows show, apart from how far an install is: rows are built again
@@ -72,8 +74,8 @@ mod imp {
 
 glib::wrapper! {
     /// The stores to install, the install that runs or how it ended, and what to do next.
-    /// It is the `"add-store"` page of the window's Quick Access stack, and the content of
-    /// the desktop's Add a Store dialog.
+    /// It is the `"add-store"` page of Quick Access's stack, and the content of the
+    /// desktop's Add a Store dialog.
     pub struct PinduAddStoreLevel(ObjectSubclass<imp::PinduAddStoreLevel>)
         @extends adw::Bin, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
@@ -193,41 +195,15 @@ impl PinduWindow {
         }
     }
 
-    /// The level opens: it shows the flow as it is, and the installed stores are looked
-    /// for again.
-    pub(crate) fn show_add_store(&self) {
-        let Some(service) = self.add_store_service() else {
-            return;
-        };
-        self.imp()
-            .quick_access_add_store_level
-            .fill(&service.state());
-        service.refresh();
-    }
-
-    /// Where focus goes on the level.
-    pub(crate) fn add_store_focus(&self) -> Option<gtk::Widget> {
-        self.imp().quick_access_add_store_level.focus_target()
-    }
-
     fn add_store_service(&self) -> Option<AddStoreService> {
         self.application()
             .and_downcast::<PinduApplication>()
             .map(|application| application.add_store_service().clone())
     }
 
-    /// Fills the level while it is open, and the dialog while it shows, keeping focus in
-    /// them when their rows are built again.
+    /// Fills the dialog while it shows, keeping focus in it when its rows are built again.
     fn show_add_store_state(&self, state: &AddStoreState) {
-        let imp = self.imp();
-        if self.open_panel() == Some(Panel::QuickAccess(QuickAccessLevel::AddStore)) {
-            let level = &imp.quick_access_add_store_level;
-            let had_focus = level.has_focus();
-            if level.fill(state) && had_focus {
-                self.focus_panel(None);
-            }
-        }
-        let dialog = imp.add_store_dialog.borrow().clone();
+        let dialog = self.imp().add_store_dialog.borrow().clone();
         if let Some(level) = dialog {
             let had_focus = level.has_focus();
             if level.fill(state)
@@ -236,6 +212,43 @@ impl PinduWindow {
             {
                 target.grab_focus();
             }
+        }
+    }
+}
+
+impl PinduQuickAccess {
+    /// Fills the level as the flow changes while it is open.
+    pub(crate) fn setup_add_store(&self, application: &PinduApplication) {
+        application
+            .add_store_service()
+            .connect_changed(glib::clone!(
+                #[weak(rename_to = quick_access)]
+                self,
+                move |state| quick_access.show_add_store_state(state)
+            ));
+    }
+
+    /// The level opens: it shows the flow as it is, and the installed stores are looked
+    /// for again.
+    pub(crate) fn show_add_store(&self) {
+        let Some(application) = self.application() else {
+            return;
+        };
+        let service = application.add_store_service();
+        self.imp().add_store_level.fill(&service.state());
+        service.refresh();
+    }
+
+    /// Fills the level while it is open, keeping focus in it when its rows are built
+    /// again.
+    fn show_add_store_state(&self, state: &AddStoreState) {
+        if self.level() != Some(QuickAccessLevel::AddStore) {
+            return;
+        }
+        let level = &self.imp().add_store_level;
+        let had_focus = level.has_focus();
+        if level.fill(state) && had_focus {
+            self.focus_level(None);
         }
     }
 }

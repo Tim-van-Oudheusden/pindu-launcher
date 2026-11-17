@@ -9,41 +9,46 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
-use pindu_core::panels::{Panel, QuickAccessLevel};
+use pindu_core::panels::QuickAccessLevel;
 use pindu_core::tasks::{Cancel, Progress, Task, TaskId, TaskKind};
 
 use crate::application::PinduApplication;
-use crate::sync_service::SyncService;
-use crate::window::PinduWindow;
+use crate::quick_access::PinduQuickAccess;
 
 /// How often the progress bars of tasks with no telling how far they are move.
 const PULSE_INTERVAL: Duration = Duration::from_millis(150);
 
-impl PinduWindow {
+impl PinduQuickAccess {
     /// Cancelling a task, and following the tasks and the sync: the Activity entry and
     /// level, and whether Refresh Library is available.
-    pub(crate) fn setup_activity(&self, application: &PinduApplication, sync: &SyncService) {
-        let cancel = gio::ActionEntry::builder("cancel-task")
-            .parameter_type(Some(glib::VariantTy::UINT64))
-            .activate(|window: &Self, _, target| {
+    pub(crate) fn setup_activity(
+        &self,
+        application: &PinduApplication,
+        actions: &impl IsA<gio::ActionMap>,
+    ) {
+        self.add_host_action(
+            actions,
+            "cancel-task",
+            Some(glib::VariantTy::UINT64),
+            |quick_access, target| {
                 let Some(id) = target.and_then(u64::from_variant) else {
                     return;
                 };
-                if let Some(application) = window.application().and_downcast::<PinduApplication>() {
+                if let Some(application) = quick_access.application() {
                     application.task_service().cancel(TaskId(id));
                 }
-            })
-            .build();
-        self.add_action_entries([cancel]);
+            },
+        );
         application.task_service().connect_changed(glib::clone!(
-            #[weak(rename_to = window)]
+            #[weak(rename_to = quick_access)]
             self,
-            move || window.tasks_changed()
+            move || quick_access.tasks_changed()
         ));
+        let sync = application.sync_service();
         sync.connect_syncing_notify(glib::clone!(
-            #[weak(rename_to = window)]
+            #[weak(rename_to = quick_access)]
             self,
-            move |sync| window.show_refresh(sync.syncing())
+            move |sync| quick_access.show_refresh(sync.syncing())
         ));
         self.show_refresh(sync.syncing());
         self.tasks_changed();
@@ -52,12 +57,13 @@ impl PinduWindow {
     /// Fills the Activity level with the running tasks, oldest first, keeping focus on
     /// the task it was on, and moves the bars of those with no telling how far they are.
     pub(crate) fn show_activity(&self) {
-        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+        let Some(application) = self.application() else {
             return;
         };
         let imp = self.imp();
-        let list = imp.quick_access_activity.get();
-        let focused = gtk::prelude::GtkWindowExt::focus(self)
+        let list = imp.activity.get();
+        let focused = self
+            .focus_widget()
             .filter(|focus| focus.is_ancestor(&list))
             .and_then(|focus| {
                 let row = focus.ancestor(gtk::ListBoxRow::static_type())?;
@@ -92,22 +98,22 @@ impl PinduWindow {
     /// any runs, and the level follows them while it is open, leaving for Quick Access's
     /// entries once nothing runs.
     fn tasks_changed(&self) {
-        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+        let Some(application) = self.application() else {
             return;
         };
         let tasks = application.task_service().tasks();
         let imp = self.imp();
-        let row = &imp.quick_access_activity_row;
+        let row = &imp.activity_row;
         let had_focus = row.has_focus();
         row.set_visible(!tasks.is_empty());
         if tasks.is_empty() {
             if had_focus {
                 self.activity_entry().grab_focus();
             }
-            self.leave_activity();
+            self.end_activity();
             return;
         }
-        if self.open_panel() != Some(Panel::QuickAccess(QuickAccessLevel::Activity)) {
+        if self.level() != Some(QuickAccessLevel::Activity) {
             return;
         }
         // Only progress changed: the bars move, and the rows (and focus) stay.
@@ -136,12 +142,12 @@ impl PinduWindow {
     /// Library, or the notifications while a sync keeps that unavailable.
     pub(crate) fn activity_entry(&self) -> gtk::Widget {
         let imp = self.imp();
-        let row = if imp.quick_access_activity_row.is_visible() {
-            &imp.quick_access_activity_row
-        } else if imp.quick_access_refresh_row.is_sensitive() {
-            &imp.quick_access_refresh_row
+        let row = if imp.activity_row.is_visible() {
+            &imp.activity_row
+        } else if imp.refresh_row.is_sensitive() {
+            &imp.refresh_row
         } else {
-            &imp.quick_access_notifications_row
+            &imp.notifications_row
         };
         row.get().upcast()
     }
@@ -149,15 +155,15 @@ impl PinduWindow {
     /// Refresh Library is unavailable while a sync runs; if it had focus, Activity, which
     /// now lists the sync, takes it once it is shown.
     fn show_refresh(&self, syncing: bool) {
-        let row = &self.imp().quick_access_refresh_row;
+        let row = &self.imp().refresh_row;
         let had_focus = row.has_focus();
         row.set_sensitive(!syncing);
         if had_focus && syncing {
             glib::idle_add_local_once(glib::clone!(
-                #[weak(rename_to = window)]
+                #[weak(rename_to = quick_access)]
                 self,
                 move || {
-                    window.activity_entry().grab_focus();
+                    quick_access.activity_entry().grab_focus();
                 }
             ));
         }
@@ -172,13 +178,13 @@ impl PinduWindow {
         let source = glib::timeout_add_local(
             PULSE_INTERVAL,
             glib::clone!(
-                #[weak(rename_to = window)]
+                #[weak(rename_to = quick_access)]
                 self,
                 #[upgrade_or]
                 glib::ControlFlow::Break,
                 move || {
-                    let imp = window.imp();
-                    if window.open_panel() != Some(Panel::QuickAccess(QuickAccessLevel::Activity)) {
+                    let imp = quick_access.imp();
+                    if quick_access.level() != Some(QuickAccessLevel::Activity) {
                         imp.activity_pulse.take();
                         return glib::ControlFlow::Break;
                     }

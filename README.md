@@ -179,7 +179,9 @@ back to the drawer's entries.
   Suspend does not ask: the game carries on when the machine wakes.
 - When a program holds the machine on (an update installing, for example), a notification names it.
 
-The Flatpak has no access to the system bus, so the entry does not show there; use the desktop's own power menu.
+The Flatpak has no access to the system bus, so the entry does not show there; use the desktop's own power menu. In a
+[gamescope-session-plus session](#a-gamescope-session-plus-session) the level also has **Switch to Desktop**, in the
+Flatpak too.
 
 ### Quick Access
 
@@ -312,6 +314,8 @@ gamescope -f -- flatpak run --nosocket=wayland io.github.tim_van_oudheusden.pind
   opens takes gamescope's focus, and the app gets it back when the game quits.
 - `--nosocket=wayland` matters when gamescope starts from a desktop session: without it, Flatpak gives the app the
   desktop's Wayland display, and the window opens on the desktop instead of in gamescope.
+- Games the app starts on the host get the app's display rather than the desktop's: its `DISPLAY`, and with
+  `--nosocket=wayland` an empty `WAYLAND_DISPLAY`, so a game that would use Wayland falls back to X11 in gamescope.
 - `-f` makes gamescope's window fullscreen when it runs nested in a desktop session.
 - Under X11 the app draws at scale 1. On a 4K screen, let gamescope upscale a smaller picture
   (`gamescope -W 3840 -H 2160 -w 1920 -h 1080 -f -- …`) or scale the app (`flatpak run --env=GDK_SCALE=2 …`).
@@ -334,6 +338,14 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   it starts, and the app when it ends.
 - Guide during play brings the app to the front, with the menu drawer open on Playing Now; Return there brings the game
   back.
+- Games the app hands to their store's launcher (Steam, Heroic, Lutris, Bottles) are not brought to the front yet.
+- With `MANGOHUD_CONFIGFILE` naming a file the app can write, as gamescope-session-plus and `gamescope --steam
+  --mangoapp` set it, the Performance Overlay switch drives their MangoApp instead of wrapping games in `mangohud`: the
+  app rewrites the file in place with `preset=2` or `no_display` for the game in front, when it comes to the front and
+  when its switch flips in Quick Access or the options sheet. MangoApp hides itself while the app is in front. The
+  Flatpak cannot reach `/tmp/mangohud.*` or `$XDG_RUNTIME_DIR/gamescope-mangoapp-*`; point the variable at a file under
+  `$XDG_RUNTIME_DIR/app/io.github.tim_van_oudheusden.pindu-launcher/` that holds `no_display` before gamescope starts.
+  Otherwise games keep their own MangoHud.
 - A game the app hands to its store's launcher (Steam, Heroic, Lutris, Bottles, Faugus) is expected in front from the
   moment the store opens: its windows, and any untagged window another app opens meanwhile, such as Steam's update or
   sign-in window, get the game's app ID and come to the front. The app is back when the last of those windows closes,
@@ -352,6 +364,45 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   another store never shows Steam.
 - Tested with gamescope 3.17.0 (`gamescope --backend headless --steam --xwayland-count 2`). gamescope's `--steam`
   protocol is undocumented and may change between releases.
+
+#### A gamescope-session-plus session
+
+On ChimeraOS, Bazzite and other distributions with
+[gamescope-session-plus](https://github.com/ChimeraOS/gamescope-session), the fullscreen mode can be a session of its
+own at login, next to "Steam Big Picture". The native packages install it: pick **Pindu launcher** in the login
+screen's session menu. A build from source installs it with `meson setup -Dgamescope-session=true _build`, which puts
+the client file in `share/gamescope-session-plus/sessions.d/pindu` and the login entry in
+`share/wayland-sessions/gamescope-session-pindu.desktop`. The entry only shows where `gamescope-session-plus` is
+installed.
+
+- The session runs `pindu-launcher --fullscreen --session`. `--session` tells the app that it is the session's
+  client: the session ends when the app quits, so closing its window does nothing, and **Quit** in the menu drawer
+  ends the session.
+- **Switch to Desktop** in the drawer's Power level runs `/usr/lib/os-session-select desktop`, the distribution's
+  script that switches to the desktop session, and then quits. It asks first while a game Pindu started is running.
+  Where the distribution has no `os-session-select`, the entry is not there.
+- The client file points `MANGOHUD_CONFIGFILE` at `$XDG_RUNTIME_DIR/pindu-launcher/mangohud.conf`, holding
+  `no_display`, and falls back to the desktop (`short_session_recover`) after five sessions in a row that ended within
+  a minute.
+
+The Flatpak installs no session files. To use the Flatpak as the session's client, create
+`~/.config/gamescope-session-plus/sessions.d/pindu` yourself:
+
+```sh
+CLIENTCMD="flatpak run --nosocket=wayland io.github.tim_van_oudheusden.pindu-launcher --fullscreen --session"
+MANGOHUD_CONFIGFILE="$XDG_RUNTIME_DIR/app/io.github.tim_van_oudheusden.pindu-launcher/mangohud.conf"
+mkdir -p "$XDG_RUNTIME_DIR/app/io.github.tim_van_oudheusden.pindu-launcher"
+echo no_display >"$MANGOHUD_CONFIGFILE"
+```
+
+- `$XDG_RUNTIME_DIR/app/<app-id>/` is the one folder of the runtime directory the sandbox shares with the host, so the
+  app can reach the MangoApp settings there.
+- The login entry is the distribution's to add, as a `/usr/share/wayland-sessions/gamescope-session-pindu.desktop`
+  with `Exec=gamescope-session-plus pindu` and `DesktopNames=gamescope`; without it, start the session with
+  `gamescope-session-plus pindu`.
+- The Flatpak sees the host's `os-session-select` at `/run/host/usr/lib/os-session-select`. Switch to Desktop runs it on
+  the host, which needs the access described in [Starting games on the host](#starting-games-on-the-host); without it
+  the entry is greyed out.
 
 ### Styling fullscreen mode
 

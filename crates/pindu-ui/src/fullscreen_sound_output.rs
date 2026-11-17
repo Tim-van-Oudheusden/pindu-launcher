@@ -2,21 +2,21 @@
 //! output in use and shown only where the tools run and find an output, and its level,
 //! which lists the outputs as radio rows with a check on the default one; choosing one
 //! makes it the default. The level is [`PinduSoundOutputLevel`], with its own Blueprint
-//! (`data/ui/fullscreen_sound_output.blp`); the window keeps the entry, which sits in Quick
-//! Access's shared list, and `win.sound-output`. Both show
-//! [`AudioOutputService`](crate::audio_output_service::AudioOutputService)'s state and the
-//! window calls it; neither runs `pw-dump` or `wpctl` itself.
+//! (`data/ui/fullscreen_sound_output.blp`); Quick Access keeps the entry, which sits in its
+//! shared list, and adds `win.sound-output` to its host. Both show
+//! [`AudioOutputService`](crate::audio_output_service::AudioOutputService)'s state and
+//! Quick Access calls it; neither runs `pw-dump` or `wpctl` itself.
 
 use std::cell::RefCell;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gio, glib};
-use pindu_core::panels::{Panel, QuickAccessLevel};
+use pindu_core::panels::QuickAccessLevel;
 use pindu_core::system::audio::{AudioState, Output};
 
 use crate::application::PinduApplication;
-use crate::window::PinduWindow;
+use crate::quick_access::PinduQuickAccess;
 
 /// The `win.sound-output` state while no output is the default: PipeWire's invalid id,
 /// which no output has.
@@ -60,17 +60,21 @@ mod imp {
 
 glib::wrapper! {
     /// Quick Access's Sound Output level: the outputs as radio rows, with a check on the
-    /// default one. It is the `"sound-output"` page of the window's Quick Access stack.
+    /// default one. It is the `"sound-output"` page of Quick Access's stack.
     pub struct PinduSoundOutputLevel(ObjectSubclass<imp::PinduSoundOutputLevel>)
         @extends adw::Bin, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
-impl PinduWindow {
+impl PinduQuickAccess {
     /// Adds `win.sound-output`, whose state is the default output and which the level's
-    /// radio rows choose through, shows the entry as the section is and as it changes, and
-    /// reads the outputs again whenever Quick Access opens.
-    pub(crate) fn setup_sound_output(&self, application: &PinduApplication) {
+    /// radio rows choose through, and shows the entry as the section is and as it changes.
+    /// The outputs are read again whenever the panel opens.
+    pub(crate) fn setup_sound_output(
+        &self,
+        application: &PinduApplication,
+        actions: &impl IsA<gio::ActionMap>,
+    ) {
         let service = application.audio_output_service().clone();
         let action = gio::SimpleAction::new_stateful(
             "sound-output",
@@ -86,45 +90,41 @@ impl PinduWindow {
                 }
             }
         ));
-        self.add_action(&action);
+        actions.add_action(&action);
+        let _ = self.imp().sound_output_action.set(action.clone());
         service.connect_changed(glib::clone!(
             #[weak]
             action,
-            #[weak(rename_to = window)]
+            #[weak(rename_to = quick_access)]
             self,
             move |state| {
                 action.set_state(&default_output(state).to_variant());
-                window.show_sound_output_state(state);
+                quick_access.show_sound_output_state(state);
             }
         ));
         self.show_sound_output_state(&service.state());
-        self.imp()
-            .quick_access
-            .connect_show_sidebar_notify(move |quick_access| {
-                if quick_access.shows_sidebar() {
-                    service.refresh();
-                }
-            });
     }
 
     /// The level opens: it lists the outputs as last read, and they are read again.
     pub(crate) fn show_sound_output(&self) {
-        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+        let Some(application) = self.application() else {
             return;
         };
         let service = application.audio_output_service();
         self.imp()
-            .quick_access_sound_output_level
+            .sound_output_level
             .fill(&service.state().outputs.outputs);
         service.refresh();
     }
 
     /// Where focus goes on the level: the output in use, or else the first one.
     pub(crate) fn sound_output_focus(&self) -> Option<gtk::Widget> {
-        let checked = self.action_state("sound-output");
-        self.imp()
-            .quick_access_sound_output_level
-            .focus_target(checked.as_ref())
+        let imp = self.imp();
+        let checked = imp
+            .sound_output_action
+            .get()
+            .and_then(|action| action.state());
+        imp.sound_output_level.focus_target(checked.as_ref())
     }
 
     /// Shows or hides the entry, with the output in use under it, and lists the outputs
@@ -132,30 +132,28 @@ impl PinduWindow {
     /// section is gone.
     fn show_sound_output_state(&self, state: &AudioState) {
         let imp = self.imp();
-        imp.quick_access_sound_output_row
-            .set_visible(state.available);
+        imp.sound_output_row.set_visible(state.available);
         let in_use = state
             .outputs
             .in_use()
             .map(|output| output.description.as_str())
             .unwrap_or_default();
-        imp.quick_access_sound_output_subtitle
-            .set_visible(!in_use.is_empty());
-        imp.quick_access_sound_output_subtitle.set_label(in_use);
-        if self.open_panel() != Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)) {
+        imp.sound_output_subtitle.set_visible(!in_use.is_empty());
+        imp.sound_output_subtitle.set_label(in_use);
+        if self.level() != Some(QuickAccessLevel::SoundOutput) {
             return;
         }
         if !state.available {
-            self.show_panel(Panel::QuickAccess(QuickAccessLevel::Main));
+            self.request_level(QuickAccessLevel::Main);
             return;
         }
         // The checks follow `win.sound-output`; only other outputs need the rows again.
-        let level = &imp.quick_access_sound_output_level;
+        let level = &imp.sound_output_level;
         if !level.lists_outputs(&state.outputs.outputs) {
             let had_focus = level.has_focus();
             level.fill(&state.outputs.outputs);
             if had_focus {
-                self.focus_panel(None);
+                self.focus_level(None);
             }
         }
     }

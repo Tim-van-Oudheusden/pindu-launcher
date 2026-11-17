@@ -111,3 +111,32 @@ test(
   args: ['--strict', '--dry-run', meson.current_build_dir()],
   suite: 'data',
 )
+
+# gamescope-session-plus's client and its login entry (`-Dgamescope-session=true`, for
+# distribution packages; never the Flatpak, whose client file is the user's, see README).
+# Installed only with the option; the client file's syntax is checked either way. The
+# entry is a session file, not an app's: desktop-file-validate rejects its `DesktopNames`,
+# which display managers read.
+gamescope_session = get_option('gamescope-session')
+i18n.merge_file(
+  input: 'gamescope-session' / 'gamescope-session-pindu.desktop.in',
+  output: 'gamescope-session-pindu.desktop',
+  type: 'desktop',
+  po_dir: '../po',
+  install: gamescope_session,
+  install_dir: datadir / 'wayland-sessions',
+)
+session_client = files('gamescope-session' / 'pindu')
+if gamescope_session
+  install_data(
+    session_client,
+    install_dir: datadir / 'gamescope-session-plus' / 'sessions.d',
+  )
+endif
+
+test(
+  'check-session-client',
+  find_program('sh'),
+  args: ['-n', session_client],
+  suite: 'data',
+)
