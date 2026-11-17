@@ -103,8 +103,9 @@ Service: BlueZ, `org.bluez` on the system bus.
 - **Agent.** While the level is open the launcher registers a pairing agent (`org.bluez.Agent1`, capability
   `KeyboardDisplay`) and asks to be the default agent. Numeric comparison (`RequestConfirmation`) shows the code with
   A to confirm and B to refuse; a displayed passkey (`DisplayPasskey`) shows the code to type on the device; a PIN
-  (`RequestPinCode`) opens the PIN dialog with the on-screen keyboard. Controllers and headsets usually pair with none
-  of these ("Just Works").
+  (`RequestPinCode`) or a passkey (`RequestPasskey`) opens the PIN dialog with the on-screen keyboard, on its digits and
+  showing what it types. BlueZ's `Cancel` (it gave up waiting) withdraws the dialog without an answer. Controllers and
+  headsets usually pair with none of these ("Just Works").
 - **Forget.** A paired device has **Forget** (`Adapter1.RemoveDevice`).
 
 ### Audio output
