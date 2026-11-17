@@ -3,8 +3,10 @@
 Run with: python3 tests/tooling/test_release_notes.py (or `meson test -C _build --suite tooling`)
 """
 
+import importlib.util
 import subprocess
 import sys
+import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -65,6 +67,31 @@ class ReleaseNotesTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(result.stdout, "")
         self.assertIn("Usage: build-aux/release-notes.py VERSION", result.stderr)
+
+    def test_finds_an_rcs_notes_under_its_metainfo_version(self) -> None:
+        # A pre-release tag vX.Y.Z-rc.N names its files X.Y.Z-rc.N, while the MetaInfo
+        # names the release X.Y.Z~rcN (build-aux/check-version.sh).
+        spec = importlib.util.spec_from_file_location("release_notes", SCRIPT)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as tmp:
+            metainfo = Path(tmp) / "metainfo.xml"
+            metainfo.write_text(
+                "<component><releases>"
+                '<release version="0.5.0~rc1" type="development" date="2026-11-20">'
+                "<description><p>A test release.</p></description></release>"
+                "</releases></component>"
+            )
+            notes = module.notes("0.5.0-rc.1", metainfo)
+            self.assertIn("A test release.\n", notes)
+            self.assertIn("pindu-launcher-0.5.0-rc.1-x86_64.flatpak", notes)
+            self.assertIn("pindu-launcher-0.5.0-rc.1-1.fc45.aarch64.rpm", notes)
+            self.assertIn("pindu-launcher-0.5.0-rc.1-debian-testing-amd64.deb", notes)
+            self.assertIn("pindu-launcher-0.5.0-rc.1.tar.xz", notes)
+            self.assertNotIn("~", notes)
+            with self.assertRaisesRegex(LookupError, 'no <release version="0.5.0~rc2">'):
+                module.notes("0.5.0-rc.2", metainfo)
 
 
 if __name__ == "__main__":
