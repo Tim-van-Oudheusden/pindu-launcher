@@ -8,34 +8,31 @@ use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gdk, gio, glib};
 use pindu_core::accessibility::Accessibility;
-use pindu_core::clock::ClockFormat;
 use pindu_core::focus::FocusMemory;
-use pindu_core::gamepad::{Intent, Layout};
+use pindu_core::gamepad::Layout;
 use pindu_core::grid;
 use pindu_core::hints::Hint;
 use pindu_core::launch_overlay::LaunchOverlay;
 use pindu_core::library::{
     Counts, Filters, HistoryGroup, PlaytimeOrigin, SortMode, View, history_group,
 };
-use pindu_core::model::{GameId, Source, Timestamp};
+use pindu_core::model::{GameId, Source};
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{GameOption, Panels};
-use pindu_core::tasks::Task;
 
 use crate::add_store::PinduAddStoreLevel;
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
 use crate::fullscreen::NavigationSounds;
-use crate::fullscreen_bluetooth::PinduBluetoothLevel;
-use crate::fullscreen_network::PinduNetworkLevel;
+use crate::fullscreen_clock::Clock;
+use crate::fullscreen_playing::PlayingCards;
 use crate::fullscreen_power::PinduPowerLevel;
-use crate::fullscreen_sound_output::PinduSoundOutputLevel;
-use crate::fullscreen_system_update::PinduSystemUpdateLevel;
 use crate::game_page::GamePage;
 use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
 use crate::log_service;
 use crate::models::{GameObject, LibraryModel};
+use crate::quick_access::PinduQuickAccess;
 use crate::sources::{source_icon, source_name};
 use crate::sync_service::SyncService;
 use crate::widgets::{CoverArt, CoverTile, TileSize};
@@ -177,149 +174,7 @@ mod imp {
         #[template_child]
         pub quick_access: TemplateChild<adw::OverlaySplitView>,
         #[template_child]
-        pub quick_access_panel: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub quick_access_playing_cards: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub quick_access_list: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_clock: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub quick_access_offline: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub quick_access_battery: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub quick_access_battery_icon: TemplateChild<gtk::Image>,
-        #[template_child]
-        pub quick_access_battery_level: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub quick_access_stack: TemplateChild<gtk::Stack>,
-        #[template_child]
-        pub quick_access_notifications_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_unread: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub quick_access_notifications: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_activity_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_refresh_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_surprise_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_activity: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_design_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_designs: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_variant_title: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub quick_access_variants: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_blur: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_dim: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_custom_style: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_custom_style_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub quick_access_settings_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_controllers_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_controllers: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_prompts: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_swap: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_controls_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_controls: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub tile_small: TemplateChild<gtk::CheckButton>,
-        #[template_child]
-        pub tile_medium: TemplateChild<gtk::CheckButton>,
-        #[template_child]
-        pub tile_large: TemplateChild<gtk::CheckButton>,
-        #[template_child]
-        pub quick_access_sizes: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_switches: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_sounds_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub quick_access_volume_row: TemplateChild<adw::ActionRow>,
-        #[template_child]
-        pub quick_access_volume: TemplateChild<gtk::Scale>,
-        #[template_child]
-        pub quick_access_exit_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub quick_access_accessibility: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_reduce_motion_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub quick_access_large_text_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub quick_access_filters_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_filters: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_installed_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub quick_access_not_installed_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub quick_access_windows_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub quick_access_native_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub quick_access_hidden_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub quick_access_clear_filters: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_performance_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_performance_title: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub quick_access_performance: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_overlay_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub quick_access_gamemode_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub quick_access_performance_note: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub quick_access_sound_output_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_sound_output_subtitle: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub quick_access_sound_output_level: TemplateChild<PinduSoundOutputLevel>,
-        #[template_child]
-        pub quick_access_system_update_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_system_update_subtitle: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub quick_access_system_update_level: TemplateChild<PinduSystemUpdateLevel>,
-        #[template_child]
-        pub quick_access_add_store_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_add_store_level: TemplateChild<PinduAddStoreLevel>,
-        #[template_child]
-        pub quick_access_network_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_network_icon: TemplateChild<gtk::Image>,
-        #[template_child]
-        pub quick_access_network_subtitle: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub quick_access_network_level: TemplateChild<PinduNetworkLevel>,
-        #[template_child]
-        pub quick_access_bluetooth_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub quick_access_bluetooth_subtitle: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub quick_access_bluetooth_level: TemplateChild<PinduBluetoothLevel>,
+        pub quick_access_panel: TemplateChild<PinduQuickAccess>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
         /// Every sidebar row with the view it selects and, for sources, its count label.
@@ -362,33 +217,12 @@ mod imp {
         pub options_game: RefCell<Option<GameObject>>,
         /// The options the sheet lists for that game, in its rows' order.
         pub game_options: RefCell<Vec<GameOption>>,
-        /// The intents Quick Access's Controls lists, in its rows' order across its groups.
-        pub shown_controls: RefCell<Vec<Intent>>,
         /// The widget that had focus before a panel opened, to give it back after.
         pub focus_before_panel: glib::WeakRef<gtk::Widget>,
-        /// Fullscreen mode's clocks: their format, their next tick while one shows, and
-        /// the portal's notice of format changes.
-        pub clock_format: Cell<ClockFormat>,
-        pub clock_tick: RefCell<Option<glib::SourceId>>,
-        pub clock_format_changes: RefCell<Option<gio::SignalSubscription>>,
-        /// The Playing Now cards' time labels, each with when its session began, and their
-        /// next tick while the drawer or Quick Access shows.
-        pub session_times: RefCell<Vec<(gtk::Label, Timestamp)>>,
-        pub session_tick: RefCell<Option<glib::SourceId>>,
-        /// The tasks Quick Access's Activity shows, each with its progress bar, and the
-        /// next pulse of the bars of those with no telling how far they are.
-        pub activity_shown: RefCell<Vec<(Task, gtk::ProgressBar)>>,
-        pub activity_pulse: RefCell<Option<glib::SourceId>>,
-        /// The game Surprise Me picked last, which it does not pick again next time.
-        pub surprise_previous: RefCell<Option<GameId>>,
-        /// The game fullscreen mode's performance switches are for, and its
-        /// `notify::playing` handler.
-        pub performance_game: RefCell<Option<(GameObject, glib::SignalHandlerId)>>,
-        /// That game's Performance Overlay and GameMode as stored, which every switch
-        /// shows; `None` until they are read, or for a game without launch settings.
-        pub performance_tools: Cell<Option<[bool; 2]>>,
-        /// Whether the switches are being set to show those, rather than by the user.
-        pub performance_filling: Cell<bool>,
+        /// The top bar's clock.
+        pub(crate) top_bar_clock: OnceCell<Clock>,
+        /// The drawer's Playing Now cards.
+        pub(crate) drawer_cards: OnceCell<PlayingCards>,
         /// The level of the desktop's Add a Store dialog, while it shows.
         pub add_store_dialog: RefCell<Option<PinduAddStoreLevel>>,
     }
@@ -401,11 +235,7 @@ mod imp {
 
         fn class_init(klass: &mut Self::Class) {
             HomePage::ensure_type();
-            PinduNetworkLevel::ensure_type();
-            PinduBluetoothLevel::ensure_type();
-            PinduSystemUpdateLevel::ensure_type();
-            PinduAddStoreLevel::ensure_type();
-            PinduSoundOutputLevel::ensure_type();
+            PinduQuickAccess::ensure_type();
             PinduPowerLevel::ensure_type();
             klass.bind_template();
         }
@@ -473,18 +303,12 @@ impl PinduWindow {
         window.setup_search_keyboard();
         window.setup_fullscreen_game();
         window.setup_panels();
-        window.setup_surprise_me();
         window.follow_accessibility();
         if let Some(application) = application.downcast_ref::<PinduApplication>() {
             window.setup_controller_navigation(application);
             window.setup_hint_bar(application);
-            window.setup_quick_access_status(application);
+            window.setup_quick_access(application);
             window.setup_playing_cards(application);
-            window.setup_notifications(application);
-            window.setup_activity(application, sync_service);
-            window.setup_controllers(application);
-            window.setup_controls(application);
-            window.setup_sound_output(application);
         }
         window
     }

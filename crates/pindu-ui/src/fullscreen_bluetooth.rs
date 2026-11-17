@@ -6,8 +6,8 @@
 //! shows in a dialog: a code to confirm (A confirms, B refuses), a code to type on the
 //! device, or a PIN or passkey to type here in the passphrase dialog, with the on-screen
 //! keyboard or a keyboard. The level is [`PinduBluetoothLevel`], with its own Blueprint
-//! (`data/ui/fullscreen_bluetooth.blp`); the window keeps the entry, which sits in Quick
-//! Access's shared list, and the level's `win.bluetooth-*` actions. Both show
+//! (`data/ui/fullscreen_bluetooth.blp`); Quick Access keeps the entry, which sits in its
+//! shared list, and adds the level's `win.bluetooth-*` actions to its host. Both show
 //! [`BluetoothService`]'s state and call it; neither talks to BlueZ itself.
 
 use std::cell::RefCell;
@@ -17,16 +17,20 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::osk::Keyboard;
-use pindu_core::panels::{Panel, QuickAccessLevel};
+use pindu_core::panels::QuickAccessLevel;
 use pindu_core::system::bluetooth::{BluetoothState, Busy, Device, Power, Prompt, Summary};
 
 use crate::application::PinduApplication;
 use crate::bluetooth_service::BluetoothService;
+use crate::quick_access::PinduQuickAccess;
 use crate::secret_dialog::SecretDialog;
 use crate::window::PinduWindow;
 
 /// The icon of a device whose own icon the theme lacks.
 const FALLBACK_ICON: &str = "bluetooth-active-symbolic";
+
+/// What one of the level's device actions asks of the service, for a device.
+type DeviceAction = fn(&BluetoothService, &str);
 
 mod imp {
     use super::*;
@@ -83,51 +87,54 @@ mod imp {
 
 glib::wrapper! {
     /// Quick Access's Bluetooth level: the radio's switch, the paired devices and the
-    /// devices found nearby. It is the `"bluetooth"` page of the window's Quick Access
-    /// stack.
+    /// devices found nearby. It is the `"bluetooth"` page of Quick Access's stack.
     pub struct PinduBluetoothLevel(ObjectSubclass<imp::PinduBluetoothLevel>)
         @extends adw::Bin, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
-impl PinduWindow {
+impl PinduQuickAccess {
     /// Adds the level's actions, and shows the entry as the section is and as it changes.
-    pub(crate) fn setup_bluetooth(&self) {
-        let device_action = |name: &str, act: fn(&BluetoothService, &str)| {
-            gio::ActionEntry::builder(name)
-                .parameter_type(Some(glib::VariantTy::STRING))
-                .activate(move |window: &Self, _, target| {
+    pub(crate) fn setup_bluetooth(
+        &self,
+        application: &PinduApplication,
+        actions: &impl IsA<gio::ActionMap>,
+    ) {
+        let device_actions: [(&str, DeviceAction); 3] = [
+            ("bluetooth-pair", BluetoothService::pair),
+            ("bluetooth-connect", BluetoothService::connect),
+            ("bluetooth-disconnect", BluetoothService::disconnect),
+        ];
+        for (name, act) in device_actions {
+            self.add_host_action(
+                actions,
+                name,
+                Some(glib::VariantTy::STRING),
+                move |quick_access, target| {
                     if let (Some(service), Some(device)) = (
-                        window.bluetooth_service(),
+                        quick_access.bluetooth_service(),
                         target.and_then(|target| target.str()),
                     ) {
                         act(&service, device);
                     }
-                })
-                .build()
-        };
-        let forget = gio::ActionEntry::builder("bluetooth-forget")
-            .parameter_type(Some(glib::VariantTy::STRING))
-            .activate(|window: &Self, _, target| {
+                },
+            );
+        }
+        self.add_host_action(
+            actions,
+            "bluetooth-forget",
+            Some(glib::VariantTy::STRING),
+            |quick_access, target| {
                 if let Some(device) = target.and_then(|target| target.str()) {
-                    let level = &window.imp().quick_access_bluetooth_level;
-                    level.ask_forget(device);
+                    quick_access.imp().bluetooth_level.ask_forget(device);
                 }
-            })
-            .build();
-        self.add_action_entries([
-            device_action("bluetooth-pair", BluetoothService::pair),
-            device_action("bluetooth-connect", BluetoothService::connect),
-            device_action("bluetooth-disconnect", BluetoothService::disconnect),
-            forget,
-        ]);
-        let Some(service) = self.bluetooth_service() else {
-            return;
-        };
+            },
+        );
+        let service = application.bluetooth_service();
         service.connect_changed(glib::clone!(
-            #[weak(rename_to = window)]
+            #[weak(rename_to = quick_access)]
             self,
-            move |state| window.show_bluetooth_state(state)
+            move |state| quick_access.show_bluetooth_state(state)
         ));
         self.show_bluetooth_state(&service.state());
     }
@@ -149,14 +156,8 @@ impl PinduWindow {
         }
     }
 
-    /// Where focus goes on the level: the switch, or what blocks the radio.
-    pub(crate) fn bluetooth_focus(&self) -> Option<gtk::Widget> {
-        self.imp().quick_access_bluetooth_level.focus_target()
-    }
-
     fn bluetooth_service(&self) -> Option<BluetoothService> {
         self.application()
-            .and_downcast::<PinduApplication>()
             .map(|application| application.bluetooth_service().clone())
     }
 
@@ -165,16 +166,15 @@ impl PinduWindow {
     /// the section is gone.
     fn show_bluetooth_state(&self, state: &BluetoothState) {
         let imp = self.imp();
-        imp.quick_access_bluetooth_row.set_visible(state.available);
-        imp.quick_access_bluetooth_subtitle
+        imp.bluetooth_row.set_visible(state.available);
+        imp.bluetooth_subtitle
             .set_label(&summary_text(&state.summary()));
-        imp.quick_access_bluetooth_level
-            .show_prompt(state.prompt.as_ref());
-        if self.open_panel() != Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)) {
+        imp.bluetooth_level.show_prompt(state.prompt.as_ref());
+        if self.level() != Some(QuickAccessLevel::Bluetooth) {
             return;
         }
         if !state.available {
-            self.show_panel(Panel::QuickAccess(QuickAccessLevel::Main));
+            self.request_level(QuickAccessLevel::Main);
             return;
         }
         self.fill_bluetooth(state);
@@ -183,8 +183,8 @@ impl PinduWindow {
     /// Fills the level for `state`, and puts focus back in the panel when the row it was on
     /// is gone.
     fn fill_bluetooth(&self, state: &BluetoothState) {
-        if self.imp().quick_access_bluetooth_level.fill(state) {
-            self.focus_panel(None);
+        if self.imp().bluetooth_level.fill(state) {
+            self.focus_level(None);
         }
     }
 }

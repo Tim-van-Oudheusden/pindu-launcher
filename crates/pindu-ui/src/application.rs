@@ -414,6 +414,11 @@ impl PinduApplication {
         &self.imp().task_service
     }
 
+    /// The sync of every launcher's library, and what it found.
+    pub fn sync_service(&self) -> &SyncService {
+        &self.imp().sync_service
+    }
+
     /// Fullscreen mode's library filters, as Quick Access set them this run.
     pub fn fullscreen_filters(&self) -> Filters {
         self.imp().fullscreen_filters.get()

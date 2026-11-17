@@ -166,9 +166,10 @@ the services; they never talk to the bus or spawn a process themselves.
 - The existing `power` module (batteries from sysfs) keeps its name; the new power actions live in `system::power`.
 - The panel's levels and entries extend `panels.rs` (`DrawerLevel`, `QuickAccessLevel`, `drawer_entries`).
 - Each section's level is its own composite widget with its own Blueprint (the UI level column), a single child of its
-  page in `window.blp`, as `HomePage` is. The section's entry stays in `window.blp`, in the panel's shared list. Moving
-  a level keeps its action names (`win.*`), the widget names controller focus finds its rows by, and the style classes
-  in [Fullscreen style](fullscreen-style.md); its rows stay direct children of their list boxes.
+  page in the panel's Blueprint, as `HomePage` is: `quick_access.blp` for Quick Access's levels, which belong to the
+  `PinduQuickAccess` widget (#403), and `window.blp` for the drawer's Power. The section's entry stays in that panel's
+  shared list. Moving a level keeps its action names (`win.*`), the widget names controller focus finds its rows by,
+  and the style classes in [Fullscreen style](fullscreen-style.md); its rows stay direct children of their list boxes.
 
 ## Pindu OS side
 
