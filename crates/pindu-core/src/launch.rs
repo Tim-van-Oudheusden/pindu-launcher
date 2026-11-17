@@ -1,7 +1,7 @@
 //! How Play starts a game and how "Open in launcher" reaches its launcher.
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::model::{Game, GameId, LaunchConfig, LaunchKind, Source};
 use crate::sources::sha256::sha256_hex;
@@ -235,6 +235,55 @@ pub fn join_environment(environment: &BTreeMap<String, String>) -> String {
         .map(|(name, value)| format!("{name}={value}"))
         .collect();
     crate::manual::join_arguments(&words)
+}
+
+/// What decides how Play hands a Steam game to Steam: a URI, or the `steam` command with
+/// `-silent` (see [`silent_steam`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SteamSession<'a> {
+    /// The launcher runs in a `gamescope --steam` session.
+    pub steam_gamescope: bool,
+    /// The launcher may run commands on the host.
+    pub host_spawn: bool,
+    /// The Steam folder the library was imported from, if one was found.
+    pub steam_root: Option<&'a Path>,
+}
+
+/// The Steam Flatpak's app ID, whose data lives under `~/.var/app/<id>`.
+const STEAM_FLATPAK: &str = "com.valvesoftware.Steam";
+
+/// The command that hands a Steam game's `uri` to Steam with `-silent`, so a Steam client
+/// that is not running yet starts without its library window, or `None` when the URI
+/// stays the hand-off. A library under `~/.var/app/com.valvesoftware.Steam` belongs to
+/// the Steam Flatpak, which `flatpak run` starts; any other belongs to the host's `steam`.
+pub fn silent_steam(game: &Game, uri: &str, session: &SteamSession<'_>) -> Option<Command> {
+    if game.source() != Source::Steam || !(session.steam_gamescope && session.host_spawn) {
+        return None;
+    }
+    let root = session.steam_root?;
+    let mut argv = if in_steam_flatpak(root) {
+        vec![
+            "flatpak".to_owned(),
+            "run".to_owned(),
+            STEAM_FLATPAK.to_owned(),
+        ]
+    } else {
+        vec!["steam".to_owned()]
+    };
+    argv.extend(["-silent".to_owned(), uri.to_owned()]);
+    Some(Command {
+        argv,
+        environment: BTreeMap::new(),
+        working_dir: None,
+    })
+}
+
+/// Whether a Steam folder lies in the Steam Flatpak's data, `.var/app/<id>`.
+fn in_steam_flatpak(root: &Path) -> bool {
+    let parts: Vec<_> = root.components().map(|part| part.as_os_str()).collect();
+    parts
+        .windows(3)
+        .any(|window| window == [".var", "app", STEAM_FLATPAK])
 }
 
 fn store_uri(game: &Game) -> Option<String> {
@@ -859,5 +908,120 @@ mod tests {
             )),
             None
         );
+    }
+
+    fn steam_session(root: &Path) -> SteamSession<'_> {
+        SteamSession {
+            steam_gamescope: true,
+            host_spawn: true,
+            steam_root: Some(root),
+        }
+    }
+
+    #[test]
+    fn in_a_steam_gamescope_native_steam_starts_the_game_silently() {
+        let game = store_game(Source::Steam, "2379780");
+        let session = steam_session(Path::new("/home/me/.local/share/Steam"));
+
+        assert_eq!(
+            silent_steam(&game, "steam://rungameid/2379780", &session).map(|command| command.argv),
+            Some(vec![
+                "steam".to_owned(),
+                "-silent".to_owned(),
+                "steam://rungameid/2379780".to_owned(),
+            ])
+        );
+    }
+
+    #[test]
+    fn a_library_from_the_steam_flatpak_starts_through_flatpak_run() {
+        let game = store_game(Source::Steam, "2379780");
+        let session = steam_session(Path::new(
+            "/home/me/.var/app/com.valvesoftware.Steam/data/Steam",
+        ));
+
+        assert_eq!(
+            silent_steam(&game, "steam://rungameid/2379780", &session).map(|command| command.argv),
+            Some(vec![
+                "flatpak".to_owned(),
+                "run".to_owned(),
+                "com.valvesoftware.Steam".to_owned(),
+                "-silent".to_owned(),
+                "steam://rungameid/2379780".to_owned(),
+            ])
+        );
+    }
+
+    #[test]
+    fn the_launch_options_dialog_goes_to_steam_silently_too() {
+        let mut game = store_game(Source::Steam, "570");
+        game.steam_launch_dialog = true;
+        let Some(Route::StoreUri(uri)) = route(&game, None) else {
+            panic!("a Steam game has a store URI");
+        };
+        let session = steam_session(Path::new("/home/me/.steam/steam"));
+
+        assert_eq!(
+            silent_steam(&game, &uri, &session).map(|command| command.argv),
+            Some(vec![
+                "steam".to_owned(),
+                "-silent".to_owned(),
+                "steam://launch/570/dialog".to_owned(),
+            ])
+        );
+    }
+
+    #[test]
+    fn outside_a_steam_gamescope_the_uri_stays() {
+        let game = store_game(Source::Steam, "570");
+        let session = SteamSession {
+            steam_gamescope: false,
+            ..steam_session(Path::new("/home/me/.steam/steam"))
+        };
+
+        assert_eq!(silent_steam(&game, "steam://rungameid/570", &session), None);
+    }
+
+    #[test]
+    fn without_host_spawn_the_uri_stays() {
+        let game = store_game(Source::Steam, "570");
+        let session = SteamSession {
+            host_spawn: false,
+            ..steam_session(Path::new("/home/me/.steam/steam"))
+        };
+
+        assert_eq!(silent_steam(&game, "steam://rungameid/570", &session), None);
+    }
+
+    #[test]
+    fn other_store_games_keep_their_uri() {
+        let session = steam_session(Path::new("/home/me/.steam/steam"));
+        for (source, uri) in [
+            (
+                Source::HeroicEpic,
+                "heroic://launch?appName=Sugar&runner=legendary",
+            ),
+            (Source::Lutris, "lutris:rungameid/42"),
+            (Source::Bottles, "bottles:run/Gaming/Celeste"),
+        ] {
+            assert_eq!(
+                silent_steam(&store_game(source, "1"), uri, &session),
+                None,
+                "{source}"
+            );
+        }
+    }
+
+    #[test]
+    fn without_a_known_steam_folder_the_uri_stays() {
+        // Which Steam has the game is unknown, so the portal picks the one that
+        // handles `steam://`.
+        let game = store_game(Source::Steam, "570");
+        let session = SteamSession {
+            steam_root: None,
+            ..steam_session(Path::new("/home/me/.steam/steam"))
+        };
+
+        assert_eq!(silent_steam(&game, "steam://rungameid/570", &session), None);
     }
 }

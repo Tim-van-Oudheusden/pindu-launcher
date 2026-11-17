@@ -1,15 +1,16 @@
 //! Starts games and opens their launchers. Store games go to their launcher through a URI,
-//! which `GtkUriLauncher` hands to the OpenURI portal inside the sandbox; games we start
-//! ourselves run on the host as our child, from an argument list, and Windows games and
-//! native games in the Steam Linux Runtime run through umu in the sandbox (see
-//! `proton_launch`).
+//! which `GtkUriLauncher` hands to the OpenURI portal inside the sandbox, or, in a
+//! `gamescope --steam` session, a Steam game goes to Steam as `steam -silent <uri>` on the
+//! host; games we start ourselves run on the host as our child, from an argument list, and
+//! Windows games and native games in the Steam Linux Runtime run through umu in the
+//! sandbox (see `proton_launch`).
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
-use pindu_core::launch::{self, Route};
+use pindu_core::launch::{self, Command, Route, SteamSession};
 use pindu_core::model::{Game, Source};
 use pindu_core::notifications::{Kind, Target};
 
@@ -84,7 +85,16 @@ pub fn play(
         }
         match launch::route(&game, config.as_ref()) {
             Some(Route::StoreUri(uri)) => {
-                open_store_uri(&app, window.as_ref(), &game, &uri, library, sessions, toast);
+                let hand_off = store_hand_off(&app, &library, &game, uri).await;
+                hand_to_launcher(
+                    &app,
+                    window.as_ref(),
+                    &game,
+                    hand_off,
+                    library,
+                    sessions,
+                    toast,
+                );
             }
             Some(Route::HostSpawn(mut command)) => {
                 let mut output = None;
@@ -149,22 +159,69 @@ pub fn play(
     });
 }
 
+/// How a store game goes to its launcher.
+enum HandOff {
+    /// Through its URI, which `GtkUriLauncher` opens (the OpenURI portal in the sandbox).
+    Uri(String),
+    /// Through a host command we start and leave alone: Steam with `-silent`.
+    Command(Command),
+}
+
+/// How `game`'s store `uri` goes to its launcher: a Steam game in a `gamescope --steam`
+/// session goes to Steam with `-silent` when we may run it on the host, so a Steam client
+/// that is not running yet starts without its library window (see
+/// [`launch::silent_steam`]); anything else goes through the URI.
+async fn store_hand_off(
+    app: &gtk::Application,
+    library: &LibraryService,
+    game: &Game,
+    uri: String,
+) -> HandOff {
+    let steam_gamescope = app
+        .downcast_ref::<PinduApplication>()
+        .is_some_and(|application| application.gamescope_service().is_active());
+    let host_spawn = permission_service::host_spawn_allowed();
+    // Where Steam is matters only when its command could run, so the store is read
+    // only then.
+    let steam_root = if steam_gamescope && host_spawn && game.source() == Source::Steam {
+        library.source_location(Source::Steam).await
+    } else {
+        None
+    };
+    let session = SteamSession {
+        steam_gamescope,
+        host_spawn,
+        steam_root: steam_root.as_deref(),
+    };
+    match launch::silent_steam(game, &uri, &session) {
+        Some(command) => {
+            glib::g_debug!("pindu", "Handing {} to Steam: {:?}", game.id, command.argv);
+            HandOff::Command(command)
+        }
+        None => {
+            glib::g_debug!("pindu", "Handing {} to its launcher: {uri}", game.id);
+            HandOff::Uri(uri)
+        }
+    }
+}
+
 /// Hands a store game to its launcher, then quits when the user asked for that and no
-/// game we started is running.
-fn open_store_uri(
+/// game we started is running. A command is started and left alone: the `steam` it runs
+/// passes the URI to a running Steam client and exits, or becomes the client itself.
+fn hand_to_launcher(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
     game: &Game,
-    uri: &str,
+    hand_off: HandOff,
     library: LibraryService,
     sessions: SessionService,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
     let launcher = launcher_name(game.source()).unwrap_or_default();
-    let (id, title, uri) = (game.id.clone(), game.title.clone(), uri.to_owned());
+    let (id, title) = (game.id.clone(), game.title.clone());
     let (app, hold) = (app.clone(), app.hold());
     let main_window = window.and_then(|window| window.downcast_ref::<PinduWindow>().cloned());
-    gtk::UriLauncher::new(&uri).launch(window, gio::Cancellable::NONE, move |result| {
+    let handed_off = move |result: Result<(), String>| {
         let message = match result {
             Ok(()) => {
                 if let Some(application) = app.downcast_ref::<PinduApplication>() {
@@ -186,7 +243,7 @@ fn open_store_uri(
                 gettext("Starting “{title}” in {launcher}")
             }
             Err(error) => {
-                glib::g_warning!("pindu", "Could not open {uri}: {error}");
+                glib::g_warning!("pindu", "{error}");
                 gettext("Could not open {launcher}")
             }
         };
@@ -195,7 +252,19 @@ fn open_store_uri(
                 .replace("{title}", &title)
                 .replace("{launcher}", launcher),
         ));
-    });
+    };
+    match hand_off {
+        HandOff::Uri(uri) => {
+            gtk::UriLauncher::new(&uri).launch(window, gio::Cancellable::NONE, move |result| {
+                handed_off(result.map_err(|error| format!("Could not open {uri}: {error}")));
+            });
+        }
+        HandOff::Command(command) => handed_off(
+            session_service::spawn(&command, None)
+                .map(drop)
+                .map_err(|error| format!("Could not start {:?}: {error}", command.argv)),
+        ),
+    }
 }
 
 /// Explains, instead of failing, that a game needs the host-spawn permission.

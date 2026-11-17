@@ -7,7 +7,9 @@ use gtk::glib;
 use gtk::subclass::prelude::*;
 use pindu_core::backup::{self, BackupError, ImportSummary};
 use pindu_core::library::{self, LibraryEntry};
-use pindu_core::model::{Collection, Game, GameId, LaunchConfig, PerformanceTool, Timestamp};
+use pindu_core::model::{
+    Collection, Game, GameId, LaunchConfig, PerformanceTool, Source, Timestamp,
+};
 use pindu_core::paths::default_library_db_path;
 use pindu_core::store::{self, Store};
 
@@ -236,6 +238,23 @@ impl LibraryService {
             Ok(Ok(config)) => config,
             Ok(Err(error)) => {
                 glib::g_warning!("pindu", "Could not read a launch config: {error}");
+                None
+            }
+            Err(_) => None,
+        }
+    }
+
+    /// The folder the last sync read `source` from, read on a worker thread; `None` when
+    /// it found none or the store cannot be read.
+    pub async fn source_location(&self, source: Source) -> Option<PathBuf> {
+        let read = gtk::gio::spawn_blocking(move || {
+            Store::open(&default_library_db_path())?.source_state(source)
+        })
+        .await;
+        match read {
+            Ok(Ok(state)) => state.and_then(|state| state.resolved_location),
+            Ok(Err(error)) => {
+                glib::g_warning!("pindu", "Could not read where {source} is: {error}");
                 None
             }
             Err(_) => None,
