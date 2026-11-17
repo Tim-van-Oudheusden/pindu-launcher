@@ -9,6 +9,7 @@
 //! tags the windows of the games it starts. Tested against gamescope 3.17.0.
 
 pub mod overlay;
+pub mod prompts;
 pub mod session;
 
 use std::ffi::{c_long, c_ulong};

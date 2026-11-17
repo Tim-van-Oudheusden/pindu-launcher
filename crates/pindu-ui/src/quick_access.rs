@@ -12,7 +12,8 @@
 //! (`level-requested`), leave Activity once nothing runs (`activity-ended`), show a game
 //! (`game-requested`) and apply fullscreen mode's changed library filters
 //! (`filters-changed`). Over a running game (`quick_access_overlay`) it leaves out the
-//! entries that need the main window ([`PinduQuickAccess::set_over_game`]).
+//! entries that need the main window ([`PinduQuickAccess::set_over_game`]). Network and
+//! Bluetooth ask their questions on the host the player sees (`asks_prompts`).
 //!
 //! The levels are filled by: Notifications `fullscreen_notifications`, Activity and Refresh
 //! Library `fullscreen_activity`, Surprise Me `fullscreen_surprise`, Controllers
@@ -34,6 +35,7 @@ use gettextrs::gettext;
 use gtk::glib::subclass::Signal;
 use gtk::{gio, glib};
 use pindu_core::gamepad::Intent;
+use pindu_core::gamescope::prompts::{PromptHost, prompt_host};
 use pindu_core::home::{BLUR_KEY, DIM_KEY};
 use pindu_core::keys;
 use pindu_core::model::GameId;
@@ -342,16 +344,13 @@ impl PinduQuickAccess {
     }
 
     /// Hosts the panel over a running game, before [`Self::setup`]: it leaves out the
-    /// entries that need the main window, Surprise Me (it leads to a library page), Network
-    /// and Bluetooth (their passphrase and PIN dialog is the main window's) and Add a Store
-    /// (its flow is the main window's).
+    /// entries that need the main window, Surprise Me (it leads to a library page) and Add
+    /// a Store (its flow is the main window's).
     pub fn set_over_game(&self) {
         let imp = self.imp();
         imp.over_game.set(true);
         imp.surprise_row.set_visible(false);
         imp.add_store_row.set_visible(false);
-        imp.network_row.set_visible(false);
-        imp.bluetooth_row.set_visible(false);
     }
 
     /// Shows what Quick Access adds for the page under it, as it opens: `entries` from
@@ -567,6 +566,21 @@ impl PinduQuickAccess {
     /// Whether the panel is hosted over a running game (see [`Self::set_over_game`]).
     pub(crate) fn over_game(&self) -> bool {
         self.imp().over_game.get()
+    }
+
+    /// Whether this panel's host asks what Network and Bluetooth want now: the overlay
+    /// while Quick Access is open over the game, and the main window otherwise
+    /// (`pindu_core::gamescope::prompts`).
+    pub(crate) fn asks_prompts(&self) -> bool {
+        let overlay_open = self
+            .application()
+            .is_some_and(|application| application.gamescope_service().quick_access_open());
+        let host = if self.over_game() {
+            PromptHost::Overlay
+        } else {
+            PromptHost::MainWindow
+        };
+        prompt_host(overlay_open) == host
     }
 
     pub(crate) fn settings(&self) -> &gio::Settings {

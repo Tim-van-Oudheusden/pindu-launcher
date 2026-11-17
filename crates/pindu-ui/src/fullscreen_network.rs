@@ -26,8 +26,7 @@ use pindu_core::system::network::{
 use crate::application::PinduApplication;
 use crate::network_service::NetworkService;
 use crate::quick_access::PinduQuickAccess;
-use crate::secret_dialog::SecretDialog;
-use crate::window::PinduWindow;
+use crate::secret_dialog::{SecretDialog, ask_secret};
 
 mod imp {
     use super::*;
@@ -122,6 +121,19 @@ impl PinduQuickAccess {
             self,
             move |state| quick_access.show_network_state(state)
         ));
+        // The passphrase dialog moves between the main window and Quick Access over the
+        // game as the latter opens and closes, before the overlay closes its dialogs.
+        application
+            .gamescope_service()
+            .connect_quick_access_changed(glib::clone!(
+                #[weak(rename_to = quick_access)]
+                self,
+                move |_| {
+                    if let Some(service) = quick_access.network_service() {
+                        quick_access.show_network_prompt(&service.state());
+                    }
+                }
+            ));
         self.show_network_state(&service.state());
     }
 
@@ -146,16 +158,13 @@ impl PinduQuickAccess {
     fn show_network_state(&self, state: &NetworkState) {
         let imp = self.imp();
         let row = &imp.network_row;
-        row.set_visible(state.availability != Availability::Hidden && !self.over_game());
+        row.set_visible(state.availability != Availability::Hidden);
         row.set_sensitive(state.availability == Availability::Shown);
         if let Some(summary) = &state.summary {
             imp.network_icon.set_icon_name(Some(summary_icon(summary)));
             imp.network_subtitle.set_label(&summary_text(summary));
         }
-        // Over a game the main window asks for the passphrase.
-        if !self.over_game() {
-            imp.network_level.show_prompt(state.prompt.as_ref());
-        }
+        self.show_network_prompt(state);
         if self.level() != Some(QuickAccessLevel::Network) {
             return;
         }
@@ -164,6 +173,13 @@ impl PinduQuickAccess {
             return;
         }
         self.fill_network(state);
+    }
+
+    /// Asks for the passphrase `state` wants while this panel's host asks, and withdraws
+    /// the dialog once it no longer does.
+    fn show_network_prompt(&self, state: &NetworkState) {
+        let prompt = state.prompt.as_ref().filter(|_| self.asks_prompts());
+        self.imp().network_level.show_prompt(prompt);
     }
 
     /// Fills the level for `state`, and puts focus back in the panel when the row it was on
@@ -238,13 +254,12 @@ impl PinduNetworkLevel {
             })
     }
 
-    /// The service, through the application of the window the level is in.
+    /// The service, from the application Quick Access was set up with: the overlay over a
+    /// game is no window of the application's.
     fn network_service(&self) -> Option<NetworkService> {
-        self.root()
-            .and_downcast::<gtk::Window>()
-            .and_then(|window| window.application())
-            .and_downcast::<PinduApplication>()
-            .map(|application| application.network_service().clone())
+        self.ancestor(PinduQuickAccess::static_type())
+            .and_downcast::<PinduQuickAccess>()?
+            .network_service()
     }
 
     /// The level's rows for `state`, keeping focus on the row it was on and saved networks
@@ -340,11 +355,12 @@ impl PinduNetworkLevel {
             imp.network_prompt.replace(None);
             dialog.withdraw();
         }
-        let (Some(prompt), Some(window)) = (prompt, self.root().and_downcast::<PinduWindow>())
-        else {
+        let Some(prompt) = prompt else {
             return;
         };
-        let dialog = window.ask_secret(
+        // On the window the level is in: the main window, or Quick Access over a game.
+        let Some(dialog) = ask_secret(
+            self,
             // Translators: {network} is a Wi-Fi network's name.
             &gettext("Join {network}").replace("{network}", &prompt.name),
             &passphrase_message(prompt),
@@ -365,7 +381,9 @@ impl PinduNetworkLevel {
                     level.show_prompt(service.state().prompt.as_ref());
                 }
             ),
-        );
+        ) else {
+            return;
+        };
         imp.network_prompt.replace(Some((dialog, prompt.clone())));
     }
 

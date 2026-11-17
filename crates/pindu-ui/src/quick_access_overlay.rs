@@ -6,11 +6,13 @@
 //! this window follows: it shows the panel's levels as the window does, for the game in
 //! front, and acts on the controller while it holds input.
 //!
-//! Over a game the panel offers what needs no library page and no dialog of the main
-//! window ([`PinduQuickAccess::set_over_game`]). Playing Now's Return and Stop, the volume
-//! preview and a notification's link go to the main window, which a link brings to the
-//! front. The controller still reaches the game while the panel is open: only the OS can
-//! take it away from the game.
+//! Over a game the panel offers what needs no library page and no flow of the main window
+//! ([`PinduQuickAccess::set_over_game`]). Network's passphrase and Bluetooth's PIN and
+//! codes are asked here while the panel is open (`secret_dialog`), with the dialog's
+//! keyboard taking the controller and its buttons in this window's hint bar. Playing Now's
+//! Return and Stop, the volume preview and a notification's link go to the main window,
+//! which a link brings to the front. The controller still reaches the game while the panel
+//! is open: only the OS can take it away from the game.
 
 use std::cell::{Cell, RefCell};
 
@@ -290,15 +292,19 @@ impl PinduQuickAccessOverlay {
         self.update_hints();
     }
 
-    /// Acts on a controller intent while the panel is open and holds input: directions
-    /// move focus as in the main window, A activates, and B closes a dialog, steps back a
-    /// level or closes the panel. Guide and Misc1 are the gamescope service's; R3 and the
-    /// page's buttons are the game's.
+    /// Acts on a controller intent while the panel is open and holds input: an open
+    /// passphrase dialog's keyboard takes every button, directions move focus as in the
+    /// main window, A activates, and B closes a dialog, steps back a level or closes the
+    /// panel. Guide and Misc1 are the gamescope service's; R3 and the page's buttons are
+    /// the game's.
     fn handle_intent(&self, intent: Intent) {
         if self.imp().panels.get().open().is_none() || !self.takes_controller() {
             return;
         }
         self.set_focus_visible(true);
+        if self.secret_dialog_intent(intent) {
+            return;
+        }
         match intent {
             Intent::Navigate(direction) => {
                 if !self.adjust_slider(direction) {
@@ -377,7 +383,7 @@ impl PinduQuickAccessOverlay {
     }
 
     /// Plays a navigation sound as the main window does.
-    fn play_sound(&self, sound: Sound) {
+    pub(crate) fn play_sound(&self, sound: Sound) {
         if let Some(window) = self.imp().main_window.upgrade() {
             window.play_sound(sound);
         }
@@ -385,7 +391,7 @@ impl PinduQuickAccessOverlay {
 
     /// Shows the hints for where focus is in the panel while a controller is in use, and
     /// hides the bar otherwise.
-    fn update_hints(&self) {
+    pub(crate) fn update_hints(&self) {
         let imp = self.imp();
         let layout = imp
             .application
@@ -407,7 +413,7 @@ impl PinduQuickAccessOverlay {
             menu: false,
             panel: imp.panels.get().open(),
             launching: Launching::No,
-            keyboard: None,
+            keyboard: self.secret_dialog_typing(),
         };
         let shown = Some((layout, hints::hints(context, layout)));
         if *imp.hints.borrow() == shown {
