@@ -90,7 +90,7 @@ Pick one:
 
   ```sh
   flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-  flatpak install --user ./pindu-launcher-0.4.0-x86_64.flatpak
+  flatpak install --user ./pindu-launcher-0.4.1-x86_64.flatpak
   flatpak run io.github.tim_van_oudheusden.pindu-launcher
   ```
 

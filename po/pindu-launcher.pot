@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-15 20:21+0100\n"
+"POT-Creation-Date: 2026-11-17 02:05+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,19 +18,19 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: crates/pindu-ui/src/application.rs:102
+#: crates/pindu-ui/src/application.rs:117
 msgid "Start a game by its ID, without opening the window"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:110
+#: crates/pindu-ui/src/application.rs:125
 msgid "Open the window in fullscreen mode"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:503
+#: crates/pindu-ui/src/application.rs:573
 msgid "Getting artwork from SteamGridDB…"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:546
+#: crates/pindu-ui/src/application.rs:616
 #, rust-format
 msgid "Added one game"
 msgid_plural "Added {count} games"
@@ -38,12 +38,12 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
-#: crates/pindu-ui/src/application.rs:549
+#: crates/pindu-ui/src/application.rs:619
 #, rust-format
 msgid "From {sources}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:560
+#: crates/pindu-ui/src/application.rs:630
 #, rust-format
 msgid "One game is missing"
 msgid_plural "{count} games are missing"
@@ -51,111 +51,111 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
-#: crates/pindu-ui/src/application.rs:566
+#: crates/pindu-ui/src/application.rs:636
 #, rust-format
 msgid "No longer listed by {sources}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:603
+#: crates/pindu-ui/src/application.rs:673
 msgid "Game Art From SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:605
+#: crates/pindu-ui/src/application.rs:675
 msgid ""
 "SteamGridDB has covers, banners and logos for games that come without them. "
 "To use it, make a free account on steamgriddb.com and add your own API key "
 "in Preferences; it is kept in your keyring."
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:611
+#: crates/pindu-ui/src/application.rs:681
 msgid "_Not Now"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:612
+#: crates/pindu-ui/src/application.rs:682
 msgid "_Open Settings"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:636
+#: crates/pindu-ui/src/application.rs:706
 msgid "Export Library"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:651
+#: crates/pindu-ui/src/application.rs:721
 msgid "Library exported"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:653
+#: crates/pindu-ui/src/application.rs:723
 #, rust-format
 msgid "Could not export the library: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:667
+#: crates/pindu-ui/src/application.rs:737
 msgid "Library Backups"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:672
+#: crates/pindu-ui/src/application.rs:742
 msgid "Import Backup"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:685
+#: crates/pindu-ui/src/application.rs:755
 msgid "This file is not a library backup"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:687
+#: crates/pindu-ui/src/application.rs:757
 msgid "This backup is from a newer version of Pindu launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:690
+#: crates/pindu-ui/src/application.rs:760
 #, rust-format
 msgid "Could not import the backup: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:754
+#: crates/pindu-ui/src/application.rs:824
 #: data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in:2
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:7
-#: data/ui/window.blp:5 data/ui/window.blp:1277
+#: data/ui/window.blp:5 data/ui/window.blp:1502
 msgid "Pindu launcher"
 msgstr ""
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-#: crates/pindu-ui/src/application.rs:762
+#: crates/pindu-ui/src/application.rs:832
 msgid "translator-credits"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:779
+#: crates/pindu-ui/src/application.rs:849
 #, rust-format
 msgid "Added artwork for one game"
 msgid_plural "Added artwork for {count} games"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:784
+#: crates/pindu-ui/src/application.rs:854
 msgid "No new artwork found"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:785
+#: crates/pindu-ui/src/application.rs:855
 msgid "SteamGridDB did not accept the key"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:786
+#: crates/pindu-ui/src/application.rs:856
 msgid "Could not reach SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:798
+#: crates/pindu-ui/src/application.rs:868
 msgid "Nothing new to restore"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:800
+#: crates/pindu-ui/src/application.rs:870
 msgid "Backup restored"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:806
+#: crates/pindu-ui/src/application.rs:876
 #, rust-format
 msgid "one game in it is not in this library"
 msgid_plural "{count} games in it are not in this library"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:811
+#: crates/pindu-ui/src/application.rs:881
 #, rust-format
 msgid "{result}; {note}"
 msgstr ""
@@ -164,12 +164,48 @@ msgstr ""
 msgid "Could not change the sound output"
 msgstr ""
 
+#: crates/pindu-ui/src/bluetooth_service.rs:28
+msgid "Could not turn Bluetooth on"
+msgstr ""
+
+#: crates/pindu-ui/src/bluetooth_service.rs:31
+msgid "Could not turn Bluetooth off"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a
+#. controller's.
+#: crates/pindu-ui/src/bluetooth_service.rs:36
+#, rust-format
+msgid "Could not pair {device}"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a
+#. controller's.
+#: crates/pindu-ui/src/bluetooth_service.rs:42
+#, rust-format
+msgid "Could not connect {device}"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a
+#. controller's.
+#: crates/pindu-ui/src/bluetooth_service.rs:48
+#, rust-format
+msgid "Could not disconnect {device}"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a
+#. controller's.
+#: crates/pindu-ui/src/bluetooth_service.rs:54
+#, rust-format
+msgid "Could not forget {device}"
+msgstr ""
+
 #: crates/pindu-ui/src/collection_actions.rs:17
 msgid "_Add to Collection"
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:39
-#: crates/pindu-ui/src/fullscreen_panels.rs:900
+#: crates/pindu-ui/src/fullscreen_panels.rs:993
 msgid "_New Collection…"
 msgstr ""
 
@@ -178,7 +214,7 @@ msgstr ""
 msgid "Remove from “{collection}”"
 msgstr ""
 
-#: crates/pindu-ui/src/collection_actions.rs:129 data/ui/window.blp:1345
+#: crates/pindu-ui/src/collection_actions.rs:129 data/ui/window.blp:1570
 msgid "New Collection"
 msgstr ""
 
@@ -206,7 +242,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:185
 #: crates/pindu-ui/src/collection_actions.rs:210
-#: crates/pindu-ui/src/window.rs:888 crates/pindu-ui/src/window.rs:902
+#: crates/pindu-ui/src/window.rs:929 crates/pindu-ui/src/window.rs:943
 msgid "_Undo"
 msgstr ""
 
@@ -225,13 +261,15 @@ msgid "Name"
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:239
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:419
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:576
+#: crates/pindu-ui/src/fullscreen_network.rs:419
+#: crates/pindu-ui/src/fullscreen_network.rs:632
+#: crates/pindu-ui/src/fullscreen_power.rs:171
+#: crates/pindu-ui/src/fullscreen_system_update.rs:175
 #: crates/pindu-ui/src/game_dialog.rs:807
 #: crates/pindu-ui/src/proton_downloads_page.rs:227
-#: crates/pindu-ui/src/proton_launch.rs:628
-#: crates/pindu-ui/src/fullscreen_system_update.rs:169 data/ui/game_dialog.blp:16
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:315
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:472
-#: crates/pindu-ui/src/fullscreen_power.rs:146
+#: crates/pindu-ui/src/proton_launch.rs:629 data/ui/game_dialog.blp:16
 #: data/ui/secret_dialog.blp:17
 msgid "_Cancel"
 msgstr ""
@@ -244,7 +282,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: crates/pindu-ui/src/fullscreen_activity.rs:244
-#: crates/pindu-ui/src/hint_bar.rs:169
+#: crates/pindu-ui/src/hint_bar.rs:171
 msgid "Cancel"
 msgstr ""
 
@@ -262,6 +300,131 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_activity.rs:290
 msgid "Installing"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:214
+msgid "Looking for devices…"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a controller's.
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:411
+#, rust-format
+msgid "Forget {device}?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:413
+msgid ""
+"It disconnects, and has to be paired again before it can connect. If it is "
+"the controller in use, use another one to pair it."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:420
+#: crates/pindu-ui/src/fullscreen_network.rs:420
+msgid "_Forget"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:438
+msgid "No devices connected"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:439
+#: crates/pindu-ui/src/fullscreen_network.rs:471 data/ui/preferences.blp:74
+#: data/ui/window.blp:922 data/ui/window.blp:976 data/ui/window.blp:1159
+msgid "Off"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:440
+msgid "Blocked"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:456
+msgid "Pairing…"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:457
+#: crates/pindu-ui/src/fullscreen_network.rs:468
+#: crates/pindu-ui/src/fullscreen_network.rs:503
+msgid "Connecting…"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:458
+msgid "Disconnecting…"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:459
+#: crates/pindu-ui/src/fullscreen_network.rs:504
+msgid "Forgetting…"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:460
+#: crates/pindu-ui/src/fullscreen_network.rs:467
+#: crates/pindu-ui/src/fullscreen_network.rs:505
+msgid "Connected"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:461
+msgid "Paired"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:497
+msgid "Disconnect"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:503
+#: crates/pindu-ui/src/fullscreen_network.rs:530
+msgid "Connect"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:515
+#: crates/pindu-ui/src/fullscreen_network.rs:539
+msgid "Forget"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a controller's.
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:557
+#, rust-format
+msgid "Pair With {device}?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:558
+msgid "Pair if the device shows this code too."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:563
+msgid "_Refuse"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:563
+msgid "_Pair"
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name, such as a keyboard's.
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:570
+#, rust-format
+msgid "Type This Code on {device}"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:571
+msgid "Then press Enter on it."
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name.
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:582
+#, rust-format
+msgid "{device} Asks for a Code"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:584
+msgid ""
+"Typing a code with the controller is not possible yet, so this device cannot "
+"pair here."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:589
+#: crates/pindu-ui/src/launch_service.rs:196
+#: crates/pindu-ui/src/proton_launch.rs:374
+#: crates/pindu-ui/src/proton_launch.rs:603 crates/pindu-ui/src/window.rs:1377
+msgid "_Close"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:88
@@ -283,15 +446,15 @@ msgstr ""
 msgid "{percent} %"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_controllers.rs:167 data/ui/window.blp:891
+#: crates/pindu-ui/src/fullscreen_controllers.rs:167 data/ui/window.blp:1092
 msgid "Letters"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_controllers.rs:168 data/ui/window.blp:903
+#: crates/pindu-ui/src/fullscreen_controllers.rs:168 data/ui/window.blp:1104
 msgid "Shapes"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_controllers.rs:169 data/ui/window.blp:915
+#: crates/pindu-ui/src/fullscreen_controllers.rs:169 data/ui/window.blp:1116
 msgid "Letters, A on the Right"
 msgstr ""
 
@@ -346,7 +509,7 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_controls.rs:207
 #: crates/pindu-ui/src/home_page.rs:912 data/ui/home_page.blp:185
 #: data/ui/preferences.blp:10 data/ui/shortcuts-dialog.blp:35
-#: data/ui/window.blp:107 data/ui/window.blp:1283 data/ui/window.blp:1382
+#: data/ui/window.blp:107 data/ui/window.blp:1508 data/ui/window.blp:1607
 msgid "Library"
 msgstr ""
 
@@ -375,12 +538,12 @@ msgid "Move Right"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controls.rs:220
-#: crates/pindu-ui/src/hint_bar.rs:171
+#: crates/pindu-ui/src/hint_bar.rs:173
 msgid "Select"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controls.rs:221
-#: crates/pindu-ui/src/hint_bar.rs:172 data/ui/shortcuts-dialog.blp:58
+#: crates/pindu-ui/src/hint_bar.rs:174 data/ui/shortcuts-dialog.blp:58
 msgid "Back"
 msgstr ""
 
@@ -389,7 +552,7 @@ msgid "Cancel Launch"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controls.rs:223
-#: crates/pindu-ui/src/hint_bar.rs:174 data/ui/shortcuts-dialog.blp:9
+#: crates/pindu-ui/src/hint_bar.rs:176 data/ui/shortcuts-dialog.blp:9
 msgid "Search"
 msgstr ""
 
@@ -416,14 +579,14 @@ msgstr ""
 #. Guide opens the menu drawer too, and from the desktop it opens fullscreen mode.
 #: crates/pindu-ui/src/fullscreen_controls.rs:229
 #: crates/pindu-ui/src/fullscreen_controls.rs:231
-#: crates/pindu-ui/src/hint_bar.rs:180 crates/pindu-ui/src/hint_bar.rs:197
+#: crates/pindu-ui/src/hint_bar.rs:182 crates/pindu-ui/src/hint_bar.rs:199
 #: data/ui/shortcuts-dialog.blp:77 data/ui/window.blp:41
 msgid "Menu"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controls.rs:232
-#: crates/pindu-ui/src/hint_bar.rs:181 data/ui/shortcuts-dialog.blp:82
-#: data/ui/window.blp:224 data/ui/window.blp:312
+#: crates/pindu-ui/src/hint_bar.rs:183 data/ui/shortcuts-dialog.blp:82
+#: data/ui/window.blp:257 data/ui/window.blp:345
 msgid "Quick Access"
 msgstr ""
 
@@ -447,14 +610,14 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_library.rs:139
 #: crates/pindu-ui/src/home_page.rs:90
 #: crates/pindu-ui/src/proton_downloads_page.rs:338
-#: crates/pindu-ui/src/widgets/cover_tile.rs:352 data/ui/window.blp:1179
-#: data/ui/window.blp:1298 data/ui/window.blp:1524
+#: crates/pindu-ui/src/widgets/cover_tile.rs:352 data/ui/window.blp:1380
+#: data/ui/window.blp:1523 data/ui/window.blp:1749
 msgid "Installed"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:140
-#: crates/pindu-ui/src/home_page.rs:89 data/ui/window.blp:1310
-#: data/ui/window.blp:1532
+#: crates/pindu-ui/src/home_page.rs:89 data/ui/window.blp:1535
+#: data/ui/window.blp:1757
 msgid "Favourites"
 msgstr ""
 
@@ -480,6 +643,95 @@ msgstr ""
 msgid "Playtime"
 msgstr ""
 
+#: crates/pindu-ui/src/fullscreen_network.rs:201
+msgid "Looking for networks…"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/fullscreen_network.rs:411
+#, rust-format
+msgid "Forget {network}?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:413
+msgid ""
+"Its passphrase is removed, and the console no longer joins it by itself."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:441
+#: crates/pindu-ui/src/fullscreen_network.rs:451
+msgid "Wired"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:443
+#: crates/pindu-ui/src/proton_downloads_page.rs:100 data/ui/window.blp:299
+msgid "Offline"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:444
+#: crates/pindu-ui/src/fullscreen_power.rs:256
+msgid "Not allowed on this system"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:452
+#: data/ui/fullscreen_network.blp:43 data/ui/fullscreen_network.blp:47
+msgid "Wi-Fi"
+msgstr ""
+
+#. Translators: {device} is "Wired" or "Wi-Fi", {interface} its name, such as wlan0.
+#: crates/pindu-ui/src/fullscreen_network.rs:456
+#, rust-format
+msgid "{device} ({interface})"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/fullscreen_network.rs:465
+#, rust-format
+msgid "Connected to {network}"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:469
+msgid "Disconnected"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:470
+msgid "Cable unplugged"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:506
+msgid "Saved"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:507
+msgid "Set up on another device"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:613
+msgid "Wrong passphrase. Try again."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:615
+msgid "A passphrase has 8 to 63 characters."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:617
+msgid "Enter the network's passphrase."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:623
+msgid "Passphrase"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/fullscreen_network.rs:626
+#, rust-format
+msgid "Join {network}"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_network.rs:632
+msgid "_Join"
+msgstr ""
+
 #: crates/pindu-ui/src/fullscreen_notifications.rs:64
 msgid "No Notifications"
 msgstr ""
@@ -500,63 +752,63 @@ msgstr ""
 msgid "Unread"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:792
+#: crates/pindu-ui/src/fullscreen_panels.rs:885
 #: crates/pindu-ui/src/preferences.rs:618
 msgid "Your fullscreen.css, over the design"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:794
+#: crates/pindu-ui/src/fullscreen_panels.rs:887
 #, rust-format
 msgid "Create {path} to restyle fullscreen mode"
 msgstr ""
 
 #. / Why Quick Access cannot apply a design written for a newer style contract.
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:975
+#: crates/pindu-ui/src/fullscreen_panels.rs:1068
 msgid "Needs a newer Pindu launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:981
-#: crates/pindu-ui/src/hint_bar.rs:167
+#: crates/pindu-ui/src/fullscreen_panels.rs:1074
+#: crates/pindu-ui/src/hint_bar.rs:169
 #: crates/pindu-ui/src/widgets/cover_tile.rs:232 data/ui/cover_tile.blp:65
 msgid "Play"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:982
-#: crates/pindu-ui/src/hint_bar.rs:168
+#: crates/pindu-ui/src/fullscreen_panels.rs:1075
+#: crates/pindu-ui/src/hint_bar.rs:170
 #: crates/pindu-ui/src/widgets/cover_tile.rs:230
 msgid "Stop"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:983
+#: crates/pindu-ui/src/fullscreen_panels.rs:1076
 #: crates/pindu-ui/src/game_page.rs:393 data/ui/game_page.blp:113
 msgid "Add to Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:984
+#: crates/pindu-ui/src/fullscreen_panels.rs:1077
 #: crates/pindu-ui/src/game_page.rs:391
 msgid "Remove from Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:985 data/ui/window.blp:125
-#: data/ui/window.blp:188 data/ui/window.blp:1339
+#: crates/pindu-ui/src/fullscreen_panels.rs:1078 data/ui/window.blp:125
+#: data/ui/window.blp:215 data/ui/window.blp:1564
 msgid "Collections"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:986
+#: crates/pindu-ui/src/fullscreen_panels.rs:1079
 #: crates/pindu-ui/src/search_keyboard.rs:174
 msgid "Hide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:987
+#: crates/pindu-ui/src/fullscreen_panels.rs:1080
 msgid "Unhide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:991
+#: crates/pindu-ui/src/fullscreen_panels.rs:1084
 msgid "Open in Launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:992
+#: crates/pindu-ui/src/fullscreen_panels.rs:1085
 #: crates/pindu-ui/src/game_page.rs:270
 #, rust-format
 msgid "Open in {launcher}"
@@ -568,7 +820,7 @@ msgid "Performance for {game}"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_performance.rs:110 data/ui/game_page.blp:306
-#: data/ui/preferences.blp:200 data/ui/window.blp:1246 data/ui/window.blp:1752
+#: data/ui/preferences.blp:200 data/ui/window.blp:1447 data/ui/window.blp:1977
 msgid "MangoHud"
 msgstr ""
 
@@ -611,34 +863,39 @@ msgid "_Stop"
 msgstr ""
 
 #. Translators: {game} is the title of the game that runs.
-#: crates/pindu-ui/src/fullscreen_power.rs:131
+#: crates/pindu-ui/src/fullscreen_power.rs:156
 #, rust-format
 msgid "Power off while {game} is running?"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_power.rs:132
+#: crates/pindu-ui/src/fullscreen_power.rs:157
 msgid "_Power Off"
 msgstr ""
 
 #. Translators: {game} is the title of the game that runs.
-#: crates/pindu-ui/src/fullscreen_power.rs:136
+#: crates/pindu-ui/src/fullscreen_power.rs:161
 #, rust-format
 msgid "Restart while {game} is running?"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_power.rs:137
+#: crates/pindu-ui/src/fullscreen_power.rs:162
 msgid "_Restart"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_power.rs:142
+#: crates/pindu-ui/src/fullscreen_power.rs:167
 msgid "Unsaved progress is lost."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_power.rs:173
+#: crates/pindu-ui/src/fullscreen_power.rs:226
 msgid "Suspend"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_power.rs:183
+#: crates/pindu-ui/src/fullscreen_power.rs:231
+#: crates/pindu-ui/src/fullscreen_system_update.rs:303
+msgid "Restart"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_power.rs:236
 msgid "Power Off"
 msgstr ""
 
@@ -658,234 +915,64 @@ msgstr ""
 msgid "Fully charged"
 msgstr ""
 
-#: crates/pindu-ui/src/bluetooth_service.rs:28
-msgid "Could not turn Bluetooth on"
-msgstr ""
-
-#: crates/pindu-ui/src/bluetooth_service.rs:31
-msgid "Could not turn Bluetooth off"
-msgstr ""
-
-#. Translators: {device} is a Bluetooth device's name, such as a
-#. controller's.
-#: crates/pindu-ui/src/bluetooth_service.rs:36
-#, rust-format
-msgid "Could not pair {device}"
-msgstr ""
-
-#. Translators: {device} is a Bluetooth device's name, such as a
-#. controller's.
-#: crates/pindu-ui/src/bluetooth_service.rs:42
-#, rust-format
-msgid "Could not connect {device}"
-msgstr ""
-
-#. Translators: {device} is a Bluetooth device's name, such as a
-#. controller's.
-#: crates/pindu-ui/src/bluetooth_service.rs:48
-#, rust-format
-msgid "Could not disconnect {device}"
-msgstr ""
-
-#. Translators: {device} is a Bluetooth device's name, such as a
-#. controller's.
-#: crates/pindu-ui/src/bluetooth_service.rs:54
-#, rust-format
-msgid "Could not forget {device}"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:75
-msgid "Looking for devices…"
-msgstr ""
-
-#. Translators: {device} is a Bluetooth device's name, such as a controller's.
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:307
-#, rust-format
-msgid "Forget {device}?"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:309
-msgid ""
-"It disconnects, and has to be paired again before it can connect. If it is "
-"the controller in use, use another one to pair it."
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:316
-#: crates/pindu-ui/src/fullscreen_network.rs:319
-msgid "_Forget"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:334
-msgid "No devices connected"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:336
-msgid "Blocked"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:352
-msgid "Pairing…"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:353
-#: crates/pindu-ui/src/fullscreen_network.rs:367
-#: crates/pindu-ui/src/fullscreen_network.rs:402
-msgid "Connecting…"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:354
-msgid "Disconnecting…"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:355
-#: crates/pindu-ui/src/fullscreen_network.rs:403
-msgid "Forgetting…"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:356
-#: crates/pindu-ui/src/fullscreen_network.rs:366
-#: crates/pindu-ui/src/fullscreen_network.rs:404
-msgid "Connected"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:357
-msgid "Paired"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:393
-msgid "Disconnect"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:399
-#: crates/pindu-ui/src/fullscreen_network.rs:429
-msgid "Connect"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:411
-#: crates/pindu-ui/src/fullscreen_network.rs:438
-msgid "Forget"
-msgstr ""
-
-#. Translators: {device} is a Bluetooth device's name, such as a controller's.
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:453
-#, rust-format
-msgid "Pair With {device}?"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:454
-msgid "Pair if the device shows this code too."
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:459
-msgid "_Refuse"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:459
-msgid "_Pair"
-msgstr ""
-
-#. Translators: {device} is a Bluetooth device's name, such as a keyboard's.
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:466
-#, rust-format
-msgid "Type This Code on {device}"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:467
-msgid "Then press Enter on it."
-msgstr ""
-
-#. Translators: {device} is a Bluetooth device's name.
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:478
-#, rust-format
-msgid "{device} Asks for a Code"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:480
-msgid ""
-"Typing a code with the controller is not possible yet, so this device cannot "
-"pair here."
-msgstr ""
-
-#: data/ui/window.blp:603 data/ui/window.blp:1419 data/ui/window.blp:1436
-#: data/ui/window.blp:1440
-msgid "Bluetooth"
-msgstr ""
-
-#: data/ui/window.blp:1441
-msgid "Turned off by airplane mode or a hardware switch"
-msgstr ""
-
-#: data/ui/window.blp:1447
-msgid "Paired Devices"
-msgstr ""
-
-#: data/ui/window.blp:1467
-msgid "Found Devices"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_system_update.rs:78
+#: crates/pindu-ui/src/fullscreen_system_update.rs:123
 msgid "Update ready"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_system_update.rs:115
-msgid "Installed Version"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_system_update.rs:124
-msgid "Update Ready"
-msgstr ""
-
 #. Translators: {version} is an OS version, such as 45.20261101.0.
-#: crates/pindu-ui/src/fullscreen_system_update.rs:150
+#: crates/pindu-ui/src/fullscreen_system_update.rs:156
 #, rust-format
 msgid "Roll Back to {version}?"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_system_update.rs:151
+#: crates/pindu-ui/src/fullscreen_system_update.rs:157
 msgid "Roll Back to the Previous Version?"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_system_update.rs:155
+#: crates/pindu-ui/src/fullscreen_system_update.rs:161
 msgid ""
 "The console restarts into that version, and the update waiting for the next "
 "start is discarded. The version it runs now stays installed, so you can go "
 "back to it."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_system_update.rs:159
+#: crates/pindu-ui/src/fullscreen_system_update.rs:165
 msgid ""
 "The console restarts into that version. The version it runs now stays "
 "installed, so you can go back to it."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_system_update.rs:170
+#: crates/pindu-ui/src/fullscreen_system_update.rs:176
 msgid "_Roll Back"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_system_update.rs:230
+#: crates/pindu-ui/src/fullscreen_system_update.rs:251
+msgid "Installed Version"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:260
+msgid "Update Ready"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_system_update.rs:298
 msgid "Restart to Update"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_system_update.rs:235
-#: crates/pindu-ui/src/fullscreen_power.rs:178
-msgid "Restart"
-msgstr ""
-
 #. Translators: {version} is an OS version, such as 45.20261101.0.
-#: crates/pindu-ui/src/fullscreen_system_update.rs:242
+#: crates/pindu-ui/src/fullscreen_system_update.rs:310
 #, rust-format
 msgid "Roll Back to {version}"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_system_update.rs:243
+#: crates/pindu-ui/src/fullscreen_system_update.rs:311
 msgid "Roll Back to the Previous Version"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_system_update.rs:260
+#: crates/pindu-ui/src/fullscreen_system_update.rs:328
 msgid "Rolling Back…"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_system_update.rs:261
+#: crates/pindu-ui/src/fullscreen_system_update.rs:329
 msgid "Restarting…"
 msgstr ""
 
@@ -1131,110 +1218,110 @@ msgid_plural "{n} hours"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/hint_bar.rs:166
+#: crates/pindu-ui/src/hint_bar.rs:168
 msgid "Open"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:170
+#: crates/pindu-ui/src/hint_bar.rs:172
 msgid "Toggle"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:173
+#: crates/pindu-ui/src/hint_bar.rs:175
 msgid "Close"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:175
+#: crates/pindu-ui/src/hint_bar.rs:177
 msgid "Tabs"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:176 data/ui/window.blp:1449
+#: crates/pindu-ui/src/hint_bar.rs:178 data/ui/window.blp:1674
 msgid "Sort"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:177
+#: crates/pindu-ui/src/hint_bar.rs:179
 msgid "Adjust"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:178 data/ui/game_page.blp:140
+#: crates/pindu-ui/src/hint_bar.rs:180 data/ui/game_page.blp:140
 msgid "Options"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:179
+#: crates/pindu-ui/src/hint_bar.rs:181
 msgid "Hold to Cancel"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:182 data/ui/game_dialog.blp:40
+#: crates/pindu-ui/src/hint_bar.rs:184 data/ui/game_dialog.blp:40
 msgid "Type"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:183
-#: crates/pindu-ui/src/search_keyboard.rs:167
+#: crates/pindu-ui/src/hint_bar.rs:185
+#: crates/pindu-ui/src/search_keyboard.rs:168
 msgid "Delete"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:184
-#: crates/pindu-ui/src/search_keyboard.rs:168
+#: crates/pindu-ui/src/hint_bar.rs:186
+#: crates/pindu-ui/src/search_keyboard.rs:169
 msgid "Done"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:192
+#: crates/pindu-ui/src/hint_bar.rs:194
 msgid "Cross"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:193
+#: crates/pindu-ui/src/hint_bar.rs:195
 msgid "Circle"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:194
+#: crates/pindu-ui/src/hint_bar.rs:196
 msgid "Square"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:195
+#: crates/pindu-ui/src/hint_bar.rs:197
 msgid "Triangle"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:196
+#: crates/pindu-ui/src/hint_bar.rs:198
 msgid "View"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:198
+#: crates/pindu-ui/src/hint_bar.rs:200
 msgid "Minus"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:199
+#: crates/pindu-ui/src/hint_bar.rs:201
 msgid "Plus"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:200 data/ui/home_page.blp:5
-#: data/ui/window.blp:89 data/ui/window.blp:1372
+#: crates/pindu-ui/src/hint_bar.rs:202 data/ui/home_page.blp:5
+#: data/ui/window.blp:89 data/ui/window.blp:1597
 msgid "Home"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:201
+#: crates/pindu-ui/src/hint_bar.rs:203
 msgid "More"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:202
+#: crates/pindu-ui/src/hint_bar.rs:204
 msgid "D-pad Up"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:203
+#: crates/pindu-ui/src/hint_bar.rs:205
 msgid "D-pad Down"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:204
+#: crates/pindu-ui/src/hint_bar.rs:206
 msgid "D-pad Left"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:205
+#: crates/pindu-ui/src/hint_bar.rs:207
 msgid "D-pad Right"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:46 crates/pindu-ui/src/window.rs:773
+#: crates/pindu-ui/src/home_page.rs:46 crates/pindu-ui/src/window.rs:814
 msgid "Today"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:47 crates/pindu-ui/src/window.rs:774
+#: crates/pindu-ui/src/home_page.rs:47 crates/pindu-ui/src/window.rs:815
 msgid "This Week"
 msgstr ""
 
@@ -1256,13 +1343,13 @@ msgid "Recently Played"
 msgstr ""
 
 #: crates/pindu-ui/src/launch_service.rs:118
-#: crates/pindu-ui/src/proton_launch.rs:176
+#: crates/pindu-ui/src/proton_launch.rs:177
 #, rust-format
 msgid "Starting “{title}”"
 msgstr ""
 
 #: crates/pindu-ui/src/launch_service.rs:122
-#: crates/pindu-ui/src/proton_launch.rs:503
+#: crates/pindu-ui/src/proton_launch.rs:504
 #, rust-format
 msgid "Could not start “{title}”"
 msgstr ""
@@ -1280,13 +1367,6 @@ msgstr ""
 #: crates/pindu-ui/src/launch_service.rs:241
 #, rust-format
 msgid "Could not open {launcher}"
-msgstr ""
-
-#: crates/pindu-ui/src/launch_service.rs:196
-#: crates/pindu-ui/src/proton_launch.rs:373
-#: crates/pindu-ui/src/proton_launch.rs:602 crates/pindu-ui/src/window.rs:1336
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:485
-msgid "_Close"
 msgstr ""
 
 #: crates/pindu-ui/src/launch_service.rs:197
@@ -1311,6 +1391,40 @@ msgstr ""
 #: crates/pindu-ui/src/log_service.rs:109
 #, rust-format
 msgid "Could not keep a log of “{title}”"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/network_service.rs:30
+#, rust-format
+msgid "Could not join {network}"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/network_service.rs:38
+#, rust-format
+msgid "Could not forget {network}"
+msgstr ""
+
+#: crates/pindu-ui/src/network_service.rs:44
+msgid "Could not switch Wi-Fi"
+msgstr ""
+
+#: crates/pindu-ui/src/network_service.rs:93
+msgid "The saved passphrase was not accepted."
+msgstr ""
+
+#: crates/pindu-ui/src/network_service.rs:94
+msgid "The network is out of range."
+msgstr ""
+
+#: crates/pindu-ui/src/network_service.rs:95
+msgid "The network gave no address."
+msgstr ""
+
+#. Translators: {reason} is a number NetworkManager gives for a failed connection.
+#: crates/pindu-ui/src/network_service.rs:97
+#, rust-format
+msgid "The connection failed (reason {reason})."
 msgstr ""
 
 #: crates/pindu-ui/src/preferences.rs:150
@@ -1456,47 +1570,47 @@ msgstr ""
 msgid "{proton} (not installed)"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:115
+#: crates/pindu-ui/src/proton_download_service.rs:116
 #, rust-format
 msgid "{build} is already being installed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:157
+#: crates/pindu-ui/src/proton_download_service.rs:158
 #, rust-format
 msgid "{build} installed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:158
+#: crates/pindu-ui/src/proton_download_service.rs:159
 msgid "Windows games can now run with it"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:162
+#: crates/pindu-ui/src/proton_download_service.rs:163
 #, rust-format
 msgid "{build} was not installed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:175
+#: crates/pindu-ui/src/proton_download_service.rs:176
 msgid "The build could not be removed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:190
+#: crates/pindu-ui/src/proton_download_service.rs:191
 msgid "The download folder could not be made"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:200
+#: crates/pindu-ui/src/proton_download_service.rs:201
 msgid "The download was stopped"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:205
-#: crates/pindu-ui/src/proton_download_service.rs:250
+#: crates/pindu-ui/src/proton_download_service.rs:206
+#: crates/pindu-ui/src/proton_download_service.rs:251
 msgid "The tarball could not be unpacked"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:224
+#: crates/pindu-ui/src/proton_download_service.rs:225
 msgid "The release's checksum file does not list its tarball"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:232
+#: crates/pindu-ui/src/proton_download_service.rs:233
 msgid ""
 "The download does not match the checksum the release published; nothing was "
 "installed"
@@ -1504,31 +1618,27 @@ msgstr ""
 
 #. / What the user is told when GitHub cannot be reached.
 
-#: crates/pindu-ui/src/proton_download_service.rs:327
+#: crates/pindu-ui/src/proton_download_service.rs:328
 msgid ""
 "You are offline. Connect to the internet to see and download Proton releases."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:342
+#: crates/pindu-ui/src/proton_download_service.rs:343
 #, rust-format
 msgid "GitHub could not be reached: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:351
+#: crates/pindu-ui/src/proton_download_service.rs:352
 msgid "GitHub was asked too often from this network; try again in an hour"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:353
+#: crates/pindu-ui/src/proton_download_service.rs:354
 #, rust-format
 msgid "GitHub answered {status}"
 msgstr ""
 
 #: crates/pindu-ui/src/proton_downloads_page.rs:82
 msgid "Checking GitHub…"
-msgstr ""
-
-#: crates/pindu-ui/src/proton_downloads_page.rs:100 data/ui/window.blp:266
-msgid "Offline"
 msgstr ""
 
 #: crates/pindu-ui/src/proton_downloads_page.rs:129
@@ -1582,82 +1692,82 @@ msgid "Downloading {received} of {total}"
 msgstr ""
 
 #: crates/pindu-ui/src/proton_downloads_page.rs:409
-#: crates/pindu-ui/src/proton_launch.rs:672
+#: crates/pindu-ui/src/proton_launch.rs:673
 msgid "Unpacking…"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:363
+#: crates/pindu-ui/src/proton_launch.rs:364
 msgid "umu-launcher Needed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:366
+#: crates/pindu-ui/src/proton_launch.rs:367
 #, rust-format
 msgid ""
 "“{title}” runs through umu-launcher, which is not installed on this "
 "computer. Install it, then try again."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:374
+#: crates/pindu-ui/src/proton_launch.rs:375
 msgid "_How to Install"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:493
+#: crates/pindu-ui/src/proton_launch.rs:494
 #, rust-format
 msgid "Could not start “{title}”: no Proton found"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:495
+#: crates/pindu-ui/src/proton_launch.rs:496
 #, rust-format
 msgid "Could not start “{title}”: {proton} is not installed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:562
+#: crates/pindu-ui/src/proton_launch.rs:563
 msgid "No Internet Connection"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:564
+#: crates/pindu-ui/src/proton_launch.rs:565
 msgid ""
 "Windows games need the Steam Linux Runtime, a one-time download. Connect to "
 "the internet, then try again."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:573
+#: crates/pindu-ui/src/proton_launch.rs:574
 msgid "Could Not Set Up Windows Games"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:574
+#: crates/pindu-ui/src/proton_launch.rs:575
 msgid "The Steam Linux Runtime could not be installed. Try again later."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:617
+#: crates/pindu-ui/src/proton_launch.rs:618
 msgid "Setting Up Windows Games"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:620
+#: crates/pindu-ui/src/proton_launch.rs:621
 #, rust-format
 msgid ""
 "Windows games need the Steam Linux Runtime, a one-time download. “{title}” "
 "starts when it is ready."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:668
+#: crates/pindu-ui/src/proton_launch.rs:669
 #, rust-format
 msgid "Downloading… {size}"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:670
+#: crates/pindu-ui/src/proton_launch.rs:671
 msgid "Downloading…"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:673
+#: crates/pindu-ui/src/proton_launch.rs:674
 msgid "Checking…"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:675
+#: crates/pindu-ui/src/proton_launch.rs:676
 msgid "Preparing…"
 msgstr ""
 
-#: crates/pindu-ui/src/search_keyboard.rs:166
+#: crates/pindu-ui/src/search_keyboard.rs:167
 msgid "Space"
 msgstr ""
 
@@ -1823,17 +1933,17 @@ msgstr ""
 msgid "Could not suspend"
 msgstr ""
 
+#: crates/pindu-ui/src/system_power_service.rs:61
+#: crates/pindu-ui/src/system_update_service.rs:41
+msgid "Could not restart"
+msgstr ""
+
 #: crates/pindu-ui/src/system_power_service.rs:62
 msgid "Could not power off"
 msgstr ""
 
 #: crates/pindu-ui/src/system_update_service.rs:32
 msgid "Could not roll back"
-msgstr ""
-
-#: crates/pindu-ui/src/system_update_service.rs:41
-#: crates/pindu-ui/src/system_power_service.rs:61
-msgid "Could not restart"
 msgstr ""
 
 #: crates/pindu-ui/src/widgets/cover_tile.rs:215
@@ -1871,62 +1981,62 @@ msgstr ""
 msgid "_Pin to Jump Back In"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:601
+#: crates/pindu-ui/src/window.rs:642
 msgid "No logs yet: start the game with Play with Logs"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:775
+#: crates/pindu-ui/src/window.rs:816
 msgid "Earlier"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:783
+#: crates/pindu-ui/src/window.rs:824
 #, rust-format
 msgid "{time} in {source}"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:787
+#: crates/pindu-ui/src/window.rs:828
 #, rust-format
 msgid "{time}, tracked here"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:852
+#: crates/pindu-ui/src/window.rs:893
 msgid "Three games are pinned already; unpin one first"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:866
+#: crates/pindu-ui/src/window.rs:907
 msgid "Hidden Games"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:887
+#: crates/pindu-ui/src/window.rs:928
 #, rust-format
 msgid "“{title}” removed"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:901
+#: crates/pindu-ui/src/window.rs:942
 #, rust-format
 msgid "“{title}” hidden"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1315
+#: crates/pindu-ui/src/window.rs:1356
 #, rust-format
 msgid "One import problem"
 msgid_plural "{count} import problems"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/window.rs:1318
+#: crates/pindu-ui/src/window.rs:1359
 msgid "Details"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1333
+#: crates/pindu-ui/src/window.rs:1374
 msgid "Some Games Could Not Be Imported"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1503
+#: crates/pindu-ui/src/window.rs:1544
 msgid "Pinned"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1521
+#: crates/pindu-ui/src/window.rs:1562
 #, rust-format
 msgid "{title}, pinned"
 msgstr ""
@@ -2271,151 +2381,206 @@ msgid "Light and dark style"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:92
+msgid "A fix for fullscreen mode in virtual machines."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:94
+msgid ""
+"Fullscreen mode no longer crashes in a virtual machine with 3D acceleration "
+"and Venus (virtio-gpu)"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:100
 msgid ""
 "Release files for ARM (aarch64), a fix for a crash on Steam libraries, and "
 "more in the fullscreen Quick Access panel."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:94
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:102
 msgid ""
 "Flatpak, RPM and DEB release files are now built for aarch64 (ARM) as well "
 "as x86_64"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:95
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:103
 msgid "Fixed a crash when importing a Steam library with deeply nested data"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:96
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:104
 msgid "Windows games use a Proton build made for your machine's architecture"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:97
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:105
 msgid "Turning on MangoHud now explains when it cannot work inside the sandbox"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:98
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:106
 msgid ""
 "Quick Access in fullscreen mode gains Network, Bluetooth, System Update, "
 "Sound Output and Power sections"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:99
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:107
 msgid ""
 "The on-screen keyboard has capitals and symbols, and a dialog for entering "
 "passphrases"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:100
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:108
 msgid "The RPM and DEB packages now depend on GStreamer's good plug-ins"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:101
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:109
 msgid "Updated translations"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:107
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:115
 msgid ""
 "Native packages, your own fullscreen style in Preferences, and the start of "
 "translations."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:109
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:117
 msgid ""
 "Install Pindu launcher as an RPM on Fedora 45 or a DEB on Debian testing and "
 "Ubuntu 26.10, next to the Flatpak"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:110
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:118
 msgid ""
 "Turn your own fullscreen stylesheet on, import it, open its folder or reset "
 "it in Preferences, which also lists its problems"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:111
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:119
 msgid ""
 "Without umu-launcher, Windows games now say what is missing and how to "
 "install it"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:112
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:120
 msgid ""
 "The focused cover in the first row of the fullscreen library is no longer "
 "cut off"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:113
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:121
 msgid "A first, partial Dutch translation; help translate on Weblate"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:119
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:127
 msgid ""
 "Windows games, and a fullscreen mode for playing from the couch with a "
 "controller."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:121
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:129
 msgid ""
 "Add a Windows game from its .exe or installer and play it with Proton, with "
 "launch settings and logs for each game"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:122
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:130
 msgid "Download GE-Proton and Proton-CachyOS builds from Preferences"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:123
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:131
 msgid ""
 "Run native games in the Steam Linux Runtime, and turn on MangoHud or "
 "GameMode for a game"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:124
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:132
 msgid ""
 "A fullscreen mode with Home, Library and game pages, an on-screen keyboard "
 "for search and a Quick Access panel"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:125
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:133
 msgid ""
 "Fullscreen designs, Ribbon and Panorama, with variants, and your own "
 "stylesheet"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:126
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:134
 msgid ""
 "Reduce Motion, Larger Text and a volume for navigation sounds in fullscreen "
 "mode"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:127
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:135
 msgid "Control the desktop window and its menus with a controller"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:128
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:136
 msgid "SteamGridDB art arrives as soon as you save your key"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:134
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:142
 msgid "The first release."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:136
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:144
 msgid ""
 "One library for Steam, Heroic, Lutris, Bottles, Faugus, installed apps and "
 "games you add yourself"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:137
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:145
 msgid "Collections, favourites, Jump Back In and play history"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:138
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:146
 msgid "Artwork from your launchers, your own files or SteamGridDB"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:139
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:147
 msgid "Search from GNOME Shell"
+msgstr ""
+
+#: data/ui/fullscreen_bluetooth.blp:15 data/ui/fullscreen_bluetooth.blp:32
+#: data/ui/fullscreen_bluetooth.blp:36 data/ui/window.blp:678
+msgid "Bluetooth"
+msgstr ""
+
+#: data/ui/fullscreen_bluetooth.blp:37
+msgid "Turned off by airplane mode or a hardware switch"
+msgstr ""
+
+#: data/ui/fullscreen_bluetooth.blp:43
+msgid "Paired Devices"
+msgstr ""
+
+#: data/ui/fullscreen_bluetooth.blp:63
+msgid "Found Devices"
+msgstr ""
+
+#: data/ui/fullscreen_network.blp:15 data/ui/window.blp:636
+msgid "Network"
+msgstr ""
+
+#: data/ui/fullscreen_network.blp:48
+msgid "Turned off by a hardware switch"
+msgstr ""
+
+#: data/ui/fullscreen_network.blp:54
+msgid "Wi-Fi Networks"
+msgstr ""
+
+#: data/ui/fullscreen_power.blp:15 data/ui/window.blp:188
+msgid "Power"
+msgstr ""
+
+#: data/ui/fullscreen_sound_output.blp:15 data/ui/window.blp:720
+msgid "Sound Output"
+msgstr ""
+
+#: data/ui/fullscreen_system_update.blp:15 data/ui/window.blp:762
+msgid "System Update"
+msgstr ""
+
+#: data/ui/fullscreen_system_update.blp:35
+msgid "The previous version starts next time."
 msgstr ""
 
 #: data/ui/game_dialog.blp:36
@@ -2426,12 +2591,12 @@ msgstr ""
 msgid "Choose the game's folder; its program, title and options come next."
 msgstr ""
 
-#: data/ui/game_dialog.blp:44 data/ui/window.blp:1191 data/ui/window.blp:1540
+#: data/ui/game_dialog.blp:44 data/ui/window.blp:1392 data/ui/window.blp:1765
 msgid "Native"
 msgstr ""
 
 #: data/ui/game_dialog.blp:45 data/ui/game_dialog.blp:93
-#: data/ui/preferences.blp:156 data/ui/window.blp:1187 data/ui/window.blp:1536
+#: data/ui/preferences.blp:156 data/ui/window.blp:1388 data/ui/window.blp:1761
 msgid "Windows"
 msgstr ""
 
@@ -2570,7 +2735,7 @@ msgstr ""
 msgid "Ask Steam which of the game’s launch options to use"
 msgstr ""
 
-#: data/ui/game_page.blp:271 data/ui/window.blp:1257
+#: data/ui/game_page.blp:271 data/ui/window.blp:1458
 msgid "Changes apply the next time the game starts."
 msgstr ""
 
@@ -2583,12 +2748,12 @@ msgid "An overlay with the frame rate and how busy the computer is"
 msgstr ""
 
 #: data/ui/game_page.blp:311 data/ui/preferences.blp:205
-#: data/ui/window.blp:1250 data/ui/window.blp:1756
+#: data/ui/window.blp:1451 data/ui/window.blp:1981
 msgid "GameMode"
 msgstr ""
 
 #: data/ui/game_page.blp:312 data/ui/preferences.blp:206
-#: data/ui/window.blp:1251 data/ui/window.blp:1757
+#: data/ui/window.blp:1452 data/ui/window.blp:1982
 msgid "Asks the system to favour the game while it runs"
 msgstr ""
 
@@ -2632,7 +2797,7 @@ msgstr ""
 msgid "The launcher and state badges on covers"
 msgstr ""
 
-#: data/ui/preferences.blp:39 data/ui/window.blp:1117
+#: data/ui/preferences.blp:39 data/ui/window.blp:1318
 msgid "Exit After Launching"
 msgstr ""
 
@@ -2652,7 +2817,7 @@ msgid ""
 "this is on, a Steam Deck's own controls work only as a controller."
 msgstr ""
 
-#: data/ui/preferences.blp:54 data/ui/window.blp:860
+#: data/ui/preferences.blp:54 data/ui/window.blp:1061
 msgid "Button Prompts"
 msgstr ""
 
@@ -2662,8 +2827,8 @@ msgid ""
 "controller looks like Steam's own, which Automatic shows with letters."
 msgstr ""
 
-#: data/ui/preferences.blp:59 data/ui/preferences.blp:73 data/ui/window.blp:878
-#: data/ui/window.blp:945
+#: data/ui/preferences.blp:59 data/ui/preferences.blp:73
+#: data/ui/window.blp:1079 data/ui/window.blp:1146
 msgid "Automatic"
 msgstr ""
 
@@ -2679,7 +2844,7 @@ msgstr ""
 msgid "Letters (Nintendo)"
 msgstr ""
 
-#: data/ui/preferences.blp:68 data/ui/window.blp:928
+#: data/ui/preferences.blp:68 data/ui/window.blp:1129
 msgid "Swap Confirm and Back"
 msgstr ""
 
@@ -2689,13 +2854,7 @@ msgid ""
 "them for Nintendo letters."
 msgstr ""
 
-#: data/ui/preferences.blp:74 data/ui/window.blp:721 data/ui/window.blp:775
-#: data/ui/window.blp:958
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:335
-msgid "Off"
-msgstr ""
-
-#: data/ui/preferences.blp:75 data/ui/window.blp:971
+#: data/ui/preferences.blp:75 data/ui/window.blp:1172
 msgid "On"
 msgstr ""
 
@@ -2723,7 +2882,7 @@ msgid "Copy Command"
 msgstr ""
 
 #: data/ui/preferences.blp:121 data/ui/preferences.blp:125
-#: data/ui/window.blp:1335
+#: data/ui/window.blp:1560
 msgid "Sources"
 msgstr ""
 
@@ -2830,7 +2989,7 @@ msgstr ""
 msgid "Start in Fullscreen Mode"
 msgstr ""
 
-#: data/ui/preferences.blp:250 data/ui/window.blp:1087
+#: data/ui/preferences.blp:250 data/ui/window.blp:1288
 msgid "Navigation Sounds"
 msgstr ""
 
@@ -2838,19 +2997,19 @@ msgstr ""
 msgid "A soft sound when the controller moves, selects or goes back"
 msgstr ""
 
-#: data/ui/preferences.blp:255 data/ui/window.blp:1093
+#: data/ui/preferences.blp:255 data/ui/window.blp:1294
 msgid "Volume"
 msgstr ""
 
-#: data/ui/preferences.blp:273 data/ui/window.blp:1111
+#: data/ui/preferences.blp:273 data/ui/window.blp:1312
 msgid "Navigation Sound Volume"
 msgstr ""
 
-#: data/ui/preferences.blp:280 data/ui/window.blp:1122
+#: data/ui/preferences.blp:280 data/ui/window.blp:1323
 msgid "Accessibility"
 msgstr ""
 
-#: data/ui/preferences.blp:283 data/ui/window.blp:1139
+#: data/ui/preferences.blp:283 data/ui/window.blp:1340
 msgid "Reduce Motion"
 msgstr ""
 
@@ -2860,7 +3019,7 @@ msgid ""
 "animations are off in the system settings"
 msgstr ""
 
-#: data/ui/preferences.blp:288 data/ui/window.blp:1143
+#: data/ui/preferences.blp:288 data/ui/window.blp:1344
 msgid "Larger Text"
 msgstr ""
 
@@ -2868,7 +3027,7 @@ msgstr ""
 msgid "Text about a quarter larger, to read from across the room"
 msgstr ""
 
-#: data/ui/preferences.blp:296 data/ui/window.blp:822
+#: data/ui/preferences.blp:296 data/ui/window.blp:1023
 msgid "My Stylesheet"
 msgstr ""
 
@@ -2919,15 +3078,11 @@ msgstr ""
 msgid "Quit"
 msgstr ""
 
-#: data/ui/window.blp:188 data/ui/window.blp:245
-msgid "Power"
-msgstr ""
-
-#: data/ui/shortcuts-dialog.blp:38 data/ui/window.blp:1411
+#: data/ui/shortcuts-dialog.blp:38 data/ui/window.blp:1636
 msgid "Toggle Sidebar"
 msgstr ""
 
-#: data/ui/shortcuts-dialog.blp:43 data/ui/window.blp:1195
+#: data/ui/shortcuts-dialog.blp:43 data/ui/window.blp:1396
 msgid "Show Hidden Games"
 msgstr ""
 
@@ -2959,396 +3114,254 @@ msgstr ""
 msgid "Exit Fullscreen Mode"
 msgstr ""
 
-#: data/ui/window.blp:254
+#: data/ui/window.blp:287
 msgid "Artwork downloads wait until you are online"
 msgstr ""
 
-#: data/ui/window.blp:340 data/ui/window.blp:598
+#: data/ui/window.blp:373 data/ui/window.blp:799
 msgid "Notifications"
 msgstr ""
 
-#: data/ui/window.blp:377 data/ui/window.blp:630
+#: data/ui/window.blp:410 data/ui/window.blp:831
 msgid "Activity"
 msgstr ""
 
-#: data/ui/window.blp:406
+#: data/ui/window.blp:439
 msgid "Refresh Library"
 msgstr ""
 
-#: data/ui/window.blp:427
+#: data/ui/window.blp:460
 msgid "Surprise Me"
 msgstr ""
 
-#: data/ui/window.blp:448 data/ui/window.blp:1161
+#: data/ui/window.blp:481 data/ui/window.blp:1362
 msgid "Filters"
 msgstr ""
 
-#: data/ui/window.blp:475
+#: data/ui/window.blp:508
 msgid "Performance"
 msgstr ""
 
-#: data/ui/window.blp:499 data/ui/window.blp:662
+#: data/ui/window.blp:532 data/ui/window.blp:863
 msgid "Design"
 msgstr ""
 
-#: data/ui/window.blp:523 data/ui/window.blp:840
+#: data/ui/window.blp:556 data/ui/window.blp:1041
 msgid "Controllers"
 msgstr ""
 
-#: data/ui/window.blp:547 data/ui/window.blp:998
+#: data/ui/window.blp:580 data/ui/window.blp:1199
 msgid "Controls"
 msgstr ""
 
-#: data/ui/window.blp:571 data/ui/window.blp:1028
+#: data/ui/window.blp:604 data/ui/window.blp:1229
 msgid "Settings"
 msgstr ""
 
-#: data/ui/window.blp:745 data/ui/window.blp:1507
-msgid "Sound Output"
-msgstr ""
-
-#: data/ui/window.blp:603 data/ui/window.blp:1323
-msgid "System Update"
-msgstr ""
-
-#: data/ui/window.blp:683
+#: data/ui/window.blp:884
 msgid "Variant"
 msgstr ""
 
-#: data/ui/window.blp:704
+#: data/ui/window.blp:905
 msgid "Background Blur"
 msgstr ""
 
-#: data/ui/window.blp:733 data/ui/window.blp:787
+#: data/ui/window.blp:934 data/ui/window.blp:988
 msgid "Low"
 msgstr ""
 
-#: data/ui/window.blp:745 data/ui/window.blp:799
+#: data/ui/window.blp:946 data/ui/window.blp:1000
 msgid "High"
 msgstr ""
 
-#: data/ui/window.blp:758
+#: data/ui/window.blp:959
 msgid "Background Dim"
 msgstr ""
 
-#: data/ui/window.blp:879
+#: data/ui/window.blp:1080
 msgid "As the controller shows them"
 msgstr ""
 
-#: data/ui/window.blp:946
+#: data/ui/window.blp:1147
 msgid "Swapped when A is on the right"
 msgstr ""
 
-#: data/ui/window.blp:959
+#: data/ui/window.blp:1160
 msgid "The bottom button confirms"
 msgstr ""
 
-#: data/ui/window.blp:972
+#: data/ui/window.blp:1173
 msgid "The right button confirms"
 msgstr ""
 
-#: data/ui/window.blp:1047
+#: data/ui/window.blp:1248
 msgid "Small Covers"
 msgstr ""
 
-#: data/ui/window.blp:1057
+#: data/ui/window.blp:1258
 msgid "Medium Covers"
 msgstr ""
 
-#: data/ui/window.blp:1068
+#: data/ui/window.blp:1269
 msgid "Large Covers"
 msgstr ""
 
-#: data/ui/window.blp:1183 data/ui/window.blp:1528
+#: data/ui/window.blp:1384 data/ui/window.blp:1753
 msgid "Not Installed"
 msgstr ""
 
-#: data/ui/window.blp:1207
+#: data/ui/window.blp:1408
 msgid "Clear Filters"
 msgstr ""
 
-#: data/ui/window.blp:1245 data/ui/window.blp:1751
+#: data/ui/window.blp:1446 data/ui/window.blp:1976
 msgid "Performance Overlay"
 msgstr ""
 
-#: data/ui/window.blp:1343
-msgid "The previous version starts next time."
-msgstr ""
-
-#: data/ui/window.blp:1286 data/ui/window.blp:1402
+#: data/ui/window.blp:1511 data/ui/window.blp:1627
 msgid "All Games"
 msgstr ""
 
-#: data/ui/window.blp:1322
+#: data/ui/window.blp:1547
 msgid "Play History"
 msgstr ""
 
-#: data/ui/window.blp:1418
+#: data/ui/window.blp:1643
 msgid "Add"
 msgstr ""
 
-#: data/ui/window.blp:1425
+#: data/ui/window.blp:1650
 msgid "Importing Games…"
 msgstr ""
 
-#: data/ui/window.blp:1429 data/ui/window.blp:1434
+#: data/ui/window.blp:1654 data/ui/window.blp:1659
 msgid "Search games"
 msgstr ""
 
-#: data/ui/window.blp:1442
+#: data/ui/window.blp:1667
 msgid "Main Menu"
 msgstr ""
 
-#: data/ui/window.blp:1485
+#: data/ui/window.blp:1710
 msgid "Filtered"
 msgstr ""
 
-#: data/ui/window.blp:1544
+#: data/ui/window.blp:1769
 msgid "Clear"
 msgstr ""
 
-#: data/ui/window.blp:1562
+#: data/ui/window.blp:1787
 msgid "Jump Back In"
 msgstr ""
 
-#: data/ui/window.blp:1604
+#: data/ui/window.blp:1829
 msgid "No Games Yet"
 msgstr ""
 
-#: data/ui/window.blp:1605
+#: data/ui/window.blp:1830
 msgid "Games from your launchers appear here once they are imported"
 msgstr ""
 
-#: data/ui/window.blp:1608 data/ui/window.blp:1850
+#: data/ui/window.blp:1833 data/ui/window.blp:2075
 msgid "_Import Now"
 msgstr ""
 
-#: data/ui/window.blp:1626
+#: data/ui/window.blp:1851
 msgid "No Results Found"
 msgstr ""
 
-#: data/ui/window.blp:1627
+#: data/ui/window.blp:1852
 msgid "Try a different search or filter"
 msgstr ""
 
-#: data/ui/window.blp:1636
+#: data/ui/window.blp:1861
 msgid "No Games Match the Filters"
 msgstr ""
 
-#: data/ui/window.blp:1637
+#: data/ui/window.blp:1862
 msgid "Clear the filters in Quick Access to see the whole tab"
 msgstr ""
 
-#: data/ui/window.blp:1666
+#: data/ui/window.blp:1891
 msgid "No Hidden Games"
 msgstr ""
 
-#: data/ui/window.blp:1667
+#: data/ui/window.blp:1892
 msgid "Games you hide show here, to unhide them"
 msgstr ""
 
-#: data/ui/window.blp:1676
+#: data/ui/window.blp:1901
 msgid "Empty Collection"
 msgstr ""
 
-#: data/ui/window.blp:1677
+#: data/ui/window.blp:1902
 msgid "Add games with “Add to Collection” in their menu"
 msgstr ""
 
-#: data/ui/window.blp:1819
+#: data/ui/window.blp:2044
 msgid "_Rename…"
 msgstr ""
 
-#: data/ui/window.blp:1824
+#: data/ui/window.blp:2049
 msgid "Move _Up"
 msgstr ""
 
-#: data/ui/window.blp:1829
+#: data/ui/window.blp:2054
 msgid "Move _Down"
 msgstr ""
 
-#: data/ui/window.blp:1836
+#: data/ui/window.blp:2061
 msgid "_Delete"
 msgstr ""
 
-#: data/ui/window.blp:1845
+#: data/ui/window.blp:2070
 msgid "_Add Game…"
 msgstr ""
 
-#: data/ui/window.blp:1859
+#: data/ui/window.blp:2084
 msgid "_Last Played"
 msgstr ""
 
-#: data/ui/window.blp:1865
+#: data/ui/window.blp:2090
 msgid "Name _A–Z"
 msgstr ""
 
-#: data/ui/window.blp:1871
+#: data/ui/window.blp:2096
 msgid "Name _Z–A"
 msgstr ""
 
-#: data/ui/window.blp:1877
+#: data/ui/window.blp:2102
 msgid "_Recently Added"
 msgstr ""
 
-#: data/ui/window.blp:1883
+#: data/ui/window.blp:2108
 msgid "_Playtime"
 msgstr ""
 
-#: data/ui/window.blp:1893
+#: data/ui/window.blp:2118
 msgid "Show _Hidden Games"
 msgstr ""
 
-#: data/ui/window.blp:1898
+#: data/ui/window.blp:2123
 msgid "_Fullscreen Mode"
 msgstr ""
 
-#: data/ui/window.blp:1905
+#: data/ui/window.blp:2130
 msgid "_Export Library…"
 msgstr ""
 
-#: data/ui/window.blp:1910
+#: data/ui/window.blp:2135
 msgid "I_mport Backup…"
 msgstr ""
 
-#: data/ui/window.blp:1917
+#: data/ui/window.blp:2142
 msgid "_Preferences"
 msgstr ""
 
-#: data/ui/window.blp:1922
+#: data/ui/window.blp:2147
 msgid "_Keyboard Shortcuts"
 msgstr ""
 
-#: data/ui/window.blp:1927
+#: data/ui/window.blp:2152
 msgid "_About Pindu launcher"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:66
-msgid "Looking for networks…"
-msgstr ""
-
-#. Translators: {network} is a Wi-Fi network's name.
-#: crates/pindu-ui/src/fullscreen_network.rs:310
-#, rust-format
-msgid "Forget {network}?"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:312
-msgid ""
-"Its passphrase is removed, and the console no longer joins it by itself."
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:340
-#: crates/pindu-ui/src/fullscreen_network.rs:350
-msgid "Wired"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:343
-#: crates/pindu-ui/src/fullscreen_power.rs:203
-msgid "Not allowed on this system"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:351 data/ui/window.blp:1447
-#: data/ui/window.blp:1451
-msgid "Wi-Fi"
-msgstr ""
-
-#. Translators: {device} is "Wired" or "Wi-Fi", {interface} its name, such as wlan0.
-#: crates/pindu-ui/src/fullscreen_network.rs:355
-#, rust-format
-msgid "{device} ({interface})"
-msgstr ""
-
-#. Translators: {network} is a Wi-Fi network's name.
-#: crates/pindu-ui/src/fullscreen_network.rs:364
-#, rust-format
-msgid "Connected to {network}"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:368
-msgid "Disconnected"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:369
-msgid "Cable unplugged"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:405
-msgid "Saved"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:406
-msgid "Set up on another device"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:512
-msgid "Wrong passphrase. Try again."
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:514
-msgid "A passphrase has 8 to 63 characters."
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:516
-msgid "Enter the network's passphrase."
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:522
-msgid "Passphrase"
-msgstr ""
-
-#. Translators: {network} is a Wi-Fi network's name.
-#: crates/pindu-ui/src/fullscreen_network.rs:525
-#, rust-format
-msgid "Join {network}"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:531
-msgid "_Join"
-msgstr ""
-
-#. Translators: {network} is a Wi-Fi network's name.
-#: crates/pindu-ui/src/network_service.rs:30
-#, rust-format
-msgid "Could not join {network}"
-msgstr ""
-
-#. Translators: {network} is a Wi-Fi network's name.
-#: crates/pindu-ui/src/network_service.rs:38
-#, rust-format
-msgid "Could not forget {network}"
-msgstr ""
-
-#: crates/pindu-ui/src/network_service.rs:44
-msgid "Could not switch Wi-Fi"
-msgstr ""
-
-#: crates/pindu-ui/src/network_service.rs:93
-msgid "The saved passphrase was not accepted."
-msgstr ""
-
-#: crates/pindu-ui/src/network_service.rs:94
-msgid "The network is out of range."
-msgstr ""
-
-#: crates/pindu-ui/src/network_service.rs:95
-msgid "The network gave no address."
-msgstr ""
-
-#. Translators: {reason} is a number NetworkManager gives for a failed connection.
-#: crates/pindu-ui/src/network_service.rs:97
-#, rust-format
-msgid "The connection failed (reason {reason})."
-msgstr ""
-
-#: data/ui/window.blp:603 data/ui/window.blp:1419
-msgid "Network"
-msgstr ""
-
-#: data/ui/window.blp:1452
-msgid "Turned off by a hardware switch"
-msgstr ""
-
-#: data/ui/window.blp:1458
-msgid "Wi-Fi Networks"
 msgstr ""

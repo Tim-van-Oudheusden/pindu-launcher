@@ -1,7 +1,7 @@
 project(
   'pindu-launcher',
   'rust',
-  version: '0.4.0',
+  version: '0.4.1',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 1.6.0',
 )
