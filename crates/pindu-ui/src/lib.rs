@@ -54,6 +54,7 @@ pub mod proton_choice;
 pub mod proton_download_service;
 pub mod proton_downloads_page;
 pub mod proton_launch;
+pub mod quick_access;
 pub mod search_keyboard;
 pub mod search_provider;
 pub mod secret_dialog;

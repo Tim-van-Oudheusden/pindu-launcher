@@ -5,9 +5,9 @@
 //! passphrase where it needs one, typed in the passphrase dialog with the on-screen
 //! keyboard or a keyboard; a saved one opens to Connect and Forget (asked first).
 //! The level is [`PinduNetworkLevel`], with its own Blueprint
-//! (`data/ui/fullscreen_network.blp`); the window keeps the entry, which sits in Quick
-//! Access's shared list, and the level's `win.network-join` and `win.network-forget`.
-//! Both show [`NetworkService`]'s state and call it; neither talks to NetworkManager
+//! (`data/ui/fullscreen_network.blp`); Quick Access keeps the entry, which sits in its
+//! shared list, and adds the level's `win.network-join` and `win.network-forget` to its
+//! host. Both show [`NetworkService`]'s state and call it; neither talks to NetworkManager
 //! itself.
 
 use std::cell::RefCell;
@@ -17,7 +17,7 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::osk::Keyboard;
-use pindu_core::panels::{Panel, QuickAccessLevel};
+use pindu_core::panels::QuickAccessLevel;
 use pindu_core::system::network::{
     Availability, Busy, DeviceKind, DeviceRow, DeviceStatus, NetworkState, Problem, Prompt, Radio,
     Security, Signal, Summary, WifiNetwork,
@@ -25,6 +25,7 @@ use pindu_core::system::network::{
 
 use crate::application::PinduApplication;
 use crate::network_service::NetworkService;
+use crate::quick_access::PinduQuickAccess;
 use crate::secret_dialog::SecretDialog;
 use crate::window::PinduWindow;
 
@@ -79,44 +80,47 @@ mod imp {
 
 glib::wrapper! {
     /// Quick Access's Network level: the wired and Wi-Fi devices, Wi-Fi's switch and the
-    /// Wi-Fi networks in range. It is the `"network"` page of the window's Quick Access
-    /// stack.
+    /// Wi-Fi networks in range. It is the `"network"` page of Quick Access's stack.
     pub struct PinduNetworkLevel(ObjectSubclass<imp::PinduNetworkLevel>)
         @extends adw::Bin, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
-impl PinduWindow {
+impl PinduQuickAccess {
     /// Adds the level's actions, and shows the entry as the network is and as it changes.
-    pub(crate) fn setup_network(&self) {
-        let join = gio::ActionEntry::builder("network-join")
-            .parameter_type(Some(glib::VariantTy::BYTE_STRING))
-            .activate(|window: &Self, _, target| {
+    pub(crate) fn setup_network(
+        &self,
+        application: &PinduApplication,
+        actions: &impl IsA<gio::ActionMap>,
+    ) {
+        self.add_host_action(
+            actions,
+            "network-join",
+            Some(glib::VariantTy::BYTE_STRING),
+            |quick_access, target| {
                 if let (Some(service), Some(ssid)) = (
-                    window.network_service(),
+                    quick_access.network_service(),
                     target.and_then(|target| target.get::<Vec<u8>>()),
                 ) {
                     service.join(&ssid);
                 }
-            })
-            .build();
-        let forget = gio::ActionEntry::builder("network-forget")
-            .parameter_type(Some(glib::VariantTy::BYTE_STRING))
-            .activate(|window: &Self, _, target| {
+            },
+        );
+        self.add_host_action(
+            actions,
+            "network-forget",
+            Some(glib::VariantTy::BYTE_STRING),
+            |quick_access, target| {
                 if let Some(ssid) = target.and_then(|target| target.get::<Vec<u8>>()) {
-                    let level = &window.imp().quick_access_network_level;
-                    level.ask_forget(&ssid);
+                    quick_access.imp().network_level.ask_forget(&ssid);
                 }
-            })
-            .build();
-        self.add_action_entries([join, forget]);
-        let Some(service) = self.network_service() else {
-            return;
-        };
+            },
+        );
+        let service = application.network_service();
         service.connect_changed(glib::clone!(
-            #[weak(rename_to = window)]
+            #[weak(rename_to = quick_access)]
             self,
-            move |state| window.show_network_state(state)
+            move |state| quick_access.show_network_state(state)
         ));
         self.show_network_state(&service.state());
     }
@@ -131,14 +135,8 @@ impl PinduWindow {
         service.open();
     }
 
-    /// Where focus goes on the level: the first device, or else Wi-Fi's switch.
-    pub(crate) fn network_focus(&self) -> Option<gtk::Widget> {
-        self.imp().quick_access_network_level.focus_target()
-    }
-
     fn network_service(&self) -> Option<NetworkService> {
         self.application()
-            .and_downcast::<PinduApplication>()
             .map(|application| application.network_service().clone())
     }
 
@@ -147,22 +145,19 @@ impl PinduWindow {
     /// entries once the section is gone or not allowed.
     fn show_network_state(&self, state: &NetworkState) {
         let imp = self.imp();
-        let row = &imp.quick_access_network_row;
+        let row = &imp.network_row;
         row.set_visible(state.availability != Availability::Hidden);
         row.set_sensitive(state.availability == Availability::Shown);
         if let Some(summary) = &state.summary {
-            imp.quick_access_network_icon
-                .set_icon_name(Some(summary_icon(summary)));
-            imp.quick_access_network_subtitle
-                .set_label(&summary_text(summary));
+            imp.network_icon.set_icon_name(Some(summary_icon(summary)));
+            imp.network_subtitle.set_label(&summary_text(summary));
         }
-        imp.quick_access_network_level
-            .show_prompt(state.prompt.as_ref());
-        if self.open_panel() != Some(Panel::QuickAccess(QuickAccessLevel::Network)) {
+        imp.network_level.show_prompt(state.prompt.as_ref());
+        if self.level() != Some(QuickAccessLevel::Network) {
             return;
         }
         if state.availability != Availability::Shown {
-            self.show_panel(Panel::QuickAccess(QuickAccessLevel::Main));
+            self.request_level(QuickAccessLevel::Main);
             return;
         }
         self.fill_network(state);
@@ -171,8 +166,8 @@ impl PinduWindow {
     /// Fills the level for `state`, and puts focus back in the panel when the row it was on
     /// is gone.
     fn fill_network(&self, state: &NetworkState) {
-        if self.imp().quick_access_network_level.fill(state) {
-            self.focus_panel(None);
+        if self.imp().network_level.fill(state) {
+            self.focus_level(None);
         }
     }
 }

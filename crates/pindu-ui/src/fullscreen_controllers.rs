@@ -10,52 +10,56 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::controllers::{Controller, controllers};
 use pindu_core::gamepad::{DeviceId, Glyphs, PROMPTS_KEY, SWAP_KEY};
-use pindu_core::panels::{Panel, QuickAccessLevel};
+use pindu_core::panels::QuickAccessLevel;
 
 use crate::application::PinduApplication;
-use crate::window::PinduWindow;
+use crate::quick_access::PinduQuickAccess;
 
-impl PinduWindow {
+impl PinduQuickAccess {
     /// The settings' actions the radio rows choose through, Identify, and following the
     /// pads and the batteries.
-    pub(crate) fn setup_controllers(&self, application: &PinduApplication) {
+    pub(crate) fn setup_controllers(
+        &self,
+        application: &PinduApplication,
+        actions: &impl IsA<gio::ActionMap>,
+    ) {
         let settings = self.settings();
-        self.add_action(&settings.create_action(PROMPTS_KEY));
-        self.add_action(&settings.create_action(SWAP_KEY));
-        let identify = gio::ActionEntry::builder("identify-controller")
-            .parameter_type(Some(glib::VariantTy::UINT64))
-            .activate(|window: &Self, _, target| {
+        actions.add_action(&settings.create_action(PROMPTS_KEY));
+        actions.add_action(&settings.create_action(SWAP_KEY));
+        self.add_host_action(
+            actions,
+            "identify-controller",
+            Some(glib::VariantTy::UINT64),
+            |quick_access, target| {
                 let device = target.and_then(u64::from_variant).map(DeviceId);
-                let application = window.application().and_downcast::<PinduApplication>();
-                if let (Some(device), Some(application)) = (device, application) {
+                if let (Some(device), Some(application)) = (device, quick_access.application()) {
                     application.gamepad_service().identify(device);
                 }
-            })
-            .build();
-        self.add_action_entries([identify]);
+            },
+        );
         let power = application.power_service().clone();
         application
             .gamepad_service()
             .connect_pads_changed(glib::clone!(
-                #[weak(rename_to = window)]
+                #[weak(rename_to = quick_access)]
                 self,
                 move || {
                     // A pad just plugged in may bring a battery.
                     power.refresh();
-                    window.controllers_changed();
+                    quick_access.controllers_changed();
                 }
             ));
         application.power_service().connect_changed(glib::clone!(
-            #[weak(rename_to = window)]
+            #[weak(rename_to = quick_access)]
             self,
-            move |_| window.controllers_changed()
+            move |_| quick_access.controllers_changed()
         ));
     }
 
     /// A pad came or went, the settings changed its glyphs, or the batteries were read:
     /// the level shows it while it is open.
     fn controllers_changed(&self) {
-        if self.open_panel() == Some(Panel::QuickAccess(QuickAccessLevel::Controllers)) {
+        if self.level() == Some(QuickAccessLevel::Controllers) {
             self.fill_controllers();
         }
     }
@@ -63,11 +67,12 @@ impl PinduWindow {
     /// Fills the Controllers list, keeping focus on the pad it was on, or on the level's
     /// first item when that pad is gone.
     pub(crate) fn fill_controllers(&self) {
-        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+        let Some(application) = self.application() else {
             return;
         };
-        let list = self.imp().quick_access_controllers.get();
-        let focused = gtk::prelude::GtkWindowExt::focus(self)
+        let list = self.imp().controllers.get();
+        let focused = self
+            .focus_widget()
             .filter(|focus| focus.is_ancestor(&list))
             .and_then(|focus| {
                 focus
@@ -102,7 +107,7 @@ impl PinduWindow {
             Some(row) => {
                 row.grab_focus();
             }
-            None => self.focus_panel(None),
+            None => self.focus_level(None),
         }
     }
 }

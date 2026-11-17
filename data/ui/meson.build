@@ -11,6 +11,7 @@ blueprint_names = [
   'game_page',
   'home_page',
   'preferences',
+  'quick_access',
   'secret_dialog',
   'shortcuts-dialog',
   'window',
