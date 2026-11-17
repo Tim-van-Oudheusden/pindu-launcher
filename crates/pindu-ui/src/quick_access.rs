@@ -316,6 +316,7 @@ impl PinduQuickAccess {
         imp.application.set(Some(application));
         let _ = imp.performance_switches.set(PerformanceSwitches::new(
             application.library_service(),
+            application.gamescope_service(),
             &imp.performance_note,
         ));
         self.performance_switches()
