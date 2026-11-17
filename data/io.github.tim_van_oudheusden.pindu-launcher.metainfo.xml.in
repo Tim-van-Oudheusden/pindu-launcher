@@ -87,6 +87,22 @@
   </supports>
 
   <releases>
+    <release version="0.5.0~rc1" type="development" date="2026-11-17">
+      <description>
+        <p>A test release of fullscreen mode in gamescope sessions, where the launcher takes Steam's place.</p>
+        <ul>
+          <li>In a gamescope session started with --steam, the games the launcher starts come to the front, Guide brings the launcher back, and Return in Playing Now goes back to the game</li>
+          <li>Games handed to Steam, Heroic or Lutris come to the front too, and Steam's own window shows while it needs an answer</li>
+          <li>Quick Access opens over a running game with the ⋯ button, including Network and Bluetooth</li>
+          <li>The Performance Overlay switch drives MangoApp in a gamescope session</li>
+          <li>The RPM and DEB packages add a "Pindu launcher" session to gamescope-session-plus login screens, with Switch to Desktop in the Power menu</li>
+          <li>Games started outside the Flatpak open on the launcher's own display</li>
+          <li>Fullscreen mode can install Steam, Heroic or Lutris from Add a Store</li>
+          <li>Wi-Fi passphrases and Bluetooth PINs are typed with the on-screen keyboard</li>
+          <li>Updated translations</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.1" date="2026-11-17">
       <description>
         <p>A fix for fullscreen mode in virtual machines.</p>

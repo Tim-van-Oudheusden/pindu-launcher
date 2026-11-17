@@ -8,16 +8,19 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-17, #341, #346, #353–#355 (#338), #370 (release 0.4.1): set the repository's Website and closed milestones
-  M1–M4 and Hive readiness (#341); opened the hive's branch for #346 as #368; moved the System Update, Sound Output and
-  Power levels into `PinduSystemUpdateLevel`, `PinduSoundOutputLevel` and `PinduPowerLevel` as stacked PRs (#369,
-  #371, #372), which closes #338; cut 0.4.1 for the #359 fix.
-- Gotcha: the level-move PRs classify as high risk (`scripts/tier-classify.sh`), so the merge queue skips them and
-  they merge by hand once CI is green; stacked branches work because PRs merge with merge commits.
-- Gotcha: `tests/e2e/ui-smoke.sh` skips under plain `meson test` (no install). To run it locally: in
-  `org.gnome.Sdk//51` with `--socket=wayland`, `meson setup _smoke --prefix=/tmp/pindu/prefix`, `meson install -C
-  _smoke`, then the script with `/tmp/pindu/prefix/bin/pindu-launcher` and its `resources.gresource` (and
-  `--fullscreen <app-id>` first for fullscreen); `/tmp` is the sandbox's own, so install and run in one invocation.
-- Gotcha: the GNOME 51 SDK's local rust-stable ships clippy 0.1.95, which flags two `collapsible_match` in
-  `controller_navigation.rs` that CI's clippy does not; nothing to fix for CI. No local `flatpak-builder`, so the
-  Flatpak build and lint are CI's.
+- 2026-11-17, gamescope `--steam` work from the #377 spike and its follow-ups, then release 0.5.0-rc.1 (#417): #390
+  (#406), #403 (#412), #404 (#411), #405 (#408), #410 (#414), #392 (#407), #393 (#409), #391 (#416), #413 (#419),
+  #415 (#420), all merged by hand. Each issue had its own agent in its own worktree under `../wt/`; dependent issues
+  were stacked on their base branch and caught up by merging `main` (never rebasing). Open: #377 (spike, findings
+  to fold into the spec), the hardware check on #417, then the final 0.5.0 after the soak.
+- Gotcha: every parallel PR that touches strings regenerates `po/pindu-launcher.pot`, so each merge to `main`
+  conflicts the next one on line references: take `main`'s copy, `meson compile -C _build pindu-launcher-pot`, and
+  let `meson test` (check-pot) confirm.
+- Gotcha: the host's document portal broke mid-session; run the SDK with `flatpak run --no-documents-portal`. Live
+  checks under headless `gamescope --steam` need a private session bus (`dbus-run-session`) or another agent's
+  launcher answers the D-Bus calls, and other agents' uinput pads send stray Guide presses. A portal on a private bus
+  hands `steam://` to the real Steam client.
+- Gotcha: CI runs tests as root, which can write a read-only file (#392's first CI failure); a "cannot write" test
+  needs a target root cannot open either, such as a directory.
+- Gotcha: `tests/e2e/ui-smoke.sh` skips under plain `meson test`; see README/CONTRIBUTING for the install-prefix run
+  inside the SDK. No local `flatpak-builder`, so the Flatpak build and lint are CI's.
