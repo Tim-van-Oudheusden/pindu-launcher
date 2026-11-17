@@ -6,6 +6,7 @@
 #   make -f .copr/Makefile srpm outdir=OUTDIR [spec=SPEC]
 #
 # The version is the spec's, so build after the vX.Y.Z release is published (docs/releasing.md).
+# Pre-releases (X.Y.Z~rcN) are not built: COPR ships final releases only.
 
 top := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 spec ?= $(top)/build-aux/rpm/pindu-launcher.spec
@@ -14,6 +15,10 @@ sources := $(outdir)/sources
 
 srpm:
 	rpm -q rpm-build rpmdevtools >/dev/null || dnf -y install rpm-build rpmdevtools
+	case "$$(rpmspec -q --srpm --qf '%{version}' "$(spec)")" in \
+	  *~*) echo "The spec holds a pre-release; COPR builds final releases only (docs/releasing.md)." >&2; \
+	    exit 1;; \
+	esac
 	mkdir -p "$(sources)"
 	spectool --get-files --directory "$(sources)" "$(spec)"
 	cd "$(sources)" && \

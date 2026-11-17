@@ -11,6 +11,13 @@ repository.workspace = true
 name = "pindu-launcher"
 path = "src/main.rs"
 
+# The system panel against python-dbusmock (tests/system_panel/main.rs): its own harness, as
+# the system bus address is process-wide and the sections run on the main thread's main loop.
+[[test]]
+name = "system_panel"
+path = "tests/system_panel/main.rs"
+harness = false
+
 [dependencies]
 adw = { package = "libadwaita", version = "0.9", features = ["v1_10"] }
 gettext-rs = { version = "0.8", features = ["gettext-system"] }

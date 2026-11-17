@@ -2,7 +2,8 @@
 //! entry, subtitled with the connection in use, and its level with a row per wired and
 //! Wi-Fi device and its state, Wi-Fi's switch, and the Wi-Fi networks in range, which a
 //! scan looks for as the level opens. A new network is joined by selecting it, after its
-//! passphrase where it needs one; a saved one opens to Connect and Forget (asked first).
+//! passphrase where it needs one, typed in the passphrase dialog with the on-screen
+//! keyboard or a keyboard; a saved one opens to Connect and Forget (asked first).
 //! The level is [`PinduNetworkLevel`], with its own Blueprint
 //! (`data/ui/fullscreen_network.blp`); the window keeps the entry, which sits in Quick
 //! Access's shared list, and the level's `win.network-join` and `win.network-forget`.
@@ -15,6 +16,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use pindu_core::osk::Keyboard;
 use pindu_core::panels::{Panel, QuickAccessLevel};
 use pindu_core::system::network::{
     Availability, Busy, DeviceKind, DeviceRow, DeviceStatus, NetworkState, Problem, Prompt, Radio,
@@ -23,6 +25,7 @@ use pindu_core::system::network::{
 
 use crate::application::PinduApplication;
 use crate::network_service::NetworkService;
+use crate::secret_dialog::SecretDialog;
 use crate::window::PinduWindow;
 
 mod imp {
@@ -44,7 +47,7 @@ mod imp {
         #[template_child]
         pub quick_access_wifi_networks: TemplateChild<gtk::ListBox>,
         /// The dialog asking for a Wi-Fi passphrase, with the prompt it shows.
-        pub network_prompt: RefCell<Option<(adw::AlertDialog, Prompt)>>,
+        pub network_prompt: RefCell<Option<(SecretDialog, Prompt)>>,
     }
 
     #[glib::object_subclass]
@@ -327,8 +330,8 @@ impl PinduNetworkLevel {
             .find(|name| name.contains(':'))
     }
 
-    /// Asks for the passphrase the section wants in a dialog, or closes the dialog once it
-    /// no longer wants one.
+    /// Asks for the passphrase the section wants in the passphrase dialog, or withdraws the
+    /// dialog once the section no longer wants one.
     pub(crate) fn show_prompt(&self, prompt: Option<&Prompt>) {
         let imp = self.imp();
         let shown = imp.network_prompt.borrow().clone();
@@ -337,59 +340,35 @@ impl PinduNetworkLevel {
         }
         if let Some((dialog, _)) = shown {
             imp.network_prompt.replace(None);
-            dialog.force_close();
+            dialog.withdraw();
         }
-        let Some(prompt) = prompt else {
+        let (Some(prompt), Some(window)) = (prompt, self.root().and_downcast::<PinduWindow>())
+        else {
             return;
         };
-        let (dialog, entry) = passphrase_dialog(prompt);
-        let answered = prompt.clone();
-        dialog.connect_response(
-            None,
+        let dialog = window.ask_secret(
+            // Translators: {network} is a Wi-Fi network's name.
+            &gettext("Join {network}").replace("{network}", &prompt.name),
+            &passphrase_message(prompt),
+            Keyboard::passphrase(),
             glib::clone!(
                 #[weak(rename_to = level)]
                 self,
-                move |_, response| {
+                move |passphrase: Option<String>| {
+                    // The dialog closes itself after its answer; the answer changing the
+                    // prompt must not withdraw it.
+                    level.imp().network_prompt.replace(None);
                     let Some(service) = level.network_service() else {
                         return;
                     };
-                    // A dialog closing for a prompt gone or replaced answers nothing.
-                    if service.state().prompt.as_ref() != Some(&answered) {
-                        return;
-                    }
-                    // The dialog closes itself after its response; the answer changing the
-                    // prompt must not close it again.
-                    level.imp().network_prompt.replace(None);
-                    if response == "join" {
-                        service.enter(Some(&entry.text()));
-                    } else {
-                        service.enter(None);
-                    }
+                    service.enter(passphrase.as_deref());
                     // A passphrase that cannot fit again leaves the prompt as it was, which
                     // tells no listener; ask again here.
                     level.show_prompt(service.state().prompt.as_ref());
                 }
             ),
         );
-        dialog.connect_closed(glib::clone!(
-            #[weak(rename_to = level)]
-            self,
-            move |dialog| {
-                let imp = level.imp();
-                let ours = imp
-                    .network_prompt
-                    .borrow()
-                    .as_ref()
-                    .is_some_and(|(shown, _)| shown == dialog);
-                if ours {
-                    imp.network_prompt.replace(None);
-                }
-            }
-        ));
-        imp.network_prompt
-            .replace(Some((dialog.clone(), prompt.clone())));
-        // On the window the level is in.
-        dialog.present(self.root().as_ref());
+        imp.network_prompt.replace(Some((dialog, prompt.clone())));
     }
 
     /// Asks before forgetting a saved network: joining it again takes its passphrase.
@@ -607,31 +586,15 @@ fn signal_icon(signal: Signal) -> gtk::Image {
         .build()
 }
 
-/// The dialog asking for a network's passphrase, with its entry.
-fn passphrase_dialog(prompt: &Prompt) -> (adw::AlertDialog, gtk::PasswordEntry) {
-    let body = match (prompt.problem, prompt.security) {
+/// What the passphrase dialog says above its entry: why it asks again, if it does.
+fn passphrase_message(prompt: &Prompt) -> String {
+    match (prompt.problem, prompt.security) {
         (Some(Problem::Wrong), _) => gettext("Wrong passphrase. Try again."),
         (Some(Problem::Length), Security::WpaPersonal) => {
             gettext("A passphrase has 8 to 63 characters.")
         }
         _ => gettext("Enter the network's passphrase."),
-    };
-    let entry = gtk::PasswordEntry::builder()
-        .show_peek_icon(true)
-        .activates_default(true)
-        .build();
-    entry.update_property(&[gtk::accessible::Property::Label(&gettext("Passphrase"))]);
-    let dialog = adw::AlertDialog::builder()
-        // Translators: {network} is a Wi-Fi network's name.
-        .heading(gettext("Join {network}").replace("{network}", &prompt.name))
-        .body(body)
-        .extra_child(&entry)
-        .close_response("cancel")
-        .default_response("join")
-        .build();
-    dialog.add_responses(&[("cancel", &gettext("_Cancel")), ("join", &gettext("_Join"))]);
-    dialog.set_response_appearance("join", adw::ResponseAppearance::Suggested);
-    (dialog, entry)
+    }
 }
 
 /// `bytes` in hexadecimal, which names a network's rows whatever its SSID holds.

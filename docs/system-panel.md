@@ -103,8 +103,9 @@ Service: BlueZ, `org.bluez` on the system bus.
 - **Agent.** While the level is open the launcher registers a pairing agent (`org.bluez.Agent1`, capability
   `KeyboardDisplay`) and asks to be the default agent. Numeric comparison (`RequestConfirmation`) shows the code with
   A to confirm and B to refuse; a displayed passkey (`DisplayPasskey`) shows the code to type on the device; a PIN
-  (`RequestPinCode`) opens the PIN dialog with the on-screen keyboard. Controllers and headsets usually pair with none
-  of these ("Just Works").
+  (`RequestPinCode`) or a passkey (`RequestPasskey`) opens the PIN dialog with the on-screen keyboard, on its digits and
+  showing what it types. BlueZ's `Cancel` (it gave up waiting) withdraws the dialog without an answer. Controllers and
+  headsets usually pair with none of these ("Just Works").
 - **Forget.** A paired device has **Forget** (`Adapter1.RemoveDevice`).
 
 ### Audio output
@@ -158,6 +159,10 @@ the services; they never talk to the bus or spawn a process themselves.
 - The backends report results through callbacks on the main thread, like `GamepadBackend::start`'s sink, so the core
   stays free of GLib and every flow (join a network, pair a device, roll back) is tested in `pindu-core` with a fake
   backend.
+- The Power, Network and Bluetooth sections are also tested over their real backends, against python-dbusmock's
+  `logind`, `networkmanager` and `bluez5` templates on a private system bus (`crates/pindu-ui/tests/system_panel`,
+  #380), so a renamed call or a missed signal fails `cargo test` and `meson test`. The suite says it skips, and
+  passes, where python-dbusmock or `dbus-daemon` is missing; CI installs python-dbusmock.
 - The existing `power` module (batteries from sysfs) keeps its name; the new power actions live in `system::power`.
 - The panel's levels and entries extend `panels.rs` (`DrawerLevel`, `QuickAccessLevel`, `drawer_entries`).
 - Each section's level is its own composite widget with its own Blueprint (the UI level column), a single child of its

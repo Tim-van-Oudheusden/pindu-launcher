@@ -1,15 +1,17 @@
 name: Release
 
 # A `v*` tag publishes a GitHub release: the stable Flatpak bundle, its checksums and notes
-# from the MetaInfo. Running it by hand rebuilds an existing tag's release (for example after
-# a failed upload) and replaces its files. docs/releasing.md is the runbook.
+# from the MetaInfo. A `vX.Y.Z-rc.N` tag publishes a pre-release that is never "latest", so
+# a release can soak before its final tag. Running it by hand rebuilds an existing tag's
+# release (for example after a failed upload) and replaces its files. docs/releasing.md is
+# the runbook.
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing tag to build and publish, for example v0.2.0
+        description: Existing tag to build and publish, for example v0.2.0 or v0.3.0-rc.1
         required: true
 
 concurrency:
@@ -37,7 +39,9 @@ jobs:
           ref: ${{ env.TAG }}
 
       # Fails before anything is built when the tag, meson.build, Cargo.toml and the
-      # MetaInfo's newest <release> disagree, or the release has no notes.
+      # MetaInfo's newest <release> disagree, or the release has no notes. A pre-release
+      # tag vX.Y.Z-rc.N passes when the files name X.Y.Z-rc.N (meson, Cargo) and X.Y.Z~rcN
+      # (MetaInfo, RPM, DEB).
       - id: version
         run: |
           build-aux/check-version.sh "$TAG"
@@ -264,12 +268,19 @@ jobs:
           (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)
           build-aux/release-notes.py "$VERSION" > notes.md
 
-      # A new tag gets a new release; a rerun replaces the files of the existing one.
+      # A new tag gets a new release; a rerun replaces the files of the existing one. A
+      # pre-release tag (vX.Y.Z-rc.N) is published as a pre-release that never becomes the
+      # latest release, so the final X.Y.Z stays "latest"; a rerun keeps it that way.
       - name: Publish
         run: |
+          flags=()
+          case "$TAG" in
+            *-rc.*) flags=(--prerelease --latest=false) ;;
+          esac
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/* --clobber
-            gh release edit "$TAG" --notes-file notes.md
+            gh release edit "$TAG" --notes-file notes.md "${flags[@]}"
           else
-            gh release create "$TAG" dist/* --verify-tag --title "Pindu launcher $VERSION" --notes-file notes.md
+            gh release create "$TAG" dist/* --verify-tag --title "Pindu launcher $VERSION" \
+              --notes-file notes.md "${flags[@]}"
           fi
