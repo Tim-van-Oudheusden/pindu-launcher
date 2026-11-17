@@ -235,16 +235,16 @@ Wi-Fi network's name, or `Offline`.
   Wi-Fi's switch, and the Wi-Fi networks in range, strongest first. Opening it looks for networks. The network in use
   is checked, and saved ones say **Saved**.
 - Selecting a new network joins it. An open one joins at once; a WPA/WPA2 or WPA3 personal one asks for its passphrase
-  first. The connection is saved for every user of the machine with the passphrase in it, so it comes back after a
-  restart before anyone logs in. A wrong passphrase is asked for again, and the connection it made is deleted.
+  first, typed with the on-screen keyboard (capitals and symbols are a key away, and Show shows what you typed) or
+  with a keyboard. The connection is saved for every user of the machine with the passphrase in it, so it comes back
+  after a restart before anyone logs in. A wrong passphrase is asked for again, and the connection it made is deleted.
 - A saved network opens to **Connect** and **Forget**, which deletes its connection after asking.
 - Enterprise (802.1X) networks are listed but greyed out, to be set up on another device. Hidden networks, static
   addresses, VPNs and proxies are not offered.
 - If the system does not let the session change the network, the entry is greyed out and says so. Without a Wi-Fi
   device the level has the wired state only.
 
-For now the passphrase is typed with a keyboard: the on-screen keyboard cannot type one yet. The Flatpak has no access
-to the system bus, so the entry does not show there.
+The Flatpak has no access to the system bus, so the entry does not show there.
 
 ### Bluetooth
 
@@ -258,8 +258,9 @@ controller or headset with a controller only.
   forgotten device has to be paired again.
 - **Found Devices** lists what is nearby while the level is open; the search stops when it closes. Selecting one
   pairs it, trusts it so that it reconnects by itself after a restart, and connects it.
-- When a device asks to compare a code, the code shows: A pairs, B refuses. A keyboard gets a code to type on it.
-  A device that asks for a PIN cannot pair here yet.
+- When a device asks to compare a code, the code shows: A pairs, B refuses. A keyboard gets a code to type on it. When
+  a device asks for a PIN or a passkey, you type it with the on-screen keyboard, which starts on the digits, or with a
+  keyboard.
 - If something does not work, a notification says why.
 
 The Flatpak has no access to the system bus, so the entry does not show there; use the desktop's Bluetooth settings.

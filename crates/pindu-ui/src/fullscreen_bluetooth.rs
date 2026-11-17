@@ -3,8 +3,9 @@
 //! the radio's switch, the paired devices (each opening to Connect or Disconnect and
 //! Forget, asked first) and the devices found nearby, which a press pairs and connects.
 //! While the level is open discovery and the pairing agent run, and what the agent asks
-//! shows in a dialog: a code to confirm (A confirms, B refuses) or a code to type on the
-//! device. The level is [`PinduBluetoothLevel`], with its own Blueprint
+//! shows in a dialog: a code to confirm (A confirms, B refuses), a code to type on the
+//! device, or a PIN or passkey to type here in the passphrase dialog, with the on-screen
+//! keyboard or a keyboard. The level is [`PinduBluetoothLevel`], with its own Blueprint
 //! (`data/ui/fullscreen_bluetooth.blp`); the window keeps the entry, which sits in Quick
 //! Access's shared list, and the level's `win.bluetooth-*` actions. Both show
 //! [`BluetoothService`]'s state and call it; neither talks to BlueZ itself.
@@ -15,11 +16,13 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use pindu_core::osk::Keyboard;
 use pindu_core::panels::{Panel, QuickAccessLevel};
 use pindu_core::system::bluetooth::{BluetoothState, Busy, Device, Power, Prompt, Summary};
 
 use crate::application::PinduApplication;
 use crate::bluetooth_service::BluetoothService;
+use crate::secret_dialog::SecretDialog;
 use crate::window::PinduWindow;
 
 /// The icon of a device whose own icon the theme lacks.
@@ -48,7 +51,7 @@ mod imp {
         #[template_child]
         pub quick_access_bluetooth_found: TemplateChild<gtk::ListBox>,
         /// The dialog showing what Bluetooth's pairing agent asks, with what it shows.
-        pub bluetooth_prompt: RefCell<Option<(adw::AlertDialog, Prompt)>>,
+        pub bluetooth_prompt: RefCell<Option<(adw::Dialog, Prompt)>>,
     }
 
     #[glib::object_subclass]
@@ -337,12 +340,37 @@ impl PinduBluetoothLevel {
         }
         if let Some((dialog, _)) = shown {
             imp.bluetooth_prompt.replace(None);
-            dialog.force_close();
+            match dialog.downcast_ref::<SecretDialog>() {
+                Some(secret) => secret.withdraw(),
+                None => dialog.force_close(),
+            }
         }
         let Some(prompt) = prompt else {
             return;
         };
-        let dialog = prompt_dialog(prompt);
+        let dialog = match prompt {
+            Prompt::Confirm { device, passkey } => {
+                Some(self.present_alert(prompt, confirm_dialog(device, passkey)))
+            }
+            Prompt::Show { device, code } => {
+                Some(self.present_alert(prompt, show_dialog(device, code)))
+            }
+            Prompt::EnterPin { device } => {
+                self.ask_code(device, &gettext("Type the device's PIN."))
+            }
+            Prompt::EnterPasskey { device } => self.ask_code(
+                device,
+                &gettext("Type the six-digit code the device shows."),
+            ),
+        };
+        if let Some(dialog) = dialog {
+            imp.bluetooth_prompt.replace(Some((dialog, prompt.clone())));
+        }
+    }
+
+    /// Presents `dialog` for `prompt`, a code to confirm or to type on the device, and
+    /// answers the prompt with its response.
+    fn present_alert(&self, prompt: &Prompt, dialog: adw::AlertDialog) -> adw::Dialog {
         let answered = prompt.clone();
         dialog.connect_response(
             None,
@@ -360,12 +388,10 @@ impl PinduBluetoothLevel {
                     // The dialog closes itself after its response; the answer taking the
                     // prompt away must not close it again.
                     level.imp().bluetooth_prompt.replace(None);
-                    match answered {
-                        Prompt::Confirm { .. } => service.confirm(response == "pair"),
-                        Prompt::Show { .. } => service.dismiss(),
-                        Prompt::EnterPin { .. } | Prompt::EnterPasskey { .. } => {
-                            service.enter(None);
-                        }
+                    if matches!(answered, Prompt::Confirm { .. }) {
+                        service.confirm(response == "pair");
+                    } else {
+                        service.dismiss();
                     }
                 }
             ),
@@ -379,16 +405,42 @@ impl PinduBluetoothLevel {
                     .bluetooth_prompt
                     .borrow()
                     .as_ref()
-                    .is_some_and(|(shown, _)| shown == dialog);
+                    .is_some_and(|(shown, _)| shown == dialog.upcast_ref::<adw::Dialog>());
                 if ours {
                     imp.bluetooth_prompt.replace(None);
                 }
             }
         ));
-        imp.bluetooth_prompt
-            .replace(Some((dialog.clone(), prompt.clone())));
         // On the window the level is in.
         dialog.present(self.root().as_ref());
+        dialog.upcast()
+    }
+
+    /// Asks for the PIN or passkey `device` wants in the passphrase dialog, saying
+    /// `message`, and answers the agent with what is typed, or refuses once it is
+    /// cancelled. The code keyboard starts on the digits and shows what it types: the
+    /// device shows the code anyway.
+    fn ask_code(&self, device: &str, message: &str) -> Option<adw::Dialog> {
+        let window = self.root().and_downcast::<PinduWindow>()?;
+        let dialog = window.ask_secret(
+            // Translators: {device} is a Bluetooth device's name.
+            &gettext("Pair With {device}").replace("{device}", device),
+            message,
+            Keyboard::code(),
+            glib::clone!(
+                #[weak(rename_to = level)]
+                self,
+                move |code: Option<String>| {
+                    // The dialog closes itself after its answer; the answer taking the
+                    // prompt away must not withdraw it.
+                    level.imp().bluetooth_prompt.replace(None);
+                    if let Some(service) = level.bluetooth_service() {
+                        service.enter(code);
+                    }
+                }
+            ),
+        );
+        Some(dialog.upcast())
     }
 
     /// Asks before forgetting a paired device: pairing it again takes a controller, and it
@@ -541,55 +593,42 @@ fn found_row(device: &Device, state: &BluetoothState) -> adw::ActionRow {
     row
 }
 
-/// The dialog for what the pairing agent asks.
-fn prompt_dialog(prompt: &Prompt) -> adw::AlertDialog {
-    let code_label = |code: &str| {
-        gtk::Label::builder()
-            .label(code)
-            .selectable(false)
-            .css_classes(["title-1", "numeric"])
-            .build()
-    };
-    match prompt {
-        Prompt::Confirm { device, passkey } => {
-            let dialog = adw::AlertDialog::builder()
-                // Translators: {device} is a Bluetooth device's name, such as a controller's.
-                .heading(gettext("Pair With {device}?").replace("{device}", device))
-                .body(gettext("Pair if the device shows this code too."))
-                .extra_child(&code_label(passkey))
-                .close_response("refuse")
-                .default_response("pair")
-                .build();
-            dialog.add_responses(&[("refuse", &gettext("_Refuse")), ("pair", &gettext("_Pair"))]);
-            dialog.set_response_appearance("pair", adw::ResponseAppearance::Suggested);
-            dialog
-        }
-        Prompt::Show { device, code } => {
-            let dialog = adw::AlertDialog::builder()
-                // Translators: {device} is a Bluetooth device's name, such as a keyboard's.
-                .heading(gettext("Type This Code on {device}").replace("{device}", device))
-                .body(gettext("Then press Enter on it."))
-                .extra_child(&code_label(code))
-                .close_response("cancel")
-                .default_response("cancel")
-                .build();
-            dialog.add_responses(&[("cancel", &gettext("_Cancel"))]);
-            dialog
-        }
-        Prompt::EnterPin { device } | Prompt::EnterPasskey { device } => {
-            let dialog = adw::AlertDialog::builder()
-                // Translators: {device} is a Bluetooth device's name.
-                .heading(gettext("{device} Asks for a Code").replace("{device}", device))
-                .body(gettext(
-                    "Typing a code with the controller is not possible yet, so this device cannot pair here.",
-                ))
-                .close_response("close")
-                .default_response("close")
-                .build();
-            dialog.add_responses(&[("close", &gettext("_Close"))]);
-            dialog
-        }
-    }
+/// The dialog for a code both sides show, which A confirms and B refuses.
+fn confirm_dialog(device: &str, passkey: &str) -> adw::AlertDialog {
+    let dialog = adw::AlertDialog::builder()
+        // Translators: {device} is a Bluetooth device's name, such as a controller's.
+        .heading(gettext("Pair With {device}?").replace("{device}", device))
+        .body(gettext("Pair if the device shows this code too."))
+        .extra_child(&code_label(passkey))
+        .close_response("refuse")
+        .default_response("pair")
+        .build();
+    dialog.add_responses(&[("refuse", &gettext("_Refuse")), ("pair", &gettext("_Pair"))]);
+    dialog.set_response_appearance("pair", adw::ResponseAppearance::Suggested);
+    dialog
+}
+
+/// The dialog for a code to type on the device.
+fn show_dialog(device: &str, code: &str) -> adw::AlertDialog {
+    let dialog = adw::AlertDialog::builder()
+        // Translators: {device} is a Bluetooth device's name, such as a keyboard's.
+        .heading(gettext("Type This Code on {device}").replace("{device}", device))
+        .body(gettext("Then press Enter on it."))
+        .extra_child(&code_label(code))
+        .close_response("cancel")
+        .default_response("cancel")
+        .build();
+    dialog.add_responses(&[("cancel", &gettext("_Cancel"))]);
+    dialog
+}
+
+/// A code, large, in a dialog.
+fn code_label(code: &str) -> gtk::Label {
+    gtk::Label::builder()
+        .label(code)
+        .selectable(false)
+        .css_classes(["title-1", "numeric"])
+        .build()
 }
 
 /// The rows of `list`.

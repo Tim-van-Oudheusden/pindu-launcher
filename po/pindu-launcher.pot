@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-17 15:23+0100\n"
+"POT-Creation-Date: 2026-11-17 15:31+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -378,16 +378,15 @@ msgid "Name"
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:239
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:419
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:576
-#: crates/pindu-ui/src/fullscreen_network.rs:419
-#: crates/pindu-ui/src/fullscreen_network.rs:632
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:471
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:621
+#: crates/pindu-ui/src/fullscreen_network.rs:398
 #: crates/pindu-ui/src/fullscreen_power.rs:171
 #: crates/pindu-ui/src/fullscreen_system_update.rs:175
 #: crates/pindu-ui/src/game_dialog.rs:807
 #: crates/pindu-ui/src/proton_downloads_page.rs:227
 #: crates/pindu-ui/src/proton_launch.rs:629 data/ui/game_dialog.blp:16
-#: data/ui/secret_dialog.blp:17
+#: data/ui/secret_dialog.blp:19
 msgid "_Cancel"
 msgstr ""
 
@@ -414,129 +413,124 @@ msgstr ""
 msgid "From Flathub"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:214
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:217
 msgid "Looking for devices…"
 msgstr ""
 
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:359
+msgid "Type the device's PIN."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:363
+msgid "Type the six-digit code the device shows."
+msgstr ""
+
+#. Translators: {device} is a Bluetooth device's name.
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:427
+#, rust-format
+msgid "Pair With {device}"
+msgstr ""
+
 #. Translators: {device} is a Bluetooth device's name, such as a controller's.
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:411
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:463
 #, rust-format
 msgid "Forget {device}?"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:413
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:465
 msgid ""
 "It disconnects, and has to be paired again before it can connect. If it is "
 "the controller in use, use another one to pair it."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:420
-#: crates/pindu-ui/src/fullscreen_network.rs:420
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:472
+#: crates/pindu-ui/src/fullscreen_network.rs:399
 msgid "_Forget"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:438
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:490
 msgid "No devices connected"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:439
-#: crates/pindu-ui/src/fullscreen_network.rs:471 data/ui/preferences.blp:74
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:491
+#: crates/pindu-ui/src/fullscreen_network.rs:450 data/ui/preferences.blp:74
 #: data/ui/window.blp:947 data/ui/window.blp:1001 data/ui/window.blp:1184
 msgid "Off"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:440
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:492
 msgid "Blocked"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:456
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:508
 msgid "Pairing…"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:457
-#: crates/pindu-ui/src/fullscreen_network.rs:468
-#: crates/pindu-ui/src/fullscreen_network.rs:503
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:509
+#: crates/pindu-ui/src/fullscreen_network.rs:447
+#: crates/pindu-ui/src/fullscreen_network.rs:482
 msgid "Connecting…"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:458
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:510
 msgid "Disconnecting…"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:459
-#: crates/pindu-ui/src/fullscreen_network.rs:504
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:511
+#: crates/pindu-ui/src/fullscreen_network.rs:483
 msgid "Forgetting…"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:460
-#: crates/pindu-ui/src/fullscreen_network.rs:467
-#: crates/pindu-ui/src/fullscreen_network.rs:505
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:512
+#: crates/pindu-ui/src/fullscreen_network.rs:446
+#: crates/pindu-ui/src/fullscreen_network.rs:484
 msgid "Connected"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:461
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:513
 msgid "Paired"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:497
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:549
 msgid "Disconnect"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:503
-#: crates/pindu-ui/src/fullscreen_network.rs:530
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:555
+#: crates/pindu-ui/src/fullscreen_network.rs:509
 msgid "Connect"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:515
-#: crates/pindu-ui/src/fullscreen_network.rs:539
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:567
+#: crates/pindu-ui/src/fullscreen_network.rs:518
 msgid "Forget"
 msgstr ""
 
 #. Translators: {device} is a Bluetooth device's name, such as a controller's.
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:557
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:600
 #, rust-format
 msgid "Pair With {device}?"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:558
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:601
 msgid "Pair if the device shows this code too."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:563
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:606
 msgid "_Refuse"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:563
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:606
 msgid "_Pair"
 msgstr ""
 
 #. Translators: {device} is a Bluetooth device's name, such as a keyboard's.
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:570
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:615
 #, rust-format
 msgid "Type This Code on {device}"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:571
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:616
 msgid "Then press Enter on it."
-msgstr ""
-
-#. Translators: {device} is a Bluetooth device's name.
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:582
-#, rust-format
-msgid "{device} Asks for a Code"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:584
-msgid ""
-"Typing a code with the controller is not possible yet, so this device cannot "
-"pair here."
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:589
-#: crates/pindu-ui/src/launch_service.rs:196
-#: crates/pindu-ui/src/proton_launch.rs:374
-#: crates/pindu-ui/src/proton_launch.rs:603 crates/pindu-ui/src/window.rs:1385
-msgid "_Close"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:88
@@ -747,93 +741,85 @@ msgstr ""
 msgid "Playtime"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:201
+#: crates/pindu-ui/src/fullscreen_network.rs:204
 msgid "Looking for networks…"
 msgstr ""
 
 #. Translators: {network} is a Wi-Fi network's name.
-#: crates/pindu-ui/src/fullscreen_network.rs:411
+#: crates/pindu-ui/src/fullscreen_network.rs:351
+#, rust-format
+msgid "Join {network}"
+msgstr ""
+
+#. Translators: {network} is a Wi-Fi network's name.
+#: crates/pindu-ui/src/fullscreen_network.rs:390
 #, rust-format
 msgid "Forget {network}?"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:413
+#: crates/pindu-ui/src/fullscreen_network.rs:392
 msgid ""
 "Its passphrase is removed, and the console no longer joins it by itself."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:441
-#: crates/pindu-ui/src/fullscreen_network.rs:451
+#: crates/pindu-ui/src/fullscreen_network.rs:420
+#: crates/pindu-ui/src/fullscreen_network.rs:430
 msgid "Wired"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:443
+#: crates/pindu-ui/src/fullscreen_network.rs:422
 #: crates/pindu-ui/src/proton_downloads_page.rs:100 data/ui/window.blp:299
 msgid "Offline"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:444
+#: crates/pindu-ui/src/fullscreen_network.rs:423
 #: crates/pindu-ui/src/fullscreen_power.rs:256
 msgid "Not allowed on this system"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:452
+#: crates/pindu-ui/src/fullscreen_network.rs:431
 #: data/ui/fullscreen_network.blp:43 data/ui/fullscreen_network.blp:47
 msgid "Wi-Fi"
 msgstr ""
 
 #. Translators: {device} is "Wired" or "Wi-Fi", {interface} its name, such as wlan0.
-#: crates/pindu-ui/src/fullscreen_network.rs:456
+#: crates/pindu-ui/src/fullscreen_network.rs:435
 #, rust-format
 msgid "{device} ({interface})"
 msgstr ""
 
 #. Translators: {network} is a Wi-Fi network's name.
-#: crates/pindu-ui/src/fullscreen_network.rs:465
+#: crates/pindu-ui/src/fullscreen_network.rs:444
 #, rust-format
 msgid "Connected to {network}"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:469
+#: crates/pindu-ui/src/fullscreen_network.rs:448
 msgid "Disconnected"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:470
+#: crates/pindu-ui/src/fullscreen_network.rs:449
 msgid "Cable unplugged"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:506
+#: crates/pindu-ui/src/fullscreen_network.rs:485
 msgid "Saved"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:507
+#: crates/pindu-ui/src/fullscreen_network.rs:486
 msgid "Set up on another device"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:613
+#: crates/pindu-ui/src/fullscreen_network.rs:592
 msgid "Wrong passphrase. Try again."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:615
+#: crates/pindu-ui/src/fullscreen_network.rs:594
 msgid "A passphrase has 8 to 63 characters."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:617
+#: crates/pindu-ui/src/fullscreen_network.rs:596
 msgid "Enter the network's passphrase."
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:623
-msgid "Passphrase"
-msgstr ""
-
-#. Translators: {network} is a Wi-Fi network's name.
-#: crates/pindu-ui/src/fullscreen_network.rs:626
-#, rust-format
-msgid "Join {network}"
-msgstr ""
-
-#: crates/pindu-ui/src/fullscreen_network.rs:632
-msgid "_Join"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_notifications.rs:64
@@ -1471,6 +1457,12 @@ msgstr ""
 #: crates/pindu-ui/src/launch_service.rs:241
 #, rust-format
 msgid "Could not open {launcher}"
+msgstr ""
+
+#: crates/pindu-ui/src/launch_service.rs:196
+#: crates/pindu-ui/src/proton_launch.rs:374
+#: crates/pindu-ui/src/proton_launch.rs:603 crates/pindu-ui/src/window.rs:1385
+msgid "_Close"
 msgstr ""
 
 #: crates/pindu-ui/src/launch_service.rs:197
@@ -3176,7 +3168,7 @@ msgid ""
 "Turns My Stylesheet off and renames fullscreen.css to fullscreen.css.bak"
 msgstr ""
 
-#: data/ui/secret_dialog.blp:24
+#: data/ui/secret_dialog.blp:26
 msgid "_Done"
 msgstr ""
 
