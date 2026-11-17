@@ -312,6 +312,8 @@ gamescope -f -- flatpak run --nosocket=wayland io.github.tim_van_oudheusden.pind
   opens takes gamescope's focus, and the app gets it back when the game quits.
 - `--nosocket=wayland` matters when gamescope starts from a desktop session: without it, Flatpak gives the app the
   desktop's Wayland display, and the window opens on the desktop instead of in gamescope.
+- Games the app starts on the host get the app's display rather than the desktop's: its `DISPLAY`, and with
+  `--nosocket=wayland` an empty `WAYLAND_DISPLAY`, so a game that would use Wayland falls back to X11 in gamescope.
 - `-f` makes gamescope's window fullscreen when it runs nested in a desktop session.
 - Under X11 the app draws at scale 1. On a 4K screen, let gamescope upscale a smaller picture
   (`gamescope -W 3840 -H 2160 -w 1920 -h 1080 -f -- …`) or scale the app (`flatpak run --env=GDK_SCALE=2 …`).
@@ -342,6 +344,16 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   Flatpak cannot reach `/tmp/mangohud.*` or `$XDG_RUNTIME_DIR/gamescope-mangoapp-*`; point the variable at a file under
   `$XDG_RUNTIME_DIR/app/io.github.tim_van_oudheusden.pindu-launcher/` that holds `no_display` before gamescope starts.
   Otherwise games keep their own MangoHud.
+- A game the app hands to its store's launcher (Steam, Heroic, Lutris, Bottles, Faugus) is expected in front from the
+  moment the store opens: its windows, and any untagged window another app opens meanwhile, such as Steam's update or
+  sign-in window, get the game's app ID and come to the front. The app is back when the last of those windows closes,
+  and stops expecting the game 10 seconds later. While none has opened the app stays in front, and after a minute it
+  stops waiting. Guide brings the app to the front as with other games, and starting the game again brings it back.
+- A Steam client that a Steam game starts inside the session tags its own windows (its library, and so probably its
+  sign-in window) as app 769, as the app's window is, and writes the focus list itself. The app therefore pins its
+  window (`GAMESCOPECTRL_BASELAYER_WINDOW`) whenever it should be in front, including while a game it wants in front
+  has no window yet, and writes its focus list and pin back when another client changes them, at most ten times in 10
+  seconds. The Steam client's own windows therefore stay hidden; its games come to the front as usual.
 - Tested with gamescope 3.17.0 (`gamescope --backend headless --steam --xwayland-count 2`). gamescope's `--steam`
   protocol is undocumented and may change between releases.
 

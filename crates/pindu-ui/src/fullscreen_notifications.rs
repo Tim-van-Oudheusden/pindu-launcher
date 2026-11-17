@@ -7,55 +7,65 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use pindu_core::model::GameId;
 use pindu_core::notifications::{Kind, Notification, Target};
-use pindu_core::panels::{Panel, QuickAccessLevel};
+use pindu_core::panels::QuickAccessLevel;
 
 use crate::application::PinduApplication;
-use crate::window::PinduWindow;
+use crate::quick_access::PinduQuickAccess;
 
-impl PinduWindow {
+impl PinduQuickAccess {
     /// The entries' targets, and following the notifications: the entry's count, and the
     /// level while it shows.
-    pub(crate) fn setup_notifications(&self, application: &PinduApplication) {
-        self.add_game_action("notification-game", |window, id| {
-            window.close_panel();
-            window.return_to_game(id);
-        });
-        let permissions = gio::ActionEntry::builder("notification-permissions")
-            .activate(|window: &Self, _, _| {
-                window.close_panel();
-                if let Some(application) = window.application() {
+    pub(crate) fn setup_notifications(
+        &self,
+        application: &PinduApplication,
+        actions: &impl IsA<gio::ActionMap>,
+    ) {
+        self.add_host_action(
+            actions,
+            "notification-game",
+            Some(glib::VariantTy::STRING),
+            |quick_access, target| {
+                let id = target
+                    .and_then(|target| target.str())
+                    .and_then(|id| id.parse::<GameId>().ok());
+                if let Some(id) = id {
+                    quick_access.request_game(&id);
+                }
+            },
+        );
+        self.add_host_action(
+            actions,
+            "notification-permissions",
+            None,
+            |quick_access, _| {
+                quick_access.request_close();
+                if let Some(application) = quick_access.application() {
                     application.activate_action("permissions", None);
                 }
-            })
-            .build();
-        self.add_action_entries([permissions]);
+            },
+        );
         application
             .notification_service()
             .connect_changed(glib::clone!(
-                #[weak(rename_to = window)]
+                #[weak(rename_to = quick_access)]
                 self,
-                move || window.notifications_changed()
+                move || quick_access.notifications_changed()
             ));
         self.show_unread_count();
-    }
-
-    /// Whether a notification is unread, which has Quick Access open at its notifications.
-    pub(crate) fn has_unread_notifications(&self) -> bool {
-        self.application()
-            .and_downcast::<PinduApplication>()
-            .is_some_and(|application| application.notification_service().unread() > 0)
     }
 
     /// Fills the Notifications level, newest first, and marks them read: the user sees
     /// them now. Unread ones stand out until the level is filled again.
     pub(crate) fn show_notifications(&self) {
-        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+        let Some(application) = self.application() else {
             return;
         };
-        let list = self.imp().quick_access_notifications.get();
-        let had_focus =
-            gtk::prelude::GtkWindowExt::focus(self).is_some_and(|focus| focus.is_ancestor(&list));
+        let list = self.imp().notifications.get();
+        let had_focus = self
+            .focus_widget()
+            .is_some_and(|focus| focus.is_ancestor(&list));
         list.remove_all();
         let service = application.notification_service();
         let entries = service.entries();
@@ -80,7 +90,7 @@ impl PinduWindow {
     /// A posted notification, or the log read: the count follows, and the level shows a
     /// new one while it is open.
     fn notifications_changed(&self) {
-        let open = self.open_panel() == Some(Panel::QuickAccess(QuickAccessLevel::Notifications));
+        let open = self.level() == Some(QuickAccessLevel::Notifications);
         if open && self.has_unread_notifications() {
             self.show_notifications();
         }
@@ -89,14 +99,14 @@ impl PinduWindow {
 
     /// The Notifications entry's count of unread notifications, hidden at none.
     fn show_unread_count(&self) {
-        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+        let Some(application) = self.application() else {
             return;
         };
         let unread = application.notification_service().unread();
-        let label = &self.imp().quick_access_unread;
+        let label = &self.imp().unread;
         label.set_visible(unread > 0);
         label.set_label(&unread.to_string());
-        let row = &self.imp().quick_access_notifications_row;
+        let row = &self.imp().notifications_row;
         // Translators: how many notifications are unread; {count} is a number.
         let description = gettext("{count} unread").replace("{count}", &unread.to_string());
         if unread > 0 {
@@ -130,9 +140,12 @@ impl PinduWindow {
             dot.update_property(&[gtk::accessible::Property::Label(&gettext("Unread"))]);
             row.add_prefix(&dot);
         }
-        if let Ok(time) = glib::DateTime::from_unix_local(entry.time) {
+        if let (Ok(time), Some(clock)) = (
+            glib::DateTime::from_unix_local(entry.time),
+            self.imp().time.get(),
+        ) {
             let label = gtk::Label::builder()
-                .label(self.clock_text_at(&time))
+                .label(clock.text_at(&time))
                 .valign(gtk::Align::Center)
                 .css_classes(["dim-label", "numeric"])
                 .build();

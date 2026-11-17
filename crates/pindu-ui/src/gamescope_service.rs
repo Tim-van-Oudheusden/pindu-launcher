@@ -15,13 +15,15 @@ use std::cell::{Cell, RefCell};
 use std::ffi::{c_int, c_long, c_uchar, c_ulong};
 use std::path::PathBuf;
 use std::rc::{Rc, Weak};
+use std::time::Instant;
 
 use gdk4_x11::x11::xlib;
 use gdk4_x11::{X11Display, X11Surface};
 use gtk::glib;
 use gtk::prelude::*;
 use pindu_core::gamescope::{
-    self, ExpectedGame, Front, InGameIntent, STEAM_APP_ID, WindowFacts, Xid, mangoapp,
+    self, BaseLayerClaim, ExpectedGame, Front, InGameIntent, Reclaims, STEAM_APP_ID, StoreLaunch,
+    WindowFacts, Xid, mangoapp,
 };
 use pindu_core::model::{GameId, LaunchConfig};
 
@@ -32,8 +34,12 @@ use crate::session_service::SessionService;
 const FOCUSED_APP: &str = "GAMESCOPE_FOCUSED_APP";
 /// gamescope's property with the app ID of the base layer: who is in front.
 const FOCUSED_APP_GFX: &str = "GAMESCOPE_FOCUSED_APP_GFX";
+/// gamescope's property with the app IDs of the windows it could show.
+const FOCUSABLE_APPS: &str = "GAMESCOPE_FOCUSABLE_APPS";
 /// The root's focus priority list, which Steam writes and the launcher writes in its place.
 const BASELAYER_APPID: &str = "GAMESCOPECTRL_BASELAYER_APPID";
+/// The root's pinned base layer window, which takes precedence over the list.
+const BASELAYER_WINDOW: &str = "GAMESCOPECTRL_BASELAYER_WINDOW";
 /// A window's app ID.
 const STEAM_GAME: &str = "STEAM_GAME";
 /// The process ID a client gives its window.
@@ -69,6 +75,10 @@ struct Inner {
     sessions: SessionService,
     /// The games we started that run, the first started first, with their app IDs.
     running: RefCell<Vec<(GameId, u32)>>,
+    /// The store launch expected in front, when there is one.
+    store_launch: RefCell<Option<StoreLaunch>>,
+    /// The timer that looks at the store launch again at its deadline.
+    store_timer: RefCell<Option<glib::SourceId>>,
     /// Who the launcher asked gamescope to show.
     wanted: Cell<Front>,
     /// Who gamescope shows, as `GAMESCOPE_FOCUSED_APP_GFX` says.
@@ -79,6 +89,12 @@ struct Inner {
     /// Counts the Performance Overlay writes asked for, so a game's switch read late
     /// never overwrites a newer one.
     overlay_writes: Cell<u64>,
+    /// The launcher's main window, which the claim pins, once it is realized.
+    main_window: Cell<Option<Xid>>,
+    /// The app IDs of the windows gamescope could show (`GAMESCOPE_FOCUSABLE_APPS`).
+    focusable: RefCell<Vec<u32>>,
+    /// When the launcher wrote its claim back after another client changed it.
+    reclaims: RefCell<Reclaims>,
 }
 
 impl GamescopeService {
@@ -96,11 +112,16 @@ impl GamescopeService {
                 x11,
                 sessions: sessions.clone(),
                 running: RefCell::default(),
+                store_launch: RefCell::default(),
+                store_timer: RefCell::default(),
                 wanted: Cell::new(Front::Launcher),
                 front: Cell::new(Front::Launcher),
                 front_listeners: RefCell::default(),
                 mangoapp,
                 overlay_writes: Cell::default(),
+                main_window: Cell::default(),
+                focusable: RefCell::default(),
+                reclaims: RefCell::default(),
             }),
         };
         let Some(x11) = &service.inner.x11 else {
@@ -117,6 +138,8 @@ impl GamescopeService {
                 path.display()
             );
         }
+        let focusable = x11.cardinals(x11.root, FOCUSABLE_APPS).unwrap_or_default();
+        service.inner.focusable.replace(focusable);
         x11.watch_root(Rc::downgrade(&service.inner));
         let weak = Rc::downgrade(&service.inner);
         sessions.connect_sessions_changed(move || {
@@ -139,7 +162,9 @@ impl GamescopeService {
         service
     }
 
-    /// Tags `window` as the launcher (app 769) once it is realized, so gamescope shows it.
+    /// Tags `window`, the launcher's main window, as the launcher (app 769) once it is
+    /// realized, so gamescope shows it, and pins it whenever the launcher should be in
+    /// front, so a Steam client's own 769 windows do not cover it.
     pub fn attach_window(&self, window: &impl IsA<gtk::Window>) {
         if self.inner.x11.is_none() {
             return;
@@ -150,9 +175,15 @@ impl GamescopeService {
                 return;
             };
             let surface = window.surface().and_downcast::<X11Surface>();
-            if let (Some(x11), Some(surface)) = (&inner.x11, surface) {
-                x11.write_cardinals(surface.xid(), STEAM_GAME, &[STEAM_APP_ID]);
-            }
+            let xid = match (&inner.x11, surface) {
+                (Some(x11), Some(surface)) => {
+                    x11.write_cardinals(surface.xid(), STEAM_GAME, &[STEAM_APP_ID]);
+                    surface.xid()
+                }
+                _ => return,
+            };
+            inner.main_window.set(Some(xid));
+            GamescopeService { inner }.write_base_layer();
         };
         let window = window.upcast_ref::<gtk::Window>();
         if window.is_realized() {
@@ -161,7 +192,7 @@ impl GamescopeService {
         window.connect_realize(move |window| tag(window));
     }
 
-    /// Who gamescope shows: the launcher, or a game we started.
+    /// Who gamescope shows: the launcher, or a game we started or handed to its store.
     pub fn front(&self) -> Front {
         self.inner.front.get()
     }
@@ -284,6 +315,26 @@ impl GamescopeService {
         }
     }
 
+    /// Expects the game with `id`, which the launcher just handed to its store launcher, in
+    /// front: its windows, and the store launcher's untagged ones, get its app ID until
+    /// they have come and gone, or for a while when none comes. It replaces an earlier
+    /// store launch.
+    pub fn store_launch_started(&self, id: &GameId) {
+        let Some(x11) = &self.inner.x11 else {
+            return;
+        };
+        self.forget_store_launch();
+        let now = Instant::now();
+        let mut launch = StoreLaunch::new(id, now);
+        let apps = x11.cardinals(x11.root, FOCUSABLE_APPS).unwrap_or_default();
+        launch.focusable_apps_changed(&apps, now);
+        let app_id = launch.app_id();
+        glib::g_info!("pindu", "gamescope: expecting {id} as app {app_id}");
+        self.inner.store_launch.replace(Some(launch));
+        self.schedule_store_check();
+        self.ask_for(Front::Game(app_id));
+    }
+
     /// Follows the games we started: one that starts comes to the front, and the launcher
     /// once the game in front ends.
     fn sessions_changed(&self) {
@@ -297,12 +348,104 @@ impl GamescopeService {
                 (id, app_id)
             })
             .collect();
-        let before = self.running_ids();
+        let before = self.front_ids();
+        let tracked_before = self.running_ids();
         self.inner.running.replace(running);
+        let replaced = self
+            .inner
+            .store_launch
+            .borrow()
+            .as_ref()
+            .is_some_and(|launch| {
+                launch.replaced_by_sessions(&tracked_before, &self.running_ids())
+            });
+        if replaced {
+            self.forget_store_launch();
+        }
         let wanted =
-            gamescope::front_after_sessions(self.inner.wanted.get(), &before, &self.running_ids());
+            gamescope::front_after_sessions(self.inner.wanted.get(), &before, &self.front_ids());
         self.inner.wanted.set(wanted);
         self.write_base_layer();
+    }
+
+    /// Follows the root's `GAMESCOPE_FOCUSABLE_APPS`: for the store launch, and for the
+    /// claim, which pins the launcher while the game it wants in front has no window.
+    fn focusable_apps_changed(&self) {
+        let Some(x11) = &self.inner.x11 else {
+            return;
+        };
+        let apps = x11.cardinals(x11.root, FOCUSABLE_APPS).unwrap_or_default();
+        if let Some(launch) = self.inner.store_launch.borrow_mut().as_mut() {
+            launch.focusable_apps_changed(&apps, Instant::now());
+        }
+        // gamescope rewrites the property, unchanged, after every base layer write: only a
+        // changed claim is written, or the two would loop.
+        let before = self.claim();
+        self.inner.focusable.replace(apps);
+        self.check_store_launch();
+        if self.claim() != before {
+            self.write_base_layer();
+        }
+    }
+
+    /// Ends the store launch once it is over, or looks again at its next deadline.
+    fn check_store_launch(&self) {
+        let over = self
+            .inner
+            .store_launch
+            .borrow()
+            .as_ref()
+            .map(|launch| launch.is_over(Instant::now()));
+        match over {
+            Some(true) => self.end_store_launch(),
+            Some(false) => self.schedule_store_check(),
+            None => {}
+        }
+    }
+
+    fn schedule_store_check(&self) {
+        if let Some(timer) = self.inner.store_timer.take() {
+            timer.remove();
+        }
+        let deadline = self
+            .inner
+            .store_launch
+            .borrow()
+            .as_ref()
+            .and_then(StoreLaunch::deadline);
+        let Some(deadline) = deadline else {
+            return;
+        };
+        let weak = Rc::downgrade(&self.inner);
+        let wait = deadline.saturating_duration_since(Instant::now());
+        let timer = glib::timeout_add_local_once(wait, move || {
+            if let Some(inner) = weak.upgrade() {
+                // The timer has fired, so there is nothing left to remove.
+                inner.store_timer.take();
+                GamescopeService { inner }.check_store_launch();
+            }
+        });
+        self.inner.store_timer.replace(Some(timer));
+    }
+
+    /// The store launch is over: the launcher comes back to the front if it was the one
+    /// wanted there.
+    fn end_store_launch(&self) {
+        let before = self.front_ids();
+        self.forget_store_launch();
+        glib::g_info!("pindu", "gamescope: the store launch is over");
+        let wanted =
+            gamescope::front_after_sessions(self.inner.wanted.get(), &before, &self.front_ids());
+        self.inner.wanted.set(wanted);
+        self.write_base_layer();
+        self.read_front();
+    }
+
+    fn forget_store_launch(&self) {
+        self.inner.store_launch.take();
+        if let Some(timer) = self.inner.store_timer.take() {
+            timer.remove();
+        }
     }
 
     fn ask_for(&self, front: Front) {
@@ -320,7 +463,22 @@ impl GamescopeService {
             .collect()
     }
 
-    fn expected(&self) -> Vec<ExpectedGame> {
+    /// The app IDs the launcher may want in front: the games we started that run, and the
+    /// store launch.
+    fn front_ids(&self) -> Vec<u32> {
+        let mut ids = self.running_ids();
+        ids.extend(
+            self.inner
+                .store_launch
+                .borrow()
+                .as_ref()
+                .map(StoreLaunch::app_id),
+        );
+        ids
+    }
+
+    /// The games we started that run, as their windows are matched.
+    fn tracked(&self) -> Vec<ExpectedGame> {
         self.inner
             .running
             .borrow()
@@ -329,11 +487,65 @@ impl GamescopeService {
             .collect()
     }
 
-    /// Writes `GAMESCOPECTRL_BASELAYER_APPID` for the front the launcher wants.
+    /// The games the launcher expects in front: the tracked ones and the store launch.
+    fn expected(&self) -> Vec<ExpectedGame> {
+        let mut expected = self.tracked();
+        if let Some(launch) = self.inner.store_launch.borrow().as_ref() {
+            expected.push(launch.expected().clone());
+        }
+        expected
+    }
+
+    /// What the launcher claims on the root for the front it wants.
+    fn claim(&self) -> BaseLayerClaim {
+        BaseLayerClaim::new(
+            self.inner.wanted.get(),
+            &self.front_ids(),
+            &self.inner.focusable.borrow(),
+            self.inner.main_window.get(),
+        )
+    }
+
+    /// Writes `GAMESCOPECTRL_BASELAYER_APPID` and `GAMESCOPECTRL_BASELAYER_WINDOW` for the
+    /// front the launcher wants.
     fn write_base_layer(&self) {
         if let Some(x11) = &self.inner.x11 {
-            let list = gamescope::base_layer(self.inner.wanted.get(), &self.running_ids());
-            x11.write_cardinals(x11.root, BASELAYER_APPID, &list);
+            let claim = self.claim();
+            x11.write_cardinals(x11.root, BASELAYER_APPID, &claim.app_ids);
+            // XIDs have 29 bits; 0 is no pin, as gamescope and Steam read it.
+            let window = claim
+                .window
+                .and_then(|xid| u32::try_from(xid).ok())
+                .unwrap_or(0);
+            x11.write_cardinals(x11.root, BASELAYER_WINDOW, &[window]);
+        }
+    }
+
+    /// Writes the claim back when another client, such as a Steam client started inside
+    /// the session, changed the root's base layer properties.
+    fn base_layer_changed(&self) {
+        let Some(x11) = &self.inner.x11 else {
+            return;
+        };
+        let app_ids = x11.cardinals(x11.root, BASELAYER_APPID);
+        let window = x11
+            .cardinals(x11.root, BASELAYER_WINDOW)
+            .and_then(|ids| ids.first().copied())
+            .map(Xid::from);
+        if self.claim().is_held(app_ids.as_deref(), window) {
+            return;
+        }
+        if self.inner.reclaims.borrow_mut().allow(Instant::now()) {
+            glib::g_info!(
+                "pindu",
+                "gamescope: another client changed the base layer ({app_ids:?}, window {window:?}); writing the launcher's back"
+            );
+            self.write_base_layer();
+        } else {
+            glib::g_warning!(
+                "pindu",
+                "gamescope: another client keeps changing the base layer; leaving it for now"
+            );
         }
     }
 
@@ -361,8 +573,9 @@ impl GamescopeService {
         let Some(x11) = &self.inner.x11 else {
             return;
         };
-        let expected = self.expected();
-        if expected.is_empty() {
+        let tracked = self.tracked();
+        let launch = self.inner.store_launch.borrow().clone();
+        if tracked.is_empty() && launch.is_none() {
             return;
         }
         let own: Vec<Xid> = gtk::Window::list_toplevels()
@@ -374,7 +587,11 @@ impl GamescopeService {
         let Some(facts) = x11.window_facts(xid) else {
             return;
         };
-        if let Some(app_id) = gamescope::tag_for_window(&facts, &expected, &own) {
+        let app_id = match &launch {
+            Some(launch) => launch.tag_for_window(&facts, &tracked, &own),
+            None => gamescope::tag_for_window(&facts, &tracked, &own),
+        };
+        if let Some(app_id) = app_id {
             glib::g_info!("pindu", "gamescope: window {xid:#x} is app {app_id}");
             x11.write_cardinals_trapped(xid, STEAM_GAME, &[app_id]);
         }
@@ -442,6 +659,8 @@ impl X11 {
         unsafe { (self.xlib.XSelectInput)(display, self.root, mask) };
         let root = self.root;
         let gfx = self.atom(FOCUSED_APP_GFX);
+        let focusable = self.atom(FOCUSABLE_APPS);
+        let base_layer = [self.atom(BASELAYER_APPID), self.atom(BASELAYER_WINDOW)];
         let handler = move |_: &X11Display, event: *mut xlib::XEvent| {
             // SAFETY: GDK hands the handler the event it is processing, valid for the
             // call; `type_` is the first field of every event in the union.
@@ -450,7 +669,13 @@ impl X11 {
                 xlib::PropertyNotify => {
                     // SAFETY: a `PropertyNotify` event is an `XPropertyEvent`.
                     let property = unsafe { (*event).property };
-                    (property.window == root && property.atom == gfx).then_some(Work::ReadFront)
+                    match property.atom {
+                        _ if property.window != root => None,
+                        atom if atom == gfx => Some(Work::ReadFront),
+                        atom if atom == focusable => Some(Work::ReadFocusable),
+                        atom if base_layer.contains(&atom) => Some(Work::CheckClaim),
+                        _ => None,
+                    }
                 }
                 xlib::MapNotify => {
                     // SAFETY: a `MapNotify` event is an `XMapEvent`.
@@ -470,7 +695,9 @@ impl X11 {
                         let service = GamescopeService { inner };
                         match work {
                             Work::ReadFront => service.read_front(),
+                            Work::ReadFocusable => service.focusable_apps_changed(),
                             Work::Mapped(xid) => service.window_mapped(xid),
+                            Work::CheckClaim => service.base_layer_changed(),
                         }
                     }
                 });
@@ -639,6 +866,10 @@ enum Items {
 enum Work {
     /// `GAMESCOPE_FOCUSED_APP_GFX` changed.
     ReadFront,
+    /// `GAMESCOPE_FOCUSABLE_APPS` changed.
+    ReadFocusable,
     /// Another client mapped this top-level window.
     Mapped(Xid),
+    /// `GAMESCOPECTRL_BASELAYER_APPID` or `GAMESCOPECTRL_BASELAYER_WINDOW` changed.
+    CheckClaim,
 }

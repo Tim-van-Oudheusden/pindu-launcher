@@ -35,17 +35,65 @@ pub struct Command {
     pub working_dir: Option<PathBuf>,
 }
 
+/// The display the launcher shows on, which games it starts on the host should open on
+/// too. Inside Flatpak, `flatpak-spawn --host` hands a game the host session's display
+/// rather than ours, which differs when the launcher runs in a nested gamescope.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LauncherDisplay {
+    /// Our X11 display (`DISPLAY`), if we have one.
+    pub x11: Option<String>,
+    /// Our Wayland display (`WAYLAND_DISPLAY`), if we have one.
+    pub wayland: Option<String>,
+}
+
+impl LauncherDisplay {
+    /// Our display from our environment, which `var` reads by name. Flatpak before 1.14
+    /// renames the X11 display to `:99.0` in the sandbox, a name the host does not know,
+    /// so that one is not ours to pass on.
+    pub fn from_vars(var: impl Fn(&str) -> Option<String>) -> Self {
+        Self {
+            x11: var("DISPLAY").filter(|display| display != ":99.0"),
+            wayland: var("WAYLAND_DISPLAY"),
+        }
+    }
+}
+
 impl Command {
     /// The argument list that runs this command on the host from inside Flatpak. The
     /// environment and folder go as options, since `flatpak-spawn` does not forward ours;
     /// there is no `--watch-bus`, so the game stays our child until it exits.
     pub fn flatpak_spawn_argv(&self) -> Vec<String> {
+        self.spawn_argv(None)
+    }
+
+    /// [`Command::flatpak_spawn_argv`] for a game that opens on our display rather than
+    /// the host session's.
+    pub fn flatpak_spawn_argv_on(&self, display: &LauncherDisplay) -> Vec<String> {
+        self.spawn_argv(Some(display))
+    }
+
+    fn spawn_argv(&self, display: Option<&LauncherDisplay>) -> Vec<String> {
         let mut argv = vec!["flatpak-spawn".to_owned(), "--host".to_owned()];
         if let Some(dir) = &self.working_dir {
             argv.push(format!("--directory={}", dir.display()));
         }
-        argv.extend(
+        let mut environment: BTreeMap<&str, &str> = BTreeMap::new();
+        if let Some(display) = display {
+            if let Some(x11) = &display.x11 {
+                environment.insert("DISPLAY", x11);
+            }
+            // Without a Wayland display of ours, an empty name rather than none: unset,
+            // libwayland falls back to `wayland-0`, the desktop's, and the game opens
+            // there; an empty name connects nowhere, so the game uses our X11 display.
+            environment.insert("WAYLAND_DISPLAY", display.wayland.as_deref().unwrap_or(""));
+        }
+        environment.extend(
             self.environment
+                .iter()
+                .map(|(key, value)| (key.as_str(), value.as_str())),
+        );
+        argv.extend(
+            environment
                 .iter()
                 .map(|(key, value)| format!("--env={key}={value}")),
         );
@@ -585,6 +633,112 @@ mod tests {
             command.flatpak_spawn_argv(),
             ["flatpak-spawn", "--host", "--", "neverball"]
         );
+    }
+
+    #[test]
+    fn flatpak_spawn_hands_the_game_our_display() {
+        let command = Command {
+            argv: vec!["neverball".into()],
+            environment: Default::default(),
+            working_dir: None,
+        };
+        let display = LauncherDisplay {
+            x11: Some(":1".into()),
+            wayland: Some("gamescope-0".into()),
+        };
+
+        assert_eq!(
+            command.flatpak_spawn_argv_on(&display),
+            [
+                "flatpak-spawn",
+                "--host",
+                "--env=DISPLAY=:1",
+                "--env=WAYLAND_DISPLAY=gamescope-0",
+                "--",
+                "neverball",
+            ]
+        );
+    }
+
+    #[test]
+    fn flatpak_spawn_without_a_wayland_display_of_ours_drops_the_host_s() {
+        // `--nosocket=wayland` in a nested gamescope: a Wayland-capable game must not
+        // find the desktop compositor, or it opens there rather than on our X display.
+        // Unset is not enough: libwayland then tries `wayland-0`, the desktop's. An empty
+        // name connects nowhere, and GTK and SDL fall back to X11.
+        let command = Command {
+            argv: vec!["neverball".into()],
+            environment: Default::default(),
+            working_dir: None,
+        };
+        let display = LauncherDisplay {
+            x11: Some(":1".into()),
+            wayland: None,
+        };
+
+        assert_eq!(
+            command.flatpak_spawn_argv_on(&display),
+            [
+                "flatpak-spawn",
+                "--host",
+                "--env=DISPLAY=:1",
+                "--env=WAYLAND_DISPLAY=",
+                "--",
+                "neverball",
+            ]
+        );
+    }
+
+    #[test]
+    fn flatpak_spawn_lets_the_user_s_own_display_win() {
+        let command = Command {
+            argv: vec!["neverball".into()],
+            environment: [
+                ("DISPLAY".to_owned(), ":0".to_owned()),
+                ("WAYLAND_DISPLAY".to_owned(), "wayland-1".to_owned()),
+            ]
+            .into(),
+            working_dir: None,
+        };
+        let display = LauncherDisplay {
+            x11: Some(":1".into()),
+            wayland: None,
+        };
+
+        assert_eq!(
+            command.flatpak_spawn_argv_on(&display),
+            [
+                "flatpak-spawn",
+                "--host",
+                "--env=DISPLAY=:0",
+                "--env=WAYLAND_DISPLAY=wayland-1",
+                "--",
+                "neverball",
+            ]
+        );
+    }
+
+    #[test]
+    fn our_display_comes_from_display_and_wayland_display() {
+        let vars: BTreeMap<&str, &str> = [("DISPLAY", ":1"), ("HOME", "/home/a")].into();
+
+        assert_eq!(
+            LauncherDisplay::from_vars(|name| vars.get(name).map(|value| (*value).to_owned())),
+            LauncherDisplay {
+                x11: Some(":1".into()),
+                wayland: None,
+            }
+        );
+    }
+
+    #[test]
+    fn the_sandbox_s_own_x11_display_name_is_not_ours_to_pass_on() {
+        // Flatpak before 1.14 hides the host's display number behind `:99.0`, a name
+        // that means nothing on the host; the host session's display is right there.
+        let display =
+            LauncherDisplay::from_vars(|name| (name == "DISPLAY").then(|| ":99.0".to_owned()));
+
+        assert_eq!(display.x11, None);
     }
 
     fn store_game(source: Source, native_id: &str) -> Game {
