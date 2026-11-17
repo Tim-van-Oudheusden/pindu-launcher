@@ -21,8 +21,10 @@ trap 'rm -rf "$repo"' EXIT
 cd "$repo"
 git init -q -b main
 git config commit.gpgsign false
+# The merge commit below takes this default author; commit() sets its own per commit.
+GIT_AUTHOR_NAME=ci GIT_AUTHOR_EMAIL=ci@example.org
 GIT_COMMITTER_NAME=ci GIT_COMMITTER_EMAIL=ci@example.org
-export GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
+export GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
 
 # commit <author name> <author email> <file> <lines> <message>: appends <lines> lines to <file>.
 commit() {
