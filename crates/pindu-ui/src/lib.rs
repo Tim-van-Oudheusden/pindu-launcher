@@ -34,6 +34,7 @@ pub mod fullscreen_top_bar;
 pub mod game_dialog;
 pub mod game_page;
 pub mod gamepad_service;
+pub mod gamescope_service;
 pub mod hint_bar;
 pub mod home_page;
 pub mod launch_service;

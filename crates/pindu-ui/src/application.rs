@@ -12,6 +12,7 @@ use crate::bluetooth_service::BluetoothService;
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
 use crate::game_dialog::GameDialog;
 use crate::gamepad_service::GamepadService;
+use crate::gamescope_service::GamescopeService;
 use crate::launch_service;
 use crate::library_service::{ImportFailure, LibraryService};
 use crate::manette_backend::ManetteBackend;
@@ -67,6 +68,8 @@ mod imp {
         pub pending_fullscreen: std::cell::Cell<bool>,
         /// Controller input for every shell; it opens controllers only when one listens.
         pub gamepad_service: OnceCell<GamepadService>,
+        /// gamescope's `--steam` focus protocol; inert outside such a gamescope.
+        pub gamescope_service: OnceCell<GamescopeService>,
         /// The user's own stylesheet for fullscreen mode.
         pub style_service: OnceCell<StyleService>,
         /// The batteries, for Quick Access's header.
@@ -164,6 +167,12 @@ mod imp {
             self.gamepad_service
                 .set(GamepadService::new(Box::new(ManetteBackend::new())))
                 .expect("start-up runs once");
+            self.gamescope_service
+                .set(GamescopeService::new(
+                    self.session_service.get().expect("set above"),
+                    self.gamepad_service.get().expect("set above"),
+                ))
+                .expect("start-up runs once");
             self.style_service
                 .set(StyleService::new())
                 .expect("start-up runs once");
@@ -256,6 +265,7 @@ mod imp {
                     &self.sync_service,
                     &application.library_service().model(),
                 );
+                application.gamescope_service().attach_window(&window);
                 if window.settings().boolean("start-in-fullscreen") {
                     window.enter_fullscreen();
                 }
@@ -336,6 +346,14 @@ impl PinduApplication {
     pub fn gamepad_service(&self) -> &GamepadService {
         self.imp()
             .gamepad_service
+            .get()
+            .expect("the application has started")
+    }
+
+    /// gamescope's `--steam` focus protocol: who is in front, and Return to a game.
+    pub fn gamescope_service(&self) -> &GamescopeService {
+        self.imp()
+            .gamescope_service
             .get()
             .expect("the application has started")
     }

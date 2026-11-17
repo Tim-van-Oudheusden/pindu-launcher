@@ -11,8 +11,8 @@ use std::time::Duration;
 use gtk::gio::{self, prelude::*};
 use gtk::glib;
 use pindu_core::gamepad::{
-    ControllerSettings, DeviceId, GamepadBackend, GamepadEvent, IDENTIFY_RUMBLE, Intent, Intents,
-    Layout, PROMPTS_KEY, Pad, Prompts, SWAP_KEY, Swap,
+    Button, ControllerSettings, DeviceId, GamepadBackend, GamepadEvent, IDENTIFY_RUMBLE, Intent,
+    Intents, Layout, PROMPTS_KEY, Pad, Prompts, SWAP_KEY, Swap,
 };
 
 use crate::config::APP_ID;
@@ -23,6 +23,8 @@ type Listener = Box<dyn Fn(Intent)>;
 type LayoutListener = Box<dyn Fn(Option<Layout>)>;
 /// Something the shells do when a pad comes or goes, or the settings change how they show.
 type PadsListener = Box<dyn Fn()>;
+/// Something a service does with a button pressed, before it becomes an intent.
+type ButtonListener = Box<dyn Fn(Button)>;
 
 /// Turns controller input into intents and hands them to the shells' listeners.
 #[derive(Clone)]
@@ -41,6 +43,7 @@ struct Inner {
     /// The active layout the layout listeners last heard of.
     layout: Cell<Option<Layout>>,
     pads_listeners: RefCell<Vec<PadsListener>>,
+    button_listeners: RefCell<Vec<ButtonListener>>,
     /// Holds the Button Prompts and Swap Confirm and Back settings, and their signals.
     settings: gio::Settings,
 }
@@ -69,6 +72,7 @@ impl GamepadService {
                 layout_listeners: RefCell::new(Vec::new()),
                 layout: Cell::new(None),
                 pads_listeners: RefCell::new(Vec::new()),
+                button_listeners: RefCell::new(Vec::new()),
                 settings,
             }),
         };
@@ -96,6 +100,16 @@ impl GamepadService {
     /// Calls `listener` with every intent while the service listens.
     pub fn connect_intent(&self, listener: impl Fn(Intent) + 'static) {
         self.inner.listeners.borrow_mut().push(Box::new(listener));
+    }
+
+    /// Calls `listener` with every button pressed while the service listens, whichever
+    /// window has focus: the gamescope service reads Guide this way while a game is in
+    /// front, where the shells take no intent.
+    pub fn connect_button_pressed(&self, listener: impl Fn(Button) + 'static) {
+        self.inner
+            .button_listeners
+            .borrow_mut()
+            .push(Box::new(listener));
     }
 
     /// Opens the controllers, or lets go of them. Nothing touches a controller until
@@ -227,6 +241,16 @@ impl GamepadService {
         self.notify_layout();
         if plugged {
             self.notify_pads();
+        }
+        if let GamepadEvent::Button {
+            button,
+            pressed: true,
+            ..
+        } = event
+        {
+            for listener in self.inner.button_listeners.borrow().iter() {
+                listener(button);
+            }
         }
         if let Some(intent) = intent {
             self.emit(intent);
