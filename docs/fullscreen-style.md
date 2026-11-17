@@ -19,8 +19,8 @@ This page is the style contract: the files, the `theme.json` fields and the CSS 
 
 - A design's `<id>` is its folder name: lowercase letters, digits and dashes. Your design with the same id as a
   shipped one replaces it.
-- Pick a design in fullscreen mode's **Quick Access** panel (right stick click, the Steam Deck's "…" button,
-  or Ctrl+2) under **Design**, or set it with
+- Pick a design in fullscreen mode's **Quick Access** panel (Guide + A, right stick click, the Steam Deck's "…"
+  button, or Ctrl+2) under **Design**, or set it with
   `gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-design <id>`. Ribbon (`ribbon`) is
   the default; **Adwaita**, an empty id, is no design: the standard libadwaita look.
 - A design can offer **variants** (below): pick one in Quick Access under **Design** → **Variant**, or set it with

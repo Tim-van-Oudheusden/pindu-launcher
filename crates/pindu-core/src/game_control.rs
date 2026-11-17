@@ -2,7 +2,8 @@
 //! cannot say (#130): in a nested gamescope the launcher's window keeps focus there while
 //! the game plays on the desktop, and on a desktop a game that "is ready" may never take
 //! focus. So once a game starts, the controller is the game's, and the launcher acts on
-//! nothing but Guide until it gets the controller back.
+//! nothing but Guide and the Quick Access of buttons games leave alone (Guide + A, the
+//! Steam Deck's "…") until it gets the controller back.
 
 use crate::gamepad::Intent;
 
@@ -43,9 +44,10 @@ impl GameControl {
     }
 
     /// Whether the launcher acts on `intent` from a controller: on every one while it has
-    /// the controller, and on Guide alone while the game has it.
+    /// the controller, and while the game has it on Guide alone and on the Quick Access of
+    /// buttons games leave alone, not on R3's, which the game takes too.
     pub fn acts_on(self, intent: Intent) -> bool {
-        !self.game_has_it || intent == Intent::Home
+        !self.game_has_it || matches!(intent, Intent::Home | Intent::SystemQuickAccess)
     }
 
     /// The user called the launcher back, with Guide or the keyboard: the controller is
@@ -97,6 +99,15 @@ mod tests {
         control.sessions_changed(1, true);
 
         assert!(control.acts_on(Intent::Home));
+    }
+
+    #[test]
+    fn guide_and_a_reach_the_launcher_over_a_game_and_r3_stays_the_game_s() {
+        let mut control = GameControl::default();
+        control.sessions_changed(1, true);
+
+        assert!(control.acts_on(Intent::SystemQuickAccess));
+        assert!(!control.acts_on(Intent::QuickAccess));
     }
 
     #[test]

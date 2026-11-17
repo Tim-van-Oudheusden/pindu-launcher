@@ -54,7 +54,8 @@ impl PinduWindow {
         let Some(layout) = layout else {
             return;
         };
-        // While a game we started has the controller, only Guide does anything here.
+        // While a game we started has the controller, only Guide (and Guide + A) does
+        // anything here; the bar names Guide.
         let hints = if imp.game_control.get().game_has_controller() {
             hints::playing_hints(layout)
         } else {

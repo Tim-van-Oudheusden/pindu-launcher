@@ -1,7 +1,7 @@
 //! Fullscreen mode's panels over the pages: the menu drawer on the left (Start or Guide),
-//! Quick Access on the right (R3 or the Steam Deck's "…" button) and the options sheet at
-//! the bottom (View or X, or a game page's Options and Add to Collection buttons). Which
-//! panel is open, at which level, and what the controller does to them is
+//! Quick Access on the right (Guide + A, R3 or the Steam Deck's "…" button) and the
+//! options sheet at the bottom (View or X, or a game page's Options and Add to Collection
+//! buttons). Which panel is open, at which level, and what the controller does to them is
 //! `pindu_core::panels`; this fills the drawer and the sheet, shows the panels, keeps focus
 //! inside the open one and gives it back after, and does what their entries say. They are
 //! widgets in the window rather than popover menus, which the compositor dismisses on a
@@ -208,12 +208,14 @@ impl PinduWindow {
         }
     }
 
-    /// Acts on a controller intent for the panels; says whether they took it. Start, Guide
-    /// and R3 open their panels in fullscreen mode only: in the desktop window Guide enters
-    /// fullscreen mode.
+    /// Acts on a controller intent for the panels; says whether they took it. Start, Guide,
+    /// R3 and Guide + A open their panels in fullscreen mode only: in the desktop window
+    /// Guide enters fullscreen mode.
     pub(crate) fn handle_panel_intent(&self, intent: Intent) -> bool {
-        if matches!(intent, Intent::Menu | Intent::Home | Intent::QuickAccess)
-            && !self.is_fullscreen()
+        if matches!(
+            intent,
+            Intent::Menu | Intent::Home | Intent::QuickAccess | Intent::SystemQuickAccess
+        ) && !self.is_fullscreen()
         {
             return false;
         }

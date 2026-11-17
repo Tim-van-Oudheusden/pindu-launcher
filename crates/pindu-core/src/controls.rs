@@ -1,8 +1,8 @@
 //! Quick Access's Controls: every fullscreen intent a controller asks for, grouped, with
 //! the button that asks for it on the active controller's [`Layout`] (after any confirm
-//! and back swap) and the keys that stand in for it. Both come from the mappings the
-//! input itself goes through (`gamepad`'s buttons and holds, `keys`' shortcuts), so the
-//! list cannot drift from them.
+//! and back swap), or the two of a chord, and the keys that stand in for it. Both come
+//! from the mappings the input itself goes through (`gamepad`'s buttons, holds and chord,
+//! `keys`' shortcuts), so the list cannot drift from them.
 
 use crate::gamepad::{self, Button, Intent, Layout};
 use crate::keys::{self, Chord};
@@ -35,6 +35,8 @@ pub struct Control {
     pub button: Option<Button>,
     /// Whether the button is held down rather than pressed.
     pub held: bool,
+    /// The button pressed while `button` is held down, for a chord such as Guide + A.
+    pub chord: Option<Button>,
     /// The keys that stand in for it, shortcuts first; empty without any.
     pub keys: Vec<Chord>,
 }
@@ -54,10 +56,20 @@ pub fn controls(layout: Option<Layout>) -> Vec<Section> {
     let rows: Vec<(Group, Control)> = gamepad::intents()
         .into_iter()
         .map(|intent| {
+            // The Quick Access games leave alone shows the chord every pad has, rather
+            // than the Steam Deck's "…" alone.
+            let (button, chord) = match intent {
+                Intent::SystemQuickAccess => {
+                    let (held, pressed) = gamepad::QUICK_ACCESS_CHORD;
+                    (layout.map(|_| held), layout.map(|_| pressed))
+                }
+                _ => (layout.map(|layout| layout.button(intent)), None),
+            };
             let control = Control {
                 intent,
-                button: layout.map(|layout| layout.button(intent)),
+                button,
                 held: intent.held_from().is_some(),
+                chord,
                 keys: keys::stand_ins(intent),
             };
             (group(intent), control)
@@ -87,7 +99,11 @@ fn group(intent: Intent) -> Group {
         | Intent::NextTab
         | Intent::PreviousSort
         | Intent::NextSort => Group::Library,
-        Intent::Menu | Intent::Home | Intent::QuickAccess | Intent::Options => Group::Panels,
+        Intent::Menu
+        | Intent::Home
+        | Intent::QuickAccess
+        | Intent::SystemQuickAccess
+        | Intent::Options => Group::Panels,
         Intent::BackHeld => Group::Launching,
     }
 }
@@ -145,7 +161,16 @@ mod tests {
         for pressed in gamepad::BUTTONS {
             emitted.extend(button(&mut intents, pressed, true));
             emitted.extend(intents.repeat(HOLD_DURATION));
-            button(&mut intents, pressed, false);
+            emitted.extend(button(&mut intents, pressed, false));
+        }
+        let (held, chorded) = gamepad::QUICK_ACCESS_CHORD;
+        for (chord, pressed) in [
+            (held, true),
+            (chorded, true),
+            (chorded, false),
+            (held, false),
+        ] {
+            emitted.extend(button(&mut intents, chord, pressed));
         }
         for (axis, value) in [
             (gamepad::Axis::LeftX, -1.0),
@@ -200,9 +225,27 @@ mod tests {
                 intent: Intent::BackHeld,
                 button: Some(Button::East),
                 held: true,
+                chord: None,
                 keys: Vec::new(),
             }]
         );
+    }
+
+    #[test]
+    fn quick_access_lists_r3_and_the_chord_of_guide_and_the_south_button() {
+        for kind in DeviceKind::ALL {
+            let shown = controls(Some(Layout::detected(kind)));
+
+            let r3 = control(&shown, Intent::QuickAccess).expect("R3's Quick Access");
+            assert_eq!((r3.button, r3.chord), (Some(Button::RightStick), None));
+            // The south button by position, whatever its glyph: B on a Nintendo pad.
+            let chord = control(&shown, Intent::SystemQuickAccess).expect("the chord's");
+            assert_eq!(
+                (chord.button, chord.chord, chord.held),
+                (Some(Button::Guide), Some(Button::South), false),
+                "{kind:?}"
+            );
+        }
     }
 
     #[test]

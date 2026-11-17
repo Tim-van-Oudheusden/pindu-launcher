@@ -164,11 +164,11 @@ impl Panels {
     }
 
     /// Acts on a controller intent and says whether the panels took it, so the page does
-    /// not act on it too. Start and Guide toggle the drawer, R3 toggles Quick Access (at
-    /// its notifications while one is unread, as Steam's does), View or X opens the
-    /// options for a game, and B steps back a level or closes. Opening one panel closes
-    /// the other. While a panel is open the page's own buttons (search, tabs, sort) wait;
-    /// directions and A move and act inside it.
+    /// not act on it too. Start and Guide toggle the drawer, R3, Guide + A and the Steam
+    /// Deck's "…" toggle Quick Access (at its notifications while one is unread, as
+    /// Steam's does), View or X opens the options for a game, and B steps back a level or
+    /// closes. Opening one panel closes the other. While a panel is open the page's own
+    /// buttons (search, tabs, sort) wait; directions and A move and act inside it.
     pub fn handle(&mut self, intent: Intent, under: Under) -> bool {
         if under.dialog {
             return false;
@@ -176,8 +176,10 @@ impl Panels {
         match (intent, self.open) {
             (Intent::Menu | Intent::Home, Some(Panel::Drawer(_))) => self.open = None,
             (Intent::Menu | Intent::Home, _) => self.open = Some(Panel::Drawer(DrawerLevel::Main)),
-            (Intent::QuickAccess, Some(Panel::QuickAccess(_))) => self.open = None,
-            (Intent::QuickAccess, _) => {
+            (Intent::QuickAccess | Intent::SystemQuickAccess, Some(Panel::QuickAccess(_))) => {
+                self.open = None;
+            }
+            (Intent::QuickAccess | Intent::SystemQuickAccess, _) => {
                 let level = if under.unread {
                     QuickAccessLevel::Notifications
                 } else {
@@ -501,6 +503,15 @@ mod tests {
         assert!(panels.handle(Intent::QuickAccess, PAGE));
         assert_eq!(panels.open(), quick_access());
         assert!(panels.handle(Intent::QuickAccess, PAGE));
+        assert_eq!(panels.open(), None);
+    }
+
+    #[test]
+    fn guide_and_a_or_the_deck_s_dots_button_toggle_quick_access_as_r3_does() {
+        let mut panels = Panels::new();
+        assert!(panels.handle(Intent::SystemQuickAccess, PAGE));
+        assert_eq!(panels.open(), quick_access());
+        assert!(panels.handle(Intent::SystemQuickAccess, PAGE));
         assert_eq!(panels.open(), None);
     }
 

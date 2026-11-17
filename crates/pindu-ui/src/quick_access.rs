@@ -1,5 +1,5 @@
-//! Quick Access, fullscreen mode's panel on the right (R3 or the Steam Deck's "…" button),
-//! as a widget a window hosts: [`PinduQuickAccess`], with its own Blueprint
+//! Quick Access, fullscreen mode's panel on the right (Guide + A, R3 or the Steam Deck's "…"
+//! button), as a widget a window hosts: [`PinduQuickAccess`], with its own Blueprint
 //! (`data/ui/quick_access.blp`). It holds the status header (`fullscreen_status`), the
 //! level stack, the main list and every level, and takes the services it shows from the
 //! application ([`PinduQuickAccess::setup`]), never from its host.

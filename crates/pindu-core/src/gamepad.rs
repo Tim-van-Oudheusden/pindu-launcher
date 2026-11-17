@@ -1,8 +1,10 @@
 //! Turns controller input into app intents, so the shells never see hardware. Devices come
 //! from a [`GamepadBackend`]; [`Intents`] maps their mapped buttons and sticks to intents,
-//! repeats held directions, notices a held Back, and keeps the connected pads. Each pad's
-//! [`Layout`] (its glyphs and whether confirm and back swap) comes from its kind and the
-//! user's [`ControllerSettings`], and serves the hints and the intents alike.
+//! repeats held directions, notices a held Back, reads Guide on its release unless
+//! another button went down while it was held (Guide + A, [`QUICK_ACCESS_CHORD`], asks for
+//! Quick Access), and keeps the connected pads. Each pad's [`Layout`] (its glyphs and
+//! whether confirm and back swap) comes from its kind and the user's
+//! [`ControllerSettings`], and serves the hints and the intents alike.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::time::Duration;
@@ -99,16 +101,26 @@ pub enum Intent {
     Menu,
     /// Open the focused game's options.
     Options,
-    /// The Guide button: open or close the menu drawer, or from the desktop open fullscreen
-    /// mode.
+    /// Guide, once let go without another button pressed while it was held: open or close
+    /// the menu drawer, or from the desktop open fullscreen mode. It reaches the launcher
+    /// while a game has the controller.
     Home,
-    /// Open or close the Quick Access panel.
+    /// Open or close the Quick Access panel: R3, which games use too, or its key.
     QuickAccess,
+    /// Open or close the Quick Access panel from a button no game uses: Guide + South
+    /// ([`QUICK_ACCESS_CHORD`]) or the Steam Deck's "…". Unlike R3's, it reaches the
+    /// launcher while a game has the controller, and opens Quick Access over the game.
+    SystemQuickAccess,
 }
 
 /// The intents a button asks for when held down for [`HOLD_DURATION`] rather than pressed:
 /// the pressed intent, then the held one.
 const HOLDS: [(Intent, Intent); 1] = [(Intent::Back, Intent::BackHeld)];
+
+/// The chord that asks for [`Intent::SystemQuickAccess`], as Steam has it: the first button
+/// held down and the second pressed while it is. Both go by position whatever the layout,
+/// so the second is the bottom face button even where confirm and back swap.
+pub const QUICK_ACCESS_CHORD: (Button, Button) = (Button::Guide, Button::South);
 
 impl Intent {
     /// The intent whose button, held down, asks for this one: Back for BackHeld.
@@ -473,6 +485,9 @@ pub struct Intents {
     /// A button held down that asks for an intent once held (Back's, to cancel a launch):
     /// by which device and button, that intent, and when it counts as a hold.
     back_held: Option<(DeviceId, Button, Intent, Duration)>,
+    /// The first button of [`QUICK_ACCESS_CHORD`], Guide, held down: by which device, and
+    /// whether another button was pressed while it was, so letting go asks for nothing.
+    guide: Option<(DeviceId, bool)>,
     /// The device last plugged in or used, whose layout the hints show.
     active: Option<DeviceId>,
     settings: ControllerSettings,
@@ -519,6 +534,9 @@ impl Intents {
                 if self.back_held.is_some_and(|(holder, ..)| holder == device) {
                     self.back_held = None;
                 }
+                if self.guide.is_some_and(|(holder, _)| holder == device) {
+                    self.guide = None;
+                }
                 if self.active == Some(device) {
                     self.active = self.pads.keys().next().copied();
                 }
@@ -532,6 +550,19 @@ impl Intents {
                 self.active = Some(device);
                 if !self.pressed.insert((device, button)) {
                     return None;
+                }
+                let (first, second) = QUICK_ACCESS_CHORD;
+                if button == first {
+                    self.guide = Some((device, false));
+                    return None;
+                }
+                if let Some((holder, chorded)) = &mut self.guide
+                    && *holder == device
+                {
+                    *chorded = true;
+                    if button == second {
+                        return Some(Intent::SystemQuickAccess);
+                    }
                 }
                 let intent = button_intent(self.confirm_and_back_swapped(device, button));
                 match intent {
@@ -558,6 +589,13 @@ impl Intents {
                     .is_some_and(|(holder, held, ..)| (holder, held) == (device, button))
                 {
                     self.back_held = None;
+                }
+                if button == QUICK_ACCESS_CHORD.0
+                    && let Some((holder, chorded)) = self.guide
+                    && holder == device
+                {
+                    self.guide = None;
+                    return (!chorded).then_some(Intent::Home);
                 }
                 None
             }
@@ -735,7 +773,8 @@ fn button_intent(button: Button) -> Intent {
         Button::West | Button::Select => Intent::Options,
         Button::Start => Intent::Menu,
         Button::Guide => Intent::Home,
-        Button::RightStick | Button::Misc1 => Intent::QuickAccess,
+        Button::RightStick => Intent::QuickAccess,
+        Button::Misc1 => Intent::SystemQuickAccess,
         Button::LeftShoulder => Intent::PreviousTab,
         Button::RightShoulder => Intent::NextTab,
         Button::LeftTrigger => Intent::PreviousSort,
@@ -799,7 +838,6 @@ mod tests {
             (Button::West, Intent::Options),
             (Button::Select, Intent::Options),
             (Button::Start, Intent::Menu),
-            (Button::Guide, Intent::Home),
             (Button::LeftShoulder, Intent::PreviousTab),
             (Button::RightShoulder, Intent::NextTab),
             (Button::LeftTrigger, Intent::PreviousSort),
@@ -825,15 +863,136 @@ mod tests {
     }
 
     #[test]
-    fn r3_and_the_deck_s_dots_button_open_quick_access() {
+    fn r3_opens_quick_access_and_the_deck_s_dots_button_the_one_games_leave_alone() {
         let mut intents = Intents::new();
-        for button in [Button::RightStick, Button::Misc1] {
-            assert_eq!(
-                intents.handle(&press(button), Duration::ZERO),
-                Some(Intent::QuickAccess),
-                "{button:?}"
-            );
-        }
+        assert_eq!(
+            intents.handle(&press(Button::RightStick), Duration::ZERO),
+            Some(Intent::QuickAccess)
+        );
+        assert_eq!(
+            intents.handle(&press(Button::Misc1), Duration::ZERO),
+            Some(Intent::SystemQuickAccess)
+        );
+    }
+
+    #[test]
+    fn guide_asks_for_home_once_released_rather_than_when_pressed() {
+        let mut intents = Intents::new();
+
+        assert_eq!(intents.handle(&press(Button::Guide), ms(0)), None);
+        assert_eq!(
+            intents.handle(&release(Button::Guide), ms(100)),
+            Some(Intent::Home)
+        );
+    }
+
+    #[test]
+    fn guide_and_the_south_button_open_quick_access_and_nothing_else() {
+        let mut intents = Intents::new();
+
+        intents.handle(&press(Button::Guide), ms(0));
+        assert_eq!(
+            intents.handle(&press(Button::South), ms(50)),
+            Some(Intent::SystemQuickAccess)
+        );
+        assert_eq!(intents.handle(&release(Button::South), ms(100)), None);
+        assert_eq!(intents.handle(&release(Button::Guide), ms(150)), None);
+    }
+
+    #[test]
+    fn another_button_pressed_while_guide_is_held_keeps_guide_from_asking_for_home() {
+        let mut intents = Intents::new();
+
+        intents.handle(&press(Button::Guide), ms(0));
+        assert_eq!(
+            intents.handle(&press(Button::DpadDown), ms(50)),
+            Some(Intent::Navigate(Direction::Down))
+        );
+        intents.handle(&release(Button::DpadDown), ms(100));
+        assert_eq!(intents.handle(&release(Button::Guide), ms(150)), None);
+    }
+
+    #[test]
+    fn the_south_button_pressed_before_guide_is_no_chord() {
+        let mut intents = Intents::new();
+
+        assert_eq!(
+            intents.handle(&press(Button::South), ms(0)),
+            Some(Intent::Activate)
+        );
+        assert_eq!(intents.handle(&press(Button::Guide), ms(50)), None);
+        assert_eq!(intents.handle(&release(Button::South), ms(100)), None);
+        assert_eq!(
+            intents.handle(&release(Button::Guide), ms(150)),
+            Some(Intent::Home)
+        );
+    }
+
+    #[test]
+    fn letting_go_of_guide_before_the_south_button_still_asks_for_nothing_more() {
+        let mut intents = Intents::new();
+
+        intents.handle(&press(Button::Guide), ms(0));
+        intents.handle(&press(Button::South), ms(50));
+        assert_eq!(intents.handle(&release(Button::Guide), ms(100)), None);
+        assert_eq!(intents.handle(&release(Button::South), ms(150)), None);
+        // The next press of A alone is A's again.
+        assert_eq!(
+            intents.handle(&press(Button::South), ms(200)),
+            Some(Intent::Activate)
+        );
+    }
+
+    #[test]
+    fn the_chord_takes_the_bottom_face_button_where_confirm_and_back_swap() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Nintendo), ms(0));
+
+        intents.handle(&press(Button::Guide), ms(0));
+        assert_eq!(
+            intents.handle(&press(Button::South), ms(50)),
+            Some(Intent::SystemQuickAccess)
+        );
+        // The south button goes back on this pad, but the chord's press is no hold of Back.
+        assert_eq!(intents.repeat(HOLD_DURATION), None);
+        intents.handle(&release(Button::South), ms(100));
+        intents.handle(&release(Button::Guide), ms(100));
+
+        intents.handle(&press(Button::Guide), ms(200));
+        assert_eq!(
+            intents.handle(&press(Button::East), ms(250)),
+            Some(Intent::Activate)
+        );
+    }
+
+    #[test]
+    fn the_south_button_of_another_pad_is_no_chord() {
+        let mut intents = Intents::new();
+        let other = DeviceId(2);
+
+        intents.handle(&press(Button::Guide), ms(0));
+        let south = GamepadEvent::Button {
+            device: other,
+            button: Button::South,
+            pressed: true,
+        };
+        assert_eq!(intents.handle(&south, ms(50)), Some(Intent::Activate));
+        assert_eq!(
+            intents.handle(&release(Button::Guide), ms(100)),
+            Some(Intent::Home)
+        );
+    }
+
+    #[test]
+    fn unplugging_a_pad_while_guide_is_held_asks_for_nothing() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Xbox), ms(0));
+        intents.handle(&press(Button::Guide), ms(0));
+
+        intents.handle(&GamepadEvent::Disconnected { device: PAD }, ms(50));
+        intents.handle(&connected(DeviceKind::Xbox), ms(100));
+
+        assert_eq!(intents.handle(&release(Button::Guide), ms(150)), None);
     }
 
     #[test]
