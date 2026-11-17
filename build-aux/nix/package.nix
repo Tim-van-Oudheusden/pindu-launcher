@@ -79,6 +79,9 @@ stdenv.mkDerivation (finalAttrs: {
 
   mesonBuildType = "release";
 
+  # The gamescope-session-plus client and its login entry
+  mesonFlags = [ (lib.mesonBool "gamescope-session" true) ];
+
   # meson test runs these Python scripts directly, through /usr/bin/env
   postPatch = ''
     patchShebangs --build po/check-potfiles.py build-aux/release-notes.py
@@ -100,6 +103,9 @@ stdenv.mkDerivation (finalAttrs: {
       }"
     )
   '';
+
+  # The login entry, for NixOS's services.displayManager.sessionPackages
+  passthru.providedSessions = [ "gamescope-session-pindu" ];
 
   meta = {
     description = "Every PC game on your computer in one GNOME library";

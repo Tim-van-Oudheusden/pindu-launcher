@@ -1,5 +1,5 @@
-//! The application: starts the shared services, handles `--launch` and `--fullscreen`,
-//! registers the Shell search provider and owns the app-wide actions.
+//! The application: starts the shared services, handles `--launch`, `--fullscreen` and
+//! `--session`, registers the Shell search provider and owns the app-wide actions.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -34,9 +34,11 @@ use crate::task_service::TaskService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
 use pindu_core::backup::ImportSummary;
+use pindu_core::gamescope::session::{Session, has_os_session_select};
 use pindu_core::keys;
 use pindu_core::library::Filters;
 use pindu_core::notifications::{Kind, Target};
+use pindu_core::sources::location::HostDirs;
 use pindu_core::steamgriddb::{self, RunNotice};
 
 mod imp {
@@ -66,6 +68,10 @@ mod imp {
         pub pending_launch: RefCell<Option<String>>,
         /// Whether `--fullscreen` asked for the window in fullscreen mode.
         pub pending_fullscreen: std::cell::Cell<bool>,
+        /// Whether `--session` said this process is gamescope-session-plus's client.
+        pub session_client: std::cell::Cell<bool>,
+        /// What `--session` changes, read on first use.
+        pub session: OnceCell<Session>,
         /// Controller input for every shell; it opens controllers only when one listens.
         pub gamepad_service: OnceCell<GamepadService>,
         /// gamescope's `--steam` focus protocol; inert outside such a gamescope.
@@ -129,6 +135,14 @@ mod imp {
                 glib::OptionFlags::NONE,
                 glib::OptionArg::None,
                 &gettext("Open the window in fullscreen mode"),
+                None,
+            );
+            obj.add_main_option(
+                "session",
+                glib::Char::from(0),
+                glib::OptionFlags::NONE,
+                glib::OptionArg::None,
+                &gettext("Run as the client of a gamescope-session-plus session"),
                 None,
             );
             glib::g_info!(
@@ -210,6 +224,8 @@ mod imp {
         }
 
         fn handle_local_options(&self, options: &glib::VariantDict) -> ControlFlow<glib::ExitCode> {
+            // Before anything registers: the session's own process is the first instance.
+            self.session_client.set(options.contains("session"));
             let Some(id) = options.lookup::<String>("launch").ok().flatten() else {
                 if options.contains("fullscreen") {
                     return self.request_fullscreen();
@@ -340,6 +356,17 @@ impl PinduApplication {
             .session_service
             .get()
             .expect("the application has started")
+    }
+
+    /// What `--session` changes: whether closing the window quits, and whether the Power
+    /// level offers Switch to Desktop. Read once, after the options are handled.
+    pub fn session(&self) -> Session {
+        let imp = self.imp();
+        *imp.session.get_or_init(|| Session {
+            client: imp.session_client.get(),
+            os_session_select: has_os_session_select(&HostDirs::from_env().host_usr),
+            host_spawn: permission_service::host_spawn_allowed(),
+        })
     }
 
     /// Controller input, as intents.

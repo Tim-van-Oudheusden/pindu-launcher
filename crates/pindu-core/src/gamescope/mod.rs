@@ -8,6 +8,8 @@
 //! Steam's place there: its main window is app [`STEAM_APP_ID`], it writes the list, and it
 //! tags the windows of the games it starts. Tested against gamescope 3.17.0.
 
+pub mod session;
+
 use std::ffi::{c_long, c_ulong};
 
 use crate::gamepad::Button;
