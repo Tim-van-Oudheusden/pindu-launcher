@@ -30,6 +30,21 @@ def version() -> str:
     return match.group(1)
 
 
+def current_text(path: Path) -> str:
+    """The text in the repository's copy of `path` that names its version: the packaged form
+    (X.Y.Z~rcN) in the MetaInfo, RPM and DEB, and with the MetaInfo's type="development" of
+    a pre-release, so a test can replace it whether the repository is at a final version or
+    at a pre-release."""
+    upstream = version()
+    if path in (Path("meson.build"), Path("Cargo.toml")):
+        return VERSIONED[path].format(upstream)
+    packaged = re.sub(r"-rc\.([0-9]+)$", r"~rc\1", upstream)
+    text = VERSIONED[path].format(packaged)
+    if path == METAINFO and packaged != upstream:
+        text += ' type="development"'
+    return text
+
+
 def run(root: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
         ["sh", str(root / SCRIPT), *args], capture_output=True, text=True, check=False
@@ -50,7 +65,7 @@ class CheckVersionTest(unittest.TestCase):
     def bump(self, copy: Path, path: Path) -> None:
         """Change the version in one copied file to one no other file names."""
         file = copy / path
-        current = VERSIONED[path].format(version())
+        current = current_text(path)
         text = file.read_text()
         self.assertIn(current, text)
         file.write_text(text.replace(current, VERSIONED[path].format("99.0.0"), 1))
@@ -94,7 +109,7 @@ class CheckVersionTest(unittest.TestCase):
         }
         for path, name in names.items():
             file = copy / path
-            current = VERSIONED[path].format(version())
+            current = current_text(path)
             new = VERSIONED[path].format(name)
             if path == METAINFO and development:
                 new += ' type="development"'

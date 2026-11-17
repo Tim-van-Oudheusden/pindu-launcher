@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-17 18:38+0100\n"
+"POT-Creation-Date: 2026-11-17 19:01+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -383,9 +383,9 @@ msgid "Name"
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:239
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:475
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:625
-#: crates/pindu-ui/src/fullscreen_network.rs:396
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:485
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:635
+#: crates/pindu-ui/src/fullscreen_network.rs:414
 #: crates/pindu-ui/src/fullscreen_power.rs:201
 #: crates/pindu-ui/src/fullscreen_system_update.rs:164
 #: crates/pindu-ui/src/game_dialog.rs:807
@@ -418,124 +418,124 @@ msgstr ""
 msgid "From Flathub"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:221
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:236
 msgid "Looking for devices…"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:363
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:377
 msgid "Type the device's PIN."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:367
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:381
 msgid "Type the six-digit code the device shows."
 msgstr ""
 
 #. Translators: {device} is a Bluetooth device's name.
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:431
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:441
 #, rust-format
 msgid "Pair With {device}"
 msgstr ""
 
 #. Translators: {device} is a Bluetooth device's name, such as a controller's.
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:467
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:477
 #, rust-format
 msgid "Forget {device}?"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:469
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:479
 msgid ""
 "It disconnects, and has to be paired again before it can connect. If it is "
 "the controller in use, use another one to pair it."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:476
-#: crates/pindu-ui/src/fullscreen_network.rs:397
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:486
+#: crates/pindu-ui/src/fullscreen_network.rs:415
 msgid "_Forget"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:494
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:504
 msgid "No devices connected"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:495
-#: crates/pindu-ui/src/fullscreen_network.rs:448 data/ui/preferences.blp:74
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:505
+#: crates/pindu-ui/src/fullscreen_network.rs:466 data/ui/preferences.blp:74
 #: data/ui/quick_access.blp:704 data/ui/quick_access.blp:758
 #: data/ui/quick_access.blp:941
 msgid "Off"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:496
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:506
 msgid "Blocked"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:512
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:522
 msgid "Pairing…"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:513
-#: crates/pindu-ui/src/fullscreen_network.rs:445
-#: crates/pindu-ui/src/fullscreen_network.rs:480
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:523
+#: crates/pindu-ui/src/fullscreen_network.rs:463
+#: crates/pindu-ui/src/fullscreen_network.rs:498
 msgid "Connecting…"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:514
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:524
 msgid "Disconnecting…"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:515
-#: crates/pindu-ui/src/fullscreen_network.rs:481
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:525
+#: crates/pindu-ui/src/fullscreen_network.rs:499
 msgid "Forgetting…"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:516
-#: crates/pindu-ui/src/fullscreen_network.rs:444
-#: crates/pindu-ui/src/fullscreen_network.rs:482
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:526
+#: crates/pindu-ui/src/fullscreen_network.rs:462
+#: crates/pindu-ui/src/fullscreen_network.rs:500
 msgid "Connected"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:517
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:527
 msgid "Paired"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:553
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:563
 msgid "Disconnect"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:559
-#: crates/pindu-ui/src/fullscreen_network.rs:507
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:569
+#: crates/pindu-ui/src/fullscreen_network.rs:525
 msgid "Connect"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:571
-#: crates/pindu-ui/src/fullscreen_network.rs:516
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:581
+#: crates/pindu-ui/src/fullscreen_network.rs:534
 msgid "Forget"
 msgstr ""
 
 #. Translators: {device} is a Bluetooth device's name, such as a controller's.
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:604
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:614
 #, rust-format
 msgid "Pair With {device}?"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:605
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:615
 msgid "Pair if the device shows this code too."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:610
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:620
 msgid "_Refuse"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:610
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:620
 msgid "_Pair"
 msgstr ""
 
 #. Translators: {device} is a Bluetooth device's name, such as a keyboard's.
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:619
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:629
 #, rust-format
 msgid "Type This Code on {device}"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_bluetooth.rs:620
+#: crates/pindu-ui/src/fullscreen_bluetooth.rs:630
 msgid "Then press Enter on it."
 msgstr ""
 
@@ -751,84 +751,84 @@ msgstr ""
 msgid "Playtime"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:202
+#: crates/pindu-ui/src/fullscreen_network.rs:218
 msgid "Looking for networks…"
 msgstr ""
 
 #. Translators: {network} is a Wi-Fi network's name.
-#: crates/pindu-ui/src/fullscreen_network.rs:349
+#: crates/pindu-ui/src/fullscreen_network.rs:365
 #, rust-format
 msgid "Join {network}"
 msgstr ""
 
 #. Translators: {network} is a Wi-Fi network's name.
-#: crates/pindu-ui/src/fullscreen_network.rs:388
+#: crates/pindu-ui/src/fullscreen_network.rs:406
 #, rust-format
 msgid "Forget {network}?"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:390
+#: crates/pindu-ui/src/fullscreen_network.rs:408
 msgid ""
 "Its passphrase is removed, and the console no longer joins it by itself."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:418
-#: crates/pindu-ui/src/fullscreen_network.rs:428
+#: crates/pindu-ui/src/fullscreen_network.rs:436
+#: crates/pindu-ui/src/fullscreen_network.rs:446
 msgid "Wired"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:420
+#: crates/pindu-ui/src/fullscreen_network.rs:438
 #: crates/pindu-ui/src/proton_downloads_page.rs:100 data/ui/quick_access.blp:56
 msgid "Offline"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:421
+#: crates/pindu-ui/src/fullscreen_network.rs:439
 #: crates/pindu-ui/src/fullscreen_power.rs:349
 msgid "Not allowed on this system"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:429
+#: crates/pindu-ui/src/fullscreen_network.rs:447
 #: data/ui/fullscreen_network.blp:43 data/ui/fullscreen_network.blp:47
 msgid "Wi-Fi"
 msgstr ""
 
 #. Translators: {device} is "Wired" or "Wi-Fi", {interface} its name, such as wlan0.
-#: crates/pindu-ui/src/fullscreen_network.rs:433
+#: crates/pindu-ui/src/fullscreen_network.rs:451
 #, rust-format
 msgid "{device} ({interface})"
 msgstr ""
 
 #. Translators: {network} is a Wi-Fi network's name.
-#: crates/pindu-ui/src/fullscreen_network.rs:442
+#: crates/pindu-ui/src/fullscreen_network.rs:460
 #, rust-format
 msgid "Connected to {network}"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:446
+#: crates/pindu-ui/src/fullscreen_network.rs:464
 msgid "Disconnected"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:447
+#: crates/pindu-ui/src/fullscreen_network.rs:465
 msgid "Cable unplugged"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:483
+#: crates/pindu-ui/src/fullscreen_network.rs:501
 msgid "Saved"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:484
+#: crates/pindu-ui/src/fullscreen_network.rs:502
 msgid "Set up on another device"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:590
+#: crates/pindu-ui/src/fullscreen_network.rs:608
 msgid "Wrong passphrase. Try again."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:592
+#: crates/pindu-ui/src/fullscreen_network.rs:610
 msgid "A passphrase has 8 to 63 characters."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_network.rs:594
+#: crates/pindu-ui/src/fullscreen_network.rs:612
 msgid "Enter the network's passphrase."
 msgstr ""
 
@@ -1600,7 +1600,7 @@ msgid "The key was not saved: {error}"
 msgstr ""
 
 #: crates/pindu-ui/src/preferences.rs:618
-#: crates/pindu-ui/src/quick_access.rs:939
+#: crates/pindu-ui/src/quick_access.rs:953
 msgid "Your fullscreen.css, over the design"
 msgstr ""
 
@@ -1880,19 +1880,19 @@ msgstr ""
 msgid "Preparing…"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:369
+#: crates/pindu-ui/src/quick_access.rs:368
 #, rust-format
 msgid "Performance for {game}"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:941
+#: crates/pindu-ui/src/quick_access.rs:955
 #, rust-format
 msgid "Create {path} to restyle fullscreen mode"
 msgstr ""
 
 #. / Why Design cannot apply a design written for a newer style contract.
 
-#: crates/pindu-ui/src/quick_access.rs:1027
+#: crates/pindu-ui/src/quick_access.rs:1041
 msgid "Needs a newer Pindu launcher"
 msgstr ""
 
@@ -2514,160 +2514,209 @@ msgid "Light and dark style"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:92
-msgid "A fix for fullscreen mode in virtual machines."
+msgid ""
+"A test release of fullscreen mode in gamescope sessions, where the launcher "
+"takes Steam's place."
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:94
+msgid ""
+"In a gamescope session started with --steam, the games the launcher starts "
+"come to the front, Guide brings the launcher back, and Return in Playing Now "
+"goes back to the game"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:95
+msgid ""
+"Games handed to Steam, Heroic or Lutris come to the front too, and Steam's "
+"own window shows while it needs an answer"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:96
+msgid ""
+"Quick Access opens over a running game with the ⋯ button, including Network "
+"and Bluetooth"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:97
+msgid "The Performance Overlay switch drives MangoApp in a gamescope session"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:98
+msgid ""
+"The RPM and DEB packages add a \"Pindu launcher\" session to gamescope-"
+"session-plus login screens, with Switch to Desktop in the Power menu"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:99
+msgid "Games started outside the Flatpak open on the launcher's own display"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:100
+msgid "Fullscreen mode can install Steam, Heroic or Lutris from Add a Store"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:101
+msgid ""
+"Wi-Fi passphrases and Bluetooth PINs are typed with the on-screen keyboard"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:102
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:125
+msgid "Updated translations"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:108
+msgid "A fix for fullscreen mode in virtual machines."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:110
 msgid ""
 "Fullscreen mode no longer crashes in a virtual machine with 3D acceleration "
 "and Venus (virtio-gpu)"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:100
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:116
 msgid ""
 "Release files for ARM (aarch64), a fix for a crash on Steam libraries, and "
 "more in the fullscreen Quick Access panel."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:102
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:118
 msgid ""
 "Flatpak, RPM and DEB release files are now built for aarch64 (ARM) as well "
 "as x86_64"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:103
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:119
 msgid "Fixed a crash when importing a Steam library with deeply nested data"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:104
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:120
 msgid "Windows games use a Proton build made for your machine's architecture"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:105
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:121
 msgid "Turning on MangoHud now explains when it cannot work inside the sandbox"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:106
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:122
 msgid ""
 "Quick Access in fullscreen mode gains Network, Bluetooth, System Update, "
 "Sound Output and Power sections"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:107
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:123
 msgid ""
 "The on-screen keyboard has capitals and symbols, and a dialog for entering "
 "passphrases"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:108
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:124
 msgid "The RPM and DEB packages now depend on GStreamer's good plug-ins"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:109
-msgid "Updated translations"
-msgstr ""
-
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:115
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:131
 msgid ""
 "Native packages, your own fullscreen style in Preferences, and the start of "
 "translations."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:117
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:133
 msgid ""
 "Install Pindu launcher as an RPM on Fedora 45 or a DEB on Debian testing and "
 "Ubuntu 26.10, next to the Flatpak"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:118
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:134
 msgid ""
 "Turn your own fullscreen stylesheet on, import it, open its folder or reset "
 "it in Preferences, which also lists its problems"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:119
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:135
 msgid ""
 "Without umu-launcher, Windows games now say what is missing and how to "
 "install it"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:120
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:136
 msgid ""
 "The focused cover in the first row of the fullscreen library is no longer "
 "cut off"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:121
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:137
 msgid "A first, partial Dutch translation; help translate on Weblate"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:127
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:143
 msgid ""
 "Windows games, and a fullscreen mode for playing from the couch with a "
 "controller."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:129
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:145
 msgid ""
 "Add a Windows game from its .exe or installer and play it with Proton, with "
 "launch settings and logs for each game"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:130
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:146
 msgid "Download GE-Proton and Proton-CachyOS builds from Preferences"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:131
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:147
 msgid ""
 "Run native games in the Steam Linux Runtime, and turn on MangoHud or "
 "GameMode for a game"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:132
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:148
 msgid ""
 "A fullscreen mode with Home, Library and game pages, an on-screen keyboard "
 "for search and a Quick Access panel"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:133
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:149
 msgid ""
 "Fullscreen designs, Ribbon and Panorama, with variants, and your own "
 "stylesheet"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:134
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:150
 msgid ""
 "Reduce Motion, Larger Text and a volume for navigation sounds in fullscreen "
 "mode"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:135
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:151
 msgid "Control the desktop window and its menus with a controller"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:136
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:152
 msgid "SteamGridDB art arrives as soon as you save your key"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:142
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:158
 msgid "The first release."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:144
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:160
 msgid ""
 "One library for Steam, Heroic, Lutris, Bottles, Faugus, installed apps and "
 "games you add yourself"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:145
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:161
 msgid "Collections, favourites, Jump Back In and play history"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:146
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:162
 msgid "Artwork from your launchers, your own files or SteamGridDB"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:147
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:163
 msgid "Search from GNOME Shell"
 msgstr ""
 
