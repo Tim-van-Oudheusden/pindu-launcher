@@ -14,7 +14,7 @@
 //! (`pindu_core::gamescope::mangoapp`).
 
 use std::cell::{Cell, RefCell};
-use std::ffi::{c_int, c_long, c_uchar, c_ulong};
+use std::ffi::{c_int, c_long, c_uchar, c_uint, c_ulong};
 use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 use std::time::Instant;
@@ -173,11 +173,18 @@ impl GamescopeService {
             let Some(inner) = weak.upgrade() else {
                 return;
             };
-            let in_game = matches!(inner.front.get(), Front::Game(_));
-            let Some(intent) = gamescope::in_game_intent(button).filter(|_| in_game) else {
+            let Some(intent) = gamescope::in_game_intent(button) else {
                 return;
             };
             let service = GamescopeService { inner };
+            if intent == InGameIntent::ShowLauncher && service.steam_window().is_some() {
+                // The user leaves the Steam client's window: the launch is given up on.
+                service.end_store_launch();
+                return;
+            }
+            if !matches!(service.inner.front.get(), Front::Game(_)) {
+                return;
+            }
             service.set_quick_access_open(overlay::open_after(service.quick_access_open(), intent));
             if intent == InGameIntent::ShowLauncher {
                 service.ask_for(Front::Launcher, true);
@@ -427,8 +434,8 @@ impl GamescopeService {
 
     /// Expects the game with `id`, which the launcher just handed to its store launcher, in
     /// front: its windows, and the store launcher's untagged ones, get its app ID until
-    /// they have come and gone, or for a while when none comes. It replaces an earlier
-    /// store launch.
+    /// they have come and gone, or for a while when none comes, and the Steam client's
+    /// open windows show meanwhile. It replaces an earlier store launch.
     pub fn store_launch_started(&self, id: &GameId) {
         let Some(x11) = &self.inner.x11 else {
             return;
@@ -438,6 +445,13 @@ impl GamescopeService {
         let mut launch = StoreLaunch::new(id, now);
         let apps = x11.cardinals(x11.root, FOCUSABLE_APPS).unwrap_or_default();
         launch.focusable_apps_changed(&apps, now);
+        // A Steam client that already runs asks inside the window it has open.
+        let own = own_windows();
+        for xid in x11.viewable_children() {
+            if let Some(facts) = x11.window_facts(xid) {
+                launch.window_mapped(&facts, &own);
+            }
+        }
         let app_id = launch.app_id();
         glib::g_info!("pindu", "gamescope: expecting {id} as app {app_id}");
         self.inner.store_launch.replace(Some(launch));
@@ -631,7 +645,8 @@ impl GamescopeService {
         expected
     }
 
-    /// What the launcher claims on the root for the front it wants.
+    /// What the launcher claims on the root for the front it wants: the Steam client's
+    /// window the store launch waits on in the launcher's place, when there is one.
     fn claim(&self) -> BaseLayerClaim {
         BaseLayerClaim::new(
             self.inner.wanted.get(),
@@ -639,6 +654,16 @@ impl GamescopeService {
             &self.inner.focusable.borrow(),
             self.inner.main_window.get(),
         )
+        .showing(self.steam_window())
+    }
+
+    /// The Steam client's window the store launch waits on, which gamescope shows.
+    fn steam_window(&self) -> Option<Xid> {
+        self.inner
+            .store_launch
+            .borrow()
+            .as_ref()
+            .and_then(|launch| launch.steam_window(self.inner.wanted.get()))
     }
 
     /// Writes `GAMESCOPECTRL_BASELAYER_APPID` and `GAMESCOPECTRL_BASELAYER_WINDOW` for the
@@ -705,7 +730,8 @@ impl GamescopeService {
         self.write_overlay_for_front();
     }
 
-    /// Gives a window another client just mapped its game's app ID, when it is one.
+    /// Gives a window another client just mapped its game's app ID, when it is one, and
+    /// shows it while the store launch waits on it, when it is the Steam client's.
     fn window_mapped(&self, xid: Xid) {
         let Some(x11) = &self.inner.x11 else {
             return;
@@ -715,12 +741,7 @@ impl GamescopeService {
         if tracked.is_empty() && launch.is_none() {
             return;
         }
-        let own: Vec<Xid> = gtk::Window::list_toplevels()
-            .iter()
-            .filter_map(|widget| widget.downcast_ref::<gtk::Window>()?.surface())
-            .filter_map(|surface| surface.downcast::<X11Surface>().ok())
-            .map(|surface| surface.xid())
-            .collect();
+        let own = own_windows();
         let Some(facts) = x11.window_facts(xid) else {
             return;
         };
@@ -732,7 +753,49 @@ impl GamescopeService {
             glib::g_info!("pindu", "gamescope: window {xid:#x} is app {app_id}");
             x11.write_cardinals_trapped(xid, STEAM_GAME, &[app_id]);
         }
+        if launch.is_some() {
+            self.follow_store_window(|launch| launch.window_mapped(&facts, &own));
+        }
     }
+
+    /// Lets the store launch know another client's top-level window was unmapped.
+    fn window_unmapped(&self, xid: Xid) {
+        self.follow_store_window(|launch| launch.window_unmapped(xid, Instant::now()));
+    }
+
+    /// Lets the store launch follow another client's window with `follow`, then writes the
+    /// claim when the Steam client's window it waits on changed, and looks at the launch
+    /// again at its new deadline.
+    fn follow_store_window(&self, follow: impl FnOnce(&mut StoreLaunch)) {
+        let before = self.steam_window();
+        match self.inner.store_launch.borrow_mut().as_mut() {
+            Some(launch) => follow(launch),
+            None => return,
+        }
+        self.schedule_store_check();
+        let after = self.steam_window();
+        if after == before {
+            return;
+        }
+        match after {
+            Some(xid) => glib::g_info!(
+                "pindu",
+                "gamescope: showing the Steam client's window {xid:#x} the launch waits on"
+            ),
+            None => glib::g_info!("pindu", "gamescope: the Steam client's window is gone"),
+        }
+        self.write_base_layer();
+    }
+}
+
+/// The X11 windows of the launcher's own top-levels.
+fn own_windows() -> Vec<Xid> {
+    gtk::Window::list_toplevels()
+        .iter()
+        .filter_map(|widget| widget.downcast_ref::<gtk::Window>()?.surface())
+        .filter_map(|surface| surface.downcast::<X11Surface>().ok())
+        .map(|surface| surface.xid())
+        .collect()
 }
 
 /// GDK's X11 connection, and Xlib to call on it.
@@ -821,6 +884,11 @@ impl X11 {
                     (map.event == root && map.override_redirect == 0)
                         .then_some(Work::Mapped(map.window))
                 }
+                xlib::UnmapNotify => {
+                    // SAFETY: an `UnmapNotify` event is an `XUnmapEvent`.
+                    let unmap = unsafe { (*event).unmap };
+                    (unmap.event == root).then_some(Work::Unmapped(unmap.window))
+                }
                 _ => None,
             };
             if let Some(work) = work {
@@ -834,6 +902,7 @@ impl X11 {
                             Work::ReadFront => service.read_front(),
                             Work::ReadFocusable => service.focusable_apps_changed(),
                             Work::Mapped(xid) => service.window_mapped(xid),
+                            Work::Unmapped(xid) => service.window_unmapped(xid),
                             Work::CheckClaim => service.base_layer_changed(),
                         }
                     }
@@ -988,6 +1057,59 @@ impl X11 {
         let error = self.display.error_trap_pop();
         (read != 0 && error == 0).then_some(facts)
     }
+
+    /// The root's children that are mapped and viewable, the top-level windows on screen,
+    /// bottom first.
+    fn viewable_children(&self) -> Vec<Xid> {
+        let display = self.xdisplay();
+        let mut root: xlib::Window = 0;
+        let mut parent: xlib::Window = 0;
+        let mut children: *mut xlib::Window = std::ptr::null_mut();
+        let mut count: c_uint = 0;
+        // SAFETY: `display` is GDK's open connection, the root exists as long as it does,
+        // and every out-pointer points to a local that outlives the call.
+        let status = unsafe {
+            (self.xlib.XQueryTree)(
+                display,
+                self.root,
+                &mut root,
+                &mut parent,
+                &mut children,
+                &mut count,
+            )
+        };
+        if children.is_null() {
+            return Vec::new();
+        }
+        let count = usize::try_from(count).unwrap_or(0);
+        let windows = if status == 0 {
+            Vec::new()
+        } else {
+            // SAFETY: on success Xlib returns `count` windows at `children`, valid until
+            // the `XFree` below.
+            unsafe { std::slice::from_raw_parts(children, count) }.to_vec()
+        };
+        // SAFETY: Xlib allocated `children` for this call, and it is freed once, after the
+        // windows were copied out.
+        unsafe { (self.xlib.XFree)(children.cast()) };
+        windows
+            .into_iter()
+            .filter(|&xid| self.is_viewable(xid))
+            .collect()
+    }
+
+    /// Whether `xid` is mapped and viewable; `false` once it is gone.
+    fn is_viewable(&self, xid: Xid) -> bool {
+        self.display.error_trap_push();
+        // SAFETY: a zeroed `XWindowAttributes` is a valid value for Xlib to fill in.
+        let mut attributes: xlib::XWindowAttributes = unsafe { std::mem::zeroed() };
+        // SAFETY: `xdisplay` is GDK's open connection and `attributes` outlives the call; a
+        // window that is gone is caught by the error trap.
+        let read =
+            unsafe { (self.xlib.XGetWindowAttributes)(self.xdisplay(), xid, &mut attributes) };
+        let error = self.display.error_trap_pop();
+        read != 0 && error == 0 && attributes.map_state == xlib::IsViewable
+    }
 }
 
 /// A property's items as read.
@@ -1007,6 +1129,8 @@ enum Work {
     ReadFocusable,
     /// Another client mapped this top-level window.
     Mapped(Xid),
+    /// A top-level window was unmapped.
+    Unmapped(Xid),
     /// `GAMESCOPECTRL_BASELAYER_APPID` or `GAMESCOPECTRL_BASELAYER_WINDOW` changed.
     CheckClaim,
 }
