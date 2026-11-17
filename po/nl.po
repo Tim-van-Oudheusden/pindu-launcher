@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-17 18:19+0100\n"
+"POT-Creation-Date: 2026-11-17 18:29+0100\n"
 "PO-Revision-Date: 2026-11-07 18:15+0000\n"
 "Last-Translator: Tim <tim-van-oudheusden@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/pindu-launcher/"
@@ -872,13 +872,13 @@ msgstr ""
 msgid "Open in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_performance.rs:182 data/ui/game_page.blp:306
+#: crates/pindu-ui/src/fullscreen_performance.rs:197 data/ui/game_page.blp:306
 #: data/ui/preferences.blp:200 data/ui/quick_access.blp:1229
 #: data/ui/window.blp:749
 msgid "MangoHud"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_performance.rs:184
+#: crates/pindu-ui/src/fullscreen_performance.rs:199
 #: crates/pindu-ui/src/game_page.rs:291
 msgid "MangoHud is not installed"
 msgstr ""
@@ -1403,45 +1403,45 @@ msgstr[1] ""
 msgid "Recently Played"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:118
+#: crates/pindu-ui/src/launch_service.rs:122
 #: crates/pindu-ui/src/proton_launch.rs:177
 msgid "Starting “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:122
+#: crates/pindu-ui/src/launch_service.rs:126
 #: crates/pindu-ui/src/proton_launch.rs:504
 msgid "Could not start “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:141
+#: crates/pindu-ui/src/launch_service.rs:145
 msgid "This game cannot be started yet"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:177
+#: crates/pindu-ui/src/launch_service.rs:181
 msgid "Starting “{title}” in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:181
-#: crates/pindu-ui/src/launch_service.rs:244
+#: crates/pindu-ui/src/launch_service.rs:185
+#: crates/pindu-ui/src/launch_service.rs:248
 msgid "Could not open {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:199
+#: crates/pindu-ui/src/launch_service.rs:203
 #: crates/pindu-ui/src/proton_launch.rs:374
 #: crates/pindu-ui/src/proton_launch.rs:603 crates/pindu-ui/src/window.rs:1214
 msgid "_Close"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:200
+#: crates/pindu-ui/src/launch_service.rs:204
 msgid "_How to Enable"
 msgstr ""
 
 #. / The heading of the explanation that a game needs a permission.
-#: crates/pindu-ui/src/launch_service.rs:214
+#: crates/pindu-ui/src/launch_service.rs:218
 msgid "Permission Needed"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:220
+#: crates/pindu-ui/src/launch_service.rs:224
 msgid ""
 "“{title}” starts on this computer, outside the sandbox. Allow that in "
 "Preferences, then restart Pindu launcher."
@@ -1551,7 +1551,7 @@ msgid "The key was not saved: {error}"
 msgstr ""
 
 #: crates/pindu-ui/src/preferences.rs:618
-#: crates/pindu-ui/src/quick_access.rs:917
+#: crates/pindu-ui/src/quick_access.rs:918
 msgid "Your fullscreen.css, over the design"
 msgstr ""
 
@@ -1807,16 +1807,16 @@ msgstr ""
 msgid "Preparing…"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:352
+#: crates/pindu-ui/src/quick_access.rs:353
 msgid "Performance for {game}"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:919
+#: crates/pindu-ui/src/quick_access.rs:920
 msgid "Create {path} to restyle fullscreen mode"
 msgstr ""
 
 #. / Why Design cannot apply a design written for a newer style contract.
-#: crates/pindu-ui/src/quick_access.rs:1005
+#: crates/pindu-ui/src/quick_access.rs:1006
 msgid "Needs a newer Pindu launcher"
 msgstr ""
 
