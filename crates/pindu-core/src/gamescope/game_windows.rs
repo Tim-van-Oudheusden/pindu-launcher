@@ -1,10 +1,17 @@
-//! A running game's windows, as gamescope lists them, and the one the user picks from the
-//! menu drawer over the game. Many games open through a launcher of their own, so a game
-//! can have two windows; gamescope shows the one mapped last. The root's
-//! `GAMESCOPE_FOCUSABLE_WINDOWS` lists every window it could show, and the launcher pins the
-//! picked one with `GAMESCOPECTRL_BASELAYER_WINDOW` while the game is wanted in front.
+//! A running game's windows, as gamescope lists them: the one the user picks from the
+//! menu drawer over the game, and closing them all to exit a store-launched game. Many
+//! games open through a launcher of their own, so a game can have two windows; gamescope
+//! shows the one mapped last. The root's `GAMESCOPE_FOCUSABLE_WINDOWS` lists every window
+//! it could show, and the launcher pins the picked one with
+//! `GAMESCOPECTRL_BASELAYER_WINDOW` while the game is wanted in front.
+
+use std::time::{Duration, Instant};
 
 use super::{BaseLayerClaim, Xid};
+
+/// How long a store-launched game's windows have to close once asked, before the launcher
+/// ends their clients.
+pub const EXIT_GRACE: Duration = Duration::from_secs(5);
 
 /// A window gamescope could show, from the root's `GAMESCOPE_FOCUSABLE_WINDOWS`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,10 +89,50 @@ pub fn window_title(net_wm_name: Option<&[u8]>, wm_name: Option<&[u8]>) -> Optio
         .find(|title| !title.is_empty())
 }
 
+/// Exiting a store-launched game, whose process the launcher cannot signal: its windows are
+/// asked to close (`WM_DELETE_WINDOW`), and the clients of the ones still there after
+/// [`EXIT_GRACE`] are ended.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StoreExit {
+    app_id: u32,
+    asked_at: Instant,
+}
+
+impl StoreExit {
+    /// Exiting the game with `app_id`, asked at `now`.
+    pub fn new(app_id: u32, now: Instant) -> Self {
+        Self {
+            app_id,
+            asked_at: now,
+        }
+    }
+
+    /// The windows to ask to close: the game's among `windows`.
+    pub fn to_ask(&self, windows: &[FocusableWindow]) -> Vec<Xid> {
+        game_windows(windows, self.app_id)
+    }
+
+    /// When the windows left are ended.
+    pub fn due(&self) -> Instant {
+        self.asked_at + EXIT_GRACE
+    }
+
+    /// The windows whose clients to end at `now`: none before [`Self::due`], then every
+    /// window of the game among `windows`, one it opened since (such as a question about
+    /// saving) too.
+    pub fn to_end(&self, windows: &[FocusableWindow], now: Instant) -> Vec<Xid> {
+        if now < self.due() {
+            return Vec::new();
+        }
+        game_windows(windows, self.app_id)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::gamescope::{BaseLayerClaim, Front, STEAM_APP_ID};
+    use std::time::{Duration, Instant};
 
     const GAME: u32 = 0x8000_1234;
     const MAIN: Xid = 0x60_0004;
@@ -157,5 +204,23 @@ mod tests {
         );
         assert_eq!(window_title(Some(b""), Some(b" ")), None);
         assert_eq!(window_title(None, None), None);
+    }
+
+    #[test]
+    fn exiting_asks_the_games_windows_to_close_then_ends_the_ones_left_after_the_grace() {
+        let start = Instant::now();
+        let exit = StoreExit::new(GAME, start);
+        let windows = focusable_windows(&[0x40_0001, GAME, 4100, 0x60_0004, STEAM_APP_ID, 2]);
+        assert_eq!(exit.to_ask(&windows), [0x40_0001]);
+        assert_eq!(exit.due(), start + EXIT_GRACE);
+        assert!(
+            exit.to_end(&windows, start + Duration::from_secs(1))
+                .is_empty()
+        );
+        // The game asked whether to save, in a window of its own: it goes too.
+        let left = focusable_windows(&[0x40_0001, GAME, 4100, 0x40_0009, GAME, 4100]);
+        assert_eq!(exit.to_end(&left, exit.due()), [0x40_0001, 0x40_0009]);
+        let gone = focusable_windows(&[0x60_0004, STEAM_APP_ID, 2]);
+        assert!(exit.to_end(&gone, exit.due()).is_empty());
     }
 }

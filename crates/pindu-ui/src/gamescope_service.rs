@@ -25,8 +25,8 @@ use gtk::glib;
 use gtk::prelude::*;
 use pindu_core::gamescope::overlay::{self, OverGame};
 use pindu_core::gamescope::{
-    self, BaseLayerClaim, ExpectedGame, Front, InGameIntent, PickedWindow, Reclaims, STEAM_APP_ID,
-    StoreLaunch, WindowFacts, Xid, mangoapp,
+    self, BaseLayerClaim, EXIT_GRACE, ExpectedGame, Front, InGameIntent, PickedWindow, Reclaims,
+    STEAM_APP_ID, StoreExit, StoreLaunch, WindowFacts, Xid, mangoapp,
 };
 use pindu_core::model::{GameId, LaunchConfig, Timestamp};
 
@@ -55,6 +55,10 @@ const WM_CLASS: &str = "WM_CLASS";
 const NET_WM_NAME: &str = "_NET_WM_NAME";
 /// A window's title, the older way.
 const WM_NAME: &str = "WM_NAME";
+/// The protocols a window takes part in, such as being asked to close.
+const WM_PROTOCOLS: &str = "WM_PROTOCOLS";
+/// The request to close a window, as its close button would.
+const WM_DELETE_WINDOW: &str = "WM_DELETE_WINDOW";
 /// Marks a window as an overlay, which is never a base layer.
 const STEAM_OVERLAY: &str = "STEAM_OVERLAY";
 /// Whether an overlay holds the keyboard and pointer.
@@ -368,7 +372,8 @@ impl GamescopeService {
     }
 
     /// The store-launched game that plays, with when the launcher first saw its window:
-    /// its store launcher runs it, so the launcher can bring it back but not stop it.
+    /// its store launcher runs it, so Stop closes its windows (see
+    /// [`Self::exit_store_game`]).
     pub fn store_playing(&self) -> Option<(GameId, Timestamp)> {
         self.inner.store_playing.borrow().clone()
     }
@@ -679,6 +684,45 @@ impl GamescopeService {
             .into_iter()
             .map(|xid| (xid, x11.title(xid)))
             .collect()
+    }
+
+    /// Exits the store-launched game with `id` while it plays, as Stop: its windows, its
+    /// store launcher's among them, are asked to close, and the clients of those still
+    /// there after [`EXIT_GRACE`] are ended. The launcher cannot signal a process outside
+    /// its sandbox, so this goes through X11.
+    pub fn exit_store_game(&self, id: &GameId) {
+        let app_id = self
+            .inner
+            .store_launch
+            .borrow()
+            .as_ref()
+            .filter(|launch| launch.is_playing() && launch.game() == id)
+            .map(StoreLaunch::app_id);
+        let (Some(x11), Some(app_id)) = (&self.inner.x11, app_id) else {
+            return;
+        };
+        let exit = StoreExit::new(app_id, Instant::now());
+        for xid in exit.to_ask(&self.focusable_windows()) {
+            glib::g_info!(
+                "pindu",
+                "gamescope: asking window {xid:#x} of {id} to close"
+            );
+            x11.close_window(xid);
+        }
+        let weak = Rc::downgrade(&self.inner);
+        glib::timeout_add_local_once(EXIT_GRACE, move || {
+            let Some(inner) = weak.upgrade() else {
+                return;
+            };
+            let service = GamescopeService { inner };
+            let Some(x11) = &service.inner.x11 else {
+                return;
+            };
+            for xid in exit.to_end(&service.focusable_windows(), Instant::now()) {
+                glib::g_info!("pindu", "gamescope: ending the client of window {xid:#x}");
+                x11.kill_client(xid);
+            }
+        });
     }
 
     /// Shows `xid`, a window of the game in front the user picked, instead of the one
@@ -1150,6 +1194,48 @@ impl X11 {
                 "gamescope: window {window:#x} went (X error {error})"
             );
         }
+    }
+
+    /// Asks another client's window to close (`WM_DELETE_WINDOW`), as its close button
+    /// would; nothing once it is gone.
+    fn close_window(&self, xid: Xid) {
+        // SAFETY: a zeroed `XEvent` is a valid value; the client message is filled in
+        // through its own member below.
+        let mut event: xlib::XEvent = unsafe { std::mem::zeroed() };
+        let message: &mut xlib::XClientMessageEvent = event.as_mut();
+        message.type_ = xlib::ClientMessage;
+        message.window = xid;
+        message.message_type = self.atom(WM_PROTOCOLS);
+        message.format = 32;
+        let delete = c_long::try_from(self.atom(WM_DELETE_WINDOW)).unwrap_or_default();
+        message.data.set_long(0, delete);
+        // CurrentTime.
+        message.data.set_long(1, 0);
+        self.display.error_trap_push();
+        // SAFETY: `xdisplay` is GDK's open connection and `event` outlives the call; a
+        // window that is gone is caught by the error trap.
+        unsafe {
+            (self.xlib.XSendEvent)(
+                self.xdisplay(),
+                xid,
+                xlib::False,
+                xlib::NoEventMask,
+                &mut event,
+            )
+        };
+        self.display.flush();
+        self.display.error_trap_pop();
+    }
+
+    /// Ends the client of another client's window, which closes its connection and, for
+    /// nearly every program, the program; nothing once it is gone.
+    fn kill_client(&self, xid: Xid) {
+        self.display.error_trap_push();
+        // SAFETY: `xdisplay` is GDK's open connection; a window that is gone is caught by
+        // the error trap.
+        unsafe { (self.xlib.XKillClient)(self.xdisplay(), xid) };
+        self.display.flush();
+        self.display.error_trap_pop();
     }
 
     /// Another client's window's title, or `None` when it has none or is gone.

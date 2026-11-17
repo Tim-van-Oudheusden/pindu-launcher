@@ -5,7 +5,7 @@
 //! panel shows. The window has the cards' `win.playing-return` and `win.playing-stop`. In
 //! a `--steam` gamescope, Return also brings the game back to the front, the drawer and
 //! Quick Access over a game hold the same cards, and a store-launched game that plays gets
-//! a card too, with Return alone, since its store launcher runs it.
+//! a card too, whose Stop closes its windows.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -312,10 +312,6 @@ fn playing_card(game: &GameObject, time: String) -> (gtk::Box, gtk::Label) {
         (gettext("_Return"), "win.playing-return", "suggested-action"),
         (gettext("_Stop"), "win.playing-stop", "destructive-action"),
     ] {
-        // Only a game we started can be stopped.
-        if action == "win.playing-stop" && !game.is_playing() {
-            continue;
-        }
         let button = gtk::Button::builder()
             .label(label)
             .use_underline(true)

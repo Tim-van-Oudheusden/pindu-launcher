@@ -577,10 +577,21 @@ impl PinduApplication {
                 });
             })
             .build();
+        // Stop ends a game we started, and closes a store-launched game's windows.
         let stop_action = gio::ActionEntry::builder("stop")
             .parameter_type(Some(glib::VariantTy::STRING))
             .activate(move |app: &Self, _, id| {
-                if let Some(id) = id.and_then(|id| id.str()).and_then(|id| id.parse().ok()) {
+                let Some(id) = id.and_then(|id| id.str()).and_then(|id| id.parse().ok()) else {
+                    return;
+                };
+                let in_store = app
+                    .library_service()
+                    .model()
+                    .game_object(&id)
+                    .is_some_and(|game| game.playing() == Playing::InStore);
+                if in_store {
+                    app.gamescope_service().exit_store_game(&id);
+                } else {
                     app.session_service().stop(&id);
                 }
             })

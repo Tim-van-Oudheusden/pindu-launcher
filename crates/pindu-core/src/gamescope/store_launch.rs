@@ -80,7 +80,7 @@ impl StoreLaunch {
     }
 
     /// Whether the game plays: a window with its app ID has shown, and the launch is not
-    /// over yet. The launcher can bring it back to the front, but not stop it.
+    /// over yet. Its store launcher runs it, not the launcher.
     pub fn is_playing(&self) -> bool {
         !matches!(self.phase, Phase::Waiting(_))
     }
