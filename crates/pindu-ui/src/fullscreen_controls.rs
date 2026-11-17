@@ -11,24 +11,24 @@ use pindu_core::controls::{Control, Group, controls};
 use pindu_core::gamepad::{Direction, Glyphs, Intent};
 use pindu_core::hints;
 use pindu_core::keys::Chord;
-use pindu_core::panels::{Panel, QuickAccessLevel};
+use pindu_core::panels::QuickAccessLevel;
 
 use crate::application::PinduApplication;
 use crate::fullscreen_panels::step_out_of_list;
 use crate::hint_bar::{GLYPH_SIZE, glyph_label};
-use crate::window::PinduWindow;
+use crate::quick_access::PinduQuickAccess;
 
-impl PinduWindow {
+impl PinduQuickAccess {
     /// Follows the controller in use, whose glyphs the list shows.
     pub(crate) fn setup_controls(&self, application: &PinduApplication) {
         application
             .gamepad_service()
             .connect_active_layout_notify(glib::clone!(
-                #[weak(rename_to = window)]
+                #[weak(rename_to = quick_access)]
                 self,
                 move |_| {
-                    if window.open_panel() == Some(Panel::QuickAccess(QuickAccessLevel::Controls)) {
-                        window.fill_controls();
+                    if quick_access.level() == Some(QuickAccessLevel::Controls) {
+                        quick_access.fill_controls();
                     }
                 }
             ));
@@ -37,11 +37,11 @@ impl PinduWindow {
     /// Fills the Controls level for the controller in use, keeping focus on the row it was
     /// on, or on the level's first row when that row is gone.
     pub(crate) fn fill_controls(&self) {
-        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+        let Some(application) = self.application() else {
             return;
         };
         let imp = self.imp();
-        let container = imp.quick_access_controls.get();
+        let container = imp.controls.get();
         let rows = |container: &gtk::Box| -> Vec<gtk::ListBoxRow> {
             std::iter::successors(container.first_child(), |child| child.next_sibling())
                 .filter_map(|child| child.downcast::<gtk::ListBox>().ok())
@@ -51,7 +51,8 @@ impl PinduWindow {
                 })
                 .collect()
         };
-        let focused = gtk::prelude::GtkWindowExt::focus(self)
+        let focused = self
+            .focus_widget()
             .filter(|focus| focus.is_ancestor(&container))
             .and_then(|focus| {
                 let index = rows(&container)
@@ -95,7 +96,7 @@ impl PinduWindow {
             Some(row) => {
                 row.grab_focus();
             }
-            None if focused.is_some() => self.focus_panel(None),
+            None if focused.is_some() => self.focus_level(None),
             None => {}
         }
     }

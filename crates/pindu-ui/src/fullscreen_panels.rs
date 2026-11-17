@@ -2,20 +2,13 @@
 //! Quick Access on the right (R3 or the Steam Deck's "…" button) and the options sheet at
 //! the bottom (View or X, or a game page's Options and Add to Collection buttons). Which
 //! panel is open, at which level, and what the controller does to them is
-//! `pindu_core::panels`; this fills them, shows them, keeps focus inside the open one and
-//! gives it back after, and does what their entries say. They are widgets in the window
-//! rather than popover menus, which the compositor dismisses on a controller press.
-//! Quick Access's notifications are `fullscreen_notifications`'s, its Activity and Refresh
-//! Library `fullscreen_activity`'s, its Surprise Me `fullscreen_surprise`'s, its
-//! Controllers `fullscreen_controllers`'s, its Controls `fullscreen_controls`'s, its
-//! Filters (on the library page only) `fullscreen_library`'s, its Performance (for a game we
-//! run ourselves, which the options sheet has too) `fullscreen_performance`'s, its Network
-//! `fullscreen_network`'s, its Bluetooth (where BlueZ has an adapter)
-//! `fullscreen_bluetooth`'s, its Sound Output (where PipeWire's tools run)
-//! `fullscreen_sound_output`'s, its System Update (on Pindu OS only)
-//! `fullscreen_system_update`'s, its Add a Store `add_store`'s. Its Design level holds the
-//! design, its variant, Home's background blur and dim, and the user's own stylesheet. The
-//! drawer's Power level is `fullscreen_power`'s.
+//! `pindu_core::panels`; this fills the drawer and the sheet, shows the panels, keeps focus
+//! inside the open one and gives it back after, and does what their entries say. They are
+//! widgets in the window rather than popover menus, which the compositor dismisses on a
+//! controller press. Quick Access is a widget of its own, `PinduQuickAccess`
+//! (`quick_access`), which the window hosts as the sidebar of its `quick_access` split
+//! view: the window tells it which level shows and what lies under it, and does what it
+//! asks for. The drawer's Power level is `fullscreen_power`'s.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -23,22 +16,18 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::gamepad::Intent;
 use pindu_core::gamescope::session::power_shown;
-use pindu_core::home::{BLUR_KEY, DIM_KEY};
 use pindu_core::keys;
 use pindu_core::launch;
 use pindu_core::library::View;
 use pindu_core::panels::{
-    DrawerEntry, DrawerLevel, GameOption, OptionsLevel, PageEntry, Panel, Panels, QuickAccessLevel,
-    Under, design_choices, drawer_entries, game_options, page_entries, variant_choices,
+    DrawerEntry, DrawerLevel, GameOption, OptionsLevel, Panel, Panels, Under, drawer_entries,
+    game_options, page_entries,
 };
-use pindu_core::paths;
 
 use crate::application::PinduApplication;
-use crate::fullscreen::bind_volume_slider;
 use crate::fullscreen_playing::card_return;
 use crate::launch_service::launcher_name;
 use crate::models::GameObject;
-use crate::preferences::TILE_SIZES;
 use crate::window::PinduWindow;
 
 impl PinduWindow {
@@ -86,66 +75,6 @@ impl PinduWindow {
                 window.handle_panel_intent(Intent::QuickAccess);
             })
             .build();
-        let notifications = gio::ActionEntry::builder("quick-access-notifications")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Notifications));
-            })
-            .build();
-        let activity = gio::ActionEntry::builder("quick-access-activity")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Activity));
-            })
-            .build();
-        let designs = gio::ActionEntry::builder("quick-access-designs")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Designs));
-            })
-            .build();
-        let controllers = gio::ActionEntry::builder("quick-access-controllers")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Controllers));
-            })
-            .build();
-        let controls = gio::ActionEntry::builder("quick-access-controls")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Controls));
-            })
-            .build();
-        let quick_settings = gio::ActionEntry::builder("quick-access-settings")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Settings));
-            })
-            .build();
-        let filters = gio::ActionEntry::builder("quick-access-filters")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Filters));
-            })
-            .build();
-        let performance = gio::ActionEntry::builder("quick-access-performance")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Performance));
-            })
-            .build();
-        let bluetooth = gio::ActionEntry::builder("quick-access-bluetooth")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Bluetooth));
-            })
-            .build();
-        let sound_output = gio::ActionEntry::builder("quick-access-sound-output")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::QuickAccess(QuickAccessLevel::SoundOutput));
-            })
-            .build();
-        let system_update = gio::ActionEntry::builder("quick-access-system-update")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::QuickAccess(QuickAccessLevel::SystemUpdate));
-            })
-            .build();
-        let network = gio::ActionEntry::builder("quick-access-network")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::QuickAccess(QuickAccessLevel::Network));
-            })
-            .build();
         self.add_action_entries([
             close,
             home,
@@ -155,66 +84,18 @@ impl PinduWindow {
             options,
             game_collections,
             quick_access,
-            notifications,
-            activity,
-            designs,
-            controllers,
-            controls,
-            quick_settings,
-            filters,
-            performance,
-            bluetooth,
-            sound_output,
-            system_update,
-            network,
         ]);
-        // Up and Down stop at a list's ends; in Quick Access's Controllers, settings,
-        // Network, Bluetooth and System Update and the options sheet they go on to the next list
-        // (`fullscreen_playing` takes the drawer's and Quick Access's own lists up to their
-        // Playing Now cards).
-        let [network_devices, wifi_radio, wifi_networks] = imp.quick_access_network_level.lists();
-        let [bluetooth_adapter, bluetooth_paired, bluetooth_found] =
-            imp.quick_access_bluetooth_level.lists();
-        let [system_versions, system_actions] = imp.quick_access_system_update_level.lists();
-        let [add_store_stores, add_store_actions] = imp.quick_access_add_store_level.lists();
-        for list in [
-            imp.quick_access_designs.get(),
-            imp.quick_access_variants.get(),
-            imp.quick_access_blur.get(),
-            imp.quick_access_dim.get(),
-            imp.quick_access_custom_style.get(),
-            imp.quick_access_controllers.get(),
-            imp.quick_access_prompts.get(),
-            imp.quick_access_swap.get(),
-            imp.quick_access_sizes.get(),
-            imp.quick_access_switches.get(),
-            imp.quick_access_accessibility.get(),
-            imp.quick_access_filters.get(),
-            imp.quick_access_clear_filters.get(),
-            imp.options_list.get(),
-            imp.options_performance.get(),
-            bluetooth_adapter,
-            bluetooth_paired,
-            bluetooth_found,
-            system_versions,
-            system_actions,
-            add_store_stores,
-            add_store_actions,
-            network_devices,
-            wifi_radio,
-            wifi_networks,
-        ] {
+        // Up and Down stop at a list's ends; in the options sheet they go on to the next
+        // list (`fullscreen_playing` takes the drawer's own list up to its Playing Now
+        // cards, and Quick Access does its own).
+        for list in [imp.options_list.get(), imp.options_performance.get()] {
             list.connect_keynav_failed(|list, direction| {
                 step_out_of_list(list, direction);
                 glib::Propagation::Stop
             });
         }
         // Escape closes a panel rather than leaving fullscreen mode.
-        for panel in [
-            imp.drawer_panel.get(),
-            imp.quick_access_panel.get(),
-            imp.options_panel.get(),
-        ] {
+        for panel in [imp.drawer_panel.get(), imp.options_panel.get()] {
             let escape = gtk::ShortcutController::new();
             escape.add_shortcut(gtk::Shortcut::new(
                 gtk::ShortcutTrigger::parse_string(&keys::ESCAPE.accelerator()),
@@ -275,157 +156,56 @@ impl PinduWindow {
                 }
             }
         ));
-        self.setup_quick_access_settings();
-        self.setup_quick_access();
-        self.setup_performance();
-        self.setup_bluetooth();
-        self.setup_system_update();
         self.setup_add_store();
-        self.setup_network();
         self.setup_power();
         self.fill_drawer();
     }
 
-    /// Quick Access's settings: cover size, navigation sounds and their volume, exiting
-    /// after a launch, Reduce Motion and Larger Text, the same settings Preferences
-    /// changes, applied as they change.
-    fn setup_quick_access_settings(&self) {
+    /// Hosts Quick Access: it takes its services from `application` and adds its rows'
+    /// actions to the window, and the window does what it asks for. The options sheet's
+    /// performance switches show the same state as Quick Access's.
+    pub(crate) fn setup_quick_access(&self, application: &PinduApplication) {
         let imp = self.imp();
-        let settings = self.settings();
-        settings
-            .bind("navigation-sounds", &*imp.quick_access_sounds_row, "active")
-            .build();
-        bind_volume_slider(
-            settings,
-            &imp.quick_access_volume_row,
-            &imp.quick_access_volume,
-        );
-        settings
-            .bind("exit-after-launch", &*imp.quick_access_exit_row, "active")
-            .build();
-        settings
-            .bind(
-                "fullscreen-reduce-motion",
-                &*imp.quick_access_reduce_motion_row,
-                "active",
-            )
-            .build();
-        settings
-            .bind(
-                "fullscreen-large-text",
-                &*imp.quick_access_large_text_row,
-                "active",
-            )
-            .build();
-        let toggles = [
-            imp.tile_small.get(),
-            imp.tile_medium.get(),
-            imp.tile_large.get(),
-        ];
-        for (toggle, size) in toggles.iter().zip(TILE_SIZES) {
-            toggle.connect_toggled(glib::clone!(
-                #[weak(rename_to = window)]
-                self,
-                move |toggle| {
-                    if toggle.is_active() && window.settings().string("tile-size") != size {
-                        let _ = window.settings().set_string("tile-size", size);
-                    }
+        let panel = &imp.quick_access_panel;
+        panel.setup(application, self);
+        panel.connect_close_requested(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.close_panel()
+        ));
+        panel.connect_level_requested(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, level| window.show_panel(Panel::QuickAccess(level))
+        ));
+        panel.connect_activity_ended(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.leave_activity()
+        ));
+        panel.connect_game_requested(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, id| {
+                window.close_panel();
+                window.return_to_game(id);
+            }
+        ));
+        panel.connect_filters_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.apply_filters()
+        ));
+        if let Some(switches) = panel.performance() {
+            switches.attach(&imp.options_overlay_row, &imp.options_gamemode_row);
+            // Outside fullscreen mode the game page edits the same settings, so they are
+            // read afresh the next time.
+            self.connect_fullscreened_notify(move |window| {
+                if !window.is_fullscreen() {
+                    switches.forget();
                 }
-            ));
+            });
         }
-        let show_size = move |settings: &gio::Settings| {
-            let size = settings.string("tile-size");
-            for (toggle, name) in toggles.iter().zip(TILE_SIZES) {
-                toggle.set_active(size == name);
-            }
-        };
-        show_size(settings);
-        settings.connect_changed(Some("tile-size"), move |settings, _| show_size(settings));
-    }
-
-    /// Quick Access's designs choose through `win.design`, whose state is the design in
-    /// force: it checks the matching row, and follows the setting, which Preferences can
-    /// change too. Its variants do the same through `win.design-variant`, Blur and Dim
-    /// through their settings' actions, and My Stylesheet is bound to its setting.
-    fn setup_quick_access(&self) {
-        let design = gio::SimpleAction::new_stateful(
-            "design",
-            Some(glib::VariantTy::STRING),
-            &self.design_in_force().unwrap_or_default().to_variant(),
-        );
-        design.connect_change_state(glib::clone!(
-            #[weak(rename_to = window)]
-            self,
-            move |_, state| {
-                if let Some(id) = state.and_then(String::from_variant) {
-                    window.choose_design(&id);
-                }
-            }
-        ));
-        self.add_action(&design);
-        let variant = gio::SimpleAction::new_stateful(
-            "design-variant",
-            Some(glib::VariantTy::STRING),
-            &self.variant_in_force().unwrap_or_default().to_variant(),
-        );
-        variant.connect_change_state(glib::clone!(
-            #[weak(rename_to = window)]
-            self,
-            move |_, state| {
-                if let Some(id) = state.and_then(String::from_variant) {
-                    window.choose_variant(&id);
-                }
-            }
-        ));
-        self.add_action(&variant);
-        let settings = self.settings();
-        self.add_action(&settings.create_action(BLUR_KEY));
-        self.add_action(&settings.create_action(DIM_KEY));
-        settings
-            .bind(
-                CUSTOM_STYLE_KEY,
-                &*self.imp().quick_access_custom_style_row,
-                "active",
-            )
-            .build();
-        settings.connect_changed(
-            Some(CUSTOM_STYLE_KEY),
-            glib::clone!(
-                #[weak(rename_to = window)]
-                self,
-                move |_, _| window.show_custom_style()
-            ),
-        );
-        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
-            return;
-        };
-        let service = application.style_service();
-        // Another design has other variants: the list follows while it shows.
-        service.connect_design_changed(glib::clone!(
-            #[weak]
-            design,
-            #[weak]
-            variant,
-            #[weak(rename_to = window)]
-            self,
-            move || {
-                design.set_state(&window.design_in_force().unwrap_or_default().to_variant());
-                variant.set_state(&window.variant_in_force().unwrap_or_default().to_variant());
-                if window.open_panel() == Some(Panel::QuickAccess(QuickAccessLevel::Designs)) {
-                    window.fill_variants();
-                }
-            }
-        ));
-        // The rows follow the action's state, so focus stays on the chosen one.
-        service.connect_variant_changed(glib::clone!(
-            #[weak]
-            variant,
-            #[weak(rename_to = window)]
-            self,
-            move || {
-                variant.set_state(&window.variant_in_force().unwrap_or_default().to_variant());
-            }
-        ));
     }
 
     /// Acts on a controller intent for the panels; says whether they took it. Start, Guide
@@ -442,7 +222,7 @@ impl PinduWindow {
             game: game.is_some(),
             own_game: game.as_ref().is_some_and(own_game),
             dialog: self.visible_dialog().is_some(),
-            unread: self.has_unread_notifications(),
+            unread: self.imp().quick_access_panel.has_unread_notifications(),
             library: self.library_under_panels(),
         };
         let mut panels = self.imp().panels.get();
@@ -479,8 +259,8 @@ impl PinduWindow {
             && imp.navigation_view.visible_page().as_ref() == Some(&*imp.library_page)
     }
 
-    /// Shows the entries Quick Access adds for the page under it, as it opens, and makes
-    /// the performance switches the focused game's when they show.
+    /// Tells Quick Access, as it opens, which entries the page under it adds, and the
+    /// focused game, whose performance switches it shows.
     fn show_page_entries(&self) {
         let game = self.focused_game();
         let under = Under {
@@ -489,15 +269,9 @@ impl PinduWindow {
             library: self.library_under_panels(),
             ..Under::default()
         };
-        let entries = page_entries(under);
-        let imp = self.imp();
-        imp.quick_access_filters_row
-            .set_visible(entries.contains(&PageEntry::Filters));
-        let performance = entries.contains(&PageEntry::Performance);
-        imp.quick_access_performance_row.set_visible(performance);
-        if performance && let Some(game) = game {
-            self.show_performance_for(&game);
-        }
+        self.imp()
+            .quick_access_panel
+            .set_page(&page_entries(under), game.as_ref());
     }
 
     /// The panel that is open, if any.
@@ -532,7 +306,7 @@ impl PinduWindow {
     }
 
     /// Nothing runs any more: Quick Access leaves its Activity for its entries.
-    pub(crate) fn leave_activity(&self) {
+    fn leave_activity(&self) {
         let mut panels = self.imp().panels.get();
         panels.activity_ended();
         self.set_panels(panels);
@@ -555,31 +329,18 @@ impl PinduWindow {
         if matches!(open, Some(Panel::Drawer(_))) && !matches!(before, Some(Panel::Drawer(_))) {
             self.fill_drawer();
         }
-        if matches!(open, Some(Panel::QuickAccess(_)))
-            && !matches!(before, Some(Panel::QuickAccess(_)))
-        {
+        let quick_access_level = match open {
+            Some(Panel::QuickAccess(level)) => Some(level),
+            _ => None,
+        };
+        if quick_access_level.is_some() && !matches!(before, Some(Panel::QuickAccess(_))) {
             self.show_page_entries();
         }
-        if before == Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)) {
-            self.leave_bluetooth();
-        }
-        match open {
-            Some(Panel::QuickAccess(QuickAccessLevel::Notifications)) => self.show_notifications(),
-            Some(Panel::QuickAccess(QuickAccessLevel::Activity)) => self.show_activity(),
-            Some(Panel::QuickAccess(QuickAccessLevel::Designs)) => self.fill_designs(),
-            Some(Panel::QuickAccess(QuickAccessLevel::Controllers)) => self.fill_controllers(),
-            Some(Panel::QuickAccess(QuickAccessLevel::Controls)) => self.fill_controls(),
-            Some(Panel::QuickAccess(QuickAccessLevel::Filters)) => self.show_fullscreen_filters(),
-            Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)) => self.show_bluetooth(),
-            Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)) => self.show_sound_output(),
-            Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)) => self.show_system_update(),
-            Some(Panel::QuickAccess(QuickAccessLevel::AddStore)) => self.show_add_store(),
-            Some(Panel::QuickAccess(QuickAccessLevel::Network)) => self.show_network(),
-            Some(Panel::Drawer(DrawerLevel::Power)) => self.show_power(),
-            _ => {}
+        if open == Some(Panel::Drawer(DrawerLevel::Power)) {
+            self.show_power();
         }
         let drawer = matches!(open, Some(Panel::Drawer(_)));
-        let quick_access = matches!(open, Some(Panel::QuickAccess(_)));
+        let quick_access = quick_access_level.is_some();
         let sheet = matches!(open, Some(Panel::Options(_)));
         // Directions stay inside the open panel.
         imp.split_view
@@ -588,6 +349,8 @@ impl PinduWindow {
         imp.drawer.set_show_sidebar(drawer);
         imp.quick_access.set_show_sidebar(quick_access);
         imp.options_sheet.set_open(sheet);
+        // After the sidebar shows, as the split view gives focus back into it.
+        imp.quick_access_panel.show_level(quick_access_level);
         match open {
             Some(Panel::Drawer(level)) => imp.drawer_stack.set_visible_child_name(match level {
                 DrawerLevel::Main => "main",
@@ -598,24 +361,7 @@ impl PinduWindow {
                 OptionsLevel::Main => "main",
                 OptionsLevel::Collections => "collections",
             }),
-            Some(Panel::QuickAccess(level)) => {
-                imp.quick_access_stack.set_visible_child_name(match level {
-                    QuickAccessLevel::Main => "main",
-                    QuickAccessLevel::Notifications => "notifications",
-                    QuickAccessLevel::Activity => "activity",
-                    QuickAccessLevel::Designs => "designs",
-                    QuickAccessLevel::Controllers => "controllers",
-                    QuickAccessLevel::Controls => "controls",
-                    QuickAccessLevel::Settings => "settings",
-                    QuickAccessLevel::Filters => "filters",
-                    QuickAccessLevel::Performance => "performance",
-                    QuickAccessLevel::Bluetooth => "bluetooth",
-                    QuickAccessLevel::SoundOutput => "sound-output",
-                    QuickAccessLevel::SystemUpdate => "system-update",
-                    QuickAccessLevel::AddStore => "add-store",
-                    QuickAccessLevel::Network => "network",
-                });
-            }
+            Some(Panel::QuickAccess(_)) => {}
             None => {
                 imp.options_game.take();
                 let previous = imp.focus_before_panel.upgrade();
@@ -637,9 +383,18 @@ impl PinduWindow {
     }
 
     /// Focuses the open panel: the entry that led to the list being left, or else its
-    /// first item (a list box would go back to the row it last had focus on).
+    /// first item (a list box would go back to the row it last had focus on). Quick Access
+    /// focuses its own.
     pub(crate) fn focus_panel(&self, left: Option<Panel>) {
         let imp = self.imp();
+        if let Some(Panel::QuickAccess(_)) = self.open_panel() {
+            let left = match left {
+                Some(Panel::QuickAccess(level)) => Some(level),
+                _ => None,
+            };
+            imp.quick_access_panel.focus_level(left);
+            return;
+        }
         let first_row = |list: &gtk::ListBox| list.row_at_index(0).map(|row| row.upcast());
         let target: Option<gtk::Widget> = match (self.open_panel(), left) {
             (
@@ -649,98 +404,12 @@ impl PinduWindow {
             (Some(Panel::Drawer(DrawerLevel::Main)), Some(Panel::Drawer(DrawerLevel::Power))) => {
                 Some(imp.drawer_power_row.get().upcast())
             }
-            (
-                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
-                Some(Panel::QuickAccess(QuickAccessLevel::Notifications)),
-            ) => Some(imp.quick_access_notifications_row.get().upcast()),
-            // Activity, or the entry after it once nothing runs.
-            (
-                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
-                Some(Panel::QuickAccess(QuickAccessLevel::Activity)),
-            ) => Some(self.activity_entry()),
-            (
-                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
-                Some(Panel::QuickAccess(QuickAccessLevel::Designs)),
-            ) => Some(imp.quick_access_design_row.get().upcast()),
-            (
-                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
-                Some(Panel::QuickAccess(QuickAccessLevel::Controllers)),
-            ) => Some(imp.quick_access_controllers_row.get().upcast()),
-            (
-                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
-                Some(Panel::QuickAccess(QuickAccessLevel::Controls)),
-            ) => Some(imp.quick_access_controls_row.get().upcast()),
-            (
-                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
-                Some(Panel::QuickAccess(QuickAccessLevel::Settings)),
-            ) => Some(imp.quick_access_settings_row.get().upcast()),
-            (
-                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
-                Some(Panel::QuickAccess(QuickAccessLevel::Filters)),
-            ) => Some(imp.quick_access_filters_row.get().upcast()),
-            (
-                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
-                Some(Panel::QuickAccess(QuickAccessLevel::Performance)),
-            ) => Some(imp.quick_access_performance_row.get().upcast()),
-            (
-                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
-                Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)),
-            ) => Some(imp.quick_access_bluetooth_row.get().upcast()),
-            (
-                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
-                Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)),
-            ) => Some(imp.quick_access_sound_output_row.get().upcast()),
-            (
-                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
-                Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)),
-            ) => Some(imp.quick_access_system_update_row.get().upcast()),
-            (
-                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
-                Some(Panel::QuickAccess(QuickAccessLevel::AddStore)),
-            ) => Some(imp.quick_access_add_store_row.get().upcast()),
-            (
-                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
-                Some(Panel::QuickAccess(QuickAccessLevel::Network)),
-            ) => Some(imp.quick_access_network_row.get().upcast()),
             // The first Playing Now card's Return comes first.
             (Some(Panel::Drawer(DrawerLevel::Main)), _) if imp.playing_cards.is_visible() => imp
                 .playing_cards
                 .first_child()
                 .as_ref()
                 .and_then(card_return),
-            (Some(Panel::QuickAccess(QuickAccessLevel::Main)), _)
-                if imp.quick_access_playing_cards.is_visible() =>
-            {
-                imp.quick_access_playing_cards
-                    .first_child()
-                    .as_ref()
-                    .and_then(card_return)
-            }
-            (Some(Panel::QuickAccess(QuickAccessLevel::Main)), _) => {
-                Some(imp.quick_access_notifications_row.get().upcast())
-            }
-            (Some(Panel::QuickAccess(QuickAccessLevel::Notifications)), _) => {
-                first_row(&imp.quick_access_notifications)
-            }
-            (Some(Panel::QuickAccess(QuickAccessLevel::Activity)), _) => {
-                first_row(&imp.quick_access_activity)
-            }
-            // The design in force.
-            (Some(Panel::QuickAccess(QuickAccessLevel::Designs)), _) => {
-                let checked = self.action_state("design");
-                let mut rows =
-                    std::iter::successors(imp.quick_access_designs.first_child(), |row| {
-                        row.next_sibling()
-                    });
-                rows.find(|row| {
-                    row.downcast_ref::<adw::ActionRow>()
-                        .and_then(adw::ActionRow::activatable_widget)
-                        .and_downcast::<gtk::CheckButton>()
-                        .and_then(|check| check.action_target_value())
-                        == checked
-                })
-                .or_else(|| first_row(&imp.quick_access_designs))
-            }
             (
                 Some(Panel::Options(OptionsLevel::Main)),
                 Some(Panel::Options(OptionsLevel::Collections)),
@@ -759,49 +428,11 @@ impl PinduWindow {
                 first_row(&imp.drawer_collections)
             }
             (Some(Panel::Drawer(DrawerLevel::Power)), _) => self.power_focus(),
-            (Some(Panel::QuickAccess(QuickAccessLevel::Settings)), _) => {
-                imp.tile_small.ancestor(gtk::ListBoxRow::static_type())
-            }
-            (Some(Panel::QuickAccess(QuickAccessLevel::Filters)), _) => {
-                first_row(&imp.quick_access_filters)
-            }
-            // The first switch that works: MangoHud's cannot when it is not installed.
-            (Some(Panel::QuickAccess(QuickAccessLevel::Performance)), _) => {
-                std::iter::successors(imp.quick_access_performance.first_child(), |row| {
-                    row.next_sibling()
-                })
-                .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
-            }
-            (Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)), _) => self.bluetooth_focus(),
-            // The output in use.
-            (Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)), _) => {
-                self.sound_output_focus()
-            }
-            (Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)), _) => {
-                self.system_update_focus()
-            }
-            (Some(Panel::QuickAccess(QuickAccessLevel::AddStore)), _) => self.add_store_focus(),
-            (Some(Panel::QuickAccess(QuickAccessLevel::Network)), _) => self.network_focus(),
-            // The first controller that can rumble, or else the first button prompt.
-            (Some(Panel::QuickAccess(QuickAccessLevel::Controllers)), _) => {
-                std::iter::successors(imp.quick_access_controllers.first_child(), |row| {
-                    row.next_sibling()
-                })
-                .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
-                .or_else(|| first_row(&imp.quick_access_prompts))
-            }
-            (Some(Panel::QuickAccess(QuickAccessLevel::Controls)), _) => {
-                std::iter::successors(imp.quick_access_controls.first_child(), |child| {
-                    child.next_sibling()
-                })
-                .find_map(|child| child.downcast::<gtk::ListBox>().ok())
-                .and_then(|list| first_row(&list))
-            }
             (Some(Panel::Options(OptionsLevel::Main)), _) => first_row(&imp.options_list),
             (Some(Panel::Options(OptionsLevel::Collections)), _) => {
                 first_row(&imp.options_collections)
             }
-            (None, _) => None,
+            (Some(Panel::QuickAccess(_)) | None, _) => None,
         };
         if let Some(target) = target {
             target.grab_focus();
@@ -809,7 +440,7 @@ impl PinduWindow {
     }
 
     /// The drawer's collections and its Power entry. Its Playing Now cards are
-    /// `fill_playing_cards`'s.
+    /// `fullscreen_playing`'s.
     fn fill_drawer(&self) {
         let imp = self.imp();
         let application = self.application().and_downcast::<PinduApplication>();
@@ -837,121 +468,6 @@ impl PinduWindow {
         }
     }
 
-    /// Quick Access's designs: Default, then each installed design, with a check on the
-    /// one in force. A design for a newer Pindu launcher shows but cannot be chosen. Then
-    /// the variants of the design in force and My Stylesheet as things now are.
-    fn fill_designs(&self) {
-        let imp = self.imp();
-        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
-            return;
-        };
-        let service = application.style_service();
-        imp.quick_access_designs.remove_all();
-        for choice in design_choices(&service.designs(), &service.design()) {
-            let subtitle = if choice.available {
-                choice.description
-            } else {
-                needs_newer_launcher()
-            };
-            let row = radio_row(
-                "win.design",
-                &choice.id,
-                &choice.name.unwrap_or_else(no_design_name),
-            );
-            row.set_subtitle(&subtitle);
-            row.set_sensitive(choice.available);
-            imp.quick_access_designs.append(&row);
-        }
-        self.fill_variants();
-        self.show_custom_style();
-    }
-
-    /// The Variant list: the variants of the design in force, with a check on the one in
-    /// force; hidden for a design without variants.
-    fn fill_variants(&self) {
-        let imp = self.imp();
-        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
-            return;
-        };
-        let service = application.style_service();
-        let choices = variant_choices(&service.designs(), &service.design(), &service.variant());
-        imp.quick_access_variants.remove_all();
-        for choice in &choices {
-            let row = radio_row("win.design-variant", &choice.id, &choice.name);
-            imp.quick_access_variants.append(&row);
-        }
-        imp.quick_access_variant_title
-            .set_visible(!choices.is_empty());
-        imp.quick_access_variants.set_visible(!choices.is_empty());
-    }
-
-    /// My Stylesheet: it can be turned on once there is a `fullscreen.css`, and its
-    /// subtitle says where that goes until there is; on without one, it can still be
-    /// turned off.
-    fn show_custom_style(&self) {
-        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
-            return;
-        };
-        let service = application.style_service();
-        let exists = service.has_custom_stylesheet();
-        let row = &self.imp().quick_access_custom_style_row;
-        row.set_sensitive(exists || self.settings().boolean(CUSTOM_STYLE_KEY));
-        row.set_subtitle(&if exists {
-            gettext("Your fullscreen.css, over the design")
-        } else {
-            gettext("Create {path} to restyle fullscreen mode").replace(
-                "{path}",
-                &paths::home_relative(
-                    service.custom_stylesheet_path(),
-                    &std::env::home_dir().unwrap_or_default(),
-                ),
-            )
-        });
-    }
-
-    /// Applies the design `id` (Adwaita, no design, for an empty one) unless it is in force
-    /// already; Quick Access stays open.
-    fn choose_design(&self, id: &str) {
-        if self.design_in_force().as_deref() == Some(id) {
-            return;
-        }
-        if let Some(application) = self.application().and_downcast::<PinduApplication>() {
-            application.style_service().set_design(id);
-        }
-    }
-
-    /// Applies the variant `id` of the design in force unless it is in force already.
-    fn choose_variant(&self, id: &str) {
-        if self.variant_in_force().as_deref() == Some(id) {
-            return;
-        }
-        if let Some(application) = self.application().and_downcast::<PinduApplication>() {
-            application.style_service().set_variant(id);
-        }
-    }
-
-    /// The id of the variant Quick Access checks: the chosen one, or the design's first;
-    /// `None` for a design without variants.
-    fn variant_in_force(&self) -> Option<String> {
-        let application = self.application().and_downcast::<PinduApplication>()?;
-        let service = application.style_service();
-        variant_choices(&service.designs(), &service.design(), &service.variant())
-            .into_iter()
-            .find(|choice| choice.active)
-            .map(|choice| choice.id)
-    }
-
-    /// The id of the design Quick Access checks: the chosen one if it can apply, or empty
-    /// for Adwaita.
-    fn design_in_force(&self) -> Option<String> {
-        let application = self.application().and_downcast::<PinduApplication>()?;
-        let service = application.style_service();
-        design_choices(&service.designs(), &service.design())
-            .into_iter()
-            .find(|choice| choice.active)
-            .map(|choice| choice.id)
-    }
-
     /// The sheet's title and actions for `game`, its performance switches for a game we
     /// run ourselves, and its collections.
     fn fill_options(&self, game: &GameObject) {
@@ -971,8 +487,8 @@ impl PinduWindow {
         imp.game_options.replace(options);
         let performance = own_game(game);
         imp.options_performance.set_visible(performance);
-        if performance {
-            self.show_performance_for(game);
+        if performance && let Some(switches) = imp.quick_access_panel.performance() {
+            switches.show_for(game);
         }
         self.fill_options_collections(game);
     }
@@ -1047,40 +563,9 @@ impl PinduWindow {
     }
 }
 
-/// What Quick Access calls the choice of no design: Adwaita, the stock libadwaita look it
-/// leaves in force. A name, so it is not translated.
-fn no_design_name() -> String {
-    "Adwaita".to_owned()
-}
-
 /// Whether `game` is one we run ourselves, which has performance switches.
 fn own_game(game: &GameObject) -> bool {
     launch::offers_performance(&game.game())
-}
-
-/// The setting My Stylesheet turns on: `fullscreen.css` over the design.
-const CUSTOM_STYLE_KEY: &str = "fullscreen-custom-style";
-
-/// A row of Quick Access's design and variant lists: `title`, with a check on the
-/// stateful `action` for `id`, which the row's activation sets.
-fn radio_row(action: &str, id: &str, title: &str) -> adw::ActionRow {
-    let check = gtk::CheckButton::builder()
-        .action_name(action)
-        .action_target(&id.to_variant())
-        .can_focus(false)
-        .build();
-    let row = adw::ActionRow::builder()
-        .title(title)
-        .use_markup(false)
-        .activatable_widget(&check)
-        .build();
-    row.add_prefix(&check);
-    row
-}
-
-/// Why Quick Access cannot apply a design written for a newer style contract.
-fn needs_newer_launcher() -> String {
-    gettext("Needs a newer Pindu launcher")
 }
 
 /// The icon and label of an options sheet entry for `game`.

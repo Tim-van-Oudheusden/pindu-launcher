@@ -1,0 +1,1283 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Fullscreen mode's Quick Access panel: R3 or the Deck's "…" button opens it, B closes it.
+// The window hosts it as the sidebar of its `quick_access` split view; the rows' `win.*`
+// actions are the ones `PinduQuickAccess::setup` adds to the host window, plus
+// `win.playing-return`, `win.playing-stop` and `win.preview-navigation-sound`, which the
+// host has.
+template $PinduQuickAccess: Box {
+  orientation: vertical;
+  accessible-role: group;
+
+  accessibility {
+    label: _("Quick Access");
+  }
+
+  styles [
+    "quick-access",
+  ]
+
+  // The status header over every level: the clock, "Offline" while there is no
+  // network, and the battery on a machine that has one.
+  Box {
+    spacing: 18;
+    margin-bottom: 18;
+
+    styles [
+      "quick-access-status",
+    ]
+
+    Label clock {
+      xalign: 0;
+      hexpand: true;
+
+      styles [
+        "clock",
+        "numeric",
+      ]
+    }
+
+    Box offline {
+      spacing: 6;
+      visible: false;
+      tooltip-text: _("Artwork downloads wait until you are online");
+
+      styles [
+        "offline",
+      ]
+
+      Image {
+        icon-name: "network-offline-symbolic";
+        accessible-role: presentation;
+      }
+
+      Label {
+        label: _("Offline");
+      }
+    }
+
+    Box battery {
+      spacing: 6;
+      visible: false;
+
+      styles [
+        "battery",
+      ]
+
+      Image battery_icon {
+        accessible-role: presentation;
+      }
+
+      Label battery_level {
+        styles [
+          "numeric",
+        ]
+      }
+    }
+  }
+
+  Stack stack {
+    vexpand: true;
+    transition-type: crossfade;
+
+    StackPage {
+      name: "main";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          // The same Playing Now cards as the drawer's.
+          Box playing_cards {
+            orientation: vertical;
+            spacing: 12;
+            visible: false;
+          }
+
+          Label {
+            label: _("Quick Access");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          ListBox list {
+            selection-mode: none;
+
+            styles [
+              "navigation-sidebar",
+            ]
+
+            // With the unread count, which clears once the level is opened.
+            ListBoxRow notifications_row {
+              action-name: "win.quick-access-notifications";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "preferences-system-notifications-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Notifications");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Label unread {
+                  visible: false;
+                  valign: center;
+
+                  styles [
+                    "notification-count",
+                    "numeric",
+                  ]
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            // Shown while something runs in the background: a sync, an art
+            // fetch or a Proton download.
+            ListBoxRow activity_row {
+              action-name: "win.quick-access-activity";
+              visible: false;
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "emblem-synchronizing-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Activity");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Adw.Spinner {
+                  valign: center;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            // The same sync as Import, unavailable while one runs.
+            ListBoxRow refresh_row {
+              action-name: "app.import";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "view-refresh-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Refresh Library");
+                  xalign: 0;
+                  hexpand: true;
+                }
+              };
+            }
+
+            // Opens a random installed game's page; unavailable while none is
+            // installed.
+            ListBoxRow surprise_row {
+              action-name: "win.surprise-me";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "media-playlist-shuffle-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Surprise Me");
+                  xalign: 0;
+                  hexpand: true;
+                }
+              };
+            }
+
+            // Shown while fullscreen mode's library is under the panel.
+            ListBoxRow filters_row {
+              action-name: "win.quick-access-filters";
+              visible: false;
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "checkbox-checked-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Filters");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            // Shown while a game we run ourselves has focus under the panel, or
+            // the page is its own.
+            ListBoxRow performance_row {
+              action-name: "win.quick-access-performance";
+              visible: false;
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "power-profile-performance-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Performance");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            ListBoxRow design_row {
+              action-name: "win.quick-access-designs";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "preferences-desktop-appearance-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Design");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            ListBoxRow controllers_row {
+              action-name: "win.quick-access-controllers";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "input-gaming-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Controllers");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            ListBoxRow controls_row {
+              action-name: "win.quick-access-controls";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "help-browser-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Controls");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            ListBoxRow settings_row {
+              action-name: "win.quick-access-settings";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "preferences-system-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Settings");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            // Shown where NetworkManager runs: the connection in use, or that
+            // the system does not allow changing it (then insensitive).
+            ListBoxRow network_row {
+              action-name: "win.quick-access-network";
+              visible: false;
+
+              child: Box {
+                spacing: 16;
+
+                Image network_icon {
+                  icon-name: "network-wired-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Box {
+                  orientation: vertical;
+                  valign: center;
+                  hexpand: true;
+
+                  Label {
+                    label: _("Network");
+                    xalign: 0;
+                  }
+
+                  Label network_subtitle {
+                    xalign: 0;
+                    ellipsize: end;
+
+                    styles [
+                      "caption",
+                      "dim-label",
+                    ]
+                  }
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            // Shown where BlueZ has an adapter: the connected devices, or how
+            // the radio is.
+            ListBoxRow bluetooth_row {
+              action-name: "win.quick-access-bluetooth";
+              visible: false;
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "bluetooth-active-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Box {
+                  orientation: vertical;
+                  valign: center;
+                  hexpand: true;
+
+                  Label {
+                    label: _("Bluetooth");
+                    xalign: 0;
+                  }
+
+                  Label bluetooth_subtitle {
+                    xalign: 0;
+                    ellipsize: end;
+
+                    styles [
+                      "caption",
+                      "dim-label",
+                    ]
+                  }
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            // Shown where PipeWire's tools run and find an output, with the
+            // output in use under it.
+            ListBoxRow sound_output_row {
+              action-name: "win.quick-access-sound-output";
+              visible: false;
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "audio-volume-high-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Box {
+                  orientation: vertical;
+                  valign: center;
+                  hexpand: true;
+
+                  Label {
+                    label: _("Sound Output");
+                    xalign: 0;
+                  }
+
+                  Label sound_output_subtitle {
+                    xalign: 0;
+                    ellipsize: end;
+
+                    styles [
+                      "caption",
+                      "dim-label",
+                    ]
+                  }
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            // Shown on Pindu OS: the installed version, or that an update waits
+            // for the next start.
+            ListBoxRow system_update_row {
+              action-name: "win.quick-access-system-update";
+              visible: false;
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "software-update-available-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Box {
+                  orientation: vertical;
+                  valign: center;
+                  hexpand: true;
+
+                  Label {
+                    label: _("System Update");
+                    xalign: 0;
+                  }
+
+                  Label system_update_subtitle {
+                    xalign: 0;
+                    ellipsize: end;
+
+                    styles [
+                      "caption",
+                      "dim-label",
+                    ]
+                  }
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            // The "add a store" flow, which installs Steam, Heroic or Lutris.
+            ListBoxRow add_store_row {
+              action-name: "win.quick-access-add-store";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "list-add-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Add a Store");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+          }
+        };
+      };
+    }
+
+    StackPage {
+      name: "notifications";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Notifications");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          // What happened this session, newest first, or that nothing has;
+          // filled in code.
+          ListBox notifications {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+          }
+        };
+      };
+    }
+
+    StackPage {
+      name: "activity";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Activity");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          // What runs, oldest first, each with its progress and Cancel where
+          // it can be cancelled; filled in code.
+          ListBox activity {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+          }
+        };
+      };
+    }
+
+    StackPage {
+      name: "designs";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Design");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          // Default, then each installed design, with a check on the one in
+          // force; filled in code.
+          ListBox designs {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+          }
+
+          // The variants of the design in force, with a check on the one in
+          // force; filled in code, and hidden for a design without variants.
+          Label variant_title {
+            label: _("Variant");
+            xalign: 0;
+            margin-top: 6;
+            visible: false;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          ListBox variants {
+            selection-mode: none;
+            visible: false;
+
+            styles [
+              "boxed-list",
+            ]
+          }
+
+          // Radio rows on the settings' actions, as Settings has its sizes.
+          Label {
+            label: _("Background Blur");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          ListBox blur {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow {
+              title: _("Off");
+              activatable-widget: blur_off;
+
+              [prefix]
+              CheckButton blur_off {
+                action-name: "win.fullscreen-background-blur";
+                action-target: "'off'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Low");
+              activatable-widget: blur_low;
+
+              [prefix]
+              CheckButton blur_low {
+                action-name: "win.fullscreen-background-blur";
+                action-target: "'low'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("High");
+              activatable-widget: blur_high;
+
+              [prefix]
+              CheckButton blur_high {
+                action-name: "win.fullscreen-background-blur";
+                action-target: "'high'";
+                can-focus: false;
+              }
+            }
+          }
+
+          Label {
+            label: _("Background Dim");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          ListBox dim {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow {
+              title: _("Off");
+              activatable-widget: dim_off;
+
+              [prefix]
+              CheckButton dim_off {
+                action-name: "win.fullscreen-background-dim";
+                action-target: "'off'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Low");
+              activatable-widget: dim_low;
+
+              [prefix]
+              CheckButton dim_low {
+                action-name: "win.fullscreen-background-dim";
+                action-target: "'low'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("High");
+              activatable-widget: dim_high;
+
+              [prefix]
+              CheckButton dim_high {
+                action-name: "win.fullscreen-background-dim";
+                action-target: "'high'";
+                can-focus: false;
+              }
+            }
+          }
+
+          // On the `fullscreen-custom-style` setting; insensitive, saying
+          // where the file goes, while there is no `fullscreen.css`.
+          ListBox custom_style {
+            selection-mode: none;
+            margin-top: 6;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.SwitchRow custom_style_row {
+              title: _("My Stylesheet");
+            }
+          }
+        };
+      };
+    }
+
+    StackPage {
+      name: "controllers";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Controllers");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          // Each connected controller with the glyphs it shows and its
+          // battery; selecting one rumbles it, and one that cannot rumble is
+          // unavailable. Filled in code, and again as controllers come and go.
+          ListBox controllers {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+          }
+
+          Label {
+            label: _("Button Prompts");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          // Radio rows on the settings' actions, as Settings has its sizes.
+          ListBox prompts {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow {
+              title: _("Automatic");
+              subtitle: _("As the controller shows them");
+              activatable-widget: prompts_auto;
+
+              [prefix]
+              CheckButton prompts_auto {
+                action-name: "win.controller-prompts";
+                action-target: "'auto'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Letters");
+              activatable-widget: prompts_letters;
+
+              [prefix]
+              CheckButton prompts_letters {
+                action-name: "win.controller-prompts";
+                action-target: "'letters'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Shapes");
+              activatable-widget: prompts_shapes;
+
+              [prefix]
+              CheckButton prompts_shapes {
+                action-name: "win.controller-prompts";
+                action-target: "'shapes'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Letters, A on the Right");
+              activatable-widget: prompts_letters_east;
+
+              [prefix]
+              CheckButton prompts_letters_east {
+                action-name: "win.controller-prompts";
+                action-target: "'nintendo-letters'";
+                can-focus: false;
+              }
+            }
+          }
+
+          Label {
+            label: _("Swap Confirm and Back");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          ListBox swap {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow {
+              title: _("Automatic");
+              subtitle: _("Swapped when A is on the right");
+              activatable-widget: swap_auto;
+
+              [prefix]
+              CheckButton swap_auto {
+                action-name: "win.swap-confirm-back";
+                action-target: "'auto'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Off");
+              subtitle: _("The bottom button confirms");
+              activatable-widget: swap_off;
+
+              [prefix]
+              CheckButton swap_off {
+                action-name: "win.swap-confirm-back";
+                action-target: "'off'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("On");
+              subtitle: _("The right button confirms");
+              activatable-widget: swap_on;
+
+              [prefix]
+              CheckButton swap_on {
+                action-name: "win.swap-confirm-back";
+                action-target: "'on'";
+                can-focus: false;
+              }
+            }
+          }
+        };
+      };
+    }
+
+    StackPage {
+      name: "controls";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Controls");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          // What each button and key does, a heading and a list per group,
+          // with the glyphs of the controller in use or the keys alone
+          // without one. Filled in code, and again as the controller changes.
+          Box controls {
+            orientation: vertical;
+            spacing: 12;
+          }
+        };
+      };
+    }
+
+    StackPage {
+      name: "settings";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Settings");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          // Radio rows rather than a drop-down, whose popover a controller press
+          // would dismiss, or toggles side by side, which up and down step
+          // through.
+          ListBox sizes {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow {
+              title: _("Small Covers");
+              activatable-widget: tile_small;
+
+              [prefix]
+              CheckButton tile_small {
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Medium Covers");
+              activatable-widget: tile_medium;
+
+              [prefix]
+              CheckButton tile_medium {
+                group: tile_small;
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Large Covers");
+              activatable-widget: tile_large;
+
+              [prefix]
+              CheckButton tile_large {
+                group: tile_small;
+                can-focus: false;
+              }
+            }
+          }
+
+          ListBox switches {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.SwitchRow sounds_row {
+              title: _("Navigation Sounds");
+            }
+
+            // The slider takes focus rather than its row, so left and right
+            // turn it; the row goes insensitive while the sounds are off.
+            Adw.ActionRow volume_row {
+              title: _("Volume");
+              activatable: false;
+              focusable: false;
+
+              [suffix]
+              Scale volume {
+                hexpand: true;
+                digits: 0;
+                draw-value: false;
+
+                adjustment: Adjustment {
+                  lower: 0;
+                  upper: 100;
+                  step-increment: 5;
+                  page-increment: 20;
+                };
+
+                accessibility {
+                  label: _("Navigation Sound Volume");
+                }
+              }
+            }
+
+            Adw.SwitchRow exit_row {
+              title: _("Exit After Launching");
+            }
+          }
+
+          Label {
+            label: _("Accessibility");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          ListBox accessibility {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.SwitchRow reduce_motion_row {
+              title: _("Reduce Motion");
+            }
+
+            Adw.SwitchRow large_text_row {
+              title: _("Larger Text");
+            }
+          }
+        };
+      };
+    }
+
+    StackPage {
+      name: "filters";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Filters");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          // Fullscreen mode's own filters, apart from the desktop window's
+          // filter row; they narrow every tab as they change.
+          ListBox filters {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.SwitchRow installed_row {
+              title: _("Installed");
+            }
+
+            Adw.SwitchRow not_installed_row {
+              title: _("Not Installed");
+            }
+
+            Adw.SwitchRow windows_row {
+              title: _("Windows");
+            }
+
+            Adw.SwitchRow native_row {
+              title: _("Native");
+            }
+
+            Adw.SwitchRow hidden_row {
+              title: _("Show Hidden Games");
+            }
+          }
+
+          ListBox clear_filters {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ButtonRow {
+              title: _("Clear Filters");
+              action-name: "win.clear-fullscreen-filters";
+            }
+          }
+        };
+      };
+    }
+
+    StackPage {
+      name: "performance";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          // "Performance for <the game>".
+          Label performance_title {
+            xalign: 0;
+            wrap: true;
+            wrap-mode: word_char;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          // The game's own launch settings, the same as its options sheet's.
+          ListBox performance {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.SwitchRow overlay_row {
+              title: _("Performance Overlay");
+              subtitle: _("MangoHud");
+            }
+
+            Adw.SwitchRow gamemode_row {
+              title: _("GameMode");
+              subtitle: _("Asks the system to favour the game while it runs");
+            }
+          }
+
+          // Shown while the game runs.
+          Label performance_note {
+            label: _("Changes apply the next time the game starts.");
+            xalign: 0;
+            wrap: true;
+            visible: false;
+
+            styles [
+              "dim-label",
+            ]
+          }
+        };
+      };
+    }
+
+    StackPage {
+      name: "sound-output";
+
+      child: $PinduSoundOutputLevel sound_output_level {};
+    }
+
+    StackPage {
+      name: "system-update";
+
+      child: $PinduSystemUpdateLevel system_update_level {};
+    }
+
+    StackPage {
+      name: "add-store";
+
+      child: $PinduAddStoreLevel add_store_level {};
+    }
+
+    StackPage {
+      name: "network";
+
+      child: $PinduNetworkLevel network_level {};
+    }
+
+    StackPage {
+      name: "bluetooth";
+
+      child: $PinduBluetoothLevel bluetooth_level {};
+    }
+  }
+}

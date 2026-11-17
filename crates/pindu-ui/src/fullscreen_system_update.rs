@@ -3,20 +3,20 @@
 //! installed version, the update waiting for the next start, and Restart to Update, Roll
 //! Back (asked first) or Restart, as bootc's status allows. The level is
 //! [`PinduSystemUpdateLevel`], with its own Blueprint (`data/ui/fullscreen_system_update.blp`);
-//! the window keeps the entry, which sits in Quick Access's shared list, and the level's
-//! `win.restart-system` and `win.roll-back-system`. Both show [`SystemUpdateService`]'s
-//! state and call it; neither reads the status file itself.
+//! Quick Access keeps the entry, which sits in its shared list, and adds the level's
+//! `win.restart-system` and `win.roll-back-system` to its host. Both show
+//! [`SystemUpdateService`]'s state and call it; neither reads the status file itself.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
-use pindu_core::panels::{Panel, QuickAccessLevel};
+use pindu_core::panels::QuickAccessLevel;
 use pindu_core::system::update::{Busy, UpdateAction, UpdateState};
 
 use crate::application::PinduApplication;
+use crate::quick_access::PinduQuickAccess;
 use crate::system_update_service::SystemUpdateService;
-use crate::window::PinduWindow;
 
 mod imp {
     use super::*;
@@ -59,33 +59,32 @@ mod imp {
 glib::wrapper! {
     /// Quick Access's System Update level: the installed version, the update waiting for
     /// the next start, and the actions bootc's status allows. It is the `"system-update"`
-    /// page of the window's Quick Access stack.
+    /// page of Quick Access's stack.
     pub struct PinduSystemUpdateLevel(ObjectSubclass<imp::PinduSystemUpdateLevel>)
         @extends adw::Bin, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
-impl PinduWindow {
+impl PinduQuickAccess {
     /// Adds the level's actions, and shows the entry as the section is and as it changes.
-    pub(crate) fn setup_system_update(&self) {
-        let restart = gio::ActionEntry::builder("restart-system")
-            .activate(|window: &Self, _, _| {
-                if let Some(service) = window.system_update_service() {
-                    service.restart();
-                }
-            })
-            .build();
-        let roll_back = gio::ActionEntry::builder("roll-back-system")
-            .activate(|window: &Self, _, _| window.ask_roll_back())
-            .build();
-        self.add_action_entries([restart, roll_back]);
-        let Some(service) = self.system_update_service() else {
-            return;
-        };
+    pub(crate) fn setup_system_update(
+        &self,
+        application: &PinduApplication,
+        actions: &impl IsA<gio::ActionMap>,
+    ) {
+        self.add_host_action(actions, "restart-system", None, |quick_access, _| {
+            if let Some(service) = quick_access.system_update_service() {
+                service.restart();
+            }
+        });
+        self.add_host_action(actions, "roll-back-system", None, |quick_access, _| {
+            quick_access.ask_roll_back();
+        });
+        let service = application.system_update_service();
         service.connect_changed(glib::clone!(
-            #[weak(rename_to = window)]
+            #[weak(rename_to = quick_access)]
             self,
-            move |state| window.show_system_update_state(state)
+            move |state| quick_access.show_system_update_state(state)
         ));
         self.show_system_update_state(&service.state());
     }
@@ -96,20 +95,12 @@ impl PinduWindow {
         let Some(service) = self.system_update_service() else {
             return;
         };
-        self.imp()
-            .quick_access_system_update_level
-            .fill(&service.state());
+        self.imp().system_update_level.fill(&service.state());
         service.refresh();
-    }
-
-    /// Where focus goes on the level: the first action, or else the installed version.
-    pub(crate) fn system_update_focus(&self) -> Option<gtk::Widget> {
-        self.imp().quick_access_system_update_level.focus_target()
     }
 
     fn system_update_service(&self) -> Option<SystemUpdateService> {
         self.application()
-            .and_downcast::<PinduApplication>()
             .map(|application| application.system_update_service().clone())
     }
 
@@ -117,28 +108,26 @@ impl PinduWindow {
     /// open; it leaves for the entries once the section is gone.
     fn show_system_update_state(&self, state: &UpdateState) {
         let imp = self.imp();
-        imp.quick_access_system_update_row
-            .set_visible(state.available);
+        imp.system_update_row.set_visible(state.available);
         let subtitle = if state.update_ready() {
             gettext("Update ready")
         } else {
             state.installed.clone().unwrap_or_default()
         };
-        imp.quick_access_system_update_subtitle
-            .set_visible(!subtitle.is_empty());
-        imp.quick_access_system_update_subtitle.set_label(&subtitle);
-        if self.open_panel() != Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)) {
+        imp.system_update_subtitle.set_visible(!subtitle.is_empty());
+        imp.system_update_subtitle.set_label(&subtitle);
+        if self.level() != Some(QuickAccessLevel::SystemUpdate) {
             return;
         }
         if !state.available {
-            self.show_panel(Panel::QuickAccess(QuickAccessLevel::Main));
+            self.request_level(QuickAccessLevel::Main);
             return;
         }
-        let level = &imp.quick_access_system_update_level;
+        let level = &imp.system_update_level;
         let had_focus = level.has_focus();
         level.fill(state);
         if had_focus {
-            self.focus_panel(None);
+            self.focus_level(None);
         }
     }
 
@@ -179,10 +168,10 @@ impl PinduWindow {
         dialog.connect_response(
             Some("roll-back"),
             glib::clone!(
-                #[weak(rename_to = window)]
+                #[weak(rename_to = quick_access)]
                 self,
                 move |_, _| {
-                    if let Some(service) = window.system_update_service() {
+                    if let Some(service) = quick_access.system_update_service() {
                         service.roll_back();
                     }
                 }
@@ -191,18 +180,17 @@ impl PinduWindow {
         // Rolling back fills the level again while the dialog has focus, so the row the
         // dialog gives focus back to may be gone.
         dialog.connect_closed(glib::clone!(
-            #[weak(rename_to = window)]
+            #[weak(rename_to = quick_access)]
             self,
             move |_| {
                 glib::idle_add_local_once(glib::clone!(
                     #[weak]
-                    window,
+                    quick_access,
                     move || {
-                        let open = window.open_panel()
-                            == Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate));
-                        let level = &window.imp().quick_access_system_update_level;
+                        let open = quick_access.level() == Some(QuickAccessLevel::SystemUpdate);
+                        let level = &quick_access.imp().system_update_level;
                         if open && !level.has_focus() {
-                            window.focus_panel(None);
+                            quick_access.focus_level(None);
                         }
                     }
                 ));

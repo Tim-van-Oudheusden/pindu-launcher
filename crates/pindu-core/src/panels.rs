@@ -84,6 +84,52 @@ pub enum QuickAccessLevel {
     AddStore,
 }
 
+impl QuickAccessLevel {
+    /// Every level, the entries first.
+    pub const ALL: [Self; 14] = [
+        Self::Main,
+        Self::Notifications,
+        Self::Activity,
+        Self::Designs,
+        Self::Controllers,
+        Self::Controls,
+        Self::Settings,
+        Self::Filters,
+        Self::Performance,
+        Self::Network,
+        Self::Bluetooth,
+        Self::SoundOutput,
+        Self::SystemUpdate,
+        Self::AddStore,
+    ];
+
+    /// The name the level goes by: its page of the panel's stack, and what a row asks for
+    /// to lead to it.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Main => "main",
+            Self::Notifications => "notifications",
+            Self::Activity => "activity",
+            Self::Designs => "designs",
+            Self::Controllers => "controllers",
+            Self::Controls => "controls",
+            Self::Settings => "settings",
+            Self::Filters => "filters",
+            Self::Performance => "performance",
+            Self::Network => "network",
+            Self::Bluetooth => "bluetooth",
+            Self::SoundOutput => "sound-output",
+            Self::SystemUpdate => "system-update",
+            Self::AddStore => "add-store",
+        }
+    }
+
+    /// The level that goes by `name` (see [`Self::name`]), if one does.
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|level| level.name() == name)
+    }
+}
+
 /// What lies under the panels when an intent comes in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Under {
@@ -407,6 +453,28 @@ mod tests {
 
     fn quick_access() -> Option<Panel> {
         Some(Panel::QuickAccess(QuickAccessLevel::Main))
+    }
+
+    #[test]
+    fn each_quick_access_level_has_the_name_its_page_goes_by() {
+        assert_eq!(QuickAccessLevel::Main.name(), "main");
+        assert_eq!(QuickAccessLevel::Designs.name(), "designs");
+        assert_eq!(QuickAccessLevel::SoundOutput.name(), "sound-output");
+        assert_eq!(QuickAccessLevel::SystemUpdate.name(), "system-update");
+        assert_eq!(QuickAccessLevel::AddStore.name(), "add-store");
+    }
+
+    #[test]
+    fn a_level_is_found_again_by_its_name_and_no_other_name_finds_one() {
+        for level in QuickAccessLevel::ALL {
+            assert_eq!(QuickAccessLevel::from_name(level.name()), Some(level));
+        }
+        assert_eq!(
+            QuickAccessLevel::from_name("sound-output"),
+            Some(QuickAccessLevel::SoundOutput)
+        );
+        assert_eq!(QuickAccessLevel::from_name("Main"), None);
+        assert_eq!(QuickAccessLevel::from_name(""), None);
     }
 
     #[test]
