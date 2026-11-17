@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-17 21:04+0100\n"
+"POT-Creation-Date: 2026-11-17 21:23+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2566,161 +2566,168 @@ msgid ""
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:102
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:125
+msgid ""
+"Once the launcher starts a game, the controller is the game's: only Guide "
+"reaches the launcher until Guide, switching back to it or the game ending, "
+"so buttons no longer act in the game and the launcher at once"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:103
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:126
 msgid "Updated translations"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:108
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:109
 msgid "A fix for fullscreen mode in virtual machines."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:110
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:111
 msgid ""
 "Fullscreen mode no longer crashes in a virtual machine with 3D acceleration "
 "and Venus (virtio-gpu)"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:116
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:117
 msgid ""
 "Release files for ARM (aarch64), a fix for a crash on Steam libraries, and "
 "more in the fullscreen Quick Access panel."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:118
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:119
 msgid ""
 "Flatpak, RPM and DEB release files are now built for aarch64 (ARM) as well "
 "as x86_64"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:119
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:120
 msgid "Fixed a crash when importing a Steam library with deeply nested data"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:120
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:121
 msgid "Windows games use a Proton build made for your machine's architecture"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:121
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:122
 msgid "Turning on MangoHud now explains when it cannot work inside the sandbox"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:122
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:123
 msgid ""
 "Quick Access in fullscreen mode gains Network, Bluetooth, System Update, "
 "Sound Output and Power sections"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:123
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:124
 msgid ""
 "The on-screen keyboard has capitals and symbols, and a dialog for entering "
 "passphrases"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:124
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:125
 msgid "The RPM and DEB packages now depend on GStreamer's good plug-ins"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:131
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:132
 msgid ""
 "Native packages, your own fullscreen style in Preferences, and the start of "
 "translations."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:133
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:134
 msgid ""
 "Install Pindu launcher as an RPM on Fedora 45 or a DEB on Debian testing and "
 "Ubuntu 26.10, next to the Flatpak"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:134
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:135
 msgid ""
 "Turn your own fullscreen stylesheet on, import it, open its folder or reset "
 "it in Preferences, which also lists its problems"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:135
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:136
 msgid ""
 "Without umu-launcher, Windows games now say what is missing and how to "
 "install it"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:136
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:137
 msgid ""
 "The focused cover in the first row of the fullscreen library is no longer "
 "cut off"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:137
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:138
 msgid "A first, partial Dutch translation; help translate on Weblate"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:143
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:144
 msgid ""
 "Windows games, and a fullscreen mode for playing from the couch with a "
 "controller."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:145
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:146
 msgid ""
 "Add a Windows game from its .exe or installer and play it with Proton, with "
 "launch settings and logs for each game"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:146
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:147
 msgid "Download GE-Proton and Proton-CachyOS builds from Preferences"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:147
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:148
 msgid ""
 "Run native games in the Steam Linux Runtime, and turn on MangoHud or "
 "GameMode for a game"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:148
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:149
 msgid ""
 "A fullscreen mode with Home, Library and game pages, an on-screen keyboard "
 "for search and a Quick Access panel"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:149
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:150
 msgid ""
 "Fullscreen designs, Ribbon and Panorama, with variants, and your own "
 "stylesheet"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:150
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:151
 msgid ""
 "Reduce Motion, Larger Text and a volume for navigation sounds in fullscreen "
 "mode"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:151
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:152
 msgid "Control the desktop window and its menus with a controller"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:152
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:153
 msgid "SteamGridDB art arrives as soon as you save your key"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:158
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:159
 msgid "The first release."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:160
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:161
 msgid ""
 "One library for Steam, Heroic, Lutris, Bottles, Faugus, installed apps and "
 "games you add yourself"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:161
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:162
 msgid "Collections, favourites, Jump Back In and play history"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:162
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:163
 msgid "Artwork from your launchers, your own files or SteamGridDB"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:163
+#: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:164
 msgid "Search from GNOME Shell"
 msgstr ""
 

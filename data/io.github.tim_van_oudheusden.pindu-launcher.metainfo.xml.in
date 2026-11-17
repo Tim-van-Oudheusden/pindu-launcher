@@ -87,7 +87,7 @@
   </supports>
 
   <releases>
-    <release version="0.5.0~rc1" type="development" date="2026-11-17">
+    <release version="0.5.0~rc2" type="development" date="2026-11-17">
       <description>
         <p>A test release of fullscreen mode in gamescope sessions, where the launcher takes Steam's place.</p>
         <ul>
@@ -99,6 +99,7 @@
           <li>Games started outside the Flatpak open on the launcher's own display</li>
           <li>Fullscreen mode can install Steam, Heroic or Lutris from Add a Store</li>
           <li>Wi-Fi passphrases and Bluetooth PINs are typed with the on-screen keyboard</li>
+          <li>Once the launcher starts a game, the controller is the game's: only Guide reaches the launcher until Guide, switching back to it or the game ending, so buttons no longer act in the game and the launcher at once</li>
           <li>Updated translations</li>
         </ul>
       </description>
