@@ -369,6 +369,12 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   expecting it, the game counts as playing: its page and options sheet offer Return instead of Play, and it has a
   Playing Now card with Return but no Stop, since its store launcher runs it. Return, or Play from anywhere else,
   brings it back to the front without handing it to the store again.
+  stops waiting. Guide brings the app to the front as with other games, and starting the game again brings it back.
+- With [host access granted](#starting-games-on-the-host), Play hands a Steam game to Steam as
+  `steam -silent steam://rungameid/<id>` on the host (`flatpak run com.valvesoftware.Steam -silent …` for a library
+  from the Steam Flatpak) instead of through the OpenURI portal, so a Steam client that is not running yet starts
+  without its library window; one that runs already gets the link as before. Its prompts still show. Without host
+  access the link goes through the portal.
 - A Steam client that a Steam game starts inside the session tags its own windows (in a `--steam` gamescope it runs as
   Big Picture, one window) as app 769, as the app's window is, and writes the focus list itself. The app therefore pins
   its window (`GAMESCOPECTRL_BASELAYER_WINDOW`) whenever it should be in front, including while a game it wants in

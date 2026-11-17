@@ -1,9 +1,10 @@
 //! Fullscreen mode's launch overlay and the way back to the game's page. Play shows an
 //! overlay that matches the route: the launcher's name for a store game we hand off, and
 //! "Starting…", which a held B cancels, for a game we run. It goes once the game or its
-//! launcher comes to the front, the game ends, a dialog covers it, or after a while. When
-//! the window has focus again (or the game ends while it has focus), the shell returns to
-//! the game's page with focus on Play, or on Stop while the game still runs.
+//! launcher comes to the front, the game ends, a dialog covers it, or after a while, even
+//! when a hand-off never reports back. When the window has focus again (or the game ends
+//! while it has focus), the shell returns to the game's page with focus on Play, or on Stop
+//! while the game still runs.
 
 use std::time::Duration;
 
@@ -14,6 +15,9 @@ use crate::model::{Game, GameId, LaunchKind};
 /// How long "Opening {launcher}…" stays after the hand-off when the launcher does not
 /// come to the front.
 pub const HAND_OFF_LINGER: Duration = Duration::from_secs(3);
+/// How long "Opening {launcher}…" waits for the hand-off to report back. A launcher the
+/// desktop cannot reach may never answer (#427), and the overlay takes every button.
+pub const HAND_OFF_TIMEOUT: Duration = Duration::from_secs(10);
 /// How long "Starting…" stays after the game started when its window does not come to
 /// the front.
 pub const START_LINGER: Duration = Duration::from_secs(10);
@@ -113,7 +117,9 @@ impl LaunchOverlay {
                 running: false,
                 away: false,
             });
-            return None;
+            // A game we run always reports back, and a held B cancels it; a hand-off
+            // that never does is not waited for past its timeout.
+            return (launch == Launch::HandOff).then_some(Effect::Linger(HAND_OFF_TIMEOUT));
         }
         let pending = self.pending.as_mut()?;
         match event {
@@ -231,7 +237,10 @@ mod tests {
     fn a_hand_off_shows_until_the_launcher_comes_up_then_returns_once() {
         let mut overlay = LaunchOverlay::default();
 
-        assert_eq!(overlay.handle(Event::Play(id(), Launch::HandOff)), None);
+        assert_eq!(
+            overlay.handle(Event::Play(id(), Launch::HandOff)),
+            Some(Effect::Linger(HAND_OFF_TIMEOUT))
+        );
         assert_eq!(overlay.shown(), Launching::HandingOff);
         assert_eq!(
             overlay.handle(Event::Reported),
@@ -262,6 +271,22 @@ mod tests {
         // Coming back from somewhere else later is not a return from the game.
         overlay.handle(Event::Focus(false));
         assert_eq!(overlay.handle(Event::Focus(true)), None);
+    }
+
+    #[test]
+    fn a_hand_off_that_never_reports_back_goes_after_its_timeout() {
+        let mut overlay = LaunchOverlay::default();
+
+        assert_eq!(
+            overlay.handle(Event::Play(id(), Launch::HandOff)),
+            Some(Effect::Linger(HAND_OFF_TIMEOUT))
+        );
+        assert_eq!(overlay.handle(Event::Lingered), None);
+        assert_eq!(overlay.shown(), Launching::No);
+        assert_eq!(overlay.game(), None);
+        // A report that comes after all changes nothing.
+        assert_eq!(overlay.handle(Event::Reported), None);
+        assert_eq!(overlay.shown(), Launching::No);
     }
 
     #[test]
