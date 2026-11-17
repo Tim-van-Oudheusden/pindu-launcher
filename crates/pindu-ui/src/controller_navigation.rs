@@ -3,14 +3,16 @@
 //! cover grid steps through its covers with `scroll_to`, A activates the focused widget, B
 //! closes a menu or dialog or goes back, Y searches from Home or the library (with the
 //! search keyboard in fullscreen mode, which takes the buttons while it is open), LB/RB and
-//! LT/RT switch the fullscreen library's tabs and sort order, and Guide enters fullscreen
-//! mode. The panels come next: in fullscreen mode Start or Guide toggles the menu drawer,
-//! View or X opens the options sheet for the focused game, and B closes them. While the
-//! launch overlay is up it takes every button, and a held B cancels a game we start. The
-//! passphrase dialog's keyboard takes every button while the dialog is open, as the search
-//! keyboard does. Once a game we started plays, the controller is the game's and only Guide
-//! reaches the window (`pindu_core::game_control`). Intents never become synthetic key
-//! events, and only the active window acts on them.
+//! LT/RT switch the fullscreen library's tabs and sort order, and Guide, let go without
+//! another button pressed while it was held, enters fullscreen mode. The panels come next:
+//! in fullscreen mode Start or Guide toggles the menu drawer, R3, Guide + A or the Steam
+//! Deck's "…" toggles Quick Access, View or X opens the options sheet for the focused game,
+//! and B closes them. While the launch overlay is up it takes every button, and a held B
+//! cancels a game we start. The passphrase dialog's keyboard takes every button while the
+//! dialog is open, as the search keyboard does. Once a game we started plays, the
+//! controller is the game's and only Guide and the Quick Access of Guide + A or "…" reach
+//! the window (`pindu_core::game_control`). Intents never become synthetic key events, and
+//! only the active window acts on them.
 
 use std::cell::RefCell;
 use std::collections::BTreeSet;
@@ -63,8 +65,8 @@ impl PinduWindow {
         );
     }
 
-    /// A controller's intent: while a game we started has the controller only Guide acts,
-    /// and gives it back before it does what Guide does.
+    /// A controller's intent: while a game we started has the controller only Guide and
+    /// the Quick Access of Guide + A or "…" act, and give it back before they do.
     fn controller_intent(&self, intent: Intent) {
         let control = self.imp().game_control.get();
         if !self.takes_controller() || !control.acts_on(intent) {
@@ -76,8 +78,8 @@ impl PinduWindow {
         self.handle_intent(intent);
     }
 
-    /// The user turned to the window, with Guide or the keyboard: the controller is its
-    /// again.
+    /// The user turned to the window, with Guide, Guide + A or the keyboard: the
+    /// controller is its again.
     pub(crate) fn give_controller_back(&self) {
         self.update_game_control(GameControl::give_back);
     }
@@ -145,9 +147,11 @@ impl PinduWindow {
         if self.handle_panel_intent(intent) {
             match intent {
                 Intent::Back => self.play_sound(Sound::Back),
-                Intent::Menu | Intent::Home | Intent::QuickAccess | Intent::Options => {
-                    self.play_sound(Sound::Select)
-                }
+                Intent::Menu
+                | Intent::Home
+                | Intent::QuickAccess
+                | Intent::SystemQuickAccess
+                | Intent::Options => self.play_sound(Sound::Select),
                 _ => {}
             }
             return;

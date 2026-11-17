@@ -195,8 +195,8 @@ mod imp {
         pub volume_preview: RefCell<Option<glib::SourceId>>,
         /// The hints the hint bar shows, and for which controller layout.
         pub hints: RefCell<Option<(Layout, Vec<Hint>)>>,
-        /// Whether a game the launcher started has the controller, which only Guide, the
-        /// window's focus coming back or the last game ending gives back.
+        /// Whether a game the launcher started has the controller, which only Guide,
+        /// Guide + A, the window's focus coming back or the last game ending gives back.
         pub game_control: Cell<GameControl>,
         /// Whether the sidebar showed before fullscreen mode hid it, to show it again after.
         pub sidebar_before_hiding: Cell<Option<bool>>,

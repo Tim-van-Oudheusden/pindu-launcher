@@ -1,7 +1,7 @@
 //! The fullscreen hint bar: what each button does right now for the focused page and
 //! widget, with the glyph that shows the button on the active controller.
 
-use crate::gamepad::{Button, Direction, Glyphs, Intent, Layout};
+use crate::gamepad::{Button, Direction, Glyphs, Intent, Layout, QUICK_ACCESS_CHORD};
 use crate::osk::Key;
 use crate::panels::{DrawerLevel, OptionsLevel, Panel, QuickAccessLevel};
 
@@ -129,12 +129,12 @@ pub enum Action {
 
 /// One hint: the button, by its position on the pad, and what it does. A pair of buttons
 /// that step two ways (the shoulders, the triggers, the D-pad's left and right) shares one
-/// hint.
+/// hint, and so do the two buttons of a chord (Guide + A).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Hint {
-    /// The button; for a pair, the one that steps back.
+    /// The button; for a pair, the one that steps back; for a chord, the one held down.
     pub button: Button,
-    /// The button that steps the other way.
+    /// The button that steps the other way, or that is pressed while `button` is held.
     pub pair: Option<Button>,
     /// What it does.
     pub action: Action,
@@ -218,7 +218,15 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
     let search = (context.search && page).then_some(Action::Search);
     let options = (context.options && page).then_some(Action::Options);
     let menu = (context.menu && page).then_some(Action::Menu);
-    let quick_access = (context.menu && page).then_some(Action::QuickAccess);
+    // Quick Access shows the chord every pad has, rather than R3, which games use too.
+    let quick_access = (context.menu && page).then(|| {
+        let (held, pressed) = QUICK_ACCESS_CHORD;
+        Hint {
+            button: held,
+            pair: Some(pressed),
+            action: Action::QuickAccess,
+        }
+    });
     let tabs = context.tabs && page;
     let pair = |back, forward, action| {
         tabs.then(|| Hint {
@@ -234,7 +242,7 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
         single(Intent::Search, search),
         single(Intent::Options, options),
         single(Intent::Menu, menu),
-        single(Intent::QuickAccess, quick_access),
+        quick_access,
         pair(Intent::PreviousTab, Intent::NextTab, Action::Tabs),
         pair(Intent::PreviousSort, Intent::NextSort, Action::Sort),
     ]
@@ -244,7 +252,8 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
 }
 
 /// The hints while a game the launcher started has the controller
-/// (`game_control::GameControl`): only Guide, which gives it back.
+/// (`game_control::GameControl`): only Guide, which gives it back. Guide + A gives it back
+/// too, as it opens Quick Access.
 pub fn playing_hints(layout: Layout) -> Vec<Hint> {
     vec![Hint {
         button: layout.button(Intent::Home),
@@ -413,7 +422,7 @@ mod tests {
                 (Button::North, Action::Search),
                 (Button::Select, Action::Options),
                 (Button::Start, Action::Menu),
-                (Button::RightStick, Action::QuickAccess)
+                (Button::Guide, Action::QuickAccess)
             ]
         );
         let dialog_over_home = Context {
@@ -427,18 +436,24 @@ mod tests {
     }
 
     #[test]
-    fn fullscreen_pages_open_quick_access_with_r3_after_the_menu() {
+    fn fullscreen_pages_open_quick_access_with_guide_and_the_south_button_after_the_menu() {
         let library = Context {
             page_below: true,
             menu: true,
             ..context(Focus::Game)
         };
-        for kind in [DeviceKind::Xbox, DeviceKind::SteamDeck] {
+        for kind in DeviceKind::ALL {
+            let chord = hints(library, Layout::detected(kind))
+                .into_iter()
+                .map(|hint| (hint.button, hint.pair, hint.action))
+                .skip(2)
+                .collect::<Vec<_>>();
+            // The south button by position, whatever its glyph: B on a Nintendo pad.
             assert_eq!(
-                actions(library, kind)[2..],
+                chord,
                 [
-                    (Button::Start, Action::Menu),
-                    (Button::RightStick, Action::QuickAccess)
+                    (Button::Start, None, Action::Menu),
+                    (Button::Guide, Some(Button::South), Action::QuickAccess)
                 ],
                 "{kind:?}"
             );

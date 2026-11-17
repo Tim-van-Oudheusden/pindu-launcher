@@ -185,7 +185,9 @@ Flatpak too.
 
 ### Quick Access
 
-Open it with a right stick click, the Steam Deck's "…" button, or <kbd>Ctrl</kbd>+<kbd>2</kbd>.
+Open it with Guide + A (hold the Guide button and press the bottom face button, whatever its label), a right stick
+click, the Steam Deck's "…" button, or <kbd>Ctrl</kbd>+<kbd>2</kbd>. Guide on its own acts when you let go of it, so
+Guide + A never also opens the menu drawer.
 
 - **Status:** the time, the battery, whether you are offline, and the game you are playing with how long it has run.
 - **Notifications** from this session: games a sync added or found missing, artwork fetched or not, Proton downloads,
@@ -321,10 +323,11 @@ gamescope -f -- flatpak run --nosocket=wayland io.github.tim_van_oudheusden.pind
   (`gamescope -W 3840 -H 2160 -w 1920 -h 1080 -f -- …`) or scale the app (`flatpak run --env=GDK_SCALE=2 …`).
 - `--expose-wayland` is not recommended. The app then runs as a Wayland client, but gamescope doesn't make its window
   fullscreen: the window keeps its desktop size, and gamescope scales it up to the screen.
-- Once the app starts a game, the controller is the game's: the app acts on no button but Guide, and its hint bar shows
-  only Guide, "Back to Pindu". Guide, the app's window gaining focus again after it lost it, a key in fullscreen mode, or
-  the last game the app runs ending gives the controller back. A nested gamescope needs this most: there the app's window
-  keeps gamescope's focus while a game plays on the desktop.
+- Once the app starts a game, the controller is the game's: the app acts on no button but Guide and the Quick Access of
+  Guide + A or the Steam Deck's "…" (a right stick click stays the game's), and its hint bar shows only Guide, "Back to
+  Pindu". Guide, Guide + A, the app's window gaining focus again after it lost it, a key in fullscreen mode, or the last
+  game the app runs ending gives the controller back. A nested gamescope needs this most: there the app's window keeps
+  gamescope's focus while a game plays on the desktop.
 - In a gamescope nested in a desktop session, a store game opens wherever its store's launcher runs. The desktop starts
   Steam, Heroic or Lutris through the OpenURI portal, so they and their games open on the desktop, not in gamescope; a
   Steam client starting from a `steam://` link also shows its own window first. A gamescope session has no such desktop
@@ -344,16 +347,17 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   otherwise a stable ID with the high bit set. Its window is recognised by the window class the app gives it, by its
   process when the app is not sandboxed, or as the only new window while one game runs. The game comes to the front when
   it starts, and the app when it ends.
-- Guide during play brings the app to the front, with the menu drawer open on Playing Now; Return there brings the game
-  back.
-- Misc1 (the Steam Deck's "…") during play opens Quick Access over the running game, in a see-through window of its
-  own that gamescope draws above the game (`STEAM_OVERLAY`); Misc1 or B closes it and gives input back to the game, and
-  Guide closes it on the way to the app. R3 stays the game's. Over a game Quick Access shows the levels that need no
-  library page or flow of the app's window: Performance is the game's, Playing Now's Return and Stop work, and Surprise
-  Me and Add a Store are left out. Network's passphrase and Bluetooth's PIN, code and confirmation are asked over the
-  game and answered with the controller there. A passphrase still unanswered as Quick Access closes moves to the app's
-  window and comes back when Quick Access opens again; closing it while pairing refuses, as leaving Bluetooth does. The
-  controller still reaches the game while it is open.
+- Guide during play, let go without pressing another button, brings the app to the front, with the menu drawer open on
+  Playing Now; Return there brings the game back.
+- Guide + A, or the Steam Deck's "…", during play opens Quick Access over the running game, in a see-through window of
+  its own that gamescope draws above the game (`STEAM_OVERLAY`); either again, or B, closes it and gives input back to
+  the game, and Guide closes it on the way to the app. R3 stays the game's. The game sees the A of Guide + A too: the
+  app reads controllers alongside games and cannot take a press from them. Over a game Quick Access shows the levels
+  that need no library page or flow of the app's window: Performance is the game's, Playing Now's Return and Stop work,
+  and Surprise Me and Add a Store are left out. Network's passphrase and Bluetooth's PIN, code and confirmation are
+  asked over the game and answered with the controller there. A passphrase still unanswered as Quick Access closes
+  moves to the app's window and comes back when Quick Access opens again; closing it while pairing refuses, as leaving
+  Bluetooth does. The controller still reaches the game while it is open.
 - With `MANGOHUD_CONFIGFILE` naming a file the app can write, as gamescope-session-plus and `gamescope --steam
   --mangoapp` set it, the Performance Overlay switch drives their MangoApp instead of wrapping games in `mangohud`: the
   app rewrites the file in place with `preset=2` or `no_display` for the game in front, when it comes to the front and
