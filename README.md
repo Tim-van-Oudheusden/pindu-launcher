@@ -338,6 +338,12 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   it starts, and the app when it ends.
 - Guide during play brings the app to the front, with the menu drawer open on Playing Now; Return there brings the game
   back.
+- Misc1 (the Steam Deck's "…") during play opens Quick Access over the running game, in a see-through window of its
+  own that gamescope draws above the game (`STEAM_OVERLAY`); Misc1 or B closes it and gives input back to the game, and
+  Guide closes it on the way to the app. R3 stays the game's. Over a game Quick Access shows the levels that need no
+  library page or dialog of the app's window: Performance is the game's, Playing Now's Return and Stop work, and
+  Surprise Me, Network, Bluetooth and Add a Store are left out. The controller still reaches the game while it is open.
+- Games the app hands to their store's launcher (Steam, Heroic, Lutris, Bottles) are not brought to the front yet.
 - Games the app hands to their store's launcher (Steam, Heroic, Lutris, Bottles) are not brought to the front yet.
 - With `MANGOHUD_CONFIGFILE` naming a file the app can write, as gamescope-session-plus and `gamescope --steam
   --mangoapp` set it, the Performance Overlay switch drives their MangoApp instead of wrapping games in `mangohud`: the

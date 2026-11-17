@@ -146,13 +146,16 @@ impl PinduQuickAccess {
     fn show_network_state(&self, state: &NetworkState) {
         let imp = self.imp();
         let row = &imp.network_row;
-        row.set_visible(state.availability != Availability::Hidden);
+        row.set_visible(state.availability != Availability::Hidden && !self.over_game());
         row.set_sensitive(state.availability == Availability::Shown);
         if let Some(summary) = &state.summary {
             imp.network_icon.set_icon_name(Some(summary_icon(summary)));
             imp.network_subtitle.set_label(&summary_text(summary));
         }
-        imp.network_level.show_prompt(state.prompt.as_ref());
+        // Over a game the main window asks for the passphrase.
+        if !self.over_game() {
+            imp.network_level.show_prompt(state.prompt.as_ref());
+        }
         if self.level() != Some(QuickAccessLevel::Network) {
             return;
         }

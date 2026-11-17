@@ -185,14 +185,14 @@ impl PinduWindow {
 
     /// Guide over a game brought the launcher to the front in a `--steam` gamescope: in
     /// fullscreen mode the drawer opens on the Playing Now cards, so Return is a press
-    /// away. A game that ends gives the front back too, but the launcher still wants the
-    /// game then, or nothing runs any more.
+    /// away. A game that ends gives the front back too, and so does a link in Quick Access
+    /// over a game, which shows what it leads to instead.
     fn front_changed(&self, front: Front) {
         let Some(application) = self.application().and_downcast::<PinduApplication>() else {
             return;
         };
-        let by_guide = front == Front::Launcher
-            && application.gamescope_service().wanted_front() == Front::Launcher;
+        let by_guide =
+            front == Front::Launcher && application.gamescope_service().launcher_by_guide();
         if !by_guide || !self.is_fullscreen() || !application.session_service().any_playing() {
             return;
         }

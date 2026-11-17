@@ -269,6 +269,11 @@ window.fullscreen-mode .game-actions button:focus-visible {
   background-color: alpha(var(--window-bg-color), 0.92);
 }
 
+/* Quick Access over a running game: the game shows through beside the panel. */
+window.quick-access-overlay {
+  background-color: transparent;
+}
+
 /* Fullscreen mode's menu drawer, Quick Access and options sheet: roomy rows to read from
    across the room, and a ring around the Playing Now card's focused button. */
 .menu-drawer,
