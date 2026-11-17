@@ -335,6 +335,13 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
 - Guide during play brings the app to the front, with the menu drawer open on Playing Now; Return there brings the game
   back.
 - Games the app hands to their store's launcher (Steam, Heroic, Lutris, Bottles) are not brought to the front yet.
+- With `MANGOHUD_CONFIGFILE` naming a file the app can write, as gamescope-session-plus and `gamescope --steam
+  --mangoapp` set it, the Performance Overlay switch drives their MangoApp instead of wrapping games in `mangohud`: the
+  app rewrites the file in place with `preset=2` or `no_display` for the game in front, when it comes to the front and
+  when its switch flips in Quick Access or the options sheet. MangoApp hides itself while the app is in front. The
+  Flatpak cannot reach `/tmp/mangohud.*` or `$XDG_RUNTIME_DIR/gamescope-mangoapp-*`; point the variable at a file under
+  `$XDG_RUNTIME_DIR/app/io.github.tim_van_oudheusden.pindu-launcher/` that holds `no_display` before gamescope starts.
+  Otherwise games keep their own MangoHud.
 - Tested with gamescope 3.17.0 (`gamescope --backend headless --steam --xwayland-count 2`). gamescope's `--steam`
   protocol is undocumented and may change between releases.
 

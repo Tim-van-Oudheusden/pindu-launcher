@@ -5,7 +5,9 @@
 //! keeps one state for one game, read once from the store, and every switch shows it, so
 //! Quick Access and the sheet always agree. While the game runs, Quick Access's level says
 //! a change applies from its next launch. Where MangoHud cannot work for the game
-//! (`permission_service::mangohud_works`), its switches are insensitive and say why.
+//! (`permission_service::mangohud_works`), its switches are insensitive and say why. In a
+//! gamescope session whose MangoApp the launcher drives, the Performance Overlay switch
+//! of the game in front shows or hides MangoApp at once (`GamescopeService`).
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -13,6 +15,7 @@ use gettextrs::gettext;
 use gtk::glib;
 use pindu_core::model::PerformanceTool;
 
+use crate::application::PinduApplication;
 use crate::models::GameObject;
 use crate::permission_service;
 use crate::window::PinduWindow;
@@ -99,7 +102,12 @@ impl PinduWindow {
         }
         imp.quick_access_performance_title
             .set_label(&gettext("Performance for {game}").replace("{game}", &game.game().title));
-        self.show_overlay_works(permission_service::mangohud_works(&game.game()));
+        let works = permission_service::mangohud_works(&game.game())
+            || self
+                .application()
+                .and_downcast::<PinduApplication>()
+                .is_some_and(|application| application.gamescope_service().drives_mangoapp());
+        self.show_overlay_works(works);
         self.show_performance_note();
     }
 
@@ -170,6 +178,13 @@ impl PinduWindow {
                 imp.performance_tools.set(Some(tools));
                 self.library_service()
                     .set_performance_tool(&id, TOOLS[index], on);
+                if TOOLS[index] == PerformanceTool::Overlay
+                    && let Some(application) = self.application().and_downcast::<PinduApplication>()
+                {
+                    application
+                        .gamescope_service()
+                        .performance_overlay_switched(&id, on);
+                }
             }
             _ => {}
         }
