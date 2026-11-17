@@ -6,8 +6,9 @@
 
 use std::time::{Duration, Instant};
 
-use super::{ExpectedGame, WindowFacts, Xid};
-use crate::model::GameId;
+use super::steam_prompts::SteamPrompts;
+use super::{ExpectedGame, Front, WindowFacts, Xid};
+use crate::model::{GameId, Source};
 
 /// How long a store launch waits for its first window before the launcher gives up on it.
 pub const STORE_LAUNCH_TIMEOUT: Duration = Duration::from_secs(60);
@@ -21,6 +22,10 @@ pub const STORE_LAUNCH_GRACE: Duration = Duration::from_secs(10);
 pub struct StoreLaunch {
     game: ExpectedGame,
     phase: Phase,
+    /// Whether the Steam client launches the game, so its windows may be the launch's.
+    by_steam: bool,
+    /// The Steam client's windows that are open while the launch waits.
+    steam: SteamPrompts,
 }
 
 /// Where a store launch is.
@@ -40,6 +45,8 @@ impl StoreLaunch {
         Self {
             game: ExpectedGame::new(id, None),
             phase: Phase::Waiting(now),
+            by_steam: id.source() == Source::Steam,
+            steam: SteamPrompts::default(),
         }
     }
 
@@ -49,9 +56,11 @@ impl StoreLaunch {
     }
 
     /// When the launch is over unless a window with its app ID shows first, so the
-    /// launcher knows when to look again; `None` while one is there.
+    /// launcher knows when to look again; `None` while one is there, or while the Steam
+    /// client shows a window the launch waits on.
     pub fn deadline(&self) -> Option<Instant> {
         match self.phase {
+            Phase::Waiting(_) if self.steam.newest().is_some() => None,
             Phase::Waiting(since) => Some(since + STORE_LAUNCH_TIMEOUT),
             Phase::Shown => None,
             Phase::Left(since) => Some(since + STORE_LAUNCH_GRACE),
@@ -106,6 +115,38 @@ impl StoreLaunch {
     /// made last. A later store launch replaces it by taking its place.
     pub fn replaced_by_sessions(&self, before: &[u32], running: &[u32]) -> bool {
         running.iter().any(|id| !before.contains(id))
+    }
+
+    /// Follows a top-level window another client mapped, or that was there when the launch
+    /// started (`own` holds the launcher's windows): one of the Steam client's, while a
+    /// Steam launch waits for its game, is shown until the game's window comes (see
+    /// [`Self::steam_window`]).
+    pub fn window_mapped(&mut self, window: &WindowFacts, own: &[Xid]) {
+        if self.by_steam && matches!(self.phase, Phase::Waiting(_)) {
+            self.steam.mapped(window, own);
+        }
+    }
+
+    /// Follows a top-level window that was unmapped at `now`: once the last of the Steam
+    /// client's windows the launch waits on is gone, the game gets the full time-out again.
+    pub fn window_unmapped(&mut self, xid: Xid, now: Instant) {
+        let was_showing = self.steam.newest().is_some();
+        self.steam.unmapped(xid);
+        if was_showing
+            && self.steam.newest().is_none()
+            && let Phase::Waiting(_) = self.phase
+        {
+            self.phase = Phase::Waiting(now);
+        }
+    }
+
+    /// The Steam client's window to pin as the base layer with `front` wanted in front: the
+    /// newest one open while a Steam launch waits for its game, so a prompt the launch needs
+    /// answered shows instead of the launcher.
+    pub fn steam_window(&self, front: Front) -> Option<Xid> {
+        let waiting = matches!(self.phase, Phase::Waiting(_));
+        let wanted = front == Front::Game(self.game.app_id);
+        self.steam.newest().filter(|_| waiting && wanted)
     }
 }
 

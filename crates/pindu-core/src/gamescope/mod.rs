@@ -15,6 +15,7 @@ use crate::model::{GameId, Source};
 use crate::sources::sha256::sha256_hex;
 
 mod claim;
+mod steam_prompts;
 mod store_launch;
 pub use claim::{BaseLayerClaim, RECLAIM_LIMIT, RECLAIM_PERIOD, Reclaims};
 pub use store_launch::{STORE_LAUNCH_GRACE, STORE_LAUNCH_TIMEOUT, StoreLaunch};

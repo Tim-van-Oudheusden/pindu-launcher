@@ -339,11 +339,17 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   sign-in window, get the game's app ID and come to the front. The app is back when the last of those windows closes,
   and stops expecting the game 10 seconds later. While none has opened the app stays in front, and after a minute it
   stops waiting. Guide brings the app to the front as with other games, and starting the game again brings it back.
-- A Steam client that a Steam game starts inside the session tags its own windows (its library, and so probably its
-  sign-in window) as app 769, as the app's window is, and writes the focus list itself. The app therefore pins its
-  window (`GAMESCOPECTRL_BASELAYER_WINDOW`) whenever it should be in front, including while a game it wants in front
-  has no window yet, and writes its focus list and pin back when another client changes them, at most ten times in 10
-  seconds. The Steam client's own windows therefore stay hidden; its games come to the front as usual.
+- A Steam client that a Steam game starts inside the session tags its own windows (in a `--steam` gamescope it runs as
+  Big Picture, one window) as app 769, as the app's window is, and writes the focus list itself. The app therefore pins
+  its window (`GAMESCOPECTRL_BASELAYER_WINDOW`) whenever it should be in front, including while a game it wants in
+  front has no window yet, and writes its focus list and pin back when another client changes them, at most ten times
+  in 10 seconds. Its games come to the front as usual.
+- While a Steam store launch waits for the game's window, the Steam client's window (Big Picture, which shows a
+  sign-in, install, launch option or cloud conflict prompt inside it) is pinned in the app's place, the newest first,
+  so the user can answer what Steam asks. The launch does not time out while one is open; once the last one closes the
+  app is back and waits another minute for the game. Guide over such a window brings the app back and stops waiting.
+  Steam windows that open once the game has shown (such as a cloud sync when it ends) stay hidden, and a launch through
+  another store never shows Steam.
 - Tested with gamescope 3.17.0 (`gamescope --backend headless --steam --xwayland-count 2`). gamescope's `--steam`
   protocol is undocumented and may change between releases.
 
