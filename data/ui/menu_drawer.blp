@@ -40,6 +40,26 @@ template $PinduMenuDrawer: Box {
             visible: false;
           }
 
+          // Over a running game, its windows when it has more than one, to show another.
+          Label windows_title {
+            label: _("Windows");
+            xalign: 0;
+            visible: false;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          ListBox windows {
+            selection-mode: none;
+            visible: false;
+
+            styles [
+              "navigation-sidebar",
+            ]
+          }
+
           ListBox list {
             selection-mode: none;
 

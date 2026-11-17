@@ -351,7 +351,10 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   see-through window of its own that gamescope draws above the game (`STEAM_OVERLAY`), as Guide opens Steam's menu.
   The game stays in front behind it. The drawer holds the game's Playing Now card (Return closes the drawer, Stop ends a
   game the app started), Home, Library and Collections, which bring the app to the front there; leaving fullscreen
-  mode, Quit and Power are left out. Guide again, or B, closes it and gives input back to the game.
+  mode, Quit and Power are left out. Guide again, or B, closes it and gives input back to the game. When the game has
+  more than one window gamescope could show (`GAMESCOPE_FOCUSABLE_WINDOWS`), such as its own launcher's and the
+  game's, the drawer lists them by title under its card; picking one pins it (`GAMESCOPECTRL_BASELAYER_WINDOW`) while
+  the game is in front, until it closes, when gamescope shows the game's other window again.
 - Guide + A, or the Steam Deck's "…", during play opens Quick Access over the running game in the same window; either
   again, or B, closes it, and Guide turns from it to the menu drawer. R3 stays the game's. The game sees the A of
   Guide + A too: the app reads controllers alongside games and cannot take a press from them. Over a game Quick Access

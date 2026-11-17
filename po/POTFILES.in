@@ -26,6 +26,7 @@ crates/pindu-ui/src/hint_bar.rs
 crates/pindu-ui/src/home_page.rs
 crates/pindu-ui/src/launch_service.rs
 crates/pindu-ui/src/log_service.rs
+crates/pindu-ui/src/menu_drawer.rs
 crates/pindu-ui/src/network_service.rs
 crates/pindu-ui/src/preferences.rs
 crates/pindu-ui/src/proton_choice.rs
