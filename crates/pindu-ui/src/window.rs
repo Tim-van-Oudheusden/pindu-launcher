@@ -20,7 +20,6 @@ use pindu_core::library::{
 use pindu_core::model::{GameId, Source, Timestamp};
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{GameOption, Panels};
-use pindu_core::system::audio::Output;
 use pindu_core::tasks::Task;
 
 use crate::application::PinduApplication;
@@ -28,6 +27,7 @@ use crate::config::APP_ID;
 use crate::fullscreen::NavigationSounds;
 use crate::fullscreen_bluetooth::PinduBluetoothLevel;
 use crate::fullscreen_network::PinduNetworkLevel;
+use crate::fullscreen_sound_output::PinduSoundOutputLevel;
 use crate::fullscreen_system_update::PinduSystemUpdateLevel;
 use crate::game_page::GamePage;
 use crate::home_page::HomePage;
@@ -293,7 +293,7 @@ mod imp {
         #[template_child]
         pub quick_access_sound_output_subtitle: TemplateChild<gtk::Label>,
         #[template_child]
-        pub quick_access_sound_outputs: TemplateChild<gtk::ListBox>,
+        pub quick_access_sound_output_level: TemplateChild<PinduSoundOutputLevel>,
         #[template_child]
         pub quick_access_system_update_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
@@ -358,8 +358,6 @@ mod imp {
         pub game_options: RefCell<Vec<GameOption>>,
         /// The intents Quick Access's Controls lists, in its rows' order across its groups.
         pub shown_controls: RefCell<Vec<Intent>>,
-        /// The outputs Quick Access's Sound Output lists, in its rows' order.
-        pub sound_outputs: RefCell<Vec<Output>>,
         /// The widget that had focus before a panel opened, to give it back after.
         pub focus_before_panel: glib::WeakRef<gtk::Widget>,
         /// Fullscreen mode's clocks: their format, their next tick while one shows, and
@@ -398,6 +396,7 @@ mod imp {
             PinduNetworkLevel::ensure_type();
             PinduBluetoothLevel::ensure_type();
             PinduSystemUpdateLevel::ensure_type();
+            PinduSoundOutputLevel::ensure_type();
             klass.bind_template();
         }
 

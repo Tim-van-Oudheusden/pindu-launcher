@@ -152,7 +152,7 @@ the services; they never talk to the bus or spawn a process themselves.
 | Power | `system::power` (`PowerBackend`) | `logind_backend.rs` | `system_power_service.rs` | not yet moved (#338) |
 | Network | `system::network` (`NetworkBackend`) | `networkmanager_backend.rs` | `network_service.rs` | `PinduNetworkLevel` (`fullscreen_network.rs`), `data/ui/fullscreen_network.blp` |
 | Bluetooth | `system::bluetooth` (`BluetoothBackend`) | `bluez_backend.rs` | `bluetooth_service.rs` | `PinduBluetoothLevel` (`fullscreen_bluetooth.rs`), `data/ui/fullscreen_bluetooth.blp` |
-| Audio output | `system::audio` (`AudioBackend`, `pw-dump` parser) | `wireplumber_backend.rs` | `audio_output_service.rs` | not yet moved (#338) |
+| Audio output | `system::audio` (`AudioBackend`, `pw-dump` parser) | `wireplumber_backend.rs` | `audio_output_service.rs` | `PinduSoundOutputLevel` (`fullscreen_sound_output.rs`), `data/ui/fullscreen_sound_output.blp` |
 | OS updates | `system::update` (`UpdateBackend`, `bootc status` parser) | `pindu_os_backend.rs` | `system_update_service.rs` | `PinduSystemUpdateLevel` (`fullscreen_system_update.rs`), `data/ui/fullscreen_system_update.blp` |
 
 - The backends report results through callbacks on the main thread, like `GamepadBackend::start`'s sink, so the core
