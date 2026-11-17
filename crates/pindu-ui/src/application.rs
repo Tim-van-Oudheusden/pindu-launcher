@@ -39,6 +39,7 @@ use pindu_core::gamescope::session::{Session, has_os_session_select};
 use pindu_core::keys;
 use pindu_core::library::Filters;
 use pindu_core::notifications::{Kind, Target};
+use pindu_core::panels::Playing;
 use pindu_core::sources::location::HostDirs;
 use pindu_core::steamgriddb::{self, RunNotice};
 
@@ -846,11 +847,20 @@ impl PinduApplication {
         });
     }
 
-    /// Starts a game from the window, with or without keeping its log.
+    /// Starts a game from the window, with or without keeping its log. A game its store
+    /// launcher already runs is brought back instead of handed to the store again.
     fn play(&self, id: Option<&glib::Variant>, logs: bool) {
         let sessions = self.session_service().clone();
         let app = self.clone();
         self.with_game(id, move |window, game, library, toast| {
+            if game.playing() == Playing::InStore {
+                ActionGroupExt::activate_action(
+                    window,
+                    "playing-return",
+                    Some(&game.id().as_str().to_variant()),
+                );
+                return;
+            }
             // In fullscreen mode the launch overlay follows the launch, which reports
             // back through its toast.
             window.begin_launch(game);

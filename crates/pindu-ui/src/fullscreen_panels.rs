@@ -476,7 +476,7 @@ impl PinduWindow {
         let imp = self.imp();
         imp.options_game.replace(Some(game.clone()));
         imp.options_title.set_label(&game.game().title);
-        let options = game_options(&game.game(), game.is_playing());
+        let options = game_options(&game.game(), game.playing());
         imp.options_list.remove_all();
         for option in &options {
             let (icon, label) = option_label(*option, game);
@@ -547,6 +547,7 @@ impl PinduWindow {
         let (group, action) = match option {
             GameOption::Play => ("app", "play"),
             GameOption::Stop => ("app", "stop"),
+            GameOption::Return => ("win", "playing-return"),
             GameOption::AddToFavourites | GameOption::RemoveFromFavourites => {
                 ("win", "toggle-favourite")
             }
@@ -575,6 +576,7 @@ fn option_label(option: GameOption, game: &GameObject) -> (&'static str, String)
     match option {
         GameOption::Play => ("media-playback-start-symbolic", gettext("Play")),
         GameOption::Stop => ("media-playback-stop-symbolic", gettext("Stop")),
+        GameOption::Return => ("media-playback-start-symbolic", gettext("Return")),
         GameOption::AddToFavourites => ("non-starred-symbolic", gettext("Add to Favourites")),
         GameOption::RemoveFromFavourites => ("starred-symbolic", gettext("Remove from Favourites")),
         GameOption::Collections => ("folder-symbolic", gettext("Collections")),

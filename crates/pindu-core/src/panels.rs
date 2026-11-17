@@ -302,6 +302,19 @@ pub fn page_entries(under: Under) -> Vec<PageEntry> {
     .collect()
 }
 
+/// Whether a game runs, as the launcher knows it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Playing {
+    /// It does not run.
+    #[default]
+    No,
+    /// We started it and it runs: the launcher can stop it.
+    Started,
+    /// Its store launcher runs it, in a `--steam` gamescope where the launcher sees its
+    /// windows: the launcher can bring it back to the front, but not stop it.
+    InStore,
+}
+
 /// An action of the options sheet for one game.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameOption {
@@ -309,6 +322,8 @@ pub enum GameOption {
     Play,
     /// Stop a game we started, which runs.
     Stop,
+    /// Bring back a game its store launcher runs.
+    Return,
     /// Mark the game a favourite.
     AddToFavourites,
     /// Take the game out of the favourites.
@@ -323,12 +338,15 @@ pub enum GameOption {
     OpenInLauncher,
 }
 
-/// The options sheet's actions for `game`, top to bottom; `playing` says whether we
-/// started it and it runs.
-pub fn game_options(game: &Game, playing: bool) -> Vec<GameOption> {
+/// The options sheet's actions for `game`, top to bottom, as it runs or not (`playing`).
+pub fn game_options(game: &Game, playing: Playing) -> Vec<GameOption> {
     use GameOption::*;
     [
-        Some(if playing { Stop } else { Play }),
+        Some(match playing {
+            Playing::No => Play,
+            Playing::Started => Stop,
+            Playing::InStore => Return,
+        }),
         Some(if game.favourite {
             RemoveFromFavourites
         } else {
@@ -816,7 +834,7 @@ mod tests {
         use GameOption::*;
         let steam = game(Source::Steam, LaunchKind::StoreUri);
         assert_eq!(
-            game_options(&steam, false),
+            game_options(&steam, Playing::No),
             [Play, AddToFavourites, Collections, Hide, OpenInLauncher]
         );
     }
@@ -828,8 +846,18 @@ mod tests {
         manual.favourite = true;
         manual.hidden = true;
         assert_eq!(
-            game_options(&manual, true),
+            game_options(&manual, Playing::Started),
             [Stop, RemoveFromFavourites, Collections, Unhide]
+        );
+    }
+
+    #[test]
+    fn a_game_its_store_launcher_runs_offers_return_instead_of_play() {
+        use GameOption::*;
+        let steam = game(Source::Steam, LaunchKind::StoreUri);
+        assert_eq!(
+            game_options(&steam, Playing::InStore),
+            [Return, AddToFavourites, Collections, Hide, OpenInLauncher]
         );
     }
 

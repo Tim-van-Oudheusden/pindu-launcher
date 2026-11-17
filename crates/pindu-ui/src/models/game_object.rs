@@ -9,6 +9,7 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use pindu_core::library::{ArtSet, LibraryEntry, PlaytimeOrigin, SearchKey, SortKey};
 use pindu_core::model::{Game, GameId};
+use pindu_core::panels::Playing;
 
 /// The game, its art and playtime, and the keys filtering and sorting need, recomputed
 /// when it changes.
@@ -52,6 +53,8 @@ mod imp {
         pub entry: RefCell<Option<Entry>>,
         /// A game we started is running.
         pub playing: Cell<bool>,
+        /// Its store launcher runs the game, in a `--steam` gamescope.
+        pub playing_in_store: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -78,6 +81,9 @@ mod imp {
                     glib::ParamSpecBoolean::builder("playing")
                         .read_only()
                         .build(),
+                    glib::ParamSpecBoolean::builder("playing-in-store")
+                        .read_only()
+                        .build(),
                 ]
             });
             PROPERTIES.as_ref()
@@ -93,6 +99,7 @@ mod imp {
                 "favourite" => game.favourite.to_value(),
                 "hidden" => game.hidden.to_value(),
                 "playing" => self.playing.get().to_value(),
+                "playing-in-store" => self.playing_in_store.get().to_value(),
                 name => unreachable!("unknown property {name}"),
             }
         }
@@ -149,6 +156,26 @@ impl GameObject {
     pub fn set_playing(&self, playing: bool) {
         if self.imp().playing.replace(playing) != playing {
             self.notify("playing");
+        }
+    }
+
+    /// Sets whether its store launcher runs the game, notifying `playing-in-store` when
+    /// it changes.
+    pub fn set_playing_in_store(&self, playing: bool) {
+        if self.imp().playing_in_store.replace(playing) != playing {
+            self.notify("playing-in-store");
+        }
+    }
+
+    /// Whether the game runs: one we started, or one its store launcher runs.
+    pub fn playing(&self) -> Playing {
+        let imp = self.imp();
+        if imp.playing.get() {
+            Playing::Started
+        } else if imp.playing_in_store.get() {
+            Playing::InStore
+        } else {
+            Playing::No
         }
     }
 

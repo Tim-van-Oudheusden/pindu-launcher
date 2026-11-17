@@ -27,10 +27,10 @@ use pindu_core::gamescope::{
     self, BaseLayerClaim, ExpectedGame, Front, InGameIntent, Reclaims, STEAM_APP_ID, StoreLaunch,
     WindowFacts, Xid, mangoapp, overlay,
 };
-use pindu_core::model::{GameId, LaunchConfig};
+use pindu_core::model::{GameId, LaunchConfig, Timestamp};
 
 use crate::gamepad_service::GamepadService;
-use crate::session_service::SessionService;
+use crate::session_service::{self, SessionService};
 
 /// gamescope's property that says it runs with `--steam`; the app ID with input focus.
 const FOCUSED_APP: &str = "GAMESCOPE_FOCUSED_APP";
@@ -63,6 +63,8 @@ const MAX_ITEMS: c_long = 1024;
 type FrontListener = Box<dyn Fn(Front)>;
 /// Something the overlay does when Quick Access opens or closes over the game.
 type QuickAccessListener = Box<dyn Fn(bool)>;
+/// Something the shells do when the store-launched game that plays changes.
+type StorePlayingListener = Box<dyn Fn()>;
 
 /// gamescope's `--steam` protocol for the launcher, or nothing outside such a gamescope.
 #[derive(Clone)]
@@ -89,6 +91,9 @@ struct Inner {
     store_launch: RefCell<Option<StoreLaunch>>,
     /// The timer that looks at the store launch again at its deadline.
     store_timer: RefCell<Option<glib::SourceId>>,
+    /// The store-launched game that plays, and since when the launcher has seen it.
+    store_playing: RefCell<Option<(GameId, Timestamp)>>,
+    store_playing_listeners: RefCell<Vec<StorePlayingListener>>,
     /// Who the launcher asked gamescope to show.
     wanted: Cell<Front>,
     /// Who gamescope shows, as `GAMESCOPE_FOCUSED_APP_GFX` says.
@@ -131,6 +136,8 @@ impl GamescopeService {
                 running: RefCell::default(),
                 store_launch: RefCell::default(),
                 store_timer: RefCell::default(),
+                store_playing: RefCell::default(),
+                store_playing_listeners: RefCell::default(),
                 wanted: Cell::new(Front::Launcher),
                 front: Cell::new(Front::Launcher),
                 front_listeners: RefCell::default(),
@@ -331,7 +338,7 @@ impl GamescopeService {
     }
 
     /// Brings the game with `id` to the front, as Return in Playing Now does, while it
-    /// runs.
+    /// runs: a game we started, or the store-launched game that plays.
     pub fn bring_to_front(&self, id: &GameId) {
         let app_id = self
             .inner
@@ -339,9 +346,64 @@ impl GamescopeService {
             .borrow()
             .iter()
             .find(|(game, _)| game == id)
-            .map(|&(_, app_id)| app_id);
+            .map(|&(_, app_id)| app_id)
+            .or_else(|| {
+                self.inner
+                    .store_launch
+                    .borrow()
+                    .as_ref()
+                    .filter(|launch| launch.is_playing() && launch.game() == id)
+                    .map(StoreLaunch::app_id)
+            });
         if let Some(app_id) = app_id {
             self.ask_for(Front::Game(app_id), false);
+        }
+    }
+
+    /// The store-launched game that plays, with when the launcher first saw its window:
+    /// its store launcher runs it, so the launcher can bring it back but not stop it.
+    pub fn store_playing(&self) -> Option<(GameId, Timestamp)> {
+        self.inner.store_playing.borrow().clone()
+    }
+
+    /// Calls `listener` whenever the store-launched game that plays changes.
+    pub fn connect_store_playing_changed(&self, listener: impl Fn() + 'static) {
+        self.inner
+            .store_playing_listeners
+            .borrow_mut()
+            .push(Box::new(listener));
+    }
+
+    /// Follows the store launch into the store-launched game that plays: its game's
+    /// Playing state, and the listeners, when it changed.
+    fn update_store_playing(&self) {
+        let playing = self
+            .inner
+            .store_launch
+            .borrow()
+            .as_ref()
+            .filter(|launch| launch.is_playing())
+            .map(|launch| launch.game().clone());
+        let before = self.inner.store_playing.borrow().clone();
+        if before.as_ref().map(|(id, _)| id) == playing.as_ref() {
+            return;
+        }
+        let model = self.inner.sessions.library().model();
+        if let Some(object) = before.and_then(|(id, _)| model.game_object(&id)) {
+            object.set_playing_in_store(false);
+        }
+        if let Some(object) = playing.as_ref().and_then(|id| model.game_object(id)) {
+            object.set_playing_in_store(true);
+        }
+        glib::g_info!(
+            "pindu",
+            "gamescope: store-launched game playing: {playing:?}"
+        );
+        self.inner
+            .store_playing
+            .replace(playing.map(|id| (id, session_service::now())));
+        for listener in self.inner.store_playing_listeners.borrow().iter() {
+            listener();
         }
     }
 
@@ -459,6 +521,7 @@ impl GamescopeService {
         self.inner.store_launch.replace(Some(launch));
         self.schedule_store_check();
         self.ask_for(Front::Game(app_id), false);
+        self.update_store_playing();
     }
 
     /// Follows the games we started: one that starts comes to the front, and the launcher
@@ -487,6 +550,7 @@ impl GamescopeService {
             });
         if replaced {
             self.forget_store_launch();
+            self.update_store_playing();
         }
         let wanted =
             gamescope::front_after_sessions(self.inner.wanted.get(), &before, &self.front_ids());
@@ -520,6 +584,7 @@ impl GamescopeService {
         if self.claim() != before {
             self.write_base_layer();
         }
+        self.update_store_playing();
     }
 
     /// Ends the store launch once it is over, or looks again at its next deadline.
@@ -567,6 +632,7 @@ impl GamescopeService {
     fn end_store_launch(&self) {
         let before = self.front_ids();
         self.forget_store_launch();
+        self.update_store_playing();
         glib::g_info!("pindu", "gamescope: the store launch is over");
         let wanted =
             gamescope::front_after_sessions(self.inner.wanted.get(), &before, &self.front_ids());
