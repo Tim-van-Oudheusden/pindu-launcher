@@ -429,6 +429,11 @@ mod imp {
     impl WindowImpl for PinduWindow {
         fn close_request(&self) -> glib::Propagation {
             self.obj().save_window_state();
+            // A session's client stays: its exit would end gamescope-session-plus's session.
+            let application = self.obj().application().and_downcast::<PinduApplication>();
+            if application.is_some_and(|application| !application.session().closing_quits()) {
+                return glib::Propagation::Stop;
+            }
             self.parent_close_request()
         }
     }

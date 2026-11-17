@@ -69,7 +69,8 @@ source=("$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.xz")
 sha256sums=('09593ee49f722392510636150ce86f257ae69859a560785dd104e0b65d4193ae')
 
 build() {
-  arch-meson "$pkgname-$pkgver" build --buildtype=release
+  # -Dgamescope-session: the gamescope-session-plus client and its login entry
+  arch-meson "$pkgname-$pkgver" build --buildtype=release -Dgamescope-session=true
   meson compile -C build
 }
 

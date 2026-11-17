@@ -210,7 +210,8 @@ pub enum DrawerEntry {
 
 /// The drawer's entries, top to bottom: a Playing Now card while a game we started runs,
 /// Collections when there are any, and Power after Quit when the system lets the session
-/// suspend, restart or power off (never in the Flatpak, which has no system bus).
+/// suspend, restart or power off (never in the Flatpak, which has no system bus) or it
+/// offers Switch to Desktop ([`crate::gamescope::session::power_shown`]).
 pub fn drawer_entries(playing: bool, collections: bool, power: bool) -> Vec<DrawerEntry> {
     use DrawerEntry::*;
     let playing = playing.then_some(PlayingNow);

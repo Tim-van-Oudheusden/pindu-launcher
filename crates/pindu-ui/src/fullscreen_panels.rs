@@ -22,6 +22,7 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::gamepad::Intent;
+use pindu_core::gamescope::session::power_shown;
 use pindu_core::home::{BLUR_KEY, DIM_KEY};
 use pindu_core::keys;
 use pindu_core::launch;
@@ -815,9 +816,12 @@ impl PinduWindow {
         let playing = application
             .as_ref()
             .is_some_and(|application| application.session_service().any_playing());
-        let power = application
-            .as_ref()
-            .is_some_and(|application| application.system_power_service().state().shown());
+        let power = application.as_ref().is_some_and(|application| {
+            power_shown(
+                &application.system_power_service().state(),
+                application.session().switch_to_desktop(),
+            )
+        });
         let collections = self.library().collections();
         let entries = drawer_entries(playing, !collections.is_empty(), power);
         imp.drawer_collections_row

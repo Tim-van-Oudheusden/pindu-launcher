@@ -66,7 +66,8 @@ switch to the fullscreen mode and do the same from the couch with a controller.
 %autosetup -p1 -n %{name}-%{upstream_version}
 
 %build
-%meson --buildtype=release
+# -Dgamescope-session: the gamescope-session-plus client and its login entry
+%meson --buildtype=release -Dgamescope-session=true
 %meson_build
 
 %install
@@ -90,6 +91,11 @@ appstreamcli validate --no-net %{buildroot}%{_metainfodir}/%{app_id}.metainfo.xm
 %{_datadir}/icons/hicolor/scalable/apps/%{app_id}.svg
 %{_datadir}/icons/hicolor/symbolic/apps/%{app_id}-symbolic.svg
 %{_metainfodir}/%{app_id}.metainfo.xml
+%dir %{_datadir}/gamescope-session-plus
+%dir %{_datadir}/gamescope-session-plus/sessions.d
+%{_datadir}/gamescope-session-plus/sessions.d/pindu
+%dir %{_datadir}/wayland-sessions
+%{_datadir}/wayland-sessions/gamescope-session-pindu.desktop
 
 %changelog
 * Tue Nov 17 2026 Tim van Oudheusden - 0.4.1-1

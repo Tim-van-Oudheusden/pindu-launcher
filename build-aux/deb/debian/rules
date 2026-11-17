@@ -7,8 +7,9 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 %:
 	dh $@ --buildsystem=meson
 
+# -Dgamescope-session: the gamescope-session-plus client and its login entry
 override_dh_auto_configure:
-	dh_auto_configure -- --buildtype=release
+	dh_auto_configure -- --buildtype=release -Dgamescope-session=true
 
 # dh_clean deletes *.orig files, but cargo checks every vendored crate's Cargo.toml.orig
 override_dh_clean:
