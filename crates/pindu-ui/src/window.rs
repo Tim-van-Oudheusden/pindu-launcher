@@ -28,6 +28,7 @@ use crate::config::APP_ID;
 use crate::fullscreen::NavigationSounds;
 use crate::fullscreen_bluetooth::PinduBluetoothLevel;
 use crate::fullscreen_network::PinduNetworkLevel;
+use crate::fullscreen_system_update::PinduSystemUpdateLevel;
 use crate::game_page::GamePage;
 use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
@@ -298,11 +299,7 @@ mod imp {
         #[template_child]
         pub quick_access_system_update_subtitle: TemplateChild<gtk::Label>,
         #[template_child]
-        pub quick_access_system_versions: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub quick_access_rollback_note: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub quick_access_system_actions: TemplateChild<gtk::ListBox>,
+        pub quick_access_system_update_level: TemplateChild<PinduSystemUpdateLevel>,
         #[template_child]
         pub quick_access_network_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
@@ -400,6 +397,7 @@ mod imp {
             HomePage::ensure_type();
             PinduNetworkLevel::ensure_type();
             PinduBluetoothLevel::ensure_type();
+            PinduSystemUpdateLevel::ensure_type();
             klass.bind_template();
         }
 
