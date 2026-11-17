@@ -22,6 +22,7 @@ use pindu_core::osk::Keyboard;
 use pindu_core::panels::{GameOption, Panels};
 use pindu_core::tasks::Task;
 
+use crate::add_store::PinduAddStoreLevel;
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
 use crate::fullscreen::NavigationSounds;
@@ -302,6 +303,10 @@ mod imp {
         #[template_child]
         pub quick_access_system_update_level: TemplateChild<PinduSystemUpdateLevel>,
         #[template_child]
+        pub quick_access_add_store_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quick_access_add_store_level: TemplateChild<PinduAddStoreLevel>,
+        #[template_child]
         pub quick_access_network_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub quick_access_network_icon: TemplateChild<gtk::Image>,
@@ -384,6 +389,8 @@ mod imp {
         pub performance_tools: Cell<Option<[bool; 2]>>,
         /// Whether the switches are being set to show those, rather than by the user.
         pub performance_filling: Cell<bool>,
+        /// The level of the desktop's Add a Store dialog, while it shows.
+        pub add_store_dialog: RefCell<Option<PinduAddStoreLevel>>,
     }
 
     #[glib::object_subclass]
@@ -397,6 +404,7 @@ mod imp {
             PinduNetworkLevel::ensure_type();
             PinduBluetoothLevel::ensure_type();
             PinduSystemUpdateLevel::ensure_type();
+            PinduAddStoreLevel::ensure_type();
             PinduSoundOutputLevel::ensure_type();
             PinduPowerLevel::ensure_type();
             klass.bind_template();

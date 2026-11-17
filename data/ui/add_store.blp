@@ -1,0 +1,98 @@
+using Gtk 4.0;
+using Adw 1;
+
+// The "add a store" flow: the "add-store" page of the window's
+// quick_access_stack in fullscreen mode, and the content of the Add a Store
+// dialog on the desktop. Its rows are filled in code from the flow's state.
+template $PinduAddStoreLevel: Adw.Bin {
+  child: ScrolledWindow {
+    hscrollbar-policy: never;
+    propagate-natural-height: true;
+
+    child: Box {
+      orientation: vertical;
+      spacing: 12;
+
+      Label add_store_title {
+        label: _("Add a Store");
+        xalign: 0;
+
+        styles [
+          "title-3",
+        ]
+      }
+
+      Label {
+        label: _("Install a store, sign in to it, and its games show in your library.");
+        xalign: 0;
+        wrap: true;
+
+        styles [
+          "dim-label",
+        ]
+      }
+
+      // Shown in the Flatpak build, which cannot install apps itself.
+      Label add_store_sandbox_note {
+        label: _("Pindu launcher runs in a sandbox that cannot install apps, so your software centre opens at the store to install it there.");
+        xalign: 0;
+        wrap: true;
+        visible: false;
+
+        styles [
+          "dim-label",
+        ]
+      }
+
+      // Steam, Heroic and Lutris, the installed ones marked; filled in code.
+      ListBox add_store_stores {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+
+      // What runs, or how it ended, and what to do next.
+      Box add_store_status {
+        orientation: vertical;
+        spacing: 6;
+        visible: false;
+
+        Label add_store_status_title {
+          xalign: 0;
+          wrap: true;
+
+          styles [
+            "heading",
+          ]
+        }
+
+        ProgressBar add_store_progress {
+          visible: false;
+        }
+
+        Label add_store_status_detail {
+          xalign: 0;
+          wrap: true;
+          selectable: false;
+
+          styles [
+            "dim-label",
+          ]
+        }
+      }
+
+      // Cancel, Try Again, Refresh Library or Show Library, as the step
+      // allows; filled in code.
+      ListBox add_store_actions {
+        selection-mode: none;
+        visible: false;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+    };
+  };
+}

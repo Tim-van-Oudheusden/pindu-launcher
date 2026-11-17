@@ -780,6 +780,31 @@ template $PinduWindow: Adw.ApplicationWindow {
                             }
                           };
                         }
+
+                        // The "add a store" flow, which installs Steam, Heroic or Lutris.
+                        ListBoxRow quick_access_add_store_row {
+                          action-name: "win.add-store";
+
+                          child: Box {
+                            spacing: 16;
+
+                            Image {
+                              icon-name: "list-add-symbolic";
+                              accessible-role: presentation;
+                            }
+
+                            Label {
+                              label: _("Add a Store");
+                              xalign: 0;
+                              hexpand: true;
+                            }
+
+                            Image {
+                              icon-name: "go-next-symbolic";
+                              accessible-role: presentation;
+                            }
+                          };
+                        }
                       }
                     };
                   };
@@ -1481,6 +1506,12 @@ template $PinduWindow: Adw.ApplicationWindow {
                 }
 
                 StackPage {
+                  name: "add-store";
+
+                  child: $PinduAddStoreLevel quick_access_add_store_level {};
+                }
+
+                StackPage {
                   name: "network";
 
                   child: $PinduNetworkLevel quick_access_network_level {};
@@ -1827,18 +1858,33 @@ template $PinduWindow: Adw.ApplicationWindow {
 
                             child: Adw.StatusPage empty_page {
                               title: _("No Games Yet");
-                              description: _("Games from your launchers appear here once they are imported");
+                              description: _("Add a store and sign in to it, or import the games of the launchers you have");
 
-                              child: Button {
-                                label: _("_Import Now");
-                                use-underline: true;
+                              child: Box {
+                                orientation: vertical;
+                                spacing: 12;
                                 halign: center;
-                                action-name: "app.import";
 
-                                styles [
-                                  "pill",
-                                  "suggested-action",
-                                ]
+                                Button {
+                                  label: _("Add a _Store");
+                                  use-underline: true;
+                                  action-name: "win.add-store";
+
+                                  styles [
+                                    "pill",
+                                    "suggested-action",
+                                  ]
+                                }
+
+                                Button {
+                                  label: _("_Import Now");
+                                  use-underline: true;
+                                  action-name: "app.import";
+
+                                  styles [
+                                    "pill",
+                                  ]
+                                }
                               };
                             };
                           }

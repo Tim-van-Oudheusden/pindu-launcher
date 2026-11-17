@@ -172,5 +172,7 @@ fn kind_icon(kind: Kind) -> &'static str {
         Kind::NetworkFailed => "network-offline-symbolic",
         Kind::PowerInhibited => "system-shutdown-symbolic",
         Kind::SoundOutputFailed => "dialog-warning-symbolic",
+        Kind::StoreInstalled => "system-software-install-symbolic",
+        Kind::StoreFailed => "dialog-warning-symbolic",
     }
 }

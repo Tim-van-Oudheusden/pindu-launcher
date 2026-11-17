@@ -288,6 +288,7 @@ fn task_state(task: &Task) -> String {
         (_, TaskKind::ArtFetch) => "SteamGridDB".to_owned(),
         (Cancel::Available, TaskKind::ProtonDownload) => gettext("Downloading"),
         (Cancel::Unavailable, TaskKind::ProtonDownload) => gettext("Installing"),
+        (_, TaskKind::StoreInstall) => gettext("From Flathub"),
     }
 }
 
@@ -297,5 +298,6 @@ fn kind_icon(kind: TaskKind) -> &'static str {
         TaskKind::LibrarySync => "view-refresh-symbolic",
         TaskKind::ArtFetch => "image-x-generic-symbolic",
         TaskKind::ProtonDownload => "folder-download-symbolic",
+        TaskKind::StoreInstall => "system-software-install-symbolic",
     }
 }

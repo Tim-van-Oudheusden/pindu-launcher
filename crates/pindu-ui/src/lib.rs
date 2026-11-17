@@ -1,6 +1,9 @@
 //! GTK4 and libadwaita shells of Pindu launcher. The binary in `main.rs` only sets up
 //! gettext and resources and runs [`application::PinduApplication`].
 
+pub mod add_store;
+pub mod add_store_backend;
+pub mod add_store_service;
 pub mod application;
 pub mod audio_output_service;
 pub mod bluetooth_service;
