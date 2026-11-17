@@ -8,9 +8,14 @@
 //!
 //! The service is inert unless the display is X11 and gamescope runs with `--steam`: on a
 //! Wayland desktop and in a plain gamescope it writes nothing.
+//!
+//! In such a gamescope with a writable `MANGOHUD_CONFIGFILE`, it also drives the session's
+//! MangoApp from the Performance Overlay switch of the game in front
+//! (`pindu_core::gamescope::mangoapp`).
 
 use std::cell::{Cell, RefCell};
 use std::ffi::{c_int, c_long, c_uchar, c_ulong};
+use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 use std::time::Instant;
 
@@ -20,9 +25,9 @@ use gtk::glib;
 use gtk::prelude::*;
 use pindu_core::gamescope::{
     self, BaseLayerClaim, ExpectedGame, Front, InGameIntent, Reclaims, STEAM_APP_ID, StoreLaunch,
-    WindowFacts, Xid, overlay,
+    WindowFacts, Xid, mangoapp, overlay,
 };
-use pindu_core::model::GameId;
+use pindu_core::model::{GameId, LaunchConfig};
 
 use crate::gamepad_service::GamepadService;
 use crate::session_service::SessionService;
@@ -96,6 +101,11 @@ struct Inner {
     /// Whether Quick Access is open over the game.
     quick_access_open: Cell<bool>,
     quick_access_listeners: RefCell<Vec<QuickAccessListener>>,
+    /// The session's MangoApp config file, when the launcher drives it.
+    mangoapp: Option<PathBuf>,
+    /// Counts the Performance Overlay writes asked for, so a game's switch read late
+    /// never overwrites a newer one.
+    overlay_writes: Cell<u64>,
     /// The launcher's main window, which the claim pins, once it is realized.
     main_window: Cell<Option<Xid>>,
     /// The app IDs of the windows gamescope could show (`GAMESCOPE_FOCUSABLE_APPS`).
@@ -110,6 +120,10 @@ impl GamescopeService {
     /// with `--steam`.
     pub fn new(sessions: &SessionService, gamepad: &GamepadService) -> Self {
         let x11 = X11::steam_mode_display();
+        let mangoapp = mangoapp::session_config_file(
+            x11.is_some(),
+            std::env::var_os("MANGOHUD_CONFIGFILE").as_deref(),
+        );
         let service = Self {
             inner: Rc::new(Inner {
                 x11,
@@ -124,6 +138,8 @@ impl GamescopeService {
                 overlay: glib::WeakRef::new(),
                 quick_access_open: Cell::new(false),
                 quick_access_listeners: RefCell::default(),
+                mangoapp,
+                overlay_writes: Cell::default(),
                 main_window: Cell::default(),
                 focusable: RefCell::default(),
                 reclaims: RefCell::default(),
@@ -136,6 +152,13 @@ impl GamescopeService {
             "pindu",
             "gamescope runs with --steam: the launcher takes Steam's place"
         );
+        if let Some(path) = &service.inner.mangoapp {
+            glib::g_info!(
+                "pindu",
+                "gamescope: the Performance Overlay drives MangoApp through {}",
+                path.display()
+            );
+        }
         let focusable = x11.cardinals(x11.root, FOCUSABLE_APPS).unwrap_or_default();
         service.inner.focusable.replace(focusable);
         x11.watch_root(Rc::downgrade(&service.inner));
@@ -213,11 +236,11 @@ impl GamescopeService {
         let weak = Rc::downgrade(&self.inner);
         window.connect_realize(move |_| {
             if let Some(inner) = weak.upgrade() {
-                GamescopeService { inner }.write_overlay();
+                GamescopeService { inner }.write_overlay_window();
             }
         });
         if window.is_realized() {
-            self.write_overlay();
+            self.write_overlay_window();
         }
     }
 
@@ -239,7 +262,7 @@ impl GamescopeService {
             "pindu",
             "gamescope: Quick Access open over the game: {open}"
         );
-        self.write_overlay();
+        self.write_overlay_window();
         for listener in self.inner.quick_access_listeners.borrow().iter() {
             listener(open);
         }
@@ -310,6 +333,95 @@ impl GamescopeService {
             .map(|&(_, app_id)| app_id);
         if let Some(app_id) = app_id {
             self.ask_for(Front::Game(app_id), false);
+        }
+    }
+
+    /// Whether the session's MangoApp shows the Performance Overlay, rather than MangoHud
+    /// of the game's own.
+    pub fn drives_mangoapp(&self) -> bool {
+        self.inner.mangoapp.is_some()
+    }
+
+    /// The launch config a game starts with: without MangoHud of its own while the
+    /// session's MangoApp shows the Performance Overlay, otherwise `config`.
+    pub fn launch_config(&self, config: LaunchConfig) -> LaunchConfig {
+        if self.drives_mangoapp() {
+            mangoapp::launch_config(&config)
+        } else {
+            config
+        }
+    }
+
+    /// The Performance Overlay switch of the game with `id` turned `on`: MangoApp shows or
+    /// hides it now when that game is in front.
+    pub fn performance_overlay_switched(&self, id: &GameId, on: bool) {
+        if self.inner.mangoapp.is_some()
+            && mangoapp::writes_for(self.inner.front.get(), gamescope::app_id(id))
+        {
+            self.write_overlay(on);
+        }
+    }
+
+    /// Writes the Performance Overlay switch of the game that came to the front for
+    /// MangoApp, once it is read; nothing with the launcher in front.
+    fn write_overlay_for_front(&self) {
+        if self.inner.mangoapp.is_none() {
+            return;
+        }
+        let front = self.inner.front.get();
+        let id = self
+            .inner
+            .running
+            .borrow()
+            .iter()
+            .find(|&&(_, app_id)| mangoapp::writes_for(front, app_id))
+            .map(|(id, _)| id.clone());
+        let Some(id) = id else {
+            return;
+        };
+        let asked = self.next_overlay_write();
+        let (weak, library) = (
+            Rc::downgrade(&self.inner),
+            self.inner.sessions.library().clone(),
+        );
+        glib::spawn_future_local(async move {
+            let on = library
+                .launch_config(&id)
+                .await
+                .is_some_and(|config| config.mangohud);
+            let Some(inner) = weak.upgrade() else {
+                return;
+            };
+            let service = GamescopeService { inner };
+            if service.inner.overlay_writes.get() == asked && service.inner.front.get() == front {
+                service.write_overlay_file(on);
+            }
+        });
+    }
+
+    fn next_overlay_write(&self) -> u64 {
+        let asked = self.inner.overlay_writes.get() + 1;
+        self.inner.overlay_writes.set(asked);
+        asked
+    }
+
+    fn write_overlay(&self, on: bool) {
+        self.next_overlay_write();
+        self.write_overlay_file(on);
+    }
+
+    /// Rewrites MangoApp's config file in place for a switch that is `on`.
+    fn write_overlay_file(&self, on: bool) {
+        let Some(path) = &self.inner.mangoapp else {
+            return;
+        };
+        glib::g_debug!("pindu", "gamescope: Performance Overlay {on} for MangoApp");
+        if let Err(error) = mangoapp::write_config(path, on) {
+            glib::g_warning!(
+                "pindu",
+                "Could not write MangoApp's config {}: {error}",
+                path.display()
+            );
         }
     }
 
@@ -463,7 +575,7 @@ impl GamescopeService {
     }
 
     /// Writes the overlay window's properties for Quick Access open or closed.
-    fn write_overlay(&self) {
+    fn write_overlay_window(&self) {
         let (Some(x11), Some(window)) = (&self.inner.x11, self.inner.overlay.upgrade()) else {
             return;
         };
@@ -590,6 +702,7 @@ impl GamescopeService {
         for listener in self.inner.front_listeners.borrow().iter() {
             listener(front);
         }
+        self.write_overlay_for_front();
     }
 
     /// Gives a window another client just mapped its game's app ID, when it is one.
