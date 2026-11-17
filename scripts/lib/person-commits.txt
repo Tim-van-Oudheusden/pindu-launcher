@@ -1,0 +1,12 @@
+# Commits a person made without AI assistance, read by scripts/ai-extent.sh. One commit per line: the
+# hash, then the issue or reason. Only the maintainer adds a line here (AI_DISCLOSURE.md says why).
+30c3504 Initial commit: the one-line README GitHub created
+26522fe #1: assets/pindu_icon.png, the icon artwork
+2799c02 #1: the GPL-3.0 licence text
+af8e050 #4: the development Flatpak manifest, written by hand
+61c1d10 #2: the first AI_DISCLOSURE.md
+b7d17c2 #58: the store screenshots and their credits
+3133085 #58: the screenshot credits
+79a3385 #58: the MetaInfo text
+1bac685 #37, #46: the Proton tier and gamepad access in the development manifest
+a5c209d data/home/background.webm, the "Ambient Flow" video
