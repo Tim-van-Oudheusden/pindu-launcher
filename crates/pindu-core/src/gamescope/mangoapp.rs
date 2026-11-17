@@ -125,12 +125,25 @@ mod tests {
 
     #[test]
     fn a_read_only_config_file_is_no_session_overlay() {
+        use std::os::unix::fs::MetadataExt;
+
         let file = config_file();
         let mut permissions = file.as_file().metadata().unwrap().permissions();
         permissions.set_readonly(true);
         file.as_file().set_permissions(permissions).unwrap();
+        // We created the file, so it is ours: root writes it despite its mode, and then
+        // the launcher really can drive MangoApp through it.
+        let root = file.as_file().metadata().unwrap().uid() == 0;
+        let found = session_config_file(true, Some(file.path().as_os_str()));
+        assert_eq!(found.as_deref(), root.then_some(file.path()));
+    }
+
+    #[test]
+    fn a_config_path_nobody_can_write_is_no_session_overlay() {
+        // Not even root opens a folder for writing.
+        let folder = tempfile::tempdir().unwrap();
         assert_eq!(
-            session_config_file(true, Some(file.path().as_os_str())),
+            session_config_file(true, Some(folder.path().as_os_str())),
             None
         );
     }
