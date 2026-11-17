@@ -87,6 +87,14 @@
   </supports>
 
   <releases>
+    <release version="0.4.1" date="2026-11-17">
+      <description>
+        <p>A fix for fullscreen mode in virtual machines.</p>
+        <ul>
+          <li>Fullscreen mode no longer crashes in a virtual machine with 3D acceleration and Venus (virtio-gpu)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-11-16">
       <description>
         <p>Release files for ARM (aarch64), a fix for a crash on Steam libraries, and more in the fullscreen Quick Access panel.</p>
