@@ -17,6 +17,7 @@ use pindu_core::launch::{self, LaunchSettings};
 use pindu_core::library::PlaytimeOrigin;
 use pindu_core::manual;
 use pindu_core::model::{Collection, Game, GameId, LaunchConfig, LaunchKind, Source, Timestamp};
+use pindu_core::panels::Playing;
 
 use crate::collection_actions::collection_menu;
 use crate::launch_service::launcher_name;
@@ -207,14 +208,19 @@ impl GamePage {
         imp.logo
             .update_property(&[gtk::accessible::Property::Label(&game.title)]);
         imp.play_button.set_action_target_value(Some(&target));
-        let handler = object.connect_notify_local(
-            Some("playing"),
-            glib::clone!(
-                #[weak(rename_to = page)]
-                self,
-                move |object, _| page.show_playing(object.is_playing())
-            ),
-        );
+        let mut handlers: Vec<_> = ["playing", "playing-in-store"]
+            .into_iter()
+            .map(|property| {
+                object.connect_notify_local(
+                    Some(property),
+                    glib::clone!(
+                        #[weak(rename_to = page)]
+                        self,
+                        move |object, _| page.show_playing(object.playing())
+                    ),
+                )
+            })
+            .collect();
         let favourite_handler = object.connect_notify_local(
             Some("favourite"),
             glib::clone!(
@@ -223,9 +229,10 @@ impl GamePage {
                 move |object, _| page.show_favourite(object.game().favourite)
             ),
         );
+        handlers.push(favourite_handler);
         imp.playing_handler
-            .replace(Some((object.clone(), vec![handler, favourite_handler])));
-        self.show_playing(object.is_playing());
+            .replace(Some((object.clone(), handlers)));
+        self.show_playing(object.playing());
         imp.favourite_button.set_action_target_value(Some(&target));
         self.show_favourite(game.favourite);
         imp.open_in_launcher.set_action_target_value(Some(&target));
@@ -362,7 +369,7 @@ impl GamePage {
                 self.load_launch_settings();
             }
         }
-        self.show_playing(self.game().is_some_and(|object| object.is_playing()));
+        self.show_playing(self.game().map_or(Playing::No, |object| object.playing()));
     }
 
     fn has_about(&self) -> bool {
@@ -396,31 +403,24 @@ impl GamePage {
         button.set_tooltip_text(Some(&tooltip));
     }
 
-    /// Play turns into Stop while a game we started runs.
-    fn show_playing(&self, playing: bool) {
+    /// Play turns into Stop while a game we started runs, and into Return while its store
+    /// launcher runs it.
+    fn show_playing(&self, playing: Playing) {
         let button = &self.imp().play_button;
-        let (label, action, style, old_style) = if playing {
-            (
-                gettext("_Stop"),
-                "app.stop",
-                "destructive-action",
-                "suggested-action",
-            )
-        } else {
-            (
-                gettext("_Play"),
-                "app.play",
-                "suggested-action",
-                "destructive-action",
-            )
+        let (label, action, style) = match playing {
+            Playing::Started => (gettext("_Stop"), "app.stop", "destructive-action"),
+            Playing::InStore => (gettext("_Return"), "win.playing-return", "suggested-action"),
+            Playing::No => (gettext("_Play"), "app.play", "suggested-action"),
         };
         button.set_label(&label);
         button.set_action_name(Some(action));
-        button.remove_css_class(old_style);
+        for old_style in ["destructive-action", "suggested-action"] {
+            button.remove_css_class(old_style);
+        }
         button.add_css_class(style);
         let imp = self.imp();
         imp.playing_card
-            .set_visible(playing && imp.fullscreen.get());
+            .set_visible(playing != Playing::No && imp.fullscreen.get());
     }
 
     /// Shows the rows a game's settings have and saves what the user changes.

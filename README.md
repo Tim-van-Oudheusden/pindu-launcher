@@ -365,7 +365,10 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   moment the store opens: its windows, and any untagged window another app opens meanwhile, such as Steam's update or
   sign-in window, get the game's app ID and come to the front. The app is back when the last of those windows closes,
   and stops expecting the game 10 seconds later. While none has opened the app stays in front, and after a minute it
-  stops waiting. Guide brings the app to the front as with other games, and starting the game again brings it back.
+  stops waiting. Guide brings the app to the front as with other games. From its first window until the app stops
+  expecting it, the game counts as playing: its page and options sheet offer Return instead of Play, and it has a
+  Playing Now card with Return but no Stop, since its store launcher runs it. Return, or Play from anywhere else,
+  brings it back to the front without handing it to the store again.
 - A Steam client that a Steam game starts inside the session tags its own windows (in a `--steam` gamescope it runs as
   Big Picture, one window) as app 769, as the app's window is, and writes the focus list itself. The app therefore pins
   its window (`GAMESCOPECTRL_BASELAYER_WINDOW`) whenever it should be in front, including while a game it wants in

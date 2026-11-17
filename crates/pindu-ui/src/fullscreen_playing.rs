@@ -3,8 +3,9 @@
 //! Return to its page and Stop. Both panels hold the same cards, each a `PlayingCards`,
 //! which follow the games starting and ending; their times move on each minute while their
 //! panel shows. The window has the cards' `win.playing-return` and `win.playing-stop`. In
-//! a `--steam` gamescope, Return also brings the game back to the front, and Guide over a
-//! game opens the drawer on the cards.
+//! a `--steam` gamescope, Return also brings the game back to the front, Guide over a game
+//! opens the drawer on the cards, and a store-launched game that plays gets a card too,
+//! with Return alone, since its store launcher runs it.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -130,15 +131,23 @@ fn tick_times(inner: &Rc<Inner>) {
     inner.tick.replace(Some(tick));
 }
 
-/// The games we started that run, the first started first, each with when it began.
+/// The games that run, each with when it began: the games we started, the first started
+/// first, then the store-launched game that plays.
 fn playing_games(application: &PinduApplication) -> Vec<(GameObject, Timestamp)> {
     let library = application.library_service().model();
     application
         .session_service()
         .sessions()
         .into_iter()
+        .chain(application.gamescope_service().store_playing())
         .filter_map(|(id, started_at)| Some((library.game_object(&id)?, started_at)))
         .collect()
+}
+
+/// Whether any game runs: one we started, or a store-launched game that plays.
+fn any_playing(application: &PinduApplication) -> bool {
+    application.session_service().any_playing()
+        || application.gamescope_service().store_playing().is_some()
 }
 
 impl PinduWindow {
@@ -173,6 +182,13 @@ impl PinduWindow {
                 self,
                 move || window.fill_playing_cards()
             ));
+        application
+            .gamescope_service()
+            .connect_store_playing_changed(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move || window.fill_playing_cards()
+            ));
         self.fill_playing_cards();
         application
             .gamescope_service()
@@ -193,7 +209,7 @@ impl PinduWindow {
         };
         let by_guide =
             front == Front::Launcher && application.gamescope_service().launcher_by_guide();
-        if !by_guide || !self.is_fullscreen() || !application.session_service().any_playing() {
+        if !by_guide || !self.is_fullscreen() || !any_playing(&application) {
             return;
         }
         self.show_panel(Panel::Drawer(DrawerLevel::Main));
@@ -224,11 +240,18 @@ impl PinduWindow {
 }
 
 impl PinduQuickAccess {
-    /// Fills the panel's cards now and again whenever a game we started begins or ends.
+    /// Fills the panel's cards now and again whenever a game begins or ends.
     pub(crate) fn setup_playing_cards(&self, application: &PinduApplication) {
         application
             .session_service()
             .connect_sessions_changed(glib::clone!(
+                #[weak(rename_to = quick_access)]
+                self,
+                move || quick_access.fill_playing_cards()
+            ));
+        application
+            .gamescope_service()
+            .connect_store_playing_changed(glib::clone!(
                 #[weak(rename_to = quick_access)]
                 self,
                 move || quick_access.fill_playing_cards()
@@ -268,8 +291,9 @@ fn session_time(started_at: Timestamp, now: Timestamp) -> String {
     )
 }
 
-/// A Playing Now card for a game we started that runs: its title, `time` it has run, and
-/// Return to its page or Stop it. Also gives the label of its time, to move it on.
+/// A Playing Now card for a game that runs: its title, `time` it has run, and Return to
+/// its page, or Stop it when we started it. Also gives the label of its time, to move it
+/// on.
 fn playing_card(game: &GameObject, time: String) -> (gtk::Box, gtk::Label) {
     let card = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -306,6 +330,10 @@ fn playing_card(game: &GameObject, time: String) -> (gtk::Box, gtk::Label) {
         (gettext("_Return"), "win.playing-return", "suggested-action"),
         (gettext("_Stop"), "win.playing-stop", "destructive-action"),
     ] {
+        // Only a game we started can be stopped.
+        if action == "win.playing-stop" && !game.is_playing() {
+            continue;
+        }
         let button = gtk::Button::builder()
             .label(label)
             .use_underline(true)

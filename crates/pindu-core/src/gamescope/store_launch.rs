@@ -20,6 +20,7 @@ pub const STORE_LAUNCH_GRACE: Duration = Duration::from_secs(10);
 /// A store launch that is expected in front.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StoreLaunch {
+    id: GameId,
     game: ExpectedGame,
     phase: Phase,
     /// Whether the Steam client launches the game, so its windows may be the launch's.
@@ -43,6 +44,7 @@ impl StoreLaunch {
     /// The launch of the game with `id`, whose URI opened at `now`.
     pub fn new(id: &GameId, now: Instant) -> Self {
         Self {
+            id: id.clone(),
             game: ExpectedGame::new(id, None),
             phase: Phase::Waiting(now),
             by_steam: id.source() == Source::Steam,
@@ -70,6 +72,17 @@ impl StoreLaunch {
     /// The app ID the game's windows get (see [`app_id`](super::app_id)).
     pub fn app_id(&self) -> u32 {
         self.game.app_id
+    }
+
+    /// The game the store launcher was handed.
+    pub fn game(&self) -> &GameId {
+        &self.id
+    }
+
+    /// Whether the game plays: a window with its app ID has shown, and the launch is not
+    /// over yet. The launcher can bring it back to the front, but not stop it.
+    pub fn is_playing(&self) -> bool {
+        !matches!(self.phase, Phase::Waiting(_))
     }
 
     /// Follows the root's `GAMESCOPE_FOCUSABLE_APPS` as it changed at `now`: the app IDs of
@@ -205,6 +218,24 @@ mod tests {
         let left = start + Duration::from_secs(50);
         hades.focusable_apps_changed(&[769], left);
         assert_eq!(hades.deadline(), Some(left + STORE_LAUNCH_GRACE));
+    }
+
+    #[test]
+    fn a_launch_plays_from_its_first_window_until_it_is_over() {
+        let start = Instant::now();
+        let at = |seconds| start + Duration::from_secs(seconds);
+        let mut hades = launch(start);
+        let id = hades.app_id();
+        assert!(!hades.is_playing());
+        hades.focusable_apps_changed(&[769, id], at(5));
+        assert!(hades.is_playing());
+        // Between the store launcher's window and the game's, it still plays.
+        hades.focusable_apps_changed(&[769], at(30));
+        assert!(hades.is_playing());
+        assert_eq!(
+            hades.game(),
+            &"heroic-epic:hades".parse::<GameId>().unwrap()
+        );
     }
 
     fn window(xid: Xid) -> WindowFacts {
