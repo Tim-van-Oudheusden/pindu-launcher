@@ -23,8 +23,7 @@ use pindu_core::system::bluetooth::{BluetoothState, Busy, Device, Power, Prompt,
 use crate::application::PinduApplication;
 use crate::bluetooth_service::BluetoothService;
 use crate::quick_access::PinduQuickAccess;
-use crate::secret_dialog::SecretDialog;
-use crate::window::PinduWindow;
+use crate::secret_dialog::{SecretDialog, ask_secret};
 
 /// The icon of a device whose own icon the theme lacks.
 const FALLBACK_ICON: &str = "bluetooth-active-symbolic";
@@ -136,6 +135,19 @@ impl PinduQuickAccess {
             self,
             move |state| quick_access.show_bluetooth_state(state)
         ));
+        // What the agent asks moves between the main window and Quick Access over the game
+        // as the latter opens and closes, before the overlay closes its dialogs.
+        application
+            .gamescope_service()
+            .connect_quick_access_changed(glib::clone!(
+                #[weak(rename_to = quick_access)]
+                self,
+                move |_| {
+                    if let Some(service) = quick_access.bluetooth_service() {
+                        quick_access.show_bluetooth_prompt(&service.state());
+                    }
+                }
+            ));
         self.show_bluetooth_state(&service.state());
     }
 
@@ -166,14 +178,10 @@ impl PinduQuickAccess {
     /// the section is gone.
     fn show_bluetooth_state(&self, state: &BluetoothState) {
         let imp = self.imp();
-        imp.bluetooth_row
-            .set_visible(state.available && !self.over_game());
+        imp.bluetooth_row.set_visible(state.available);
         imp.bluetooth_subtitle
             .set_label(&summary_text(&state.summary()));
-        // Over a game the main window shows what the pairing agent asks.
-        if !self.over_game() {
-            imp.bluetooth_level.show_prompt(state.prompt.as_ref());
-        }
+        self.show_bluetooth_prompt(state);
         if self.level() != Some(QuickAccessLevel::Bluetooth) {
             return;
         }
@@ -182,6 +190,13 @@ impl PinduQuickAccess {
             return;
         }
         self.fill_bluetooth(state);
+    }
+
+    /// Shows what the pairing agent asks in `state` while this panel's host asks, and takes
+    /// the dialog away once it no longer does.
+    fn show_bluetooth_prompt(&self, state: &BluetoothState) {
+        let prompt = state.prompt.as_ref().filter(|_| self.asks_prompts());
+        self.imp().bluetooth_level.show_prompt(prompt);
     }
 
     /// Fills the level for `state`, and puts focus back in the panel when the row it was on
@@ -251,13 +266,12 @@ impl PinduBluetoothLevel {
         })
     }
 
-    /// The service, through the application of the window the level is in.
+    /// The service, from the application Quick Access was set up with: the overlay over a
+    /// game is no window of the application's.
     fn bluetooth_service(&self) -> Option<BluetoothService> {
-        self.root()
-            .and_downcast::<gtk::Window>()
-            .and_then(|window| window.application())
-            .and_downcast::<PinduApplication>()
-            .map(|application| application.bluetooth_service().clone())
+        self.ancestor(PinduQuickAccess::static_type())
+            .and_downcast::<PinduQuickAccess>()?
+            .bluetooth_service()
     }
 
     /// The level's rows for `state`, keeping focus on the row it was on and paired devices
@@ -373,7 +387,8 @@ impl PinduBluetoothLevel {
     }
 
     /// Presents `dialog` for `prompt`, a code to confirm or to type on the device, and
-    /// answers the prompt with its response.
+    /// answers the prompt with its response. Closing it, with B, Esc or because the prompt
+    /// went, responds too, after its `closed`.
     fn present_alert(&self, prompt: &Prompt, dialog: adw::AlertDialog) -> adw::Dialog {
         let answered = prompt.clone();
         dialog.connect_response(
@@ -381,17 +396,27 @@ impl PinduBluetoothLevel {
             glib::clone!(
                 #[weak(rename_to = level)]
                 self,
-                move |_, response| {
-                    let Some(service) = level.bluetooth_service() else {
-                        return;
-                    };
-                    // A dialog closing for a prompt gone or replaced answers nothing.
-                    if service.state().prompt.as_ref() != Some(&answered) {
+                move |dialog, response| {
+                    let imp = level.imp();
+                    // A dialog taken away answers nothing: its prompt went, was replaced
+                    // or moved to the other window.
+                    let shown = imp
+                        .bluetooth_prompt
+                        .borrow()
+                        .as_ref()
+                        .is_some_and(|(shown, _)| shown == dialog.upcast_ref::<adw::Dialog>());
+                    if !shown {
                         return;
                     }
                     // The dialog closes itself after its response; the answer taking the
                     // prompt away must not close it again.
-                    level.imp().bluetooth_prompt.replace(None);
+                    imp.bluetooth_prompt.replace(None);
+                    let Some(service) = level.bluetooth_service() else {
+                        return;
+                    };
+                    if service.state().prompt.as_ref() != Some(&answered) {
+                        return;
+                    }
                     if matches!(answered, Prompt::Confirm { .. }) {
                         service.confirm(response == "pair");
                     } else {
@@ -400,21 +425,6 @@ impl PinduBluetoothLevel {
                 }
             ),
         );
-        dialog.connect_closed(glib::clone!(
-            #[weak(rename_to = level)]
-            self,
-            move |dialog| {
-                let imp = level.imp();
-                let ours = imp
-                    .bluetooth_prompt
-                    .borrow()
-                    .as_ref()
-                    .is_some_and(|(shown, _)| shown == dialog.upcast_ref::<adw::Dialog>());
-                if ours {
-                    imp.bluetooth_prompt.replace(None);
-                }
-            }
-        ));
         // On the window the level is in.
         dialog.present(self.root().as_ref());
         dialog.upcast()
@@ -425,8 +435,8 @@ impl PinduBluetoothLevel {
     /// cancelled. The code keyboard starts on the digits and shows what it types: the
     /// device shows the code anyway.
     fn ask_code(&self, device: &str, message: &str) -> Option<adw::Dialog> {
-        let window = self.root().and_downcast::<PinduWindow>()?;
-        let dialog = window.ask_secret(
+        let dialog = ask_secret(
+            self,
             // Translators: {device} is a Bluetooth device's name.
             &gettext("Pair With {device}").replace("{device}", device),
             message,
@@ -443,7 +453,7 @@ impl PinduBluetoothLevel {
                     }
                 }
             ),
-        );
+        )?;
         Some(dialog.upcast())
     }
 

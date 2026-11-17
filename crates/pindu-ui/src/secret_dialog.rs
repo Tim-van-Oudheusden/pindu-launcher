@@ -5,7 +5,8 @@
 //! types too. While the dialog is open the on-screen keyboard takes every button. The
 //! grid and what each button does are `pindu_core::osk`; this draws the keys, marks the
 //! cursor's, and hands the text to the caller on Done or Start, or nothing on Cancel or on
-//! B with the entry empty.
+//! B with the entry empty. It opens on the window Quick Access is in, the main window or
+//! Quick Access over a game (`quick_access_overlay`), whose hint bar shows its buttons.
 
 use std::cell::{Cell, RefCell};
 use std::fmt;
@@ -18,6 +19,7 @@ use pindu_core::hints::Typing;
 use pindu_core::osk::{Keyboard, Outcome};
 
 use crate::fullscreen::Sound;
+use crate::quick_access_overlay::PinduQuickAccessOverlay;
 use crate::search_keyboard::{CURSOR_CLASS, key_label, key_name};
 use crate::window::PinduWindow;
 
@@ -223,6 +225,42 @@ impl SecretDialog {
             gtk::AccessibleAnnouncementPriority::Medium,
         );
     }
+
+    /// Acts on a controller intent while the dialog is open on its host, which plays the
+    /// returned sound and shows the hints again.
+    pub(crate) fn controller_intent(&self, intent: Intent) -> Option<Sound> {
+        match self.handle(intent) {
+            Outcome::Moved | Outcome::Layer => Some(Sound::Move),
+            Outcome::Edit(_) | Outcome::Reveal | Outcome::Confirm => Some(Sound::Select),
+            Outcome::Close => Some(Sound::Back),
+            Outcome::Ignored => None,
+        }
+    }
+
+    /// Presents the dialog on `host`, calling `typed` whenever its entry changes: B's hint
+    /// turns from Delete into Close as the entry empties, however it does.
+    fn present_on(&self, host: &impl IsA<gtk::Widget>, typed: impl Fn() + 'static) {
+        self.imp().entry.connect_changed(move |_| typed());
+        self.present(Some(host));
+    }
+}
+
+/// Asks for a passphrase or PIN on the window `widget` is in, the main window or Quick
+/// Access over a game, as [`PinduWindow::ask_secret`] does; `None` when `widget` is in
+/// neither.
+pub(crate) fn ask_secret(
+    widget: &impl IsA<gtk::Widget>,
+    title: &str,
+    message: &str,
+    keyboard: Keyboard,
+    done: impl FnOnce(Option<String>) + 'static,
+) -> Option<SecretDialog> {
+    let root = widget.root()?;
+    if let Some(window) = root.downcast_ref::<PinduWindow>() {
+        return Some(window.ask_secret(title, message, keyboard, done));
+    }
+    let overlay = root.downcast_ref::<PinduQuickAccessOverlay>()?;
+    Some(overlay.ask_secret(title, message, keyboard, done))
 }
 
 impl PinduWindow {
@@ -238,13 +276,14 @@ impl PinduWindow {
         done: impl FnOnce(Option<String>) + 'static,
     ) -> SecretDialog {
         let dialog = SecretDialog::new(title, message, keyboard, done);
-        // B's hint turns from Delete into Close as the entry empties, however it does.
-        dialog.imp().entry.connect_changed(glib::clone!(
-            #[weak(rename_to = window)]
+        dialog.present_on(
             self,
-            move |_| window.update_hints()
-        ));
-        dialog.present(Some(self));
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move || window.update_hints()
+            ),
+        );
         dialog
     }
 
@@ -259,13 +298,55 @@ impl PinduWindow {
         let Some(dialog) = self.secret_dialog() else {
             return false;
         };
-        let sound = match dialog.handle(intent) {
-            Outcome::Moved | Outcome::Layer => Some(Sound::Move),
-            Outcome::Edit(_) | Outcome::Reveal | Outcome::Confirm => Some(Sound::Select),
-            Outcome::Close => Some(Sound::Back),
-            Outcome::Ignored => None,
+        if let Some(sound) = dialog.controller_intent(intent) {
+            self.play_sound(sound);
+        }
+        self.update_hints();
+        true
+    }
+
+    /// The open passphrase dialog's cursor key and whether its entry is empty, for the
+    /// hints.
+    pub(crate) fn secret_dialog_typing(&self) -> Option<Typing> {
+        self.secret_dialog().map(|dialog| dialog.typing())
+    }
+}
+
+impl PinduQuickAccessOverlay {
+    /// Asks for a passphrase or PIN over the game, as [`PinduWindow::ask_secret`] does in
+    /// the main window: the dialog's keyboard takes the controller and the overlay's hint
+    /// bar shows its buttons.
+    pub fn ask_secret(
+        &self,
+        title: &str,
+        message: &str,
+        keyboard: Keyboard,
+        done: impl FnOnce(Option<String>) + 'static,
+    ) -> SecretDialog {
+        let dialog = SecretDialog::new(title, message, keyboard, done);
+        dialog.present_on(
+            self,
+            glib::clone!(
+                #[weak(rename_to = overlay)]
+                self,
+                move || overlay.update_hints()
+            ),
+        );
+        dialog
+    }
+
+    /// The open passphrase dialog, if any.
+    fn secret_dialog(&self) -> Option<SecretDialog> {
+        self.visible_dialog().and_downcast::<SecretDialog>()
+    }
+
+    /// Hands `intent` to the open passphrase dialog, which takes every button then;
+    /// `false` when none is open.
+    pub(crate) fn secret_dialog_intent(&self, intent: Intent) -> bool {
+        let Some(dialog) = self.secret_dialog() else {
+            return false;
         };
-        if let Some(sound) = sound {
+        if let Some(sound) = dialog.controller_intent(intent) {
             self.play_sound(sound);
         }
         self.update_hints();
