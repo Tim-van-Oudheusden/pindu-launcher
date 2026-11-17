@@ -27,6 +27,7 @@ use crate::config::APP_ID;
 use crate::fullscreen::NavigationSounds;
 use crate::fullscreen_bluetooth::PinduBluetoothLevel;
 use crate::fullscreen_network::PinduNetworkLevel;
+use crate::fullscreen_power::PinduPowerLevel;
 use crate::fullscreen_sound_output::PinduSoundOutputLevel;
 use crate::fullscreen_system_update::PinduSystemUpdateLevel;
 use crate::game_page::GamePage;
@@ -155,7 +156,7 @@ mod imp {
         #[template_child]
         pub drawer_power_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
-        pub drawer_power: TemplateChild<gtk::ListBox>,
+        pub drawer_power_level: TemplateChild<PinduPowerLevel>,
         #[template_child]
         pub options_panel: TemplateChild<gtk::Box>,
         #[template_child]
@@ -397,6 +398,7 @@ mod imp {
             PinduBluetoothLevel::ensure_type();
             PinduSystemUpdateLevel::ensure_type();
             PinduSoundOutputLevel::ensure_type();
+            PinduPowerLevel::ensure_type();
             klass.bind_template();
         }
 

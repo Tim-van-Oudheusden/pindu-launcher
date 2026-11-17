@@ -3,6 +3,7 @@ blueprint_names = [
   'cover_tile',
   'fullscreen_bluetooth',
   'fullscreen_network',
+  'fullscreen_power',
   'fullscreen_sound_output',
   'fullscreen_system_update',
   'game_dialog',

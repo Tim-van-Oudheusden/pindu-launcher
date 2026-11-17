@@ -149,7 +149,7 @@ the services; they never talk to the bus or spawn a process themselves.
 | Section | Core module (pure logic and the trait) | UI backend | UI service | UI level |
 | --- | --- | --- | --- | --- |
 | Availability | `system` (the rules in [What is available](#what-is-available), from facts the backends report) | | | |
-| Power | `system::power` (`PowerBackend`) | `logind_backend.rs` | `system_power_service.rs` | not yet moved (#338) |
+| Power | `system::power` (`PowerBackend`) | `logind_backend.rs` | `system_power_service.rs` | `PinduPowerLevel` (`fullscreen_power.rs`), `data/ui/fullscreen_power.blp` |
 | Network | `system::network` (`NetworkBackend`) | `networkmanager_backend.rs` | `network_service.rs` | `PinduNetworkLevel` (`fullscreen_network.rs`), `data/ui/fullscreen_network.blp` |
 | Bluetooth | `system::bluetooth` (`BluetoothBackend`) | `bluez_backend.rs` | `bluetooth_service.rs` | `PinduBluetoothLevel` (`fullscreen_bluetooth.rs`), `data/ui/fullscreen_bluetooth.blp` |
 | Audio output | `system::audio` (`AudioBackend`, `pw-dump` parser) | `wireplumber_backend.rs` | `audio_output_service.rs` | `PinduSoundOutputLevel` (`fullscreen_sound_output.rs`), `data/ui/fullscreen_sound_output.blp` |

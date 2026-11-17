@@ -234,32 +234,7 @@ template $PinduWindow: Adw.ApplicationWindow {
               StackPage {
                 name: "power";
 
-                child: ScrolledWindow {
-                  hscrollbar-policy: never;
-
-                  child: Box {
-                    orientation: vertical;
-                    spacing: 12;
-
-                    Label {
-                      label: _("Power");
-                      xalign: 0;
-
-                      styles [
-                        "title-3",
-                      ]
-                    }
-
-                    // Suspend, Restart and Power Off, filled from what logind allows.
-                    ListBox drawer_power {
-                      selection-mode: none;
-
-                      styles [
-                        "navigation-sidebar",
-                      ]
-                    }
-                  };
-                };
+                child: $PinduPowerLevel drawer_power_level {};
               }
             }
           };
