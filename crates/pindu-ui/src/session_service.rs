@@ -15,7 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
-use pindu_core::launch::Command;
+use pindu_core::launch::{Command, LauncherDisplay};
 use pindu_core::model::{GameId, Timestamp};
 use pindu_core::paths::default_library_db_path;
 use pindu_core::store::Store;
@@ -280,8 +280,9 @@ async fn write<T: Send + 'static>(
 }
 
 /// Spawns the command on the host: through `flatpak-spawn --host` inside Flatpak (never
-/// `--watch-bus`), directly outside it. With `output`, the game's output and errors go
-/// there; `flatpak-spawn` hands them on to the game.
+/// `--watch-bus`), on our display rather than the host session's, directly outside it.
+/// With `output`, the game's output and errors go there; `flatpak-spawn` hands them on to
+/// the game.
 pub fn spawn(command: &Command, output: Option<File>) -> Result<gio::Subprocess, glib::Error> {
     let launcher = match output {
         Some(output) => {
@@ -292,7 +293,7 @@ pub fn spawn(command: &Command, output: Option<File>) -> Result<gio::Subprocess,
         None => gio::SubprocessLauncher::new(gio::SubprocessFlags::NONE),
     };
     let argv = if permission_service::in_flatpak() {
-        command.flatpak_spawn_argv()
+        command.flatpak_spawn_argv_on(&LauncherDisplay::from_vars(|name| std::env::var(name).ok()))
     } else {
         for (key, value) in &command.environment {
             launcher.setenv(key, value, true);

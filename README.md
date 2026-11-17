@@ -312,6 +312,8 @@ gamescope -f -- flatpak run --nosocket=wayland io.github.tim_van_oudheusden.pind
   opens takes gamescope's focus, and the app gets it back when the game quits.
 - `--nosocket=wayland` matters when gamescope starts from a desktop session: without it, Flatpak gives the app the
   desktop's Wayland display, and the window opens on the desktop instead of in gamescope.
+- Games the app starts on the host get the app's display rather than the desktop's: its `DISPLAY`, and with
+  `--nosocket=wayland` an empty `WAYLAND_DISPLAY`, so a game that would use Wayland falls back to X11 in gamescope.
 - `-f` makes gamescope's window fullscreen when it runs nested in a desktop session.
 - Under X11 the app draws at scale 1. On a 4K screen, let gamescope upscale a smaller picture
   (`gamescope -W 3840 -H 2160 -w 1920 -h 1080 -f -- …`) or scale the app (`flatpak run --env=GDK_SCALE=2 …`).
