@@ -47,6 +47,7 @@ data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in
 data/ui/cover_tile.blp
 data/ui/fullscreen_bluetooth.blp
 data/ui/fullscreen_network.blp
+data/ui/fullscreen_power.blp
 data/ui/fullscreen_sound_output.blp
 data/ui/fullscreen_system_update.blp
 data/ui/game_dialog.blp
