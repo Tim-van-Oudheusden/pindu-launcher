@@ -347,17 +347,19 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   otherwise a stable ID with the high bit set. Its window is recognised by the window class the app gives it, by its
   process when the app is not sandboxed, or as the only new window while one game runs. The game comes to the front when
   it starts, and the app when it ends.
-- Guide during play, let go without pressing another button, brings the app to the front, with the menu drawer open on
-  Playing Now; Return there brings the game back.
-- Guide + A, or the Steam Deck's "…", during play opens Quick Access over the running game, in a see-through window of
-  its own that gamescope draws above the game (`STEAM_OVERLAY`); either again, or B, closes it and gives input back to
-  the game, and Guide closes it on the way to the app. R3 stays the game's. The game sees the A of Guide + A too: the
-  app reads controllers alongside games and cannot take a press from them. Over a game Quick Access shows the levels
-  that need no library page or flow of the app's window: Performance is the game's, Playing Now's Return and Stop work,
-  and Surprise Me and Add a Store are left out. Network's passphrase and Bluetooth's PIN, code and confirmation are
-  asked over the game and answered with the controller there. A passphrase still unanswered as Quick Access closes
-  moves to the app's window and comes back when Quick Access opens again; closing it while pairing refuses, as leaving
-  Bluetooth does. The controller still reaches the game while it is open.
+- Guide during play, let go without pressing another button, opens the menu drawer over the running game, in a
+  see-through window of its own that gamescope draws above the game (`STEAM_OVERLAY`), as Guide opens Steam's menu.
+  The game stays in front behind it. The drawer holds the game's Playing Now card (Return closes the drawer, Stop ends a
+  game the app started), Home, Library and Collections, which bring the app to the front there; leaving fullscreen
+  mode, Quit and Power are left out. Guide again, or B, closes it and gives input back to the game.
+- Guide + A, or the Steam Deck's "…", during play opens Quick Access over the running game in the same window; either
+  again, or B, closes it, and Guide turns from it to the menu drawer. R3 stays the game's. The game sees the A of
+  Guide + A too: the app reads controllers alongside games and cannot take a press from them. Over a game Quick Access
+  shows the levels that need no library page or flow of the app's window: Performance is the game's, Playing Now's
+  Return and Stop work, and Surprise Me and Add a Store are left out. Network's passphrase and Bluetooth's PIN, code
+  and confirmation are asked over the game and answered with the controller there. A passphrase still unanswered as
+  Quick Access closes moves to the app's window and comes back when Quick Access opens again; closing it while pairing
+  refuses, as leaving Bluetooth does. The controller still reaches the game while it is open.
 - With `MANGOHUD_CONFIGFILE` naming a file the app can write, as gamescope-session-plus and `gamescope --steam
   --mangoapp` set it, the Performance Overlay switch drives their MangoApp instead of wrapping games in `mangohud`: the
   app rewrites the file in place with `preset=2` or `no_display` for the game in front, when it comes to the front and
@@ -369,7 +371,7 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   moment the store opens: its windows, and any untagged window another app opens meanwhile, such as Steam's update or
   sign-in window, get the game's app ID and come to the front. The app is back when the last of those windows closes,
   and stops expecting the game 10 seconds later. While none has opened the app stays in front, and after a minute it
-  stops waiting. Guide brings the app to the front as with other games. From its first window until the app stops
+  stops waiting. Guide over it opens the menu drawer as with other games. From its first window until the app stops
   expecting it, the game counts as playing: its page and options sheet offer Return instead of Play, and it has a
   Playing Now card with Return but no Stop, since its store launcher runs it. Return, or Play from anywhere else,
   brings it back to the front without handing it to the store again.

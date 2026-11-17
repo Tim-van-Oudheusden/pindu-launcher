@@ -11,6 +11,7 @@ use crate::audio_output_service::AudioOutputService;
 use crate::bluetooth_service::BluetoothService;
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
 use crate::game_dialog::GameDialog;
+use crate::game_overlay::PinduGameOverlay;
 use crate::gamepad_service::GamepadService;
 use crate::gamescope_service::GamescopeService;
 use crate::launch_service;
@@ -22,7 +23,6 @@ use crate::notification_service::NotificationService;
 use crate::permission_service;
 use crate::power_service::PowerService;
 use crate::preferences::PreferencesDialog;
-use crate::quick_access_overlay::PinduQuickAccessOverlay;
 use crate::search_provider;
 use crate::session_service::SessionService;
 use crate::sources::source_list;
@@ -306,13 +306,14 @@ mod imp {
                 }
             }
             window.present();
-            // In a `--steam` gamescope Quick Access also opens over a running game, in a
-            // window of its own; shown without focus, it stays see-through until it opens.
+            // In a `--steam` gamescope the menu drawer and Quick Access also open over a
+            // running game, in a window of their own; shown without focus, it stays
+            // see-through until one opens.
             if new_window
                 && application.gamescope_service().is_active()
                 && let Some(window) = window.downcast_ref::<PinduWindow>()
             {
-                let overlay = PinduQuickAccessOverlay::new(&application, window);
+                let overlay = PinduGameOverlay::new(&application, window);
                 application.gamescope_service().attach_overlay(&overlay);
                 overlay.set_visible(true);
             }

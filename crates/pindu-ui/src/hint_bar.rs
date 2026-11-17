@@ -1,7 +1,8 @@
 //! Fullscreen mode's hint bar: what each controller button does right now, with the active
 //! controller's glyphs. Which hints show is `pindu_core::hints`; this follows the focused
-//! widget, the shown page, open dialogs and the active controller, and draws the bar. Quick
-//! Access over a game (`quick_access_overlay`) draws its own bar the same way.
+//! widget, the shown page, open dialogs and the active controller, and draws the bar. The
+//! menu drawer and Quick Access over a game (`game_overlay`) draw their own bars the same
+//! way.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;

@@ -1,8 +1,9 @@
-//! Quick Access over a running game: the launcher's overlay window, which gamescope
-//! composites above the game in `--steam` mode, as plain data. The window carries
-//! `STEAM_OVERLAY` from the start and is open or closed by its opacity and
-//! `STEAM_INPUT_FOCUS`; it never carries `STEAM_GAME`, so `GAMESCOPE_FOCUSED_APP_GFX` stays
-//! the game's while it is open. Tested against gamescope 3.17.0.
+//! The launcher's overlay window over a running game, which gamescope composites above the
+//! game in `--steam` mode, as plain data: what it shows (the menu drawer or Quick Access)
+//! and the properties that open and close it. The window carries `STEAM_OVERLAY` from the
+//! start and is open or closed by its opacity and `STEAM_INPUT_FOCUS`; it never carries
+//! `STEAM_GAME`, so `GAMESCOPE_FOCUSED_APP_GFX` stays the game's while it is open. Tested
+//! against gamescope 3.17.0.
 
 use super::InGameIntent;
 
@@ -19,9 +20,9 @@ pub struct OverlayProps {
     pub input_focus: u32,
 }
 
-/// The overlay window's properties while Quick Access is `open` over a game, or closed:
-/// always an overlay, fully opaque and holding input while open, see-through and leaving
-/// input to the game while closed.
+/// The overlay window's properties while it is `open` over a game, or closed: always an
+/// overlay, fully opaque and holding input while open, see-through and leaving input to
+/// the game while closed.
 pub fn overlay_props(open: bool) -> OverlayProps {
     OverlayProps {
         steam_overlay: 1,
@@ -30,14 +31,24 @@ pub fn overlay_props(open: bool) -> OverlayProps {
     }
 }
 
-/// Whether Quick Access is open over the game after `intent`, from `open`: Guide + A or
-/// the Steam Deck's "…" opens or closes it, and Guide closes it as it brings the launcher
-/// to the front, where Quick Access opens inside the main window instead.
-pub fn open_after(open: bool, intent: InGameIntent) -> bool {
-    match intent {
-        InGameIntent::ToggleQuickAccess => !open,
-        InGameIntent::ShowLauncher => false,
-    }
+/// What the overlay window shows over a game.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OverGame {
+    /// The menu drawer, on the left, as Guide opens Steam's menu over a game.
+    Menu,
+    /// Quick Access, on the right.
+    QuickAccess,
+}
+
+/// What the overlay window shows over the game after `intent`, from `shown`: Guide opens or
+/// closes the menu, the Quick Access button opens or closes Quick Access, and either one
+/// turns from the other panel to its own.
+pub fn shown_after(shown: Option<OverGame>, intent: InGameIntent) -> Option<OverGame> {
+    let wanted = match intent {
+        InGameIntent::ToggleMenu => OverGame::Menu,
+        InGameIntent::ToggleQuickAccess => OverGame::QuickAccess,
+    };
+    (shown != Some(wanted)).then_some(wanted)
 }
 
 #[cfg(test)]
@@ -69,10 +80,23 @@ mod tests {
     }
 
     #[test]
-    fn misc1_flips_quick_access_and_guide_closes_it_on_the_way_to_the_launcher() {
-        assert!(open_after(false, InGameIntent::ToggleQuickAccess));
-        assert!(!open_after(true, InGameIntent::ToggleQuickAccess));
-        assert!(!open_after(true, InGameIntent::ShowLauncher));
-        assert!(!open_after(false, InGameIntent::ShowLauncher));
+    fn guide_opens_and_closes_the_menu_over_the_game() {
+        use OverGame::*;
+        assert_eq!(shown_after(None, InGameIntent::ToggleMenu), Some(Menu));
+        assert_eq!(shown_after(Some(Menu), InGameIntent::ToggleMenu), None);
+        // Over Quick Access, Guide turns to the menu, as Steam's button does.
+        assert_eq!(
+            shown_after(Some(QuickAccess), InGameIntent::ToggleMenu),
+            Some(Menu)
+        );
+    }
+
+    #[test]
+    fn the_quick_access_button_opens_and_closes_quick_access_over_the_game() {
+        use OverGame::*;
+        let toggle = InGameIntent::ToggleQuickAccess;
+        assert_eq!(shown_after(None, toggle), Some(QuickAccess));
+        assert_eq!(shown_after(Some(QuickAccess), toggle), None);
+        assert_eq!(shown_after(Some(Menu), toggle), Some(QuickAccess));
     }
 }
