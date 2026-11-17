@@ -228,6 +228,16 @@ impl Keyboard {
         }
     }
 
+    /// The passphrase keyboard for a Bluetooth PIN or passkey: on the first digit, as such
+    /// a code is mostly digits, and showing the text, as the device shows the code anyway.
+    pub fn code() -> Self {
+        Self {
+            layer: Layer::Lower,
+            row: 0,
+            ..Self::default()
+        }
+    }
+
     /// The layer the keyboard shows; [`Layer::rows`] lays it out.
     pub fn layer(&self) -> Layer {
         self.layer
@@ -615,6 +625,20 @@ mod tests {
         assert_eq!(keyboard.handle(Activate, "secret"), Outcome::Reveal);
         assert!(keyboard.hidden());
         assert_eq!(keyboard.key(), Key::Reveal);
+    }
+
+    #[test]
+    fn the_code_keyboard_starts_on_the_first_digit_and_shows_what_it_types() {
+        let mut keyboard = Keyboard::code();
+        assert_eq!(keyboard.layer(), Layer::Lower);
+        assert_eq!(keyboard.key(), Key::Char('1'));
+        assert!(!keyboard.hidden());
+        assert_eq!(
+            keyboard.handle(Activate, "00"),
+            Outcome::Edit("001".to_owned())
+        );
+        keyboard.step(Down);
+        assert_eq!(keyboard.key(), Key::Char('q'));
     }
 
     #[test]

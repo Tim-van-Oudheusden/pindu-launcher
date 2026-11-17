@@ -1,9 +1,11 @@
 //! The passphrase and PIN dialog, for a Wi-Fi passphrase or a Bluetooth PIN typed with a
-//! controller: a title, an entry that shows its text as dots, and the on-screen keyboard
-//! with its lowercase, capitals and symbols layers and its Show key. While the dialog is
-//! open the keyboard takes every button. The grid and what each button does are
-//! `pindu_core::osk`; this draws the keys, marks the cursor's, and hands the text to the
-//! caller on Done or Start, or nothing on Cancel or on B with the entry empty.
+//! controller: a title, a line saying what to type, an entry that shows its text as dots
+//! unless the caller's keyboard shows it, and the on-screen keyboard with its lowercase,
+//! capitals and symbols layers and its Show key. The entry has the focus, so a keyboard
+//! types too. While the dialog is open the on-screen keyboard takes every button. The
+//! grid and what each button does are `pindu_core::osk`; this draws the keys, marks the
+//! cursor's, and hands the text to the caller on Done or Start, or nothing on Cancel or on
+//! B with the entry empty.
 
 use std::cell::{Cell, RefCell};
 use std::fmt;
@@ -50,6 +52,8 @@ mod imp {
     #[template(resource = "/io/github/tim_van_oudheusden/pindu-launcher/ui/secret_dialog.ui")]
     pub struct SecretDialog {
         #[template_child]
+        pub message: TemplateChild<gtk::Label>,
+        #[template_child]
         pub entry: TemplateChild<gtk::Entry>,
         #[template_child]
         pub keyboard_grid: TemplateChild<gtk::Grid>,
@@ -88,10 +92,8 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
             let dialog = self.obj();
-            self.keyboard.set(Keyboard::passphrase());
             // Cancel, Esc and B on an empty entry all close the dialog: no text then.
             dialog.connect_closed(|dialog| dialog.imp().answer.give(None));
-            dialog.show_keys();
         }
     }
     impl WidgetImpl for SecretDialog {}
@@ -106,12 +108,31 @@ glib::wrapper! {
 }
 
 impl SecretDialog {
-    /// A dialog titled `title` that hands the typed text to `done`, or `None` once it is
-    /// cancelled.
-    pub fn new(title: &str, done: impl FnOnce(Option<String>) + 'static) -> Self {
+    /// A dialog titled `title`, saying `message` above its entry, with `keyboard` (the
+    /// passphrase keyboard or the code keyboard of `pindu_core::osk`), that hands the
+    /// typed text to `done`, or `None` once it is cancelled.
+    pub fn new(
+        title: &str,
+        message: &str,
+        keyboard: Keyboard,
+        done: impl FnOnce(Option<String>) + 'static,
+    ) -> Self {
         let dialog: Self = glib::Object::builder().property("title", title).build();
-        dialog.imp().answer.0.replace(Some(Box::new(done)));
+        let imp = dialog.imp();
+        imp.answer.0.replace(Some(Box::new(done)));
+        imp.message.set_label(message);
+        imp.entry
+            .update_property(&[gtk::accessible::Property::Description(message)]);
+        imp.keyboard.set(keyboard);
+        dialog.show_keys();
         dialog
+    }
+
+    /// Closes the dialog without handing the caller anything, as what it asked for went
+    /// away (BlueZ cancelled the request, or a new one replaced it).
+    pub fn withdraw(&self) {
+        self.imp().answer.0.take();
+        self.force_close();
     }
 
     /// Acts on a controller intent, and says what the keyboard did.
@@ -205,11 +226,18 @@ impl SecretDialog {
 }
 
 impl PinduWindow {
-    /// Asks for a passphrase or PIN in a dialog titled `title`, typed with the on-screen
-    /// keyboard or a keyboard; `done` gets the text on Done or Start, or `None` once the
-    /// dialog is cancelled.
-    pub fn ask_secret(&self, title: &str, done: impl FnOnce(Option<String>) + 'static) {
-        let dialog = SecretDialog::new(title, done);
+    /// Asks for a passphrase or PIN in a dialog titled `title` that says `message`, typed
+    /// with `keyboard` on screen or with a keyboard; `done` gets the text on Done or Start,
+    /// or `None` once the dialog is cancelled. The dialog is returned to
+    /// [`withdraw`](SecretDialog::withdraw) it once the question goes away.
+    pub fn ask_secret(
+        &self,
+        title: &str,
+        message: &str,
+        keyboard: Keyboard,
+        done: impl FnOnce(Option<String>) + 'static,
+    ) -> SecretDialog {
+        let dialog = SecretDialog::new(title, message, keyboard, done);
         // B's hint turns from Delete into Close as the entry empties, however it does.
         dialog.imp().entry.connect_changed(glib::clone!(
             #[weak(rename_to = window)]
@@ -217,6 +245,7 @@ impl PinduWindow {
             move |_| window.update_hints()
         ));
         dialog.present(Some(self));
+        dialog
     }
 
     /// The open passphrase dialog, if any.
