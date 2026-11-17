@@ -336,7 +336,11 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   it starts, and the app when it ends.
 - Guide during play brings the app to the front, with the menu drawer open on Playing Now; Return there brings the game
   back.
-- Games the app hands to their store's launcher (Steam, Heroic, Lutris, Bottles) are not brought to the front yet.
+- A game the app hands to its store's launcher (Steam, Heroic, Lutris, Bottles, Faugus) is expected in front from the
+  moment the store opens: its windows, and any untagged window another app opens meanwhile, such as Steam's update or
+  sign-in window, get the game's app ID and come to the front. The app is back when the last of those windows closes,
+  and stops expecting the game 10 seconds later. While none has opened the app stays in front, and after a minute it
+  stops waiting. Guide brings the app to the front as with other games, and starting the game again brings it back.
 - Tested with gamescope 3.17.0 (`gamescope --backend headless --steam --xwayland-count 2`). gamescope's `--steam`
   protocol is undocumented and may change between releases.
 
