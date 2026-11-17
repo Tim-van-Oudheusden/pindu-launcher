@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Pindu launcher
+Comment=Fullscreen mode of Pindu launcher in a gamescope session
+Exec=gamescope-session-plus pindu
+TryExec=gamescope-session-plus
+Type=Application
+DesktopNames=gamescope
