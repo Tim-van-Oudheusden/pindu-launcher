@@ -20,7 +20,8 @@ flowchart LR
 
 ## Cut a release
 
-1. **Open an issue** ("Release X.Y.Z") in the M5 milestone, or whichever one is current, and branch
+1. **Open an issue** ("Release X.Y.Z") from the [Release issue form](../.github/ISSUE_TEMPLATE/release.yml), which
+   carries the [hardware checklist](#hardware-checklist), in the M5 milestone, or whichever one is current, and branch
    `release/<issue>-vX.Y.Z` off an up-to-date `main`.
 2. **Bump the version** in `meson.build` (`project(version:)`), `Cargo.toml` (`[workspace.package] version`) and
    `build-aux/rpm/pindu-launcher.spec` (`Version:`, plus a `%changelog` entry), add an entry at the top of
@@ -47,6 +48,9 @@ flowchart LR
    `pindu-launcher-X.Y.Z-debian-testing-<amd64|arm64>.deb` and `pindu-launcher-X.Y.Z-ubuntu-26.10-<amd64|arm64>.deb`,
    plus `pindu-launcher-X.Y.Z.tar.xz` and `SHA256SUMS`. Install the bundle (the notes say how), start it, and check
    that it opens and imports a library.
+9. **Run the [hardware checklist](#hardware-checklist)** on the release's files, on one real machine, and record the
+   result on the "Release X.Y.Z" issue. Run it on a pre-release, then tag the final version, so a failed check never
+   reaches a final release.
 
 The native packages target the distros that ship GTK 4.24 and libadwaita 1.10 (#232). When a new Fedora, Debian or
 Ubuntu release qualifies, add it to the `packages` and `packages-smoke` matrices in `packaging.yml` and `release.yml`
@@ -62,3 +66,45 @@ and to the table in `build-aux/release-notes.py`.
   with the tag as input. It rebuilds the tag and replaces the files of an existing release.
 - **A published release is broken:** mark it as a pre-release or delete it on GitHub, and release a fixed patch
   version. Keep the tag, so the version is never reused.
+
+## Hardware checklist
+
+Fullscreen mode's system panel, controllers, gamescope and Proton only fail on real hardware, so every release runs
+this checklist once, by hand, on one real machine. Run it on the pre-release before the final tag; Pindu OS waits for a
+recorded pass before it promotes the new launcher from `:testing` to `:stable`
+([pindu-os#30](https://github.com/Tim-van-Oudheusden/pindu-os/issues/30)).
+
+**The machine** runs Pindu OS with the build under test installed, because the system panel's Network, Bluetooth,
+Power and System Update sections only show there (see [System panel](system-panel.md)). It needs a Bluetooth adapter,
+Wi-Fi, a Bluetooth controller, and a Steam library with one native game and one Windows game set to run through Proton.
+
+| Check | Passes when |
+| --- | --- |
+| Fullscreen mode in gamescope | The launcher starts fullscreen in the gamescope session, the controller drives it, a game takes the focus and the launcher gets it back when the game quits |
+| Controller over Bluetooth | **Quick Access → Bluetooth** pairs the controller, which then moves through the library, opens a game's page and goes back |
+| Wi-Fi with the on-screen keyboard | **Quick Access → Network** joins a WPA2 network, with the passphrase typed on the on-screen keyboard with the controller |
+| Suspend and resume | **Power → Suspend** puts the machine to sleep; after waking, the launcher, the controller and the network work again |
+| Steam game | A native Steam game starts from the launcher, and its playtime counts once it quits |
+| Proton game | A Windows game through Proton starts from the launcher, and its playtime counts once it quits |
+| System Update | **Quick Access → System Update** shows the installed version, and the update state and actions it offers work |
+
+**Record it on the "Release X.Y.Z" issue**, which the [Release issue form](../.github/ISSUE_TEMPLATE/release.yml)
+creates with the checklist in it. The title is exactly `Release X.Y.Z`, the final version without `v` or `-rc.N`, so
+one issue holds the checks for every pre-release of that version:
+
+1. Fill in **Hardware tested** (the machine, the Pindu OS image, the controller, the Wi-Fi network) and **Build tested**
+   (the tag and the file installed, for example `v0.5.0-rc.1` and `pindu-launcher-0.5.0-rc.1-1.fc45.x86_64.rpm`).
+2. Tick each check that passes. Comment on a check that fails, with what happened, and file a bug for it.
+3. When every check is ticked for one build, the maintainer adds the label **`hardware-check:passed`** to the issue.
+   That label on that issue is the recorded pass; nothing else counts. The issue may be open or closed.
+
+A failed check leaves the label off. The fix ships in a new pre-release, and the checklist runs again on it: untick the
+boxes and update **Build tested**. If the label was already added and a later build is the one that ships, remove the
+label until the new build passes.
+
+Pindu OS looks the pass up with:
+
+```sh
+gh issue list -R Tim-van-Oudheusden/pindu-launcher --state all --label hardware-check:passed \
+  --search '"Release X.Y.Z" in:title' --json title,url --jq '.[] | select(.title == "Release X.Y.Z") | .url'
+```
