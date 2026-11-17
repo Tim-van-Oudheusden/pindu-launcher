@@ -1,0 +1,56 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Quick Access's System Update level, the "system-update" page of the window's
+// quick_access_stack. Its entry row stays in the window's shared Quick Access list.
+template $PinduSystemUpdateLevel: Adw.Bin {
+  child: ScrolledWindow {
+    hscrollbar-policy: never;
+
+    child: Box {
+      orientation: vertical;
+      spacing: 12;
+
+      Label {
+        label: _("System Update");
+        xalign: 0;
+
+        styles [
+          "title-3",
+        ]
+      }
+
+      // The installed version, and the update waiting for the next start;
+      // filled in code.
+      ListBox quick_access_system_versions {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+
+      // Shown while a rollback is queued.
+      Label quick_access_rollback_note {
+        label: _("The previous version starts next time.");
+        xalign: 0;
+        wrap: true;
+        visible: false;
+
+        styles [
+          "dim-label",
+        ]
+      }
+
+      // Restart to Update, Roll Back or Restart, as bootc's status allows,
+      // or what runs; filled in code.
+      ListBox quick_access_system_actions {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+    };
+  };
+}

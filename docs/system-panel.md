@@ -153,7 +153,7 @@ the services; they never talk to the bus or spawn a process themselves.
 | Network | `system::network` (`NetworkBackend`) | `networkmanager_backend.rs` | `network_service.rs` | `PinduNetworkLevel` (`fullscreen_network.rs`), `data/ui/fullscreen_network.blp` |
 | Bluetooth | `system::bluetooth` (`BluetoothBackend`) | `bluez_backend.rs` | `bluetooth_service.rs` | `PinduBluetoothLevel` (`fullscreen_bluetooth.rs`), `data/ui/fullscreen_bluetooth.blp` |
 | Audio output | `system::audio` (`AudioBackend`, `pw-dump` parser) | `wireplumber_backend.rs` | `audio_output_service.rs` | not yet moved (#338) |
-| OS updates | `system::update` (`UpdateBackend`, `bootc status` parser) | `pindu_os_backend.rs` | `system_update_service.rs` | not yet moved (#338) |
+| OS updates | `system::update` (`UpdateBackend`, `bootc status` parser) | `pindu_os_backend.rs` | `system_update_service.rs` | `PinduSystemUpdateLevel` (`fullscreen_system_update.rs`), `data/ui/fullscreen_system_update.blp` |
 
 - The backends report results through callbacks on the main thread, like `GamepadBackend::start`'s sink, so the core
   stays free of GLib and every flow (join a network, pair a device, roll back) is tested in `pindu-core` with a fake

@@ -174,6 +174,7 @@ impl PinduWindow {
         let [network_devices, wifi_radio, wifi_networks] = imp.quick_access_network_level.lists();
         let [bluetooth_adapter, bluetooth_paired, bluetooth_found] =
             imp.quick_access_bluetooth_level.lists();
+        let [system_versions, system_actions] = imp.quick_access_system_update_level.lists();
         for list in [
             imp.quick_access_designs.get(),
             imp.quick_access_variants.get(),
@@ -193,8 +194,8 @@ impl PinduWindow {
             bluetooth_adapter,
             bluetooth_paired,
             bluetooth_found,
-            imp.quick_access_system_versions.get(),
-            imp.quick_access_system_actions.get(),
+            system_versions,
+            system_actions,
             network_devices,
             wifi_radio,
             wifi_networks,

@@ -1,8 +1,11 @@
 //! Quick Access's System Update, on Pindu OS only (`pindu_core::system::update`): its entry,
 //! subtitled with the installed version or that an update is ready, and its level with the
 //! installed version, the update waiting for the next start, and Restart to Update, Roll
-//! Back (asked first) or Restart, as bootc's status allows. The window shows
-//! [`SystemUpdateService`]'s state and calls it; it never reads the status file itself.
+//! Back (asked first) or Restart, as bootc's status allows. The level is
+//! [`PinduSystemUpdateLevel`], with its own Blueprint (`data/ui/fullscreen_system_update.blp`);
+//! the window keeps the entry, which sits in Quick Access's shared list, and the level's
+//! `win.restart-system` and `win.roll-back-system`. Both show [`SystemUpdateService`]'s
+//! state and call it; neither reads the status file itself.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -14,6 +17,53 @@ use pindu_core::system::update::{Busy, UpdateAction, UpdateState};
 use crate::application::PinduApplication;
 use crate::system_update_service::SystemUpdateService;
 use crate::window::PinduWindow;
+
+mod imp {
+    use super::*;
+
+    #[derive(Debug, Default, gtk::CompositeTemplate)]
+    #[template(
+        resource = "/io/github/tim_van_oudheusden/pindu-launcher/ui/fullscreen_system_update.ui"
+    )]
+    pub struct PinduSystemUpdateLevel {
+        #[template_child]
+        pub quick_access_system_versions: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub quick_access_rollback_note: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub quick_access_system_actions: TemplateChild<gtk::ListBox>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for PinduSystemUpdateLevel {
+        const NAME: &'static str = "PinduSystemUpdateLevel";
+        type Type = super::PinduSystemUpdateLevel;
+        type ParentType = adw::Bin;
+
+        fn class_init(klass: &mut Self::Class) {
+            klass.bind_template();
+        }
+
+        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
+            obj.init_template();
+        }
+    }
+
+    impl ObjectImpl for PinduSystemUpdateLevel {}
+
+    impl WidgetImpl for PinduSystemUpdateLevel {}
+
+    impl BinImpl for PinduSystemUpdateLevel {}
+}
+
+glib::wrapper! {
+    /// Quick Access's System Update level: the installed version, the update waiting for
+    /// the next start, and the actions bootc's status allows. It is the `"system-update"`
+    /// page of the window's Quick Access stack.
+    pub struct PinduSystemUpdateLevel(ObjectSubclass<imp::PinduSystemUpdateLevel>)
+        @extends adw::Bin, gtk::Widget,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
+}
 
 impl PinduWindow {
     /// Adds the level's actions, and shows the entry as the section is and as it changes.
@@ -46,20 +96,15 @@ impl PinduWindow {
         let Some(service) = self.system_update_service() else {
             return;
         };
-        self.fill_system_update(&service.state());
+        self.imp()
+            .quick_access_system_update_level
+            .fill(&service.state());
         service.refresh();
     }
 
     /// Where focus goes on the level: the first action, or else the installed version.
     pub(crate) fn system_update_focus(&self) -> Option<gtk::Widget> {
-        let imp = self.imp();
-        let actions = &imp.quick_access_system_actions;
-        let list = if actions.is_visible() {
-            actions
-        } else {
-            &imp.quick_access_system_versions
-        };
-        list.row_at_index(0).map(|row| row.upcast())
+        self.imp().quick_access_system_update_level.focus_target()
     }
 
     fn system_update_service(&self) -> Option<SystemUpdateService> {
@@ -89,51 +134,12 @@ impl PinduWindow {
             self.show_panel(Panel::QuickAccess(QuickAccessLevel::Main));
             return;
         }
-        let had_focus = self.focus_in_system_update();
-        self.fill_system_update(state);
+        let level = &imp.quick_access_system_update_level;
+        let had_focus = level.has_focus();
+        level.fill(state);
         if had_focus {
             self.focus_panel(None);
         }
-    }
-
-    /// Whether focus is on one of the level's rows, which filling it again takes away.
-    fn focus_in_system_update(&self) -> bool {
-        let imp = self.imp();
-        gtk::prelude::GtkWindowExt::focus(self).is_some_and(|focus| {
-            focus.is_ancestor(&*imp.quick_access_system_versions)
-                || focus.is_ancestor(&*imp.quick_access_system_actions)
-        })
-    }
-
-    /// The level's rows for `state`: the versions, the note on a queued rollback, and the
-    /// actions, or what runs.
-    fn fill_system_update(&self, state: &UpdateState) {
-        let imp = self.imp();
-        let versions = &imp.quick_access_system_versions;
-        versions.remove_all();
-        versions.append(&version_row(
-            &gettext("Installed Version"),
-            state.installed.as_deref(),
-        ));
-        if state.update_ready() {
-            let staged = state
-                .status
-                .staged
-                .as_ref()
-                .and_then(|staged| staged.version.as_deref());
-            versions.append(&version_row(&gettext("Update Ready"), staged));
-        }
-        imp.quick_access_rollback_note
-            .set_visible(state.status.rollback_queued);
-        let actions = &imp.quick_access_system_actions;
-        actions.remove_all();
-        if let Some(busy) = state.busy {
-            actions.append(&busy_row(busy));
-        }
-        for action in state.actions() {
-            actions.append(&action_row(action, state));
-        }
-        actions.set_visible(actions.row_at_index(0).is_some());
     }
 
     /// Asks before rolling back: the console restarts into the previous version.
@@ -194,7 +200,8 @@ impl PinduWindow {
                     move || {
                         let open = window.open_panel()
                             == Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate));
-                        if open && !window.focus_in_system_update() {
+                        let level = &window.imp().quick_access_system_update_level;
+                        if open && !level.has_focus() {
                             window.focus_panel(None);
                         }
                     }
@@ -202,6 +209,67 @@ impl PinduWindow {
             }
         ));
         dialog.present(Some(self));
+    }
+}
+
+impl PinduSystemUpdateLevel {
+    /// The level's lists, whose Up and Down go on to the next list at their ends.
+    pub(crate) fn lists(&self) -> [gtk::ListBox; 2] {
+        let imp = self.imp();
+        [
+            imp.quick_access_system_versions.get(),
+            imp.quick_access_system_actions.get(),
+        ]
+    }
+
+    /// Where focus goes on the level: the first action, or else the installed version.
+    pub(crate) fn focus_target(&self) -> Option<gtk::Widget> {
+        let imp = self.imp();
+        let actions = &imp.quick_access_system_actions;
+        let list = if actions.is_visible() {
+            actions
+        } else {
+            &imp.quick_access_system_versions
+        };
+        list.row_at_index(0).map(|row| row.upcast())
+    }
+
+    /// Whether focus is on one of the level's rows, which filling it again takes away.
+    pub(crate) fn has_focus(&self) -> bool {
+        self.root()
+            .and_then(|root| gtk::prelude::RootExt::focus(&root))
+            .is_some_and(|focus| self.lists().iter().any(|list| focus.is_ancestor(list)))
+    }
+
+    /// The level's rows for `state`: the versions, the note on a queued rollback, and the
+    /// actions, or what runs.
+    pub(crate) fn fill(&self, state: &UpdateState) {
+        let imp = self.imp();
+        let versions = &imp.quick_access_system_versions;
+        versions.remove_all();
+        versions.append(&version_row(
+            &gettext("Installed Version"),
+            state.installed.as_deref(),
+        ));
+        if state.update_ready() {
+            let staged = state
+                .status
+                .staged
+                .as_ref()
+                .and_then(|staged| staged.version.as_deref());
+            versions.append(&version_row(&gettext("Update Ready"), staged));
+        }
+        imp.quick_access_rollback_note
+            .set_visible(state.status.rollback_queued);
+        let actions = &imp.quick_access_system_actions;
+        actions.remove_all();
+        if let Some(busy) = state.busy {
+            actions.append(&busy_row(busy));
+        }
+        for action in state.actions() {
+            actions.append(&action_row(action, state));
+        }
+        actions.set_visible(actions.row_at_index(0).is_some());
     }
 }
 
