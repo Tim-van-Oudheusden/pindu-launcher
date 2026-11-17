@@ -30,9 +30,9 @@ pub fn overlay_props(open: bool) -> OverlayProps {
     }
 }
 
-/// Whether Quick Access is open over the game after `intent`, from `open`: Misc1 opens or
-/// closes it, and Guide closes it as it brings the launcher to the front, where Quick
-/// Access opens inside the main window instead.
+/// Whether Quick Access is open over the game after `intent`, from `open`: Guide + A or
+/// the Steam Deck's "…" opens or closes it, and Guide closes it as it brings the launcher
+/// to the front, where Quick Access opens inside the main window instead.
 pub fn open_after(open: bool, intent: InGameIntent) -> bool {
     match intent {
         InGameIntent::ToggleQuickAccess => !open,

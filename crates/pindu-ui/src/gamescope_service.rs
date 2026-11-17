@@ -116,8 +116,8 @@ struct Inner {
 
 impl GamescopeService {
     /// A service for the default display that follows the games `sessions` runs and reads
-    /// Guide and Misc1 from `gamepad`; inert unless the display is X11 and gamescope runs
-    /// with `--steam`.
+    /// Guide and the Quick Access of Guide + A or Misc1 from `gamepad`'s intents; inert
+    /// unless the display is X11 and gamescope runs with `--steam`.
     pub fn new(sessions: &SessionService, gamepad: &GamepadService) -> Self {
         let x11 = X11::steam_mode_display();
         let mangoapp = mangoapp::session_config_file(
@@ -169,11 +169,13 @@ impl GamescopeService {
             }
         });
         let weak = Rc::downgrade(&service.inner);
-        gamepad.connect_button_pressed(move |button| {
+        // Intents rather than buttons, so Guide acts once let go alone and Guide + A
+        // toggles Quick Access, as in the launcher's own window.
+        gamepad.connect_intent(move |intent| {
             let Some(inner) = weak.upgrade() else {
                 return;
             };
-            let Some(intent) = gamescope::in_game_intent(button) else {
+            let Some(intent) = gamescope::in_game_intent(intent) else {
                 return;
             };
             let service = GamescopeService { inner };
@@ -232,8 +234,8 @@ impl GamescopeService {
 
     /// Makes `window` the overlay Quick Access opens in over a game: once it is realized
     /// it is marked `STEAM_OVERLAY` and closed, see-through and leaving input to the game,
-    /// and Misc1 opens it while a game is in front. It never gets an app ID, so the game
-    /// stays the base layer while it is open.
+    /// and Guide + A or the Steam Deck's "…" opens it while a game is in front. It never
+    /// gets an app ID, so the game stays the base layer while it is open.
     pub fn attach_overlay(&self, window: &impl IsA<gtk::Window>) {
         if self.inner.x11.is_none() {
             return;

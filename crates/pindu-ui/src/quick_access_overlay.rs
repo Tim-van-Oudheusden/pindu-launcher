@@ -2,9 +2,9 @@
 //! a second toplevel that hosts the Quick Access widget (`quick_access`) with its own
 //! Blueprint (`data/ui/quick_access_overlay.blp`). The application makes one when the
 //! gamescope service speaks the protocol; the service marks it as gamescope's overlay and
-//! opens and closes it (Misc1 with a game in front, Guide, the game in front changing), and
-//! this window follows: it shows the panel's levels as the window does, for the game in
-//! front, and acts on the controller while it holds input.
+//! opens and closes it (Guide + A or the Steam Deck's "…" with a game in front, Guide, the
+//! game in front changing), and this window follows: it shows the panel's levels as the
+//! window does, for the game in front, and acts on the controller while it holds input.
 //!
 //! Over a game the panel offers what needs no library page and no flow of the main window
 //! ([`PinduQuickAccess::set_over_game`]). Network's passphrase and Bluetooth's PIN and
@@ -295,8 +295,8 @@ impl PinduQuickAccessOverlay {
     /// Acts on a controller intent while the panel is open and holds input: an open
     /// passphrase dialog's keyboard takes every button, directions move focus as in the
     /// main window, A activates, and B closes a dialog, steps back a level or closes the
-    /// panel. Guide and Misc1 are the gamescope service's; R3 and the page's buttons are
-    /// the game's.
+    /// panel. Guide, Guide + A and Misc1 are the gamescope service's; R3 and the page's
+    /// buttons are the game's.
     fn handle_intent(&self, intent: Intent) {
         if self.imp().panels.get().open().is_none() || !self.takes_controller() {
             return;

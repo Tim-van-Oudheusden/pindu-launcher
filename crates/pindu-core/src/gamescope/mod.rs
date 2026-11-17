@@ -14,7 +14,7 @@ pub mod session;
 
 use std::ffi::{c_long, c_ulong};
 
-use crate::gamepad::Button;
+use crate::gamepad::Intent;
 use crate::model::{GameId, Source};
 use crate::sources::sha256::sha256_hex;
 
@@ -177,18 +177,19 @@ pub enum InGameIntent {
     /// Bring the launcher to the front, as Guide does over a game in Steam; Quick Access
     /// closes if it is open over the game.
     ShowLauncher,
-    /// Open Quick Access over the game, or close it, as the Steam Deck's "…" does.
+    /// Open Quick Access over the game, or close it, as Guide + A and the Steam Deck's "…"
+    /// do in Steam.
     ToggleQuickAccess,
 }
 
-/// What `button` asks of the launcher while a game is in front: Guide brings the launcher
-/// to the front and Misc1 (the Steam Deck's "…") opens or closes Quick Access over the
-/// game. Every other button is the game's, R3 too, which opens Quick Access in the
-/// launcher: the game gets it as well.
-pub fn in_game_intent(button: Button) -> Option<InGameIntent> {
-    match button {
-        Button::Guide => Some(InGameIntent::ShowLauncher),
-        Button::Misc1 => Some(InGameIntent::ToggleQuickAccess),
+/// What a controller's `intent` asks of the launcher while a game is in front: Guide, let
+/// go alone, brings the launcher to the front, and Guide + A or the Steam Deck's "…"
+/// ([`Intent::SystemQuickAccess`]) open or close Quick Access over the game. Every other
+/// intent is the game's button, R3's Quick Access too: the game gets it as well.
+pub fn in_game_intent(intent: Intent) -> Option<InGameIntent> {
+    match intent {
+        Intent::Home => Some(InGameIntent::ShowLauncher),
+        Intent::SystemQuickAccess => Some(InGameIntent::ToggleQuickAccess),
         _ => None,
     }
 }
@@ -233,6 +234,8 @@ pub fn front_after_sessions(wanted: Front, before: &[u32], running: &[u32]) -> F
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gamepad::{Button, DeviceId, GamepadEvent, Intents};
+    use std::time::Duration;
 
     #[test]
     fn steam_mode_follows_the_focused_app_property() {
@@ -383,11 +386,30 @@ mod tests {
         assert_eq!(front(Some(1_145_360), games), Front::Launcher);
     }
 
+    /// What the launcher does over a game as the buttons go down (`true`) and up, in turn,
+    /// on one pad.
+    fn in_game(presses: &[(Button, bool)]) -> Vec<InGameIntent> {
+        let mut intents = Intents::new();
+        presses
+            .iter()
+            .filter_map(|&(button, pressed)| {
+                let event = GamepadEvent::Button {
+                    device: DeviceId(1),
+                    button,
+                    pressed,
+                };
+                intents.handle(&event, Duration::ZERO)
+            })
+            .filter_map(in_game_intent)
+            .collect()
+    }
+
     #[test]
-    fn in_game_only_guide_brings_the_launcher_to_the_front() {
+    fn in_game_guide_let_go_alone_brings_the_launcher_to_the_front() {
+        assert_eq!(in_game(&[(Button::Guide, true)]), []);
         assert_eq!(
-            in_game_intent(Button::Guide),
-            Some(InGameIntent::ShowLauncher)
+            in_game(&[(Button::Guide, true), (Button::Guide, false)]),
+            [InGameIntent::ShowLauncher]
         );
         for button in [
             Button::South,
@@ -396,17 +418,32 @@ mod tests {
             Button::Select,
             Button::RightStick,
         ] {
-            assert_eq!(in_game_intent(button), None, "{button:?}");
+            assert_eq!(
+                in_game(&[(button, true), (button, false)]),
+                [],
+                "{button:?}"
+            );
         }
+    }
+
+    #[test]
+    fn in_game_guide_and_a_open_and_close_quick_access_and_leave_the_game_in_front() {
+        let chord = [
+            (Button::Guide, true),
+            (Button::South, true),
+            (Button::South, false),
+            (Button::Guide, false),
+        ];
+        assert_eq!(in_game(&chord), [InGameIntent::ToggleQuickAccess]);
     }
 
     #[test]
     fn in_game_misc1_opens_and_closes_quick_access_and_r3_stays_the_games() {
         assert_eq!(
-            in_game_intent(Button::Misc1),
-            Some(InGameIntent::ToggleQuickAccess)
+            in_game(&[(Button::Misc1, true)]),
+            [InGameIntent::ToggleQuickAccess]
         );
-        assert_eq!(in_game_intent(Button::RightStick), None);
+        assert_eq!(in_game(&[(Button::RightStick, true)]), []);
     }
 
     #[test]

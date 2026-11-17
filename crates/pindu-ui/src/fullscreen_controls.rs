@@ -102,9 +102,9 @@ impl PinduQuickAccess {
     }
 }
 
-/// A row of the list: the glyph of the button (with Hold before it for a held one) and the
-/// keys that stand in for it, named for screen readers by the button, the keys and what
-/// they do.
+/// A row of the list: the glyph of the button (with Hold before it for a held one, and
+/// the glyph of the button pressed with it for a chord) and the keys that stand in for it,
+/// named for screen readers by the buttons, the keys and what they do.
 fn control_row(control: &Control, glyphs: Option<Glyphs>) -> adw::ActionRow {
     let action = action_label(control.intent);
     let row = adw::ActionRow::builder()
@@ -124,16 +124,25 @@ fn control_row(control: &Control, glyphs: Option<Glyphs>) -> adw::ActionRow {
                 .build();
             shown.append(&hold);
         }
-        let glyph = gtk::Image::builder()
-            .icon_name(hints::glyph(glyphs, button))
-            .pixel_size(GLYPH_SIZE)
-            .css_classes(["control-glyph"])
-            .accessible_role(gtk::AccessibleRole::Presentation)
-            .build();
-        shown.append(&glyph);
+        for button in std::iter::once(button).chain(control.chord) {
+            let glyph = gtk::Image::builder()
+                .icon_name(hints::glyph(glyphs, button))
+                .pixel_size(GLYPH_SIZE)
+                .css_classes(["control-glyph"])
+                .accessible_role(gtk::AccessibleRole::Presentation)
+                .build();
+            shown.append(&glyph);
+        }
         row.add_prefix(&shown);
         let name = glyph_label(hints::glyph_name(glyphs, button));
-        if control.held {
+        if let Some(chord) = control.chord {
+            // Translators: two buttons pressed together, as Quick Access's Controls reads
+            // them to a screen reader; {held} is the one held down, such as "Home", and
+            // {pressed} the one pressed while it is, such as "A" or "Cross".
+            gettext("{held} + {pressed}")
+                .replace("{held}", &name)
+                .replace("{pressed}", &glyph_label(hints::glyph_name(glyphs, chord)))
+        } else if control.held {
             // Translators: a button held down, as Quick Access's Controls reads it to a
             // screen reader; {button} is its name, such as "B" or "Circle".
             gettext("Hold {button}").replace("{button}", &name)
@@ -230,6 +239,6 @@ fn action_label(intent: Intent) -> String {
         Intent::Menu => gettext("Menu"),
         // Guide opens the menu drawer too, and from the desktop it opens fullscreen mode.
         Intent::Home => gettext("Menu"),
-        Intent::QuickAccess => gettext("Quick Access"),
+        Intent::QuickAccess | Intent::SystemQuickAccess => gettext("Quick Access"),
     }
 }
