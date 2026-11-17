@@ -159,6 +159,10 @@ the services; they never talk to the bus or spawn a process themselves.
 - The backends report results through callbacks on the main thread, like `GamepadBackend::start`'s sink, so the core
   stays free of GLib and every flow (join a network, pair a device, roll back) is tested in `pindu-core` with a fake
   backend.
+- The Power, Network and Bluetooth sections are also tested over their real backends, against python-dbusmock's
+  `logind`, `networkmanager` and `bluez5` templates on a private system bus (`crates/pindu-ui/tests/system_panel`,
+  #380), so a renamed call or a missed signal fails `cargo test` and `meson test`. The suite says it skips, and
+  passes, where python-dbusmock or `dbus-daemon` is missing; CI installs python-dbusmock.
 - The existing `power` module (batteries from sysfs) keeps its name; the new power actions live in `system::power`.
 - The panel's levels and entries extend `panels.rs` (`DrawerLevel`, `QuickAccessLevel`, `drawer_entries`).
 - Each section's level is its own composite widget with its own Blueprint (the UI level column), a single child of its

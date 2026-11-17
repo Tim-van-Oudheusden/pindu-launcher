@@ -17,10 +17,20 @@ pub fn host_spawn_allowed() -> bool {
     })
 }
 
+/// Whether we run inside Flatpak, as [`in_flatpak`] read it once.
+static IN_FLATPAK: OnceLock<bool> = OnceLock::new();
+
 /// Whether we run inside Flatpak, where host commands go through `flatpak-spawn --host`.
 pub fn in_flatpak() -> bool {
-    static IN_FLATPAK: OnceLock<bool> = OnceLock::new();
     *IN_FLATPAK.get_or_init(|| std::path::Path::new("/.flatpak-info").exists())
+}
+
+/// Makes [`in_flatpak`] answer `false` from now on. Only the system panel's integration
+/// tests call it: they run inside the GNOME SDK's sandbox, as CI does, against a private
+/// system bus of their own, where the sandbox's rule of no system bus does not hold.
+/// Returns `false`, changing nothing, when [`in_flatpak`] has been read already.
+pub fn assume_native() -> bool {
+    IN_FLATPAK.set(false).is_ok()
 }
 
 /// Whether starting `game` needs a permission the sandbox lacks.

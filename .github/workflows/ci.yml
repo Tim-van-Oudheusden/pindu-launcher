@@ -67,6 +67,9 @@ jobs:
       # Everything runs in the GNOME 51 SDK, as local builds do. Inside its sandbox root
       # can only write files root owns, and the checkout belongs to the runner's user.
       # The lint set lives in Cargo.toml's [workspace.lints]; `cargo doc` runs its rustdoc lints.
+      # python-dbusmock (approved 2026-11-17), with the dbus-python it needs, is installed
+      # into the build folder for the system panel's tests against NetworkManager, BlueZ and
+      # logind templates (crates/pindu-ui/tests/system_panel); without it they skip.
       - name: rustfmt, clippy, rustdoc, unit tests and Meson tests
         run: |
           chown -R "$(id -u):$(id -g)" "$PWD"
@@ -74,8 +77,11 @@ jobs:
             --env=CARGO_HOME="$PWD/.cargo-home" \
             --env=CARGO_TARGET_DIR="$PWD/_build/cargo-target" \
             --env=PATH=/usr/lib/sdk/rust-stable/bin:/usr/bin \
+            --env=PYTHONPATH="$PWD/_build/python" \
             --command=sh org.gnome.Sdk//51 -c '
               set -e
+              python3 -m pip install --no-cache-dir --target _build/python \
+                python-dbusmock==0.38.1 dbus-python==1.5.1
               cargo fmt --all --check
               cargo clippy --workspace --all-targets -- -D warnings
               RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
