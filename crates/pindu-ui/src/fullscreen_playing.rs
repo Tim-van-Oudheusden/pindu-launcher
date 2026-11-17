@@ -1,13 +1,17 @@
 //! Fullscreen mode's Playing Now cards, in the menu drawer and at the top of Quick Access's
 //! main level: one per game we started that runs, with how long its session has run,
 //! Return to its page and Stop. Both panels hold the same cards, which follow the games
-//! starting and ending; their times move on each minute while either panel shows.
+//! starting and ending; their times move on each minute while either panel shows. In a
+//! `--steam` gamescope, Return also brings the game back to the front, and Guide over a
+//! game opens the drawer on the cards.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
+use pindu_core::gamescope::Front;
 use pindu_core::model::Timestamp;
+use pindu_core::panels::{DrawerLevel, Panel};
 use pindu_core::session_time::{SessionTimeWords, session_time_text, until_next_minute};
 
 use crate::application::PinduApplication;
@@ -23,6 +27,9 @@ impl PinduWindow {
         self.add_game_action("playing-return", |window, id| {
             window.close_panel();
             window.return_to_game(id);
+            if let Some(application) = window.application().and_downcast::<PinduApplication>() {
+                application.gamescope_service().bring_to_front(id);
+            }
         });
         self.add_game_action("playing-stop", |window, id| {
             window.close_panel();
@@ -70,6 +77,38 @@ impl PinduWindow {
                 move || window.fill_playing_cards()
             ));
         self.fill_playing_cards();
+        application
+            .gamescope_service()
+            .connect_front_changed(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |front| window.front_changed(front)
+            ));
+    }
+
+    /// Guide over a game brought the launcher to the front in a `--steam` gamescope: in
+    /// fullscreen mode the drawer opens on the Playing Now cards, so Return is a press
+    /// away. A game that ends gives the front back too, but the launcher still wants the
+    /// game then, or nothing runs any more.
+    fn front_changed(&self, front: Front) {
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return;
+        };
+        let by_guide = front == Front::Launcher
+            && application.gamescope_service().wanted_front() == Front::Launcher;
+        if !by_guide || !self.is_fullscreen() || !application.session_service().any_playing() {
+            return;
+        }
+        self.show_panel(Panel::Drawer(DrawerLevel::Main));
+        if let Some(button) = self
+            .imp()
+            .playing_cards
+            .last_child()
+            .as_ref()
+            .and_then(card_return)
+        {
+            button.grab_focus();
+        }
     }
 
     /// Fills the drawer and Quick Access with a card per game we started that runs, the

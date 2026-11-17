@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use crate::model::{Game, LaunchConfig, LaunchKind, Source};
+use crate::model::{Game, GameId, LaunchConfig, LaunchKind, Source};
 use crate::sources::sha256::sha256_hex;
 
 /// The way to start a game.
@@ -126,13 +126,19 @@ pub fn offers_performance(game: &Game) -> bool {
 /// A game ID and window class of the game's own, so umu, the compositor and the shell
 /// tell our games apart: `pindu-<hash>` from the game's ID.
 pub(crate) fn session_environment(game: &Game) -> BTreeMap<String, String> {
-    let hash = sha256_hex(game.id.as_str().as_bytes());
-    let class = format!("pindu-{}", &hash[..12]);
+    let class = window_class(&game.id);
     BTreeMap::from([
         ("GAMEID".to_owned(), format!("umu-{class}")),
         ("SDL_VIDEO_WAYLAND_WMCLASS".to_owned(), class.clone()),
         ("SDL_VIDEO_X11_WMCLASS".to_owned(), class),
     ])
+}
+
+/// The window class of the game's own the game runs with (see [`session_environment`]):
+/// `pindu-<hash>` from its ID.
+pub(crate) fn window_class(game: &GameId) -> String {
+    let hash = sha256_hex(game.as_str().as_bytes());
+    format!("pindu-{}", &hash[..12])
 }
 
 /// The command for a launch config: the wrappers (outermost first), then `gamemoderun`
