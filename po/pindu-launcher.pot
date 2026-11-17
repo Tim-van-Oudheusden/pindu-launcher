@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-17 17:38+0100\n"
+"POT-Creation-Date: 2026-11-17 18:21+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1433,34 +1433,34 @@ msgstr ""
 msgid "This game cannot be started yet"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:174
+#: crates/pindu-ui/src/launch_service.rs:177
 #, rust-format
 msgid "Starting “{title}” in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:178
-#: crates/pindu-ui/src/launch_service.rs:241
+#: crates/pindu-ui/src/launch_service.rs:181
+#: crates/pindu-ui/src/launch_service.rs:244
 #, rust-format
 msgid "Could not open {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:196
+#: crates/pindu-ui/src/launch_service.rs:199
 #: crates/pindu-ui/src/proton_launch.rs:374
 #: crates/pindu-ui/src/proton_launch.rs:603 crates/pindu-ui/src/window.rs:1209
 msgid "_Close"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:197
+#: crates/pindu-ui/src/launch_service.rs:200
 msgid "_How to Enable"
 msgstr ""
 
 #. / The heading of the explanation that a game needs a permission.
 
-#: crates/pindu-ui/src/launch_service.rs:211
+#: crates/pindu-ui/src/launch_service.rs:214
 msgid "Permission Needed"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:217
+#: crates/pindu-ui/src/launch_service.rs:220
 #, rust-format
 msgid ""
 "“{title}” starts on this computer, outside the sandbox. Allow that in "
@@ -1894,7 +1894,7 @@ msgstr ""
 msgid "Game in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/session_service.rs:328
+#: crates/pindu-ui/src/session_service.rs:329
 msgid "A game you started is running"
 msgstr ""
 

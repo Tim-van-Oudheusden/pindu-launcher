@@ -161,6 +161,9 @@ fn open_store_uri(
     gtk::UriLauncher::new(&uri).launch(window, gio::Cancellable::NONE, move |result| {
         let message = match result {
             Ok(()) => {
+                if let Some(application) = app.downcast_ref::<PinduApplication>() {
+                    application.gamescope_service().store_launch_started(&id);
+                }
                 let exit = gio::Settings::new(APP_ID).boolean("exit-after-launch")
                     && !sessions.any_playing();
                 // Hold on until the last-played time is stored, then quit if asked to.
