@@ -180,6 +180,9 @@ The workspace enforces the Rust for Linux lint set (`[workspace.lints]` in `Carg
 - **Never add, upgrade, or remove a dependency without explicit user approval.** State the crate, exact version, and why
   it is needed. The crates in the spec's stack table (gtk4, libadwaita, rusqlite, oo7, ashpd, glycin) are approved at
   the versions it names
+- **`gdk4-x11` 0.11.5 with the `xlib` feature** (approved 2026-11-17, #387), in `pindu-ui` only, for gamescope's
+  `--steam` protocol (`gamescope_service.rs`, #390). It adds `gdk4-x11`, `gdk4-x11-sys` 0.11.5 and `x11-dl` 2.21.0,
+  which loads `libX11.so.6` at run time; its `v4_18` feature stays off
 - **Verify the crate exists** on crates.io with a real repository and history (slopsquatting)
 - **Prefer the platform and existing dependencies** — the standard library and the GNOME runtime cover most needs
 - **Never upgrade a major version as a side-effect** of another change; major upgrades and GNOME runtime bumps are
