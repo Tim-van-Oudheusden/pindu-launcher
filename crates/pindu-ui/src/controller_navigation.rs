@@ -8,8 +8,9 @@
 //! View or X opens the options sheet for the focused game, and B closes them. While the
 //! launch overlay is up it takes every button, and a held B cancels a game we start. The
 //! passphrase dialog's keyboard takes every button while the dialog is open, as the search
-//! keyboard does. Intents never become synthetic key events, and only the active window
-//! acts on them.
+//! keyboard does. Once a game we started plays, the controller is the game's and only Guide
+//! reaches the window (`pindu_core::game_control`). Intents never become synthetic key
+//! events, and only the active window acts on them.
 
 use std::cell::RefCell;
 use std::collections::BTreeSet;
@@ -18,6 +19,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::glib;
+use pindu_core::game_control::GameControl;
 use pindu_core::gamepad::{Direction, Intent, WindowFocus};
 use pindu_core::grid;
 use pindu_core::hints::Launching;
@@ -29,13 +31,27 @@ use crate::models::GameObject;
 use crate::window::PinduWindow;
 
 impl PinduWindow {
-    /// Acts on controller intents while controllers are listened to.
+    /// Acts on controller intents while controllers are listened to and the game we
+    /// started does not have the controller, and follows the games we start, which take it.
     pub(crate) fn setup_controller_navigation(&self, application: &PinduApplication) {
         application.gamepad_service().connect_intent(glib::clone!(
             #[weak(rename_to = window)]
             self,
-            move |intent| window.handle_intent(intent)
+            move |intent| window.controller_intent(intent)
         ));
+        application
+            .session_service()
+            .connect_sessions_changed(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move || window.sessions_changed_for_controller()
+            ));
+        // Keyboard focus, which every backend reports and which moves at once; the
+        // compositor's focused state can trail it.
+        self.connect_is_active_notify(|window| {
+            let focused = window.is_active();
+            window.update_game_control(|control| control.focus_changed(focused));
+        });
         self.update_listening();
         self.settings().connect_changed(
             Some("controller-navigation"),
@@ -45,6 +61,51 @@ impl PinduWindow {
                 move |_, _| window.update_listening()
             ),
         );
+    }
+
+    /// A controller's intent: while a game we started has the controller only Guide acts,
+    /// and gives it back before it does what Guide does.
+    fn controller_intent(&self, intent: Intent) {
+        let control = self.imp().game_control.get();
+        if !self.takes_controller() || !control.acts_on(intent) {
+            return;
+        }
+        if control.game_has_controller() {
+            self.give_controller_back();
+        }
+        self.handle_intent(intent);
+    }
+
+    /// The user turned to the window, with Guide or the keyboard: the controller is its
+    /// again.
+    pub(crate) fn give_controller_back(&self) {
+        self.update_game_control(GameControl::give_back);
+    }
+
+    /// A game we handed to its store's launcher takes the controller.
+    pub(crate) fn store_launch_opened(&self) {
+        let focused = self.is_active();
+        self.update_game_control(|control| control.store_launch_opened(focused));
+    }
+
+    /// A game we run starting takes the controller, and the last one ending gives it back.
+    fn sessions_changed_for_controller(&self) {
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return;
+        };
+        let running = application.session_service().sessions().len();
+        let focused = self.is_active();
+        self.update_game_control(|control| control.sessions_changed(running, focused));
+    }
+
+    /// Changes who has the controller, and the hints with it.
+    fn update_game_control(&self, change: impl FnOnce(&mut GameControl)) {
+        let imp = self.imp();
+        let mut control = imp.game_control.get();
+        change(&mut control);
+        if imp.game_control.replace(control) != control {
+            self.update_hints();
+        }
     }
 
     /// Opens the controllers while the `controller-navigation` setting is on or the window

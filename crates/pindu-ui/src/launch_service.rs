@@ -21,6 +21,7 @@ use crate::models::GameObject;
 use crate::permission_service;
 use crate::proton_launch;
 use crate::session_service::{self, SessionService};
+use crate::window::PinduWindow;
 
 /// The app that owns a store game's source, as named in toasts and buttons.
 pub fn launcher_name(source: Source) -> Option<&'static str> {
@@ -162,11 +163,15 @@ fn open_store_uri(
     let launcher = launcher_name(game.source()).unwrap_or_default();
     let (id, title, uri) = (game.id.clone(), game.title.clone(), uri.to_owned());
     let (app, hold) = (app.clone(), app.hold());
+    let main_window = window.and_then(|window| window.downcast_ref::<PinduWindow>().cloned());
     gtk::UriLauncher::new(&uri).launch(window, gio::Cancellable::NONE, move |result| {
         let message = match result {
             Ok(()) => {
                 if let Some(application) = app.downcast_ref::<PinduApplication>() {
                     application.gamescope_service().store_launch_started(&id);
+                }
+                if let Some(window) = &main_window {
+                    window.store_launch_opened();
                 }
                 let exit = gio::Settings::new(APP_ID).boolean("exit-after-launch")
                     && !sessions.any_playing();

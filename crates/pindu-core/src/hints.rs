@@ -123,6 +123,8 @@ pub enum Action {
     Delete,
     /// Confirm the search and go to the results.
     Done,
+    /// Give the controller back to the launcher while a game it started has it.
+    BackToLauncher,
 }
 
 /// One hint: the button, by its position on the pad, and what it does. A pair of buttons
@@ -239,6 +241,16 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
     .into_iter()
     .flatten()
     .collect()
+}
+
+/// The hints while a game the launcher started has the controller
+/// (`game_control::GameControl`): only Guide, which gives it back.
+pub fn playing_hints(layout: Layout) -> Vec<Hint> {
+    vec![Hint {
+        button: layout.button(Intent::Home),
+        pair: None,
+        action: Action::BackToLauncher,
+    }]
 }
 
 /// The icon name of the glyph for `button` in the set `glyphs`: the layout's own label (a
@@ -590,6 +602,18 @@ mod tests {
             .into_iter()
             .map(|hint| (hint.button, hint.action))
             .collect()
+    }
+
+    #[test]
+    fn while_a_game_has_the_controller_only_guide_is_hinted_and_it_goes_back_to_the_launcher() {
+        assert_eq!(
+            playing_hints(Layout::detected(DeviceKind::Xbox)),
+            [Hint {
+                button: Button::Guide,
+                pair: None,
+                action: Action::BackToLauncher,
+            }]
+        );
     }
 
     #[test]
