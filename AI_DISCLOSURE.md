@@ -9,8 +9,8 @@ AI was used as an assistant in the following areas:
 Development: help with writing, refactoring and explaining code.
 Testing: help with writing and improving tests, and with debugging.
 CI: help with setting up and maintaining continuous integration workflows.
-Packaging: help with the Flatpak manifests, the RPM and DEB recipes and the workflows that build GitHub releases. The
-manifest for Flathub is written by a person, without AI assistance.
+Packaging: help with the Flatpak manifests, the RPM and DEB recipes, the COPR, AUR and nixpkgs recipes and the
+workflows that build GitHub releases. The manifest for Flathub is written by a person, without AI assistance.
 Documentation: help with writing the project's documentation, such as the README, the contributor and security
 guides, the runbooks and the release notes.
 Automation: AI agents (Claude Code in CI, and Hive) may open issues and pull requests

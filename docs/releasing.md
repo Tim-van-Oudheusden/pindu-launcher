@@ -52,6 +52,27 @@ The native packages target the distros that ship GTK 4.24 and libadwaita 1.10 (#
 Ubuntu release qualifies, add it to the `packages` and `packages-smoke` matrices in `packaging.yml` and `release.yml`
 and to the table in `build-aux/release-notes.py`.
 
+## Distribution recipes
+
+COPR, the AUR and nixpkgs build the release tarball, `pindu-launcher-X.Y.Z.tar.xz`, whose crates are vendored, so
+each builds offline (#382). The tarball's checksum exists only once the release is published, so the AUR and nixpkgs
+recipes are bumped after step 8, through a pull request of their own; `meson test`'s `versions` check leaves them out.
+Take the checksum from the release's `SHA256SUMS`.
+
+- **COPR** (`.copr/Makefile`, the make_srpm method): nothing to bump. It builds `build-aux/rpm/pindu-launcher.spec`,
+  already bumped in step 2, downloads the spec's `Source0` and checks it against the release's `SHA256SUMS`, so start
+  the COPR build only once the release is published. Try it in a `fedora:45` container with
+  `make -f .copr/Makefile srpm outdir=/tmp/srpm`, then `dnf builddep` and `rpmbuild --rebuild` on the `.src.rpm`.
+  The COPR project builds for the Fedora releases that ship GTK 4.24 and libadwaita 1.10: Fedora 45 and rawhide,
+  x86_64 and aarch64.
+- **AUR** (`build-aux/aur/PKGBUILD`): set `pkgver`, reset `pkgrel=1` and set `sha256sums`, or run `updpkgsums`. Then
+  regenerate the metadata with `makepkg --printsrcinfo > .SRCINFO`, both on Arch, and try it with `makepkg -s` as a
+  non-root user in an `archlinux` container. The AUR repository gets these two files at its root.
+- **nixpkgs** (`build-aux/nix/package.nix`): set `version` and the `src` hash, the tarball's SHA-256 in SRI form:
+  `nix hash convert --hash-algo sha256 --to sri <sha256>`. There is no `cargoHash`: the build uses the tarball's
+  vendored crates. Try it in a `nixos/nix` container with
+  `nix-build -E 'with import <nixpkgs> { }; callPackage ./build-aux/nix/package.nix { }'`.
+
 ## When something goes wrong
 
 - **The version check fails:** the tag does not match the tree. Delete the tag (`git push origin :vX.Y.Z` and
