@@ -1,0 +1,67 @@
+name: Release
+description: Track one release, X.Y.Z, and its hardware check (docs/releasing.md)
+title: "Release X.Y.Z"
+labels: ["area:packaging", "type:chore"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Set the title to exactly `Release X.Y.Z`, the final version without `v` or `-rc.N`, and set the current
+        milestone. Pindu OS finds the hardware check by this title, so one issue covers the pre-releases and the final
+        release. The runbook is [docs/releasing.md](https://github.com/Tim-van-Oudheusden/pindu-launcher/blob/main/docs/releasing.md).
+
+        **Hardware check:** run the checklist below on one real machine, on the pre-release's files, before the final
+        tag ([Hardware checklist](https://github.com/Tim-van-Oudheusden/pindu-launcher/blob/main/docs/releasing.md#hardware-checklist)
+        says what each check means). Fill in the hardware and the build, tick each check that passes, and comment on
+        anything that fails. When every box is ticked, the maintainer adds the `hardware-check:passed` label; that label
+        on this issue is the recorded pass Pindu OS waits for before it promotes this launcher to `:stable`.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The final version this issue releases.
+      placeholder: "0.5.0"
+    validations:
+      required: true
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware tested
+      description: >-
+        The machine the checklist ran on: model or CPU and GPU, the Pindu OS image and version (or the distribution),
+        the controller and the Wi-Fi network type. Fill it in when you run the checklist.
+      placeholder: |
+        Machine: <model> (<CPU>, <GPU>)
+        OS: Pindu OS <image version> (:testing), with the build below installed
+        Controller: <model> over Bluetooth
+        Wi-Fi: <WPA2 or WPA3> network
+      render: text
+  - type: textarea
+    id: build
+    attributes:
+      label: Build tested
+      description: >-
+        The tag and the file the checklist ran on, from the pre-release's GitHub release. Fill it in when you run the
+        checklist; a new pre-release starts the checklist again.
+      placeholder: |
+        Tag: v0.5.0-rc.1
+        File: pindu-launcher-0.5.0-rc.1-1.fc45.x86_64.rpm
+      render: text
+  - type: checkboxes
+    id: hardware-checklist
+    attributes:
+      label: Hardware checklist
+      description: Tick a check once it passes on the hardware and build above. Leave the boxes empty when you open the issue.
+      options:
+        - label: "Fullscreen mode in gamescope: the launcher starts fullscreen in a gamescope session, takes the controller and the focus, and gets the focus back when a game quits"
+        - label: "Controller over Bluetooth: Quick Access, Bluetooth pairs a controller, which then navigates the library, opens a game's page and goes back"
+        - label: "Wi-Fi: Quick Access, Network joins a WPA2 network with the passphrase typed on the on-screen keyboard"
+        - label: "Suspend and resume: Power, Suspend sleeps the machine; after waking, the launcher, the controller and the network work again"
+        - label: "Steam game: a native Steam game starts from the launcher, and its playtime counts after it quits"
+        - label: "Proton game: a Windows game through Proton starts from the launcher, and its playtime counts after it quits"
+        - label: "System Update: Quick Access, System Update shows the installed version, and the update state and actions it offers work"
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything else about this release, for example the issues it waits for.

@@ -1,12 +1,16 @@
 # RPM for Pindu launcher, built from the release tarball with the crates vendored
 # (pindu-launcher-X.Y.Z.tar.xz, made by `meson dist`), so rpmbuild needs no network.
-# Version must match meson.build; build-aux/check-version.sh checks it.
+# Version must match meson.build, with a pre-release X.Y.Z-rc.N written X.Y.Z~rcN;
+# build-aux/check-version.sh checks it.
 
 %global app_id io.github.tim_van_oudheusden.pindu-launcher
 
 Name:           pindu-launcher
 Version:        0.4.1
 Release:        1%{?dist}
+# A pre-release's Version is X.Y.Z~rcN, which sorts below X.Y.Z; its tag and tarball name
+# it X.Y.Z-rc.N
+%global upstream_version %{lua: print((rpm.expand("%{version}"):gsub("~rc", "-rc.")))}
 Summary:        Every PC game on your computer in one GNOME library
 
 # The app is GPL-3.0-or-later; the rest are the licences of the vendored crates that
@@ -14,7 +18,7 @@ Summary:        Every PC game on your computer in one GNOME library
 # a subset of those crates).
 License:        GPL-3.0-or-later AND MIT AND Apache-2.0 AND (MIT OR Apache-2.0) AND (MPL-2.0 OR LGPL-2.1-or-later) AND BSD-3-Clause AND BSD-2-Clause AND Zlib AND ISC AND Unicode-3.0 AND IJG AND (Unlicense OR MIT) AND (0BSD OR MIT OR Apache-2.0) AND (Apache-2.0 WITH LLVM-exception)
 URL:            https://github.com/Tim-van-Oudheusden/pindu-launcher
-Source0:        %{url}/releases/download/v%{version}/%{name}-%{version}.tar.xz
+Source0:        %{url}/releases/download/v%{upstream_version}/%{name}-%{upstream_version}.tar.xz
 
 ExclusiveArch:  x86_64 aarch64
 
@@ -59,7 +63,7 @@ yourself. Browse covers, pick up where you left off and start any game with one 
 switch to the fullscreen mode and do the same from the couch with a controller.
 
 %prep
-%autosetup -p1
+%autosetup -p1 -n %{name}-%{upstream_version}
 
 %build
 %meson --buildtype=release

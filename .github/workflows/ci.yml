@@ -123,6 +123,7 @@ jobs:
           sh scripts/nightly-compliance.test.sh
           sh scripts/needs-build.test.sh
           sh scripts/packaging-issue.test.sh
+          sh scripts/ai-extent.test.sh
 
       - name: shellcheck
         run: shellcheck scripts/*.sh

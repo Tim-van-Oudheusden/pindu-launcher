@@ -52,7 +52,8 @@ gh pr create --title "type(scope): summary (#<number>)" --body-file <file>   # L
 - Bodies have: context with a link to the spec section, scope, acceptance criteria as a checklist, out of scope, and a
   research link, plus depends-on when there is one.
 - Labels: `area:core`, `area:import`, `area:ui`, `area:launch`, `area:art`, `area:gamepad`, `area:packaging`;
-  `type:feature`, `type:spike`, `type:chore`; `human-only`.
+  `type:feature`, `type:spike`, `type:chore`; `human-only`; `hardware-check:passed`, which only the maintainer adds,
+  to a "Release X.Y.Z" issue whose hardware checklist passed (`docs/releasing.md`).
 
 ## Sessions with GitHub Issues
 
