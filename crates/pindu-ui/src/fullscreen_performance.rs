@@ -6,7 +6,9 @@
 //! every switch attached to it shows that state, so Quick Access and the sheet always
 //! agree. While the game runs, Quick Access's level says a change applies from its next
 //! launch. Where MangoHud cannot work for the game (`permission_service::mangohud_works`),
-//! its switches are insensitive and say why.
+//! its switches are insensitive and say why. In a gamescope session whose MangoApp the
+//! launcher drives, the Performance Overlay switch of the game in front shows or hides
+//! MangoApp at once (`GamescopeService`), and works wherever MangoHud is not installed.
 
 use std::cell::{Cell, RefCell};
 use std::rc::{Rc, Weak};
@@ -16,6 +18,7 @@ use gettextrs::gettext;
 use gtk::glib;
 use pindu_core::model::PerformanceTool;
 
+use crate::gamescope_service::GamescopeService;
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
 use crate::permission_service;
@@ -31,6 +34,8 @@ pub struct PerformanceSwitches(Rc<Inner>);
 #[derive(Debug)]
 struct Inner {
     library: LibraryService,
+    /// Shows a flipped Performance Overlay switch at once through the session's MangoApp.
+    gamescope: GamescopeService,
     /// The switches of each tool in [`TOOLS`], one pair per place that shows them.
     rows: RefCell<Vec<[adw::SwitchRow; 2]>>,
     /// The note that a change applies from the next launch, shown while the game runs.
@@ -45,10 +50,16 @@ struct Inner {
 }
 
 impl PerformanceSwitches {
-    /// Switches that write through `library`, with `note` shown while their game runs.
-    pub(crate) fn new(library: &LibraryService, note: &gtk::Label) -> Self {
+    /// Switches that write through `library` and tell `gamescope` of a flipped Performance
+    /// Overlay, with `note` shown while their game runs.
+    pub(crate) fn new(
+        library: &LibraryService,
+        gamescope: &GamescopeService,
+        note: &gtk::Label,
+    ) -> Self {
         Self(Rc::new(Inner {
             library: library.clone(),
+            gamescope: gamescope.clone(),
             rows: RefCell::new(Vec::new()),
             note: note.clone(),
             game: RefCell::new(None),
@@ -113,7 +124,8 @@ impl PerformanceSwitches {
                 }
             });
         }
-        let works = permission_service::mangohud_works(&game.game());
+        let works =
+            permission_service::mangohud_works(&game.game()) || inner.gamescope.drives_mangoapp();
         for [overlay, _] in inner.rows.borrow().iter() {
             show_overlay_works(overlay, works);
         }
@@ -167,6 +179,9 @@ impl PerformanceSwitches {
                 tools[index] = on;
                 inner.tools.set(Some(tools));
                 inner.library.set_performance_tool(&id, TOOLS[index], on);
+                if TOOLS[index] == PerformanceTool::Overlay {
+                    inner.gamescope.performance_overlay_switched(&id, on);
+                }
             }
             _ => {}
         }

@@ -44,6 +44,7 @@ crates/pindu-ui/src/system_power_service.rs
 crates/pindu-ui/src/system_update_service.rs
 crates/pindu-ui/src/widgets/cover_tile.rs
 crates/pindu-ui/src/window.rs
+data/gamescope-session/gamescope-session-pindu.desktop.in
 data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in
 data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in
 data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in

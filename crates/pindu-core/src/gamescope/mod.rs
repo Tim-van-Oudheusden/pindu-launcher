@@ -10,12 +10,19 @@
 
 pub mod overlay;
 pub mod prompts;
+pub mod session;
 
 use std::ffi::{c_long, c_ulong};
 
 use crate::gamepad::Button;
 use crate::model::{GameId, Source};
 use crate::sources::sha256::sha256_hex;
+
+mod claim;
+pub mod mangoapp;
+mod store_launch;
+pub use claim::{BaseLayerClaim, RECLAIM_LIMIT, RECLAIM_PERIOD, Reclaims};
+pub use store_launch::{STORE_LAUNCH_GRACE, STORE_LAUNCH_TIMEOUT, StoreLaunch};
 
 /// The app ID gamescope knows as Steam, which the launcher's main window claims.
 pub const STEAM_APP_ID: u32 = 769;

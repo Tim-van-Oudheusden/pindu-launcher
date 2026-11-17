@@ -76,7 +76,11 @@ pub fn play(
     // The app stays up until the launch is through, even with no window.
     let hold = app.hold();
     glib::spawn_future_local(async move {
-        let config = library.launch_config(&game.id).await;
+        let mut config = library.launch_config(&game.id).await;
+        if let Some(application) = app.downcast_ref::<PinduApplication>() {
+            let gamescope = application.gamescope_service();
+            config = config.map(|config| gamescope.launch_config(config));
+        }
         match launch::route(&game, config.as_ref()) {
             Some(Route::StoreUri(uri)) => {
                 open_store_uri(&app, window.as_ref(), &game, &uri, library, sessions, toast);
@@ -161,6 +165,9 @@ fn open_store_uri(
     gtk::UriLauncher::new(&uri).launch(window, gio::Cancellable::NONE, move |result| {
         let message = match result {
             Ok(()) => {
+                if let Some(application) = app.downcast_ref::<PinduApplication>() {
+                    application.gamescope_service().store_launch_started(&id);
+                }
                 let exit = gio::Settings::new(APP_ID).boolean("exit-after-launch")
                     && !sessions.any_playing();
                 // Hold on until the last-played time is stored, then quit if asked to.
