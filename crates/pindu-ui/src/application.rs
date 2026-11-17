@@ -22,6 +22,7 @@ use crate::notification_service::NotificationService;
 use crate::permission_service;
 use crate::power_service::PowerService;
 use crate::preferences::PreferencesDialog;
+use crate::quick_access_overlay::PinduQuickAccessOverlay;
 use crate::search_provider;
 use crate::session_service::SessionService;
 use crate::sources::source_list;
@@ -304,6 +305,16 @@ mod imp {
                 }
             }
             window.present();
+            // In a `--steam` gamescope Quick Access also opens over a running game, in a
+            // window of its own; shown without focus, it stays see-through until it opens.
+            if new_window
+                && application.gamescope_service().is_active()
+                && let Some(window) = window.downcast_ref::<PinduWindow>()
+            {
+                let overlay = PinduQuickAccessOverlay::new(&application, window);
+                application.gamescope_service().attach_overlay(&overlay);
+                overlay.set_visible(true);
+            }
         }
     }
 

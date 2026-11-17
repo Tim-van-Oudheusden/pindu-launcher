@@ -12,6 +12,7 @@ blueprint_names = [
   'home_page',
   'preferences',
   'quick_access',
+  'quick_access_overlay',
   'secret_dialog',
   'shortcuts-dialog',
   'window',

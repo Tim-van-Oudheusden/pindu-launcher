@@ -8,6 +8,7 @@
 //! Steam's place there: its main window is app [`STEAM_APP_ID`], it writes the list, and it
 //! tags the windows of the games it starts. Tested against gamescope 3.17.0.
 
+pub mod overlay;
 pub mod session;
 
 use std::ffi::{c_long, c_ulong};
@@ -171,15 +172,21 @@ pub fn front(focused_app_gfx: Option<u32>, expected: &[ExpectedGame]) -> Front {
 /// button too.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InGameIntent {
-    /// Bring the launcher to the front, as Guide does over a game in Steam.
+    /// Bring the launcher to the front, as Guide does over a game in Steam; Quick Access
+    /// closes if it is open over the game.
     ShowLauncher,
+    /// Open Quick Access over the game, or close it, as the Steam Deck's "…" does.
+    ToggleQuickAccess,
 }
 
 /// What `button` asks of the launcher while a game is in front: Guide brings the launcher
-/// to the front; every other button is the game's.
+/// to the front and Misc1 (the Steam Deck's "…") opens or closes Quick Access over the
+/// game. Every other button is the game's, R3 too, which opens Quick Access in the
+/// launcher: the game gets it as well.
 pub fn in_game_intent(button: Button) -> Option<InGameIntent> {
     match button {
         Button::Guide => Some(InGameIntent::ShowLauncher),
+        Button::Misc1 => Some(InGameIntent::ToggleQuickAccess),
         _ => None,
     }
 }
@@ -386,10 +393,18 @@ mod tests {
             Button::Start,
             Button::Select,
             Button::RightStick,
-            Button::Misc1,
         ] {
             assert_eq!(in_game_intent(button), None, "{button:?}");
         }
+    }
+
+    #[test]
+    fn in_game_misc1_opens_and_closes_quick_access_and_r3_stays_the_games() {
+        assert_eq!(
+            in_game_intent(Button::Misc1),
+            Some(InGameIntent::ToggleQuickAccess)
+        );
+        assert_eq!(in_game_intent(Button::RightStick), None);
     }
 
     #[test]
