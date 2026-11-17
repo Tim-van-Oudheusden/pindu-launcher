@@ -26,12 +26,11 @@ use crate::application::PinduApplication;
 use crate::config::APP_ID;
 use crate::fullscreen::NavigationSounds;
 use crate::fullscreen_clock::Clock;
-use crate::fullscreen_playing::PlayingCards;
-use crate::fullscreen_power::PinduPowerLevel;
 use crate::game_page::GamePage;
 use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
 use crate::log_service;
+use crate::menu_drawer::PinduMenuDrawer;
 use crate::models::{GameObject, LibraryModel};
 use crate::quick_access::PinduQuickAccess;
 use crate::sources::{source_icon, source_name};
@@ -141,21 +140,7 @@ mod imp {
         #[template_child]
         pub drawer: TemplateChild<adw::OverlaySplitView>,
         #[template_child]
-        pub drawer_panel: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub drawer_stack: TemplateChild<gtk::Stack>,
-        #[template_child]
-        pub playing_cards: TemplateChild<gtk::Box>,
-        #[template_child]
-        pub drawer_list: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub drawer_collections_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub drawer_collections: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub drawer_power_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub drawer_power_level: TemplateChild<PinduPowerLevel>,
+        pub drawer_panel: TemplateChild<PinduMenuDrawer>,
         #[template_child]
         pub options_panel: TemplateChild<gtk::Box>,
         #[template_child]
@@ -225,8 +210,6 @@ mod imp {
         pub focus_before_panel: glib::WeakRef<gtk::Widget>,
         /// The top bar's clock.
         pub(crate) top_bar_clock: OnceCell<Clock>,
-        /// The drawer's Playing Now cards.
-        pub(crate) drawer_cards: OnceCell<PlayingCards>,
         /// The level of the desktop's Add a Store dialog, while it shows.
         pub add_store_dialog: RefCell<Option<PinduAddStoreLevel>>,
     }
@@ -240,7 +223,7 @@ mod imp {
         fn class_init(klass: &mut Self::Class) {
             HomePage::ensure_type();
             PinduQuickAccess::ensure_type();
-            PinduPowerLevel::ensure_type();
+            PinduMenuDrawer::ensure_type();
             klass.bind_template();
         }
 

@@ -174,21 +174,21 @@ pub fn front(focused_app_gfx: Option<u32>, expected: &[ExpectedGame]) -> Front {
 /// button too.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InGameIntent {
-    /// Bring the launcher to the front, as Guide does over a game in Steam; Quick Access
-    /// closes if it is open over the game.
-    ShowLauncher,
+    /// Open the menu drawer over the game, or close it, as Guide opens Steam's menu over a
+    /// game.
+    ToggleMenu,
     /// Open Quick Access over the game, or close it, as Guide + A and the Steam Deck's "…"
     /// do in Steam.
     ToggleQuickAccess,
 }
 
 /// What a controller's `intent` asks of the launcher while a game is in front: Guide, let
-/// go alone, brings the launcher to the front, and Guide + A or the Steam Deck's "…"
-/// ([`Intent::SystemQuickAccess`]) open or close Quick Access over the game. Every other
-/// intent is the game's button, R3's Quick Access too: the game gets it as well.
+/// go alone, opens or closes the menu drawer over the game, and Guide + A or the Steam
+/// Deck's "…" ([`Intent::SystemQuickAccess`]) Quick Access. Every other intent is the
+/// game's button, R3's Quick Access too: the game gets it as well.
 pub fn in_game_intent(intent: Intent) -> Option<InGameIntent> {
     match intent {
-        Intent::Home => Some(InGameIntent::ShowLauncher),
+        Intent::Home => Some(InGameIntent::ToggleMenu),
         Intent::SystemQuickAccess => Some(InGameIntent::ToggleQuickAccess),
         _ => None,
     }
@@ -405,11 +405,11 @@ mod tests {
     }
 
     #[test]
-    fn in_game_guide_let_go_alone_brings_the_launcher_to_the_front() {
+    fn in_game_guide_let_go_alone_opens_the_menu() {
         assert_eq!(in_game(&[(Button::Guide, true)]), []);
         assert_eq!(
             in_game(&[(Button::Guide, true), (Button::Guide, false)]),
-            [InGameIntent::ShowLauncher]
+            [InGameIntent::ToggleMenu]
         );
         for button in [
             Button::South,

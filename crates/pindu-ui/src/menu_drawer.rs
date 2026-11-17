@@ -1,0 +1,169 @@
+//! The menu drawer, fullscreen mode's panel on the left, as a widget a window hosts:
+//! [`PinduMenuDrawer`], with its own Blueprint (`data/ui/menu_drawer.blp`). It holds the
+//! level stack: the main level with the Playing Now cards (`fullscreen_playing`) and the
+//! entries, the collections, and Power (`fullscreen_power`).
+//!
+//! Which level is open is the host's (`pindu_core::panels::Panels`): the host shows a
+//! level with `show_level` and fills the entries with `fill`; the rows' `win.*` actions
+//! are the host's. The main window hosts it on the left, where Start or Guide opens it over
+//! the page. Over a running game in a `--steam` gamescope the overlay window
+//! (`game_overlay`) hosts it too, where Guide opens it over the game and it leaves out
+//! what would end the session (`set_over_game`).
+
+use std::cell::OnceCell;
+
+use adw::subclass::prelude::*;
+use gtk::glib;
+use gtk::prelude::*;
+use pindu_core::model::Collection;
+use pindu_core::panels::{DrawerEntry, DrawerLevel, drawer_entries};
+
+use crate::fullscreen_panels::drawer_row;
+use crate::fullscreen_playing::PlayingCards;
+use crate::fullscreen_power::PinduPowerLevel;
+
+mod imp {
+    use super::*;
+
+    #[derive(Debug, Default, gtk::CompositeTemplate)]
+    #[template(resource = "/io/github/tim_van_oudheusden/pindu-launcher/ui/menu_drawer.ui")]
+    pub struct PinduMenuDrawer {
+        #[template_child]
+        pub stack: TemplateChild<gtk::Stack>,
+        #[template_child]
+        pub playing_cards: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub collections_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub exit_fullscreen_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub quit_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub power_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub collections: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub power_level: TemplateChild<PinduPowerLevel>,
+        /// The Playing Now cards over the main level's entries.
+        pub(crate) cards: OnceCell<PlayingCards>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for PinduMenuDrawer {
+        const NAME: &'static str = "PinduMenuDrawer";
+        type Type = super::PinduMenuDrawer;
+        type ParentType = gtk::Box;
+
+        fn class_init(klass: &mut Self::Class) {
+            PinduPowerLevel::ensure_type();
+            klass.bind_template();
+        }
+
+        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
+            obj.init_template();
+        }
+    }
+
+    impl ObjectImpl for PinduMenuDrawer {
+        fn constructed(&self) {
+            self.parent_constructed();
+            let _ = self
+                .cards
+                .set(PlayingCards::new(&self.playing_cards, &self.list));
+        }
+    }
+
+    impl WidgetImpl for PinduMenuDrawer {}
+
+    impl BoxImpl for PinduMenuDrawer {}
+}
+
+glib::wrapper! {
+    /// Fullscreen mode's menu drawer: the Playing Now cards, Home, Library, Collections,
+    /// leaving fullscreen mode, Quit and Power, with Collections and Power as levels of
+    /// their own.
+    pub struct PinduMenuDrawer(ObjectSubclass<imp::PinduMenuDrawer>)
+        @extends gtk::Box, gtk::Widget,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
+}
+
+impl PinduMenuDrawer {
+    /// The drawer's Playing Now cards.
+    pub(crate) fn cards(&self) -> &PlayingCards {
+        self.imp().cards.get().expect("made as the drawer is built")
+    }
+
+    /// Leaves out the entries that would leave fullscreen mode or end the session, for the
+    /// drawer over a running game: Exit Fullscreen Mode, Quit and Power.
+    pub(crate) fn set_over_game(&self) {
+        let imp = self.imp();
+        imp.exit_fullscreen_row.set_visible(false);
+        imp.quit_row.set_visible(false);
+        imp.power_row.set_visible(false);
+    }
+
+    /// Shows the entries that apply: Collections while there are `collections`, whose
+    /// level lists them, and Power while `power` says the system offers it.
+    pub(crate) fn fill(&self, collections: &[Collection], power: bool) {
+        let imp = self.imp();
+        let entries = drawer_entries(false, !collections.is_empty(), power);
+        imp.collections_row
+            .set_visible(entries.contains(&DrawerEntry::Collections));
+        imp.power_row
+            .set_visible(entries.contains(&DrawerEntry::Power));
+        imp.collections.remove_all();
+        for collection in collections {
+            let row = drawer_row("folder-symbolic", &collection.name);
+            row.set_action_name(Some("win.drawer-collection"));
+            row.set_action_target_value(Some(&collection.id.to_variant()));
+            imp.collections.append(&row);
+        }
+    }
+
+    /// Shows `level`.
+    pub(crate) fn show_level(&self, level: DrawerLevel) {
+        self.imp().stack.set_visible_child_name(match level {
+            DrawerLevel::Main => "main",
+            DrawerLevel::Collections => "collections",
+            DrawerLevel::Power => "power",
+        });
+    }
+
+    /// Where focus goes as `level` shows, after `left` (the level focus comes from): the
+    /// entry that led to a level just left, the first Playing Now card's Return, or the
+    /// level's first entry. Power's own focus is its host's.
+    pub(crate) fn focus_target(
+        &self,
+        level: DrawerLevel,
+        left: Option<DrawerLevel>,
+    ) -> Option<gtk::Widget> {
+        let imp = self.imp();
+        let first_row = |list: &gtk::ListBox| list.row_at_index(0).map(|row| row.upcast());
+        match (level, left) {
+            (DrawerLevel::Main, Some(DrawerLevel::Collections)) => {
+                Some(imp.collections_row.get().upcast())
+            }
+            (DrawerLevel::Main, Some(DrawerLevel::Power)) => Some(imp.power_row.get().upcast()),
+            (DrawerLevel::Main, _) if imp.playing_cards.is_visible() => imp
+                .playing_cards
+                .first_child()
+                .as_ref()
+                .and_then(crate::fullscreen_playing::card_return),
+            (DrawerLevel::Main, _) => first_row(&imp.list),
+            (DrawerLevel::Collections, _) => first_row(&imp.collections),
+            (DrawerLevel::Power, _) => imp.power_level.focus_target(),
+        }
+    }
+
+    /// The drawer's Power level.
+    pub(crate) fn power_level(&self) -> &PinduPowerLevel {
+        &self.imp().power_level
+    }
+
+    /// The drawer's Power entry.
+    pub(crate) fn power_row(&self) -> &gtk::ListBoxRow {
+        &self.imp().power_row
+    }
+}

@@ -125,7 +125,7 @@ impl PinduQuickAccess {
         // game as the latter opens and closes, before the overlay closes its dialogs.
         application
             .gamescope_service()
-            .connect_quick_access_changed(glib::clone!(
+            .connect_over_game_changed(glib::clone!(
                 #[weak(rename_to = quick_access)]
                 self,
                 move |_| {

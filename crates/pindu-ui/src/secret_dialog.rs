@@ -6,7 +6,7 @@
 //! grid and what each button does are `pindu_core::osk`; this draws the keys, marks the
 //! cursor's, and hands the text to the caller on Done or Start, or nothing on Cancel or on
 //! B with the entry empty. It opens on the window Quick Access is in, the main window or
-//! Quick Access over a game (`quick_access_overlay`), whose hint bar shows its buttons.
+//! Quick Access over a game (`game_overlay`), whose hint bar shows its buttons.
 
 use std::cell::{Cell, RefCell};
 use std::fmt;
@@ -19,7 +19,7 @@ use pindu_core::hints::Typing;
 use pindu_core::osk::{Keyboard, Outcome};
 
 use crate::fullscreen::Sound;
-use crate::quick_access_overlay::PinduQuickAccessOverlay;
+use crate::game_overlay::PinduGameOverlay;
 use crate::search_keyboard::{CURSOR_CLASS, key_label, key_name};
 use crate::window::PinduWindow;
 
@@ -259,7 +259,7 @@ pub(crate) fn ask_secret(
     if let Some(window) = root.downcast_ref::<PinduWindow>() {
         return Some(window.ask_secret(title, message, keyboard, done));
     }
-    let overlay = root.downcast_ref::<PinduQuickAccessOverlay>()?;
+    let overlay = root.downcast_ref::<PinduGameOverlay>()?;
     Some(overlay.ask_secret(title, message, keyboard, done))
 }
 
@@ -312,7 +312,7 @@ impl PinduWindow {
     }
 }
 
-impl PinduQuickAccessOverlay {
+impl PinduGameOverlay {
     /// Asks for a passphrase or PIN over the game, as [`PinduWindow::ask_secret`] does in
     /// the main window: the dialog's keyboard takes the controller and the overlay's hint
     /// bar shows its buttons.

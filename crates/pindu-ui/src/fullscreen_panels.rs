@@ -20,12 +20,10 @@ use pindu_core::keys;
 use pindu_core::launch;
 use pindu_core::library::View;
 use pindu_core::panels::{
-    DrawerEntry, DrawerLevel, GameOption, OptionsLevel, Panel, Panels, Under, drawer_entries,
-    game_options, page_entries,
+    DrawerLevel, GameOption, OptionsLevel, Panel, Panels, Under, game_options, page_entries,
 };
 
 use crate::application::PinduApplication;
-use crate::fullscreen_playing::card_return;
 use crate::launch_service::launcher_name;
 use crate::models::GameObject;
 use crate::window::PinduWindow;
@@ -95,7 +93,10 @@ impl PinduWindow {
             });
         }
         // Escape closes a panel rather than leaving fullscreen mode.
-        for panel in [imp.drawer_panel.get(), imp.options_panel.get()] {
+        for panel in [
+            imp.drawer_panel.upcast_ref::<gtk::Widget>(),
+            imp.options_panel.upcast_ref(),
+        ] {
             let escape = gtk::ShortcutController::new();
             escape.add_shortcut(gtk::Shortcut::new(
                 gtk::ShortcutTrigger::parse_string(&keys::ESCAPE.accelerator()),
@@ -354,11 +355,7 @@ impl PinduWindow {
         // After the sidebar shows, as the split view gives focus back into it.
         imp.quick_access_panel.show_level(quick_access_level);
         match open {
-            Some(Panel::Drawer(level)) => imp.drawer_stack.set_visible_child_name(match level {
-                DrawerLevel::Main => "main",
-                DrawerLevel::Collections => "collections",
-                DrawerLevel::Power => "power",
-            }),
+            Some(Panel::Drawer(level)) => imp.drawer_panel.show_level(level),
             Some(Panel::Options(level)) => imp.options_stack.set_visible_child_name(match level {
                 OptionsLevel::Main => "main",
                 OptionsLevel::Collections => "collections",
@@ -399,19 +396,13 @@ impl PinduWindow {
         }
         let first_row = |list: &gtk::ListBox| list.row_at_index(0).map(|row| row.upcast());
         let target: Option<gtk::Widget> = match (self.open_panel(), left) {
-            (
-                Some(Panel::Drawer(DrawerLevel::Main)),
-                Some(Panel::Drawer(DrawerLevel::Collections)),
-            ) => Some(imp.drawer_collections_row.get().upcast()),
-            (Some(Panel::Drawer(DrawerLevel::Main)), Some(Panel::Drawer(DrawerLevel::Power))) => {
-                Some(imp.drawer_power_row.get().upcast())
+            (Some(Panel::Drawer(level)), left) => {
+                let left = match left {
+                    Some(Panel::Drawer(level)) => Some(level),
+                    _ => None,
+                };
+                imp.drawer_panel.focus_target(level, left)
             }
-            // The first Playing Now card's Return comes first.
-            (Some(Panel::Drawer(DrawerLevel::Main)), _) if imp.playing_cards.is_visible() => imp
-                .playing_cards
-                .first_child()
-                .as_ref()
-                .and_then(card_return),
             (
                 Some(Panel::Options(OptionsLevel::Main)),
                 Some(Panel::Options(OptionsLevel::Collections)),
@@ -425,11 +416,6 @@ impl PinduWindow {
                     .and_then(|index| imp.options_list.row_at_index(index as i32))
                     .map(|row| row.upcast())
             }
-            (Some(Panel::Drawer(DrawerLevel::Main)), _) => first_row(&imp.drawer_list),
-            (Some(Panel::Drawer(DrawerLevel::Collections)), _) => {
-                first_row(&imp.drawer_collections)
-            }
-            (Some(Panel::Drawer(DrawerLevel::Power)), _) => self.power_focus(),
             (Some(Panel::Options(OptionsLevel::Main)), _) => first_row(&imp.options_list),
             (Some(Panel::Options(OptionsLevel::Collections)), _) => {
                 first_row(&imp.options_collections)
@@ -444,30 +430,16 @@ impl PinduWindow {
     /// The drawer's collections and its Power entry. Its Playing Now cards are
     /// `fullscreen_playing`'s.
     fn fill_drawer(&self) {
-        let imp = self.imp();
         let application = self.application().and_downcast::<PinduApplication>();
-        let playing = application
-            .as_ref()
-            .is_some_and(|application| application.session_service().any_playing());
         let power = application.as_ref().is_some_and(|application| {
             power_shown(
                 &application.system_power_service().state(),
                 application.session().switch_to_desktop(),
             )
         });
-        let collections = self.library().collections();
-        let entries = drawer_entries(playing, !collections.is_empty(), power);
-        imp.drawer_collections_row
-            .set_visible(entries.contains(&DrawerEntry::Collections));
-        imp.drawer_power_row
-            .set_visible(entries.contains(&DrawerEntry::Power));
-        imp.drawer_collections.remove_all();
-        for collection in &collections {
-            let row = drawer_row("folder-symbolic", &collection.name);
-            row.set_action_name(Some("win.drawer-collection"));
-            row.set_action_target_value(Some(&collection.id.to_variant()));
-            imp.drawer_collections.append(&row);
-        }
+        self.imp()
+            .drawer_panel
+            .fill(&self.library().collections(), power);
     }
 
     /// The sheet's title and actions for `game`, its performance switches for a game we
@@ -593,7 +565,7 @@ fn option_label(option: GameOption, game: &GameObject) -> (&'static str, String)
 }
 
 /// A row of the drawer or the sheet: an icon and a label.
-fn drawer_row(icon: &str, label: &str) -> gtk::ListBoxRow {
+pub(crate) fn drawer_row(icon: &str, label: &str) -> gtk::ListBoxRow {
     let content = gtk::Box::builder().spacing(16).build();
     content.append(
         &gtk::Image::builder()

@@ -269,8 +269,9 @@ window.fullscreen-mode .game-actions button:focus-visible {
   background-color: alpha(var(--window-bg-color), 0.92);
 }
 
-/* Quick Access over a running game: the game shows through beside the panel. */
-window.quick-access-overlay {
+/* The menu drawer and Quick Access over a running game: the game shows through beside
+   the panel. */
+window.game-overlay {
   background-color: transparent;
 }
 

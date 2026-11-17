@@ -1,0 +1,74 @@
+using Gtk 4.0;
+using Adw 1;
+
+// The menu drawer and Quick Access over a running game in a `--steam` gamescope: an
+// undecorated, see-through window that gamescope sizes to the screen and composites over
+// the game while one of them is open. The drawer sits on the left and Quick Access on the
+// right, as they do in the main window, each with the hint bar under it; the game shows
+// beside them, and a click there closes the panel. The rows' `win.*` actions are the ones
+// `PinduQuickAccess::setup` adds to this window, plus the ones `game_overlay` hands on to
+// the main window.
+template $PinduGameOverlay: Adw.Window {
+  title: _("Pindu launcher");
+  decorated: false;
+
+  styles [
+    "game-overlay",
+  ]
+
+  content: Box {
+    // As wide as in the main window: without `hexpand: false` the panel's rows would share
+    // the shade's space.
+    Box drawer_pane {
+      orientation: vertical;
+      width-request: 440;
+      hexpand: false;
+      visible: false;
+
+      styles [
+        "sidebar-pane",
+      ]
+
+      $PinduMenuDrawer drawer {
+        vexpand: true;
+      }
+
+      Box drawer_hint_bar {
+        halign: start;
+        spacing: 24;
+
+        styles [
+          "hint-bar",
+        ]
+      }
+    }
+
+    Box shade {
+      hexpand: true;
+    }
+
+    Box quick_access_pane {
+      orientation: vertical;
+      width-request: 440;
+      hexpand: false;
+      visible: false;
+
+      styles [
+        "sidebar-pane",
+      ]
+
+      $PinduQuickAccess quick_access {
+        vexpand: true;
+      }
+
+      Box hint_bar {
+        halign: end;
+        spacing: 24;
+
+        styles [
+          "hint-bar",
+        ]
+      }
+    }
+  };
+}

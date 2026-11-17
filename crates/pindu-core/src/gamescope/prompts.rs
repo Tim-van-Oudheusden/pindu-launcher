@@ -15,7 +15,7 @@ pub enum PromptHost {
 /// The window that asks what Network and Bluetooth want while Quick Access is
 /// `overlay_open` over a game, or not: the overlay while it is open, and the main window
 /// otherwise, as it does outside gamescope. A question still unanswered as Quick Access
-/// closes over the game goes back to the main window, which is in front after Guide.
+/// closes over the game goes back to the main window, which asks it once it is in front.
 pub fn prompt_host(overlay_open: bool) -> PromptHost {
     if overlay_open {
         PromptHost::Overlay

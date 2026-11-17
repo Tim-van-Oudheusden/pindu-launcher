@@ -103,15 +103,10 @@ impl PinduWindow {
     pub(crate) fn show_power(&self) {
         if let Some(service) = self.system_power_service() {
             self.imp()
-                .drawer_power_level
+                .drawer_panel
+                .power_level()
                 .fill(&service.state(), self.switch_to_desktop());
         }
-    }
-
-    /// Where focus goes on the level: the first action the system allows, or else the
-    /// first one.
-    pub(crate) fn power_focus(&self) -> Option<gtk::Widget> {
-        self.imp().drawer_power_level.focus_target()
     }
 
     fn system_power_service(&self) -> Option<SystemPowerService> {
@@ -132,7 +127,7 @@ impl PinduWindow {
     fn show_power_state(&self, state: &PowerState) {
         let switch = self.switch_to_desktop();
         let shown = power_shown(state, switch);
-        self.imp().drawer_power_row.set_visible(shown);
+        self.imp().drawer_panel.power_row().set_visible(shown);
         if self.open_panel() != Some(Panel::Drawer(DrawerLevel::Power)) {
             return;
         }
@@ -140,7 +135,7 @@ impl PinduWindow {
             self.show_panel(Panel::Drawer(DrawerLevel::Main));
             return;
         }
-        let level = &self.imp().drawer_power_level;
+        let level = self.imp().drawer_panel.power_level();
         let had_focus = level.has_focus();
         level.fill(state, switch);
         if had_focus {

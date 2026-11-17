@@ -3,9 +3,9 @@
 //! Return to its page and Stop. Both panels hold the same cards, each a `PlayingCards`,
 //! which follow the games starting and ending; their times move on each minute while their
 //! panel shows. The window has the cards' `win.playing-return` and `win.playing-stop`. In
-//! a `--steam` gamescope, Return also brings the game back to the front, Guide over a game
-//! opens the drawer on the cards, and a store-launched game that plays gets a card too,
-//! with Return alone, since its store launcher runs it.
+//! a `--steam` gamescope, Return also brings the game back to the front, the drawer and
+//! Quick Access over a game hold the same cards, and a store-launched game that plays gets
+//! a card too, with Return alone, since its store launcher runs it.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -14,12 +14,11 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
-use pindu_core::gamescope::Front;
 use pindu_core::model::Timestamp;
-use pindu_core::panels::{DrawerLevel, Panel};
 use pindu_core::session_time::{SessionTimeWords, session_time_text, until_next_minute};
 
 use crate::application::PinduApplication;
+use crate::menu_drawer::PinduMenuDrawer;
 use crate::models::GameObject;
 use crate::quick_access::PinduQuickAccess;
 use crate::session_service;
@@ -144,15 +143,9 @@ fn playing_games(application: &PinduApplication) -> Vec<(GameObject, Timestamp)>
         .collect()
 }
 
-/// Whether any game runs: one we started, or a store-launched game that plays.
-fn any_playing(application: &PinduApplication) -> bool {
-    application.session_service().any_playing()
-        || application.gamescope_service().store_playing().is_some()
-}
-
 impl PinduWindow {
     /// The cards' Return and Stop, and the drawer's cards, filled now and again whenever a
-    /// game we started begins or ends.
+    /// game begins or ends.
     pub(crate) fn setup_playing_cards(&self, application: &PinduApplication) {
         let imp = self.imp();
         self.add_game_action("playing-return", |window, id| {
@@ -168,74 +161,63 @@ impl PinduWindow {
                 application.activate_action("stop", Some(&id.as_str().to_variant()));
             }
         });
-        let cards = PlayingCards::new(&imp.playing_cards, &imp.drawer_list);
         imp.drawer.connect_show_sidebar_notify(glib::clone!(
-            #[strong]
-            cards,
-            move |drawer| cards.set_shown(drawer.shows_sidebar())
+            #[weak(rename_to = window)]
+            self,
+            move |drawer| {
+                window
+                    .imp()
+                    .drawer_panel
+                    .cards()
+                    .set_shown(drawer.shows_sidebar());
+            }
         ));
-        let _ = imp.drawer_cards.set(cards);
-        application
-            .session_service()
-            .connect_sessions_changed(glib::clone!(
+        // Focus on a card that went moves to the open panel's first entry.
+        imp.drawer_panel.follow_playing(
+            application,
+            glib::clone!(
                 #[weak(rename_to = window)]
                 self,
-                move || window.fill_playing_cards()
-            ));
+                move || {
+                    if window.open_panel().is_some() {
+                        window.focus_panel(None);
+                    }
+                }
+            ),
+        );
+    }
+}
+
+impl PinduMenuDrawer {
+    /// Fills the drawer's cards now and again whenever a game begins or ends; `refocus`
+    /// runs when a card that had focus went.
+    pub(crate) fn follow_playing(
+        &self,
+        application: &PinduApplication,
+        refocus: impl Fn() + 'static,
+    ) {
+        let fill: Rc<dyn Fn()> = Rc::new(glib::clone!(
+            #[weak(rename_to = drawer)]
+            self,
+            #[weak]
+            application,
+            move || {
+                if drawer.cards().fill(&playing_games(&application)) {
+                    refocus();
+                }
+            }
+        ));
+        application.session_service().connect_sessions_changed({
+            let fill = fill.clone();
+            move || fill()
+        });
         application
             .gamescope_service()
-            .connect_store_playing_changed(glib::clone!(
-                #[weak(rename_to = window)]
-                self,
-                move || window.fill_playing_cards()
-            ));
-        self.fill_playing_cards();
-        application
-            .gamescope_service()
-            .connect_front_changed(glib::clone!(
-                #[weak(rename_to = window)]
-                self,
-                move |front| window.front_changed(front)
-            ));
-    }
-
-    /// Guide over a game brought the launcher to the front in a `--steam` gamescope: in
-    /// fullscreen mode the drawer opens on the Playing Now cards, so Return is a press
-    /// away. A game that ends gives the front back too, and so does a link in Quick Access
-    /// over a game, which shows what it leads to instead.
-    fn front_changed(&self, front: Front) {
-        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
-            return;
-        };
-        let by_guide =
-            front == Front::Launcher && application.gamescope_service().launcher_by_guide();
-        if !by_guide || !self.is_fullscreen() || !any_playing(&application) {
-            return;
-        }
-        self.show_panel(Panel::Drawer(DrawerLevel::Main));
-        if let Some(button) = self
-            .imp()
-            .playing_cards
-            .last_child()
-            .as_ref()
-            .and_then(card_return)
-        {
-            button.grab_focus();
-        }
-    }
-
-    /// Fills the drawer's cards. Focus on a card that went moves to the open panel's first
-    /// entry.
-    fn fill_playing_cards(&self) {
-        let (Some(application), Some(cards)) = (
-            self.application().and_downcast::<PinduApplication>(),
-            self.imp().drawer_cards.get(),
-        ) else {
-            return;
-        };
-        if cards.fill(&playing_games(&application)) && self.open_panel().is_some() {
-            self.focus_panel(None);
-        }
+            .connect_store_playing_changed({
+                let fill = fill.clone();
+                move || fill()
+            });
+        fill();
     }
 }
 

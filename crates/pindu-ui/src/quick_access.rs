@@ -11,7 +11,7 @@
 //! asks of the host through its signals: close (`close-requested`), lead to a level
 //! (`level-requested`), leave Activity once nothing runs (`activity-ended`), show a game
 //! (`game-requested`) and apply fullscreen mode's changed library filters
-//! (`filters-changed`). Over a running game (`quick_access_overlay`) it leaves out the
+//! (`filters-changed`). Over a running game (`game_overlay`) it leaves out the
 //! entries that need the main window ([`PinduQuickAccess::set_over_game`]). Network and
 //! Bluetooth ask their questions on the host the player sees (`asks_prompts`).
 //!
