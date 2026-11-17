@@ -1,6 +1,6 @@
 //! What Pindu is doing in the background, which Quick Access's Activity lists: library
-//! syncs, SteamGridDB art fetches and Proton downloads, each with how far it is and
-//! whether the user can cancel it. A task leaves the list when its work ends.
+//! syncs, SteamGridDB art fetches, Proton downloads and store installs, each with how far
+//! it is and whether the user can cancel it. A task leaves the list when its work ends.
 
 /// What a task does, which picks its icon.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -11,6 +11,8 @@ pub enum TaskKind {
     ArtFetch,
     /// Downloading and installing a Proton build.
     ProtonDownload,
+    /// Installing a store from Flathub (see [`crate::add_store`]).
+    StoreInstall,
 }
 
 /// How far a task is.

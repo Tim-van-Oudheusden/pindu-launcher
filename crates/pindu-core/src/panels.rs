@@ -79,6 +79,9 @@ pub enum QuickAccessLevel {
     /// The installed OS version, an update waiting for the next start and the version to
     /// roll back to, on Pindu OS (see [`crate::system::update`]).
     SystemUpdate,
+    /// The stores to install from Flathub, and the install that runs (see
+    /// [`crate::add_store`]).
+    AddStore,
 }
 
 /// What lies under the panels when an intent comes in.
@@ -411,6 +414,16 @@ mod tests {
         assert!(panels.handle(Intent::QuickAccess, PAGE));
         assert_eq!(panels.open(), quick_access());
         assert!(panels.handle(Intent::QuickAccess, PAGE));
+        assert_eq!(panels.open(), None);
+    }
+
+    #[test]
+    fn b_steps_back_from_add_a_store_and_then_closes_quick_access() {
+        let mut panels = Panels::new();
+        panels.show(Panel::QuickAccess(QuickAccessLevel::AddStore));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), quick_access());
+        assert!(panels.handle(Intent::Back, PAGE));
         assert_eq!(panels.open(), None);
     }
 

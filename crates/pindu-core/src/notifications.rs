@@ -40,6 +40,10 @@ pub enum Kind {
     PowerInhibited,
     /// The output the user chose did not become the default.
     SoundOutputFailed,
+    /// A store installed from Flathub.
+    StoreInstalled,
+    /// A store did not install from Flathub.
+    StoreFailed,
 }
 
 /// What a notification opens when the user picks it.

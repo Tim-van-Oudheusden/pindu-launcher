@@ -278,6 +278,19 @@ console restarts, so the entry never restarts it by itself.
 
 Elsewhere, another distribution or the Flatpak, the entry does not show.
 
+### Add a Store
+
+A library with no games, such as a fresh Pindu OS, offers **Add a Store** on its empty page, in fullscreen mode and on
+the desktop; Quick Access has it any time. It lists Steam, Heroic and Lutris with a line on what each is for, marks the
+ones already installed, and installs the one you pick from Flathub, all with a controller alone:
+
+- The native packages run `flatpak` themselves: into the system installation when it has a `flathub` remote (Pindu
+  OS ships one, and lets the console's user install without a password), otherwise into your user installation, after
+  adding Flathub to it. The install shows how far it is, here and in Activity, and can be cancelled.
+- The Flatpak cannot install apps and gets no permission to, so it opens the store's page in your software centre
+  and says so.
+- Once a store is installed the library refreshes; sign in to the store, and its games show.
+
 ### Controllers
 
 - **Controllers** in Quick Access lists the controllers it sees, with the glyphs each shows and its battery where the

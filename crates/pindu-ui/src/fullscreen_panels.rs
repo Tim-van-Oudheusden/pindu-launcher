@@ -13,9 +13,9 @@
 //! `fullscreen_network`'s, its Bluetooth (where BlueZ has an adapter)
 //! `fullscreen_bluetooth`'s, its Sound Output (where PipeWire's tools run)
 //! `fullscreen_sound_output`'s, its System Update (on Pindu OS only)
-//! `fullscreen_system_update`'s. Its Design level holds the design, its variant, Home's
-//! background blur and dim, and the user's own stylesheet. The drawer's Power level is
-//! `fullscreen_power`'s.
+//! `fullscreen_system_update`'s, its Add a Store `add_store`'s. Its Design level holds the
+//! design, its variant, Home's background blur and dim, and the user's own stylesheet. The
+//! drawer's Power level is `fullscreen_power`'s.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -175,6 +175,7 @@ impl PinduWindow {
         let [bluetooth_adapter, bluetooth_paired, bluetooth_found] =
             imp.quick_access_bluetooth_level.lists();
         let [system_versions, system_actions] = imp.quick_access_system_update_level.lists();
+        let [add_store_stores, add_store_actions] = imp.quick_access_add_store_level.lists();
         for list in [
             imp.quick_access_designs.get(),
             imp.quick_access_variants.get(),
@@ -196,6 +197,8 @@ impl PinduWindow {
             bluetooth_found,
             system_versions,
             system_actions,
+            add_store_stores,
+            add_store_actions,
             network_devices,
             wifi_radio,
             wifi_networks,
@@ -276,6 +279,7 @@ impl PinduWindow {
         self.setup_performance();
         self.setup_bluetooth();
         self.setup_system_update();
+        self.setup_add_store();
         self.setup_network();
         self.setup_power();
         self.fill_drawer();
@@ -568,6 +572,7 @@ impl PinduWindow {
             Some(Panel::QuickAccess(QuickAccessLevel::Bluetooth)) => self.show_bluetooth(),
             Some(Panel::QuickAccess(QuickAccessLevel::SoundOutput)) => self.show_sound_output(),
             Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)) => self.show_system_update(),
+            Some(Panel::QuickAccess(QuickAccessLevel::AddStore)) => self.show_add_store(),
             Some(Panel::QuickAccess(QuickAccessLevel::Network)) => self.show_network(),
             Some(Panel::Drawer(DrawerLevel::Power)) => self.show_power(),
             _ => {}
@@ -606,6 +611,7 @@ impl PinduWindow {
                     QuickAccessLevel::Bluetooth => "bluetooth",
                     QuickAccessLevel::SoundOutput => "sound-output",
                     QuickAccessLevel::SystemUpdate => "system-update",
+                    QuickAccessLevel::AddStore => "add-store",
                     QuickAccessLevel::Network => "network",
                 });
             }
@@ -689,6 +695,10 @@ impl PinduWindow {
             ) => Some(imp.quick_access_system_update_row.get().upcast()),
             (
                 Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+                Some(Panel::QuickAccess(QuickAccessLevel::AddStore)),
+            ) => Some(imp.quick_access_add_store_row.get().upcast()),
+            (
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
                 Some(Panel::QuickAccess(QuickAccessLevel::Network)),
             ) => Some(imp.quick_access_network_row.get().upcast()),
             // The first Playing Now card's Return comes first.
@@ -769,6 +779,7 @@ impl PinduWindow {
             (Some(Panel::QuickAccess(QuickAccessLevel::SystemUpdate)), _) => {
                 self.system_update_focus()
             }
+            (Some(Panel::QuickAccess(QuickAccessLevel::AddStore)), _) => self.add_store_focus(),
             (Some(Panel::QuickAccess(QuickAccessLevel::Network)), _) => self.network_focus(),
             // The first controller that can rumble, or else the first button prompt.
             (Some(Panel::QuickAccess(QuickAccessLevel::Controllers)), _) => {

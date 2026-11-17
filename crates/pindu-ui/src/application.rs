@@ -6,6 +6,7 @@ use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
 
+use crate::add_store_service::AddStoreService;
 use crate::audio_output_service::AudioOutputService;
 use crate::bluetooth_service::BluetoothService;
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
@@ -76,6 +77,8 @@ mod imp {
         pub audio_output_service: OnceCell<AudioOutputService>,
         /// OS updates on Pindu OS, for Quick Access's System Update.
         pub system_update_service: OnceCell<SystemUpdateService>,
+        /// The "add a store" flow, for Quick Access and the empty library.
+        pub add_store_service: OnceCell<AddStoreService>,
         /// The network, for Quick Access's Network.
         pub network_service: OnceCell<NetworkService>,
         /// Suspend, restart and power off, for the drawer's Power.
@@ -175,6 +178,13 @@ mod imp {
                 .expect("start-up runs once");
             self.system_update_service
                 .set(SystemUpdateService::new(&self.notification_service))
+                .expect("start-up runs once");
+            self.add_store_service
+                .set(AddStoreService::new(
+                    &self.sync_service,
+                    &self.task_service,
+                    &self.notification_service,
+                ))
                 .expect("start-up runs once");
             self.network_service
                 .set(NetworkService::new(&self.notification_service))
@@ -366,6 +376,14 @@ impl PinduApplication {
     pub fn system_update_service(&self) -> &SystemUpdateService {
         self.imp()
             .system_update_service
+            .get()
+            .expect("the application has started")
+    }
+
+    /// The "add a store" flow.
+    pub fn add_store_service(&self) -> &AddStoreService {
+        self.imp()
+            .add_store_service
             .get()
             .expect("the application has started")
     }
