@@ -25,8 +25,8 @@ use gtk::glib;
 use gtk::prelude::*;
 use pindu_core::gamescope::overlay::{self, OverGame};
 use pindu_core::gamescope::{
-    self, BaseLayerClaim, ExpectedGame, Front, InGameIntent, Reclaims, STEAM_APP_ID, StoreLaunch,
-    WindowFacts, Xid, mangoapp,
+    self, BaseLayerClaim, ExpectedGame, Front, InGameIntent, PickedWindow, Reclaims, STEAM_APP_ID,
+    StoreLaunch, WindowFacts, Xid, mangoapp,
 };
 use pindu_core::model::{GameId, LaunchConfig, Timestamp};
 
@@ -39,6 +39,8 @@ const FOCUSED_APP: &str = "GAMESCOPE_FOCUSED_APP";
 const FOCUSED_APP_GFX: &str = "GAMESCOPE_FOCUSED_APP_GFX";
 /// gamescope's property with the app IDs of the windows it could show.
 const FOCUSABLE_APPS: &str = "GAMESCOPE_FOCUSABLE_APPS";
+/// gamescope's property with the windows it could show: window, app ID and process.
+const FOCUSABLE_WINDOWS: &str = "GAMESCOPE_FOCUSABLE_WINDOWS";
 /// The root's focus priority list, which Steam writes and the launcher writes in its place.
 const BASELAYER_APPID: &str = "GAMESCOPECTRL_BASELAYER_APPID";
 /// The root's pinned base layer window, which takes precedence over the list.
@@ -49,6 +51,10 @@ const STEAM_GAME: &str = "STEAM_GAME";
 const NET_WM_PID: &str = "_NET_WM_PID";
 /// A window's instance and class names.
 const WM_CLASS: &str = "WM_CLASS";
+/// A window's title in UTF-8.
+const NET_WM_NAME: &str = "_NET_WM_NAME";
+/// A window's title, the older way.
+const WM_NAME: &str = "WM_NAME";
 /// Marks a window as an overlay, which is never a base layer.
 const STEAM_OVERLAY: &str = "STEAM_OVERLAY";
 /// Whether an overlay holds the keyboard and pointer.
@@ -117,6 +123,8 @@ struct Inner {
     focusable: RefCell<Vec<u32>>,
     /// When the launcher wrote its claim back after another client changed it.
     reclaims: RefCell<Reclaims>,
+    /// The window of the game in front the user picked from the menu drawer over it.
+    picked: Cell<Option<PickedWindow>>,
 }
 
 impl GamescopeService {
@@ -149,6 +157,7 @@ impl GamescopeService {
                 main_window: Cell::default(),
                 focusable: RefCell::default(),
                 reclaims: RefCell::default(),
+                picked: Cell::default(),
             }),
         };
         let Some(x11) = &service.inner.x11 else {
@@ -638,10 +647,52 @@ impl GamescopeService {
         }
     }
 
-    /// Asks gamescope to show `front`.
+    /// Asks gamescope to show `front`; a window picked of another game is forgotten.
     fn ask_for(&self, front: Front) {
         glib::g_debug!("pindu", "gamescope: asking for {front:?} in front");
         self.inner.wanted.set(front);
+        let picked = self.inner.picked.get();
+        if picked.is_some_and(|picked| front != Front::Game(picked.app_id)) {
+            self.inner.picked.set(None);
+        }
+        self.write_base_layer();
+    }
+
+    /// The windows gamescope could show (`GAMESCOPE_FOCUSABLE_WINDOWS`).
+    fn focusable_windows(&self) -> Vec<gamescope::FocusableWindow> {
+        let Some(x11) = &self.inner.x11 else {
+            return Vec::new();
+        };
+        let property = x11
+            .cardinals(x11.root, FOCUSABLE_WINDOWS)
+            .unwrap_or_default();
+        gamescope::focusable_windows(&property)
+    }
+
+    /// The windows of the game in front, each with its title, in gamescope's order; none
+    /// while the launcher is in front.
+    pub fn front_windows(&self) -> Vec<(Xid, Option<String>)> {
+        let (Some(x11), Front::Game(app_id)) = (&self.inner.x11, self.inner.front.get()) else {
+            return Vec::new();
+        };
+        gamescope::game_windows(&self.focusable_windows(), app_id)
+            .into_iter()
+            .map(|xid| (xid, x11.title(xid)))
+            .collect()
+    }
+
+    /// Shows `xid`, a window of the game in front the user picked, instead of the one
+    /// gamescope shows: it stays pinned while the game is wanted in front and the window
+    /// is there.
+    pub fn show_window(&self, xid: Xid) {
+        let Front::Game(app_id) = self.inner.front.get() else {
+            return;
+        };
+        glib::g_info!(
+            "pindu",
+            "gamescope: showing window {xid:#x} of app {app_id}"
+        );
+        self.inner.picked.set(Some(PickedWindow { app_id, xid }));
         self.write_base_layer();
     }
 
@@ -703,15 +754,20 @@ impl GamescopeService {
     }
 
     /// What the launcher claims on the root for the front it wants: the Steam client's
-    /// window the store launch waits on in the launcher's place, when there is one.
+    /// window the store launch waits on in the launcher's place, when there is one, and
+    /// the window the user picked of the game in front.
     fn claim(&self) -> BaseLayerClaim {
-        BaseLayerClaim::new(
+        let claim = BaseLayerClaim::new(
             self.inner.wanted.get(),
             &self.front_ids(),
             &self.inner.focusable.borrow(),
             self.inner.main_window.get(),
         )
-        .showing(self.steam_window())
+        .showing(self.steam_window());
+        match self.inner.picked.get() {
+            Some(picked) => claim.picking(Some(picked), &self.focusable_windows()),
+            None => claim,
+        }
     }
 
     /// The Steam client's window the store launch waits on, which gamescope shows.
@@ -815,8 +871,18 @@ impl GamescopeService {
         }
     }
 
-    /// Lets the store launch know another client's top-level window was unmapped.
+    /// Lets the store launch know another client's top-level window was unmapped, and
+    /// drops the pin of a picked window that went.
     fn window_unmapped(&self, xid: Xid) {
+        if self
+            .inner
+            .picked
+            .get()
+            .is_some_and(|picked| picked.xid == xid)
+        {
+            self.inner.picked.set(None);
+            self.write_base_layer();
+        }
         self.follow_store_window(|launch| launch.window_unmapped(xid, Instant::now()));
     }
 
@@ -1084,6 +1150,15 @@ impl X11 {
                 "gamescope: window {window:#x} went (X error {error})"
             );
         }
+    }
+
+    /// Another client's window's title, or `None` when it has none or is gone.
+    fn title(&self, xid: Xid) -> Option<String> {
+        self.display.error_trap_push();
+        let net_wm_name = self.bytes(xid, NET_WM_NAME);
+        let wm_name = self.bytes(xid, WM_NAME);
+        self.display.error_trap_pop();
+        gamescope::window_title(net_wm_name.as_deref(), wm_name.as_deref())
     }
 
     /// What decides a window's app ID, or `None` once it is gone.

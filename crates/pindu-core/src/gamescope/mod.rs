@@ -19,10 +19,14 @@ use crate::model::{GameId, Source};
 use crate::sources::sha256::sha256_hex;
 
 mod claim;
+mod game_windows;
 pub mod mangoapp;
 mod steam_prompts;
 mod store_launch;
 pub use claim::{BaseLayerClaim, RECLAIM_LIMIT, RECLAIM_PERIOD, Reclaims};
+pub use game_windows::{
+    FocusableWindow, PickedWindow, focusable_windows, game_windows, window_title,
+};
 pub use store_launch::{STORE_LAUNCH_GRACE, STORE_LAUNCH_TIMEOUT, StoreLaunch};
 
 /// The app ID gamescope knows as Steam, which the launcher's main window claims.

@@ -24,6 +24,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gio, glib};
 use pindu_core::gamepad::{Direction, Intent, Layout, WindowFocus};
+use pindu_core::gamescope::Xid;
 use pindu_core::gamescope::overlay::OverGame;
 use pindu_core::hints::{self, Context, Focus, Hint, Launching};
 use pindu_core::launch;
@@ -207,7 +208,8 @@ impl PinduGameOverlay {
     }
 
     /// The drawer's entries: Collections leads to its level here; Home, Library and a
-    /// collection bring the main window to the front, which goes there.
+    /// collection bring the main window to the front, which goes there; a window of the
+    /// game shows that window and closes the drawer.
     fn add_drawer_actions(&self, actions: &gio::SimpleActionGroup) {
         let launcher_action = |name: &'static str, parameter: Option<&glib::VariantTy>| {
             let action = gio::SimpleAction::new(name, parameter);
@@ -233,6 +235,21 @@ impl PinduGameOverlay {
             move |_, _| overlay.show_panel(Panel::Drawer(DrawerLevel::Collections))
         ));
         actions.add_action(&collections);
+        let window = gio::SimpleAction::new("game-window", Some(glib::VariantTy::UINT64));
+        window.connect_activate(glib::clone!(
+            #[weak(rename_to = overlay)]
+            self,
+            move |_, target| {
+                let xid = target
+                    .and_then(u64::from_variant)
+                    .and_then(|xid| Xid::try_from(xid).ok());
+                overlay.request_close();
+                if let (Some(xid), Some(application)) = (xid, overlay.imp().application.upgrade()) {
+                    application.gamescope_service().show_window(xid);
+                }
+            }
+        ));
+        actions.add_action(&window);
     }
 
     /// Does what Quick Access asks for: close, show a level, leave Activity, or show a
@@ -305,6 +322,8 @@ impl PinduGameOverlay {
                 if let Some(application) = &application {
                     imp.drawer
                         .fill(&application.library_service().model().collections(), false);
+                    imp.drawer
+                        .show_windows(&application.gamescope_service().front_windows());
                 }
                 panels.show(Panel::Drawer(DrawerLevel::Main));
             }

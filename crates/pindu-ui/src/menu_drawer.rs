@@ -13,8 +13,10 @@
 use std::cell::OnceCell;
 
 use adw::subclass::prelude::*;
+use gettextrs::gettext;
 use gtk::glib;
 use gtk::prelude::*;
+use pindu_core::gamescope::Xid;
 use pindu_core::model::Collection;
 use pindu_core::panels::{DrawerEntry, DrawerLevel, drawer_entries};
 
@@ -32,6 +34,10 @@ mod imp {
         pub stack: TemplateChild<gtk::Stack>,
         #[template_child]
         pub playing_cards: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub windows_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub windows: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub list: TemplateChild<gtk::ListBox>,
         #[template_child]
@@ -69,9 +75,52 @@ mod imp {
     impl ObjectImpl for PinduMenuDrawer {
         fn constructed(&self) {
             self.parent_constructed();
+            // The windows sit between the cards and the entries. Up from the entries goes
+            // to the last window first; this runs before the cards' own handler, which
+            // takes Up to the nearest card's Return.
+            self.list.connect_keynav_failed(glib::clone!(
+                #[weak(rename_to = windows)]
+                self.windows,
+                #[upgrade_or]
+                glib::Propagation::Proceed,
+                move |_, direction| {
+                    let last = windows.is_visible().then(|| windows.last_child()).flatten();
+                    match last {
+                        Some(row) if direction == gtk::DirectionType::Up => {
+                            row.grab_focus();
+                            glib::Propagation::Stop
+                        }
+                        _ => glib::Propagation::Proceed,
+                    }
+                }
+            ));
             let _ = self
                 .cards
                 .set(PlayingCards::new(&self.playing_cards, &self.list));
+            // Up from the first window goes to the nearest card's Return, Down from the last
+            // to the entries.
+            self.windows.connect_keynav_failed(glib::clone!(
+                #[weak(rename_to = cards)]
+                self.playing_cards,
+                #[weak(rename_to = list)]
+                self.list,
+                #[upgrade_or]
+                glib::Propagation::Stop,
+                move |_, direction| {
+                    let target = match direction {
+                        gtk::DirectionType::Up => cards
+                            .last_child()
+                            .as_ref()
+                            .and_then(crate::fullscreen_playing::card_return),
+                        gtk::DirectionType::Down => list.row_at_index(0).map(|row| row.upcast()),
+                        _ => None,
+                    };
+                    if let Some(target) = target {
+                        target.grab_focus();
+                    }
+                    glib::Propagation::Stop
+                }
+            ));
         }
     }
 
@@ -119,6 +168,30 @@ impl PinduMenuDrawer {
             row.set_action_name(Some("win.drawer-collection"));
             row.set_action_target_value(Some(&collection.id.to_variant()));
             imp.collections.append(&row);
+        }
+    }
+
+    /// Lists `windows`, the windows of the game in front with their titles, when it has
+    /// more than one, each leading to `win.game-window` with its window; hides the list
+    /// otherwise.
+    pub(crate) fn show_windows(&self, windows: &[(Xid, Option<String>)]) {
+        let imp = self.imp();
+        imp.windows.remove_all();
+        let shown = windows.len() > 1;
+        imp.windows_title.set_visible(shown);
+        imp.windows.set_visible(shown);
+        if !shown {
+            return;
+        }
+        for (xid, title) in windows {
+            let untitled = gettext("Untitled Window");
+            let row = drawer_row(
+                "focus-windows-symbolic",
+                title.as_deref().unwrap_or(&untitled),
+            );
+            row.set_action_name(Some("win.game-window"));
+            row.set_action_target_value(Some(&xid.to_variant()));
+            imp.windows.append(&row);
         }
     }
 
