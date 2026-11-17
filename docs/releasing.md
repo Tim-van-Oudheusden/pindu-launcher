@@ -56,6 +56,35 @@ The native packages target the distros that ship GTK 4.24 and libadwaita 1.10 (#
 Ubuntu release qualifies, add it to the `packages` and `packages-smoke` matrices in `packaging.yml` and `release.yml`
 and to the table in `build-aux/release-notes.py`.
 
+## Soak a pre-release
+
+A final release first soaks as a pre-release on real machines. Pindu OS follows only final releases, so nothing
+reaches its users before the soak ends.
+
+1. **Cut a pre-release** with the steps above, under the same "Release X.Y.Z" issue, with the version written the way
+   each tool sorts a pre-release below the final version (`build-aux/check-version.sh` checks all of them):
+
+   | Where | First pre-release of 0.5.0 |
+   | --- | --- |
+   | `meson.build`, `Cargo.toml`, the tag | `0.5.0-rc.1`, tag `v0.5.0-rc.1` |
+   | RPM spec `Version:` and `%changelog` | `0.5.0~rc1`, changelog entry `0.5.0~rc1-1` |
+   | Debian changelog | `0.5.0~rc1-1` (`dch -v 0.5.0~rc1-1`) |
+   | MetaInfo | `<release version="0.5.0~rc1" type="development" date="YYYY-MM-DD">` |
+
+   The Release workflow publishes a `vX.Y.Z-rc.N` tag as a GitHub pre-release that never becomes "latest". Its files
+   are named after the tag (`pindu-launcher-0.5.0-rc.1-x86_64.flatpak`, `pindu-launcher-0.5.0-rc.1-1.fc45.x86_64.rpm`
+   and so on), because GitHub renames files with a `~`; the packages inside are `0.5.0~rc1`, which `dnf` and `apt`
+   upgrade to `0.5.0`.
+2. **Run the hardware checklist** on the pre-release's files, on one real machine, and record the result on the
+   "Release X.Y.Z" issue.
+3. **Wait a few days** while the pre-release runs on real machines. A bug that needs a fix goes through a pull request
+   and a new pre-release (`rc.2`), whose soak starts again with step 2.
+4. **Tag the final version** once the soak passes, with steps 2 to 8 above: a pull request sets `X.Y.Z` in
+   `meson.build`, `Cargo.toml` and the RPM spec, adds `X.Y.Z-1` entries to the RPM and Debian changelogs, and turns the
+   MetaInfo's pre-release `<release>` into `<release version="X.Y.Z" date="YYYY-MM-DD">` without `type`; then tag its
+   merge commit `vX.Y.Z`. The final must ship the code that soaked: if anything but that version bump has landed on
+   `main` since the pre-release, cut another pre-release instead and soak that.
+
 ## When something goes wrong
 
 - **The version check fails:** the tag does not match the tree. Delete the tag (`git push origin :vX.Y.Z` and

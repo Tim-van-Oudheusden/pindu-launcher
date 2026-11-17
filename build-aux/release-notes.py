@@ -4,6 +4,7 @@
 Usage: build-aux/release-notes.py VERSION
 """
 
+import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -22,11 +23,14 @@ def text(element: ET.Element) -> str:
 
 
 def notes(version: str, metainfo: Path = METAINFO) -> str:
-    """The Markdown notes for `version`; raises LookupError when the MetaInfo has no entry."""
+    """The Markdown notes for `version` (X.Y.Z or X.Y.Z-rc.N, the tag without its `v`); raises
+    LookupError when the MetaInfo has no entry. The MetaInfo names a pre-release X.Y.Z~rcN
+    (build-aux/check-version.sh)."""
+    listed = re.sub(r"-rc\.([0-9]+)$", r"~rc\1", version)
     root = ET.parse(metainfo).getroot()
-    release = root.find(f"./releases/release[@version='{version}']")
+    release = root.find(f"./releases/release[@version='{listed}']")
     if release is None:
-        raise LookupError(f"{metainfo.name} has no <release version=\"{version}\">")
+        raise LookupError(f"{metainfo.name} has no <release version=\"{listed}\">")
     blocks = []
     description = release.find("description")
     for block in [] if description is None else description:

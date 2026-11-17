@@ -97,7 +97,8 @@ po/check-pot.sh _build
 
 `build-aux/check-version.sh` compares the version in `meson.build`, `Cargo.toml`, the MetaInfo's newest `<release>`,
 the RPM spec and the newest Debian changelog entry. With a tag argument, as the Release workflow passes, the tag must be
-that version with a `v` prefix, and `build-aux/release-notes.py` must find notes for it. A failure means a release bump
+that version with a `v` prefix, and `build-aux/release-notes.py` must find notes for it. A pre-release `X.Y.Z-rc.N` is
+written `X.Y.Z~rcN` in the MetaInfo (as `type="development"`), the RPM and the DEB. A failure means a release bump
 missed a file ([`docs/releasing.md`](../releasing.md)).
 
 ```sh
