@@ -90,11 +90,12 @@ Pick one:
 
   ```sh
   flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-  flatpak install --user ./pindu-launcher-0.4.1-x86_64.flatpak
+  flatpak install --user ./pindu-launcher-*-x86_64.flatpak
   flatpak run io.github.tim_van_oudheusden.pindu-launcher
   ```
 
-  A bundle does not update itself: install the next release's bundle the same way.
+  A bundle does not update itself: install the next release's bundle the same way, from a folder that holds only that
+  bundle.
 - **Install a native package** on Fedora 45, Debian testing or Ubuntu 26.10, the distros with GTK 4.24 and
   libadwaita 1.10. Each release has `pindu-launcher-<version>-1.fc45.<arch>.rpm` (`x86_64` or `aarch64`),
   `pindu-launcher-<version>-debian-testing-<arch>.deb` and `pindu-launcher-<version>-ubuntu-26.10-<arch>.deb` (`amd64`
