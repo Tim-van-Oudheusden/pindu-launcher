@@ -733,6 +733,16 @@ impl Intents {
             .map_or(DeviceKind::Generic, |pad| pad.kind);
         Layout::resolve(kind, self.settings)
     }
+
+    /// What a press of `button` on `device` does while the menu drawer's Controls waits for
+    /// a button ([`Capture::of`]). A button still held since before the wait is no new
+    /// press: a held trigger reports each further move as another press.
+    pub fn capture(&self, device: DeviceId, button: Button) -> Capture {
+        if self.pressed.contains(&(device, button)) {
+            return Capture::Ignore;
+        }
+        Capture::of(button)
+    }
 }
 
 /// The direction a stick points, once it is past the deadzone: the larger deflection wins.
@@ -1896,5 +1906,30 @@ mod tests {
         ] {
             assert_eq!(Capture::of(button), Capture::Ignore, "{button:?}");
         }
+    }
+
+    #[test]
+    fn a_trigger_held_since_before_the_wait_is_no_press_to_rebind() {
+        // libmanette reports each further move of a held axis trigger as another press.
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Xbox), ms(0));
+        intents.handle(&press(Button::RightTrigger), ms(0));
+
+        assert_eq!(intents.capture(PAD, Button::RightTrigger), Capture::Ignore);
+        assert_eq!(
+            intents.capture(PAD, Button::LeftTrigger),
+            Capture::Rebind(Button::LeftTrigger)
+        );
+        assert_eq!(
+            intents.capture(DeviceId(2), Button::RightTrigger),
+            Capture::Rebind(Button::RightTrigger),
+            "another pad's trigger is a new press"
+        );
+
+        intents.handle(&release(Button::RightTrigger), ms(10));
+        assert_eq!(
+            intents.capture(PAD, Button::RightTrigger),
+            Capture::Rebind(Button::RightTrigger)
+        );
     }
 }

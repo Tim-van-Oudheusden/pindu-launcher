@@ -288,8 +288,9 @@ impl GamepadService {
     }
 
     /// Hands a button press or release to the wait for a button, and says whether the wait
-    /// took it, so that no intent comes of it. A release always goes on, so the intents
-    /// know the button is up.
+    /// took it, so that no intent comes of it. A button already held when the wait began
+    /// (the one that chose the function, or a trigger reporting a further move as a press)
+    /// is no new press. A release always goes on, so the intents know the button is up.
     fn capture_button(&self, device: DeviceId, button: Button, pressed: bool) -> bool {
         let inner = &self.inner;
         if !pressed {
@@ -303,7 +304,8 @@ impl GamepadService {
             return false;
         }
         inner.swallowed.borrow_mut().insert((device, button));
-        match Capture::of(button) {
+        let capture = inner.intents.borrow().capture(device, button);
+        match capture {
             Capture::Rebind(button) => {
                 let layout = inner.intents.borrow().layout(device);
                 self.finish_capture(Some((layout, button)));
