@@ -170,18 +170,21 @@ Preferences.
 
 ### Power
 
-Where the system lets you, the menu drawer (Start or Guide) has a **Power** entry after **Quit**, leading to
-**Suspend**, **Restart** and **Power Off**, so a console without a keyboard can be turned off with a controller. B steps
-back to the drawer's entries.
+The menu drawer (Start or Guide) ends with a **Power** entry, leading to **Suspend**, **Restart** and **Power Off**
+where the system lets you, and then **Exit Pindu Launcher**, so a console without a keyboard can be turned off with a
+controller. B steps back to the drawer's entries.
 
 - An action the system does not allow is greyed out and says so; one the machine cannot do at all is not listed.
 - While a game Pindu started is running, Restart and Power Off ask first, since its unsaved progress would be lost.
   Suspend does not ask: the game carries on when the machine wakes.
 - When a program holds the machine on (an update installing, for example), a notification names it.
 
-The Flatpak has no access to the system bus, so the entry does not show there; use the desktop's own power menu. In a
-[gamescope-session-plus session](#a-gamescope-session-plus-session) the level also has **Switch to Desktop**, in the
-Flatpak too.
+The Flatpak has no access to the system bus, so it asks the host's logind through
+[host access](#starting-games-on-the-host); without it Suspend, Restart and Power Off are greyed out and say Preferences
+gives the access. In a [gamescope-session-plus session](#a-gamescope-session-plus-session) the level also has **Switch
+to Desktop**, in the Flatpak too. In the launcher's own session (`--session`, or a `--steam` gamescope whose login
+session is named after gamescope or Pindu) it leaves out Exit Pindu Launcher, since quitting would leave an empty
+screen.
 
 ### Quick Access
 
@@ -356,9 +359,9 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
 - Guide during play, let go without pressing another button, opens the menu drawer over the running game, in a
   see-through window of its own that gamescope draws above the game (`STEAM_OVERLAY`), as Guide opens Steam's menu.
   The game stays in front behind it. The drawer holds the game's Playing Now card (Return closes the drawer, Stop ends a
-  game the app started), Home, Library and Collections, which bring the app to the front there; leaving fullscreen
-  mode, Quit and Power are left out. Guide again, or B, closes it and gives input back to the game. When the game has
-  more than one window gamescope could show (`GAMESCOPE_FOCUSABLE_WINDOWS`), such as its own launcher's and the
+  game the app started), Home, Library and Collections, which bring the app to the front there; Controls, leaving
+  fullscreen mode and Power are left out. Guide again, or B, closes it and gives input back to the game. When the game
+  has more than one window gamescope could show (`GAMESCOPE_FOCUSABLE_WINDOWS`), such as its own launcher's and the
   game's, the drawer lists them by title under its card; picking one pins it (`GAMESCOPECTRL_BASELAYER_WINDOW`) while
   the game is in front, until it closes, when gamescope shows the game's other window again.
 - Guide + A, or the Steam Deck's "…", during play opens Quick Access over the running game in the same window; either
@@ -398,6 +401,11 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   its window (`GAMESCOPECTRL_BASELAYER_WINDOW`) whenever it should be in front, including while a game it wants in
   front has no window yet, and writes its focus list and pin back when another client changes them, at most ten times
   in 10 seconds. Its games come to the front as usual.
+- Where a Steam folder was found, Home has a **Big Picture** tile that hands `steam://open/bigpicture` to Steam the way
+  Play hands it a Steam game. In this session Big Picture then takes the app's place: the Steam client's newest window
+  is pinned, a game Steam starts comes to the front, and the app leaves the controller to Steam. The app is back in
+  front 10 seconds after Big Picture's last window closes, or after a minute if none opened; choosing the tile again
+  while it says Opening… gives up.
 - While a Steam store launch waits for the game's window, the Steam client's window (Big Picture, which shows a
   sign-in, install, launch option or cloud conflict prompt inside it) is pinned in the app's place, the newest first,
   so the user can answer what Steam asks. The launch does not time out while one is open; once the last one closes the
@@ -418,8 +426,8 @@ the client file in `share/gamescope-session-plus/sessions.d/pindu` and the login
 installed.
 
 - The session runs `pindu-launcher --fullscreen --session`. `--session` tells the app that it is the session's
-  client: the session ends when the app quits, so closing its window does nothing, and **Quit** in the menu drawer
-  ends the session.
+  client: the session ends when the app quits, so closing its window does nothing, and the drawer's Power level has no
+  Exit Pindu Launcher. Switch to Desktop, Restart or Power Off leave the session.
 - **Switch to Desktop** in the drawer's Power level runs `/usr/lib/os-session-select desktop`, the distribution's
   script that switches to the desktop session, and then quits. It asks first while a game Pindu started is running.
   Where the distribution has no `os-session-select`, the entry is not there.
