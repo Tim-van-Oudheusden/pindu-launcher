@@ -6,8 +6,14 @@
 //! them. [`asks_first`] says when the shell asks before it runs one, and a refusal by a
 //! program holding a block inhibitor is reported with the programs' names.
 //!
+//! Natively the backend speaks to logind on the system bus. The Flatpak has none, so with
+//! the host-spawn override it asks the host's logind through `busctl` ([`busctl`]), and
+//! without it every action shows greyed out, saying why ([`Facts::sandboxed`]).
+//!
 //! The batteries are [`crate::power`]'s; this module is only about the machine's power
 //! state.
+
+pub mod busctl;
 
 use std::cell::{Cell, RefCell};
 use std::fmt;
@@ -50,7 +56,8 @@ pub fn asks_first(action: PowerAction, game_running: bool) -> bool {
 /// What the backend found out about logind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Facts {
-    /// Whether the system bus can be reached: never in the Flatpak.
+    /// Whether the system bus can be reached: natively, or on the host through host spawn
+    /// in the Flatpak.
     pub system_bus: bool,
     /// Whether logind has an owner on the system bus or can be activated.
     pub logind: bool,
@@ -60,6 +67,9 @@ pub struct Facts {
     pub can_reboot: Permission,
     /// What `CanPowerOff` answered.
     pub can_power_off: Permission,
+    /// Whether the app runs in the Flatpak and may not run commands on the host, so it
+    /// cannot ask logind at all.
+    pub sandboxed: bool,
 }
 
 impl Facts {
@@ -86,14 +96,30 @@ pub struct PowerEntry {
 /// What the Power entry and level show.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PowerState {
-    /// The level's entries, top to bottom; none at all hides the drawer's Power entry.
+    /// The level's entries, top to bottom; none at all leaves them out of the drawer's
+    /// Power level.
     pub entries: Vec<PowerEntry>,
+    /// Whether the entries are greyed out because the app may not run commands on the
+    /// host, which Preferences explains, rather than because the system does not allow
+    /// them.
+    pub sandboxed: bool,
 }
 
 impl PowerState {
     /// The state `facts` give: an entry for each action logind answers `yes`, `challenge`
-    /// or `no` for, none without a system bus or logind.
+    /// or `no` for, none without a system bus or logind, and every action greyed out in
+    /// the Flatpak without host spawn, where logind cannot be asked.
     pub fn from_facts(facts: &Facts) -> Self {
+        if facts.sandboxed {
+            let entries = PowerAction::ALL.map(|action| PowerEntry {
+                action,
+                allowed: false,
+            });
+            return Self {
+                entries: entries.to_vec(),
+                sandboxed: true,
+            };
+        }
         let entries = PowerAction::ALL
             .into_iter()
             .filter_map(|action| {
@@ -116,10 +142,13 @@ impl PowerState {
                 }
             })
             .collect();
-        Self { entries }
+        Self {
+            entries,
+            sandboxed: false,
+        }
     }
 
-    /// Whether the drawer has a Power entry.
+    /// Whether the level lists Suspend, Restart or Power Off.
     pub fn shown(&self) -> bool {
         !self.entries.is_empty()
     }
@@ -420,6 +449,7 @@ mod tests {
             can_suspend: answer,
             can_reboot: answer,
             can_power_off: answer,
+            ..Facts::default()
         }
     }
 
@@ -536,6 +566,32 @@ mod tests {
 
         assert!(power.state().shown());
         assert!(power.state().entries.iter().all(|entry| !entry.allowed));
+    }
+
+    #[test]
+    fn the_flatpak_without_host_spawn_greys_out_every_action_saying_why() {
+        let (power, fake, failures) = section(Facts {
+            sandboxed: true,
+            ..Facts::default()
+        });
+
+        assert!(power.state().shown());
+        assert_eq!(
+            power.state().entries,
+            PowerAction::ALL.map(|action| entry(action, false))
+        );
+        assert!(power.state().sandboxed);
+        power.run(PowerAction::PowerOff);
+        assert!(fake.asked().is_empty());
+        assert_eq!(fake.watches.get(), 0);
+        assert!(failures.borrow().is_empty());
+    }
+
+    #[test]
+    fn actions_logind_does_not_allow_are_not_greyed_out_for_the_sandbox() {
+        let (power, _, _) = section(logind(Permission::No));
+
+        assert!(!power.state().sandboxed);
     }
 
     #[test]

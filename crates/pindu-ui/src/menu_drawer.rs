@@ -45,8 +45,6 @@ mod imp {
         #[template_child]
         pub exit_fullscreen_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
-        pub quit_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
         pub power_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub collections: TemplateChild<gtk::ListBox>,
@@ -131,8 +129,8 @@ mod imp {
 
 glib::wrapper! {
     /// Fullscreen mode's menu drawer: the Playing Now cards, Home, Library, Collections,
-    /// leaving fullscreen mode, Quit and Power, with Collections and Power as levels of
-    /// their own.
+    /// leaving fullscreen mode and Power, with Collections and Power as levels of their
+    /// own; quitting is on the Power level.
     pub struct PinduMenuDrawer(ObjectSubclass<imp::PinduMenuDrawer>)
         @extends gtk::Box, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
@@ -145,16 +143,15 @@ impl PinduMenuDrawer {
     }
 
     /// Leaves out the entries that would leave fullscreen mode or end the session, for the
-    /// drawer over a running game: Exit Fullscreen Mode, Quit and Power.
+    /// drawer over a running game: Exit Fullscreen Mode and Power, which holds Exit.
     pub(crate) fn set_over_game(&self) {
         let imp = self.imp();
         imp.exit_fullscreen_row.set_visible(false);
-        imp.quit_row.set_visible(false);
         imp.power_row.set_visible(false);
     }
 
     /// Shows the entries that apply: Collections while there are `collections`, whose
-    /// level lists them, and Power while `power` says the system offers it.
+    /// level lists them, and Power while `power` says its level lists anything.
     pub(crate) fn fill(&self, collections: &[Collection], power: bool) {
         let imp = self.imp();
         let entries = drawer_entries(false, !collections.is_empty(), power);

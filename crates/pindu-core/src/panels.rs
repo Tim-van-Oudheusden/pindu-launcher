@@ -30,8 +30,8 @@ pub enum DrawerLevel {
     Main,
     /// The collections, each opening its tab in the library.
     Collections,
-    /// Suspend, Restart and Power Off, as logind allows them (see
-    /// [`crate::system::power`]).
+    /// Suspend, Restart and Power Off, as the system allows them (see
+    /// [`crate::system::power`]), and Exit Pindu Launcher.
     Power,
 }
 
@@ -249,17 +249,15 @@ pub enum DrawerEntry {
     Collections,
     /// Leave fullscreen mode for the desktop window.
     ExitFullscreen,
-    /// Quit Pindu.
-    Quit,
-    /// Lead to suspending, restarting and powering off the machine
+    /// Lead to suspending, restarting and powering off the machine, and to quitting
     /// ([`DrawerLevel::Power`]).
     Power,
 }
 
 /// The drawer's entries, top to bottom: a Playing Now card while a game we started runs,
-/// Collections when there are any, and Power after Quit when the system lets the session
-/// suspend, restart or power off (never in the Flatpak, which has no system bus) or it
-/// offers Switch to Desktop ([`crate::gamescope::session::power_shown`]).
+/// Collections when there are any, and Power last while its level lists anything
+/// ([`crate::gamescope::session::power_level`]), which it does except in the launcher's
+/// own session on a system that offers none of its actions.
 pub fn drawer_entries(playing: bool, collections: bool, power: bool) -> Vec<DrawerEntry> {
     use DrawerEntry::*;
     let playing = playing.then_some(PlayingNow);
@@ -271,7 +269,6 @@ pub fn drawer_entries(playing: bool, collections: bool, power: bool) -> Vec<Draw
         Some(Library),
         collections,
         Some(ExitFullscreen),
-        Some(Quit),
         power,
     ]
     .into_iter()
@@ -760,25 +757,25 @@ mod tests {
         use DrawerEntry::*;
         assert_eq!(
             drawer_entries(true, true, false),
-            [PlayingNow, Home, Library, Collections, ExitFullscreen, Quit]
+            [PlayingNow, Home, Library, Collections, ExitFullscreen]
         );
         assert_eq!(
             drawer_entries(false, false, false),
-            [Home, Library, ExitFullscreen, Quit],
+            [Home, Library, ExitFullscreen],
             "settings live in Quick Access"
         );
     }
 
     #[test]
-    fn the_drawer_lists_power_after_quit_when_the_system_allows_it() {
+    fn the_drawer_lists_power_last_where_its_level_lists_anything_and_quit_lives_there() {
         use DrawerEntry::*;
         assert_eq!(
             drawer_entries(false, false, true),
-            [Home, Library, ExitFullscreen, Quit, Power]
+            [Home, Library, ExitFullscreen, Power]
         );
         assert_eq!(
             drawer_entries(true, false, true),
-            [PlayingNow, Home, Library, ExitFullscreen, Quit, Power]
+            [PlayingNow, Home, Library, ExitFullscreen, Power]
         );
     }
 
