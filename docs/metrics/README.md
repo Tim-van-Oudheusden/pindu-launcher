@@ -24,6 +24,7 @@ opening a pull request.
 | [Versions](#versions) | Meson, Cargo, MetaInfo, RPM and DEB name one version | `versions` Meson test (`build-aux/check-version.sh`) | Every PR and push; on a tag against the tag | `Rust and Meson checks`; Release's `Check the tag against the versions` |
 | [Manifest parity](#manifest-parity) | Release manifest grants exactly the development manifest's permissions and modules | `manifests` Meson test (`build-aux/check-manifests.sh`) | Every PR and push | `Rust and Meson checks` |
 | [Tooling tests](#tooling-tests) | The version, manifest and release-notes scripts catch what they are meant to catch | `tooling` Meson suite (`tests/tooling/`) | Every PR and push | `Rust and Meson checks`; inside both Flatpak builds |
+| [Minimum Rust version](#minimum-rust-version) | The workspace compiles with `Cargo.toml`'s `rust-version` | `cargo check` with that toolchain in `ci.yml` (`msrv`) | Every PR and push | `Minimum supported Rust version` |
 | [UI smoke test](#ui-smoke-test) | The installed app starts and stays up without a panic or GLib critical | `ui-smoke` Meson test (`tests/e2e/ui-smoke.sh`) | The development Flatpak on every PR; every Flatpak build and native package on every push to `main`, nightly and on every tag | `Flatpak build, …` and `Native package install and UI smoke test` checks |
 | [Flatpak build and lint](#flatpak-build-and-lint) | Both manifests build, test and pass `flatpak-builder-lint` | `ci.yml` (`flatpak`: development, x86_64), `packaging.yml` (`flatpak`: release, and both on aarch64), `release.yml` (`flatpak`) | Development on every PR (skipped when only docs or translations change); all on every push to `main`, nightly and every release tag | `Flatpak build, UI smoke test and lint (…)`; bundle artifacts |
 | [Source tarball](#source-tarball) | `meson dist` vendors the crates and builds and tests offline | `packaging.yml` and `release.yml` (`sources`) | Every push to `main`, nightly, every release tag | `Source tarball with vendored crates`; `sources` artifact |
@@ -128,6 +129,19 @@ and the Release workflow rely on it to do.
 ```sh
 meson test -C _build --suite tooling
 python3 tests/tooling/test_check_version.py   # one file, without Meson
+```
+
+## Minimum Rust version
+
+`Cargo.toml`'s `rust-version` is the oldest compiler the README, CONTRIBUTING, the RPM spec and the Debian control
+promise. Every other job builds with the SDK's newest stable Rust, so this one installs the declared version with
+rustup in the GNOME 51 SDK and runs `cargo check` on every crate and target. A failure means the code uses a language
+or library feature newer than the floor: rewrite it, or have the maintainer raise the floor in all five places.
+
+```sh
+msrv=$(sed -n 's/^rust-version = "\([^"]*\)"$/\1/p' Cargo.toml)
+rustup toolchain install "$msrv" --profile minimal
+cargo "+$msrv" check --workspace --all-targets --locked
 ```
 
 ## UI smoke test

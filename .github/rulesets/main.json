@@ -48,6 +48,10 @@
             "integration_id": 15368
           },
           {
+            "context": "Minimum supported Rust version",
+            "integration_id": 15368
+          },
+          {
             "context": "Flatpak build, UI smoke test and lint (development)",
             "integration_id": 15368
           },

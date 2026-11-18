@@ -74,9 +74,12 @@ pub fn header(title: &str, started: &str, argv: &[String]) -> String {
 fn oldest_first(names: &[String]) -> Vec<&String> {
     let order = |name: &String| {
         let stem = name.strip_suffix(".log")?;
-        Some(match stem.rsplit_once('_') {
-            Some((stamp, n)) if let Ok(n) = n.parse::<u32>() => (stamp.to_owned(), n),
-            _ => (stem.to_owned(), 1),
+        let numbered = stem
+            .rsplit_once('_')
+            .and_then(|(stamp, n)| Some((stamp, n.parse::<u32>().ok()?)));
+        Some(match numbered {
+            Some((stamp, n)) => (stamp.to_owned(), n),
+            None => (stem.to_owned(), 1),
         })
     };
     let mut logs: Vec<_> = names
