@@ -16,7 +16,6 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::gamepad::Intent;
-use pindu_core::gamescope::session::power_shown;
 use pindu_core::keys;
 use pindu_core::launch;
 use pindu_core::library::View;
@@ -439,10 +438,8 @@ impl PinduWindow {
     fn fill_drawer(&self) {
         let application = self.application().and_downcast::<PinduApplication>();
         let power = application.as_ref().is_some_and(|application| {
-            power_shown(
-                &application.system_power_service().state(),
-                application.session().switch_to_desktop(),
-            )
+            let state = application.system_power_service().state();
+            !self.power_level_entries(&state).is_empty()
         });
         self.imp()
             .drawer_panel
