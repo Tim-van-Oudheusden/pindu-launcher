@@ -564,11 +564,14 @@ impl GamescopeService {
             return;
         };
         self.set_over_game(None);
+        // Games that run already, ours or a store's, are never the game Steam starts.
+        let mut before = self.front_ids();
         self.forget_store_launch();
         self.update_store_playing();
         let now = Instant::now();
-        let mut session = BigPicture::new(now);
         let apps = x11.cardinals(x11.root, FOCUSABLE_APPS).unwrap_or_default();
+        before.extend_from_slice(&apps);
+        let mut session = BigPicture::new(now, &before);
         session.focusable_apps_changed(&apps, now);
         // A Steam client that already runs may show Big Picture in the window it has open.
         let own = own_windows();

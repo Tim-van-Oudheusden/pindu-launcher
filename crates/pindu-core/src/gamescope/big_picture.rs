@@ -7,14 +7,17 @@
 use std::time::{Duration, Instant};
 
 use super::steam_prompts::SteamPrompts;
-use super::{BaseLayerClaim, STEAM_APP_ID, STORE_LAUNCH_TIMEOUT, WindowFacts, Xid};
+use super::{
+    BaseLayerClaim, STEAM_APP_ID, STORE_LAUNCH_GRACE, STORE_LAUNCH_TIMEOUT, WindowFacts, Xid,
+};
 
 /// How long the launcher waits for Big Picture's window before it gives up on it.
 pub const BIG_PICTURE_TIMEOUT: Duration = STORE_LAUNCH_TIMEOUT;
 
 /// How long the session outlives the Steam client's last window, for a window that closes
-/// just before another opens.
-pub const BIG_PICTURE_GRACE: Duration = Duration::from_secs(2);
+/// a while before another opens: on a cold start, Steam's update or sign-in window before
+/// Big Picture's, as for a store launch.
+pub const BIG_PICTURE_GRACE: Duration = STORE_LAUNCH_GRACE;
 
 /// Steam Big Picture, opened from Home, in front of the launcher.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -24,6 +27,8 @@ pub struct BigPicture {
     steam: SteamPrompts,
     /// The app ID of a game the Steam client started, while gamescope could show it.
     game: Option<u32>,
+    /// The app IDs that are never Steam's game (see [`Self::new`]).
+    before: Vec<u32>,
 }
 
 /// Where the session is.
@@ -38,12 +43,15 @@ enum Phase {
 }
 
 impl BigPicture {
-    /// The session of Big Picture, whose hand-off to Steam went out at `now`.
-    pub fn new(now: Instant) -> Self {
+    /// The session of Big Picture, whose hand-off to Steam went out at `now`. `before`
+    /// holds the app IDs that are not Steam's game: the apps gamescope could show then,
+    /// and the games the launcher runs or handed to their store.
+    pub fn new(now: Instant, before: &[u32]) -> Self {
         Self {
             phase: Phase::Waiting(now),
             steam: SteamPrompts::default(),
             game: None,
+            before: before.to_vec(),
         }
     }
 
@@ -106,14 +114,15 @@ impl BigPicture {
     }
 
     /// Follows the root's `GAMESCOPE_FOCUSABLE_APPS` as it changed at `now`, the app IDs
-    /// of the windows gamescope could show: one other than Steam's own is a game Steam
-    /// started. Without the Steam client's window, the grace starts when the game ends.
+    /// of the windows gamescope could show: one other than Steam's own, and not among the
+    /// ones there before, is a game Steam started. Without the Steam client's window, the
+    /// grace starts when the game ends.
     pub fn focusable_apps_changed(&mut self, apps: &[u32], now: Instant) {
         let had_game = self.game.is_some();
         self.game = apps
             .iter()
             .copied()
-            .find(|&app| app != STEAM_APP_ID && app != 0);
+            .find(|app| ![STEAM_APP_ID, 0].contains(app) && !self.before.contains(app));
         if had_game && self.game.is_none() && matches!(self.phase, Phase::Left(_)) {
             self.phase = Phase::Left(now);
         }
@@ -141,7 +150,7 @@ mod tests {
     #[test]
     fn a_session_without_a_steam_window_is_over_after_the_time_out() {
         let start = Instant::now();
-        let session = BigPicture::new(start);
+        let session = BigPicture::new(start, &[]);
         assert!(!session.is_over(start + BIG_PICTURE_TIMEOUT - Duration::from_secs(1)));
         assert!(session.is_over(start + BIG_PICTURE_TIMEOUT));
     }
@@ -149,7 +158,7 @@ mod tests {
     #[test]
     fn the_steam_clients_window_opens_the_session_past_the_time_out() {
         let start = Instant::now();
-        let mut session = BigPicture::new(start);
+        let mut session = BigPicture::new(start, &[]);
         assert!(session.is_opening());
         session.window_mapped(&steam_window(0x220_0035), &[]);
         assert!(!session.is_opening());
@@ -161,7 +170,7 @@ mod tests {
     fn the_session_is_over_a_little_after_the_steam_clients_last_window_left() {
         let start = Instant::now();
         let at = |seconds| start + Duration::from_secs(seconds);
-        let mut session = BigPicture::new(start);
+        let mut session = BigPicture::new(start, &[]);
         session.window_mapped(&steam_window(0x220_0035), &[]);
         session.window_mapped(&steam_window(0x220_0060), &[]);
         session.window_unmapped(0x220_0060, at(30));
@@ -179,7 +188,7 @@ mod tests {
     #[test]
     fn the_claim_pins_the_newest_steam_window_in_the_launchers_place() {
         let start = Instant::now();
-        let mut session = BigPicture::new(start);
+        let mut session = BigPicture::new(start, &[]);
         // While Big Picture opens, the launcher says so.
         let waiting = session.claim(Some(MAIN));
         assert_eq!(waiting.app_ids, [STEAM_APP_ID]);
@@ -203,7 +212,7 @@ mod tests {
     fn a_game_steam_started_comes_first_and_steams_window_once_it_ends() {
         const BALATRO: u32 = 2_379_780;
         let now = Instant::now();
-        let mut session = BigPicture::new(now);
+        let mut session = BigPicture::new(now, &[]);
         session.window_mapped(&steam_window(0x220_0035), &[MAIN]);
         session.focusable_apps_changed(&[STEAM_APP_ID, BALATRO], now);
         let playing = session.claim(Some(MAIN));
@@ -220,7 +229,7 @@ mod tests {
     fn a_steam_window_that_maps_within_the_grace_keeps_the_session() {
         let start = Instant::now();
         let at = |seconds| start + Duration::from_secs(seconds);
-        let mut session = BigPicture::new(start);
+        let mut session = BigPicture::new(start, &[]);
         session.window_mapped(&steam_window(0x220_0035), &[]);
         session.window_unmapped(0x220_0035, at(60));
         session.window_mapped(&steam_window(0x220_0070), &[]);
@@ -233,7 +242,7 @@ mod tests {
         const BALATRO: u32 = 2_379_780;
         let start = Instant::now();
         let at = |seconds| start + Duration::from_secs(seconds);
-        let mut session = BigPicture::new(start);
+        let mut session = BigPicture::new(start, &[]);
         session.window_mapped(&steam_window(0x220_0035), &[]);
         session.focusable_apps_changed(&[STEAM_APP_ID, BALATRO], at(5));
         // Steam hides its window while the game plays.
@@ -242,5 +251,36 @@ mod tests {
         assert!(!session.is_over(at(600)));
         session.focusable_apps_changed(&[STEAM_APP_ID], at(900));
         assert_eq!(session.deadline(), Some(at(900) + BIG_PICTURE_GRACE));
+    }
+
+    #[test]
+    fn steams_update_window_closing_a_while_before_big_picture_opens_keeps_the_session() {
+        let start = Instant::now();
+        let at = |seconds| start + Duration::from_secs(seconds);
+        let mut session = BigPicture::new(start, &[]);
+        // A cold start: Steam's update window, then Big Picture's some seconds later.
+        session.window_mapped(&steam_window(0x220_0010), &[]);
+        session.window_unmapped(0x220_0010, at(20));
+        assert!(!session.is_over(at(25)));
+        session.window_mapped(&steam_window(0x220_0035), &[]);
+        assert_eq!(session.deadline(), None);
+    }
+
+    #[test]
+    fn apps_there_before_big_picture_opened_are_not_steams_game() {
+        // A game we run, and one Steam ran before, with windows when Big Picture opens.
+        const CELESTE: u32 = 0x8000_1234;
+        const BALATRO: u32 = 2_379_780;
+        const HADES: u32 = 1_145_360;
+        let now = Instant::now();
+        let mut session = BigPicture::new(now, &[STEAM_APP_ID, CELESTE, BALATRO]);
+        session.focusable_apps_changed(&[STEAM_APP_ID, CELESTE, BALATRO], now);
+        session.window_mapped(&steam_window(0x220_0035), &[MAIN]);
+        let shown = session.claim(Some(MAIN));
+        assert_eq!(shown.app_ids, [STEAM_APP_ID]);
+        assert_eq!(shown.window, Some(0x220_0035));
+        // A game started from Big Picture is Steam's.
+        session.focusable_apps_changed(&[STEAM_APP_ID, CELESTE, BALATRO, HADES], now);
+        assert_eq!(session.claim(Some(MAIN)).app_ids, [HADES, STEAM_APP_ID]);
     }
 }
