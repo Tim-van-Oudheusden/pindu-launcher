@@ -37,11 +37,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "pindu-launcher";
-  version = "0.4.1";
+  version = "0.5.0";
 
   src = fetchurl {
     url = "https://github.com/Tim-van-Oudheusden/pindu-launcher/releases/download/v${finalAttrs.version}/pindu-launcher-${finalAttrs.version}.tar.xz";
-    hash = "sha256-CVk+5J9yI5JRBjYVDOhvJXrmmFmlYHhd0QTgtl1Bk64=";
+    hash = "sha256-aDWcbgZ+q3cteKedyOVdOJo0YcQZcE23NBB+VCIrOGg=";
   };
 
   nativeBuildInputs = [
