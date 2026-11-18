@@ -1032,6 +1032,7 @@ mod tests {
             ControllerSettings {
                 prompts: Prompts::Shapes,
                 swap: Swap::Auto,
+                ..ControllerSettings::default()
             },
         );
         let open = hints(context(Focus::Game), layout)[0];
@@ -1049,6 +1050,7 @@ mod tests {
             ControllerSettings {
                 prompts: Prompts::Auto,
                 swap: Swap::On,
+                ..ControllerSettings::default()
             },
         );
         let game_page = Context {
@@ -1063,6 +1065,41 @@ mod tests {
         assert_eq!(
             shown,
             [(Button::East, Action::Play), (Button::South, Action::Back)]
+        );
+    }
+
+    #[test]
+    fn the_hints_show_a_rebound_function_on_its_new_button() {
+        let settings = ControllerSettings {
+            bindings: crate::bindings::Bindings::default()
+                .bind(Intent::Search, Button::LeftShoulder)
+                .bind(Intent::Back, Button::West),
+            ..ControllerSettings::default()
+        };
+        let layout = Layout::resolve(DeviceKind::Xbox, settings);
+        let library = Context {
+            search: true,
+            tabs: true,
+            page_below: true,
+            ..context(Focus::Game)
+        };
+        let shown: Vec<_> = hints(library, layout)
+            .into_iter()
+            .map(|hint| (hint.button, hint.pair, hint.action))
+            .collect();
+
+        assert!(
+            shown.contains(&(Button::LeftShoulder, None, Action::Search)),
+            "{shown:?}"
+        );
+        assert!(
+            shown.contains(&(Button::West, None, Action::Back)),
+            "{shown:?}"
+        );
+        // The tabs step back on the button Search had.
+        assert!(
+            shown.contains(&(Button::North, Some(Button::RightShoulder), Action::Tabs)),
+            "{shown:?}"
         );
     }
 }

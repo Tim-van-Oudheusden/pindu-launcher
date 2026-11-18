@@ -167,6 +167,11 @@ Preferences.
 - **Controls** in Quick Access lists everything the buttons do, grouped into moving, the library, the panels and
   launching. It shows the glyphs of the controller in use and the keys that do the same, including ones the hint bar
   leaves out, such as holding B to cancel a launch. Without a controller it lists the keys alone.
+- **Controls** in the menu drawer (Start or Guide) changes which button does what: choose a function (Select, Back,
+  Search, Game Options, Menu, Quick Access, the tabs or the sort order) and press the button it should have. The
+  function that had that button takes the old one in its place. Guide, the D-pad and the left stick stay as they are,
+  so you can always find your way back, and pressing one of them stops waiting. **Reset to Defaults** puts every
+  button back. The choice is kept, and the hints and Quick Access's Controls follow it.
 
 ### Power
 

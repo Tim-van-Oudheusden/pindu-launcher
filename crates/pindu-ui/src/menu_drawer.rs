@@ -1,7 +1,8 @@
 //! The menu drawer, fullscreen mode's panel on the left, as a widget a window hosts:
 //! [`PinduMenuDrawer`], with its own Blueprint (`data/ui/menu_drawer.blp`). It holds the
 //! level stack: the main level with the Playing Now cards (`fullscreen_playing`) and the
-//! entries, the collections, and Power (`fullscreen_power`).
+//! entries, the collections, Controls (`fullscreen_bindings`) and Power
+//! (`fullscreen_power`).
 //!
 //! Which level is open is the host's (`pindu_core::panels::Panels`): the host shows a
 //! level with `show_level` and fills the entries with `fill`; the rows' `win.*` actions
@@ -16,13 +17,18 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
 use gtk::prelude::*;
+use pindu_core::bindings::{FUNCTIONS, function_name};
+use pindu_core::gamepad::{Intent, Layout};
 use pindu_core::gamescope::Xid;
+use pindu_core::hints;
 use pindu_core::model::Collection;
 use pindu_core::panels::{DrawerEntry, DrawerLevel, drawer_entries};
 
+use crate::fullscreen_controls::action_label;
 use crate::fullscreen_panels::drawer_row;
 use crate::fullscreen_playing::PlayingCards;
 use crate::fullscreen_power::PinduPowerLevel;
+use crate::hint_bar::{GLYPH_SIZE, glyph_label};
 
 mod imp {
     use super::*;
@@ -43,6 +49,8 @@ mod imp {
         #[template_child]
         pub collections_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
+        pub controls_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
         pub exit_fullscreen_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub quit_row: TemplateChild<gtk::ListBoxRow>,
@@ -50,6 +58,8 @@ mod imp {
         pub power_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub collections: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub bindings: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub power_level: TemplateChild<PinduPowerLevel>,
         /// The Playing Now cards over the main level's entries.
@@ -131,8 +141,8 @@ mod imp {
 
 glib::wrapper! {
     /// Fullscreen mode's menu drawer: the Playing Now cards, Home, Library, Collections,
-    /// leaving fullscreen mode, Quit and Power, with Collections and Power as levels of
-    /// their own.
+    /// Controls, leaving fullscreen mode, Quit and Power, with Collections, Controls and
+    /// Power as levels of their own.
     pub struct PinduMenuDrawer(ObjectSubclass<imp::PinduMenuDrawer>)
         @extends gtk::Box, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
@@ -145,9 +155,11 @@ impl PinduMenuDrawer {
     }
 
     /// Leaves out the entries that would leave fullscreen mode or end the session, for the
-    /// drawer over a running game: Exit Fullscreen Mode, Quit and Power.
+    /// drawer over a running game: Exit Fullscreen Mode, Quit and Power. Controls goes too:
+    /// the game would take the buttons pressed to bind.
     pub(crate) fn set_over_game(&self) {
         let imp = self.imp();
+        imp.controls_row.set_visible(false);
         imp.exit_fullscreen_row.set_visible(false);
         imp.quit_row.set_visible(false);
         imp.power_row.set_visible(false);
@@ -195,11 +207,70 @@ impl PinduMenuDrawer {
         }
     }
 
+    /// Lists each function a button can be bound to with its button on `layout`, or
+    /// "Press a button…" for the one `waiting` for a press, each leading to
+    /// `win.bind-button` with its name, then Reset to Defaults (`win.reset-bindings`).
+    /// Focus stays on the row it was on.
+    pub(crate) fn fill_bindings(&self, layout: Layout, waiting: Option<Intent>) {
+        let list = &self.imp().bindings;
+        let focused = list
+            .focus_child()
+            .filter(|row| row.has_focus())
+            .and_downcast::<gtk::ListBoxRow>()
+            .map(|row| row.index());
+        list.remove_all();
+        for function in FUNCTIONS {
+            let Some(name) = function_name(function) else {
+                continue;
+            };
+            let content = gtk::Box::builder().spacing(16).build();
+            content.append(
+                &gtk::Label::builder()
+                    .label(action_label(function))
+                    .xalign(0.0)
+                    .hexpand(true)
+                    .ellipsize(gtk::pango::EllipsizeMode::End)
+                    .build(),
+            );
+            if waiting == Some(function) {
+                // Translators: in the menu drawer's Controls, in place of a function's
+                // button while it waits for the button to bind the function to.
+                let waiting = gettext("Press a button…");
+                let label = gtk::Label::builder()
+                    .label(waiting)
+                    .css_classes(["dim-label"])
+                    .build();
+                content.append(&label);
+            } else {
+                let button = layout.button(function);
+                let glyph = gtk::Image::builder()
+                    .icon_name(hints::glyph(layout.glyphs, button))
+                    .pixel_size(GLYPH_SIZE)
+                    .css_classes(["control-glyph"])
+                    .build();
+                let label = glyph_label(hints::glyph_name(layout.glyphs, button));
+                glyph.update_property(&[gtk::accessible::Property::Label(&label)]);
+                content.append(&glyph);
+            }
+            let row = gtk::ListBoxRow::builder().child(&content).build();
+            row.set_action_name(Some("win.bind-button"));
+            row.set_action_target_value(Some(&name.to_variant()));
+            list.append(&row);
+        }
+        let reset = drawer_row("edit-undo-symbolic", &gettext("Reset to Defaults"));
+        reset.set_action_name(Some("win.reset-bindings"));
+        list.append(&reset);
+        if let Some(row) = focused.and_then(|index| list.row_at_index(index)) {
+            row.grab_focus();
+        }
+    }
+
     /// Shows `level`.
     pub(crate) fn show_level(&self, level: DrawerLevel) {
         self.imp().stack.set_visible_child_name(match level {
             DrawerLevel::Main => "main",
             DrawerLevel::Collections => "collections",
+            DrawerLevel::Controls => "controls",
             DrawerLevel::Power => "power",
         });
     }
@@ -219,6 +290,9 @@ impl PinduMenuDrawer {
                 Some(imp.collections_row.get().upcast())
             }
             (DrawerLevel::Main, Some(DrawerLevel::Power)) => Some(imp.power_row.get().upcast()),
+            (DrawerLevel::Main, Some(DrawerLevel::Controls)) => {
+                Some(imp.controls_row.get().upcast())
+            }
             (DrawerLevel::Main, _) if imp.playing_cards.is_visible() => imp
                 .playing_cards
                 .first_child()
@@ -226,6 +300,7 @@ impl PinduMenuDrawer {
                 .and_then(crate::fullscreen_playing::card_return),
             (DrawerLevel::Main, _) => first_row(&imp.list),
             (DrawerLevel::Collections, _) => first_row(&imp.collections),
+            (DrawerLevel::Controls, _) => first_row(&imp.bindings),
             (DrawerLevel::Power, _) => imp.power_level.focus_target(),
         }
     }

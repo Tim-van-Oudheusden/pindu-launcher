@@ -220,8 +220,8 @@ fn group_label(group: Group) -> String {
     }
 }
 
-/// What Quick Access's Controls says an intent does.
-fn action_label(intent: Intent) -> String {
+/// What Quick Access's Controls, and the menu drawer's, say an intent does.
+pub(crate) fn action_label(intent: Intent) -> String {
     match intent {
         Intent::Navigate(Direction::Up) => gettext("Move Up"),
         Intent::Navigate(Direction::Down) => gettext("Move Down"),

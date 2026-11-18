@@ -1,11 +1,11 @@
-//! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
-//! leaving, and the machine's power), the Quick Access panel on the right (notifications,
-//! what runs in the background, the design, the controllers and what each button does, a
-//! few settings, the network, Bluetooth, the sound output, OS updates on Pindu OS, and
-//! entries for the page under it such as the library's filters and a focused game's
-//! performance switches) and the options sheet at the bottom (what to do with one game).
-//! This decides which one is open and at which level, what Start, Guide, R3, View or X and
-//! B do to them, and what each lists.
+//! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go, the
+//! controller's buttons, leaving, and the machine's power), the Quick Access panel on the
+//! right (notifications, what runs in the background, the design, the controllers and what
+//! each button does, a few settings, the network, Bluetooth, the sound output, OS updates
+//! on Pindu OS, and entries for the page under it such as the library's filters and a
+//! focused game's performance switches) and the options sheet at the bottom (what to do
+//! with one game). This decides which one is open and at which level, what Start, Guide,
+//! R3, View or X and B do to them, and what each lists.
 
 use crate::gamepad::Intent;
 use crate::launch;
@@ -30,6 +30,9 @@ pub enum DrawerLevel {
     Main,
     /// The collections, each opening its tab in the library.
     Collections,
+    /// The functions a button can be bound to, each with its button, and Reset (see
+    /// [`crate::bindings`]).
+    Controls,
     /// Suspend, Restart and Power Off, as logind allows them (see
     /// [`crate::system::power`]).
     Power,
@@ -247,6 +250,8 @@ pub enum DrawerEntry {
     Library,
     /// Lead to the collections ([`DrawerLevel::Collections`]).
     Collections,
+    /// Lead to the functions' buttons, to bind them ([`DrawerLevel::Controls`]).
+    Controls,
     /// Leave fullscreen mode for the desktop window.
     ExitFullscreen,
     /// Quit Pindu.
@@ -257,9 +262,9 @@ pub enum DrawerEntry {
 }
 
 /// The drawer's entries, top to bottom: a Playing Now card while a game we started runs,
-/// Collections when there are any, and Power after Quit when the system lets the session
-/// suspend, restart or power off (never in the Flatpak, which has no system bus) or it
-/// offers Switch to Desktop ([`crate::gamescope::session::power_shown`]).
+/// Collections when there are any, Controls, and Power after Quit when the system lets the
+/// session suspend, restart or power off (never in the Flatpak, which has no system bus) or
+/// it offers Switch to Desktop ([`crate::gamescope::session::power_shown`]).
 pub fn drawer_entries(playing: bool, collections: bool, power: bool) -> Vec<DrawerEntry> {
     use DrawerEntry::*;
     let playing = playing.then_some(PlayingNow);
@@ -270,6 +275,7 @@ pub fn drawer_entries(playing: bool, collections: bool, power: bool) -> Vec<Draw
         Some(Home),
         Some(Library),
         collections,
+        Some(Controls),
         Some(ExitFullscreen),
         Some(Quit),
         power,
@@ -756,15 +762,32 @@ mod tests {
     }
 
     #[test]
+    fn b_leaves_the_controls_level_for_the_drawer_s_entries_first() {
+        let mut panels = Panels::new();
+        panels.handle(Intent::Menu, PAGE);
+        panels.show(Panel::Drawer(DrawerLevel::Controls));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), drawer());
+    }
+
+    #[test]
     fn the_drawer_lists_playing_now_first_and_collections_when_there_are_any() {
         use DrawerEntry::*;
         assert_eq!(
             drawer_entries(true, true, false),
-            [PlayingNow, Home, Library, Collections, ExitFullscreen, Quit]
+            [
+                PlayingNow,
+                Home,
+                Library,
+                Collections,
+                Controls,
+                ExitFullscreen,
+                Quit
+            ]
         );
         assert_eq!(
             drawer_entries(false, false, false),
-            [Home, Library, ExitFullscreen, Quit],
+            [Home, Library, Controls, ExitFullscreen, Quit],
             "settings live in Quick Access"
         );
     }
@@ -774,11 +797,19 @@ mod tests {
         use DrawerEntry::*;
         assert_eq!(
             drawer_entries(false, false, true),
-            [Home, Library, ExitFullscreen, Quit, Power]
+            [Home, Library, Controls, ExitFullscreen, Quit, Power]
         );
         assert_eq!(
             drawer_entries(true, false, true),
-            [PlayingNow, Home, Library, ExitFullscreen, Quit, Power]
+            [
+                PlayingNow,
+                Home,
+                Library,
+                Controls,
+                ExitFullscreen,
+                Quit,
+                Power
+            ]
         );
     }
 

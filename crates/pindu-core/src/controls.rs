@@ -291,12 +291,26 @@ mod tests {
         let settings = ControllerSettings {
             prompts: Prompts::Auto,
             swap: Swap::Off,
+            ..ControllerSettings::default()
         };
         let shown = controls(Some(Layout::resolve(DeviceKind::Nintendo, settings)));
 
         let button = |intent| control(&shown, intent).and_then(|control| control.button);
         assert_eq!(button(Intent::Activate), Some(Button::South));
         assert_eq!(button(Intent::Back), Some(Button::East));
+    }
+
+    #[test]
+    fn a_rebound_function_is_listed_on_its_new_button() {
+        let settings = ControllerSettings {
+            bindings: crate::bindings::Bindings::default().bind(Intent::Menu, Button::North),
+            ..ControllerSettings::default()
+        };
+        let shown = controls(Some(Layout::resolve(DeviceKind::Xbox, settings)));
+
+        let button = |intent| control(&shown, intent).and_then(|control| control.button);
+        assert_eq!(button(Intent::Menu), Some(Button::North));
+        assert_eq!(button(Intent::Search), Some(Button::Start));
     }
 
     #[test]

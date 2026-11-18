@@ -301,6 +301,7 @@ impl PinduWindow {
             window.setup_hint_bar(application);
             window.setup_quick_access(application);
             window.setup_playing_cards(application);
+            window.setup_bindings(application);
         }
         window
     }

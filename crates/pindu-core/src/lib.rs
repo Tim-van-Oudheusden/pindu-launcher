@@ -9,6 +9,7 @@ pub mod arch;
 pub mod art;
 pub mod art_cache;
 pub mod backup;
+pub mod bindings;
 pub mod clock;
 pub mod controllers;
 pub mod controls;

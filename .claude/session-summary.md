@@ -8,13 +8,15 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-17/18, from the maintainer's 0.5.0-rc.2 test in a `gamescope --steam` session on Bazzite (Balatro, DualSense):
-  #427 (hand-off timeout, PR #428), then the in-game issues #429–#434: Steam started with `-silent` through host spawn
-  (#429, PR #435), store-launched games shown as playing with Return (#430, PR #436), Guide + A for Quick Access (#431,
-  PR #437), Guide opens the menu drawer over the game in the overlay window, now `PinduGameOverlay`, with the drawer a
-  widget of its own, `PinduMenuDrawer` (#432), the game's windows listed in that drawer and pinned with
-  `GAMESCOPECTRL_BASELAYER_WINDOW` (#433), and Stop for a store game closing its windows (`WM_DELETE_WINDOW`, then
-  `XKillClient`, #434). Open: the hardware check of all of it for the next rc (#417), #377's spec fold-in.
+- 2026-11-18, #458 (rebind fullscreen mode's controller buttons): `pindu_core::bindings` holds the binding table
+  (button position → function, swap on bind, `button-bindings` a{ss} setting), carried in `ControllerSettings` and
+  `Layout`, so intents, hints and Quick Access's Controls follow it. The drawer's new Controls level
+  (`fullscreen_bindings.rs`) waits for a press via `GamepadService::start_binding` / `Intents::bind_press`. Not
+  checked on hardware or in the Flatpak: needs a look in the next rc (#417).
+- Gotcha: on a host with neither GTK nor a C toolchain, `cargo check`/`clippy` of the whole workspace still works with
+  `zig cc` (pip `ziglang`) as `cc` and a fake `pkg-config` that reports every module; `cargo test -p pindu-core`
+  also needs `SQLITE3_LIB_DIR`/`SQLITE3_STATIC=1` pointing at a sqlite built from libsqlite3-sys's bundled
+  `sqlite3.c`. Blueprint, meson and the pot then go unchecked: hand-written pot entries need CI's check-pot.
 - Gotcha: the host has no development libraries; run cargo and meson through `~/.cache/pindu-gates.sh '<cmd>'` (GNOME
   51 SDK with rust-stable, `_build/cargo-target`), and the Flatpak with `flatpak run org.flatpak.Builder` (no
   `flatpak-builder` on the host). A killed build leaves a FUSE mount in `.flatpak-builder/rofiles`: `fusermount3 -u`.

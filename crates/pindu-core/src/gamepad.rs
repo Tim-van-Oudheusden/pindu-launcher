@@ -2,12 +2,16 @@
 //! from a [`GamepadBackend`]; [`Intents`] maps their mapped buttons and sticks to intents,
 //! repeats held directions, notices a held Back, reads Guide on its release unless
 //! another button went down while it was held (Guide + A, [`QUICK_ACCESS_CHORD`], asks for
-//! Quick Access), and keeps the connected pads. Each pad's [`Layout`] (its glyphs and
-//! whether confirm and back swap) comes from its kind and the user's
-//! [`ControllerSettings`], and serves the hints and the intents alike.
+//! Quick Access), and keeps the connected pads. Each pad's [`Layout`] (its glyphs, whether
+//! confirm and back swap, and which button asks for which function, [`Bindings`]) comes
+//! from its kind and the user's [`ControllerSettings`], and serves the hints and the
+//! intents alike. While the menu drawer's Controls waits for a button to bind a function
+//! to, [`Intents::bind_press`] takes the next press for it.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::time::Duration;
+
+use crate::bindings::{BINDABLE, Bindings};
 
 /// A connected controller, as its backend numbers it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -286,24 +290,29 @@ pub const PROMPTS_KEY: &str = "controller-prompts";
 /// The GSettings key of the Swap Confirm and Back setting.
 pub const SWAP_KEY: &str = "swap-confirm-back";
 
-/// What the user chose for the glyphs and the confirm and back buttons.
+/// What the user chose for the glyphs, the confirm and back buttons and the buttons of the
+/// other functions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ControllerSettings {
     /// The Button Prompts setting.
     pub prompts: Prompts,
     /// The Swap Confirm and Back setting.
     pub swap: Swap,
+    /// The button each function is bound to (see [`crate::bindings::BINDINGS_KEY`]).
+    pub bindings: Bindings,
 }
 
-/// How a pad shows and reads its buttons: the glyphs the hints draw, and whether its east
-/// button confirms and its south button goes back. One layout serves the hints and the
-/// intents, so they always agree.
+/// How a pad shows and reads its buttons: the glyphs the hints draw, whether its east
+/// button confirms and its south button goes back, and the function each button asks for.
+/// One layout serves the hints and the intents, so they always agree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Layout {
     /// The glyphs the hints draw.
     pub glyphs: Glyphs,
     /// Whether confirm and back swap: east activates and south goes back.
     pub swapped: bool,
+    /// The function each button asks for, by its position on an Xbox pad, before the swap.
+    pub bindings: Bindings,
 }
 
 impl Layout {
@@ -322,7 +331,11 @@ impl Layout {
             Swap::Off => false,
             Swap::On => true,
         };
-        Self { glyphs, swapped }
+        Self {
+            glyphs,
+            swapped,
+            bindings: settings.bindings,
+        }
     }
 
     /// The layout of a pad of `kind` as the pad itself has it.
@@ -331,13 +344,20 @@ impl Layout {
     }
 
     /// The button that asks for `intent`, for hints: with confirm and back swapped, the
-    /// east button confirms. A held intent's button is the one held down.
+    /// east button does what the bindings give the south one. A held intent's button is the
+    /// one held down.
     pub fn button(self, intent: Intent) -> Button {
         let pressed = intent.held_from().unwrap_or(intent);
-        BUTTONS
-            .into_iter()
-            .find(|&button| button_intent(self.xbox_position(button)) == pressed)
-            .expect("every intent has a button")
+        let bound = self
+            .bindings
+            .button(pressed)
+            .expect("every intent has a button");
+        self.xbox_position(bound)
+    }
+
+    /// The intent `button` asks for on this layout.
+    pub fn intent(self, button: Button) -> Intent {
+        self.bindings.intent(self.xbox_position(button))
     }
 
     /// Where an Xbox pad has the button that does what `button` does in this layout: with
@@ -564,7 +584,7 @@ impl Intents {
                         return Some(Intent::SystemQuickAccess);
                     }
                 }
-                let intent = button_intent(self.confirm_and_back_swapped(device, button));
+                let intent = self.layout(device).intent(button);
                 match intent {
                     Intent::Navigate(direction) => {
                         self.hold(device, Source::Button(button), direction, now);
@@ -685,8 +705,8 @@ impl Intents {
         self.pads.iter().map(|(device, pad)| (*device, pad))
     }
 
-    /// The glyphs and the confirm and back buttons the user chose, which every device's
-    /// layout follows from now on.
+    /// The glyphs, the confirm and back buttons and the bindings the user chose, which
+    /// every device's layout follows from now on.
     pub fn set_settings(&mut self, settings: ControllerSettings) {
         self.settings = settings;
     }
@@ -694,6 +714,37 @@ impl Intents {
     /// The settings every device's layout follows.
     pub fn settings(&self) -> ControllerSettings {
         self.settings
+    }
+
+    /// While the menu drawer's Controls waits for a button for `function`: when `event`
+    /// presses a button that can be bound ([`BINDABLE`], by where the device's layout puts
+    /// it after any confirm and back swap), binds `function` to it (swapping, see
+    /// [`Bindings::bind`]) and returns the bindings now in force. The press asks for
+    /// nothing else, and neither does its release. Any other event returns `None` and is
+    /// left to [`Self::handle`]: Guide, the D-pad and the stick go on working.
+    pub fn bind_press(&mut self, event: &GamepadEvent, function: Intent) -> Option<Bindings> {
+        let GamepadEvent::Button {
+            device,
+            button,
+            pressed: true,
+        } = *event
+        else {
+            return None;
+        };
+        let position = self.layout(device).xbox_position(button);
+        if !BINDABLE.contains(&position) || self.pressed.contains(&(device, button)) {
+            return None;
+        }
+        self.pressed.insert((device, button));
+        self.active = Some(device);
+        // Guide let go after this asks for nothing, as after Guide + A.
+        if let Some((holder, chorded)) = &mut self.guide
+            && *holder == device
+        {
+            *chorded = true;
+        }
+        self.settings.bindings = self.settings.bindings.bind(function, position);
+        Some(self.settings.bindings)
     }
 
     /// The layout of `device` under the settings; one not yet connected reads as a generic
@@ -704,11 +755,6 @@ impl Intents {
             .get(&device)
             .map_or(DeviceKind::Generic, |pad| pad.kind);
         Layout::resolve(kind, self.settings)
-    }
-
-    /// The button as an Xbox pad would place it, after the device's confirm and back swap.
-    fn confirm_and_back_swapped(&self, device: DeviceId, button: Button) -> Button {
-        self.layout(device).xbox_position(button)
     }
 }
 
@@ -757,33 +803,14 @@ pub(crate) const BUTTONS: [Button; 17] = [
 pub fn intents() -> Vec<Intent> {
     let mut intents = Vec::new();
     let held = HOLDS.map(|(_, held)| held);
-    for intent in BUTTONS.into_iter().map(button_intent).chain(held) {
+    let bindings = Bindings::default();
+    let buttons = BUTTONS.into_iter().map(|button| bindings.intent(button));
+    for intent in buttons.chain(held) {
         if !intents.contains(&intent) {
             intents.push(intent);
         }
     }
     intents
-}
-
-fn button_intent(button: Button) -> Intent {
-    match button {
-        Button::South => Intent::Activate,
-        Button::East => Intent::Back,
-        Button::North => Intent::Search,
-        Button::West | Button::Select => Intent::Options,
-        Button::Start => Intent::Menu,
-        Button::Guide => Intent::Home,
-        Button::RightStick => Intent::QuickAccess,
-        Button::Misc1 => Intent::SystemQuickAccess,
-        Button::LeftShoulder => Intent::PreviousTab,
-        Button::RightShoulder => Intent::NextTab,
-        Button::LeftTrigger => Intent::PreviousSort,
-        Button::RightTrigger => Intent::NextSort,
-        Button::DpadUp => Intent::Navigate(Direction::Up),
-        Button::DpadDown => Intent::Navigate(Direction::Down),
-        Button::DpadLeft => Intent::Navigate(Direction::Left),
-        Button::DpadRight => Intent::Navigate(Direction::Right),
-    }
 }
 
 /// What a window knows about its focus, to decide whether controller input is its.
@@ -1236,9 +1263,18 @@ mod tests {
                 (Swap::Off, false),
                 (Swap::On, true),
             ] {
+                let settings = ControllerSettings {
+                    prompts,
+                    swap,
+                    ..ControllerSettings::default()
+                };
                 assert_eq!(
-                    Layout::resolve(kind, ControllerSettings { prompts, swap }),
-                    Layout { glyphs, swapped },
+                    Layout::resolve(kind, settings),
+                    Layout {
+                        glyphs,
+                        swapped,
+                        bindings: Bindings::default(),
+                    },
                     "{kind:?} with {prompts:?} and {swap:?}"
                 );
             }
@@ -1329,7 +1365,8 @@ mod tests {
             intents.active_layout(),
             Some(Layout {
                 glyphs: Glyphs::NintendoLetters,
-                swapped: false
+                swapped: false,
+                bindings: Bindings::default(),
             })
         );
     }
@@ -1347,6 +1384,138 @@ mod tests {
         });
 
         assert_eq!(glyphs(&intents), Some(Glyphs::Shapes));
+    }
+
+    fn bound(function: Intent, button: Button) -> ControllerSettings {
+        ControllerSettings {
+            bindings: Bindings::default().bind(function, button),
+            ..ControllerSettings::default()
+        }
+    }
+
+    #[test]
+    fn a_rebound_function_asks_from_its_new_button_and_shows_there() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Xbox), ms(0));
+        intents.set_settings(bound(Intent::Search, Button::South));
+
+        assert_eq!(
+            intents.handle(&press(Button::South), ms(0)),
+            Some(Intent::Search)
+        );
+        assert_eq!(
+            intents.handle(&press(Button::North), ms(0)),
+            Some(Intent::Activate)
+        );
+        let layout = intents.active_layout().expect("a pad");
+        assert_eq!(layout.button(Intent::Search), Button::South);
+        assert_eq!(layout.button(Intent::Activate), Button::North);
+    }
+
+    #[test]
+    fn holding_back_s_new_button_cancels_a_launch() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Xbox), ms(0));
+        intents.set_settings(bound(Intent::Back, Button::RightShoulder));
+
+        assert_eq!(
+            intents.handle(&press(Button::RightShoulder), ms(0)),
+            Some(Intent::Back)
+        );
+        assert_eq!(intents.repeat(HOLD_DURATION), Some(Intent::BackHeld));
+        let layout = intents.active_layout().expect("a pad");
+        assert_eq!(layout.button(Intent::BackHeld), Button::RightShoulder);
+    }
+
+    #[test]
+    fn a_press_while_binding_binds_the_function_to_that_button_and_asks_for_nothing() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Xbox), ms(0));
+
+        let bindings = intents.bind_press(&press(Button::LeftTrigger), Intent::Menu);
+
+        let expected = Bindings::default().bind(Intent::Menu, Button::LeftTrigger);
+        assert_eq!(bindings, Some(expected));
+        assert_eq!(intents.settings().bindings, expected);
+        // A trigger that reports each move as a press binds nothing more, nor asks.
+        assert_eq!(
+            intents.bind_press(&press(Button::LeftTrigger), Intent::Search),
+            None
+        );
+        assert_eq!(intents.handle(&press(Button::LeftTrigger), ms(10)), None);
+        assert_eq!(intents.handle(&release(Button::LeftTrigger), ms(20)), None);
+        assert_eq!(
+            intents.handle(&press(Button::LeftTrigger), ms(30)),
+            Some(Intent::Menu)
+        );
+        assert_eq!(
+            intents.handle(&press(Button::Start), ms(30)),
+            Some(Intent::PreviousSort)
+        );
+    }
+
+    #[test]
+    fn binding_goes_by_where_the_swap_puts_the_button() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Nintendo), ms(0));
+
+        // A Nintendo pad's east button confirms: it is the south one of an Xbox pad.
+        let bindings = intents
+            .bind_press(&press(Button::East), Intent::Search)
+            .expect("bound");
+
+        assert_eq!(bindings.intent(Button::South), Intent::Search);
+        intents.handle(&release(Button::East), ms(0));
+        assert_eq!(
+            intents.handle(&press(Button::East), ms(0)),
+            Some(Intent::Search)
+        );
+        assert_eq!(
+            intents.handle(&press(Button::North), ms(0)),
+            Some(Intent::Activate)
+        );
+        let layout = intents.active_layout().expect("a pad");
+        assert_eq!(layout.button(Intent::Search), Button::East);
+    }
+
+    #[test]
+    fn guide_the_d_pad_and_the_stick_are_not_taken_while_binding() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Xbox), ms(0));
+        let stick = GamepadEvent::Axis {
+            device: PAD,
+            axis: Axis::LeftX,
+            value: 1.0,
+        };
+
+        for event in [
+            press(Button::Guide),
+            press(Button::DpadDown),
+            press(Button::Misc1),
+            release(Button::South),
+            stick,
+        ] {
+            assert_eq!(
+                intents.bind_press(&event, Intent::Search),
+                None,
+                "{event:?}"
+            );
+        }
+        assert_eq!(intents.settings().bindings, Bindings::default());
+    }
+
+    #[test]
+    fn guide_held_while_binding_asks_for_nothing_when_let_go() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Xbox), ms(0));
+
+        intents.handle(&press(Button::Guide), ms(0));
+        assert!(
+            intents
+                .bind_press(&press(Button::South), Intent::Search)
+                .is_some()
+        );
+        assert_eq!(intents.handle(&release(Button::Guide), ms(10)), None);
     }
 
     #[test]

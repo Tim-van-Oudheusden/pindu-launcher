@@ -1517,8 +1517,18 @@ msgstr ""
 msgid "Could not keep a log of “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/menu_drawer.rs:187
+#: crates/pindu-ui/src/menu_drawer.rs:199
 msgid "Untitled Window"
+msgstr ""
+
+#. Translators: in the menu drawer's Controls, in place of a function's
+#. button while it waits for the button to bind the function to.
+#: crates/pindu-ui/src/menu_drawer.rs:238
+msgid "Press a button…"
+msgstr ""
+
+#: crates/pindu-ui/src/menu_drawer.rs:260
+msgid "Reset to Defaults"
 msgstr ""
 
 #. Translators: {network} is a Wi-Fi network's name.
@@ -2294,6 +2304,17 @@ msgid ""
 "Whether the right face button confirms and the bottom one goes back, rather "
 "than the other way round. Auto swaps them when the button prompts put A on "
 "the right."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:78
+msgid "Button bindings"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:79
+msgid ""
+"The function each controller button does in fullscreen mode, set from the "
+"menu drawer's Controls. Empty for the default buttons. Guide, the D-pad and "
+"the left stick always do the same."
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:78
@@ -3344,6 +3365,7 @@ msgstr ""
 msgid "Controllers"
 msgstr ""
 
+#: data/ui/menu_drawer.blp:143 data/ui/menu_drawer.blp:264
 #: data/ui/quick_access.blp:337 data/ui/quick_access.blp:981
 msgid "Controls"
 msgstr ""

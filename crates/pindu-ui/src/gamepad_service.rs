@@ -1,15 +1,20 @@
 //! Turns controller input into app intents for the shells. Events from the backend are
 //! queued through the main loop, so a modal dialog never stalls them, and held directions
 //! repeat on a main-loop timer. Intents never become synthetic key events. Follows the
-//! Button Prompts and Swap Confirm and Back settings, which decide every pad's layout,
-//! keeps the connected pads for Quick Access's Controllers, and rumbles one to identify it.
+//! Button Prompts, Swap Confirm and Back and button bindings settings, which decide every
+//! pad's layout, keeps the connected pads for Quick Access's Controllers, and rumbles one
+//! to identify it. While the menu drawer's Controls waits for a button for a function, the
+//! next button that can be bound is bound to it and kept in the settings; any other input
+//! ends the wait and acts as usual.
 
 use std::cell::{Cell, RefCell};
+use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 use std::time::Duration;
 
 use gtk::gio::{self, prelude::*};
 use gtk::glib;
+use pindu_core::bindings::{BINDINGS_KEY, Bindings};
 use pindu_core::gamepad::{
     ControllerSettings, DeviceId, GamepadBackend, GamepadEvent, IDENTIFY_RUMBLE, Intent, Intents,
     Layout, PROMPTS_KEY, Pad, Prompts, SWAP_KEY, Swap,
@@ -23,6 +28,8 @@ type Listener = Box<dyn Fn(Intent)>;
 type LayoutListener = Box<dyn Fn(Option<Layout>)>;
 /// Something the shells do when a pad comes or goes, or the settings change how they show.
 type PadsListener = Box<dyn Fn()>;
+/// Something the shells do when a wait for a button to bind starts or ends.
+type BindingListener = Box<dyn Fn(Option<Intent>)>;
 
 /// Turns controller input into intents and hands them to the shells' listeners.
 #[derive(Clone)]
@@ -41,7 +48,11 @@ struct Inner {
     /// The active layout the layout listeners last heard of.
     layout: Cell<Option<Layout>>,
     pads_listeners: RefCell<Vec<PadsListener>>,
-    /// Holds the Button Prompts and Swap Confirm and Back settings, and their signals.
+    /// The function waiting for a button to be bound to, while the drawer's Controls waits.
+    binding: Cell<Option<Intent>>,
+    binding_listeners: RefCell<Vec<BindingListener>>,
+    /// Holds the Button Prompts, Swap Confirm and Back and bindings settings, and their
+    /// signals.
     settings: gio::Settings,
 }
 
@@ -69,10 +80,12 @@ impl GamepadService {
                 layout_listeners: RefCell::new(Vec::new()),
                 layout: Cell::new(None),
                 pads_listeners: RefCell::new(Vec::new()),
+                binding: Cell::new(None),
+                binding_listeners: RefCell::new(Vec::new()),
                 settings,
             }),
         };
-        for key in [PROMPTS_KEY, SWAP_KEY] {
+        for key in [PROMPTS_KEY, SWAP_KEY, BINDINGS_KEY] {
             let weak = Rc::downgrade(&service.inner);
             service
                 .inner
@@ -122,6 +135,7 @@ impl GamepadService {
                 }));
         } else {
             self.inner.backend.borrow_mut().stop();
+            self.stop_binding();
             if let Some(source) = self.inner.repeat.take() {
                 source.remove();
             }
@@ -158,7 +172,59 @@ impl GamepadService {
             .collect()
     }
 
-    /// The Button Prompts and Swap Confirm and Back settings in force.
+    /// Waits for the next press of a button that can be bound, to bind `function` to it
+    /// (see `pindu_core::bindings`), until that press or any other input.
+    pub fn start_binding(&self, function: Intent) {
+        self.set_binding(Some(function));
+    }
+
+    /// Stops waiting for a button to bind: the Controls level was left.
+    pub fn stop_binding(&self) {
+        self.set_binding(None);
+    }
+
+    /// The function waiting for a button to be bound to, if any.
+    pub fn binding(&self) -> Option<Intent> {
+        self.inner.binding.get()
+    }
+
+    /// Calls `listener` whenever a wait for a button to bind starts or ends, with the
+    /// function that waits.
+    pub fn connect_binding_notify(&self, listener: impl Fn(Option<Intent>) + 'static) {
+        self.inner
+            .binding_listeners
+            .borrow_mut()
+            .push(Box::new(listener));
+    }
+
+    /// Gives every function its default button again.
+    pub fn reset_bindings(&self) {
+        self.stop_binding();
+        self.inner.settings.reset(BINDINGS_KEY);
+    }
+
+    fn set_binding(&self, function: Option<Intent>) {
+        if self.inner.binding.replace(function) == function {
+            return;
+        }
+        for listener in self.inner.binding_listeners.borrow().iter() {
+            listener(function);
+        }
+    }
+
+    /// Keeps `bindings` in the settings, which apply them to the intents and the layouts.
+    fn save_bindings(&self, bindings: Bindings) {
+        let value: BTreeMap<&str, &str> = bindings.setting().into_iter().collect();
+        if let Err(error) = self
+            .inner
+            .settings
+            .set_value(BINDINGS_KEY, &value.to_variant())
+        {
+            glib::g_warning!("pindu", "Could not keep the button bindings: {error}");
+        }
+    }
+
+    /// The Button Prompts, Swap Confirm and Back and bindings settings in force.
     pub fn controller_settings(&self) -> ControllerSettings {
         self.inner.intents.borrow().settings()
     }
@@ -225,12 +291,25 @@ impl GamepadService {
             }
             _ => false,
         };
+        if let Some(function) = self.inner.binding.get() {
+            let bound = self.inner.intents.borrow_mut().bind_press(&event, function);
+            if let Some(bindings) = bound {
+                glib::g_info!("pindu", "Bound {function:?}");
+                self.set_binding(None);
+                self.save_bindings(bindings);
+                self.notify_layout();
+                self.notify_pads();
+                return;
+            }
+        }
         let intent = self.inner.intents.borrow_mut().handle(&event, now());
         self.notify_layout();
         if plugged {
             self.notify_pads();
         }
         if let Some(intent) = intent {
+            // Guide, the D-pad or the stick: the wait ends, and they act as usual.
+            self.set_binding(None);
             self.emit(intent);
         }
         self.schedule_repeat();
@@ -274,10 +353,19 @@ fn now() -> Duration {
     Duration::from_micros(glib::monotonic_time().max(0) as u64)
 }
 
-/// The Button Prompts and Swap Confirm and Back settings as `settings` hold them.
+/// The Button Prompts, Swap Confirm and Back and bindings settings as `settings` hold them.
 fn controller_settings(settings: &gio::Settings) -> ControllerSettings {
+    let bindings = settings
+        .value(BINDINGS_KEY)
+        .get::<HashMap<String, String>>()
+        .unwrap_or_default();
     ControllerSettings {
         prompts: Prompts::from_setting(&settings.string(PROMPTS_KEY)),
         swap: Swap::from_setting(&settings.string(SWAP_KEY)),
+        bindings: Bindings::from_setting(
+            bindings
+                .iter()
+                .map(|(button, function)| (button.as_str(), function.as_str())),
+        ),
     }
 }

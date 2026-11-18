@@ -2,10 +2,11 @@ using Gtk 4.0;
 using Adw 1;
 
 // Fullscreen mode's menu drawer (`menu_drawer.rs`): the main level with the Playing Now
-// cards and the entries, the collections, and Power. The main window holds it on the
-// left, where Start or Guide opens it over the page; over a running game in a `--steam`
-// gamescope the overlay window holds it, where Guide opens it over the game. Its rows'
-// `win.*` actions are the host's.
+// cards and the entries, the collections, Controls (the button of each function, to bind
+// it, `fullscreen_bindings.rs`), and Power. The main window holds it on the left, where
+// Start or Guide opens it over the page; over a running game in a `--steam` gamescope the
+// overlay window holds it, where Guide opens it over the game. Its rows' `win.*` actions
+// are the host's.
 template $PinduMenuDrawer: Box {
   orientation: vertical;
   accessible-role: group;
@@ -127,6 +128,30 @@ template $PinduMenuDrawer: Box {
               };
             }
 
+            ListBoxRow controls_row {
+              action-name: "win.drawer-controls";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "input-gaming-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Controls");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
             ListBoxRow exit_fullscreen_row {
               action-name: "win.leave-fullscreen";
 
@@ -214,6 +239,37 @@ template $PinduMenuDrawer: Box {
           }
 
           ListBox collections {
+            selection-mode: none;
+
+            styles [
+              "navigation-sidebar",
+            ]
+          }
+        };
+      };
+    }
+
+    // Each function with its button; choosing one waits for the next button press.
+    StackPage {
+      name: "controls";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Controls");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          ListBox bindings {
             selection-mode: none;
 
             styles [

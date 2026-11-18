@@ -249,7 +249,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 
 | Name | What |
 |---|---|
-| `.menu-drawer` | The menu drawer on the left |
+| `.menu-drawer` | The menu drawer on the left; its Controls level shows each function's button as a `.control-glyph` |
 | `.quick-access` | The Quick Access panel on the right |
 | `.quick-access-status` | The header at the top of Quick Access: `.clock` (the time), `.offline` (shown while there is no network) and `.battery` (the machine's battery, absent without one) |
 | `.notification-count` | The unread count on Quick Access's Notifications entry |
