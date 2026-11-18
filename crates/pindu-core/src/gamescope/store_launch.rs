@@ -14,8 +14,14 @@ use crate::model::{GameId, Source};
 pub const STORE_LAUNCH_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// How long a store launch outlives its last window, for the store launcher's window that
-/// closes just before the game's opens (Steam's update window, Lutris's).
+/// closes just before the game's opens (Steam's update window, Lutris's): its windows still
+/// get its app ID, and one that shows again brings the game back.
 pub const STORE_LAUNCH_GRACE: Duration = Duration::from_secs(10);
+
+/// How long the game of a store launch still plays after its last window left, for a game
+/// that closes one window and opens the next. After that it has exited, and the launcher
+/// comes back to the front.
+pub const STORE_EXIT_GRACE: Duration = Duration::from_secs(2);
 
 /// A store launch that is expected in front.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,6 +75,15 @@ impl StoreLaunch {
         }
     }
 
+    /// When the launcher looks at the launch again after `now`: when its game exits, a
+    /// little after its last window left, and then at its [`deadline`](Self::deadline).
+    pub fn next_check(&self, now: Instant) -> Option<Instant> {
+        match self.phase {
+            Phase::Left(since) if now < since + STORE_EXIT_GRACE => Some(since + STORE_EXIT_GRACE),
+            _ => self.deadline(),
+        }
+    }
+
     /// The app ID the game's windows get (see [`app_id`](super::app_id)).
     pub fn app_id(&self) -> u32 {
         self.game.app_id
@@ -79,21 +94,31 @@ impl StoreLaunch {
         &self.id
     }
 
-    /// Whether the game plays: a window with its app ID has shown, and the launch is not
-    /// over yet. Its store launcher runs it, not the launcher.
-    pub fn is_playing(&self) -> bool {
-        !matches!(self.phase, Phase::Waiting(_))
+    /// Whether the game plays at `now`: a window with its app ID has shown, and has not been
+    /// gone for [`STORE_EXIT_GRACE`] since the last one left. Its store launcher runs it, not
+    /// the launcher.
+    pub fn is_playing(&self, now: Instant) -> bool {
+        !matches!(self.phase, Phase::Waiting(_)) && !self.has_exited(now)
+    }
+
+    /// Whether the game has exited at `now`: its last window left [`STORE_EXIT_GRACE`] ago
+    /// or more. The launch is not over yet, so a window that shows again brings it back.
+    pub fn has_exited(&self, now: Instant) -> bool {
+        matches!(self.phase, Phase::Left(since) if now >= since + STORE_EXIT_GRACE)
     }
 
     /// Follows the root's `GAMESCOPE_FOCUSABLE_APPS` as it changed at `now`: the app IDs of
-    /// the windows gamescope could show.
-    pub fn focusable_apps_changed(&mut self, apps: &[u32], now: Instant) {
+    /// the windows gamescope could show. Returns whether the game came back: a window with
+    /// its app ID shows again after the game exited, so the game is wanted in front again.
+    pub fn focusable_apps_changed(&mut self, apps: &[u32], now: Instant) -> bool {
         let there = apps.contains(&self.game.app_id);
+        let back = there && self.has_exited(now);
         self.phase = match self.phase {
             _ if there => Phase::Shown,
             Phase::Shown => Phase::Left(now),
             phase => phase,
         };
+        back
     }
 
     /// The game as [`front`](super::front) matches it.
@@ -226,16 +251,83 @@ mod tests {
         let at = |seconds| start + Duration::from_secs(seconds);
         let mut hades = launch(start);
         let id = hades.app_id();
-        assert!(!hades.is_playing());
+        assert!(!hades.is_playing(at(0)));
         hades.focusable_apps_changed(&[769, id], at(5));
-        assert!(hades.is_playing());
+        assert!(hades.is_playing(at(5)));
         // Between the store launcher's window and the game's, it still plays.
         hades.focusable_apps_changed(&[769], at(30));
-        assert!(hades.is_playing());
+        assert!(hades.is_playing(at(30)));
         assert_eq!(
             hades.game(),
             &"heroic-epic:hades".parse::<GameId>().unwrap()
         );
+    }
+
+    #[test]
+    fn a_game_stops_playing_a_little_after_its_last_window_left() {
+        let start = Instant::now();
+        let mut hades = launch(start);
+        let id = hades.app_id();
+        hades.focusable_apps_changed(&[769, id], start);
+        let left = start + Duration::from_secs(600);
+        hades.focusable_apps_changed(&[769], left);
+        assert!(hades.is_playing(left + STORE_EXIT_GRACE - Duration::from_millis(1)));
+        assert!(!hades.is_playing(left + STORE_EXIT_GRACE));
+    }
+
+    #[test]
+    fn a_launch_outlives_its_exited_game_until_the_long_grace() {
+        let start = Instant::now();
+        let mut hades = launch(start);
+        let id = hades.app_id();
+        hades.focusable_apps_changed(&[769, id], start);
+        assert!(!hades.has_exited(start));
+        let left = start + Duration::from_secs(600);
+        hades.focusable_apps_changed(&[769], left);
+        assert!(!hades.has_exited(left));
+        let exited = left + STORE_EXIT_GRACE;
+        assert!(hades.has_exited(exited));
+        assert!(!hades.is_over(exited));
+        assert!(!hades.is_over(left + STORE_LAUNCH_GRACE - Duration::from_millis(1)));
+        assert!(hades.is_over(left + STORE_LAUNCH_GRACE));
+    }
+
+    #[test]
+    fn a_window_back_before_the_launch_is_over_plays_again() {
+        let start = Instant::now();
+        let at = |seconds| start + Duration::from_secs(seconds);
+        let mut hades = launch(start);
+        let id = hades.app_id();
+        assert!(!hades.focusable_apps_changed(&[769, id], at(5)));
+        // The game closes its window and opens the next before it exits.
+        assert!(!hades.focusable_apps_changed(&[769], at(600)));
+        assert!(!hades.focusable_apps_changed(&[769, id], at(601)));
+        assert!(hades.is_playing(at(601) + STORE_EXIT_GRACE));
+        // The store launcher hands over to the game once the launcher took the front back.
+        hades.focusable_apps_changed(&[769], at(700));
+        assert!(!hades.is_playing(at(705)));
+        assert!(hades.focusable_apps_changed(&[769, id], at(705)));
+        assert!(hades.is_playing(at(705)));
+        assert!(!hades.is_over(at(700) + STORE_LAUNCH_GRACE));
+    }
+
+    #[test]
+    fn the_launch_is_looked_at_when_its_game_exits_then_when_it_is_over() {
+        let start = Instant::now();
+        let mut hades = launch(start);
+        let id = hades.app_id();
+        assert_eq!(hades.next_check(start), Some(start + STORE_LAUNCH_TIMEOUT));
+        hades.focusable_apps_changed(&[769, id], start);
+        assert_eq!(hades.next_check(start), None);
+        let left = start + Duration::from_secs(600);
+        hades.focusable_apps_changed(&[769], left);
+        let exited = left + STORE_EXIT_GRACE;
+        assert_eq!(hades.next_check(left), Some(exited));
+        assert_eq!(
+            hades.next_check(exited - Duration::from_millis(1)),
+            Some(exited)
+        );
+        assert_eq!(hades.next_check(exited), Some(left + STORE_LAUNCH_GRACE));
     }
 
     fn window(xid: Xid) -> WindowFacts {

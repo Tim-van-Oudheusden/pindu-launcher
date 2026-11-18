@@ -363,7 +363,7 @@ impl GamescopeService {
                     .store_launch
                     .borrow()
                     .as_ref()
-                    .filter(|launch| launch.is_playing() && launch.game() == id)
+                    .filter(|launch| launch.is_playing(Instant::now()) && launch.game() == id)
                     .map(StoreLaunch::app_id)
             });
         if let Some(app_id) = app_id {
@@ -394,7 +394,7 @@ impl GamescopeService {
             .store_launch
             .borrow()
             .as_ref()
-            .filter(|launch| launch.is_playing())
+            .filter(|launch| launch.is_playing(Instant::now()))
             .map(|launch| launch.game().clone());
         let before = self.inner.store_playing.borrow().clone();
         if before.as_ref().map(|(id, _)| id) == playing.as_ref() {
@@ -571,15 +571,22 @@ impl GamescopeService {
     }
 
     /// Follows the root's `GAMESCOPE_FOCUSABLE_APPS`: for the store launch, and for the
-    /// claim, which pins the launcher while the game it wants in front has no window.
+    /// claim, which pins the launcher while the game it wants in front has no window. A
+    /// store-launched game whose window shows again after it exited comes back to the front.
     fn focusable_apps_changed(&self) {
         let Some(x11) = &self.inner.x11 else {
             return;
         };
         let apps = x11.cardinals(x11.root, FOCUSABLE_APPS).unwrap_or_default();
-        if let Some(launch) = self.inner.store_launch.borrow_mut().as_mut() {
-            launch.focusable_apps_changed(&apps, Instant::now());
-        }
+        let back = self
+            .inner
+            .store_launch
+            .borrow_mut()
+            .as_mut()
+            .and_then(|launch| {
+                let back = launch.focusable_apps_changed(&apps, Instant::now());
+                back.then_some(launch.app_id())
+            });
         // gamescope rewrites the property, unchanged, after every base layer write: only a
         // changed claim is written, or the two would loop.
         let before = self.claim();
@@ -589,9 +596,14 @@ impl GamescopeService {
             self.write_base_layer();
         }
         self.update_store_playing();
+        if let Some(app_id) = back {
+            glib::g_info!("pindu", "gamescope: the store-launched game came back");
+            self.ask_for(Front::Game(app_id));
+        }
     }
 
-    /// Ends the store launch once it is over, or looks again at its next deadline.
+    /// Ends the store launch once it is over, or looks again at its next check: the
+    /// launcher comes back to the front once its game exited.
     fn check_store_launch(&self) {
         let over = self
             .inner
@@ -601,8 +613,23 @@ impl GamescopeService {
             .map(|launch| launch.is_over(Instant::now()));
         match over {
             Some(true) => self.end_store_launch(),
-            Some(false) => self.schedule_store_check(),
+            Some(false) => {
+                self.update_store_playing();
+                self.leave_exited_store_game();
+                self.schedule_store_check();
+            }
             None => {}
+        }
+    }
+
+    /// Brings the launcher back to the front when the store-launched game it wanted there
+    /// has exited, while the launch still waits for a window that comes back.
+    fn leave_exited_store_game(&self) {
+        let ids = self.front_ids();
+        let wanted = gamescope::front_after_sessions(self.inner.wanted.get(), &ids, &ids);
+        if wanted != self.inner.wanted.get() {
+            glib::g_info!("pindu", "gamescope: the store-launched game exited");
+            self.ask_for(wanted);
         }
     }
 
@@ -615,7 +642,7 @@ impl GamescopeService {
             .store_launch
             .borrow()
             .as_ref()
-            .and_then(StoreLaunch::deadline);
+            .and_then(|launch| launch.next_check(Instant::now()));
         let Some(deadline) = deadline else {
             return;
         };
@@ -696,7 +723,7 @@ impl GamescopeService {
             .store_launch
             .borrow()
             .as_ref()
-            .filter(|launch| launch.is_playing() && launch.game() == id)
+            .filter(|launch| launch.is_playing(Instant::now()) && launch.game() == id)
             .map(StoreLaunch::app_id);
         let (Some(x11), Some(app_id)) = (&self.inner.x11, app_id) else {
             return;
@@ -765,7 +792,7 @@ impl GamescopeService {
     }
 
     /// The app IDs the launcher may want in front: the games we started that run, and the
-    /// store launch.
+    /// store launch until its game exited.
     fn front_ids(&self) -> Vec<u32> {
         let mut ids = self.running_ids();
         ids.extend(
@@ -773,6 +800,7 @@ impl GamescopeService {
                 .store_launch
                 .borrow()
                 .as_ref()
+                .filter(|launch| !launch.has_exited(Instant::now()))
                 .map(StoreLaunch::app_id),
         );
         ids
