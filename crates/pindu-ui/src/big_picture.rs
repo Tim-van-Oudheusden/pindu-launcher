@@ -2,9 +2,9 @@
 //! and activating it hands Big Picture to Steam (`launch_service::open_big_picture`). In a
 //! `gamescope --steam` session Big Picture then takes the launcher's place
 //! (`GamescopeService`): the tile says it is opening until Steam's window shows, and
-//! activating it again gives up. Once Steam's window shows, the window leaves the
-//! controller to Steam; when Big Picture ends, the window is in front again and the
-//! controller is its own.
+//! activating it again gives up. While Steam's window or a game it started is in front,
+//! the window leaves the controller to Steam; once Steam's last window has closed, the
+//! window is in front again and the controller is its own.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -38,15 +38,12 @@ impl PinduWindow {
         self.update_big_picture_offered();
     }
 
-    /// Whether Steam Big Picture has the controller: its window shows in the launcher's
-    /// place.
+    /// Whether Steam Big Picture has the controller: Steam's window or a game it started
+    /// shows in the launcher's place.
     pub(crate) fn big_picture_has_controller(&self) -> bool {
         self.application()
             .and_downcast::<PinduApplication>()
-            .is_some_and(|application| {
-                let gamescope = application.gamescope_service();
-                gamescope.in_big_picture() && !gamescope.big_picture_opening()
-            })
+            .is_some_and(|application| application.gamescope_service().big_picture_has_controller())
     }
 
     /// Offers Big Picture on Home once it is known whether Steam is present.

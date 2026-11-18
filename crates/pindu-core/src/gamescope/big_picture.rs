@@ -77,6 +77,14 @@ impl BigPicture {
         matches!(self.phase, Phase::Waiting(_))
     }
 
+    /// Whether Steam has the controller: its window or a game it started is in the
+    /// launcher's place. While Big Picture opens, and once its last window has left with no
+    /// game of its own playing, the launcher's window is in front and the controller is its
+    /// own.
+    pub fn has_controller(&self) -> bool {
+        self.phase == Phase::Shown || self.game.is_some()
+    }
+
     /// Follows a top-level window another client mapped at `now`, or that was there when
     /// the session started (`own` holds the launcher's windows): one of the Steam client's
     /// shows Big Picture.
@@ -183,6 +191,19 @@ mod tests {
         assert!(session.is_over(at(600) + BIG_PICTURE_GRACE));
     }
 
+    #[test]
+    fn the_launcher_has_the_controller_back_as_soon_as_steams_last_window_left() {
+        let start = Instant::now();
+        let at = |seconds| start + Duration::from_secs(seconds);
+        let mut session = BigPicture::new(start, &[]);
+        session.window_mapped(&steam_window(0x220_0035), &[], start);
+        assert!(session.has_controller());
+        // Exit Steam: its window closes, and the launcher's is in front for the grace.
+        session.window_unmapped(0x220_0035, at(600));
+        assert!(!session.is_over(at(601)));
+        assert!(!session.has_controller());
+    }
+
     const MAIN: Xid = 0x60_0004;
 
     #[test]
@@ -251,6 +272,21 @@ mod tests {
         assert!(!session.is_over(at(600)));
         session.focusable_apps_changed(&[STEAM_APP_ID], at(900));
         assert_eq!(session.deadline(), Some(at(900) + BIG_PICTURE_GRACE));
+    }
+
+    #[test]
+    fn a_game_steam_started_keeps_the_controller_until_it_ends() {
+        const BALATRO: u32 = 2_379_780;
+        let start = Instant::now();
+        let at = |seconds| start + Duration::from_secs(seconds);
+        let mut session = BigPicture::new(start, &[]);
+        session.window_mapped(&steam_window(0x220_0035), &[], start);
+        session.focusable_apps_changed(&[STEAM_APP_ID, BALATRO], at(5));
+        // Steam hides its window while the game plays.
+        session.window_unmapped(0x220_0035, at(10));
+        assert!(session.has_controller());
+        session.focusable_apps_changed(&[STEAM_APP_ID], at(900));
+        assert!(!session.has_controller());
     }
 
     #[test]

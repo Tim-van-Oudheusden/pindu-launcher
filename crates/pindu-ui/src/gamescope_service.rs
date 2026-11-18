@@ -216,7 +216,7 @@ impl GamescopeService {
             };
             let service = GamescopeService { inner };
             // Steam Big Picture has the controller, Guide included.
-            if service.in_big_picture() {
+            if service.big_picture_has_controller() {
                 return;
             }
             if intent == InGameIntent::ToggleMenu && service.steam_window().is_some() {
@@ -639,6 +639,16 @@ impl GamescopeService {
             .borrow()
             .as_ref()
             .is_some_and(BigPicture::is_opening)
+    }
+
+    /// Whether Steam Big Picture has the controller: Steam's window or a game it started is
+    /// in the launcher's place (`BigPicture::has_controller`).
+    pub fn big_picture_has_controller(&self) -> bool {
+        self.inner
+            .big_picture
+            .borrow()
+            .as_ref()
+            .is_some_and(BigPicture::has_controller)
     }
 
     /// Calls `listener` whenever Steam Big Picture opens, shows or ends.
