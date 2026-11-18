@@ -7,6 +7,7 @@ crates/pindu-ui/src/collection_actions.rs
 crates/pindu-ui/src/file_service.rs
 crates/pindu-ui/src/fullscreen.rs
 crates/pindu-ui/src/fullscreen_activity.rs
+crates/pindu-ui/src/fullscreen_bindings.rs
 crates/pindu-ui/src/fullscreen_bluetooth.rs
 crates/pindu-ui/src/fullscreen_controllers.rs
 crates/pindu-ui/src/fullscreen_controls.rs

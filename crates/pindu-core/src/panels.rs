@@ -33,6 +33,9 @@ pub enum DrawerLevel {
     /// Suspend, Restart and Power Off, as the system allows them (see
     /// [`crate::system::power`]), and Exit Pindu Launcher.
     Power,
+    /// The functions a controller button can be given, each with its button, and Reset to
+    /// Defaults (see [`crate::gamepad::Bindings`]).
+    Controls,
 }
 
 /// What the options sheet shows: the game's actions, or its collections to add it to or
@@ -706,6 +709,23 @@ mod tests {
             panels.open(),
             Some(Panel::Options(OptionsLevel::Collections))
         );
+    }
+
+    #[test]
+    fn b_leaves_the_controls_level_for_the_drawer_s_entries_first_and_start_closes_it() {
+        let mut panels = Panels::new();
+        panels.handle(Intent::Menu, PAGE);
+        panels.show(Panel::Drawer(DrawerLevel::Controls));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), drawer());
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), None);
+
+        panels.show(Panel::Drawer(DrawerLevel::Controls));
+        assert!(panels.handle(Intent::Search, PAGE), "taken, not acted on");
+        assert!(!panels.handle(Intent::Activate, PAGE), "A chooses a row");
+        assert!(panels.handle(Intent::Menu, PAGE));
+        assert_eq!(panels.open(), None);
     }
 
     #[test]

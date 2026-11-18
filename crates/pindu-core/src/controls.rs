@@ -291,12 +291,25 @@ mod tests {
         let settings = ControllerSettings {
             prompts: Prompts::Auto,
             swap: Swap::Off,
+            ..ControllerSettings::default()
         };
         let shown = controls(Some(Layout::resolve(DeviceKind::Nintendo, settings)));
 
         let button = |intent| control(&shown, intent).and_then(|control| control.button);
         assert_eq!(button(Intent::Activate), Some(Button::South));
         assert_eq!(button(Intent::Back), Some(Button::East));
+    }
+
+    #[test]
+    fn the_list_shows_the_buttons_the_player_bound() {
+        let mut settings = ControllerSettings::default();
+        settings.bindings.assign(Intent::Back, Button::North);
+        let shown = controls(Some(Layout::resolve(DeviceKind::Xbox, settings)));
+
+        let button = |intent| control(&shown, intent).and_then(|control| control.button);
+        assert_eq!(button(Intent::Back), Some(Button::North));
+        assert_eq!(button(Intent::BackHeld), Some(Button::North));
+        assert_eq!(button(Intent::Search), Some(Button::East));
     }
 
     #[test]

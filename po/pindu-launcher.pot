@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-18 16:01+0100\n"
+"POT-Creation-Date: 2026-11-18 16:18+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -327,7 +327,7 @@ msgid "_Add to Collection"
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:39
-#: crates/pindu-ui/src/fullscreen_panels.rs:495
+#: crates/pindu-ui/src/fullscreen_panels.rs:502
 msgid "_New Collection…"
 msgstr ""
 
@@ -416,6 +416,18 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_activity.rs:297
 msgid "From Flathub"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_bindings.rs:149
+msgid "Press a button…"
+msgstr ""
+
+#. Translators: a row of the menu drawer's Controls as a screen reader reads it, such
+#. as "Search: Y"; {action} is the function and {button} the controller button that
+#. does it, or "Press a button…" while the row waits for one.
+#: crates/pindu-ui/src/fullscreen_bindings.rs:172
+#, rust-format
+msgid "{action}: {button}"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:236
@@ -859,51 +871,51 @@ msgstr ""
 msgid "Unread"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:546
+#: crates/pindu-ui/src/fullscreen_panels.rs:553
 #: crates/pindu-ui/src/hint_bar.rs:196
 #: crates/pindu-ui/src/widgets/cover_tile.rs:232 data/ui/cover_tile.blp:65
 msgid "Play"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:547
+#: crates/pindu-ui/src/fullscreen_panels.rs:554
 #: crates/pindu-ui/src/hint_bar.rs:197
 #: crates/pindu-ui/src/widgets/cover_tile.rs:230
 msgid "Stop"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:548
+#: crates/pindu-ui/src/fullscreen_panels.rs:555
 msgid "Return"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:549
+#: crates/pindu-ui/src/fullscreen_panels.rs:556
 #: crates/pindu-ui/src/game_page.rs:417 data/ui/game_page.blp:113
 msgid "Add to Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:550
+#: crates/pindu-ui/src/fullscreen_panels.rs:557
 #: crates/pindu-ui/src/game_page.rs:415
 msgid "Remove from Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:551 data/ui/menu_drawer.blp:118
-#: data/ui/menu_drawer.blp:191 data/ui/window.blp:118
+#: crates/pindu-ui/src/fullscreen_panels.rs:558 data/ui/menu_drawer.blp:118
+#: data/ui/menu_drawer.blp:216 data/ui/window.blp:118
 msgid "Collections"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:552
+#: crates/pindu-ui/src/fullscreen_panels.rs:559
 #: crates/pindu-ui/src/search_keyboard.rs:174
 msgid "Hide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:553
+#: crates/pindu-ui/src/fullscreen_panels.rs:560
 msgid "Unhide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:557
+#: crates/pindu-ui/src/fullscreen_panels.rs:564
 msgid "Open in Launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:558
+#: crates/pindu-ui/src/fullscreen_panels.rs:565
 #: crates/pindu-ui/src/game_page.rs:281
 #, rust-format
 msgid "Open in {launcher}"
@@ -1532,7 +1544,7 @@ msgstr ""
 msgid "Could not keep a log of “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/menu_drawer.rs:184
+#: crates/pindu-ui/src/menu_drawer.rs:199
 msgid "Untitled Window"
 msgstr ""
 
@@ -2312,149 +2324,161 @@ msgid ""
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:78
-msgid "Default Proton build"
+msgid "Controller button bindings"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:79
+msgid ""
+"The fullscreen functions given to other controller buttons from the menu's "
+"Controls: each changed button, such as north or left-shoulder, with its "
+"function, such as search. Buttons not listed keep their default function. "
+"Guide, the D-pad and the left stick never change."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:83
+msgid "Default Proton build"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:84
 msgid ""
 "The internal name of the Proton build Windows games run with unless they "
 "name their own. Empty for the newest build on this computer."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:83
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:88
 msgid "Prefix folder"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:84
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:89
 msgid ""
 "The folder new Windows games get their own prefix in. Empty for ~/Games/"
 "pindu-launcher/prefixes."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:88
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:93
 msgid "MangoHud for new Windows games"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:89
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:94
 msgid ""
 "Whether Windows games added from now on start with the MangoHud performance "
 "overlay."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:93
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:98
 msgid "GameMode for new Windows games"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:94
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:99
 msgid "Whether Windows games added from now on start with GameMode."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:98
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:103
 msgid "Start in fullscreen mode"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:99
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:104
 msgid ""
 "Open the window in fullscreen mode, the controller-driven presentation of "
 "the library."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:103
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:108
 msgid "Navigation sounds"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:104
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:109
 msgid ""
 "Play a soft sound in fullscreen mode when the controller moves focus, "
 "selects or goes back."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:109
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:114
 msgid "Navigation sound volume"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:110
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:115
 msgid "How loud the navigation sounds play, from 0 (silent) to 100 (full)."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:114
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:119
 msgid "Reduce motion in fullscreen mode"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:115
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:120
 msgid ""
 "Hold Home's animated background on its first frame and change art without a "
 "crossfade in fullscreen mode. Turning off animations in the system settings "
 "does the same."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:119
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:124
 msgid "Larger text in fullscreen mode"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:120
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:125
 msgid ""
 "Show fullscreen mode's text about a quarter larger, for reading from across "
 "the room. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:124
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:129
 msgid "Custom fullscreen style"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:125
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:130
 msgid ""
 "Restyle fullscreen mode with your own stylesheet, fullscreen.css in the "
 "app's config folder. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:129
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:134
 msgid "Fullscreen design"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:130
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:135
 msgid ""
 "The id of the design fullscreen mode is shown in: a theme folder shipped "
 "with the app or in the app's config folder under themes. Empty for Adwaita, "
 "the standard look. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:134
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:139
 msgid "Fullscreen design variant"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:135
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:140
 msgid ""
 "The id of the chosen variant of the fullscreen design, for a design that "
 "offers variants; its stylesheet applies after the design's own. An empty or "
 "unknown id picks the design's first variant."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:144
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:149
 msgid "Fullscreen background blur"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:145
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:150
 msgid ""
 "How much Home's background and the focused game's art behind it are blurred "
 "in fullscreen mode. A design can restyle each strength."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:154
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:159
 msgid "Fullscreen background dim"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:155
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:160
 msgid ""
 "How much Home's background and the focused game's art behind it are darkened "
 "in fullscreen mode. A design can restyle each strength."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:159
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:164
 msgid "SteamGridDB prompt shown"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:160
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:165
 msgid ""
 "Whether the window has offered, once, to set up a SteamGridDB API key for "
 "game art."
@@ -2822,7 +2846,7 @@ msgstr ""
 msgid "Wi-Fi Networks"
 msgstr ""
 
-#: data/ui/fullscreen_power.blp:15 data/ui/menu_drawer.blp:164
+#: data/ui/fullscreen_power.blp:15 data/ui/menu_drawer.blp:189
 msgid "Power"
 msgstr ""
 
@@ -3022,8 +3046,18 @@ msgstr ""
 msgid "Big Picture"
 msgstr ""
 
-#: data/ui/menu_drawer.blp:142
+#: data/ui/menu_drawer.blp:143 data/ui/menu_drawer.blp:248
+#: data/ui/menu_drawer.blp:260 data/ui/quick_access.blp:337
+#: data/ui/quick_access.blp:981
+msgid "Controls"
+msgstr ""
+
+#: data/ui/menu_drawer.blp:167
 msgid "Exit Fullscreen Mode"
+msgstr ""
+
+#: data/ui/menu_drawer.blp:287
+msgid "Reset to Defaults"
 msgstr ""
 
 #: data/ui/preferences.blp:6 data/ui/shortcuts-dialog.blp:6
@@ -3357,10 +3391,6 @@ msgstr ""
 
 #: data/ui/quick_access.blp:313 data/ui/quick_access.blp:823
 msgid "Controllers"
-msgstr ""
-
-#: data/ui/quick_access.blp:337 data/ui/quick_access.blp:981
-msgid "Controls"
 msgstr ""
 
 #: data/ui/quick_access.blp:361 data/ui/quick_access.blp:1011
