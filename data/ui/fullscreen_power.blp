@@ -20,7 +20,8 @@ template $PinduPowerLevel: Adw.Bin {
         ]
       }
 
-      // Suspend, Restart and Power Off, filled from what logind allows.
+      // Suspend, Restart and Power Off, filled from what logind allows (the host's in the
+      // Flatpak), then Switch to Desktop and Exit Pindu Launcher where they are offered.
       ListBox drawer_power {
         selection-mode: none;
 
