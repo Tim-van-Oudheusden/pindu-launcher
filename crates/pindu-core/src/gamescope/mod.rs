@@ -28,6 +28,7 @@ pub use game_windows::{
     EXIT_GRACE, FocusableWindow, PickedWindow, StoreExit, focusable_windows, game_windows,
     window_title,
 };
+pub use steam_prompts::STEAM_PROMPT_DELAY;
 pub use store_launch::{STORE_EXIT_GRACE, STORE_LAUNCH_GRACE, STORE_LAUNCH_TIMEOUT, StoreLaunch};
 
 /// The app ID gamescope knows as Steam, which the launcher's main window claims.

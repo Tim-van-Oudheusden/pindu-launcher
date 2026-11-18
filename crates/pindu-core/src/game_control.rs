@@ -6,6 +6,7 @@
 //! Steam Deck's "…") until it gets the controller back.
 
 use crate::gamepad::Intent;
+use crate::hints::Launching;
 
 /// Whether the controller is the game's or the launcher's, as games start and end and the
 /// launcher's window loses and regains focus.
@@ -75,12 +76,58 @@ impl GameControl {
     pub fn game_has_controller(self) -> bool {
         self.game_has_it
     }
+
+    /// Whether the launcher acts on `intent` from a controller with `launching` on the
+    /// starting screen: as [`Self::acts_on`] says, and on the screen's own buttons while it
+    /// is up, even while the game has the controller: a held B, and A once Cancel shows.
+    pub fn acts_on_launching(self, intent: Intent, launching: Launching) -> bool {
+        let screens = match launching {
+            Launching::No | Launching::HandingOff => false,
+            Launching::Starting => intent == Intent::BackHeld,
+            Launching::Cancel => matches!(intent, Intent::Activate | Intent::BackHeld),
+        };
+        screens || self.acts_on(intent)
+    }
+
+    /// Whether the hint bar names Guide alone, as while the game has the controller,
+    /// rather than the buttons of the starting screen (`launching`) that is up.
+    pub fn shows_playing_hints(self, launching: Launching) -> bool {
+        self.game_has_it && launching == Launching::No
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::gamepad::Direction;
+
+    #[test]
+    fn the_starting_screen_takes_its_own_buttons_while_the_game_has_the_controller() {
+        for start in [
+            |control: &mut GameControl| control.sessions_changed(1, true),
+            |control: &mut GameControl| control.store_launch_opened(true),
+        ] {
+            let mut control = GameControl::default();
+            start(&mut control);
+
+            // A held B cancels a game we start; A and a held B take Cancel once it shows.
+            assert!(control.acts_on_launching(Intent::BackHeld, Launching::Starting));
+            assert!(!control.acts_on_launching(Intent::Activate, Launching::Starting));
+            assert!(control.acts_on_launching(Intent::Activate, Launching::Cancel));
+            assert!(control.acts_on_launching(Intent::BackHeld, Launching::Cancel));
+            assert!(!control.acts_on_launching(Intent::Activate, Launching::HandingOff));
+            assert!(!control.acts_on_launching(Intent::Menu, Launching::Cancel));
+            assert!(!control.acts_on_launching(Intent::Activate, Launching::No));
+            assert!(control.acts_on_launching(Intent::Home, Launching::Cancel));
+            // The hint bar names the starting screen's buttons rather than Guide.
+            assert!(!control.shows_playing_hints(Launching::Cancel));
+            assert!(!control.shows_playing_hints(Launching::Starting));
+            assert!(control.shows_playing_hints(Launching::No));
+        }
+        let control = GameControl::default();
+        assert!(control.acts_on_launching(Intent::Menu, Launching::No));
+        assert!(!control.shows_playing_hints(Launching::No));
+    }
 
     #[test]
     fn a_game_the_launcher_starts_takes_the_controller() {

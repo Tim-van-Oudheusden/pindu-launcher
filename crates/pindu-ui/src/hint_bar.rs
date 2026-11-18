@@ -56,8 +56,10 @@ impl PinduWindow {
             return;
         };
         // While a game we started has the controller, only Guide (and Guide + A) does
-        // anything here; the bar names Guide.
-        let hints = if imp.game_control.get().game_has_controller() {
+        // anything here, so the bar names Guide; the starting screen's own buttons act
+        // while it is up, so the bar names them instead.
+        let playing = imp.game_control.get().shows_playing_hints(self.launching());
+        let hints = if playing {
             hints::playing_hints(layout)
         } else {
             hints::hints(self.hint_context(), layout)
