@@ -77,6 +77,8 @@ type FrontListener = Box<dyn Fn(Front)>;
 type OverGameListener = Box<dyn Fn(Option<OverGame>)>;
 /// Something the shells do when the store-launched game that plays changes.
 type StorePlayingListener = Box<dyn Fn()>;
+/// Something the shells do when the store launch ends.
+type StoreLaunchListener = Box<dyn Fn()>;
 
 /// gamescope's `--steam` protocol for the launcher, or nothing outside such a gamescope.
 #[derive(Clone)]
@@ -101,8 +103,11 @@ struct Inner {
     running: RefCell<Vec<(GameId, u32)>>,
     /// The store launch expected in front, when there is one.
     store_launch: RefCell<Option<StoreLaunch>>,
-    /// The timer that looks at the store launch again at its deadline.
+    /// The timer that looks at the store launch again at its deadline, or when a Steam
+    /// client's window it waits on shows.
     store_timer: RefCell<Option<glib::SourceId>>,
+    /// Called when the store launch ends.
+    store_launch_listeners: RefCell<Vec<StoreLaunchListener>>,
     /// The store-launched game that plays, and since when the launcher has seen it.
     store_playing: RefCell<Option<(GameId, Timestamp)>>,
     store_playing_listeners: RefCell<Vec<StorePlayingListener>>,
@@ -148,6 +153,7 @@ impl GamescopeService {
                 running: RefCell::default(),
                 store_launch: RefCell::default(),
                 store_timer: RefCell::default(),
+                store_launch_listeners: RefCell::default(),
                 store_playing: RefCell::default(),
                 store_playing_listeners: RefCell::default(),
                 wanted: Cell::new(Front::Launcher),
@@ -386,6 +392,31 @@ impl GamescopeService {
             .push(Box::new(listener));
     }
 
+    /// Calls `listener` whenever the store launch ends: over, given up on, or left by the
+    /// user from the Steam client's window it waits on.
+    pub fn connect_store_launch_ended(&self, listener: impl Fn() + 'static) {
+        self.inner
+            .store_launch_listeners
+            .borrow_mut()
+            .push(Box::new(listener));
+    }
+
+    /// Gives up on the store launch of the game with `id` while it waits for the game, as
+    /// Cancel on the starting screen: the launcher comes back to the front. A game its
+    /// store launcher already shows is left alone; Stop exits it.
+    pub fn give_up_store_launch(&self, id: &GameId) {
+        let waiting = self
+            .inner
+            .store_launch
+            .borrow()
+            .as_ref()
+            .is_some_and(|launch| launch.game() == id && !launch.is_playing());
+        if waiting {
+            glib::g_info!("pindu", "gamescope: giving up on the store launch of {id}");
+            self.end_store_launch();
+        }
+    }
+
     /// Follows the store launch into the store-launched game that plays: its game's
     /// Playing state, and the listeners, when it changed.
     fn update_store_playing(&self) {
@@ -511,7 +542,7 @@ impl GamescopeService {
     /// Expects the game with `id`, which the launcher just handed to its store launcher, in
     /// front: its windows, and the store launcher's untagged ones, get its app ID until
     /// they have come and gone, or for a while when none comes, and the Steam client's
-    /// open windows show meanwhile. It replaces an earlier store launch.
+    /// windows that stay open show meanwhile. It replaces an earlier store launch.
     pub fn store_launch_started(&self, id: &GameId) {
         let Some(x11) = &self.inner.x11 else {
             return;
@@ -525,7 +556,7 @@ impl GamescopeService {
         let own = own_windows();
         for xid in x11.viewable_children() {
             if let Some(facts) = x11.window_facts(xid) {
-                launch.window_mapped(&facts, &own);
+                launch.window_mapped(&facts, &own, now);
             }
         }
         let app_id = launch.app_id();
@@ -606,29 +637,60 @@ impl GamescopeService {
         }
     }
 
+    /// Sets the timer that looks at the store launch again at its deadline, or when a Steam
+    /// client's window it waits on shows, whichever comes first.
     fn schedule_store_check(&self) {
         if let Some(timer) = self.inner.store_timer.take() {
             timer.remove();
         }
-        let deadline = self
+        let now = Instant::now();
+        let next = self
             .inner
             .store_launch
             .borrow()
             .as_ref()
-            .and_then(StoreLaunch::deadline);
-        let Some(deadline) = deadline else {
+            .and_then(|launch| {
+                launch
+                    .deadline()
+                    .into_iter()
+                    .chain(launch.reveal_at(now))
+                    .min()
+            });
+        let Some(next) = next else {
             return;
         };
         let weak = Rc::downgrade(&self.inner);
-        let wait = deadline.saturating_duration_since(Instant::now());
+        let wait = next.saturating_duration_since(now);
         let timer = glib::timeout_add_local_once(wait, move || {
             if let Some(inner) = weak.upgrade() {
                 // The timer has fired, so there is nothing left to remove.
                 inner.store_timer.take();
-                GamescopeService { inner }.check_store_launch();
+                let service = GamescopeService { inner };
+                service.check_store_launch();
+                service.hold_claim();
             }
         });
         self.inner.store_timer.replace(Some(timer));
+    }
+
+    /// Writes the claim when the one on the root is no longer the launcher's: a Steam
+    /// client's window the store launch waits on has just shown.
+    fn hold_claim(&self) {
+        let Some(x11) = &self.inner.x11 else {
+            return;
+        };
+        let app_ids = x11.cardinals(x11.root, BASELAYER_APPID);
+        let window = x11
+            .cardinals(x11.root, BASELAYER_WINDOW)
+            .and_then(|ids| ids.first().copied())
+            .map(Xid::from);
+        if !self.claim().is_held(app_ids.as_deref(), window) {
+            glib::g_info!(
+                "pindu",
+                "gamescope: showing the Steam client's window the launch waits on"
+            );
+            self.write_base_layer();
+        }
     }
 
     /// The store launch is over: the launcher comes back to the front if it was the one
@@ -643,6 +705,9 @@ impl GamescopeService {
         self.inner.wanted.set(wanted);
         self.write_base_layer();
         self.read_front();
+        for listener in self.inner.store_launch_listeners.borrow().iter() {
+            listener();
+        }
     }
 
     fn forget_store_launch(&self) {
@@ -820,7 +885,7 @@ impl GamescopeService {
             .store_launch
             .borrow()
             .as_ref()
-            .and_then(|launch| launch.steam_window(self.inner.wanted.get()))
+            .and_then(|launch| launch.steam_window(self.inner.wanted.get(), Instant::now()))
     }
 
     /// Writes `GAMESCOPECTRL_BASELAYER_APPID` and `GAMESCOPECTRL_BASELAYER_WINDOW` for the
@@ -911,7 +976,7 @@ impl GamescopeService {
             x11.write_cardinals_trapped(xid, STEAM_GAME, &[app_id]);
         }
         if launch.is_some() {
-            self.follow_store_window(|launch| launch.window_mapped(&facts, &own));
+            self.follow_store_window(|launch| launch.window_mapped(&facts, &own, Instant::now()));
         }
     }
 

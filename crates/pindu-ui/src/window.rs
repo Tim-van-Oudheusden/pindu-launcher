@@ -198,6 +198,8 @@ mod imp {
         pub launch: RefCell<LaunchOverlay>,
         /// The timer that lets the launch overlay linger.
         pub launch_linger: RefCell<Option<glib::SourceId>>,
+        /// The timer that offers Cancel on the starting screen.
+        pub launch_cancel: RefCell<Option<glib::SourceId>>,
         /// The launched game and its `notify::playing` handler.
         pub launch_game: RefCell<Option<(GameObject, glib::SignalHandlerId)>>,
         /// Fullscreen mode's menu drawer, Quick Access or options sheet, whichever is open.

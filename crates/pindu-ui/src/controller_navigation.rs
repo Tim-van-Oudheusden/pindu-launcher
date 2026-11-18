@@ -133,9 +133,16 @@ impl PinduWindow {
         // As with the keyboard, focus shows once the controller moves it.
         self.set_focus_visible(true);
         if self.launching() != Launching::No {
-            if intent == Intent::BackHeld {
-                self.cancel_launch();
-                self.play_sound(Sound::Back);
+            match intent {
+                Intent::BackHeld => {
+                    self.cancel_launch();
+                    self.play_sound(Sound::Back);
+                }
+                Intent::Activate if self.launching() == Launching::Cancel => {
+                    self.activate_cancel();
+                    self.play_sound(Sound::Select);
+                }
+                _ => {}
             }
             return;
         }

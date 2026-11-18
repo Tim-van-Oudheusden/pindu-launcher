@@ -1,17 +1,20 @@
-//! Fullscreen mode's game page: its presentation, the launch overlay over the page while
+//! Fullscreen mode's game page: its presentation, the starting screen over the page while
 //! Play starts the game, and the return to the page, with focus on Play or Stop, once the
-//! game ends or the window has focus again. What the overlay shows and when to return is
-//! `pindu_core::launch_overlay`; this feeds it the window's focus, dialogs, the game's
-//! Playing state and the launch's report (its toast), and does what it says.
+//! game ends or the window has focus again. What the screen shows and when to return is
+//! `pindu_core::launch_overlay`; this feeds it the window's focus (or in a `--steam`
+//! gamescope, who gamescope shows and the store launch), dialogs, the game's Playing state,
+//! the launch's report (its toast) and Cancel, and does what it says.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
-use gtk::glib;
+use gtk::{gio, glib};
+use pindu_core::gamescope::{self, Front};
 use pindu_core::hints::Launching;
-use pindu_core::launch_overlay::{Effect, Event, Launch};
+use pindu_core::launch_overlay::{CANCEL_AFTER, Effect, Event, Launch, LaunchOverlay};
 use pindu_core::model::GameId;
 
+use crate::application::PinduApplication;
 use crate::game_page::GamePage;
 use crate::launch_service::launcher_name;
 use crate::models::GameObject;
@@ -28,10 +31,28 @@ impl PinduWindow {
                 window.follow_launch(Event::Interrupted);
             }
         });
+        let cancel = gio::ActionEntry::builder("cancel-launch")
+            .activate(|window: &Self, _, _| window.activate_cancel())
+            .build();
+        self.add_action_entries([cancel]);
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return;
+        };
+        let gamescope = application.gamescope_service();
+        gamescope.connect_front_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |front| window.follow_launch(Event::Front(front))
+        ));
+        gamescope.connect_store_launch_ended(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move || window.check_store_launch()
+        ));
     }
 
     /// Shows the game pages in fullscreen mode's presentation, or the desktop one; leaving
-    /// fullscreen mode drops the launch overlay and the return.
+    /// fullscreen mode drops the starting screen and the return.
     pub(crate) fn show_fullscreen_game(&self, fullscreen: bool) {
         for page in self.game_pages() {
             page.set_fullscreen(fullscreen);
@@ -41,8 +62,8 @@ impl PinduWindow {
         }
     }
 
-    /// Starts following a Play of `game` in fullscreen mode: the overlay goes up over its
-    /// page until the launch is through.
+    /// Starts following a Play of `game` in fullscreen mode: the starting screen goes up
+    /// over its page until the launch is through, and offers Cancel after a while.
     pub fn begin_launch(&self, game: &GameObject) {
         if !self.is_fullscreen() || permission_service::needs_permission(&game.game()) {
             return;
@@ -51,6 +72,13 @@ impl PinduWindow {
             return;
         };
         self.drop_launch();
+        let in_gamescope = self
+            .application()
+            .and_downcast::<PinduApplication>()
+            .is_some_and(|application| application.gamescope_service().is_active());
+        if in_gamescope {
+            self.imp().launch.replace(LaunchOverlay::in_gamescope());
+        }
         let id = game.id();
         if self.game_page(&id).is_none() {
             self.show_details(&id);
@@ -67,21 +95,41 @@ impl PinduWindow {
             .launch_game
             .replace(Some((game.clone(), handler)));
         self.follow_launch(Event::Play(id, launch));
+        let source = glib::timeout_add_local_once(
+            CANCEL_AFTER,
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move || {
+                    // This timer has fired.
+                    window.imp().launch_cancel.take();
+                    window.follow_launch(Event::CancelDue);
+                }
+            ),
+        );
+        self.imp().launch_cancel.replace(Some(source));
     }
 
     /// The launch reported back: handed off, started, or failed.
     pub fn launch_reported(&self) {
         self.follow_launch(Event::Reported);
+        self.check_store_launch();
     }
 
-    /// What the launch overlay shows.
+    /// What the starting screen shows.
     pub(crate) fn launching(&self) -> Launching {
         self.imp().launch.borrow().shown()
     }
 
-    /// B held down over the launch overlay: stops a game we start.
+    /// B held down over the starting screen: stops a game we start, or does what its
+    /// Cancel does once that shows.
     pub(crate) fn cancel_launch(&self) {
         self.follow_launch(Event::CancelHeld);
+    }
+
+    /// The starting screen's Cancel: stops a game we start, or gives up on a store launch.
+    pub(crate) fn activate_cancel(&self) {
+        self.follow_launch(Event::Cancel);
     }
 
     /// The shown page, when it is a game's.
@@ -95,14 +143,21 @@ impl PinduWindow {
     fn follow_launch(&self, event: Event) {
         glib::g_debug!("pindu", "Launch overlay event: {event:?}");
         let effect = self.imp().launch.borrow_mut().handle(event);
+        let application = self.application().and_downcast::<PinduApplication>();
         match effect {
             Some(Effect::Linger(after)) => self.linger(after),
             Some(Effect::Stop(id)) => {
-                if let Some(application) = self.application() {
+                if let Some(application) = application {
                     application.activate_action("stop", Some(&id.as_str().to_variant()));
                 }
             }
             Some(Effect::Return(id)) => self.return_to_game(&id),
+            Some(Effect::GiveUp(id)) => {
+                if let Some(application) = application {
+                    application.gamescope_service().give_up_store_launch(&id);
+                }
+                self.return_to_game(&id);
+            }
             None => {}
         }
         self.show_launch();
@@ -116,7 +171,28 @@ impl PinduWindow {
         ));
     }
 
-    /// Lets the overlay linger for `after`, then tells the launch it did.
+    /// In a `--steam` gamescope, tells the launch its store launch is over once the
+    /// launcher no longer wants the game in front: the launch ended, or the hand-off failed.
+    fn check_store_launch(&self) {
+        let game = {
+            let launch = self.imp().launch.borrow();
+            launch
+                .follows_gamescope()
+                .then(|| launch.game().cloned())
+                .flatten()
+        };
+        let (Some(id), Some(application)) =
+            (game, self.application().and_downcast::<PinduApplication>())
+        else {
+            return;
+        };
+        let wanted = application.gamescope_service().wanted_front();
+        if wanted != Front::Game(gamescope::app_id(&id)) {
+            self.follow_launch(Event::StoreLaunchOver);
+        }
+    }
+
+    /// Lets the starting screen linger for `after`, then tells the launch it did.
     fn linger(&self, after: std::time::Duration) {
         if let Some(source) = self.imp().launch_linger.take() {
             source.remove();
@@ -136,22 +212,26 @@ impl PinduWindow {
         self.imp().launch_linger.replace(Some(source));
     }
 
-    /// Shows the overlay over the launched game's page: the launcher's name for a store
-    /// game, "Starting…" for a game we run.
+    /// Shows the starting screen over the launched game's page: the launcher's name for a
+    /// store game, "Starting…" for a game we run, and Cancel once it is offered.
     fn show_launch(&self) {
-        let (game, shown) = {
+        let (game, launch, cancel) = {
             let launch = self.imp().launch.borrow();
-            (launch.game().cloned(), launch.shown())
+            (
+                launch.game().cloned(),
+                launch.launch(),
+                launch.shown() == Launching::Cancel,
+            )
         };
         for page in self.game_pages() {
             let launched = page
                 .game()
                 .zip(game.as_ref())
                 .is_some_and(|(object, id)| object.id() == *id);
-            let status = match shown {
+            let status = match launch {
                 _ if !launched => None,
-                Launching::No => None,
-                Launching::HandingOff => Some(
+                None => None,
+                Some(Launch::HandOff) => Some(
                     page.game()
                         .and_then(|object| launcher_name(object.game().source()))
                         .map_or_else(
@@ -161,9 +241,9 @@ impl PinduWindow {
                             },
                         ),
                 ),
-                Launching::Starting => Some(gettext("Starting…")),
+                Some(Launch::Run) => Some(gettext("Starting…")),
             };
-            page.show_launch(status.as_deref());
+            page.show_launch(status.as_deref(), launched && cancel);
         }
     }
 
@@ -180,11 +260,13 @@ impl PinduWindow {
         }
     }
 
-    /// Forgets the launch: no overlay, no return.
+    /// Forgets the launch: no starting screen, no return.
     fn drop_launch(&self) {
         let imp = self.imp();
-        if let Some(source) = imp.launch_linger.take() {
-            source.remove();
+        for timer in [&imp.launch_linger, &imp.launch_cancel] {
+            if let Some(source) = timer.take() {
+                source.remove();
+            }
         }
         if let Some((game, handler)) = imp.launch_game.take() {
             game.disconnect(handler);

@@ -53,7 +53,7 @@ pub struct Context {
     pub menu: bool,
     /// The menu drawer, Quick Access or the options sheet is open, at a level.
     pub panel: Option<Panel>,
-    /// The launch overlay is up.
+    /// The starting screen is up.
     pub launching: Launching,
     /// The search keyboard or the passphrase dialog is open, which takes the buttons.
     pub keyboard: Option<Typing>,
@@ -70,7 +70,7 @@ pub struct Typing {
     pub empty: bool,
 }
 
-/// What the launch overlay shows, as far as the buttons are concerned.
+/// What the starting screen shows, as far as the buttons are concerned.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Launching {
     /// No launch overlay.
@@ -80,6 +80,9 @@ pub enum Launching {
     HandingOff,
     /// A game we run starting, which holding B cancels.
     Starting,
+    /// A store game going to its launcher or a game we run starting, with the starting
+    /// screen's Cancel shown, which A or a held B activates.
+    Cancel,
 }
 
 /// What a button does, as the hint bar names it.
@@ -142,10 +145,25 @@ pub struct Hint {
 
 /// The hints for `context` on a controller with `layout`, confirm first.
 pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
-    // The launch overlay takes every button: only a held B, for a game we start.
+    // The starting screen takes every button: only a held B, for a game we start, and A
+    // on its Cancel once that shows.
     match context.launching {
         Launching::No => {}
         Launching::HandingOff => return Vec::new(),
+        Launching::Cancel => {
+            return vec![
+                Hint {
+                    button: layout.button(Intent::Activate),
+                    pair: None,
+                    action: Action::Cancel,
+                },
+                Hint {
+                    button: layout.button(Intent::BackHeld),
+                    pair: None,
+                    action: Action::HoldToCancel,
+                },
+            ];
+        }
         Launching::Starting => {
             return vec![Hint {
                 button: layout.button(Intent::BackHeld),
@@ -884,6 +902,23 @@ mod tests {
             ..context(Focus::Play)
         };
         assert_eq!(actions(opening, DeviceKind::Xbox), []);
+    }
+
+    #[test]
+    fn cancel_on_the_starting_screen_takes_a_or_a_held_b() {
+        let cancel = Context {
+            page_below: true,
+            options: true,
+            launching: Launching::Cancel,
+            ..context(Focus::Cancel)
+        };
+        assert_eq!(
+            actions(cancel, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Cancel),
+                (Button::East, Action::HoldToCancel)
+            ]
+        );
     }
 
     #[test]

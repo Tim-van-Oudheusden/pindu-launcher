@@ -21,7 +21,7 @@ template $PinduGamePage: Adw.NavigationPage {
       action-name: "app.preferences";
     }
 
-    // In fullscreen mode, Play shows the launch overlay over the page.
+    // In fullscreen mode, Play shows the starting screen over the page.
     content: Overlay {
       child: ScrolledWindow {
         hscrollbar-policy: never;
@@ -337,10 +337,23 @@ template $PinduGamePage: Adw.NavigationPage {
           valign: center;
           hexpand: true;
 
-          Adw.Spinner {
-            width-request: 64;
-            height-request: 64;
-            halign: center;
+          // The hero art, or the cover cropped; the title below names it.
+          Adw.Clamp {
+            maximum-size: 480;
+            tightening-threshold: 480;
+
+            child: Picture launch_art {
+              visible: false;
+              content-fit: cover;
+              height-request: 225;
+              can-shrink: true;
+              overflow: hidden;
+              accessible-role: presentation;
+
+              styles [
+                "card",
+              ]
+            };
           }
 
           Label launch_title {
@@ -352,12 +365,31 @@ template $PinduGamePage: Adw.NavigationPage {
             ]
           }
 
+          Adw.Spinner {
+            width-request: 64;
+            height-request: 64;
+            halign: center;
+          }
+
           Label launch_status {
             wrap: true;
             justify: center;
 
             styles [
               "title-3",
+            ]
+          }
+
+          // Offered after a while: stops the game, or gives up on its store launch.
+          Button launch_cancel {
+            label: _("_Cancel");
+            use-underline: true;
+            halign: center;
+            visible: false;
+            action-name: "win.cancel-launch";
+
+            styles [
+              "pill",
             ]
           }
         }
