@@ -29,7 +29,7 @@ pub use game_windows::{
     window_title,
 };
 pub use steam_prompts::STEAM_PROMPT_DELAY;
-pub use store_launch::{STORE_LAUNCH_GRACE, STORE_LAUNCH_TIMEOUT, StoreLaunch};
+pub use store_launch::{STORE_EXIT_GRACE, STORE_LAUNCH_GRACE, STORE_LAUNCH_TIMEOUT, StoreLaunch};
 
 /// The app ID gamescope knows as Steam, which the launcher's main window claims.
 pub const STEAM_APP_ID: u32 = 769;
