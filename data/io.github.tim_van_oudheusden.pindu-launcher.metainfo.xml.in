@@ -87,10 +87,16 @@
   </supports>
 
   <releases>
-    <release version="0.5.0~rc3" type="development" date="2026-11-18">
+    <release version="0.5.0~rc4" type="development" date="2026-11-18">
       <description>
         <p>A test release of fullscreen mode in gamescope sessions, where the launcher takes Steam's place.</p>
         <ul>
+          <li>Play shows a starting screen with the game's art until the game is in front, and offers Cancel after five seconds, so a launch that hangs never leaves you stuck</li>
+          <li>In a gamescope session Steam's own launch window stays hidden; Steam shows only when it needs an answer, such as a sign-in or a cloud conflict</li>
+          <li>The launcher notices within about two seconds that a game handed to Steam, Heroic or Lutris has ended</li>
+          <li>Home opens Steam Big Picture where Steam is installed; the launcher leaves the screen and the controller to Steam until you leave Big Picture</li>
+          <li>The menu's Power lists Suspend, Restart, Power Off and Exit, also in the Flatpak with access outside the sandbox; Exit is left out when the launcher is the session itself</li>
+          <li>The menu's Controls lets you choose which button does what, and Reset to Defaults brings the usual buttons back</li>
           <li>In a gamescope session started with --steam, the games the launcher starts come to the front, the launcher comes back when they end, and Return in Playing Now goes back to the game</li>
           <li>Guide opens the menu over a running game, as in Steam: Return, Stop, Home and Library, and the game's windows to switch between when it has more than one</li>
           <li>Guide + A, the ⋯ button or a right stick click opens Quick Access, over a running game too, including Network and Bluetooth; Guide on its own acts when you let go of it</li>
