@@ -372,14 +372,16 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   Otherwise games keep their own MangoHud.
 - A game the app hands to its store's launcher (Steam, Heroic, Lutris, Bottles, Faugus) is expected in front from the
   moment the store opens: its windows, and any untagged window another app opens meanwhile, such as Steam's update or
-  sign-in window, get the game's app ID and come to the front. The app is back when the last of those windows closes,
-  and stops expecting the game 10 seconds later. While none has opened the app stays in front, and after a minute it
-  stops waiting. Guide over it opens the menu drawer as with other games. From its first window until the app stops
-  expecting it, the game counts as playing: its page offers Return instead of Play, its options sheet Return and Stop,
-  and it has a Playing Now card with Return and Stop. Return, or Play from anywhere else, brings it back to the front
-  without handing it to the store again. Stop, which the app cannot do by signalling a process outside its sandbox,
-  asks every window with the game's app ID, its store launcher's too, to close (`WM_DELETE_WINDOW`), and ends the X11
-  clients of the ones still there 5 seconds later (`XKillClient`); the Steam client itself keeps running.
+  sign-in window, get the game's app ID and come to the front. When the last of those windows closes, the game has
+  exited 2 seconds later unless another opens: the app is back in front, and stops expecting the game 10 seconds after
+  that window closed. A window of the game that opens before then brings the game back to the front. While none has
+  opened the app stays in front, and after a minute it stops waiting. Guide over it opens the menu drawer as with other
+  games. From its first window until it has exited, the game counts as playing: its page offers Return instead of Play,
+  its options sheet Return and Stop, and it has a Playing Now card with Return and Stop. Return, or Play from anywhere
+  else, brings it back to the front without handing it to the store again. Stop, which the app cannot do by signalling
+  a process outside its sandbox, asks every window with the game's app ID, its store launcher's too, to close
+  (`WM_DELETE_WINDOW`), and ends the X11 clients of the ones still there 5 seconds later (`XKillClient`); the Steam
+  client itself keeps running.
 - With [host access granted](#starting-games-on-the-host), Play hands a Steam game to Steam as
   `steam -silent steam://rungameid/<id>` on the host (`flatpak run com.valvesoftware.Steam -silent …` for a library
   from the Steam Flatpak) instead of through the OpenURI portal, so a Steam client that is not running yet starts
