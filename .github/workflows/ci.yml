@@ -57,6 +57,7 @@ jobs:
         run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
 
       - uses: actions/cache@v6
+        id: cargo-cache
         with:
           path: |
             .cargo-home
@@ -70,16 +71,26 @@ jobs:
       # python-dbusmock (approved 2026-11-17), with the dbus-python it needs, is installed
       # into the build folder for the system panel's tests against NetworkManager, BlueZ and
       # logind templates (crates/pindu-ui/tests/system_panel); without it they skip.
+      # A cache restored from another Cargo.lock (restore-keys) holds the workspace crates built
+      # against it, under hashes no later build uses; cleaning them keeps the cache saved at the
+      # end of this run to the dependencies and one build of the workspace.
       - name: rustfmt, clippy, rustdoc, unit tests and Meson tests
+        env:
+          CARGO_CACHE_HIT: ${{ steps.cargo-cache.outputs.cache-hit }}
         run: |
           chown -R "$(id -u):$(id -g)" "$PWD"
+          # shellcheck disable=SC2016 # $CARGO_CACHE_HIT expands in the SDK's shell, not this one
           flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
             --env=CARGO_HOME="$PWD/.cargo-home" \
             --env=CARGO_TARGET_DIR="$PWD/_build/cargo-target" \
+            --env=CARGO_CACHE_HIT="$CARGO_CACHE_HIT" \
             --env=PATH=/usr/lib/sdk/rust-stable/bin:/usr/bin \
             --env=PYTHONPATH="$PWD/_build/python" \
             --command=sh org.gnome.Sdk//51 -c '
               set -e
+              if [ "$CARGO_CACHE_HIT" != true ]; then
+                cargo clean --workspace
+              fi
               python3 -m pip install --no-cache-dir --target _build/python \
                 python-dbusmock==0.38.1 dbus-python==1.5.1
               cargo fmt --all --check
