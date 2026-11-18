@@ -1,3 +1,9 @@
+pindu-launcher (0.5.0-1) unstable; urgency=medium
+
+  * Release 0.5.0: https://github.com/Tim-van-Oudheusden/pindu-launcher/releases/tag/v0.5.0
+
+ -- Tim van Oudheusden <118523958+Tim-van-Oudheusden@users.noreply.github.com>  Wed, 18 Nov 2026 22:00:00 +0100
+
 pindu-launcher (0.5.0~rc4-1) unstable; urgency=medium
 
   * Release 0.5.0-rc.4: https://github.com/Tim-van-Oudheusden/pindu-launcher/releases/tag/v0.5.0-rc.4

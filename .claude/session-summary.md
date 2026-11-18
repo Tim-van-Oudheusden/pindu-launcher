@@ -13,7 +13,11 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   window dropped every intent for the whole session. Now `BigPicture::has_controller` (Steam's window shown or a game
   Steam started) decides, through `GamescopeService::big_picture_has_controller`. The "until I click" was the grace
   running out, not X focus: the maintainer's journal (`journalctl --user _PID=<launcher>`, debug on) logs every
-  `Gamepad intent` and `Launch overlay event: Focus(...)`, which settled it. Open: the rc.4 hardware check (#417).
+  `Gamepad intent` and `Launch overlay event: Focus(...)`, which settled it.
+- 2026-11-18, #417: 0.5.0 final cut from `main` after rc.4 plus #476 (PR #477), Weblate (#473) and README (#475).
+  The maintainer waived the soak `docs/releasing.md` asks for when code lands after the pre-release. Open: the
+  `hardware-check:passed` label on #417 (maintainer's), and the AUR and nixpkgs bumps from the release's `SHA256SUMS`
+  plus the COPR build once the release is published.
 - Gotcha: parallel agents each get a `git worktree` under `~/Git/pindu-wt/<issue>` with a reflinked
   `_build/cargo-target` (`cp -a --reflink=always`, btrfs); they must use absolute paths, or edits land in the main
   checkout.
