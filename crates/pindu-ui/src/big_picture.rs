@@ -2,9 +2,9 @@
 //! and activating it hands Big Picture to Steam (`launch_service::open_big_picture`). In a
 //! `gamescope --steam` session Big Picture then takes the launcher's place
 //! (`GamescopeService`): the tile says it is opening until Steam's window shows, and
-//! activating it again gives up. While Steam's window or a game it started is in front,
-//! the window leaves the controller to Steam; once Steam's last window has closed, the
-//! window is in front again and the controller is its own.
+//! activating it again gives up. Steam keeps the controller while its window is visible or
+//! a game it started is still active. The launcher takes the controller back once Steam's
+//! window is gone and no game it started is active.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
