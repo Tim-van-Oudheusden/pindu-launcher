@@ -292,6 +292,23 @@ pub fn spawn(command: &Command, output: Option<File>) -> Result<gio::Subprocess,
         }
         None => gio::SubprocessLauncher::new(gio::SubprocessFlags::NONE),
     };
+    spawn_with(&launcher, command)
+}
+
+/// Spawns the command on the host as [`spawn`] does, with its output and errors piped
+/// back to us, for `communicate_utf8_future` to read.
+pub fn spawn_captured(command: &Command) -> Result<gio::Subprocess, glib::Error> {
+    let launcher = gio::SubprocessLauncher::new(
+        gio::SubprocessFlags::STDOUT_PIPE | gio::SubprocessFlags::STDERR_PIPE,
+    );
+    spawn_with(&launcher, command)
+}
+
+/// Spawns the command on the host with `launcher`.
+fn spawn_with(
+    launcher: &gio::SubprocessLauncher,
+    command: &Command,
+) -> Result<gio::Subprocess, glib::Error> {
     let argv = if permission_service::in_flatpak() {
         command.flatpak_spawn_argv_on(&LauncherDisplay::from_vars(|name| std::env::var(name).ok()))
     } else {

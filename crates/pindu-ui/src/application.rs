@@ -35,7 +35,7 @@ use crate::task_service::TaskService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
 use pindu_core::backup::ImportSummary;
-use pindu_core::gamescope::session::{Session, has_os_session_select};
+use pindu_core::gamescope::session::{Session, has_os_session_select, runs_as_own_session};
 use pindu_core::keys;
 use pindu_core::library::Filters;
 use pindu_core::notifications::{Kind, Target};
@@ -74,6 +74,8 @@ mod imp {
         pub session_client: std::cell::Cell<bool>,
         /// What `--session` changes, read on first use.
         pub session: OnceCell<Session>,
+        /// Whether the launcher runs as its own login session, read on first use.
+        pub own_session: OnceCell<bool>,
         /// Controller input for every shell; it opens controllers only when one listens.
         pub gamepad_service: OnceCell<GamepadService>,
         /// gamescope's `--steam` focus protocol; inert outside such a gamescope.
@@ -379,6 +381,20 @@ impl PinduApplication {
             client: imp.session_client.get(),
             os_session_select: has_os_session_select(&HostDirs::from_env().host_usr),
             host_spawn: permission_service::host_spawn_allowed(),
+        })
+    }
+
+    /// Whether the launcher runs as its own login session (`--session`, or a `--steam`
+    /// gamescope the display manager started), where quitting leaves nothing behind, so the
+    /// Power level has no Exit. Read once from the environment.
+    pub fn runs_as_own_session(&self) -> bool {
+        let imp = self.imp();
+        *imp.own_session.get_or_init(|| {
+            runs_as_own_session(
+                imp.session_client.get(),
+                self.gamescope_service().is_active(),
+                |name| std::env::var(name).ok(),
+            )
         })
     }
 

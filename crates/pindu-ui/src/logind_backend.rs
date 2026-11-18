@@ -2,8 +2,8 @@
 //! `org.freedesktop.login1` on the system bus with `gio`: `CanSuspend`, `CanReboot` and
 //! `CanPowerOff` say what the session may do, `Suspend`, `Reboot` and `PowerOff` do it,
 //! `ListInhibitors` names who stops it, and `NameOwnerChanged` says when logind comes or
-//! goes. The Flatpak has no system bus, so there the section stays hidden and nothing
-//! touches the bus.
+//! goes. The Flatpak has no system bus, so there this backend touches nothing; the section
+//! asks the host's logind through `host_logind_backend` instead.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -114,6 +114,7 @@ async fn read_facts() -> Facts {
         can_suspend: can(&bus, "CanSuspend").await,
         can_reboot: can(&bus, "CanReboot").await,
         can_power_off: can(&bus, "CanPowerOff").await,
+        sandboxed: false,
     }
 }
 
