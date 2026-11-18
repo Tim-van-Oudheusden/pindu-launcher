@@ -4,3 +4,4 @@ Correction log for agent work in this repository. Append one line per correction
 what went wrong | correction + where it is encoded.
 
 Format: `YYYY-MM-DD\t<behaviour>\t<correction (file:rule)>`
+2026-11-18	subagents working in git worktrees edited the main checkout through relative paths (twice), caught and reverted	give each worktree agent its absolute path and tell it every edit path must be absolute (.claude/session-summary.md gotcha)
