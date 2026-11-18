@@ -29,7 +29,8 @@ pub struct StoreLaunch {
     id: GameId,
     game: ExpectedGame,
     phase: Phase,
-    /// Whether the Steam client launches the game, so its windows may be the launch's.
+    /// Whether the Steam client launches the game, so its windows may be the launch's;
+    /// not once the user gave up on the launch.
     by_steam: bool,
     /// The Steam client's windows that are open while the launch waits.
     steam: SteamPrompts,
@@ -199,6 +200,17 @@ impl StoreLaunch {
         let waiting = matches!(self.phase, Phase::Waiting(_));
         let wanted = front == Front::Game(self.game.app_id);
         self.steam.newest(now).filter(|_| waiting && wanted)
+    }
+
+    /// The user gave up on the launch at `now`, as Cancel on the starting screen does: the
+    /// Steam client's windows are left to it from then on, and its game gets the full
+    /// time-out again. Steam may still start the game, whose window then plays as before.
+    pub fn give_up(&mut self, now: Instant) {
+        self.by_steam = false;
+        self.steam = SteamPrompts::default();
+        if let Phase::Waiting(_) = self.phase {
+            self.phase = Phase::Waiting(now);
+        }
     }
 }
 

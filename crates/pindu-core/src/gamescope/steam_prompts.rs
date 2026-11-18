@@ -262,4 +262,26 @@ mod tests {
         assert_eq!(launch.steam_window(front, start + STEAM_PROMPT_DELAY), None);
         assert_eq!(launch.reveal_at(start), None);
     }
+
+    #[test]
+    fn a_launch_given_up_on_shows_no_steam_window_and_still_plays_or_times_out() {
+        let start = Instant::now();
+        let at = |seconds| start + Duration::from_secs(seconds);
+        let front = Front::Game(646_570);
+        let mut spire = launch(start);
+        spire.window_mapped(&steam_window(0x220_0035), &[], start);
+
+        spire.give_up(at(6));
+        assert_eq!(spire.steam_window(front, at(6)), None);
+        assert_eq!(spire.reveal_at(at(6)), None);
+        // Steam goes on launching: its windows no longer hold the time-out off.
+        spire.window_mapped(&steam_window(0x220_0060), &[], at(7));
+        assert_eq!(spire.steam_window(front, at(20)), None);
+        assert_eq!(spire.reveal_at(at(7)), None);
+        assert_eq!(spire.deadline(), Some(at(6) + STORE_LAUNCH_TIMEOUT));
+        assert!(spire.is_over(at(6) + STORE_LAUNCH_TIMEOUT));
+        // A game window that comes late still plays, so Return and Stop reach it.
+        spire.focusable_apps_changed(&[STEAM_APP_ID, 646_570], at(30));
+        assert!(spire.is_playing(at(30)));
+    }
 }

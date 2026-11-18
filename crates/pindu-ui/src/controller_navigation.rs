@@ -66,13 +66,14 @@ impl PinduWindow {
     }
 
     /// A controller's intent: while a game we started has the controller only Guide and
-    /// the Quick Access of Guide + A or "…" act, and give it back before they do.
+    /// the Quick Access of Guide + A or "…" act, and give it back before they do; the
+    /// starting screen's own buttons act too while it is up, and leave it with the game.
     fn controller_intent(&self, intent: Intent) {
         let control = self.imp().game_control.get();
-        if !self.takes_controller() || !control.acts_on(intent) {
+        if !self.takes_controller() || !control.acts_on_launching(intent, self.launching()) {
             return;
         }
-        if control.game_has_controller() {
+        if control.game_has_controller() && control.acts_on(intent) {
             self.give_controller_back();
         }
         self.handle_intent(intent);

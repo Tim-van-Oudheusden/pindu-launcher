@@ -392,8 +392,8 @@ impl GamescopeService {
             .push(Box::new(listener));
     }
 
-    /// Calls `listener` whenever the store launch ends: over, given up on, or left by the
-    /// user from the Steam client's window it waits on.
+    /// Calls `listener` whenever the store launch ends: over, or left by the user from the
+    /// Steam client's window it waits on.
     pub fn connect_store_launch_ended(&self, listener: impl Fn() + 'static) {
         self.inner
             .store_launch_listeners
@@ -402,18 +402,26 @@ impl GamescopeService {
     }
 
     /// Gives up on the store launch of the game with `id` while it waits for the game, as
-    /// Cancel on the starting screen: the launcher comes back to the front. A game its
-    /// store launcher already shows is left alone; Stop exits it.
+    /// Cancel on the starting screen: the launcher comes back to the front and the Steam
+    /// client's windows stay behind it. The launch itself stays until its time-out, as the
+    /// store launcher may still start the game: its window then plays, behind the
+    /// launcher, with Return and Stop. A game its store launcher already shows is left
+    /// alone; Stop exits it.
     pub fn give_up_store_launch(&self, id: &GameId) {
-        let waiting = self
+        let now = Instant::now();
+        let given_up = self
             .inner
             .store_launch
-            .borrow()
-            .as_ref()
-            .is_some_and(|launch| launch.game() == id && !launch.is_playing(Instant::now()));
-        if waiting {
+            .borrow_mut()
+            .as_mut()
+            .filter(|launch| launch.game() == id && !launch.is_playing(now))
+            .map(|launch| launch.give_up(now))
+            .is_some();
+        if given_up {
             glib::g_info!("pindu", "gamescope: giving up on the store launch of {id}");
-            self.end_store_launch();
+            self.schedule_store_check();
+            self.ask_for(Front::Launcher);
+            self.read_front();
         }
     }
 
