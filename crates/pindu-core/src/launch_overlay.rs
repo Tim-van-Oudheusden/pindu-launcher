@@ -293,7 +293,8 @@ mod tests {
     fn a_game_we_run_returns_to_its_page_when_it_ends() {
         let mut overlay = LaunchOverlay::default();
 
-        overlay.handle(Event::Play(id(), Launch::Run));
+        // A game we run reports back however slowly it starts, so no timeout drops it.
+        assert_eq!(overlay.handle(Event::Play(id(), Launch::Run)), None);
         assert_eq!(overlay.shown(), Launching::Starting);
         assert_eq!(overlay.handle(Event::Playing(id(), true)), None);
         assert_eq!(
