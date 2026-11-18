@@ -711,7 +711,7 @@ done
 check 'verify keeps no token in its checkout' false \
   "$(yq '.jobs.verify.steps[] | select(.uses == "actions/checkout@*") | .with."persist-credentials"' "$queue_yml")"
 check 'verify gets no permissions beyond the read-only default' null "$(yq '.jobs.verify.permissions' "$queue_yml")"
-check 'verify restores the cache but never saves it' 'actions/checkout@v4 actions/cache/restore@v4' \
+check 'verify restores the cache but never saves it' 'actions/checkout@v7 actions/cache/restore@v6' \
   "$(yq '[.jobs.verify.steps[] | select(has("uses")) | .uses] | join(" ")' "$queue_yml")"
 for job in pick land reject; do
   check "$job checks out main only" main \
