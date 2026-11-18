@@ -63,6 +63,12 @@ impl SteamPrompts {
         !self.mapped.is_empty()
     }
 
+    /// The newest of them, shown or not yet: Steam Big Picture's window shows at once,
+    /// without the delay a store launch gives Steam's launch window.
+    pub(crate) fn latest(&self) -> Option<Xid> {
+        self.mapped.last().map(|&(xid, _)| xid)
+    }
+
     /// The newest of them that has stayed open for [`STEAM_PROMPT_DELAY`] at `now`, which
     /// the launcher shows.
     pub(crate) fn newest(&self, now: Instant) -> Option<Xid> {

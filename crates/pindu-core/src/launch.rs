@@ -257,7 +257,30 @@ const STEAM_FLATPAK: &str = "com.valvesoftware.Steam";
 /// stays the hand-off. A library under `~/.var/app/com.valvesoftware.Steam` belongs to
 /// the Steam Flatpak, which `flatpak run` starts; any other belongs to the host's `steam`.
 pub fn silent_steam(game: &Game, uri: &str, session: &SteamSession<'_>) -> Option<Command> {
-    if game.source() != Source::Steam || !(session.steam_gamescope && session.host_spawn) {
+    if game.source() != Source::Steam {
+        return None;
+    }
+    steam_command(uri, session)
+}
+
+/// Steam Big Picture's URI, which opens the Steam client in its controller mode.
+pub const BIG_PICTURE_URI: &str = "steam://open/bigpicture";
+
+/// How Home opens Steam Big Picture, the way Play hands a Steam game to Steam (see
+/// [`silent_steam`]): the `steam` command with `-silent` where that is how a game goes,
+/// its URI otherwise. `None` where no Steam folder was found, so Home does not offer it.
+pub fn big_picture(session: &SteamSession<'_>) -> Option<Route> {
+    session.steam_root?;
+    Some(match steam_command(BIG_PICTURE_URI, session) {
+        Some(command) => Route::HostSpawn(command),
+        None => Route::StoreUri(BIG_PICTURE_URI.to_owned()),
+    })
+}
+
+/// The command that hands `uri` to Steam with `-silent` in a `gamescope --steam` session
+/// where the launcher may run commands on the host and knows which Steam has the library.
+fn steam_command(uri: &str, session: &SteamSession<'_>) -> Option<Command> {
+    if !(session.steam_gamescope && session.host_spawn) {
         return None;
     }
     let root = session.steam_root?;
@@ -1023,5 +1046,67 @@ mod tests {
         };
 
         assert_eq!(silent_steam(&game, "steam://rungameid/570", &session), None);
+    }
+
+    #[test]
+    fn in_a_steam_gamescope_big_picture_opens_through_steam_silently() {
+        let native = steam_session(Path::new("/home/me/.local/share/Steam"));
+        let flatpak = steam_session(Path::new(
+            "/home/me/.var/app/com.valvesoftware.Steam/data/Steam",
+        ));
+
+        assert_eq!(
+            big_picture(&native),
+            Some(Route::HostSpawn(Command {
+                argv: vec![
+                    "steam".to_owned(),
+                    "-silent".to_owned(),
+                    "steam://open/bigpicture".to_owned(),
+                ],
+                environment: BTreeMap::new(),
+                working_dir: None,
+            }))
+        );
+        let Some(Route::HostSpawn(command)) = big_picture(&flatpak) else {
+            panic!("the Steam Flatpak opens Big Picture through its command");
+        };
+        assert_eq!(
+            command.argv,
+            [
+                "flatpak",
+                "run",
+                "com.valvesoftware.Steam",
+                "-silent",
+                "steam://open/bigpicture"
+            ]
+        );
+    }
+
+    #[test]
+    fn big_picture_is_offered_only_where_a_steam_folder_was_found() {
+        let found = SteamSession {
+            steam_gamescope: false,
+            ..steam_session(Path::new("/home/me/.steam/steam"))
+        };
+        assert_eq!(
+            big_picture(&found),
+            Some(Route::StoreUri("steam://open/bigpicture".to_owned()))
+        );
+        let without_host_spawn = SteamSession {
+            host_spawn: false,
+            ..steam_session(Path::new("/home/me/.steam/steam"))
+        };
+        assert_eq!(
+            big_picture(&without_host_spawn),
+            Some(Route::StoreUri("steam://open/bigpicture".to_owned()))
+        );
+        for steam_gamescope in [false, true] {
+            let none = SteamSession {
+                steam_gamescope,
+                host_spawn: true,
+                steam_root: None,
+            };
+            assert_eq!(big_picture(&none), None);
+        }
     }
 }
