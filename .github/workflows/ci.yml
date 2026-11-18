@@ -1,10 +1,10 @@
 name: CI
 
 # The checks every pull request waits for, all of them required (.github/rulesets/main.json):
-# rustfmt, clippy, rustdoc, the unit and Meson tests, the dependency policy, the scripts' tests
-# and the development Flatpak build on x86_64 with its UI smoke test. The slow builds (the source
-# tarball, the native packages, the release and aarch64 Flatpaks) run after the merge in
-# packaging.yml (#362).
+# rustfmt, clippy, rustdoc, the unit and Meson tests, a check with the declared minimum Rust
+# version, the dependency policy, the scripts' tests and the development Flatpak build on x86_64
+# with its UI smoke test. The slow builds (the source tarball, the native packages, the release
+# and aarch64 Flatpaks) run after the merge in packaging.yml (#362).
 
 on:
   push:
@@ -100,6 +100,48 @@ jobs:
               meson setup --reconfigure _build || meson setup _build
               meson test -C _build --print-errorlogs
               po/check-pot.sh _build
+            '
+
+  msrv:
+    name: Minimum supported Rust version
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Cargo.toml's rust-version is the floor the README, CONTRIBUTING, the RPM spec and the
+      # Debian control promise (#449). Every other job builds with the SDK's rust-stable, so only
+      # this job notices when the code needs a newer compiler; it reads the version from
+      # Cargo.toml, so raising the floor moves the check with it. The toolchain comes from
+      # rustup-init 1.29.3 with its published SHA-256, in the GNOME 51 SDK as `checks` builds.
+      - name: cargo check with the declared rust-version
+        run: |
+          msrv=$(sed -n 's/^rust-version = "\([^"]*\)"$/\1/p' Cargo.toml)
+          test -n "$msrv"
+          mkdir -p _build
+          chown -R "$(id -u):$(id -g)" "$PWD"
+          # shellcheck disable=SC2016 # $MSRV expands in the SDK's shell, not this one
+          flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
+            --env=MSRV="$msrv" \
+            --env=RUSTUP_HOME="$PWD/_build/msrv-rustup" \
+            --env=CARGO_HOME="$PWD/_build/msrv-cargo" \
+            --env=CARGO_TARGET_DIR="$PWD/_build/msrv-target" \
+            --env=PATH="$PWD/_build/msrv-cargo/bin:/usr/bin" \
+            --command=sh org.gnome.Sdk//51 -c '
+              set -e
+              curl -fsSLo _build/rustup-init \
+                https://static.rust-lang.org/rustup/archive/1.29.3/x86_64-unknown-linux-gnu/rustup-init
+              echo "b1c8cb14e30889e7e2999e6b69e62d9e9b9ffc0f4df8180564d306d9680e6c55  _build/rustup-init" \
+                | sha256sum -c -
+              chmod +x _build/rustup-init
+              _build/rustup-init -y --no-modify-path --profile minimal --default-toolchain "$MSRV"
+              cargo --version
+              cargo check --workspace --all-targets --locked
             '
 
   deny:

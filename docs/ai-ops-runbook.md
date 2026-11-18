@@ -43,6 +43,9 @@ check on `main`, so the pull request cannot merge until it passes.
 
 - **`Rust and Meson checks`:** formatting, clippy, rustdoc, unit tests or Meson tests. Run the same gates locally
   (`AGENTS.md`, "Session Completion") and fix the code. Never weaken a test or add `#[allow]` to get green.
+- **`Minimum supported Rust version`:** the workspace does not compile with the `rust-version` in `Cargo.toml`, the
+  floor the README, CONTRIBUTING and the RPM and DEB metadata promise. Rewrite the code without the newer language or
+  library feature; raising the floor is the maintainer's call, and moves all five places together.
 - **`Flatpak build, UI smoke test and lint (development)`:** the manifest does not build, `meson test` fails inside the
   build (the UI smoke test runs there), or `flatpak-builder-lint` reports a new problem. Fix the cause; an entry in
   `build-aux/flatpak/lint-exceptions.json` is the maintainer's call, like any change to `finish-args` (`AGENTS.md`,
@@ -172,10 +175,10 @@ request:
 
 - no deletion of `main` and no force pushes;
 - changes only through a pull request, merged with a merge commit, with every review thread resolved;
-- the required checks: `Rust and Meson checks`, `Flatpak build, UI smoke test and lint (development)`,
-  `Merge queue script tests`, `Governance scripts and policies`, `Dependency policy (cargo-deny)`, `Script tests`,
-  `PR review rubric` and `Unit-test coverage floors`. Packaging's builds run after the merge and are not required
-  checks; a red Packaging run pauses the merge queue instead.
+- the required checks: `Rust and Meson checks`, `Minimum supported Rust version`, `Flatpak build, UI smoke test and
+  lint (development)`, `Merge queue script tests`, `Governance scripts and policies`, `Dependency policy (cargo-deny)`,
+  `Script tests`, `PR review rubric` and `Unit-test coverage floors`. Packaging's builds run after the merge and are
+  not required checks; a red Packaging run pauses the merge queue instead.
 
 Repository admins can bypass it (#237). Only the maintainer is an admin; agent tokens and Apps never get the admin role.
 The bypass is for emergencies the checks cannot pass by design, such as a broken runner image; when the maintainer
