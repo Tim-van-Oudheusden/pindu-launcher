@@ -39,15 +39,15 @@ pub fn new_log_name(stamp: &str, existing: &[String]) -> String {
         .expect("some name is free")
 }
 
-/// The logs among a folder's `names` beyond the newest `keep`, oldest first; what is not
-/// a log is left alone.
+/// The logs among a folder's `names` beyond the newest `keep`, oldest first; a file the
+/// launcher did not name, such as a `backup.log` kept by hand, is left alone.
 pub fn stale_logs(names: &[String], keep: usize) -> Vec<String> {
     let logs = oldest_first(names);
     let stale = logs.len().saturating_sub(keep);
     logs.into_iter().take(stale).cloned().collect()
 }
 
-/// The newest log among a folder's `names`.
+/// The newest log among a folder's `names`, ignoring files the launcher did not name.
 pub fn latest_log(names: &[String]) -> Option<&String> {
     oldest_first(names).pop()
 }
@@ -72,22 +72,42 @@ pub fn header(title: &str, started: &str, argv: &[String]) -> String {
 /// The logs among `names`, oldest first: by start, then by the number that keeps logs
 /// started in the same second apart.
 fn oldest_first(names: &[String]) -> Vec<&String> {
-    let order = |name: &String| {
-        let stem = name.strip_suffix(".log")?;
-        let numbered = stem
-            .rsplit_once('_')
-            .and_then(|(stamp, n)| Some((stamp, n.parse::<u32>().ok()?)));
-        Some(match numbered {
-            Some((stamp, n)) => (stamp.to_owned(), n),
-            None => (stem.to_owned(), 1),
-        })
-    };
     let mut logs: Vec<_> = names
         .iter()
-        .filter_map(|name| Some((order(name)?, name)))
+        .filter_map(|name| Some((log_order(name)?, name)))
         .collect();
     logs.sort();
     logs.into_iter().map(|(_, name)| name).collect()
+}
+
+/// Where a log named `name` sorts: its start and its number in that second. `None` for a
+/// name `new_log_name` never gives.
+fn log_order(name: &str) -> Option<(&str, u32)> {
+    let stem = name.strip_suffix(".log")?;
+    let (stamp, n) = match stem.split_once('_') {
+        Some((stamp, n)) => (stamp, launch_number(n)?),
+        None => (stem, 1),
+    };
+    is_stamp(stamp).then_some((stamp, n))
+}
+
+/// Whether `stem` is a start time as `new_log_name` gets it, e.g. `2026-11-05T14-03-22`.
+fn is_stamp(stem: &str) -> bool {
+    const SHAPE: &[u8] = b"0000-00-00T00-00-00";
+    stem.len() == SHAPE.len()
+        && stem.bytes().zip(SHAPE).all(|(byte, &shape)| match shape {
+            b'0' => byte.is_ascii_digit(),
+            _ => byte == shape,
+        })
+}
+
+/// The number `new_log_name` adds for another launch in the same second: 2 or more,
+/// written without a sign or leading zeros.
+fn launch_number(digits: &str) -> Option<u32> {
+    if digits.starts_with('0') || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    digits.parse().ok().filter(|&n| n >= 2)
 }
 
 #[cfg(test)]
@@ -161,6 +181,31 @@ mod tests {
             Some("2026-11-05T14-03-22_10.log")
         );
         assert_eq!(latest_log(&["notes.txt".to_owned()]), None);
+    }
+
+    #[test]
+    fn log_files_the_launcher_did_not_name_are_neither_dropped_nor_the_latest() {
+        let names = names(&[
+            "backup.log",
+            "zzz.log",
+            "backup_3.log",
+            "2026-11-05T14-03-22_backup.log",
+            "2026-11-05T14-03-22_+4.log",
+            "2026-11-05T14-03-22_05.log",
+            "2026-11-05T14-03-22_1.log",
+            "2026-11-05 14-03-22.log",
+            "2026-11-05T14-03-2.log",
+            "2026-11-04T09-00-00.log",
+            "2026-11-05T14-03-22.log",
+            "2026-11-05T14-03-22_2.log",
+        ]);
+
+        assert_eq!(stale_logs(&names, 2), ["2026-11-04T09-00-00.log"]);
+        assert_eq!(
+            latest_log(&names).map(String::as_str),
+            Some("2026-11-05T14-03-22_2.log")
+        );
+        assert_eq!(latest_log(&["backup.log".to_owned()]), None);
     }
 
     #[test]
