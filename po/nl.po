@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-18 16:45+0100\n"
+"POT-Creation-Date: 2026-11-18 21:47+0100\n"
 "PO-Revision-Date: 2026-11-07 18:15+0000\n"
 "Last-Translator: Tim <tim-van-oudheusden@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/pindu-launcher/"
@@ -2497,8 +2497,8 @@ msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:92
 msgid ""
-"A test release of fullscreen mode in gamescope sessions, where the launcher "
-"takes Steam's place."
+"Fullscreen mode in gamescope sessions, where the launcher takes Steam's "
+"place."
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:94
