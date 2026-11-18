@@ -39,14 +39,14 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       # A run that failed before its upload has no report; the script then opens the issue saying so.
       - name: Download the compliance report
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: nightly-compliance
           path: ${{ runner.temp }}/compliance

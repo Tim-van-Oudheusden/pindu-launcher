@@ -84,13 +84,13 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Check out apply script (default branch)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: trusted
           persist-credentials: false
 
       - name: Check out pull request head
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.pr.outputs.sha }}
           path: pr
