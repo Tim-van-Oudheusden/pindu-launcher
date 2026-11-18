@@ -77,12 +77,12 @@ impl BigPicture {
         matches!(self.phase, Phase::Waiting(_))
     }
 
-    /// Follows a top-level window another client mapped, or that was there when the
-    /// session started (`own` holds the launcher's windows): one of the Steam client's
+    /// Follows a top-level window another client mapped at `now`, or that was there when
+    /// the session started (`own` holds the launcher's windows): one of the Steam client's
     /// shows Big Picture.
-    pub fn window_mapped(&mut self, window: &WindowFacts, own: &[Xid]) {
-        self.steam.mapped(window, own);
-        if self.steam.newest().is_some() {
+    pub fn window_mapped(&mut self, window: &WindowFacts, own: &[Xid], now: Instant) {
+        self.steam.mapped(window, own, now);
+        if self.steam.latest().is_some() {
             self.phase = Phase::Shown;
         }
     }
@@ -91,7 +91,7 @@ impl BigPicture {
     /// last window is gone, the user has left Big Picture.
     pub fn window_unmapped(&mut self, xid: Xid, now: Instant) {
         self.steam.unmapped(xid);
-        if self.phase == Phase::Shown && self.steam.newest().is_none() {
+        if self.phase == Phase::Shown && self.steam.latest().is_none() {
             self.phase = Phase::Left(now);
         }
     }
@@ -108,7 +108,7 @@ impl BigPicture {
             },
             None => BaseLayerClaim {
                 app_ids: vec![STEAM_APP_ID],
-                window: self.steam.newest().or(main_window),
+                window: self.steam.latest().or(main_window),
             },
         }
     }
@@ -160,7 +160,7 @@ mod tests {
         let start = Instant::now();
         let mut session = BigPicture::new(start, &[]);
         assert!(session.is_opening());
-        session.window_mapped(&steam_window(0x220_0035), &[]);
+        session.window_mapped(&steam_window(0x220_0035), &[], start);
         assert!(!session.is_opening());
         assert_eq!(session.deadline(), None);
         assert!(!session.is_over(start + BIG_PICTURE_TIMEOUT * 10));
@@ -171,8 +171,8 @@ mod tests {
         let start = Instant::now();
         let at = |seconds| start + Duration::from_secs(seconds);
         let mut session = BigPicture::new(start, &[]);
-        session.window_mapped(&steam_window(0x220_0035), &[]);
-        session.window_mapped(&steam_window(0x220_0060), &[]);
+        session.window_mapped(&steam_window(0x220_0035), &[], start);
+        session.window_mapped(&steam_window(0x220_0060), &[], start);
         session.window_unmapped(0x220_0060, at(30));
         assert_eq!(session.deadline(), None);
         // The user leaves Big Picture.
@@ -194,15 +194,15 @@ mod tests {
         assert_eq!(waiting.app_ids, [STEAM_APP_ID]);
         assert_eq!(waiting.window, Some(MAIN));
         // The launcher's own window and menus are not Big Picture's.
-        session.window_mapped(&steam_window(MAIN), &[MAIN]);
+        session.window_mapped(&steam_window(MAIN), &[MAIN], start);
         let menu = WindowFacts {
             override_redirect: true,
             ..steam_window(0x220_0040)
         };
-        session.window_mapped(&menu, &[MAIN]);
+        session.window_mapped(&menu, &[MAIN], start);
         assert_eq!(session.claim(Some(MAIN)), waiting);
-        session.window_mapped(&steam_window(0x220_0035), &[MAIN]);
-        session.window_mapped(&steam_window(0x220_0060), &[MAIN]);
+        session.window_mapped(&steam_window(0x220_0035), &[MAIN], start);
+        session.window_mapped(&steam_window(0x220_0060), &[MAIN], start);
         let shown = session.claim(Some(MAIN));
         assert_eq!(shown.app_ids, [STEAM_APP_ID]);
         assert_eq!(shown.window, Some(0x220_0060));
@@ -213,7 +213,7 @@ mod tests {
         const BALATRO: u32 = 2_379_780;
         let now = Instant::now();
         let mut session = BigPicture::new(now, &[]);
-        session.window_mapped(&steam_window(0x220_0035), &[MAIN]);
+        session.window_mapped(&steam_window(0x220_0035), &[MAIN], now);
         session.focusable_apps_changed(&[STEAM_APP_ID, BALATRO], now);
         let playing = session.claim(Some(MAIN));
         assert_eq!(playing.app_ids, [BALATRO, STEAM_APP_ID]);
@@ -230,9 +230,9 @@ mod tests {
         let start = Instant::now();
         let at = |seconds| start + Duration::from_secs(seconds);
         let mut session = BigPicture::new(start, &[]);
-        session.window_mapped(&steam_window(0x220_0035), &[]);
+        session.window_mapped(&steam_window(0x220_0035), &[], start);
         session.window_unmapped(0x220_0035, at(60));
-        session.window_mapped(&steam_window(0x220_0070), &[]);
+        session.window_mapped(&steam_window(0x220_0070), &[], at(61));
         assert_eq!(session.deadline(), None);
         assert!(!session.is_over(at(3600)));
     }
@@ -243,7 +243,7 @@ mod tests {
         let start = Instant::now();
         let at = |seconds| start + Duration::from_secs(seconds);
         let mut session = BigPicture::new(start, &[]);
-        session.window_mapped(&steam_window(0x220_0035), &[]);
+        session.window_mapped(&steam_window(0x220_0035), &[], start);
         session.focusable_apps_changed(&[STEAM_APP_ID, BALATRO], at(5));
         // Steam hides its window while the game plays.
         session.window_unmapped(0x220_0035, at(10));
@@ -259,10 +259,10 @@ mod tests {
         let at = |seconds| start + Duration::from_secs(seconds);
         let mut session = BigPicture::new(start, &[]);
         // A cold start: Steam's update window, then Big Picture's some seconds later.
-        session.window_mapped(&steam_window(0x220_0010), &[]);
+        session.window_mapped(&steam_window(0x220_0010), &[], start);
         session.window_unmapped(0x220_0010, at(20));
         assert!(!session.is_over(at(25)));
-        session.window_mapped(&steam_window(0x220_0035), &[]);
+        session.window_mapped(&steam_window(0x220_0035), &[], at(25));
         assert_eq!(session.deadline(), None);
     }
 
@@ -275,7 +275,7 @@ mod tests {
         let now = Instant::now();
         let mut session = BigPicture::new(now, &[STEAM_APP_ID, CELESTE, BALATRO]);
         session.focusable_apps_changed(&[STEAM_APP_ID, CELESTE, BALATRO], now);
-        session.window_mapped(&steam_window(0x220_0035), &[MAIN]);
+        session.window_mapped(&steam_window(0x220_0035), &[MAIN], now);
         let shown = session.claim(Some(MAIN));
         assert_eq!(shown.app_ids, [STEAM_APP_ID]);
         assert_eq!(shown.window, Some(0x220_0035));

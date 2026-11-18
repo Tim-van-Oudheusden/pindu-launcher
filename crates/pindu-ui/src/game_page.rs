@@ -3,7 +3,7 @@
 //! settings; for store games, a read-only summary. In fullscreen mode it shows hero, logo,
 //! a large Play, Favourite, Add to Collection and Options (both opening the options
 //! sheet), a Playing Now card while the game runs, and
-//! a launch summary, with the launch overlay over the page while Play starts the game.
+//! a launch summary, with the starting screen over the page while Play starts the game.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::PathBuf;
@@ -56,9 +56,13 @@ mod imp {
         #[template_child]
         pub launch_overlay: TemplateChild<gtk::Box>,
         #[template_child]
+        pub launch_art: TemplateChild<gtk::Picture>,
+        #[template_child]
         pub launch_title: TemplateChild<gtk::Label>,
         #[template_child]
         pub launch_status: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub launch_cancel: TemplateChild<gtk::Button>,
         #[template_child]
         pub favourite_button: TemplateChild<gtk::Button>,
         #[template_child]
@@ -312,7 +316,10 @@ impl GamePage {
             if let Some(path) = hero.or(cover)
                 && let (Ok(texture), Some(page)) = (textures::load(&path).await, page.upgrade())
             {
-                page.imp().hero.set_paintable(Some(&texture));
+                let imp = page.imp();
+                imp.hero.set_paintable(Some(&texture));
+                imp.launch_art.set_paintable(Some(&texture));
+                imp.launch_art.set_visible(true);
             }
             if let Some(path) = logo
                 && let (Ok(texture), Some(page)) = (textures::load(&path).await, page.upgrade())
@@ -363,7 +370,7 @@ impl GamePage {
         if fullscreen {
             imp.settings_group.set_visible(false);
         } else {
-            self.show_launch(None);
+            self.show_launch(None, false);
             if was_fullscreen {
                 // The launch settings group shows once its settings are read.
                 self.load_launch_settings();
@@ -379,11 +386,21 @@ impl GamePage {
         })
     }
 
-    /// Shows the launch overlay with `status` ("Starting…"), or hides it.
-    pub fn show_launch(&self, status: Option<&str>) {
+    /// Shows the starting screen with `status` ("Starting…") and, when `cancel`, its
+    /// Cancel, which takes focus as it appears; or hides it.
+    pub fn show_launch(&self, status: Option<&str>, cancel: bool) {
         let imp = self.imp();
         imp.launch_overlay.set_visible(status.is_some());
         imp.launch_status.set_label(status.unwrap_or_default());
+        let appears = cancel && !imp.launch_cancel.is_visible();
+        if !cancel && imp.launch_cancel.has_focus() {
+            // Focus does not go with the screen.
+            imp.play_button.grab_focus();
+        }
+        imp.launch_cancel.set_visible(cancel);
+        if appears {
+            imp.launch_cancel.grab_focus();
+        }
     }
 
     /// Gives focus to Play, or to Stop while the game runs.
