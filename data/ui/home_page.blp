@@ -229,8 +229,11 @@ template $PinduHomePage: Adw.NavigationPage {
                   halign: center;
                 }
 
+                // Steam's own name for it; the full "Steam Big Picture" shows as the
+                // focused tile's title.
                 Label {
-                  label: _("Steam Big Picture");
+                  label: _("Big Picture");
+                  ellipsize: end;
 
                   styles [
                     "heading",

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-18 15:41+0100\n"
+"POT-Creation-Date: 2026-11-18 15:48+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1460,11 +1460,11 @@ msgstr[1] ""
 msgid "Recently Played"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:571 data/ui/home_page.blp:242
+#: crates/pindu-ui/src/home_page.rs:571 data/ui/home_page.blp:245
 msgid "Opening…"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:882 data/ui/home_page.blp:233
+#: crates/pindu-ui/src/home_page.rs:882
 msgid "Steam Big Picture"
 msgstr ""
 
@@ -3010,6 +3010,10 @@ msgstr ""
 
 #: data/ui/game_page.blp:316
 msgid "Wrapper Command, Such as taskset -c 0-3"
+msgstr ""
+
+#: data/ui/home_page.blp:235
+msgid "Big Picture"
 msgstr ""
 
 #: data/ui/menu_drawer.blp:142
