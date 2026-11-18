@@ -66,10 +66,12 @@ impl PinduWindow {
     }
 
     /// A controller's intent: while a game we started has the controller only Guide and
-    /// the Quick Access of Guide + A or "…" act, and give it back before they do.
+    /// the Quick Access of Guide + A or "…" act, and give it back before they do. While
+    /// Steam Big Picture has it, none do.
     fn controller_intent(&self, intent: Intent) {
         let control = self.imp().game_control.get();
-        if !self.takes_controller() || !control.acts_on(intent) {
+        if !self.takes_controller() || !control.acts_on(intent) || self.big_picture_has_controller()
+        {
             return;
         }
         if control.game_has_controller() {

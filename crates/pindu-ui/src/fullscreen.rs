@@ -248,8 +248,9 @@ impl PinduWindow {
     }
 
     /// Home: its first screen follows the sections (`pindu_core::sections`), a section
-    /// tile opens its games (`win.home-section` with the section's name) and the Library
-    /// tile goes to the library (`win.show-library`).
+    /// tile opens its games (`win.home-section` with the section's name), the Library
+    /// tile goes to the library (`win.show-library`) and the Steam Big Picture tile opens
+    /// Big Picture (`big_picture`).
     pub(crate) fn setup_home(&self) {
         let show_library = gio::ActionEntry::builder("show-library")
             .activate(|window: &Self, _, _| window.show_library())
@@ -299,6 +300,7 @@ impl PinduWindow {
         self.connect_suspended_notify(|window| window.update_home_background());
         self.connect_visible_notify(|window| window.update_home_background());
         if let Some(application) = self.application().and_downcast::<PinduApplication>() {
+            self.setup_big_picture(&application);
             application
                 .session_service()
                 .connect_any_playing_changed(glib::clone!(

@@ -325,6 +325,70 @@ pub fn open_in_launcher(
     });
 }
 
+/// How Steam Big Picture opens from Home, as [`launch::big_picture`] decides it for this
+/// session; `None` where no Steam folder was found, so Home does not offer it.
+pub async fn big_picture_route(app: &gtk::Application, library: &LibraryService) -> Option<Route> {
+    let steam_gamescope = app
+        .downcast_ref::<PinduApplication>()
+        .is_some_and(|application| application.gamescope_service().is_active());
+    let steam_root = library.source_location(Source::Steam).await;
+    launch::big_picture(&SteamSession {
+        steam_gamescope,
+        host_spawn: permission_service::host_spawn_allowed(),
+        steam_root: steam_root.as_deref(),
+    })
+}
+
+/// Hands Steam Big Picture to Steam, the way Play hands a Steam game over. In a
+/// `gamescope --steam` session it then takes the launcher's place (see
+/// `GamescopeService::big_picture_started`); elsewhere Steam's window takes focus, and
+/// with it the controller.
+pub fn open_big_picture(
+    app: &gtk::Application,
+    window: &gtk::Window,
+    library: &LibraryService,
+    toast: impl Fn(adw::Toast) + 'static,
+) {
+    let (app, window, library) = (app.clone(), window.clone(), library.clone());
+    glib::spawn_future_local(async move {
+        let route = big_picture_route(&app, &library).await;
+        let opened = move |result: Result<(), String>| match result {
+            Ok(()) => {
+                if let Some(application) = app.downcast_ref::<PinduApplication>() {
+                    application.gamescope_service().big_picture_started();
+                }
+            }
+            Err(error) => {
+                glib::g_warning!("pindu", "{error}");
+                toast(adw::Toast::new(
+                    &gettext("Could not open {launcher}").replace("{launcher}", "Steam"),
+                ));
+            }
+        };
+        match route {
+            Some(Route::HostSpawn(command)) => {
+                glib::g_debug!("pindu", "Opening Big Picture: {:?}", command.argv);
+                opened(
+                    session_service::spawn(&command, None)
+                        .map(drop)
+                        .map_err(|error| format!("Could not start {:?}: {error}", command.argv)),
+                );
+            }
+            Some(Route::StoreUri(uri)) => {
+                glib::g_debug!("pindu", "Opening Big Picture: {uri}");
+                gtk::UriLauncher::new(&uri).launch(
+                    Some(&window),
+                    gio::Cancellable::NONE,
+                    move |result| {
+                        opened(result.map_err(|error| format!("Could not open {uri}: {error}")));
+                    },
+                );
+            }
+            _ => {}
+        }
+    });
+}
+
 pub(crate) fn now() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)

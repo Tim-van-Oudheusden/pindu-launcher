@@ -1,0 +1,107 @@
+//! Steam Big Picture from fullscreen mode's Home: the tile shows where Steam is present,
+//! and activating it hands Big Picture to Steam (`launch_service::open_big_picture`). In a
+//! `gamescope --steam` session Big Picture then takes the launcher's place
+//! (`GamescopeService`): the tile says it is opening until Steam's window shows, and
+//! activating it again gives up. Once Steam's window shows, the window leaves the
+//! controller to Steam; when Big Picture ends, the window is in front again and the
+//! controller is its own.
+
+use adw::prelude::*;
+use adw::subclass::prelude::*;
+use gtk::{gio, glib};
+
+use crate::application::PinduApplication;
+use crate::launch_service;
+use crate::window::PinduWindow;
+
+impl PinduWindow {
+    /// Adds `win.steam-big-picture`, offers Big Picture on Home where Steam is present,
+    /// and follows Big Picture in the launcher's place.
+    pub(crate) fn setup_big_picture(&self, application: &PinduApplication) {
+        let open = gio::ActionEntry::builder("steam-big-picture")
+            .activate(|window: &Self, _, _| window.open_big_picture())
+            .build();
+        self.add_action_entries([open]);
+        application
+            .gamescope_service()
+            .connect_big_picture_changed(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move || window.big_picture_changed()
+            ));
+        // A sync finds or loses the Steam folder, and the games change with it.
+        self.library().connect_counts_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.update_big_picture_offered()
+        ));
+        self.update_big_picture_offered();
+    }
+
+    /// Whether Steam Big Picture has the controller: its window shows in the launcher's
+    /// place.
+    pub(crate) fn big_picture_has_controller(&self) -> bool {
+        self.application()
+            .and_downcast::<PinduApplication>()
+            .is_some_and(|application| {
+                let gamescope = application.gamescope_service();
+                gamescope.in_big_picture() && !gamescope.big_picture_opening()
+            })
+    }
+
+    /// Offers Big Picture on Home once it is known whether Steam is present.
+    fn update_big_picture_offered(&self) {
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return;
+        };
+        let window = self.downgrade();
+        glib::spawn_future_local(async move {
+            let library = application.library_service().clone();
+            let route = launch_service::big_picture_route(application.upcast_ref(), &library).await;
+            if let Some(window) = window.upgrade() {
+                window
+                    .imp()
+                    .home_page
+                    .set_big_picture_offered(route.is_some());
+            }
+        });
+    }
+
+    /// Hands Big Picture to Steam, or gives up on it while it is still opening.
+    fn open_big_picture(&self) {
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return;
+        };
+        let gamescope = application.gamescope_service();
+        if gamescope.in_big_picture() {
+            gamescope.end_big_picture();
+            return;
+        }
+        let window = self.downgrade();
+        launch_service::open_big_picture(
+            application.upcast_ref(),
+            self.upcast_ref(),
+            application.library_service(),
+            move |toast| {
+                if let Some(window) = window.upgrade() {
+                    window.add_toast(toast);
+                }
+            },
+        );
+    }
+
+    /// Follows Big Picture in the launcher's place: the tile says whether it is opening,
+    /// and once it ends the controller is the window's again.
+    fn big_picture_changed(&self) {
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return;
+        };
+        let gamescope = application.gamescope_service();
+        self.imp()
+            .home_page
+            .set_big_picture_opening(gamescope.big_picture_opening());
+        if !gamescope.in_big_picture() {
+            self.give_controller_back();
+        }
+    }
+}
