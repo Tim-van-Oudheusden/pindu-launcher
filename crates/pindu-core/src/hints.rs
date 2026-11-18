@@ -436,6 +436,35 @@ mod tests {
     }
 
     #[test]
+    fn the_hints_show_the_button_an_intent_is_bound_to() {
+        let home = Context {
+            search: true,
+            options: true,
+            menu: true,
+            ..context(Focus::Game)
+        };
+        let mut settings = ControllerSettings::default();
+        settings
+            .bindings
+            .assign(crate::gamepad::Intent::Search, Button::LeftShoulder);
+        let shown: Vec<_> = hints(home, Layout::resolve(DeviceKind::Xbox, settings))
+            .into_iter()
+            .map(|hint| (hint.button, hint.action))
+            .collect();
+
+        assert_eq!(
+            shown,
+            [
+                (Button::South, Action::Open),
+                (Button::LeftShoulder, Action::Search),
+                (Button::Select, Action::Options),
+                (Button::Start, Action::Menu),
+                (Button::Guide, Action::QuickAccess)
+            ]
+        );
+    }
+
+    #[test]
     fn fullscreen_pages_open_quick_access_with_guide_and_the_south_button_after_the_menu() {
         let library = Context {
             page_below: true,
@@ -1032,6 +1061,7 @@ mod tests {
             ControllerSettings {
                 prompts: Prompts::Shapes,
                 swap: Swap::Auto,
+                ..ControllerSettings::default()
             },
         );
         let open = hints(context(Focus::Game), layout)[0];
@@ -1049,6 +1079,7 @@ mod tests {
             ControllerSettings {
                 prompts: Prompts::Auto,
                 swap: Swap::On,
+                ..ControllerSettings::default()
             },
         );
         let game_page = Context {

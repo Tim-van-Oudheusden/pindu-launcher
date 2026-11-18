@@ -73,6 +73,11 @@
       <summary>Swap confirm and back</summary>
       <description>Whether the right face button confirms and the bottom one goes back, rather than the other way round. Auto swaps them when the button prompts put A on the right.</description>
     </key>
+    <key name="controller-bindings" type="a{ss}">
+      <default>{}</default>
+      <summary>Controller button bindings</summary>
+      <description>The fullscreen functions given to other controller buttons from the menu's Controls: each changed button, such as north or left-shoulder, with its function, such as search. Buttons not listed keep their default function. Guide, the D-pad and the left stick never change.</description>
+    </key>
     <key name="default-proton" type="s">
       <default>''</default>
       <summary>Default Proton build</summary>

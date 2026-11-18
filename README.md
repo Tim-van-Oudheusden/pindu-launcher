@@ -303,6 +303,12 @@ ones already installed, and installs the one you pick from Flathub, all with a c
 - **Button Prompts** (there or in Preferences) picks the glyphs instead of following the controller: letters, shapes,
   or letters with A on the right. This helps under Steam Input, where every controller looks like Steam's own.
 - **Swap Confirm and Back** makes the right button confirm and the bottom one go back everywhere in fullscreen mode.
+- **Controls** in the menu drawer (Start or Guide) lists what the buttons can do (Select, Back, Search, Game Options,
+  Menu, Quick Access and the tab and sort switches) with the button for each. Choose one and press the button to give
+  it; the function that had that button takes the old one. Guide, or five seconds without a press, leaves it as it was.
+  The choice is kept, and the hint bar and Quick Access's Controls follow it at once. **Reset to Defaults** restores
+  the usual buttons. Guide, the D-pad, the left stick and the keys never change, and with Swap Confirm and Back on, a
+  button goes by where it sits after the swap. The drawer over a running game leaves Controls out.
 
 ### Running in gamescope
 

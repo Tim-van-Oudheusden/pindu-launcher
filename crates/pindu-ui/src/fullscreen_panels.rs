@@ -8,7 +8,8 @@
 //! controller press. Quick Access is a widget of its own, `PinduQuickAccess`
 //! (`quick_access`), which the window hosts as the sidebar of its `quick_access` split
 //! view: the window tells it which level shows and what lies under it, and does what it
-//! asks for. The drawer's Power level is `fullscreen_power`'s.
+//! asks for. The drawer's Power level is `fullscreen_power`'s, and its Controls level is
+//! `fullscreen_bindings`'s.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -159,6 +160,7 @@ impl PinduWindow {
         ));
         self.setup_add_store();
         self.setup_power();
+        self.setup_controls_level();
         self.fill_drawer();
     }
 
@@ -341,6 +343,11 @@ impl PinduWindow {
         }
         if open == Some(Panel::Drawer(DrawerLevel::Power)) {
             self.show_power();
+        }
+        if open == Some(Panel::Drawer(DrawerLevel::Controls)) {
+            self.show_controls_level();
+        } else if before == Some(Panel::Drawer(DrawerLevel::Controls)) {
+            self.leave_controls_level();
         }
         let drawer = matches!(open, Some(Panel::Drawer(_)));
         let quick_access = quick_access_level.is_some();
