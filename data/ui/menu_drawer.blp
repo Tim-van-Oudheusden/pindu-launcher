@@ -145,26 +145,9 @@ template $PinduMenuDrawer: Box {
               };
             }
 
-            ListBoxRow quit_row {
-              action-name: "app.quit";
-
-              child: Box {
-                spacing: 16;
-
-                Image {
-                  icon-name: "application-exit-symbolic";
-                  accessible-role: presentation;
-                }
-
-                Label {
-                  label: _("Quit");
-                  xalign: 0;
-                }
-              };
-            }
-
-            // Shown where logind lets the session suspend, restart or power off;
-            // never in the Flatpak, which has no system bus.
+            // Leads to Suspend, Restart and Power Off, and to Exit Pindu Launcher; shown
+            // while that level lists anything, which it does except in the launcher's own
+            // session on a system that offers none of the actions.
             ListBoxRow power_row {
               action-name: "win.drawer-power";
               visible: false;

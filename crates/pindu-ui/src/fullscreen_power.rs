@@ -1,10 +1,13 @@
-//! The menu drawer's Power (`pindu_core::system::power`): its entry after Quit, shown where
-//! logind lets the session suspend, restart or power off, and its level with Suspend,
-//! Restart and Power Off, each greyed out with a reason when the system does not allow it.
+//! The menu drawer's Power (`pindu_core::system::power`): its entry, last on the drawer's
+//! main level, and its level with Suspend, Restart and Power Off, each greyed out with a
+//! reason when the system does not allow it, then Exit Pindu Launcher, which quits. Natively
+//! the actions ask logind on the system bus; in the Flatpak they ask the host's logind
+//! through host spawn, and without it show greyed out, saying Preferences gives the access.
 //! Restart and Power Off ask first while a game we started runs. As gamescope-session-plus's
 //! client (`--session`, `pindu_core::gamescope::session`) the level also offers Switch to
 //! Desktop, which runs the distribution's `os-session-select desktop` on the host and then
-//! quits, ending the session; it asks first as Restart does. The level is
+//! quits, ending the session; it asks first as Restart does. In the launcher's own session
+//! quitting would leave the screen empty, so there Exit is left out. The level is
 //! [`PinduPowerLevel`], with its own Blueprint (`data/ui/fullscreen_power.blp`); the window
 //! keeps the entry, which sits in the drawer's shared list, the level's `win.power-*`
 //! actions and the question asked first. Both show [`SystemPowerService`]'s state and the
@@ -15,7 +18,7 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::gamescope::session::{
-    SwitchToDesktop, asks_before_switching, power_shown, switch_to_desktop_command,
+    PowerLevelEntry, SwitchToDesktop, asks_before_switching, power_level, switch_to_desktop_command,
 };
 use pindu_core::panels::{DrawerLevel, Panel};
 use pindu_core::system::power::{PowerAction, PowerEntry, PowerState, asks_first};
@@ -58,9 +61,10 @@ mod imp {
 }
 
 glib::wrapper! {
-    /// The menu drawer's Power level: Suspend, Restart and Power Off, as logind allows them,
-    /// and Switch to Desktop in a gamescope-session-plus session. It is the `"power"` page
-    /// of the window's drawer stack.
+    /// The menu drawer's Power level: Suspend, Restart and Power Off, as the system allows
+    /// them, Switch to Desktop in a gamescope-session-plus session, and Exit Pindu Launcher
+    /// outside the launcher's own session. It is the `"power"` page of the window's drawer
+    /// stack.
     pub struct PinduPowerLevel(ObjectSubclass<imp::PinduPowerLevel>)
         @extends adw::Bin, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
@@ -102,11 +106,25 @@ impl PinduWindow {
     /// The level opens: it lists the actions as last read.
     pub(crate) fn show_power(&self) {
         if let Some(service) = self.system_power_service() {
+            let state = service.state();
             self.imp()
                 .drawer_panel
                 .power_level()
-                .fill(&service.state(), self.switch_to_desktop());
+                .fill(&self.power_level_entries(&state), state.sandboxed);
         }
+    }
+
+    /// The Power level's entries for `state`: what the system allows, Switch to Desktop for
+    /// gamescope-session-plus's client, and Exit outside the launcher's own session.
+    pub(crate) fn power_level_entries(&self, state: &PowerState) -> Vec<PowerLevelEntry> {
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return Vec::new();
+        };
+        power_level(
+            state,
+            application.session().switch_to_desktop(),
+            !application.runs_as_own_session(),
+        )
     }
 
     fn system_power_service(&self) -> Option<SystemPowerService> {
@@ -123,10 +141,10 @@ impl PinduWindow {
     }
 
     /// Shows or hides the drawer's entry, and fills the level again while it is open; it
-    /// leaves for the drawer's entries once the section is gone.
+    /// leaves for the drawer's entries once the level has nothing left to list.
     fn show_power_state(&self, state: &PowerState) {
-        let switch = self.switch_to_desktop();
-        let shown = power_shown(state, switch);
+        let entries = self.power_level_entries(state);
+        let shown = !entries.is_empty();
         self.imp().drawer_panel.power_row().set_visible(shown);
         if self.open_panel() != Some(Panel::Drawer(DrawerLevel::Power)) {
             return;
@@ -137,7 +155,7 @@ impl PinduWindow {
         }
         let level = self.imp().drawer_panel.power_level();
         let had_focus = level.has_focus();
-        level.fill(state, switch);
+        level.fill(&entries, state.sandboxed);
         if had_focus {
             self.focus_panel(None);
         }
@@ -295,32 +313,48 @@ impl PinduPowerLevel {
             .is_some_and(|focus| focus.is_ancestor(&**list))
     }
 
-    /// The level's rows for `state`, then Switch to Desktop when `switch` offers it.
-    pub(crate) fn fill(&self, state: &PowerState, switch: Option<SwitchToDesktop>) {
+    /// The level's rows for `entries`; Suspend, Restart and Power Off not allowed say the
+    /// app needs access outside the sandbox when `sandboxed`, or else that the system does
+    /// not allow them.
+    pub(crate) fn fill(&self, entries: &[PowerLevelEntry], sandboxed: bool) {
         let list = &self.imp().drawer_power;
         list.remove_all();
-        for entry in &state.entries {
-            list.append(&power_row(*entry));
-        }
-        if let Some(switch) = switch {
-            let allowed = if switch.allowed {
-                Ok(())
-            } else {
-                Err(gettext("Needs access outside the sandbox, in Preferences"))
+        for entry in entries {
+            let row = match *entry {
+                PowerLevelEntry::Power(entry) => power_row(entry, sandboxed),
+                PowerLevelEntry::SwitchToDesktop(switch) => {
+                    let allowed = if switch.allowed {
+                        Ok(())
+                    } else {
+                        Err(needs_host_access())
+                    };
+                    level_row(
+                        &gettext("Switch to Desktop"),
+                        "user-desktop-symbolic",
+                        "win.power-desktop",
+                        allowed,
+                    )
+                }
+                PowerLevelEntry::Exit => level_row(
+                    &gettext("Exit Pindu Launcher"),
+                    "application-exit-symbolic",
+                    "app.quit",
+                    Ok(()),
+                ),
             };
-            list.append(&level_row(
-                &gettext("Switch to Desktop"),
-                "user-desktop-symbolic",
-                "win.power-desktop",
-                allowed,
-            ));
+            list.append(&row);
         }
     }
 }
 
-/// The row of an entry of the level: insensitive, saying why, when the system does not
-/// allow it.
-fn power_row(entry: PowerEntry) -> gtk::ListBoxRow {
+/// Why an entry is greyed out in the Flatpak without host spawn.
+fn needs_host_access() -> String {
+    gettext("Needs access outside the sandbox, in Preferences")
+}
+
+/// The row of an entry of the level: insensitive, saying why, when it is not allowed:
+/// the app needs access outside the sandbox (`sandboxed`), or the system does not allow it.
+fn power_row(entry: PowerEntry, sandboxed: bool) -> gtk::ListBoxRow {
     let (title, icon, action) = match entry.action {
         PowerAction::Suspend => (
             gettext("Suspend"),
@@ -340,6 +374,8 @@ fn power_row(entry: PowerEntry) -> gtk::ListBoxRow {
     };
     let allowed = if entry.allowed {
         Ok(())
+    } else if sandboxed {
+        Err(needs_host_access())
     } else {
         Err(gettext("Not allowed on this system"))
     };

@@ -38,6 +38,7 @@ pub mod gamepad_service;
 pub mod gamescope_service;
 pub mod hint_bar;
 pub mod home_page;
+pub mod host_logind_backend;
 pub mod launch_service;
 pub mod library_service;
 pub mod log_service;

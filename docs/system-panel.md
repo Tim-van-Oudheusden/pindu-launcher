@@ -14,7 +14,7 @@ the panel; where this page and an issue disagree, the issue wins.
 
 | Section | Place | Why |
 | --- | --- | --- |
-| Power | A **Power** entry in the menu drawer, after **Quit**, leading to **Suspend**, **Restart** and **Power off** | The drawer already holds the ways out (Exit Fullscreen, Quit); Steam's Main Menu puts Power in the same place |
+| Power | A **Power** entry, last in the menu drawer, leading to **Suspend**, **Restart**, **Power off** and **Exit Pindu Launcher** (#457) | The drawer already holds the ways out (Exit Fullscreen); Steam's Main Menu puts Power, with its Exit, in the same place |
 | Network | A **Network** entry in Quick Access, subtitled with the connection (`Wired`, the Wi-Fi network's name, `Offline`) | Quick Access holds the settings a player changes mid-session |
 | Bluetooth | A **Bluetooth** entry in Quick Access, subtitled with the connected devices | As above |
 | Audio output | A **Sound Output** entry in Quick Access, subtitled with the output in use | As above |
@@ -36,9 +36,10 @@ The launcher checks each section once when fullscreen mode starts, and again whe
 on the bus (`NameOwnerChanged`):
 
 1. **In the Flatpak**, the sandbox has no system bus (`finish-args` grants none, and this panel does not ask for it).
-   Power, Network, Bluetooth and System Update are hidden. Sound Output is hidden too, because the sandbox does not
-   have the tools it uses (see [Audio output](#audio-output)). With every section hidden, the drawer has no Power entry
-   and Quick Access shows no system entries. A desktop's own settings do this job there.
+   Network, Bluetooth and System Update are hidden. Sound Output is hidden too, because the sandbox does not have
+   the tools it uses (see [Audio output](#audio-output)). Power asks the host's logind through host spawn instead
+   (see [Power](#power)), and without host spawn shows its actions greyed out, saying Preferences gives the access.
+   Quick Access shows no system entries; a desktop's own settings do this job there.
 2. **Natively**, a section whose service has no owner on the system bus and cannot be activated
    (`ListActivatableNames`) is hidden: a system without BlueZ shows no Bluetooth entry.
 3. **The service is there, but the hardware is not**: no Bluetooth adapter hides Bluetooth; no Wi-Fi device leaves
@@ -60,7 +61,11 @@ session bus. No crate is added.
 
 ### Power
 
-Service: logind, `org.freedesktop.login1` on the system bus.
+Service: logind, `org.freedesktop.login1` on the system bus. In the Flatpak, with the host-spawn override, the same
+calls go to the host's logind as `busctl --system --json=short call … org.freedesktop.login1.Manager <Method>` through
+`flatpak-spawn --host` (`host_logind_backend.rs`, parsed by `system::power::busctl`); it does not follow logind
+coming and going. Without the override, Suspend, Restart and Power off show greyed out with "Needs access outside the
+sandbox, in Preferences", as Switch to Desktop does.
 
 - **Suspend**, **Restart** and **Power off** call `Manager.Suspend`, `Manager.Reboot` and `Manager.PowerOff` with
   `interactive = true`. Each shows only when the matching `CanSuspend`, `CanReboot` or `CanPowerOff` answers `yes` or
@@ -69,6 +74,9 @@ Service: logind, `org.freedesktop.login1` on the system bus.
   off while *Game* is running? Unsaved progress is lost"). Suspend does not ask.
 - A block inhibitor that stops the action (logind refuses the call) is reported as an in-app notification naming who
   holds it (`ListInhibitors`), not as a failure of the launcher.
+- **Exit Pindu Launcher** follows them and quits (`app.quit`). It is left out in the launcher's own session
+  (`--session`, or a `--steam` gamescope whose login session's `XDG_SESSION_DESKTOP`, else `DESKTOP_SESSION`, names
+  gamescope or Pindu), where quitting would leave an empty screen. The main level has no Quit of its own.
 
 ### Network
 
@@ -150,7 +158,7 @@ the services; they never talk to the bus or spawn a process themselves.
 | Section | Core module (pure logic and the trait) | UI backend | UI service | UI level |
 | --- | --- | --- | --- | --- |
 | Availability | `system` (the rules in [What is available](#what-is-available), from facts the backends report) | | | |
-| Power | `system::power` (`PowerBackend`) | `logind_backend.rs` | `system_power_service.rs` | `PinduPowerLevel` (`fullscreen_power.rs`), `data/ui/fullscreen_power.blp` |
+| Power | `system::power` (`PowerBackend`), `system::power::busctl` | `logind_backend.rs`, `host_logind_backend.rs` (Flatpak) | `system_power_service.rs` | `PinduPowerLevel` (`fullscreen_power.rs`), `data/ui/fullscreen_power.blp` |
 | Network | `system::network` (`NetworkBackend`) | `networkmanager_backend.rs` | `network_service.rs` | `PinduNetworkLevel` (`fullscreen_network.rs`), `data/ui/fullscreen_network.blp` |
 | Bluetooth | `system::bluetooth` (`BluetoothBackend`) | `bluez_backend.rs` | `bluetooth_service.rs` | `PinduBluetoothLevel` (`fullscreen_bluetooth.rs`), `data/ui/fullscreen_bluetooth.blp` |
 | Audio output | `system::audio` (`AudioBackend`, `pw-dump` parser) | `wireplumber_backend.rs` | `audio_output_service.rs` | `PinduSoundOutputLevel` (`fullscreen_sound_output.rs`), `data/ui/fullscreen_sound_output.blp` |
@@ -197,10 +205,12 @@ launcher can pass in.
 
 ## Flatpak
 
-No `finish-args` change. The Flatpak has no system bus, so its fullscreen mode shows none of the system sections, and
-on a desktop the desktop's settings cover them. Pindu OS installs the native package. Should the maintainer ever want
-the panel in the Flatpak, it would need `--system-talk-name=` for `org.freedesktop.login1`,
-`org.freedesktop.NetworkManager` and `org.bluez`; that is the maintainer's call, outside this work.
+No `finish-args` change. The Flatpak has no system bus, so its fullscreen mode shows none of the system sections but
+Power, and on a desktop the desktop's settings cover them. Power reaches the host's logind through host spawn, granted
+by the `--talk-name=org.freedesktop.Flatpak` override that Preferences explains, and asks for nothing new. Pindu OS
+installs the native package. Should the maintainer ever want the rest of the panel in the Flatpak, it would need
+`--system-talk-name=` for `org.freedesktop.NetworkManager` and `org.bluez`; that is the maintainer's call, outside
+this work.
 
 ## Out of scope
 
@@ -226,8 +236,8 @@ the panel in the Flatpak, it would need `--system-talk-name=` for `org.freedeskt
 
 Choices this page makes that the maintainer may want to turn around before the issues start:
 
-- **Power in the drawer, not Quick Access.** The issue calls Quick Access the natural home; this page puts Power beside
-  Quit because the drawer is where fullscreen mode is left. Moving it into Quick Access changes only #321.
+- **Power in the drawer, not Quick Access.** The issue calls Quick Access the natural home; this page puts Power in
+  the drawer because the drawer is where fullscreen mode is left. Moving it into Quick Access changes only #321.
 - **Audio through `pw-dump` and `wpctl`.** No new crate, and native only, which is where Pindu OS runs. The
   alternative is the `libpulse-binding` crate (2.30.1), talking to PipeWire's PulseAudio server through the
   `--socket=pulseaudio` the Flatpak already has, so Sound Output would work in the Flatpak too; it is a new

@@ -2,13 +2,16 @@
 //! with `--session` by the `sessions.d/pindu` client file. session-plus exports nothing
 //! that says so, and the session ends when its client exits, so with the flag closing the
 //! window does not quit the app, and the menu drawer's Power level offers Switch to
-//! Desktop where the distribution has `os-session-select`.
+//! Desktop where the distribution has `os-session-select`. Here too is what the Power
+//! level lists ([`power_level`]): in the launcher's own session, the flag's or a `--steam`
+//! gamescope's that the display manager started ([`runs_as_own_session`]), it leaves out
+//! Exit Pindu Launcher, as quitting would leave nothing on the screen.
 
 use std::collections::BTreeMap;
 use std::path::Path;
 
 use crate::launch::Command;
-use crate::system::power::PowerState;
+use crate::system::power::{PowerEntry, PowerState};
 
 /// Where the distribution keeps `os-session-select`, on the host.
 const OS_SESSION_SELECT: &str = "/usr/lib/os-session-select";
@@ -73,10 +76,57 @@ pub fn asks_before_switching(game_running: bool) -> bool {
     game_running
 }
 
-/// Whether the menu drawer has its Power entry: where logind offers an action (`power`),
-/// or Switch to Desktop is offered, as it can be in the Flatpak, which has no system bus.
-pub fn power_shown(power: &PowerState, switch: Option<SwitchToDesktop>) -> bool {
-    power.shown() || switch.is_some()
+/// An entry of the menu drawer's Power level.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PowerLevelEntry {
+    /// Suspend, Restart or Power Off, as the system allows it.
+    Power(PowerEntry),
+    /// Switch to Desktop, for gamescope-session-plus's client.
+    SwitchToDesktop(SwitchToDesktop),
+    /// Exit Pindu Launcher, which quits the app.
+    Exit,
+}
+
+/// The Power level's entries, top to bottom: Suspend, Restart and Power Off as `power`
+/// lists them, Switch to Desktop where `switch` offers it, then Exit Pindu Launcher where
+/// `exit` says quitting leaves something behind, which is not so in the launcher's own
+/// session (see [`runs_as_own_session`]). The drawer has its Power entry while the level
+/// lists anything.
+pub fn power_level(
+    power: &PowerState,
+    switch: Option<SwitchToDesktop>,
+    exit: bool,
+) -> Vec<PowerLevelEntry> {
+    let actions = power.entries.iter().copied().map(PowerLevelEntry::Power);
+    let switch = switch.map(PowerLevelEntry::SwitchToDesktop);
+    let exit = exit.then_some(PowerLevelEntry::Exit);
+    actions.chain(switch).chain(exit).collect()
+}
+
+/// Whether the launcher runs as its own login session, where nothing is left once it
+/// quits: as gamescope-session-plus's client (`client`), or in a `--steam` gamescope
+/// (`steam_gamescope`) that the display manager started as the login session, whose
+/// desktop name (`XDG_SESSION_DESKTOP`, else `DESKTOP_SESSION`, read through `var`) names
+/// gamescope or Pindu. A gamescope nested in a desktop sets `XDG_CURRENT_DESKTOP` as well,
+/// so that one cannot tell them apart.
+pub fn runs_as_own_session(
+    client: bool,
+    steam_gamescope: bool,
+    var: impl Fn(&str) -> Option<String>,
+) -> bool {
+    if client {
+        return true;
+    }
+    if !steam_gamescope {
+        return false;
+    }
+    let desktop = ["XDG_SESSION_DESKTOP", "DESKTOP_SESSION"]
+        .into_iter()
+        .filter_map(var)
+        .find(|name| !name.is_empty())
+        .unwrap_or_default()
+        .to_lowercase();
+    desktop.contains("gamescope") || desktop.contains("pindu")
 }
 
 #[cfg(test)]
@@ -155,19 +205,133 @@ mod tests {
         assert!(!asks_before_switching(false));
     }
 
+    fn allowed(action: PowerAction) -> PowerEntry {
+        PowerEntry {
+            action,
+            allowed: true,
+        }
+    }
+
     #[test]
-    fn switch_to_desktop_alone_shows_the_power_entry() {
+    fn the_power_level_lists_the_actions_then_switch_to_desktop_then_exit() {
+        let power = PowerState {
+            entries: PowerAction::ALL.map(allowed).to_vec(),
+            ..PowerState::default()
+        };
+        let switch = SwitchToDesktop { allowed: true };
+        assert_eq!(
+            power_level(&power, Some(switch), true),
+            [
+                PowerLevelEntry::Power(allowed(PowerAction::Suspend)),
+                PowerLevelEntry::Power(allowed(PowerAction::Restart)),
+                PowerLevelEntry::Power(allowed(PowerAction::PowerOff)),
+                PowerLevelEntry::SwitchToDesktop(switch),
+                PowerLevelEntry::Exit,
+            ]
+        );
+        assert_eq!(
+            power_level(&power, None, true),
+            [
+                PowerLevelEntry::Power(allowed(PowerAction::Suspend)),
+                PowerLevelEntry::Power(allowed(PowerAction::Restart)),
+                PowerLevelEntry::Power(allowed(PowerAction::PowerOff)),
+                PowerLevelEntry::Exit,
+            ]
+        );
+    }
+
+    #[test]
+    fn the_launcher_s_own_session_has_no_exit() {
+        let power = PowerState {
+            entries: vec![allowed(PowerAction::PowerOff)],
+            ..PowerState::default()
+        };
+        assert_eq!(
+            power_level(&power, None, false),
+            [PowerLevelEntry::Power(allowed(PowerAction::PowerOff))]
+        );
+    }
+
+    #[test]
+    fn exit_alone_still_fills_the_level() {
+        assert_eq!(
+            power_level(&PowerState::default(), None, true),
+            [PowerLevelEntry::Exit]
+        );
+    }
+
+    #[test]
+    fn switch_to_desktop_alone_fills_the_level_and_nothing_at_all_leaves_it_empty() {
         let none = PowerState::default();
         let restart = PowerState {
-            entries: vec![PowerEntry {
-                action: PowerAction::Restart,
-                allowed: true,
-            }],
+            entries: vec![allowed(PowerAction::Restart)],
+            ..PowerState::default()
         };
         let switch = Some(SwitchToDesktop { allowed: false });
-        assert!(!power_shown(&none, None));
-        assert!(power_shown(&none, switch));
-        assert!(power_shown(&restart, None));
-        assert!(power_shown(&restart, switch));
+        assert!(power_level(&none, None, false).is_empty());
+        assert_eq!(
+            power_level(&none, switch, false),
+            [PowerLevelEntry::SwitchToDesktop(SwitchToDesktop {
+                allowed: false
+            })]
+        );
+        assert!(!power_level(&restart, None, false).is_empty());
+        assert!(!power_level(&restart, switch, false).is_empty());
+    }
+
+    fn desktop(name: &'static str, value: &'static str) -> impl Fn(&str) -> Option<String> {
+        move |asked| (asked == name).then(|| value.to_owned())
+    }
+
+    #[test]
+    fn the_session_flag_alone_makes_the_launcher_its_own_session() {
+        assert!(runs_as_own_session(true, false, |_| None));
+        assert!(runs_as_own_session(
+            true,
+            true,
+            desktop("XDG_SESSION_DESKTOP", "gnome")
+        ));
+        assert!(!runs_as_own_session(false, false, |_| None));
+    }
+
+    #[test]
+    fn a_steam_gamescope_is_its_own_session_when_the_login_session_names_it() {
+        for (name, value) in [
+            ("XDG_SESSION_DESKTOP", "pindu-gamescope"),
+            ("XDG_SESSION_DESKTOP", "gamescope-session-pindu"),
+            ("XDG_SESSION_DESKTOP", "Pindu"),
+            ("DESKTOP_SESSION", "gamescope"),
+        ] {
+            assert!(
+                runs_as_own_session(false, true, desktop(name, value)),
+                "{name}={value}"
+            );
+            assert!(
+                !runs_as_own_session(false, false, desktop(name, value)),
+                "{name}={value} without a --steam gamescope"
+            );
+        }
+    }
+
+    #[test]
+    fn a_steam_gamescope_nested_in_a_desktop_is_not_its_own_session() {
+        assert!(!runs_as_own_session(
+            false,
+            true,
+            desktop("XDG_SESSION_DESKTOP", "gnome")
+        ));
+        assert!(!runs_as_own_session(false, true, |_| None));
+        let gnome_over_gamescope = |name: &str| match name {
+            "XDG_SESSION_DESKTOP" => Some("gnome".to_owned()),
+            "DESKTOP_SESSION" => Some("gamescope".to_owned()),
+            _ => None,
+        };
+        assert!(!runs_as_own_session(false, true, gnome_over_gamescope));
+        let empty_first = |name: &str| match name {
+            "XDG_SESSION_DESKTOP" => Some(String::new()),
+            "DESKTOP_SESSION" => Some("pindu-gamescope".to_owned()),
+            _ => None,
+        };
+        assert!(runs_as_own_session(false, true, empty_first));
     }
 }
