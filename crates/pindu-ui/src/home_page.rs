@@ -1,6 +1,7 @@
 //! Fullscreen mode's Home page, where the mode opens, in two screens. The first lists
-//! Home's sections (`pindu_core::sections`), a tile each, then the Library tile, over
-//! Home's background, with the focused section's name and game count. Activating a section
+//! Home's sections (`pindu_core::sections`), a tile each, then the Library tile and, where
+//! Steam is present, the Steam Big Picture tile (`win.steam-big-picture`), over Home's
+//! background, with the focused section's name and game count. Activating a section
 //! (`win.home-section`) opens the second screen: its games, with the focused game's hero
 //! behind them. B goes back to the first screen, on the section it came from. Each screen
 //! comes back to the tile or card that last had focus. The page carries `.home-sections`
@@ -166,6 +167,7 @@ enum Focused {
     Section(SectionId),
     Game(GameObject),
     Library,
+    BigPicture,
 }
 
 mod imp {
@@ -206,6 +208,18 @@ mod imp {
         pub library_tile: TemplateChild<gtk::Button>,
         #[template_child]
         pub library_tile_frame: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub big_picture_tile: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub big_picture_tile_frame: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub big_picture_icon: TemplateChild<gtk::Image>,
+        #[template_child]
+        pub big_picture_spinner: TemplateChild<adw::Spinner>,
+        #[template_child]
+        pub big_picture_status: TemplateChild<gtk::Label>,
+        /// Whether Home offers Steam Big Picture: Steam is present.
+        pub big_picture_offered: Cell<bool>,
         /// Home's sections, in order, each with its games.
         pub sections: RefCell<Vec<(Section, Vec<GameObject>)>>,
         /// The section whose games the second screen shows; `None` on the first screen.
@@ -254,6 +268,15 @@ mod imp {
                 move |tile| {
                     if tile.has_focus() {
                         page.card_focused(tile, Focused::Library);
+                    }
+                }
+            ));
+            self.big_picture_tile.connect_has_focus_notify(glib::clone!(
+                #[weak]
+                page,
+                move |tile| {
+                    if tile.has_focus() {
+                        page.card_focused(tile, Focused::BigPicture);
                     }
                 }
             ));
@@ -364,6 +387,7 @@ impl HomePage {
             .add_css_class(&format!("home-tile-{}", shape.name()));
         let (width, height) = home::card_size(shape, size);
         imp.library_tile_frame.set_size_request(width, height);
+        imp.big_picture_tile_frame.set_size_request(width, height);
     }
 
     /// Names the screen shown on the page for designs: `.home-sections` for the first,
@@ -528,6 +552,30 @@ impl HomePage {
         self.imp().open.get().is_some()
     }
 
+    /// Offers Steam Big Picture on the first screen, where Steam is present (`offered`).
+    pub fn set_big_picture_offered(&self, offered: bool) {
+        let imp = self.imp();
+        imp.big_picture_offered.set(offered);
+        imp.big_picture_tile
+            .set_visible(offered && imp.open.get().is_none());
+    }
+
+    /// Shows on the Steam Big Picture tile whether Big Picture is `opening`, while the
+    /// launcher waits for its window.
+    pub fn set_big_picture_opening(&self, opening: bool) {
+        let imp = self.imp();
+        imp.big_picture_icon.set_visible(!opening);
+        imp.big_picture_spinner.set_visible(opening);
+        imp.big_picture_status.set_visible(opening);
+        let description = if opening {
+            gettext("Opening…")
+        } else {
+            String::new()
+        };
+        imp.big_picture_tile
+            .update_property(&[gtk::accessible::Property::Description(&description)]);
+    }
+
     /// Shows the first screen, focused on the tile that last had focus there: the
     /// section whose games showed, when coming back from them.
     pub fn show_sections(&self) {
@@ -540,6 +588,8 @@ impl HomePage {
         }
         imp.shown.replace(Vec::new());
         imp.library_tile.set_visible(true);
+        imp.big_picture_tile
+            .set_visible(imp.big_picture_offered.get());
         self.show_screen_class();
         self.show_tiles();
         self.focus_remembered();
@@ -573,6 +623,7 @@ impl HomePage {
         imp.shown.replace(Vec::new());
         imp.open.set(Some(id));
         imp.library_tile.set_visible(false);
+        imp.big_picture_tile.set_visible(false);
         self.show_screen_class();
         self.show_cards(&games);
         self.focus_remembered();
@@ -791,6 +842,7 @@ impl HomePage {
         match focused {
             Focused::Game(game) => self.show_hero(Some(game)),
             Focused::Library => self.show_hero(None),
+            Focused::BigPicture => self.show_big_picture_info(),
             Focused::Section(id) => {
                 let section = self
                     .imp()
@@ -819,6 +871,18 @@ impl HomePage {
         self.fill_details(&home::section_details(section));
     }
 
+    /// Shows Steam Big Picture's name, and no art or details.
+    fn show_big_picture_info(&self) {
+        let imp = self.imp();
+        imp.hero_generation.set(imp.hero_generation.get() + 1);
+        self.hide_hero_art();
+        imp.logo.set_paintable(gtk::gdk::Paintable::NONE);
+        imp.logo.set_visible(false);
+        imp.title.set_visible(true);
+        imp.title.set_label(&gettext("Steam Big Picture"));
+        self.fill_details(&[]);
+    }
+
     /// Fills the `.home-details` row with the details of what has focus, while the design
     /// asks for them; the row hides without any.
     fn show_details(&self, focused: &Focused) {
@@ -838,7 +902,7 @@ impl HomePage {
                 .find(|(section, _)| section.id == *id)
                 .map(|(section, _)| home::section_details(section))
                 .unwrap_or_default(),
-            Focused::Library => Vec::new(),
+            Focused::Library | Focused::BigPicture => Vec::new(),
         };
         self.fill_details(&details);
     }

@@ -29,7 +29,8 @@ pub struct StoreLaunch {
     id: GameId,
     game: ExpectedGame,
     phase: Phase,
-    /// Whether the Steam client launches the game, so its windows may be the launch's.
+    /// Whether the Steam client launches the game, so its windows may be the launch's;
+    /// not once the user gave up on the launch.
     by_steam: bool,
     /// The Steam client's windows that are open while the launch waits.
     steam: SteamPrompts,
@@ -65,13 +66,24 @@ impl StoreLaunch {
 
     /// When the launch is over unless a window with its app ID shows first, so the
     /// launcher knows when to look again; `None` while one is there, or while the Steam
-    /// client shows a window the launch waits on.
+    /// client has a window open the launch may wait on, shown yet or not.
     pub fn deadline(&self) -> Option<Instant> {
         match self.phase {
-            Phase::Waiting(_) if self.steam.newest().is_some() => None,
+            Phase::Waiting(_) if self.steam.any() => None,
             Phase::Waiting(since) => Some(since + STORE_LAUNCH_TIMEOUT),
             Phase::Shown => None,
             Phase::Left(since) => Some(since + STORE_LAUNCH_GRACE),
+        }
+    }
+
+    /// When one of the Steam client's windows open at `now` while the launch waits has
+    /// stayed open for [`STEAM_PROMPT_DELAY`](super::STEAM_PROMPT_DELAY) and shows (see
+    /// [`Self::steam_window`]), so the launcher looks again then; `None` when none waits to
+    /// show.
+    pub fn reveal_at(&self, now: Instant) -> Option<Instant> {
+        match self.phase {
+            Phase::Waiting(_) => self.steam.next_reveal(now),
+            Phase::Shown | Phase::Left(_) => None,
         }
     }
 
@@ -155,36 +167,50 @@ impl StoreLaunch {
         running.iter().any(|id| !before.contains(id))
     }
 
-    /// Follows a top-level window another client mapped, or that was there when the launch
-    /// started (`own` holds the launcher's windows): one of the Steam client's, while a
-    /// Steam launch waits for its game, is shown until the game's window comes (see
-    /// [`Self::steam_window`]).
-    pub fn window_mapped(&mut self, window: &WindowFacts, own: &[Xid]) {
+    /// Follows a top-level window another client mapped at `now`, or that was there when
+    /// the launch started (`own` holds the launcher's windows): one of the Steam client's,
+    /// while a Steam launch waits for its game, is shown once it has stayed open for
+    /// [`STEAM_PROMPT_DELAY`](super::STEAM_PROMPT_DELAY), until the game's window comes
+    /// (see [`Self::steam_window`]).
+    pub fn window_mapped(&mut self, window: &WindowFacts, own: &[Xid], now: Instant) {
         if self.by_steam && matches!(self.phase, Phase::Waiting(_)) {
-            self.steam.mapped(window, own);
+            self.steam.mapped(window, own, now);
         }
     }
 
     /// Follows a top-level window that was unmapped at `now`: once the last of the Steam
     /// client's windows the launch waits on is gone, the game gets the full time-out again.
     pub fn window_unmapped(&mut self, xid: Xid, now: Instant) {
-        let was_showing = self.steam.newest().is_some();
+        let was_open = self.steam.any();
         self.steam.unmapped(xid);
-        if was_showing
-            && self.steam.newest().is_none()
+        if was_open
+            && !self.steam.any()
             && let Phase::Waiting(_) = self.phase
         {
             self.phase = Phase::Waiting(now);
         }
     }
 
-    /// The Steam client's window to pin as the base layer with `front` wanted in front: the
-    /// newest one open while a Steam launch waits for its game, so a prompt the launch needs
-    /// answered shows instead of the launcher.
-    pub fn steam_window(&self, front: Front) -> Option<Xid> {
+    /// The Steam client's window to pin as the base layer at `now` with `front` wanted in
+    /// front: the newest one that has stayed open for
+    /// [`STEAM_PROMPT_DELAY`](super::STEAM_PROMPT_DELAY) while a Steam launch waits for its
+    /// game, so a prompt the launch needs answered shows instead of the launcher, and
+    /// Steam's own window that shows the game starting does not.
+    pub fn steam_window(&self, front: Front, now: Instant) -> Option<Xid> {
         let waiting = matches!(self.phase, Phase::Waiting(_));
         let wanted = front == Front::Game(self.game.app_id);
-        self.steam.newest().filter(|_| waiting && wanted)
+        self.steam.newest(now).filter(|_| waiting && wanted)
+    }
+
+    /// The user gave up on the launch at `now`, as Cancel on the starting screen does: the
+    /// Steam client's windows are left to it from then on, and its game gets the full
+    /// time-out again. Steam may still start the game, whose window then plays as before.
+    pub fn give_up(&mut self, now: Instant) {
+        self.by_steam = false;
+        self.steam = SteamPrompts::default();
+        if let Phase::Waiting(_) = self.phase {
+            self.phase = Phase::Waiting(now);
+        }
     }
 }
 

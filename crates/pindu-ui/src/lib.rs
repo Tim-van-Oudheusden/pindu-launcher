@@ -6,6 +6,7 @@ pub mod add_store_backend;
 pub mod add_store_service;
 pub mod application;
 pub mod audio_output_service;
+pub mod big_picture;
 pub mod bluetooth_service;
 pub mod bluez_backend;
 pub mod collection_actions;

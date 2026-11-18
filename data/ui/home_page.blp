@@ -191,6 +191,66 @@ template $PinduHomePage: Adw.NavigationPage {
               }
             };
           }
+
+          // Where Steam is present: opens Steam Big Picture (`win.steam-big-picture`), and
+          // shows that it is opening while the launcher waits for its window.
+          Button big_picture_tile {
+            visible: false;
+            action-name: "win.steam-big-picture";
+
+            styles [
+              "card",
+              "library-tile",
+              "big-picture-tile",
+            ]
+
+            child: Overlay {
+              child: Box big_picture_tile_frame {
+                width-request: 320;
+                height-request: 150;
+              };
+
+              [overlay]
+              Box {
+                orientation: vertical;
+                spacing: 12;
+                valign: center;
+
+                Image big_picture_icon {
+                  icon-name: "input-gaming-symbolic";
+                  pixel-size: 48;
+                  accessible-role: presentation;
+                }
+
+                Adw.Spinner big_picture_spinner {
+                  visible: false;
+                  width-request: 48;
+                  height-request: 48;
+                  halign: center;
+                }
+
+                // Steam's own name for it; the full "Steam Big Picture" shows as the
+                // focused tile's title.
+                Label {
+                  label: _("Big Picture");
+                  ellipsize: end;
+
+                  styles [
+                    "heading",
+                  ]
+                }
+
+                Label big_picture_status {
+                  visible: false;
+                  label: _("Opening…");
+
+                  styles [
+                    "dimmed",
+                  ]
+                }
+              }
+            };
+          }
         };
       }
     }
