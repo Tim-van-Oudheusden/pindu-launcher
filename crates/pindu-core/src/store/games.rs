@@ -11,7 +11,8 @@ const COLUMNS: &str = "id, title, sort_title, platform, installed, install_path,
 
 impl Store {
     /// Stores a new game; a game with the same ID already stored is an error. Its
-    /// developer, genres and description become its source's metadata, set at `added_at`.
+    /// developer, genres, description and Steam Deck rating become its source's metadata,
+    /// set at `added_at`.
     pub fn insert_game(&self, game: &Game) -> Result<()> {
         self.in_transaction(|store| {
             store.write_game(
@@ -35,8 +36,8 @@ impl Store {
     }
 
     /// Replaces every stored field of an existing game except its metadata (developer,
-    /// genres, description), which a game carries resolved from every origin: those
-    /// change through [`Store::set_metadata`] only.
+    /// genres, description, Steam Deck rating), which a game carries resolved from every
+    /// origin: those change through [`Store::set_metadata`] only.
     pub fn update_game(&self, game: &Game) -> Result<()> {
         let changed = self.write_game(
             game,
@@ -160,6 +161,9 @@ fn game_from_row(row: &Row<'_>) -> rusqlite::Result<Game> {
         launch_uri: row.get("launch_uri")?,
         genres: Vec::new(),
         description: None,
+        release_year: None,
+        controller_support: None,
+        deck_compatibility: None,
         steam_launch_dialog: row.get("steam_launch_dialog")?,
     })
 }

@@ -31,7 +31,7 @@ impl SavedFilter {
         let view = filter.view();
         let filters = Filters {
             hidden: false,
-            ..filter.filters()
+            ..filter.filters().clone()
         };
         let search = filter.search().to_owned();
         let narrowed = filters.any() || !search.is_empty();
@@ -58,7 +58,7 @@ impl SavedFilter {
         filter.set_view(self.view);
         filter.set_filters(Filters {
             hidden: false,
-            ..self.filters
+            ..self.filters.clone()
         });
         filter.set_search(&self.search);
         filter
@@ -99,17 +99,20 @@ pub enum Suggestion {
     Native,
     /// Windows games, run through Proton.
     Windows,
+    /// Installed games never played: the backlog ready to start.
+    InstalledNeverPlayed,
 }
 
 impl Suggestion {
     /// Every suggestion, in the order they are offered.
-    pub const ALL: [Self; 2] = [Self::Native, Self::Windows];
+    pub const ALL: [Self; 3] = [Self::Native, Self::Windows, Self::InstalledNeverPlayed];
 
     /// The suggestion's stable name, as action targets carry it.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Native => "native",
             Self::Windows => "windows",
+            Self::InstalledNeverPlayed => "installed-never-played",
         }
     }
 
@@ -129,6 +132,11 @@ impl Suggestion {
             },
             Self::Windows => Filters {
                 windows: true,
+                ..Filters::default()
+            },
+            Self::InstalledNeverPlayed => Filters {
+                installed: true,
+                never_played: true,
                 ..Filters::default()
             },
         };
@@ -321,7 +329,7 @@ mod tests {
     }
 
     #[test]
-    fn suggestions_are_native_and_windows_games() {
+    fn suggestions_are_native_windows_and_installed_never_played_games() {
         assert_eq!(
             Suggestion::ALL.map(|suggestion| (suggestion.as_str(), suggestion.filter())),
             [
@@ -341,6 +349,18 @@ mod tests {
                     SavedFilter {
                         view: View::All,
                         filters: windows_only(),
+                        search: String::new(),
+                    }
+                ),
+                (
+                    "installed-never-played",
+                    SavedFilter {
+                        view: View::All,
+                        filters: Filters {
+                            installed: true,
+                            never_played: true,
+                            ..Filters::default()
+                        },
                         search: String::new(),
                     }
                 ),
@@ -367,7 +387,8 @@ mod tests {
             .create_saved_filter("Windows Games", &Suggestion::Windows.filter())
             .unwrap();
 
-        let entries = crate::library::load(&store, false).unwrap();
+        let entries =
+            crate::library::load(&store, false, crate::game_groups::DEFAULT_SOURCE_ORDER).unwrap();
         let collections = |id: &GameId| {
             entries
                 .iter()
@@ -393,7 +414,8 @@ mod tests {
             .unwrap();
         store.add_to_collection(saved.id, &native.id).unwrap();
 
-        let entries = crate::library::load(&store, false).unwrap();
+        let entries =
+            crate::library::load(&store, false, crate::game_groups::DEFAULT_SOURCE_ORDER).unwrap();
         assert!(entries[0].collections.is_empty());
     }
 }

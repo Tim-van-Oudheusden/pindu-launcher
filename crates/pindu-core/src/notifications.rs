@@ -23,6 +23,10 @@ pub enum Kind {
     Artwork,
     /// Fetching artwork failed.
     ArtworkFailed,
+    /// A Wikidata refresh stored metadata.
+    Metadata,
+    /// A Wikidata refresh failed.
+    MetadataFailed,
     /// A Proton build was installed.
     Download,
     /// A Proton build was not installed.

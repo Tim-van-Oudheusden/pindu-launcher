@@ -1,0 +1,242 @@
+{
+  "head" : {
+    "vars" : [ "steam", "item", "field", "valueLabel" ]
+  },
+  "results" : {
+    "bindings" : [ {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "developer"
+      },
+      "valueLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Valve Corporation"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "400"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q274897"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "developer"
+      },
+      "valueLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Valve Corporation"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "1245620"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q64826862"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "developer"
+      },
+      "valueLabel" : {
+        "xml:lang" : "de",
+        "type" : "literal",
+        "value" : "FromSoftware"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "de",
+        "type" : "literal",
+        "value" : "Ego-Shooter"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "de",
+        "type" : "literal",
+        "value" : "Science-Fiction-Computerspiel"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "de",
+        "type" : "literal",
+        "value" : "postapokalyptisches Videospiel"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "science fiction horror"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "400"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q274897"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "de",
+        "type" : "literal",
+        "value" : "Puzzle-Computerspiel"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "400"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q274897"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "de",
+        "type" : "literal",
+        "value" : "Ego-Shooter"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "400"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q274897"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "de",
+        "type" : "literal",
+        "value" : "Science-Fiction-Computerspiel"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "1245620"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q64826862"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "de",
+        "type" : "literal",
+        "value" : "Action-Rollenspiel"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "1245620"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q64826862"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "de",
+        "type" : "literal",
+        "value" : "Soulslike"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "1245620"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q64826862"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "dark fantasy video game"
+      }
+    } ]
+  }
+}

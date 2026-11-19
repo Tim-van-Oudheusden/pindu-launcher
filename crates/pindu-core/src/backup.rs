@@ -436,12 +436,14 @@ fn saved_filter_json(filter: &SavedFilter, names: &HashMap<i64, &str>) -> Option
         View::Collection(id) => json!({ "view": "collection", "collection": names.get(&id)? }),
         view => json!({ "view": saved_filters::view_text(view) }),
     };
-    let toggles = filter.filters;
+    let toggles = &filter.filters;
     value["installed"] = toggles.installed.into();
     value["not_installed"] = toggles.not_installed.into();
     value["favourites"] = toggles.favourites.into();
     value["windows"] = toggles.windows.into();
     value["native"] = toggles.native.into();
+    value["never_played"] = toggles.never_played.into();
+    value["genre"] = toggles.genre.as_deref().into();
     value["search"] = filter.search.as_str().into();
     Some(value)
 }
@@ -454,7 +456,7 @@ enum BackupView<'a> {
     Collection(&'a str),
 }
 
-/// A saved filter's view, toggles and normalised search as a backup holds them (see
+/// A saved filter's view, toggles, genre and normalised search as a backup holds them (see
 /// [`saved_filter_json`]); `None` for none, or a view this version does not know.
 fn saved_filter_from(value: &Value) -> Option<(BackupView<'_>, Filters, String)> {
     let view = match value["view"].as_str()? {
@@ -475,6 +477,11 @@ fn saved_filter_from(value: &Value) -> Option<(BackupView<'_>, Filters, String)>
         favourites: toggle("favourites"),
         windows: toggle("windows"),
         native: toggle("native"),
+        never_played: toggle("never_played"),
+        genre: value["genre"]
+            .as_str()
+            .filter(|genre| !genre.trim().is_empty())
+            .map(str::to_owned),
         hidden: false,
     };
     let search = search::normalize(value["search"].as_str().unwrap_or_default());
@@ -563,11 +570,15 @@ fn path(value: &Value) -> Option<PathBuf> {
 }
 
 /// A metadata value the user set or a provider fetched, with its game, field, origin and
-/// time. Genres are a list, other fields text.
+/// time. Genres are a list, a release year a number, a Steam Deck rating an object, other
+/// fields text.
 fn metadata_value_json(id: &GameId, value: &MetadataValue) -> Value {
     let text = match &value.value {
         FieldValue::Developer(text) | FieldValue::Description(text) => json!(text),
         FieldValue::Genres(genres) => json!(genres),
+        FieldValue::ReleaseYear(year) => json!(year),
+        FieldValue::ControllerSupport(support) => json!(support.as_str()),
+        FieldValue::DeckCompatibility(deck) => metadata::deck_json(deck),
     };
     json!({
         "game": id.as_str(),
@@ -603,6 +614,13 @@ fn metadata_value_from(entry: &Value) -> Option<MetadataValue> {
                 return None;
             }
             FieldValue::Genres(genres)
+        }
+        MetadataField::ReleaseYear => {
+            FieldValue::ReleaseYear(i32::try_from(entry["value"].as_i64()?).ok()?)
+        }
+        MetadataField::ControllerSupport => FieldValue::ControllerSupport(text()?.parse().ok()?),
+        MetadataField::DeckCompatibility => {
+            FieldValue::DeckCompatibility(metadata::deck_from_json(&entry["value"])?)
         }
     };
     Some(MetadataValue {
@@ -1027,7 +1045,7 @@ mod tests {
         store
             .create_saved_filter(
                 "Steam Windows",
-                &saved(View::Source(Source::Steam), windows, "portal"),
+                &saved(View::Source(Source::Steam), windows.clone(), "portal"),
             )
             .unwrap();
         let installed = Filters {
@@ -1037,7 +1055,7 @@ mod tests {
         store
             .create_saved_filter(
                 "Installed Puzzles",
-                &saved(View::Collection(puzzles.id), installed, ""),
+                &saved(View::Collection(puzzles.id), installed.clone(), ""),
             )
             .unwrap();
 
@@ -1077,6 +1095,28 @@ mod tests {
                 .collection_members(collections[2].id)
                 .unwrap()
                 .is_empty()
+        );
+    }
+
+    #[test]
+    fn a_saved_filters_genre_and_never_played_survive_a_backup() {
+        let (_dir, store) = synced_store();
+        let backlog = Filters {
+            never_played: true,
+            genre: Some("Puzzle".to_owned()),
+            ..Filters::default()
+        };
+        store
+            .create_saved_filter("Puzzle Backlog", &saved(View::All, backlog.clone(), ""))
+            .unwrap();
+
+        let backup = export(&store, 300).unwrap();
+        let (_fresh_dir, fresh) = synced_store();
+        import(&fresh, &backup).unwrap();
+
+        assert_eq!(
+            saved_by_name(&fresh),
+            BTreeMap::from([("Puzzle Backlog".to_owned(), saved(View::All, backlog, ""))])
         );
     }
 
@@ -1150,7 +1190,7 @@ mod tests {
             ..Filters::default()
         };
         let mine = store
-            .create_saved_filter("Mine", &saved(View::All, native, ""))
+            .create_saved_filter("Mine", &saved(View::All, native.clone(), ""))
             .unwrap();
         let theirs = store.create_collection("Theirs").unwrap();
         let backup = r#"{
@@ -1179,6 +1219,7 @@ mod tests {
             developer: Some(developer.to_owned()),
             genres: genres.iter().map(|genre| (*genre).to_owned()).collect(),
             description: None,
+            ..Metadata::default()
         }
     }
 
@@ -1222,6 +1263,39 @@ mod tests {
             .collect();
         assert_eq!(carried.len(), 3);
         assert_eq!(fresh.metadata_values(&portal).unwrap(), carried);
+    }
+
+    #[test]
+    fn a_users_release_year_and_controller_support_are_restored() {
+        use crate::model::ControllerSupport;
+        let (_dir, store) = synced_store();
+        let portal = GameId::new(Source::Steam, "400");
+        let mine = Metadata {
+            release_year: Some(2007),
+            controller_support: Some(ControllerSupport::Full),
+            ..Metadata::default()
+        };
+        store
+            .set_metadata(&portal, MetadataOrigin::User, &mine, 1_700_000_500)
+            .unwrap();
+        let backup = export(&store, 1_700_009_000).unwrap();
+        let (_fresh_dir, fresh) = synced_store();
+
+        import(&fresh, &backup).unwrap();
+
+        let mine_only = |store: &Store| -> Vec<MetadataValue> {
+            store
+                .metadata_values(&portal)
+                .unwrap()
+                .into_iter()
+                .filter(|value| value.origin == MetadataOrigin::User)
+                .collect()
+        };
+        assert_eq!(mine_only(&fresh).len(), 2);
+        assert_eq!(mine_only(&fresh), mine_only(&store));
+        let game = fresh.game(&portal).unwrap().unwrap();
+        assert_eq!(game.release_year, Some(2007));
+        assert_eq!(game.controller_support, Some(ControllerSupport::Full));
     }
 
     #[test]

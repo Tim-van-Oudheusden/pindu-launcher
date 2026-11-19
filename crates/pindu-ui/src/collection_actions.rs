@@ -219,6 +219,7 @@ impl PinduWindow {
         let name = match suggestion {
             Suggestion::Native => gettext("Native Games"),
             Suggestion::Windows => gettext("Windows Games"),
+            Suggestion::InstalledNeverPlayed => gettext("Installed and Never Played"),
         };
         self.create_saved_filter(name, suggestion.filter());
     }
@@ -238,8 +239,8 @@ impl PinduWindow {
         });
     }
 
-    /// A name for a filter: its view, its toggles and its search, as the library shows
-    /// them.
+    /// A name for a filter: its view, its toggles, its genre and its search, as the library
+    /// shows them.
     fn filter_name(&self, filter: &SavedFilter) -> String {
         let mut parts = Vec::new();
         match filter.view {
@@ -250,13 +251,14 @@ impl PinduWindow {
             View::Source(source) => parts.push(crate::sources::source_name(source)),
             View::Collection(id) => parts.push(self.collection_name(id)),
         }
-        let toggles = filter.filters;
+        let toggles = &filter.filters;
         let labels = [
             (toggles.installed, gettext("Installed")),
             (toggles.not_installed, gettext("Not Installed")),
             (toggles.favourites, gettext("Favourites")),
             (toggles.windows, gettext("Windows")),
             (toggles.native, gettext("Native")),
+            (toggles.never_played, gettext("Never Played")),
         ];
         parts.extend(
             labels
@@ -264,6 +266,7 @@ impl PinduWindow {
                 .filter(|(on, _)| *on)
                 .map(|(_, label)| label),
         );
+        parts.extend(toggles.genre.clone());
         if !filter.search.is_empty() {
             parts.push(gettext("“{search}”").replace("{search}", &filter.search));
         }
@@ -429,11 +432,15 @@ impl PinduWindow {
             );
             return;
         }
+        let label = gettext("Name");
         let entry = gtk::Entry::builder()
             .text(initial)
             .activates_default(true)
-            .placeholder_text(gettext("Name"))
+            .placeholder_text(&label)
             .build();
+        // A placeholder is no accessible name: without one a screen reader announces an
+        // unnamed text field.
+        entry.update_property(&[gtk::accessible::Property::Label(&label)]);
         let dialog = adw::AlertDialog::builder()
             .heading(heading)
             .extra_child(&entry)

@@ -35,12 +35,25 @@ use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
 use crate::log_service;
 use crate::menu_drawer::PinduMenuDrawer;
-use crate::models::{GameObject, LibraryModel, LibrarySelection};
+use crate::models::{GameObject, LibraryModel, LibrarySelection, LibrarySelectionModel};
 use crate::quick_access::PinduQuickAccess;
 use crate::save_snapshots_dialog::SaveSnapshotsDialog;
 use crate::sources::{source_icon, source_name};
 use crate::sync_service::SyncService;
 use crate::widgets::{CoverArt, CoverTile, GameListCell, ListColumn, TileSize};
+
+/// The filter row's genre: a stateful string action, empty for any genre.
+const GENRE_FILTER_ACTION: &str = "genre-filter";
+
+/// An item of the genre menu: `label`, choosing `genre` (empty for any).
+fn genre_item(label: &str, genre: &str) -> gio::MenuItem {
+    let item = gio::MenuItem::new(Some(label), None);
+    item.set_action_and_target_value(
+        Some(&format!("win.{GENRE_FILTER_ACTION}")),
+        Some(&genre.to_variant()),
+    );
+    item
+}
 
 mod imp {
     use std::cell::OnceCell;
@@ -158,6 +171,10 @@ mod imp {
         pub windows_filter: TemplateChild<gtk::ToggleButton>,
         #[template_child]
         pub native_filter: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
+        pub never_played_filter: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
+        pub genre_filter: TemplateChild<gtk::MenuButton>,
         #[template_child]
         pub clear_filters: TemplateChild<gtk::Button>,
         #[template_child]
@@ -577,6 +594,7 @@ impl PinduWindow {
             &*imp.favourites_filter,
             &*imp.windows_filter,
             &*imp.native_filter,
+            &*imp.never_played_filter,
         ];
         for toggle in toggles {
             toggle.connect_toggled(glib::clone!(
@@ -596,11 +614,14 @@ impl PinduWindow {
                     &*imp.favourites_filter,
                     &*imp.windows_filter,
                     &*imp.native_filter,
+                    &*imp.never_played_filter,
                 ] {
                     toggle.set_active(false);
                 }
+                window.change_action_state(GENRE_FILTER_ACTION, &String::new().to_variant());
             }
         ));
+        self.setup_genre_filter();
 
         let library = self.library();
         library.model().connect_items_changed(glib::clone!(
@@ -614,9 +635,60 @@ impl PinduWindow {
             move |_| {
                 window.update_content_page();
                 window.update_jump_back_in();
+                window.update_genre_menu();
             }
         ));
         self.update_content_page();
+    }
+
+    /// The filter row's genre: `win.genre-filter`, whose state is the genre chosen, or
+    /// empty for any. Its menu offers the library's genres.
+    fn setup_genre_filter(&self) {
+        let action = gio::SimpleAction::new_stateful(
+            GENRE_FILTER_ACTION,
+            Some(glib::VariantTy::STRING),
+            &String::new().to_variant(),
+        );
+        action.connect_change_state(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |action, state| {
+                let Some(state) = state else {
+                    return;
+                };
+                action.set_state(state);
+                let genre = window.desktop_genre();
+                window.imp().genre_filter.set_label(&match &genre {
+                    Some(genre) => genre.clone(),
+                    None => gettext("Genre"),
+                });
+                window.apply_filters();
+            }
+        ));
+        self.add_action(&action);
+        self.update_genre_menu();
+    }
+
+    /// The genre the filter row's genre menu chose; `None` for any.
+    fn desktop_genre(&self) -> Option<String> {
+        self.action_state(GENRE_FILTER_ACTION)
+            .and_then(|state| state.get::<String>())
+            .filter(|genre| !genre.is_empty())
+    }
+
+    /// Fills the genre menu: Any Genre, then each genre of the library.
+    fn update_genre_menu(&self) {
+        let menu = gio::Menu::new();
+        let any = gio::Menu::new();
+        any.append_item(&genre_item(&gettext("Any Genre"), ""));
+        menu.append_section(None, &any);
+        let genres = gio::Menu::new();
+        for genre in self.library().genres() {
+            // A menu label takes underscores for mnemonics.
+            genres.append_item(&genre_item(&genre.replace('_', "__"), &genre));
+        }
+        menu.append_section(None, &genres);
+        self.imp().genre_filter.set_menu_model(Some(&menu));
     }
 
     /// Applies the filters: the desktop window's filter row, or fullscreen mode's own from
@@ -629,6 +701,8 @@ impl PinduWindow {
             favourites: imp.favourites_filter.is_active(),
             windows: imp.windows_filter.is_active(),
             native: imp.native_filter.is_active(),
+            never_played: imp.never_played_filter.is_active(),
+            genre: self.desktop_genre(),
             hidden: false,
         };
         imp.clear_filters.set_visible(toggles.any());
@@ -1070,8 +1144,12 @@ impl PinduWindow {
 
     /// The cover grid; tiles follow the `tile-size` and `show-titles` settings.
     fn setup_grid(&self) {
-        let grid = &self.imp().grid;
-        grid.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
+        let imp = self.imp();
+        let grid = &imp.grid;
+        grid.set_model(Some(&LibrarySelectionModel::new(
+            &self.library().model(),
+            &imp.selection,
+        )));
         self.update_tile_factory();
         if let Some(width) = grid.hadjustment() {
             // The page size changes while the grid allocates its size, when a new column
@@ -1161,14 +1239,16 @@ impl PinduWindow {
                 ),
             );
         }
-        self.settings().connect_changed(
-            Some("prefer-steamgriddb"),
-            glib::clone!(
-                #[weak(rename_to = window)]
-                self,
-                move |_, _| window.library_service().reload()
-            ),
-        );
+        for key in ["prefer-steamgriddb", crate::sources::SOURCE_ORDER_KEY] {
+            self.settings().connect_changed(
+                Some(key),
+                glib::clone!(
+                    #[weak(rename_to = window)]
+                    self,
+                    move |_, _| window.library_service().reload()
+                ),
+            );
+        }
         self.settings().connect_changed(
             Some("hidden-sources"),
             glib::clone!(
@@ -1191,7 +1271,10 @@ impl PinduWindow {
     fn setup_list(&self) {
         let imp = self.imp();
         let list = &imp.game_list;
-        list.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
+        list.set_model(Some(&LibrarySelectionModel::new(
+            &self.library().model(),
+            &imp.selection,
+        )));
         let selection = imp.selection.clone();
         let columns = list.columns();
         let kinds = [
@@ -1610,9 +1693,19 @@ pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::
         .action_target(&game.id().as_str().to_variant())
         .css_classes(["play-button", "pill", "suggested-action"])
         .build();
-    // The bindings go with the button, so a rebuilt row leaves nothing on the game.
+    // The bindings go with the button, so a rebuilt row leaves nothing on the game. The
+    // label binding also names the button after the game, as the visible "Play" alone
+    // does not say which game it starts.
+    let title = game.game().title.clone();
+    // Bindings transform on the main thread, where the button lives.
+    let button = glib::SendWeakRef::from(play.downgrade());
     game.bind_property("playing", &play, "label")
-        .transform_to(|_, playing: bool| {
+        .transform_to(move |_, playing: bool| {
+            if let Some(button) = button.upgrade() {
+                button.update_property(&[gtk::accessible::Property::Label(
+                    &CoverTile::play_button_name(&title, playing),
+                )]);
+            }
             Some(if playing {
                 gettext("Stop")
             } else {
@@ -1625,6 +1718,9 @@ pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::
         .transform_to(|_, playing: bool| Some(if playing { "app.stop" } else { "app.play" }))
         .sync_create()
         .build();
+    // GTK names a button after its label through a relation, which would win over the
+    // name the binding gives it.
+    play.reset_relation(gtk::AccessibleRelation::LabelledBy);
     let tile = gtk::Overlay::builder()
         .child(&card)
         .css_classes(["jump-tile"])

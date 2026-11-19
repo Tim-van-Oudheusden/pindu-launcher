@@ -301,6 +301,11 @@ impl PinduWindow {
         self.update_home();
         self.connect_suspended_notify(|window| window.update_home_background());
         self.connect_visible_notify(|window| window.update_home_background());
+        adw::StyleManager::default().connect_high_contrast_notify(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.update_home_background()
+        ));
         if let Some(application) = self.application().and_downcast::<PinduApplication>() {
             self.setup_big_picture(&application);
             application
@@ -315,7 +320,8 @@ impl PinduWindow {
 
     /// Tells Home where the window is, for its background (`home::background_playback`):
     /// fullscreen, Home shown, a game we started running, the window hidden or suspended
-    /// (minimized, or covered whole), Pindu moving less (`Accessibility::reduces_motion`).
+    /// (minimized, or covered whole), Pindu moving less (`Accessibility::reduces_motion`),
+    /// the system asking for high contrast.
     pub(crate) fn update_home_background(&self) {
         let imp = self.imp();
         let game_running = self
@@ -329,6 +335,7 @@ impl PinduWindow {
             game_running,
             hidden: !self.is_visible() || self.is_suspended(),
             reduced_motion: self.has_css_class(REDUCED_MOTION_CLASS),
+            high_contrast: adw::StyleManager::default().is_high_contrast(),
         });
     }
 

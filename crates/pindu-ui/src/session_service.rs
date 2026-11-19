@@ -26,9 +26,6 @@ use crate::permission_service;
 /// How often a running session's end is written.
 const FLUSH_INTERVAL: Duration = Duration::from_secs(30);
 
-/// The signal Stop sends, which games handle as "quit".
-pub const SIGTERM: i32 = 15;
-
 struct Running {
     /// When the session began.
     started_at: Timestamp,
@@ -140,21 +137,6 @@ impl SessionService {
             .collect();
         sessions.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.as_str().cmp(b.0.as_str())));
         sessions
-    }
-
-    /// Starts a game on the host as our child, its output written to `output` when
-    /// given, and tracks its session until it exits. Returns the child, to wait for it.
-    pub fn start(
-        &self,
-        app: &gio::Application,
-        id: &GameId,
-        command: &Command,
-        output: Option<File>,
-    ) -> Result<gio::Subprocess, glib::Error> {
-        let child = spawn(command, output)?;
-        let signalled = child.clone();
-        self.track(app, id, &child, move || signalled.send_signal(SIGTERM));
-        Ok(child)
     }
 
     /// Tracks the session of a game that runs as our child, from now until the child
@@ -292,6 +274,15 @@ pub fn spawn(command: &Command, output: Option<File>) -> Result<gio::Subprocess,
         }
         None => gio::SubprocessLauncher::new(gio::SubprocessFlags::NONE),
     };
+    spawn_with(&launcher, command)
+}
+
+/// Spawns the command on the host as [`spawn`] does, with its output and errors piped
+/// back to us together, for its short log to read (see `outcome_service`).
+pub fn spawn_piped(command: &Command) -> Result<gio::Subprocess, glib::Error> {
+    let launcher = gio::SubprocessLauncher::new(
+        gio::SubprocessFlags::STDOUT_PIPE | gio::SubprocessFlags::STDERR_MERGE,
+    );
     spawn_with(&launcher, command)
 }
 

@@ -9,7 +9,7 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, glib};
 
-use super::cover_tile::{game_state, popup_game_menu, state_name};
+use super::cover_tile::{game_state, popup_game_menu, select_name, state_name};
 use crate::models::{GameObject, LibrarySelection};
 use crate::sources::{source_icon, source_name};
 
@@ -194,7 +194,12 @@ impl GameListCell {
     fn show(&self, game: &GameObject) {
         let imp = self.imp();
         let text = match imp.column.get() {
-            ListColumn::Title => game.game().title.clone(),
+            ListColumn::Title => {
+                let title = game.game().title.clone();
+                imp.check
+                    .update_property(&[gtk::accessible::Property::Label(&select_name(&title))]);
+                title
+            }
             ListColumn::Source => {
                 let source = game.game().source();
                 imp.icon.set_icon_name(Some(source_icon(source)));

@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use pindu_core::model::{ArtLayout, LaunchKind, Platform, Source};
+use pindu_core::model::{
+    ArtLayout, ControllerSupport, DeckCompatibility, DeckRating, LaunchKind, Platform, Source,
+};
 use pindu_core::sources::location::{HostDirs, Location};
 use pindu_core::sources::vdf::Value;
 use pindu_core::sources::{ImportedGame, Snapshot, steam};
@@ -28,6 +30,15 @@ fn app(name: &str, kind: &str, oslist: &str) -> Value {
     )])
 }
 
+/// Steam's Deck rating as `appinfo.vdf` stores it: Ints, the category from 0 to 3.
+fn deck(category: i64, tested_at: Option<i64>) -> Value {
+    let category = ("category", Value::Int(category));
+    match tested_at {
+        Some(time) => map([category, ("test_timestamp", Value::Int(time))]),
+        None => map([category]),
+    }
+}
+
 fn write_appinfo(steam_root: &Path) {
     let dota = map([(
         "common",
@@ -43,6 +54,19 @@ fn write_appinfo(steam_root: &Path) {
                     map([("type", text("developer")), ("name", text("Valve"))]),
                 )]),
             ),
+            // 2013-07-09 UTC.
+            ("steam_release_date", Value::Int(1_373_328_000)),
+            // Action, Strategy and Free To Play, which is a price model, not a genre.
+            (
+                "genres",
+                map([
+                    ("0", Value::Int(1)),
+                    ("1", Value::Int(2)),
+                    ("2", Value::Int(37)),
+                ]),
+            ),
+            ("controller_support", text("full")),
+            ("steam_deck_compatibility", deck(3, Some(1_700_000_000))),
         ]),
     )]);
     let cyberpunk = map([
@@ -52,6 +76,20 @@ fn write_appinfo(steam_root: &Path) {
                 ("name", text("Cyberpunk 2077")),
                 ("type", text("game")),
                 ("oslist", text("windows")),
+                // The original release, 2020-12-10 UTC, wins over the Steam one.
+                ("original_release_date", Value::Int(1_607_558_400)),
+                ("steam_release_date", Value::Int(1_700_000_000)),
+                // RPG, Early Access (a release state) and an ID with no name.
+                (
+                    "genres",
+                    map([
+                        ("0", Value::Int(3)),
+                        ("1", Value::Int(70)),
+                        ("2", Value::Int(999)),
+                    ]),
+                ),
+                ("controller_support", text("partial")),
+                ("steam_deck_compatibility", deck(2, None)),
             ]),
         ),
         ("extended", map([("developer", text("CD PROJEKT RED"))])),
@@ -60,8 +98,32 @@ fn write_appinfo(steam_root: &Path) {
         (570, dota),
         (1091500, cyberpunk),
         (1493710, app("Proton Experimental", "Tool", "linux")),
-        (1245620, app("ELDEN RING", "Game", "windows")),
-        (292030, app("The Witcher 3: Wild Hunt", "Game", "windows")),
+        (
+            1245620,
+            map([(
+                "common",
+                map([
+                    ("name", text("ELDEN RING")),
+                    ("type", text("Game")),
+                    ("oslist", text("windows")),
+                    // Zero means Steam does not know the date.
+                    ("steam_release_date", Value::Int(0)),
+                    ("steam_deck_compatibility", deck(1, Some(1_650_000_000))),
+                ]),
+            )]),
+        ),
+        (
+            292030,
+            map([(
+                "common",
+                map([
+                    ("name", text("The Witcher 3: Wild Hunt")),
+                    ("type", text("Game")),
+                    ("oslist", text("windows")),
+                    ("steam_deck_compatibility", deck(0, Some(0))),
+                ]),
+            )]),
+        ),
     ];
     std::fs::create_dir_all(steam_root.join("appcache")).unwrap();
     std::fs::write(
@@ -162,6 +224,54 @@ fn non_games_are_filtered_and_platform_and_developer_come_from_appinfo() {
     let cyberpunk = game(&snapshot, "1091500");
     assert_eq!(cyberpunk.platform, Some(Platform::Windows));
     assert_eq!(cyberpunk.developer.as_deref(), Some("CD PROJEKT RED"));
+}
+
+#[test]
+fn the_steam_deck_rating_comes_from_appinfo() {
+    let (_dir, _root, snapshot) = import_fixture("steam", true);
+
+    let rating = |id| game(&snapshot, id).deck_compatibility;
+    assert_eq!(
+        rating("570"),
+        Some(DeckCompatibility {
+            rating: DeckRating::Verified,
+            tested_at: Some(1_700_000_000),
+        })
+    );
+    assert_eq!(
+        rating("1091500"),
+        Some(DeckCompatibility {
+            rating: DeckRating::Playable,
+            tested_at: None,
+        })
+    );
+    assert_eq!(
+        rating("1245620"),
+        Some(DeckCompatibility {
+            rating: DeckRating::Unsupported,
+            tested_at: Some(1_650_000_000),
+        })
+    );
+    // Valve has not rated it yet; a zero test time means it was never tested.
+    assert_eq!(
+        rating("292030"),
+        Some(DeckCompatibility {
+            rating: DeckRating::Unknown,
+            tested_at: None,
+        })
+    );
+}
+
+#[test]
+fn without_appinfo_there_is_no_steam_deck_rating() {
+    let (_dir, _root, snapshot) = import_fixture("steam", false);
+
+    assert!(
+        snapshot
+            .games
+            .iter()
+            .all(|game| game.deck_compatibility.is_none())
+    );
 }
 
 #[test]
@@ -305,4 +415,34 @@ fn the_other_account_counts_when_it_was_used_last() {
     let snapshot = steam::import(&steam_root).unwrap();
 
     assert_eq!(game(&snapshot, "570").playtime_secs, Some(10 * 60));
+}
+
+#[test]
+fn release_year_genres_and_controller_support_come_from_appinfo_in_both_layouts() {
+    for fixture_name in ["steam", "steam-flatpak"] {
+        let (_dir, _root, snapshot) = import_fixture(fixture_name, true);
+
+        let dota = game(&snapshot, "570");
+        assert_eq!(dota.year, Some(2013), "{fixture_name}");
+        assert_eq!(dota.genres, ["Action", "Strategy"], "{fixture_name}");
+        assert_eq!(
+            dota.controller_support,
+            Some(ControllerSupport::Full),
+            "{fixture_name}"
+        );
+    }
+
+    let (_dir, _root, snapshot) = import_fixture("steam", true);
+    let cyberpunk = game(&snapshot, "1091500");
+    assert_eq!(cyberpunk.year, Some(2020));
+    assert_eq!(cyberpunk.genres, ["RPG"]);
+    assert_eq!(
+        cyberpunk.controller_support,
+        Some(ControllerSupport::Partial)
+    );
+    let elden_ring = game(&snapshot, "1245620");
+    assert_eq!(elden_ring.year, None);
+    assert!(elden_ring.genres.is_empty());
+    // Not declared, which is not the same as no support.
+    assert_eq!(elden_ring.controller_support, None);
 }

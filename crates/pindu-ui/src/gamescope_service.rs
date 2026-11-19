@@ -15,7 +15,7 @@
 //! (`pindu_core::gamescope::mangoapp`).
 
 use std::cell::{Cell, RefCell};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ffi::{c_int, c_long, c_uchar, c_uint, c_ulong};
 use std::path::PathBuf;
 use std::rc::{Rc, Weak};
@@ -133,6 +133,9 @@ struct Inner {
     /// The games whose last start was a safe one, which MangoApp shows no Performance
     /// Overlay over, whatever their switch says.
     started_safely: RefCell<HashSet<GameId>>,
+    /// The games whose launch is recorded, each with whether a window of it has appeared
+    /// since (see [`GamescopeService::watch_windows`]).
+    windows_seen: RefCell<HashMap<GameId, bool>>,
     /// The launcher's main window, which the claim pins, once it is realized.
     main_window: Cell<Option<Xid>>,
     /// The app IDs of the windows gamescope could show (`GAMESCOPE_FOCUSABLE_APPS`).
@@ -177,6 +180,7 @@ impl GamescopeService {
                 mangoapp,
                 overlay_writes: Cell::default(),
                 started_safely: RefCell::default(),
+                windows_seen: RefCell::default(),
                 main_window: Cell::default(),
                 focusable: RefCell::default(),
                 reclaims: RefCell::default(),
@@ -502,6 +506,30 @@ impl GamescopeService {
             started_safely.insert(id.clone());
         } else {
             started_safely.remove(id);
+        }
+    }
+
+    /// Starts noting whether a window of the game with `id`, which is about to start,
+    /// appears; nothing outside a `--steam` gamescope, which cannot tell.
+    pub fn watch_windows(&self, id: &GameId) {
+        if self.inner.x11.is_some() {
+            self.inner
+                .windows_seen
+                .borrow_mut()
+                .insert(id.clone(), false);
+        }
+    }
+
+    /// Whether a window of the game with `id` appeared since [`Self::watch_windows`], and
+    /// stops noting it; `None` where the session cannot tell.
+    pub fn window_seen(&self, id: &GameId) -> Option<bool> {
+        self.inner.windows_seen.borrow_mut().remove(id)
+    }
+
+    /// Notes a window of each watched game whose app ID is among `apps`.
+    fn note_windows(&self, apps: &[u32]) {
+        for (id, seen) in self.inner.windows_seen.borrow_mut().iter_mut() {
+            *seen |= apps.contains(&gamescope::app_id(id));
         }
     }
 
@@ -832,6 +860,7 @@ impl GamescopeService {
         if let Some(session) = self.inner.big_picture.borrow_mut().as_mut() {
             session.focusable_apps_changed(&apps, Instant::now());
         }
+        self.note_windows(&apps);
         self.inner.focusable.replace(apps);
         self.check_store_launch();
         self.schedule_big_picture_check();
@@ -1190,6 +1219,9 @@ impl GamescopeService {
         let front = gamescope::front(gfx, &self.expected());
         if self.inner.front.replace(front) == front {
             return;
+        }
+        if let Front::Game(app_id) = front {
+            self.note_windows(&[app_id]);
         }
         // The panel over the game belongs to the game it opened over.
         self.set_over_game(None);

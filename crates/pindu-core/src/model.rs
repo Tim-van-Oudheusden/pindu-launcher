@@ -160,6 +160,23 @@ string_enum! {
         Genres => "genres",
         /// A description of the game.
         Description => "description",
+        /// Steam's Steam Deck rating.
+        DeckCompatibility => "deck-compatibility",
+        /// The year the game was released.
+        ReleaseYear => "release-year",
+        /// How well the game supports a controller, as its developer declares it.
+        ControllerSupport => "controller-support",
+    }
+}
+
+string_enum! {
+    /// How well a game supports a controller, as its developer declares it to its store.
+    /// A game that declares nothing has no value, which is not the same as no support.
+    ControllerSupport, "controller support" {
+        /// The whole game can be played with a controller.
+        Full => "full",
+        /// Parts of the game need a keyboard or mouse.
+        Partial => "partial",
     }
 }
 
@@ -174,6 +191,43 @@ string_enum! {
         /// Set by the user.
         User => "user",
     }
+}
+
+string_enum! {
+    /// Steam's rating of how well a game runs on the Steam Deck, which Steam keeps in
+    /// `appinfo.vdf`.
+    DeckRating, "Steam Deck rating" {
+        /// Valve has not rated the game.
+        Unknown => "unknown",
+        /// The game does not run on the Deck.
+        Unsupported => "unsupported",
+        /// The game runs, but may need the user to change something.
+        Playable => "playable",
+        /// The game runs well with the Deck's default settings.
+        Verified => "verified",
+    }
+}
+
+impl DeckRating {
+    /// The rating for Steam's `category` number, 0 to 3; `None` for any other number.
+    pub fn from_category(category: i64) -> Option<Self> {
+        match category {
+            0 => Some(Self::Unknown),
+            1 => Some(Self::Unsupported),
+            2 => Some(Self::Playable),
+            3 => Some(Self::Verified),
+            _ => None,
+        }
+    }
+}
+
+/// Steam's Steam Deck rating of a game, with when Valve tested it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DeckCompatibility {
+    /// The rating.
+    pub rating: DeckRating,
+    /// When Valve tested the game, when it says.
+    pub tested_at: Option<Timestamp>,
 }
 
 /// A stable game ID of the form `<source>:<native id>`.
@@ -233,6 +287,20 @@ impl fmt::Display for GameId {
     }
 }
 
+string_enum! {
+    /// How a launch of a game went out (see [`crate::launch_outcome`]).
+    LaunchRoute, "launch route" {
+        /// Handed to its store launcher.
+        HandOff => "hand-off",
+        /// Run on the host as our child.
+        Host => "host",
+        /// A Windows game run through umu and Proton.
+        Proton => "proton",
+        /// A native game run in the Steam Linux Runtime through umu.
+        Runtime => "runtime",
+    }
+}
+
 /// One game in the library.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Game {
@@ -276,6 +344,12 @@ pub struct Game {
     pub genres: Vec<String>,
     /// A description of the game, resolved like `developer`.
     pub description: Option<String>,
+    /// The year the game was released, resolved like `developer`.
+    pub release_year: Option<i32>,
+    /// How well the game supports a controller, resolved like `developer`.
+    pub controller_support: Option<ControllerSupport>,
+    /// Steam's Steam Deck rating, resolved like `developer`.
+    pub deck_compatibility: Option<DeckCompatibility>,
     /// Start a Steam game through Steam's launch-options dialog
     /// (`steam://launch/<id>/dialog`), which honours the user's launch-option choice.
     pub steam_launch_dialog: bool,
@@ -310,6 +384,9 @@ impl Game {
             launch_uri: None,
             genres: Vec::new(),
             description: None,
+            release_year: None,
+            controller_support: None,
+            deck_compatibility: None,
             steam_launch_dialog: false,
         }
     }
@@ -492,6 +569,23 @@ mod tests {
         assert_eq!(id.as_str(), "heroic-gog:1207658924");
         assert_eq!(id.source(), Source::HeroicGog);
         assert_eq!(id.native_id(), "1207658924");
+    }
+
+    #[test]
+    fn steams_deck_categories_are_0_to_3_and_nothing_else() {
+        let ratings: Vec<_> = (-1..=4).map(DeckRating::from_category).collect();
+
+        assert_eq!(
+            ratings,
+            [
+                None,
+                Some(DeckRating::Unknown),
+                Some(DeckRating::Unsupported),
+                Some(DeckRating::Playable),
+                Some(DeckRating::Verified),
+                None,
+            ]
+        );
     }
 
     #[test]

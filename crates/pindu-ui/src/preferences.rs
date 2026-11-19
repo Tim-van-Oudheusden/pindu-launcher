@@ -35,10 +35,11 @@ use crate::proton_downloads_page::ProtonDownloadsPage;
 use crate::proton_launch;
 use crate::save_service;
 use crate::session_service;
-use crate::sources::{source_icon, source_name, sync_age_text};
+use crate::sources::{bind_source_order, source_icon, source_name, sync_age_text};
 use crate::steamgriddb_service;
 use crate::style_service::StyleService;
 use crate::sync_service::SyncService;
+use crate::wikidata_service;
 
 /// Tile sizes in the order of the cover size row (and the menu drawer's toggles).
 pub(crate) const TILE_SIZES: [&str; 3] = ["small", "medium", "large"];
@@ -103,6 +104,8 @@ mod imp {
         #[template_child]
         pub sources_group: TemplateChild<adw::PreferencesGroup>,
         #[template_child]
+        pub source_order: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub artwork_page: TemplateChild<adw::PreferencesPage>,
         #[template_child]
         pub key_row: TemplateChild<adw::PasswordEntryRow>,
@@ -110,6 +113,8 @@ mod imp {
         pub key_status_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub prefer_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub wikidata_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub default_proton_row: TemplateChild<adw::ComboRow>,
         #[template_child]
@@ -276,6 +281,13 @@ mod imp {
                 .bind("prefer-steamgriddb", &*self.prefer_row, "active")
                 .build();
             settings
+                .bind(
+                    wikidata_service::SETTINGS_KEY,
+                    &*self.wikidata_row,
+                    "active",
+                )
+                .build();
+            settings
                 .bind("default-mangohud", &*self.default_mangohud_row, "active")
                 .build();
             settings
@@ -312,6 +324,7 @@ mod imp {
                 &self.text_size_row,
                 TextSize::ALL.map(TextSize::setting).to_vec(),
             );
+            bind_source_order(&self.source_order, &settings);
             self.settings.set(settings).expect("constructed once");
             self.obj().show_custom_style();
 

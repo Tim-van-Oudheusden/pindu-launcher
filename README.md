@@ -60,11 +60,10 @@ widgets so it looks and behaves like the rest of GNOME.
   on-screen keyboard for search and navigation sounds, with switchable designs and your own CSS
   ([Fullscreen mode](#fullscreen-mode)).
 - **A tidy library.** Browse covers in a grid, or switch the desktop window to a list with each game's source, install
-  state, last played date and playtime. Search, sort and filter by installed, favourite, Windows or native, in either
-  layout. Group games into your own collections, or save a filter and search as a collection that keeps itself up to
-  date (**Save Filter…** beside the filters, with suggested ones under its arrow), jump back into recent games and hide
-  the ones you never play.
-  layout. Group games into your own collections, jump back into recent games and hide the ones you never play. The
+  state, last played date and playtime. Search, sort and filter by installed, favourite, Windows or native, genre or
+  never played, in either layout. Group games into your own collections, or save a filter and search as a collection
+  that keeps itself up to date (**Save Filter…** beside the filters, with suggested ones such as installed and never
+  played under its arrow), jump back into recent games and hide the ones you never play. The
   **Select** button in the header bar picks several games in the grid or the list at once, to favourite, hide, add to
   a collection or take out of one in one go, with a toast to undo it, or to merge them into one game.
 - **One game, several copies.** When the same game comes from two launchers, **Merge With…** in its menu (or in its
@@ -77,10 +76,18 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
 - **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
   [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu
-  launcher only hands the address over and fetches nothing from either site.
+  launcher only hands the address over and fetches nothing from either site. Their page, in both modes, also shows
+  the game's Steam Deck rating (Verified, Playable, Unsupported or Unknown) as Steam's own files record it.
 - **Your artwork.** Covers, banners and logos from your launchers, from your own files, or from
   [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring. **Change
   Artwork** on a game's page, in both modes, pages through every SteamGridDB image of each kind.
+- **Your details.** **Edit…** in a game's page menu sets its developer, genres and description; what you change is
+  kept when the library is imported again, and clearing a field goes back to the launcher's.
+- **Metadata from Wikidata, if you want it.** Turn on **Get Metadata From Wikidata** in Preferences (or in Quick
+  Access's settings), then **Refresh Metadata** in the main menu or in Quick Access looks your games up on
+  [Wikidata](https://www.wikidata.org) by their Steam app ID and keeps their developer and genres, labelled in your
+  language where Wikidata has it. It is off by default, runs only when you ask, never during an import, and can be
+  cancelled in Activity. Details your launchers give stay underneath, and details you enter yourself come first.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
@@ -88,6 +95,15 @@ widgets so it looks and behaves like the rest of GNOME.
   playtime, groups of copies and the developer, genres and descriptions you set to a file, and import them again.
   Before an update changes the library's format, Pindu launcher keeps a copy of the library beside it, named for the
   format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
+- **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork,
+  metadata and Proton builds you ask for.
+- **Backups.** Export your collections, saved filters, favourites, hidden games, games added by
+  hand and tracked playtime to a file, and import them again. Before an update changes the library's format, Pindu
+  launcher keeps a copy of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps
+  the two newest copies.
+- **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
+  and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
+  beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 - **Save snapshots.** When a Windows game you added by hand quits normally, Pindu launcher copies its saves out of the
   prefix it made for the game into `~/Games/pindu-launcher/save-snapshots`, leaving out caches, runtimes, screenshots
   and stored logins, and keeps the last five. Any game can have save folders too: add them through the file chooser
@@ -104,7 +120,7 @@ widgets so it looks and behaves like the rest of GNOME.
 
 | Source | Games | How they start |
 | --- | --- | --- |
-| Steam, native or Flatpak | Installed games, with their playtime | Through Steam |
+| Steam, native or Flatpak | Installed games, with their playtime and Steam Deck rating | Through Steam |
 | Heroic, native or Flatpak | Epic Games, GOG, Amazon and sideloaded games, installed or not | Through Heroic |
 | Lutris, native or Flatpak | Lutris games | Through Lutris |
 | Bottles, native or Flatpak | Programs in your bottles | Through Bottles |
@@ -116,7 +132,13 @@ widgets so it looks and behaves like the rest of GNOME.
 
 The importers read each launcher's data read-only and never its credentials: from the itch app's database they read
 its installs and games, never the profiles that hold your itch.io key. Preferences, Sources shows for each source the
-folder it was found in, when it last synced and the problems that sync ran into.
+folder it was found in, when it last synced and the problems that sync ran into. Its **Copy Order** decides which copy
+Play starts for a game with copies from several sources when you chose none: the installed copy from the source
+highest in the list, native copies still before Windows ones. **Move Up** and **Move Down** change it.
+
+A game's page shows the details its launcher keeps offline: its developer, genres and description from Heroic; its
+developer, release year, genres and whether it has full or partial controller support from Steam's own app cache; and
+its release year from Lutris and from Heroic's Amazon library.
 
 The Flatpak has no permission for Legendary's `~/.config/legendary` or the itch app's folder (`~/.config/itch`, or
 `~/.var/app/io.itch.itch/config/itch` for the itch Flatpak), and does not ask for one: Preferences → Sources says so,
@@ -207,8 +229,9 @@ Preferences.
 ### Getting around
 
 - **Move** with the D-pad or left stick, **open** with A and **go back** with B.
-- A **game page** shows the game's developer, genres and description below its buttons. Once a long description has
-  focus, Down scrolls through it and Up scrolls back to its start before moving on.
+- A **game page** shows the game's developer, genres, release year, controller support, Steam Deck rating and
+  description below its buttons. Once a long description has focus, Down scrolls through it and Up scrolls back to its
+  start before moving on.
 - The **hint bar** at the bottom names the buttons that work on each screen, drawn with the app's own glyphs for the
   controller you hold.
 - **Controls** in Quick Access lists everything the buttons do, grouped into moving, the library, the panels and
@@ -258,7 +281,15 @@ Guide + A never also opens the menu drawer.
   restarting or powering off. Quick Access opens on them while one is unread.
 - **Activity:** a running library sync, SteamGridDB artwork fetch, Proton download, or save snapshot or restore, with
   its progress. Artwork fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
+- **Notifications** from this session: games a sync added or found missing, artwork fetched or not, metadata refreshed
+  or not, Proton downloads, games that need a permission, a Bluetooth device that did not pair, connect, disconnect or
+  go, a rollback or restart the system refused, a network that could not be joined, and a program that kept the
+  machine from suspending, restarting or powering off. Quick Access opens on them while one is unread.
+- **Activity:** a running library sync, SteamGridDB artwork fetch, Wikidata metadata refresh, Proton download or save
+  snapshot, with its progress. Artwork fetches, metadata refreshes and Proton downloads can be cancelled; a cancelled
+  download leaves nothing behind, and a cancelled refresh keeps what it had stored.
 - **Refresh Library** reads your launchers again, offline like every sync.
+- **Refresh Metadata**, while Wikidata metadata is on, asks Wikidata for your games' developer and genres.
 - **Surprise Me** opens the page of an installed game picked at random, never the same one twice in a row, so you
   still choose whether to play.
 - **Design** switches the fullscreen design (see [Styling fullscreen mode](#styling-fullscreen-mode)).
@@ -274,7 +305,9 @@ Guide + A never also opens the menu drawer.
   in the main menu.
 - **Sources** lists every source Pindu imports from, says whether each was found on this computer, and has its
   **Import** switch, the same setting as Preferences, Sources: a source turned off is no longer read, and changing a
-  switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences.
+  switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences. Below them,
+  **Copy Order** lists the sources in the order a game's copies follow: Right on a source reaches its **Move Up** and
+  **Move Down**.
   - **Text Size:** fullscreen text at its default size or Large, Larger or Largest, each step about a quarter of
     the default larger. Preferences has the same choice; an install that had the former Larger Text on starts at
     Large.
@@ -284,6 +317,7 @@ Guide + A never also opens the menu drawer.
 - **Artwork:** your SteamGridDB key, typed hidden with the on-screen keyboard (Show reveals it) and kept in the system
   keyring, never in settings or files; the row says whether a key is stored, or that the keyring cannot be used and
   why. Missing art is fetched once a key is saved. **Prefer SteamGridDB Art** is here too.
+- **Metadata:** **Get Metadata From Wikidata**, the same switch as in Preferences, which shows **Refresh Metadata**.
 - **Sound Output**, subtitled with the output in use, lists the outputs PipeWire has (speakers, a television over
   HDMI, a receiver, a Bluetooth headset) with a check on the one in use. Choose one to make it the default; WirePlumber
   keeps the choice after a restart, and games that follow the default move to it. It reads the outputs with `pw-dump`
@@ -292,11 +326,13 @@ Guide + A never also opens the menu drawer.
 
 ### Filters
 
-On the library page, **Filters** narrows every tab to installed or not installed games, or to Windows or native ones,
-and can show hidden games too. A **Filtered** chip beside the tabs says a filter is on, and **Clear Filters** brings the
-whole tab back. These filters are separate from the desktop window's filter row and last until the app quits.
-**Save Filter…** keeps the shown tab with these filters and the search as a collection of its own, which gets a tab,
-a Home section and a drawer entry; **Save Native Games** and **Save Windows Games** save those shelves in one press.
+On the library page, **Filters** narrows every tab to installed or not installed games, to Windows or native ones, or
+to games never played, and can show hidden games too; under **Genre**, choose one of the library's genres, or **Any
+Genre**. A **Filtered** chip beside the tabs says a filter is on, and **Clear Filters** brings the whole tab back. These
+filters are separate from the desktop window's filter row and last until the app quits. **Save Filter…** keeps the
+shown tab with these filters and the search as a collection of its own, which gets a tab, a Home section and a drawer
+entry; **Save Native Games**, **Save Windows Games** and **Save Installed and Never Played** save those shelves in one
+press.
 
 ### Performance
 
@@ -701,7 +737,7 @@ flowchart LR
   store --> services
   logic --> services
   services -->|"OpenURI portal,<br/>host spawn, umu"| games["Games"]
-  services -.->|"only when asked"| online["SteamGridDB,<br/>Proton releases"]
+  services -.->|"only when asked"| online["SteamGridDB, Wikidata,<br/>Proton releases"]
 ```
 
 Everything that can be decided without GTK lives in `crates/pindu-core` and is tested with plain `cargo test`. The
@@ -766,6 +802,10 @@ When a game misbehaves, add its newest log from **Play with Logs**: on the deskt
 **Debugging Information with Log**; in fullscreen mode, the Diagnostics Report has **Add a Game's Log**. The report then
 keeps that game's title, and still no other title and no home folder.
 
+Every other start of a game Pindu runs itself keeps a short log beside those: the last 64 KiB of its output, in
+`~/.local/share/pindu-launcher/logs/<game>/` as `<date and time>.short.log`, the newest five per game. Pindu also
+records how each of a game's last five launches ended ([Launch outcomes](docs/launch-outcomes.md)).
+
 ## Acknowledgments
 
 - [Cartridges](https://codeberg.org/kramo/cartridges) by kramo, the GNOME game launcher that showed how a libadwaita
@@ -779,6 +819,7 @@ keeps that game's title, and still no other title and no home folder.
   [GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom) and
   [Proton-CachyOS](https://github.com/CachyOS/proton-cachyos), which run the Windows games.
 - [SteamGridDB](https://www.steamgriddb.com), for community artwork.
+- [Wikidata](https://www.wikidata.org), for game metadata (CC0).
 
 ## Disclaimer
 

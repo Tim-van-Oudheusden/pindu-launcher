@@ -342,6 +342,18 @@ template $PinduWindow: Adw.ApplicationWindow {
                             label: _("Native");
                           }
 
+                          ToggleButton never_played_filter {
+                            label: _("Never Played");
+                          }
+
+                          // Its menu lists the library's genres, filled as the games
+                          // change; the label names the genre chosen.
+                          MenuButton genre_filter {
+                            label: _("Genre");
+                            tooltip-text: _("Filter by Genre");
+                            always-show-arrow: true;
+                          }
+
                           Button clear_filters {
                             label: _("Clear");
                             visible: false;
@@ -805,6 +817,12 @@ menu save_filter_menu {
       action: "win.save-suggestion";
       target: "windows";
     }
+
+    item {
+      label: _("Installed and Never Played");
+      action: "win.save-suggestion";
+      target: "installed-never-played";
+    }
   }
 }
 
@@ -876,6 +894,13 @@ menu primary_menu {
     item {
       label: _("_Duplicates");
       action: "win.review-duplicates";
+    }
+
+    // Shown only while Wikidata metadata is on in Preferences.
+    item {
+      label: _("_Refresh Metadata");
+      action: "app.refresh-metadata";
+      hidden-when: "action-disabled";
     }
   }
 

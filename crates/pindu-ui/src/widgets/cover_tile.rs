@@ -98,6 +98,10 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
             let tile = self.obj();
+            // GTK names a button after its label through a relation, which would win over
+            // the name `show_state` gives it.
+            self.play_button
+                .reset_relation(gtk::AccessibleRelation::LabelledBy);
             let right_click = gtk::GestureClick::builder()
                 .button(gdk::BUTTON_SECONDARY)
                 .build();
@@ -202,6 +206,10 @@ impl CoverTile {
         let source = entry.game.source();
         imp.title.set_text(Some(&entry.game.title));
         imp.cover.set_alternative_text(&entry.game.title);
+        imp.selected_check
+            .update_property(&[gtk::accessible::Property::Label(&select_name(
+                &entry.game.title,
+            ))]);
         imp.source_badge.set_icon_name(Some(source_icon(source)));
         imp.source_badge
             .set_tooltip_text(Some(&source_name(source)));
@@ -258,6 +266,20 @@ impl CoverTile {
         };
         imp.play_button.set_label(&label);
         imp.play_button.set_action_name(Some(action));
+        let name = Self::play_button_name(&game.game().title, playing);
+        imp.play_button
+            .update_property(&[gtk::accessible::Property::Label(&name)]);
+    }
+
+    /// What a screen reader says for a game's Play or Stop button: the visible word alone
+    /// does not say which game it starts or stops.
+    pub fn play_button_name(title: &str, playing: bool) -> String {
+        if playing {
+            gettext("Stop {title}")
+        } else {
+            gettext("Play {title}")
+        }
+        .replace("{title}", title)
     }
 
     /// Stops showing the bound game and clears the art.
@@ -329,6 +351,11 @@ pub(crate) fn game_state(game: &GameObject) -> GameState {
         permission_service::needs_permission(&game),
         game.installed,
     )
+}
+
+/// What a screen reader says for selection mode's check of a game.
+pub(crate) fn select_name(title: &str) -> String {
+    gettext("Select {title}").replace("{title}", title)
 }
 
 /// The words for a game's state.

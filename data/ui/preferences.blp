@@ -33,6 +33,16 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
     }
 
     Adw.PreferencesGroup {
+      title: _("Metadata");
+      description: _("Refresh Metadata, in the main menu and in Quick Access, looks your games up on Wikidata by their Steam app ID for their developer and genres. Details you enter yourself always come first.");
+
+      Adw.SwitchRow wikidata_row {
+        title: _("Get Metadata From Wikidata");
+        subtitle: _("Nothing is fetched until you ask, and never during an import");
+      }
+    }
+
+    Adw.PreferencesGroup {
       title: _("Launching");
 
       Adw.SwitchRow exit_row {
@@ -124,6 +134,20 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
     Adw.PreferencesGroup sources_group {
       title: _("Sources");
       description: _("Where games come from. A source that is off is no longer imported; one left out of the sidebar still is.");
+    }
+
+    // One row per source with Move Up and Move Down, filled in code.
+    Adw.PreferencesGroup {
+      title: _("Copy Order");
+      description: _("When a game has copies from several sources and you chose none, Play starts the installed copy from the source highest here. Native copies still come before Windows ones.");
+
+      ListBox source_order {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+      }
     }
   }
 

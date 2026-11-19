@@ -12,14 +12,16 @@ use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::launch::{self, Command, Route, Start, SteamSession, WebPage};
-use pindu_core::model::{Game, Source};
+use pindu_core::launch_outcome::{Ending, SIGTERM};
+use pindu_core::model::{Game, LaunchRoute, Source};
 use pindu_core::notifications::{Kind, Target};
 
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
 use crate::library_service::LibraryService;
-use crate::log_service::{self, GameLog};
+use crate::log_service::{self, LaunchLog};
 use crate::models::GameObject;
+use crate::outcome_service::{self, Recording};
 use crate::permission_service;
 use crate::proton_launch;
 use crate::save_service;
@@ -47,10 +49,12 @@ pub fn launcher_name(source: Source) -> Option<&'static str> {
 /// the toast says what happened, or why the game could not start. Without a window
 /// (`--launch`, Shell search) nothing is shown, unless the game needs a permission: then
 /// the window opens to explain it, and a notification keeps the explanation for Quick
-/// Access. With `start` keeping a log ("Play with Logs", "Start Safely"), a game we start
-/// keeps its output, and a Windows game Proton's log too, in a new log of the game (see
-/// `log_service`); a safe start runs it without its wrappers, MangoHud, GameMode or its own
-/// environment variables, this once.
+/// Access. Every launch but one refused for a permission records how it ended (see
+/// `outcome_service`). With `start` keeping a log ("Play with Logs", "Start Safely"), a
+/// game we start keeps its output, and a Windows game Proton's log too, in a new log of
+/// the game (see `log_service`); a safe start runs it without its wrappers, MangoHud,
+/// GameMode or its own environment variables, this once. Any other start of a game whose
+/// session we track keeps the end of its output in a short log.
 pub fn play(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
@@ -93,23 +97,28 @@ pub fn play(
         match launch::route(&game, config.as_ref()) {
             Some(Route::StoreUri(uri)) => {
                 let hand_off = store_hand_off(&app, &library, &game, uri).await;
+                let recording =
+                    outcome_service::begin(&app, &game.id, LaunchRoute::HandOff, None, None).await;
                 hand_to_launcher(
                     &app,
                     window.as_ref(),
                     &game,
                     hand_off,
+                    recording,
                     library,
                     sessions,
                     toast,
                 );
             }
             Some(Route::HostSpawn(mut command)) => {
-                let mut output = None;
-                if start.keeps_log() {
+                let tracks = launch::tracks_sessions(&game);
+                let mut log = None;
+                // A short log reads the game's output through a pipe, which breaks once
+                // the app quits: only a game whose session keeps the app up has one.
+                if start.keeps_log() || tracks {
                     let (id, title) = (game.id.clone(), game.title.clone());
                     let created = gio::spawn_blocking(move || {
-                        let log = GameLog::create(&id, &title, &mut command, false, start)
-                            .and_then(|log| log.output());
+                        let log = LaunchLog::create(&id, &title, &mut command, false, start);
                         (log, command)
                     })
                     .await;
@@ -118,32 +127,59 @@ pub fn play(
                     };
                     command = logged;
                     match created {
-                        Ok(created) => output = Some(created),
+                        Ok(created) => log = Some(created),
                         Err(error) => {
                             glib::g_warning!(
                                 "pindu",
                                 "Could not start a log of “{}”: {error}",
                                 game.title
                             );
-                            toast(adw::Toast::new(&log_service::could_not_keep(&game.title)));
+                            if start.keeps_log() {
+                                toast(adw::Toast::new(&log_service::could_not_keep(&game.title)));
+                            }
                         }
                     }
                 }
-                let toast = Rc::new(toast);
-                let started = if launch::tracks_sessions(&game) {
-                    sessions
-                        .start(app.upcast_ref(), &game.id, &command, output)
-                        .map(|child| snapshot_after_exit(&game, &child, toast.clone()))
+                let log_name = log.as_ref().and_then(LaunchLog::name);
+                let recording =
+                    outcome_service::begin(&app, &game.id, LaunchRoute::Host, None, log_name).await;
+                let spawned = if log.as_ref().is_some_and(LaunchLog::reads_pipe) {
+                    session_service::spawn_piped(&command)
                 } else {
-                    session_service::spawn(&command, output).map(drop)
+                    let output = log
+                        .as_ref()
+                        .map(LaunchLog::output)
+                        .transpose()
+                        .unwrap_or_else(|error| {
+                            glib::g_warning!(
+                                "pindu",
+                                "Could not open the log of “{}”: {error}",
+                                game.title
+                            );
+                            None
+                        })
+                        .flatten();
+                    session_service::spawn(&command, output)
                 };
-                let message = match started {
-                    Ok(()) => {
+                let toast = Rc::new(toast);
+                let message = match spawned {
+                    Ok(child) => {
+                        if tracks {
+                            let signalled = child.clone();
+                            sessions.track(app.upcast_ref(), &game.id, &child, move || {
+                                signalled.send_signal(SIGTERM);
+                            });
+                            snapshot_after_exit(&game, &child, toast.clone());
+                        }
+                        // A game whose session keeps the app up keeps it up until its
+                        // outcome and log are written too.
+                        recording.follow(child, log, tracks.then(|| app.hold()));
                         library.mark_played(&game.id, now()).await;
                         starting(&game.title, start)
                     }
                     Err(error) => {
                         glib::g_warning!("pindu", "Could not start {:?}: {error}", command.argv);
+                        recording.end(Ending::NotStarted).await;
                         gettext("Could not start “{title}”").replace("{title}", &game.title)
                     }
                 };
@@ -241,14 +277,20 @@ async fn store_hand_off(
     }
 }
 
-/// Hands a store game to its launcher, then quits when the user asked for that and no
-/// game we started is running. A command is started and left alone: the `steam` it runs
-/// passes the URI to a running Steam client and exits, or becomes the client itself.
+/// Hands a store game to its launcher, records whether the launcher answered, then quits
+/// when the user asked for that and no game we started is running. A command is started
+/// and left alone: the `steam` it runs passes the URI to a running Steam client and exits,
+/// or becomes the client itself.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "each argument is a separate input of one launch; a struct would only rename them"
+)]
 fn hand_to_launcher(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
     game: &Game,
     hand_off: HandOff,
+    recording: Recording,
     library: LibraryService,
     sessions: SessionService,
     toast: impl Fn(adw::Toast) + 'static,
@@ -258,7 +300,7 @@ fn hand_to_launcher(
     let (app, hold) = (app.clone(), app.hold());
     let main_window = window.and_then(|window| window.downcast_ref::<PinduWindow>().cloned());
     let handed_off = move |result: Result<(), String>| {
-        let message = match result {
+        let (message, ending, exit) = match result {
             Ok(()) => {
                 if let Some(application) = app.downcast_ref::<PinduApplication>() {
                     application.gamescope_service().store_launch_started(&id);
@@ -268,21 +310,30 @@ fn hand_to_launcher(
                 }
                 let exit = gio::Settings::new(APP_ID).boolean("exit-after-launch")
                     && !sessions.any_playing();
-                // Hold on until the last-played time is stored, then quit if asked to.
-                glib::spawn_future_local(async move {
-                    library.mark_played(&id, now()).await;
-                    drop(hold);
-                    if exit {
-                        app.quit();
-                    }
-                });
-                gettext("Starting “{title}” in {launcher}")
+                let message = gettext("Starting “{title}” in {launcher}");
+                (message, Ending::HandedOff, exit)
             }
             Err(error) => {
                 glib::g_warning!("pindu", "{error}");
-                gettext("Could not open {launcher}")
+                (
+                    gettext("Could not open {launcher}"),
+                    Ending::HandOffFailed,
+                    false,
+                )
             }
         };
+        // Hold on until the outcome and the last-played time are stored, then quit if
+        // asked to.
+        glib::spawn_future_local(async move {
+            recording.end(ending).await;
+            if ending == Ending::HandedOff {
+                library.mark_played(&id, now()).await;
+            }
+            drop(hold);
+            if exit {
+                app.quit();
+            }
+        });
         toast(adw::Toast::new(
             &message
                 .replace("{title}", &title)
