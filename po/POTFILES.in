@@ -20,6 +20,7 @@ crates/pindu-ui/src/fullscreen_panels.rs
 crates/pindu-ui/src/fullscreen_performance.rs
 crates/pindu-ui/src/fullscreen_playing.rs
 crates/pindu-ui/src/fullscreen_power.rs
+crates/pindu-ui/src/fullscreen_sources.rs
 crates/pindu-ui/src/fullscreen_status.rs
 crates/pindu-ui/src/fullscreen_system_update.rs
 crates/pindu-ui/src/game_dialog.rs

@@ -232,6 +232,10 @@ Guide + A never also opens the menu drawer.
 - **Accessibility:**
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
+  - **Larger Text:** fullscreen text about a quarter larger.
+- **Sources** lists every source Pindu imports from, says whether each was found on this computer, and has its
+  **Import** switch, the same setting as Preferences, Sources: a source turned off is no longer read, and changing a
+  switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences.
   - **Text Size:** fullscreen text at its default size or Large, Larger or Largest, each step about a quarter of
     the default larger. Preferences has the same choice; an install that had the former Larger Text on starts at
     Large.
