@@ -11,6 +11,7 @@
 use crate::gamepad::Intent;
 use crate::launch::{self, WebPage};
 use crate::model::Game;
+use crate::saves;
 use crate::themes::Theme;
 
 /// A panel over the page, at one of its levels.
@@ -442,6 +443,8 @@ pub enum GameOption {
     ProtonDb,
     /// Open the game's PCGamingWiki page in the browser, for a Steam game.
     PcGamingWiki,
+    /// List the save snapshots of a Windows game we run, to restore one.
+    SaveSnapshots,
 }
 
 /// The options sheet's actions for `game`, top to bottom, as it runs or not (`playing`).
@@ -462,6 +465,7 @@ pub fn game_options(game: &Game, playing: Playing) -> Vec<GameOption> {
         }),
         Some(Collections),
         Some(ChangeArtwork),
+        saves::offers_snapshots(game).then_some(SaveSnapshots),
         Some(if game.hidden { Unhide } else { Hide }),
         launch::launcher_uri(game).map(|_| OpenInLauncher),
         launch::web_page_uri(game, WebPage::ProtonDb).map(|_| ProtonDb),
@@ -1174,6 +1178,23 @@ mod tests {
         assert_eq!(game_options(&lutris, Playing::No)[..2], [Play, StartSafely]);
         assert!(!game_options(&lutris, Playing::Started).contains(&StartSafely));
         assert!(!game_options(&steam, Playing::No).contains(&StartSafely));
+    }
+
+    #[test]
+    fn a_windows_game_we_run_offers_its_save_snapshots_after_change_artwork() {
+        use GameOption::*;
+        let windows = game(Source::Manual, LaunchKind::Proton);
+        let options = game_options(&windows, Playing::No);
+        let artwork = options.iter().position(|o| *o == ChangeArtwork).unwrap();
+        assert_eq!(options[artwork + 1], SaveSnapshots);
+        assert!(game_options(&windows, Playing::Started).contains(&SaveSnapshots));
+        for (source, kind) in [
+            (Source::Lutris, LaunchKind::HostCommand),
+            (Source::Steam, LaunchKind::StoreUri),
+            (Source::Manual, LaunchKind::RuntimeNative),
+        ] {
+            assert!(!game_options(&game(source, kind), Playing::No).contains(&SaveSnapshots));
+        }
     }
 
     #[test]

@@ -673,6 +673,7 @@ impl PinduWindow {
             GameOption::ProtonDb => ("app", "open-protondb"),
             GameOption::PcGamingWiki => ("app", "open-pcgamingwiki"),
             GameOption::ChangeArtwork => ("win", "change-artwork"),
+            GameOption::SaveSnapshots => ("win", "save-snapshots"),
             GameOption::Split => ("win", "split-group"),
             GameOption::Collections | GameOption::MergeWith | GameOption::PreferredCopy => return,
         };
@@ -705,6 +706,7 @@ fn option_label(option: GameOption, game: &GameObject) -> (&'static str, String)
         GameOption::MergeWith => ("list-add-symbolic", gettext("Merge With")),
         GameOption::PreferredCopy => ("edit-copy-symbolic", gettext("Preferred Copy")),
         GameOption::Split => ("edit-cut-symbolic", gettext("Split Into Separate Games")),
+        GameOption::SaveSnapshots => ("document-save-symbolic", gettext("Save Snapshots")),
         GameOption::Hide => ("view-conceal-symbolic", gettext("Hide")),
         GameOption::Unhide => ("view-reveal-symbolic", gettext("Unhide")),
         GameOption::OpenInLauncher => (

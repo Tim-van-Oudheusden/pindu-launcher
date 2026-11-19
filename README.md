@@ -84,21 +84,19 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
-- **Backups.** Export your collections, saved filters, favourites, hidden games, games added by
-  hand and tracked playtime to a file, and import them again. Before an update changes the library's format, Pindu
-  launcher keeps a copy of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps
-  the two newest copies.
-- **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
-  and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
-  beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
+- **Backups.** Export your collections, saved filters, favourites, hidden games, games added by hand, tracked
+  playtime, groups of copies and the developer, genres and descriptions you set to a file, and import them again.
+  Before an update changes the library's format, Pindu launcher keeps a copy of the library beside it, named for the
+  format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 - **Save snapshots.** When a Windows game you added by hand quits normally, Pindu launcher copies its saves out of the
   prefix it made for the game into `~/Games/pindu-launcher/save-snapshots`, leaving out caches, runtimes, screenshots
+  and stored logins, and keeps the last five. **Save Snapshots…** in the game page's menu, or Save Snapshots in
+  fullscreen mode's options sheet, lists them with their time, size and every file they hold, and restores one after
+  keeping the current saves in a snapshot of their own; never while the game runs
+  ([Save snapshots](docs/save-snapshots.md)).
   and stored logins, and keeps the last five ([Save snapshots](docs/save-snapshots.md)). Pick a folder under
   Preferences → Windows → Save Snapshots, such as one Syncthing, Nextcloud or a drive keeps, and each new snapshot is
   copied there too; a folder that is gone is reported, and the game is not affected.
-- **Backups.** Export your collections, favourites, hidden games, games added by hand, tracked playtime and groups of
-  copies to a file, and import them again. Before an update changes the library's format, Pindu launcher keeps a copy
-  of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 
 ## Game sources
 
@@ -258,8 +256,8 @@ Guide + A never also opens the menu drawer.
   games that need a permission, a Bluetooth device that did not pair, connect, disconnect or go, a rollback or restart
   the system refused, a network that could not be joined, and a program that kept the machine from suspending,
   restarting or powering off. Quick Access opens on them while one is unread.
-- **Activity:** a running library sync, SteamGridDB artwork fetch, Proton download or save snapshot, with its progress.
-  Artwork fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
+- **Activity:** a running library sync, SteamGridDB artwork fetch, Proton download, or save snapshot or restore, with
+  its progress. Artwork fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
 - **Refresh Library** reads your launchers again, offline like every sync.
 - **Surprise Me** opens the page of an installed game picked at random, never the same one twice in a row, so you
   still choose whether to play.

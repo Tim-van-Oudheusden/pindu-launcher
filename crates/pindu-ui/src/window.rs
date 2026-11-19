@@ -37,6 +37,7 @@ use crate::log_service;
 use crate::menu_drawer::PinduMenuDrawer;
 use crate::models::{GameObject, LibraryModel, LibrarySelection};
 use crate::quick_access::PinduQuickAccess;
+use crate::save_snapshots_dialog::SaveSnapshotsDialog;
 use crate::sources::{source_icon, source_name};
 use crate::sync_service::SyncService;
 use crate::widgets::{CoverArt, CoverTile, GameListCell, ListColumn, TileSize};
@@ -419,6 +420,7 @@ impl PinduWindow {
         self.add_game_action("show-details", Self::show_details);
         self.add_game_action("open-install-folder", Self::open_install_folder);
         self.add_game_action("open-log", Self::open_log);
+        self.add_game_action("save-snapshots", Self::show_save_snapshots);
 
         self.setup_collection_actions();
         self.setup_group_actions();
@@ -834,6 +836,22 @@ impl PinduWindow {
         if let Some(game) = self.library().game_object(id) {
             ArtworkDialog::change(self, self.library_service(), &game, self.is_fullscreen());
         }
+    }
+
+    /// Opens the game's save snapshots, to see what each holds and restore one.
+    fn show_save_snapshots(&self, id: &GameId) {
+        let (Some(game), Some(application)) = (
+            self.library().game_object(id),
+            self.application().and_downcast::<PinduApplication>(),
+        ) else {
+            return;
+        };
+        SaveSnapshotsDialog::show(
+            self,
+            &game,
+            application.library_service().clone(),
+            application.session_service().clone(),
+        );
     }
 
     fn hide_game(&self, id: &GameId) {
