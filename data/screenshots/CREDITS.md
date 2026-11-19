@@ -1,9 +1,9 @@
 # Screenshot credits
 
-The screenshots in this folder show Pindu launcher with a demo library of free and open-source games.
-The game art comes only from each game's own official screenshots and icon, as published in its
-Flathub (AppStream) listing, under the licence given there. For each game, a cover (600×900) and a banner (1920×620) were
-cut from one of those screenshots, and the covers have the game's name added in Adwaita Sans. Nothing else was changed.
+The screenshots in this folder and the `desktop-*.webp` images in [`docs/screenshots/`](../../docs/screenshots/)
+show Pindu launcher with demo libraries of free and open-source games. The art comes only from each game's
+official screenshots and icon as published in its Flathub (AppStream) listing, under the licence given there.
+The game screenshots were cropped for covers and banners, and the covers have the game's name in Adwaita Sans.
 
 | Game | Licence (from its AppStream data) | Developer | Homepage | Art used |
 |---|---|---|---|---|

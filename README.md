@@ -17,15 +17,15 @@
 </div>
 
 <p align="center">
-  <img src="data/screenshots/1-library.png" width="820" alt="The library: a sidebar with All Games, Installed, Favourites and Play History, the sources Steam, Heroic: Sideloaded, Lutris, Desktop and Added by Hand, and the collections Strategy and Racing; beside it the filter chips Installed, Not Installed, Favourites, Windows and Native, a Jump Back In row of SuperTuxKart, Hedgewars and SuperTux, and a grid of game covers">
+  <img src="docs/screenshots/desktop-1-library.webp" width="820" alt="Desktop library with a sidebar for library views, sources and collections, filter chips above the cover grid, and a Jump Back In row with SuperTuxKart, Hedgewars, SuperTux and Mindustry">
 </p>
 
 <p align="center">
-  <img src="data/screenshots/2-game-page.png" width="405" alt="The SuperTuxKart game page: its banner art, a Play button, a favourite star and a menu, then the launcher (Steam), 30 hours of playtime, last played and added dates and the size, and the launch settings">
-  <img src="data/screenshots/3-play-history.png" width="405" alt="Play History: the games played today and this week, each with its date and playtime, from Steam, Heroic and Lutris or tracked by Pindu launcher">
+  <img src="docs/screenshots/desktop-2-game-page.webp" width="405" alt="SuperTuxKart's game page with racing banner art, a Play button, playtime tracked by Pindu launcher and About details">
+  <img src="docs/screenshots/desktop-3-play-history.webp" width="405" alt="Play History with libre games played this week, showing their last-played dates and tracked playtime">
   <br>
-  <img src="data/screenshots/4-collection.png" width="405" alt="The Strategy collection: covers of Mindustry, 0 A.D., MegaGlest and two more games">
-  <img src="data/screenshots/5-game-page-dark.png" width="405" alt="The Hedgewars game page in the dark style">
+  <img src="docs/screenshots/desktop-4-collection.webp" width="405" alt="The Strategy collection with covers for Hedgewars, Mindustry, 0 A.D., Battle for Wesnoth, MegaGlest and Warzone 2100">
+  <img src="docs/screenshots/desktop-5-game-page-dark.webp" width="405" alt="Hedgewars' game page in dark style, with snowy banner art and its game details">
 </p>
 
 ## Status
@@ -209,15 +209,15 @@ A controller-first view of the same library, for the couch, a TV or a Steam Deck
 Preferences.
 
 <p align="center">
-  <img src="docs/screenshots/fullscreen-1-home.webp" width="820" alt="Fullscreen Home in the Ribbon design: the Home and Library tabs and the clock across the top, a row of square tiles of recently played games with Drop Duchy focused, and Drop Duchy's art filling the screen behind its logo, 5 hours of playtime, This Week and Steam">
+  <img src="docs/screenshots/fullscreen-1-home.webp" width="820" alt="Fullscreen Home in the Ribbon design: recently played games across the top, with Slay the Spire 2 focused and its logo and artwork filling the background">
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/fullscreen-2-panorama.webp" width="405" alt="Fullscreen Home in the Panorama design: Slay the Spire's art across the screen, with a row of square tiles of recently played games along the bottom and Slay the Spire focused">
-  <img src="docs/screenshots/fullscreen-3-library.webp" width="405" alt="The fullscreen library: the tabs All, Installed and Favourites, sorted by Last Played, over a grid of game covers with Drop Duchy focused and its Play button showing">
+  <img src="docs/screenshots/fullscreen-2-panorama.webp" width="405" alt="Fullscreen Home in the Panorama design: recently played games along the bottom, with Balatro focused over its red and blue artwork">
+  <img src="docs/screenshots/fullscreen-3-library.webp" width="405" alt="Fullscreen Library with All, Installed and Favourites tabs and a grid of Steam games sorted by Last Played, with the Play button on Slay the Spire 2">
   <br>
-  <img src="docs/screenshots/fullscreen-4-game-page.webp" width="405" alt="Drop Duchy's fullscreen game page: its art and logo, the Play button with favourite, add to collection and menu buttons, and the launcher (Steam), 5 hours of playtime, last played and added dates and the size">
-  <img src="docs/screenshots/fullscreen-5-quick-access.webp" width="405" alt="Quick Access open over a game page: the time, then Notifications, Refresh Library, Surprise Me, Design, Controllers, Controls and Settings">
+  <img src="docs/screenshots/fullscreen-4-game-page.webp" width="405" alt="Drop Duchy's fullscreen game page with its logo and artwork, the Play button, Steam playtime, controller support and Steam Deck compatibility">
+  <img src="docs/screenshots/fullscreen-5-quick-access.webp" width="405" alt="Quick Access open to Design over fullscreen Home, with Red Ribbons selected under Background and Blue Station available">
 </p>
 
 ### Getting around
@@ -840,5 +840,5 @@ trademarks belong to their owners.
 | `data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in` | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `data/home/` (fullscreen Home's art) | [GPL-3.0-or-later](data/home/LICENSE) |
 | `docs/brand/readme-banner.svg` | [GPL-3.0-or-later](LICENSE); the outlined text is [Adwaita Sans](https://gitlab.gnome.org/GNOME/adwaita-fonts), SIL Open Font License 1.1 |
-| Game art in `data/screenshots/` | Each game's own licence, listed in [`CREDITS.md`](data/screenshots/CREDITS.md) |
-| Game art in `docs/screenshots/` | Belongs to each game's publisher; shown as Pindu launcher displays a real library |
+| Game art in `data/screenshots/` and `docs/screenshots/desktop-*.webp` | Each game's own licence, listed in [`CREDITS.md`](data/screenshots/CREDITS.md) |
+| Game art in `docs/screenshots/fullscreen-*.webp` | Belongs to each game's publisher; shown as Pindu launcher displays a real library |
