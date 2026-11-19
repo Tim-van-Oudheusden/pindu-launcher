@@ -57,6 +57,17 @@ pub fn default_prefixes_dir() -> PathBuf {
         .join("prefixes")
 }
 
+/// `~/Games/pindu-launcher/save-snapshots`: the save snapshots of Windows games, beside
+/// their prefixes so that removing a prefix keeps them and copies share its filesystem
+/// (see [`crate::saves`]).
+pub fn default_save_snapshots_dir() -> PathBuf {
+    std::env::home_dir()
+        .unwrap_or_default()
+        .join("Games")
+        .join(APP_DIR)
+        .join("save-snapshots")
+}
+
 /// `$XDG_CONFIG_HOME`, falling back to `~/.config` when unset or not absolute, as the XDG
 /// Base Directory spec requires.
 pub fn config_home(xdg_config_home: Option<&Path>, home: &Path) -> PathBuf {
