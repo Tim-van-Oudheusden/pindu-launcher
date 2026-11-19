@@ -8,7 +8,7 @@
 use std::fmt;
 use std::path::PathBuf;
 
-use crate::model::{Game, Source, SourceState};
+use crate::model::{Game, GameId, Source, SourceState};
 use crate::permissions::host_spawn_allowed;
 use crate::store::LATEST_SCHEMA_VERSION;
 use crate::system::update::OsRelease;
@@ -129,6 +129,91 @@ impl Private {
             titles: games.iter().map(|game| game.title.clone()).collect(),
         }
     }
+}
+
+/// A game's newest log, which the user chose to add to the report.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChosenLog {
+    /// The chosen game's title, which the log keeps because the user chose the game.
+    pub title: String,
+    /// The game's newest log; `None` when it has none yet.
+    pub log: Option<LogFile>,
+}
+
+/// A log file: its name and what it says.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LogFile {
+    /// The file's name, such as `2026-11-05T14-03-22.log`.
+    pub name: String,
+    /// The file's text.
+    pub text: String,
+}
+
+impl ChosenLog {
+    /// The lines added to the end of the report: the log, with every home folder spelling
+    /// written as `~` and every other title of the library replaced.
+    pub fn section(&self, private: &Private) -> String {
+        let mut section = format!("\nNewest log of “{}”", self.title);
+        match &self.log {
+            Some(log) => section.push_str(&format!(" ({}):\n{}", log.name, trimmed(&log.text))),
+            None => section.push_str(": none, start the game with Play with Logs\n"),
+        }
+        without_homes(
+            &without_titles_but(&section, &private.titles, &self.title),
+            &private.homes,
+        )
+    }
+}
+
+/// A game whose newest log the user can add to the report.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LogChoice {
+    /// The game.
+    pub id: GameId,
+    /// The game's title.
+    pub title: String,
+    /// The name of the game's newest log, such as `2026-11-05T14-03-22.log`.
+    pub newest: String,
+}
+
+/// The `games` that have a log, as `newest` finds each one's newest log, the game played
+/// with logs last first, so the game that just went wrong leads.
+pub fn log_choices(games: &[Game], newest: impl Fn(&GameId) -> Option<String>) -> Vec<LogChoice> {
+    let mut choices: Vec<LogChoice> = games
+        .iter()
+        .filter_map(|game| {
+            Some(LogChoice {
+                newest: newest(&game.id)?,
+                id: game.id.clone(),
+                title: game.title.clone(),
+            })
+        })
+        .collect();
+    // A log's name starts with the time it started, so the latest name is the newest.
+    choices.sort_by(|a, b| b.newest.cmp(&a.newest));
+    choices
+}
+
+/// How many of a long log's first lines the report keeps: the header Play with Logs
+/// writes, with the command, and the game's first words.
+const LOG_HEAD: usize = 10;
+
+/// How many of a long log's last lines the report keeps, where a crash usually shows.
+const LOG_TAIL: usize = 100;
+
+/// A log's text with its first [`LOG_HEAD`] and last [`LOG_TAIL`] lines, and a line
+/// saying how many lines between them are left out, so a long Proton log stays readable.
+fn trimmed(text: &str) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    if lines.len() <= LOG_HEAD + LOG_TAIL {
+        return text.to_owned();
+    }
+    let left_out = lines.len() - LOG_HEAD - LOG_TAIL;
+    let mut kept = lines[..LOG_HEAD].join("\n");
+    kept.push_str(&format!("\n[{left_out} lines left out]\n"));
+    kept.push_str(&lines[lines.len() - LOG_TAIL..].join("\n"));
+    kept.push('\n');
+    kept
 }
 
 impl Facts {
@@ -291,6 +376,24 @@ fn without_titles(text: &str, titles: &[String]) -> String {
         .fold(text.to_owned(), |text, title| text.replace(title, TITLE))
 }
 
+/// `text` with every one of `titles` replaced but `kept`: first the titles that hold
+/// `kept`, then the others wherever `kept` is not.
+fn without_titles_but(text: &str, titles: &[String], kept: &str) -> String {
+    if kept.is_empty() {
+        return without_titles(text, titles);
+    }
+    let (holding, others): (Vec<String>, Vec<String>) = titles
+        .iter()
+        .filter(|title| title.as_str() != kept)
+        .cloned()
+        .partition(|title| title.contains(kept));
+    without_titles(text, &holding)
+        .split(kept)
+        .map(|part| without_titles(part, &others))
+        .collect::<Vec<_>>()
+        .join(kept)
+}
+
 /// `text` with every spelling of the home folder in `homes` written as `~`, the longest
 /// first, so that `/var/home/ada` does not become `/var~`.
 fn without_homes(text: &str, homes: &[PathBuf]) -> String {
@@ -407,7 +510,7 @@ pub fn gamescope_version(output: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{GameId, LaunchKind, Source};
+    use crate::model::LaunchKind;
 
     fn facts() -> Facts {
         let mut steam = SourceState::new(Source::Steam);
@@ -593,5 +696,102 @@ mod tests {
             Some("3.14.2")
         );
         assert_eq!(gamescope_version("usage: gamescope [options]\n"), None);
+    }
+
+    fn chosen(text: &str) -> ChosenLog {
+        ChosenLog {
+            title: "Secret Quest".to_owned(),
+            log: Some(LogFile {
+                name: "2026-11-05T14-03-22.log".to_owned(),
+                text: text.to_owned(),
+            }),
+        }
+    }
+
+    #[test]
+    fn the_chosen_log_keeps_its_title_and_no_home_path() {
+        let section =
+            chosen("Game: Secret Quest\nCommand: /var/home/ada/Games/quest.exe\n\nstarted\n")
+                .section(&private());
+
+        assert!(section.contains("2026-11-05T14-03-22.log"), "{section}");
+        assert!(section.contains("Game: Secret Quest\n"), "{section}");
+        assert!(
+            section.contains("Command: ~/Games/quest.exe\n"),
+            "{section}"
+        );
+        assert!(!section.contains("/home/ada"), "{section}");
+    }
+
+    #[test]
+    fn the_chosen_log_hides_every_other_title_even_inside_its_own() {
+        let mut log = chosen(
+            "Game: Hidden Gem 2\nwine: Hidden Gem and Secret Quest saves found\n\
+             dlc: Hidden Gem 2 Deluxe\n",
+        );
+        log.title = "Hidden Gem 2".to_owned();
+        let mut private = private();
+        private
+            .titles
+            .extend(["Hidden Gem 2".to_owned(), "Hidden Gem 2 Deluxe".to_owned()]);
+
+        let section = log.section(&private);
+
+        assert!(section.contains("Game: Hidden Gem 2\n"), "{section}");
+        assert!(
+            section.contains("wine: [title] and [title] saves found\n"),
+            "{section}"
+        );
+        assert!(section.contains("dlc: [title]\n"), "{section}");
+    }
+
+    #[test]
+    fn a_game_without_a_log_says_how_to_get_one() {
+        let log = ChosenLog {
+            title: "Secret Quest".to_owned(),
+            log: None,
+        };
+
+        assert_eq!(
+            log.section(&private()),
+            "\nNewest log of “Secret Quest”: none, start the game with Play with Logs\n"
+        );
+    }
+
+    #[test]
+    fn a_long_log_keeps_its_start_and_its_end() {
+        let text: String = (1..=1000).map(|n| format!("line {n}\n")).collect();
+
+        let section = chosen(&text).section(&private());
+
+        assert!(section.contains("\nline 1\n"), "{section}");
+        assert!(section.contains("\nline 10\n[890 lines left out]\nline 901\n"));
+        assert!(section.ends_with("\nline 1000\n"));
+        assert!(!section.contains("\nline 11\n"));
+    }
+
+    #[test]
+    fn the_games_with_a_log_are_offered_newest_log_first() {
+        let game = |id: &str, title: &str| {
+            Game::new(
+                GameId::new(Source::Manual, id),
+                title,
+                LaunchKind::HostCommand,
+                0,
+            )
+        };
+        let games = [game("1", "Alpha"), game("2", "Beta"), game("3", "Gamma")];
+        let newest = |id: &GameId| match id.as_str() {
+            "manual:1" => Some("2026-11-01T10-00-00.log".to_owned()),
+            "manual:3" => Some("2026-11-05T14-03-22.log".to_owned()),
+            _ => None,
+        };
+
+        let titles: Vec<String> = log_choices(&games, newest)
+            .into_iter()
+            .map(|choice| choice.title)
+            .collect();
+
+        assert_eq!(titles, ["Gamma", "Alpha"]);
     }
 }
