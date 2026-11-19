@@ -26,6 +26,11 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **The SteamGridDB key.** It is typed hidden with the on-screen keyboard's hidden-text dialog (the one Wi-Fi
   passphrases and Bluetooth PINs use) and stored in the keyring through oo7, never in GSettings, files or logs.
   Without a working keyring the entry says so in place.
+- **Proton builds.** Quick Access's **Proton** level picks the default Proton build and the default MangoHud and
+  GameMode for new Windows games (the same settings as Preferences' Windows page), lists the downloaded builds, which
+  A asks to remove, and, once the player checks, the GE-Proton and Proton-CachyOS releases, which A downloads. A
+  download is a task in Activity that can be cancelled there or with A on its row. The default prefix folder stays
+  desktop-only: it needs a folder chooser.
 
 ## Flatpak, native and Pindu OS
 
@@ -47,6 +52,7 @@ permission is added.
 | #520 List what fullscreen mode cannot do that a console needs | Spike: every desktop-only flow, the issues to file, #518's destination | This page |
 | #521 Show a game's details on the fullscreen game page | Developer, genres and description in every shipped design | |
 | #522 Enter the SteamGridDB key in fullscreen mode | The hidden-text dialog and the keyring | #520 |
+| #567 Download and remove Proton builds in fullscreen mode | Proton downloads and removal, the defaults for new Windows games | |
 
 The issues #520 files join this table when they exist.
 

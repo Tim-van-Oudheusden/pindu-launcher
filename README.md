@@ -50,7 +50,7 @@ widgets so it looks and behaves like the rest of GNOME.
   playtime. Pindu launcher only reads the launchers' files and never writes to them.
 - **Windows games too.** Add a Windows game, or its installer, by hand and it runs with Proton through
   [umu](https://github.com/Open-Wine-Components/umu-launcher) in a prefix of its own. Download GE-Proton and
-  Proton-CachyOS builds from Preferences, and turn on MangoHud or GameMode per game.
+  Proton-CachyOS builds from Preferences or fullscreen mode's Quick Access, and turn on MangoHud or GameMode per game.
 - **A fullscreen mode for the couch.** A controller-first Home, library and game pages, a Quick Access panel, an
   on-screen keyboard for search and navigation sounds, with switchable designs and your own CSS
   ([Fullscreen mode](#fullscreen-mode)).
@@ -304,6 +304,18 @@ ones already installed, and installs the one you pick from Flathub, all with a c
 - The Flatpak cannot install apps and gets no permission to, so it opens the store's page in your software centre
   and says so.
 - Once a store is installed the library refreshes; sign in to the store, and its games show.
+
+### Proton
+
+Quick Access's **Proton** does what Preferences' Windows and Proton pages do for Proton, with a controller alone:
+
+- **Defaults:** the Proton build Windows games run with unless their page names one (**Newest** follows the newest
+  build on the machine), and whether games added from now on start with **MangoHud** and **GameMode**. These are the
+  same settings as in Preferences. The default prefix folder needs a folder chooser, so it stays in Preferences.
+- **Downloaded Builds** lists the builds in the launcher's tools folder; select one to remove it, after a question.
+- **Check for Releases** lists the newest GE-Proton and Proton-CachyOS releases from GitHub, the only time the level
+  goes online. Select one to download and install it: its row shows how far it is, and it is a task in Activity, where
+  it can be cancelled; selecting its row again stops it too. A notification says how it ended.
 
 ### Controllers
 
