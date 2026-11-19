@@ -46,6 +46,7 @@ crates/pindu-ui/src/quick_access.rs
 crates/pindu-ui/src/save_service.rs
 crates/pindu-ui/src/search_keyboard.rs
 crates/pindu-ui/src/search_provider.rs
+crates/pindu-ui/src/selection_mode.rs
 crates/pindu-ui/src/session_service.rs
 crates/pindu-ui/src/sources.rs
 crates/pindu-ui/src/steamgriddb_service.rs
