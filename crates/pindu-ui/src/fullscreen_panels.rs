@@ -534,6 +534,7 @@ impl PinduWindow {
             GameOption::ProtonDb => ("app", "open-protondb"),
             GameOption::PcGamingWiki => ("app", "open-pcgamingwiki"),
             GameOption::ChangeArtwork => ("win", "change-artwork"),
+            GameOption::SaveSnapshots => ("win", "save-snapshots"),
             GameOption::Collections => return,
         };
         if group == "app" {
@@ -562,6 +563,7 @@ fn option_label(option: GameOption, game: &GameObject) -> (&'static str, String)
         GameOption::RemoveFromFavourites => ("starred-symbolic", gettext("Remove from Favourites")),
         GameOption::Collections => ("folder-symbolic", gettext("Collections")),
         GameOption::ChangeArtwork => ("image-x-generic-symbolic", gettext("Change Artwork")),
+        GameOption::SaveSnapshots => ("document-save-symbolic", gettext("Save Snapshots")),
         GameOption::Hide => ("view-conceal-symbolic", gettext("Hide")),
         GameOption::Unhide => ("view-reveal-symbolic", gettext("Unhide")),
         GameOption::OpenInLauncher => (

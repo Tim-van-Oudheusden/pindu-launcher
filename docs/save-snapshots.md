@@ -17,9 +17,10 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **Snapshot on exit.** After a Windows game in a prefix Pindu manages exits cleanly, which is umu ending by itself
   with status 0, its saves are copied as a plain folder, atomically. It runs as a task in Activity, and a failed write
   says so in a toast and leaves the earlier snapshots intact. See [How snapshots are stored](#how-snapshots-are-stored).
-- **Restore.** Both shells list a game's snapshots with time, size and the exact paths included. A restore first takes
-  a safety snapshot, refuses while the game runs, and restores only inside the prefix or the folders the user
-  configured.
+- **Restore.** Both shells list a game's snapshots with time, size and the exact paths included: **Save Snapshots…**
+  in the desktop game page's menu, and Save Snapshots in fullscreen mode's options sheet, which a controller drives
+  alone. A restore asks first, takes a safety snapshot, refuses while the game runs, and restores only inside the
+  prefix's user folders. See [How a restore works](#how-a-restore-works).
 - **A copy elsewhere.** The user can pick a folder through the file chooser portal, which can be one that Syncthing,
   Nextcloud or a drive already syncs; snapshots are copied there too, and the choice survives a restart. A folder that
   is gone is reported, not treated as a failure of the game. There is no Pindu cloud.
@@ -44,7 +45,7 @@ after `proton_launch` sees the game exit.
 - **Unchanged saves are skipped.** When every file's path, size and modification time equal the newest snapshot's,
   none is written, so quitting from a menu five times does not push out the last five saves.
 - **Retention.** The newest five snapshots taken on exit and, separately, the newest two taken before a restore are
-  kept; older ones are removed after each new snapshot.
+  kept; older ones are removed after each new snapshot and after each restore.
 
 Excluded by default, with paths relative to a user folder and names matched whatever their case:
 
@@ -56,6 +57,25 @@ Excluded by default, with paths relative to a user folder and names matched what
 - `Pictures`, `Videos`, `Music` and `Downloads`, and the same names under `Documents`;
 - at any depth, folders named `Local Storage`, `Session Storage`, `IndexedDB`, `*cache*`, `Crashes`, `CrashDumps` and
   `Crash Reports`, and files named `Cookies`, `Cookies-journal`, `Login Data` and `Web Data`.
+
+## How a restore works
+
+`saves::restore` does it, and `save_service::restore` runs it on a worker thread as a task in Activity; the dialog in
+`crates/pindu-ui/src/save_snapshots_dialog.rs` lists the snapshots and asks before a restore.
+
+- **Never while the game runs.** A restore is refused while the game runs or a snapshot of it is being written, and
+  the game does not start until the restore is through. The dialog says to quit the game and turns Restore off.
+- **Checked before anything is written.** The snapshot must be the game's own, the prefix must have a real
+  `drive_c/users/` folder, and every file it holds must lie in a user folder there, outside the exclusion rules, with
+  no `..` and no symbolic link on its way, in the prefix or in the snapshot. Otherwise nothing is touched.
+- **A safety snapshot first.** The saves being replaced are snapshotted with the reason `before-restore`, unless they
+  are as the newest snapshot holds them already. The newest two of those are kept, apart from the five taken on exit,
+  so restores never push out the snapshots taken on exit, and old ones are pruned only after the restore, never the
+  one being restored.
+- **Mirror, not merge.** Each file is copied beside its place, flushed to disk, given its recorded modification time
+  and renamed over the old one, so a failed copy leaves that file as it was. Files under the user folders that the
+  snapshot does not hold are removed, except what the exclusion rules leave out: caches, runtimes, credential stores
+  and the rest stay as they are, and nothing outside `drive_c/users/` is touched.
 
 ## Flatpak, native and Pindu OS
 

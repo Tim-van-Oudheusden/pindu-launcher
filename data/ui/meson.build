@@ -16,6 +16,7 @@ blueprint_names = [
   'menu_drawer',
   'preferences',
   'quick_access',
+  'save_snapshots_dialog',
   'secret_dialog',
   'shortcuts-dialog',
   'window',

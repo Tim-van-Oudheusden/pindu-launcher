@@ -41,6 +41,7 @@ crates/pindu-ui/src/proton_downloads_page.rs
 crates/pindu-ui/src/proton_launch.rs
 crates/pindu-ui/src/quick_access.rs
 crates/pindu-ui/src/save_service.rs
+crates/pindu-ui/src/save_snapshots_dialog.rs
 crates/pindu-ui/src/search_keyboard.rs
 crates/pindu-ui/src/search_provider.rs
 crates/pindu-ui/src/session_service.rs
@@ -72,6 +73,7 @@ data/ui/home_page.blp
 data/ui/menu_drawer.blp
 data/ui/preferences.blp
 data/ui/quick_access.blp
+data/ui/save_snapshots_dialog.blp
 data/ui/secret_dialog.blp
 data/ui/shortcuts-dialog.blp
 data/ui/window.blp

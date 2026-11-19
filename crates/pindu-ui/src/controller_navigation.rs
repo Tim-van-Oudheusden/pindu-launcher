@@ -35,6 +35,7 @@ use crate::artwork_dialog::ArtworkDialog;
 use crate::fullscreen::Sound;
 use crate::hold_progress::destructive_action;
 use crate::models::GameObject;
+use crate::save_snapshots_dialog::SaveSnapshotsDialog;
 use crate::window::PinduWindow;
 
 impl PinduWindow {
@@ -412,7 +413,13 @@ impl PinduWindow {
                 _ => menu.popdown(),
             }
         } else if let Some(dialog) = self.visible_dialog() {
-            dialog.close();
+            // A dialog with pages of its own goes back to its first page before it closes.
+            let stepped_back = dialog
+                .downcast_ref::<SaveSnapshotsDialog>()
+                .is_some_and(SaveSnapshotsDialog::go_back);
+            if !stepped_back {
+                dialog.close();
+            }
         } else if self.shows_home_section() {
             self.imp().home_page.show_sections();
         } else {

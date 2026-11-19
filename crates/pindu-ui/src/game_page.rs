@@ -21,6 +21,7 @@ use pindu_core::manual;
 use pindu_core::model::{Collection, Game, GameId, LaunchConfig, LaunchKind, Source, Timestamp};
 use pindu_core::panels::Playing;
 use pindu_core::reading;
+use pindu_core::saves;
 
 use crate::collection_actions::collection_menu;
 use crate::launch_service::launcher_name;
@@ -620,6 +621,9 @@ fn more_menu(object: &GameObject, collections: &[Collection]) -> gio::Menu {
             logs.append_item(&item(gettext("Start _Safely"), "app.start-safely"));
         }
         logs.append_item(&item(gettext("Open Latest L_og"), "win.open-log"));
+        if saves::offers_snapshots(&game) {
+            logs.append_item(&item(gettext("Save S_napshots…"), "win.save-snapshots"));
+        }
         menu.append_section(None, &logs);
     }
     menu.append_section(None, &collection_menu(object, collections));

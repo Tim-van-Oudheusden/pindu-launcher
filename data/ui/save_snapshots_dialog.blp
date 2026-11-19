@@ -1,0 +1,124 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Save Snapshots: a Windows game's save snapshots, newest first, with their time, size and
+// why they were taken. One leads to its page, which lists the exact paths it holds and what
+// snapshots leave out, and restores it after a confirmation. Both shells open it, fullscreen
+// mode from the game's options sheet; a controller moves through it as through any dialog.
+// save_snapshots_dialog.rs fills it.
+template $PinduSaveSnapshotsDialog: Adw.Dialog {
+  title: _("Save Snapshots");
+  content-width: 600;
+  content-height: 640;
+
+  child: Adw.ToastOverlay toasts {
+    child: Adw.NavigationView navigation {
+      Adw.NavigationPage {
+        title: _("Save Snapshots");
+        tag: "list";
+
+        child: Adw.ToolbarView {
+          [top]
+          Adw.HeaderBar {}
+
+          [top]
+          Adw.Banner running_banner {
+            title: _("Quit the game to restore a snapshot");
+          }
+
+          content: Stack stack {
+            StackPage {
+              name: "loading";
+
+              child: Adw.Spinner {
+                halign: center;
+                valign: center;
+                width-request: 32;
+                height-request: 32;
+              };
+            }
+
+            StackPage {
+              name: "empty";
+
+              child: Adw.StatusPage empty_status {
+                icon-name: "document-save-symbolic";
+                title: _("No Snapshots Yet");
+                description: _("The saves are copied each time the game exits");
+              };
+            }
+
+            StackPage {
+              name: "list";
+
+              child: Adw.PreferencesPage {
+                Adw.PreferencesGroup {
+                  description: _("The newest five taken when the game exited and the newest two taken before a restore are kept");
+
+                  ListBox snapshot_list {
+                    selection-mode: none;
+                    row-activated => $snapshot_activated() swapped;
+
+                    styles [
+                      "boxed-list",
+                    ]
+                  }
+                }
+              };
+            }
+          };
+        };
+      }
+
+      Adw.NavigationPage snapshot_page {
+        tag: "snapshot";
+
+        child: Adw.ToolbarView {
+          [top]
+          Adw.HeaderBar {}
+
+          content: Adw.PreferencesPage {
+            Adw.PreferencesGroup summary_group {
+              Adw.ButtonRow restore_row {
+                title: _("_Restore…");
+                use-underline: true;
+                start-icon-name: "edit-undo-symbolic";
+                activated => $restore_activated() swapped;
+
+                styles [
+                  "destructive-action",
+                ]
+              }
+            }
+
+            Adw.PreferencesGroup {
+              title: _("Included");
+              description: _("Every file the snapshot holds, below the prefix’s drive_c/users folder");
+
+              ListBox included_list {
+                selection-mode: none;
+
+                styles [
+                  "boxed-list",
+                ]
+              }
+            }
+
+            Adw.PreferencesGroup {
+              title: _("Left Out");
+              description: _("Caches, runtimes, media and credential stores in the user folders are never copied. Neither are the registry, drive_c/ProgramData or saves in the game’s install folder.");
+
+              ListBox excluded_list {
+                selection-mode: none;
+
+                styles [
+                  "boxed-list",
+                ]
+              }
+            }
+          };
+        };
+      }
+    };
+  };
+}

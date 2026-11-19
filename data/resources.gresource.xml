@@ -17,6 +17,7 @@
     <file preprocess="xml-stripblanks">ui/menu_drawer.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences.ui</file>
     <file preprocess="xml-stripblanks">ui/quick_access.ui</file>
+    <file preprocess="xml-stripblanks">ui/save_snapshots_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/secret_dialog.ui</file>
     <!-- AdwApplication loads it from here and adds app.shortcuts on Ctrl+?. -->
     <file preprocess="xml-stripblanks" alias="shortcuts-dialog.ui">ui/shortcuts-dialog.ui</file>
