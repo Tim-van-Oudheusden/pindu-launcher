@@ -496,8 +496,9 @@ impl HomePage {
         ))
     }
 
-    /// Plays, pauses or holds Home's background on its first frame, as
-    /// `home::background_playback` says for where the window is and the screen shown.
+    /// Plays, pauses, holds Home's background on its first frame or takes it off the page,
+    /// as `home::background_playback` says for where the window is and the screen shown.
+    /// Taken off, `.home-background`'s plain black shows in its place.
     fn show_background_playback(&self) {
         let imp = self.imp();
         let Some(media) = imp.background_media.borrow().clone() else {
@@ -508,9 +509,15 @@ impl HomePage {
             first_screen: context.first_screen && imp.open.get().is_none(),
             ..context
         };
-        match home::background_playback(context) {
+        let playback = home::background_playback(context);
+        // A video that failed to play stays off the page.
+        let shown = playback != Playback::Hidden && media.error().is_none();
+        if imp.background.paintable().is_some() != shown {
+            imp.background.set_paintable(shown.then_some(&media));
+        }
+        match playback {
             Playback::Play => media.play(),
-            Playback::Pause => media.pause(),
+            Playback::Pause | Playback::Hidden => media.pause(),
             Playback::FirstFrame => {
                 media.pause();
                 if media.is_seekable() && media.timestamp() != 0 {

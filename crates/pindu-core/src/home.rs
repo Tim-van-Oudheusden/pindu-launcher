@@ -120,6 +120,9 @@ pub enum Playback {
     Pause,
     /// Holds its first frame.
     FirstFrame,
+    /// Shows no video at all: Home's plain background colour stands in for it, with no
+    /// stars or waves behind the text.
+    Hidden,
 }
 
 /// Where the window is, as far as Home's background is concerned.
@@ -136,13 +139,17 @@ pub struct BackgroundContext {
     /// Pindu moves less (`accessibility::Accessibility::reduces_motion`): the desktop's
     /// animations are off, the system asks for reduced motion, or Reduce Motion is on.
     pub reduced_motion: bool,
+    /// The system asks for high contrast (`adw::StyleManager:high-contrast`).
+    pub high_contrast: bool,
 }
 
-/// What Home's background does in `context`: it holds its first frame outside fullscreen
-/// mode and under reduced motion, pauses behind a section's games, a running game or a
-/// hidden window, and plays behind the first screen.
+/// What Home's background does in `context`: it shows nothing under high contrast, holds
+/// its first frame outside fullscreen mode and under reduced motion, pauses behind a
+/// section's games, a running game or a hidden window, and plays behind the first screen.
 pub fn background_playback(context: BackgroundContext) -> Playback {
-    if !context.fullscreen || context.reduced_motion {
+    if context.high_contrast {
+        Playback::Hidden
+    } else if !context.fullscreen || context.reduced_motion {
         Playback::FirstFrame
     } else if !context.first_screen || context.game_running || context.hidden {
         Playback::Pause
@@ -244,6 +251,7 @@ mod tests {
         game_running: false,
         hidden: false,
         reduced_motion: false,
+        high_contrast: false,
     };
 
     #[test]
@@ -320,6 +328,40 @@ mod tests {
             assert_eq!(
                 background_playback(context),
                 Playback::FirstFrame,
+                "{context:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn under_high_contrast_the_background_shows_nothing_whatever_else_holds() {
+        for context in [
+            ON_FIRST_SCREEN,
+            BackgroundContext {
+                reduced_motion: true,
+                ..ON_FIRST_SCREEN
+            },
+            BackgroundContext {
+                fullscreen: false,
+                ..ON_FIRST_SCREEN
+            },
+            BackgroundContext {
+                first_screen: false,
+                ..ON_FIRST_SCREEN
+            },
+            BackgroundContext {
+                game_running: true,
+                hidden: true,
+                ..ON_FIRST_SCREEN
+            },
+        ] {
+            let context = BackgroundContext {
+                high_contrast: true,
+                ..context
+            };
+            assert_eq!(
+                background_playback(context),
+                Playback::Hidden,
                 "{context:?}"
             );
         }
