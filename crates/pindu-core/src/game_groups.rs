@@ -18,6 +18,8 @@ pub const DEFAULT_SOURCE_ORDER: &[Source] = &[
     Source::HeroicGog,
     Source::HeroicEpic,
     Source::HeroicAmazon,
+    Source::Legendary,
+    Source::Itch,
     Source::Lutris,
     Source::Faugus,
     Source::Bottles,
@@ -25,6 +27,41 @@ pub const DEFAULT_SOURCE_ORDER: &[Source] = &[
     Source::Manual,
     Source::Desktop,
 ];
+
+/// The source order the `source-order` setting stores, as [`copy_order`] takes it: its
+/// sources in the order it lists them, then the ones it leaves out in
+/// [`DEFAULT_SOURCE_ORDER`]. Values that name no source, and repeats, are dropped, so a
+/// setting from an older or newer version still gives every source one place.
+pub fn source_order<S: AsRef<str>>(setting: impl IntoIterator<Item = S>) -> Vec<Source> {
+    let mut order: Vec<Source> = Vec::with_capacity(DEFAULT_SOURCE_ORDER.len());
+    let named = setting
+        .into_iter()
+        .filter_map(|value| value.as_ref().parse::<Source>().ok());
+    for source in named.chain(DEFAULT_SOURCE_ORDER.iter().copied()) {
+        if !order.contains(&source) {
+            order.push(source);
+        }
+    }
+    order
+}
+
+/// `order` with `source` one place earlier (`earlier`) or later, swapped with its
+/// neighbour: what Move Up and Move Down do. At either end, or for a source `order` lacks,
+/// the order stays as it is.
+pub fn moved_source(order: &[Source], source: Source, earlier: bool) -> Vec<Source> {
+    let mut order = order.to_vec();
+    if let Some(index) = order.iter().position(|named| *named == source) {
+        let other = if earlier {
+            index.checked_sub(1)
+        } else {
+            Some(index + 1).filter(|&other| other < order.len())
+        };
+        if let Some(other) = other {
+            order.swap(index, other);
+        }
+    }
+    order
+}
 
 /// The Lutris runner that only starts the Steam client, so Steam times its sessions too.
 const LUTRIS_STEAM_RUNNER: &str = "steam";

@@ -129,6 +129,8 @@ mod imp {
         #[template_child]
         pub sources: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub source_order: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub controllers_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub controllers: TemplateChild<gtk::ListBox>,
@@ -835,6 +837,7 @@ impl PinduQuickAccess {
             imp.switches.get(),
             imp.accessibility.get(),
             imp.sources.get(),
+            imp.source_order.get(),
             imp.text_sizes.get(),
             imp.artwork.get(),
             imp.filters.get(),

@@ -47,6 +47,11 @@
       <summary>Sources left out of the sidebar</summary>
       <description>Source IDs whose sidebar rows are hidden; their games still import.</description>
     </key>
+    <key name="source-order" type="as">
+      <default>[]</default>
+      <summary>Source order for a game's copies</summary>
+      <description>Source IDs, first preferred: which copy Play starts for a game with copies from several sources when you chose none. Sources left out follow in the default order.</description>
+    </key>
     <key name="prefer-steamgriddb" type="b">
       <default>false</default>
       <summary>Prefer SteamGridDB art</summary>

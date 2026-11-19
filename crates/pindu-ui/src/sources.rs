@@ -1,8 +1,109 @@
-//! User-facing names of game sources, and when they last synced.
+//! User-facing names of game sources, when they last synced, and the source order a
+//! game's copies follow.
 
+use std::cell::Cell;
+use std::rc::Rc;
+
+use adw::prelude::*;
 use gettextrs::{gettext, ngettext};
+use gtk::gio;
+use pindu_core::game_groups;
 use pindu_core::model::Source;
 use pindu_core::sync_age::SyncAge;
+
+/// The setting that stores the source order (see [`game_groups::source_order`]).
+pub const SOURCE_ORDER_KEY: &str = "source-order";
+
+/// The user's source order for a game's copies, every source once (see
+/// [`game_groups::source_order`]).
+pub fn source_order(settings: &gio::Settings) -> Vec<Source> {
+    game_groups::source_order(
+        settings
+            .strv(SOURCE_ORDER_KEY)
+            .iter()
+            .map(|value| value.as_str()),
+    )
+}
+
+/// Moves `source` one place up (`earlier`) or down in the user's source order.
+fn move_source(settings: &gio::Settings, source: Source, earlier: bool) {
+    let order = game_groups::moved_source(&source_order(settings), source, earlier);
+    let values: Vec<&str> = order.iter().map(|source| source.as_str()).collect();
+    let _ = settings.set_strv(SOURCE_ORDER_KEY, values.as_slice());
+}
+
+/// Fills `list` with the user's source order, one row per source with Move Up and Move
+/// Down, and fills it again whenever the order changes, here or elsewhere. Preferences and
+/// fullscreen mode's Sources level both show it; with a controller, Right on a row reaches
+/// its buttons and A presses one, and focus follows the source it moved.
+pub fn bind_source_order(list: &gtk::ListBox, settings: &gio::Settings) {
+    let moved: Rc<Cell<Option<(Source, bool)>>> = Rc::default();
+    fill_source_order(list, settings, &moved);
+    let list = list.downgrade();
+    settings.connect_changed(Some(SOURCE_ORDER_KEY), move |settings, _| {
+        if let Some(list) = list.upgrade() {
+            fill_source_order(&list, settings, &moved);
+        }
+    });
+}
+
+/// One row per source in the user's order; when focus was in `list`, it goes to the
+/// button that moved `moved`'s source, or to its other button at either end.
+fn fill_source_order(
+    list: &gtk::ListBox,
+    settings: &gio::Settings,
+    moved: &Rc<Cell<Option<(Source, bool)>>>,
+) {
+    let had_focus = list.focus_child().is_some();
+    list.remove_all();
+    let order = source_order(settings);
+    let last = order.len().saturating_sub(1);
+    for (index, &source) in order.iter().enumerate() {
+        let row = adw::ActionRow::builder().title(source_name(source)).build();
+        row.add_prefix(
+            &gtk::Image::builder()
+                .icon_name(source_icon(source))
+                .accessible_role(gtk::AccessibleRole::Presentation)
+                .build(),
+        );
+        let up = move_button("go-up-symbolic", &gettext("Move Up"), index > 0);
+        let down = move_button("go-down-symbolic", &gettext("Move Down"), index < last);
+        for (button, earlier) in [(&up, true), (&down, false)] {
+            let settings = settings.clone();
+            let moved = Rc::clone(moved);
+            button.connect_clicked(move |_| {
+                moved.set(Some((source, earlier)));
+                move_source(&settings, source, earlier);
+            });
+            row.add_suffix(button);
+        }
+        list.append(&row);
+        if let Some((moved_source, earlier)) = moved.get()
+            && had_focus
+            && moved_source == source
+        {
+            let (same, other) = if earlier { (&up, &down) } else { (&down, &up) };
+            if same.is_sensitive() {
+                same.grab_focus();
+            } else {
+                other.grab_focus();
+            }
+        }
+    }
+}
+
+/// A flat Move Up or Move Down button, named for screen readers by its tooltip.
+fn move_button(icon: &str, label: &str, sensitive: bool) -> gtk::Button {
+    let button = gtk::Button::builder()
+        .icon_name(icon)
+        .tooltip_text(label)
+        .valign(gtk::Align::Center)
+        .sensitive(sensitive)
+        .css_classes(["flat"])
+        .build();
+    button.update_property(&[gtk::accessible::Property::Label(label)]);
+    button
+}
 
 /// The name of a source as the user sees it.
 pub fn source_name(source: Source) -> String {

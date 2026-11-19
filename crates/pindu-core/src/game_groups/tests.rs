@@ -83,6 +83,45 @@ fn the_default_copy_follows_the_source_order() {
 }
 
 #[test]
+fn the_source_order_setting_drops_unknown_sources_and_appends_missing_ones() {
+    assert_eq!(source_order::<&str>([]), DEFAULT_SOURCE_ORDER);
+    let order = source_order(["lutris", "itch.io", "steam", "lutris"]);
+    assert_eq!(order[..2], [Source::Lutris, Source::Steam]);
+    let rest: Vec<Source> = DEFAULT_SOURCE_ORDER
+        .iter()
+        .copied()
+        .filter(|source| ![Source::Lutris, Source::Steam].contains(source))
+        .collect();
+    assert_eq!(order[2..], rest);
+}
+
+#[test]
+fn the_default_source_order_names_every_source_once() {
+    let mut sorted = DEFAULT_SOURCE_ORDER.to_vec();
+    sorted.sort_by_key(|source| source.as_str());
+    let mut all = Source::ALL.to_vec();
+    all.sort_by_key(|source| source.as_str());
+    assert_eq!(sorted, all);
+}
+
+#[test]
+fn moving_a_source_swaps_it_with_its_neighbour_and_stops_at_either_end() {
+    let order = [Source::Steam, Source::Lutris, Source::Desktop];
+
+    assert_eq!(
+        moved_source(&order, Source::Lutris, true),
+        [Source::Lutris, Source::Steam, Source::Desktop]
+    );
+    assert_eq!(
+        moved_source(&order, Source::Lutris, false),
+        [Source::Steam, Source::Desktop, Source::Lutris]
+    );
+    assert_eq!(moved_source(&order, Source::Steam, true), order);
+    assert_eq!(moved_source(&order, Source::Desktop, false), order);
+    assert_eq!(moved_source(&order, Source::Itch, true), order);
+}
+
+#[test]
 fn the_default_copy_is_the_most_recently_played_then_the_lowest_id() {
     let mut older = installed(Source::Desktop, "a");
     older.last_played_at = Some(10);

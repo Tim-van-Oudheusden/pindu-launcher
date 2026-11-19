@@ -17,6 +17,7 @@ use std::hint::black_box;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use pindu_core::game_groups;
 use pindu_core::library::{
     self, Filters, LibraryEntry, LibraryFilter, SearchKey, SortKey, SortMode, View,
 };
@@ -296,10 +297,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         "open the store, `library::load`",
         &time(runs, || {
             let store = Store::open(&db).expect("store opens");
-            black_box(library::load(&store, true).expect("library loads"));
+            black_box(
+                library::load(&store, true, game_groups::DEFAULT_SOURCE_ORDER)
+                    .expect("library loads"),
+            );
         }),
     );
-    let entries = library::load(&Store::open(&db)?, true)?;
+    let entries = library::load(&Store::open(&db)?, true, game_groups::DEFAULT_SOURCE_ORDER)?;
     report(
         "Load",
         "sort and search keys for every game",

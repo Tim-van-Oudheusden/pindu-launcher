@@ -107,7 +107,9 @@ widgets so it looks and behaves like the rest of GNOME.
 
 The importers read each launcher's data read-only and never its credentials: from the itch app's database they read
 its installs and games, never the profiles that hold your itch.io key. Preferences, Sources shows for each source the
-folder it was found in, when it last synced and the problems that sync ran into.
+folder it was found in, when it last synced and the problems that sync ran into. Its **Copy Order** decides which copy
+Play starts for a game with copies from several sources when you chose none: the installed copy from the source
+highest in the list, native copies still before Windows ones. **Move Up** and **Move Down** change it.
 
 The Flatpak has no permission for Legendary's `~/.config/legendary` or the itch app's folder (`~/.config/itch`, or
 `~/.var/app/io.itch.itch/config/itch` for the itch Flatpak), and does not ask for one: Preferences → Sources says so,
@@ -261,7 +263,9 @@ Guide + A never also opens the menu drawer.
   - **Larger Text:** fullscreen text about a quarter larger.
 - **Sources** lists every source Pindu imports from, says whether each was found on this computer, and has its
   **Import** switch, the same setting as Preferences, Sources: a source turned off is no longer read, and changing a
-  switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences.
+  switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences. Below them,
+  **Copy Order** lists the sources in the order a game's copies follow: Right on a source reaches its **Move Up** and
+  **Move Down**.
   - **Text Size:** fullscreen text at its default size or Large, Larger or Largest, each step about a quarter of
     the default larger. Preferences has the same choice; an install that had the former Larger Text on starts at
     Large.

@@ -34,7 +34,7 @@ use crate::proton_choice::{FirstChoice, ProtonChoice};
 use crate::proton_downloads_page::ProtonDownloadsPage;
 use crate::proton_launch;
 use crate::session_service;
-use crate::sources::{source_icon, source_name, sync_age_text};
+use crate::sources::{bind_source_order, source_icon, source_name, sync_age_text};
 use crate::steamgriddb_service;
 use crate::style_service::StyleService;
 use crate::sync_service::SyncService;
@@ -101,6 +101,8 @@ mod imp {
         pub sources_page: TemplateChild<adw::PreferencesPage>,
         #[template_child]
         pub sources_group: TemplateChild<adw::PreferencesGroup>,
+        #[template_child]
+        pub source_order: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub artwork_page: TemplateChild<adw::PreferencesPage>,
         #[template_child]
@@ -293,6 +295,7 @@ mod imp {
                 &self.text_size_row,
                 TextSize::ALL.map(TextSize::setting).to_vec(),
             );
+            bind_source_order(&self.source_order, &settings);
             self.settings.set(settings).expect("constructed once");
             self.obj().show_custom_style();
 

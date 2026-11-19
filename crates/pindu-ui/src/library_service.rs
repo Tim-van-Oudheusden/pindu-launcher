@@ -67,16 +67,19 @@ impl LibraryService {
         }
     }
 
-    /// Reads every game from the store on a worker thread and updates the model. A store
-    /// that cannot be read leaves the model as it was.
+    /// Reads every game from the store on a worker thread and updates the model, groups
+    /// starting the copy the user's source order puts first. A store that cannot be read
+    /// leaves the model as it was.
     pub fn reload(&self) {
         let service = self.clone();
-        let prefer_steamgriddb = gtk::gio::prelude::SettingsExt::boolean(
-            &gtk::gio::Settings::new(APP_ID),
-            "prefer-steamgriddb",
-        );
+        let settings = gtk::gio::Settings::new(APP_ID);
+        let prefer_steamgriddb =
+            gtk::gio::prelude::SettingsExt::boolean(&settings, "prefer-steamgriddb");
+        let source_order = crate::sources::source_order(&settings);
         glib::spawn_future_local(async move {
-            match gtk::gio::spawn_blocking(move || read_games(prefer_steamgriddb)).await {
+            match gtk::gio::spawn_blocking(move || read_games(prefer_steamgriddb, &source_order))
+                .await
+            {
                 Ok(Ok((games, collections, saved_filters))) => {
                     let model = &service.imp().model;
                     model.set_collections(collections, saved_filters);
@@ -600,9 +603,10 @@ type Library = (
     HashMap<i64, SavedFilter>,
 );
 
-fn read_games(prefer_steamgriddb: bool) -> Result<Library, String> {
+fn read_games(prefer_steamgriddb: bool, source_order: &[Source]) -> Result<Library, String> {
     let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
-    let games = library::load(&store, prefer_steamgriddb).map_err(|error| error.to_string())?;
+    let games = library::load(&store, prefer_steamgriddb, source_order)
+        .map_err(|error| error.to_string())?;
     let collections = store.collections().map_err(|error| error.to_string())?;
     let saved_filters = store.saved_filters().map_err(|error| error.to_string())?;
     Ok((games, collections, saved_filters))
