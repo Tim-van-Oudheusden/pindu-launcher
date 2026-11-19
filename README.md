@@ -210,7 +210,9 @@ Guide + A never also opens the menu drawer.
 - **Accessibility:**
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
-  - **Larger Text:** fullscreen text about a quarter larger.
+  - **Text Size:** fullscreen text at its default size or Large, Larger or Largest, each step about a quarter of
+    the default larger. Preferences has the same choice; an install that had the former Larger Text on starts at
+    Large.
 - **Sound Output**, subtitled with the output in use, lists the outputs PipeWire has (speakers, a television over
   HDMI, a receiver, a Bluetooth headset) with a check on the one in use. Choose one to make it the default; WirePlumber
   keeps the choice after a restart, and games that follow the default move to it. It reads the outputs with `pw-dump`

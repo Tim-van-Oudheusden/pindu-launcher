@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 18:10+0100\n"
+"POT-Creation-Date: 2026-11-19 19:32+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -96,7 +96,7 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_library.rs:146
 #: crates/pindu-ui/src/home_page.rs:91
 #: crates/pindu-ui/src/proton_downloads_page.rs:338
-#: crates/pindu-ui/src/widgets/cover_tile.rs:352 data/ui/quick_access.blp:1162
+#: crates/pindu-ui/src/widgets/cover_tile.rs:352 data/ui/quick_access.blp:1215
 #: data/ui/window.blp:77 data/ui/window.blp:303
 msgid "Installed"
 msgstr ""
@@ -135,23 +135,23 @@ msgid ""
 "library."
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:133
+#: crates/pindu-ui/src/application.rs:134
 msgid "Start a game by its ID, without opening the window"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:141
+#: crates/pindu-ui/src/application.rs:142
 msgid "Open the window in fullscreen mode"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:149
+#: crates/pindu-ui/src/application.rs:150
 msgid "Run as the client of a gamescope-session-plus session"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:681
+#: crates/pindu-ui/src/application.rs:684
 msgid "Getting artwork from SteamGridDB…"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:724
+#: crates/pindu-ui/src/application.rs:727
 #, rust-format
 msgid "Added one game"
 msgid_plural "Added {count} games"
@@ -159,12 +159,12 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
-#: crates/pindu-ui/src/application.rs:727
+#: crates/pindu-ui/src/application.rs:730
 #, rust-format
 msgid "From {sources}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:738
+#: crates/pindu-ui/src/application.rs:741
 #, rust-format
 msgid "One game is missing"
 msgid_plural "{count} games are missing"
@@ -172,65 +172,65 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
-#: crates/pindu-ui/src/application.rs:744
+#: crates/pindu-ui/src/application.rs:747
 #, rust-format
 msgid "No longer listed by {sources}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:781
+#: crates/pindu-ui/src/application.rs:784
 msgid "Game Art From SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:783
+#: crates/pindu-ui/src/application.rs:786
 msgid ""
 "SteamGridDB has covers, banners and logos for games that come without them. "
 "To use it, make a free account on steamgriddb.com and add your own API key "
 "in Preferences; it is kept in your keyring."
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:789
+#: crates/pindu-ui/src/application.rs:792
 msgid "_Not Now"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:790
+#: crates/pindu-ui/src/application.rs:793
 msgid "_Open Settings"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:814
+#: crates/pindu-ui/src/application.rs:817
 msgid "Export Library"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:829
+#: crates/pindu-ui/src/application.rs:832
 msgid "Library exported"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:831
+#: crates/pindu-ui/src/application.rs:834
 #, rust-format
 msgid "Could not export the library: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:845
+#: crates/pindu-ui/src/application.rs:848
 msgid "Library Backups"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:850
+#: crates/pindu-ui/src/application.rs:853
 msgid "Import Backup"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:863
+#: crates/pindu-ui/src/application.rs:866
 msgid "This file is not a library backup"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:865
+#: crates/pindu-ui/src/application.rs:868
 msgid "This backup is from a newer version of Pindu launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:868
+#: crates/pindu-ui/src/application.rs:871
 #, rust-format
 msgid "Could not import the backup: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:941
+#: crates/pindu-ui/src/application.rs:944
 #: data/gamescope-session/gamescope-session-pindu.desktop.in:2
 #: data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in:2
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:7
@@ -239,45 +239,45 @@ msgid "Pindu launcher"
 msgstr ""
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-#: crates/pindu-ui/src/application.rs:949
+#: crates/pindu-ui/src/application.rs:952
 msgid "translator-credits"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:966
+#: crates/pindu-ui/src/application.rs:983
 #, rust-format
 msgid "Added artwork for one game"
 msgid_plural "Added artwork for {count} games"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:971
+#: crates/pindu-ui/src/application.rs:988
 msgid "No new artwork found"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:972
+#: crates/pindu-ui/src/application.rs:989
 msgid "SteamGridDB did not accept the key"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:973
+#: crates/pindu-ui/src/application.rs:990
 msgid "Could not reach SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:985
+#: crates/pindu-ui/src/application.rs:1002
 msgid "Nothing new to restore"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:987
+#: crates/pindu-ui/src/application.rs:1004
 msgid "Backup restored"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:993
+#: crates/pindu-ui/src/application.rs:1010
 #, rust-format
 msgid "one game in it is not in this library"
 msgid_plural "{count} games in it are not in this library"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:998
+#: crates/pindu-ui/src/application.rs:1015
 #, rust-format
 msgid "{result}; {note}"
 msgstr ""
@@ -999,14 +999,14 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_panels.rs:554
 #: crates/pindu-ui/src/hint_bar.rs:201
 #: crates/pindu-ui/src/widgets/cover_tile.rs:232
-#: crates/pindu-ui/src/window.rs:1387 data/ui/cover_tile.blp:65
+#: crates/pindu-ui/src/window.rs:1386 data/ui/cover_tile.blp:65
 msgid "Play"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:555
 #: crates/pindu-ui/src/hint_bar.rs:202
 #: crates/pindu-ui/src/widgets/cover_tile.rs:230
-#: crates/pindu-ui/src/window.rs:1385
+#: crates/pindu-ui/src/window.rs:1384
 msgid "Stop"
 msgstr ""
 
@@ -1053,7 +1053,7 @@ msgid "Open in {launcher}"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_performance.rs:197 data/ui/game_page.blp:306
-#: data/ui/preferences.blp:200 data/ui/quick_access.blp:1229
+#: data/ui/preferences.blp:200 data/ui/quick_access.blp:1282
 #: data/ui/window.blp:550
 msgid "MangoHud"
 msgstr ""
@@ -1455,7 +1455,7 @@ msgstr ""
 msgid "Playtime · Tracked Here"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:692 crates/pindu-ui/src/preferences.rs:570
+#: crates/pindu-ui/src/game_page.rs:692 crates/pindu-ui/src/preferences.rs:574
 msgid "None yet"
 msgstr ""
 
@@ -1705,119 +1705,119 @@ msgstr ""
 msgid "The connection failed (reason {reason})."
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:150
+#: crates/pindu-ui/src/preferences.rs:151
 msgid "Command copied"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:315
+#: crates/pindu-ui/src/preferences.rs:319
 msgid "Allowed"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:317
+#: crates/pindu-ui/src/preferences.rs:321
 msgid "Not allowed"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:399
+#: crates/pindu-ui/src/preferences.rs:403
 msgid "Not found on this computer"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:410
+#: crates/pindu-ui/src/preferences.rs:414
 msgid "Import"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:422
+#: crates/pindu-ui/src/preferences.rs:426
 msgid "Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:424
+#: crates/pindu-ui/src/preferences.rs:428
 msgid "Found automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:429 data/ui/game_dialog.blp:62
+#: crates/pindu-ui/src/preferences.rs:433 data/ui/game_dialog.blp:62
 #: data/ui/preferences.blp:187
 msgid "_Choose…"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:435
+#: crates/pindu-ui/src/preferences.rs:439
 msgid "Find Automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:466
+#: crates/pindu-ui/src/preferences.rs:470
 msgid "Show in Sidebar"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:483
+#: crates/pindu-ui/src/preferences.rs:487
 #, rust-format
 msgid "Choose the Folder of {source}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:525
+#: crates/pindu-ui/src/preferences.rs:529
 msgid "Choose the Prefix Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:569
+#: crates/pindu-ui/src/preferences.rs:573
 msgid "A key is stored in your keyring"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:572
+#: crates/pindu-ui/src/preferences.rs:576
 #, rust-format
 msgid "The keyring cannot be used: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:600
+#: crates/pindu-ui/src/preferences.rs:604
 #, rust-format
 msgid "The key was not saved: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:618
-#: crates/pindu-ui/src/quick_access.rs:953
+#: crates/pindu-ui/src/preferences.rs:622
+#: crates/pindu-ui/src/quick_access.rs:954
 msgid "Your fullscreen.css, over the design"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:620
+#: crates/pindu-ui/src/preferences.rs:624
 msgid "Create the style file or import one to turn it on"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:645
+#: crates/pindu-ui/src/preferences.rs:649
 #, rust-format
 msgid "The style folder cannot be created: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:664
+#: crates/pindu-ui/src/preferences.rs:668
 msgid "Stylesheets"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:670
+#: crates/pindu-ui/src/preferences.rs:674
 msgid "Import Style"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:688
+#: crates/pindu-ui/src/preferences.rs:692
 msgid "Style imported"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:690
+#: crates/pindu-ui/src/preferences.rs:694
 #, rust-format
 msgid "The style was not imported: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:705
+#: crates/pindu-ui/src/preferences.rs:709
 msgid "Style moved to fullscreen.css.bak"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:706
+#: crates/pindu-ui/src/preferences.rs:710
 msgid "My Stylesheet is off"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:708
+#: crates/pindu-ui/src/preferences.rs:712
 #, rust-format
 msgid "The style was not reset: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:726 data/ui/preferences.blp:325
+#: crates/pindu-ui/src/preferences.rs:730 data/ui/preferences.blp:334
 msgid "No Problems"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:729
+#: crates/pindu-ui/src/preferences.rs:733
 #, rust-format
 msgid "{count} Problem"
 msgid_plural "{count} Problems"
@@ -1838,7 +1838,7 @@ msgstr ""
 msgid "Default ({proton})"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_choice.rs:102
+#: crates/pindu-ui/src/proton_choice.rs:102 data/ui/preferences.blp:293
 msgid "Default"
 msgstr ""
 
@@ -2050,19 +2050,19 @@ msgstr ""
 msgid "Preparing…"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:368
+#: crates/pindu-ui/src/quick_access.rs:370
 #, rust-format
 msgid "Performance for {game}"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:955
+#: crates/pindu-ui/src/quick_access.rs:956
 #, rust-format
 msgid "Create {path} to restyle fullscreen mode"
 msgstr ""
 
 #. / Why Design cannot apply a design written for a newer style contract.
 
-#: crates/pindu-ui/src/quick_access.rs:1041
+#: crates/pindu-ui/src/quick_access.rs:1042
 msgid "Needs a newer Pindu launcher"
 msgstr ""
 
@@ -2251,11 +2251,11 @@ msgstr ""
 msgid "Some Games Could Not Be Imported"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1430
+#: crates/pindu-ui/src/window.rs:1429
 msgid "Pinned"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1450
+#: crates/pindu-ui/src/window.rs:1449
 #, rust-format
 msgid "{title}, pinned"
 msgstr ""
@@ -2455,73 +2455,84 @@ msgid ""
 "does the same."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:124
-msgid "Larger text in fullscreen mode"
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:130
+msgid "Text size in fullscreen mode"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:125
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:131
 msgid ""
-"Show fullscreen mode's text about a quarter larger, for reading from across "
-"the room. The desktop window is not affected."
+"How large fullscreen mode's text is, for reading from across the room: each "
+"step past default adds about a quarter. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:129
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:135
+msgid "Larger text in fullscreen mode (replaced)"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:136
+msgid ""
+"Replaced by fullscreen-text-size. On start-up, when this is on and no text "
+"size is chosen yet, the text size becomes large, the size this gave, and "
+"this turns off."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:140
 msgid "Custom fullscreen style"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:130
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:141
 msgid ""
 "Restyle fullscreen mode with your own stylesheet, fullscreen.css in the "
 "app's config folder. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:134
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:145
 msgid "Fullscreen design"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:135
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:146
 msgid ""
 "The id of the design fullscreen mode is shown in: a theme folder shipped "
 "with the app or in the app's config folder under themes. Empty for Adwaita, "
 "the standard look. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:139
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:150
 msgid "Fullscreen design variant"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:140
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:151
 msgid ""
 "The id of the chosen variant of the fullscreen design, for a design that "
 "offers variants; its stylesheet applies after the design's own. An empty or "
 "unknown id picks the design's first variant."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:149
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:160
 msgid "Fullscreen background blur"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:150
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:161
 msgid ""
 "How much Home's background and the focused game's art behind it are blurred "
 "in fullscreen mode. A design can restyle each strength."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:159
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:170
 msgid "Fullscreen background dim"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:160
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:171
 msgid ""
 "How much Home's background and the focused game's art behind it are darkened "
 "in fullscreen mode. A design can restyle each strength."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:164
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:175
 msgid "SteamGridDB prompt shown"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:165
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:176
 msgid ""
 "Whether the window has offered, once, to set up a SteamGridDB API key for "
 "game art."
@@ -2893,8 +2904,8 @@ msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:173
 msgid ""
-"Reduce Motion, Larger Text and a volume for navigation sounds in fullscreen "
-"mode"
+"Reduce Motion, four text sizes and a volume for navigation sounds in "
+"fullscreen mode"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:174
@@ -3026,14 +3037,14 @@ msgstr ""
 msgid "Choose the game's folder; its program, title and options come next."
 msgstr ""
 
-#: data/ui/game_dialog.blp:44 data/ui/quick_access.blp:1174
+#: data/ui/game_dialog.blp:44 data/ui/quick_access.blp:1227
 #: data/ui/window.blp:319
 msgid "Native"
 msgstr ""
 
 #: data/ui/game_dialog.blp:45 data/ui/game_dialog.blp:93
 #: data/ui/menu_drawer.blp:45 data/ui/preferences.blp:156
-#: data/ui/quick_access.blp:1170 data/ui/window.blp:315
+#: data/ui/quick_access.blp:1223 data/ui/window.blp:315
 msgid "Windows"
 msgstr ""
 
@@ -3172,7 +3183,7 @@ msgstr ""
 msgid "Ask Steam which of the game’s launch options to use"
 msgstr ""
 
-#: data/ui/game_page.blp:271 data/ui/quick_access.blp:1240
+#: data/ui/game_page.blp:271 data/ui/quick_access.blp:1293
 msgid "Changes apply the next time the game starts."
 msgstr ""
 
@@ -3185,12 +3196,12 @@ msgid "An overlay with the frame rate and how busy the computer is"
 msgstr ""
 
 #: data/ui/game_page.blp:311 data/ui/preferences.blp:205
-#: data/ui/quick_access.blp:1233 data/ui/window.blp:554
+#: data/ui/quick_access.blp:1286 data/ui/window.blp:554
 msgid "GameMode"
 msgstr ""
 
 #: data/ui/game_page.blp:312 data/ui/preferences.blp:206
-#: data/ui/quick_access.blp:1234 data/ui/window.blp:555
+#: data/ui/quick_access.blp:1287 data/ui/window.blp:555
 msgid "Asks the system to favour the game while it runs"
 msgstr ""
 
@@ -3232,7 +3243,7 @@ msgstr ""
 msgid "Medium"
 msgstr ""
 
-#: data/ui/preferences.blp:19
+#: data/ui/preferences.blp:19 data/ui/preferences.blp:294
 msgid "Large"
 msgstr ""
 
@@ -3474,45 +3485,54 @@ msgid ""
 "animations are off in the system settings"
 msgstr ""
 
-#: data/ui/preferences.blp:288 data/ui/quick_access.blp:1126
-msgid "Larger Text"
+#: data/ui/preferences.blp:288
+msgid "Text Size"
 msgstr ""
 
 #: data/ui/preferences.blp:289
-msgid "Text about a quarter larger, to read from across the room"
+msgid ""
+"Each step makes text about a quarter larger, to read from across the room"
 msgstr ""
 
-#: data/ui/preferences.blp:296 data/ui/quick_access.blp:805
+#: data/ui/preferences.blp:295
+msgid "Larger"
+msgstr ""
+
+#: data/ui/preferences.blp:296
+msgid "Largest"
+msgstr ""
+
+#: data/ui/preferences.blp:305 data/ui/quick_access.blp:805
 msgid "My Stylesheet"
 msgstr ""
 
-#: data/ui/preferences.blp:297
+#: data/ui/preferences.blp:306
 msgid ""
 "Restyle fullscreen mode with your own CSS, over the design. It never reaches "
 "the desktop window, and high contrast turns it off."
 msgstr ""
 
-#: data/ui/preferences.blp:300
+#: data/ui/preferences.blp:309
 msgid "Use My Stylesheet"
 msgstr ""
 
-#: data/ui/preferences.blp:304
+#: data/ui/preferences.blp:313
 msgid "Style File"
 msgstr ""
 
-#: data/ui/preferences.blp:310 data/ui/preferences.blp:315
+#: data/ui/preferences.blp:319 data/ui/preferences.blp:324
 msgid "Open Style Folder"
 msgstr ""
 
-#: data/ui/preferences.blp:330
+#: data/ui/preferences.blp:339
 msgid "_Import Style…"
 msgstr ""
 
-#: data/ui/preferences.blp:337
+#: data/ui/preferences.blp:346
 msgid "_Reset"
 msgstr ""
 
-#: data/ui/preferences.blp:342
+#: data/ui/preferences.blp:351
 msgid ""
 "Turns My Stylesheet off and renames fullscreen.css to fullscreen.css.bak"
 msgstr ""
@@ -3533,7 +3553,7 @@ msgstr ""
 msgid "Surprise Me"
 msgstr ""
 
-#: data/ui/quick_access.blp:238 data/ui/quick_access.blp:1144
+#: data/ui/quick_access.blp:238 data/ui/quick_access.blp:1197
 msgid "Filters"
 msgstr ""
 
@@ -3601,19 +3621,35 @@ msgstr ""
 msgid "Large Covers"
 msgstr ""
 
-#: data/ui/quick_access.blp:1166 data/ui/window.blp:307
+#: data/ui/quick_access.blp:1135
+msgid "Default Text"
+msgstr ""
+
+#: data/ui/quick_access.blp:1147
+msgid "Large Text"
+msgstr ""
+
+#: data/ui/quick_access.blp:1159
+msgid "Larger Text"
+msgstr ""
+
+#: data/ui/quick_access.blp:1171
+msgid "Largest Text"
+msgstr ""
+
+#: data/ui/quick_access.blp:1219 data/ui/window.blp:307
 msgid "Not Installed"
 msgstr ""
 
-#: data/ui/quick_access.blp:1178 data/ui/shortcuts-dialog.blp:43
+#: data/ui/quick_access.blp:1231 data/ui/shortcuts-dialog.blp:43
 msgid "Show Hidden Games"
 msgstr ""
 
-#: data/ui/quick_access.blp:1190
+#: data/ui/quick_access.blp:1243
 msgid "Clear Filters"
 msgstr ""
 
-#: data/ui/quick_access.blp:1228 data/ui/window.blp:549
+#: data/ui/quick_access.blp:1281 data/ui/window.blp:549
 msgid "Performance Overlay"
 msgstr ""
 

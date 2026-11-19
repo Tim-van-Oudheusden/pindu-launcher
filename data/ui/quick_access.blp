@@ -1121,9 +1121,62 @@ template $PinduQuickAccess: Box {
             Adw.SwitchRow reduce_motion_row {
               title: _("Reduce Motion");
             }
+          }
 
-            Adw.SwitchRow large_text_row {
+          // Radio rows on the setting's action, as Settings has its sizes.
+          ListBox text_sizes {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow {
+              title: _("Default Text");
+              activatable-widget: text_default;
+
+              [prefix]
+              CheckButton text_default {
+                action-name: "win.fullscreen-text-size";
+                action-target: "'default'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Large Text");
+              activatable-widget: text_large;
+
+              [prefix]
+              CheckButton text_large {
+                action-name: "win.fullscreen-text-size";
+                action-target: "'large'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
               title: _("Larger Text");
+              activatable-widget: text_larger;
+
+              [prefix]
+              CheckButton text_larger {
+                action-name: "win.fullscreen-text-size";
+                action-target: "'larger'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Largest Text");
+              activatable-widget: text_largest;
+
+              [prefix]
+              CheckButton text_largest {
+                action-name: "win.fullscreen-text-size";
+                action-target: "'largest'";
+                can-focus: false;
+              }
             }
           }
         };

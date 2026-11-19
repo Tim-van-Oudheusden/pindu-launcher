@@ -119,10 +119,21 @@
       <summary>Reduce motion in fullscreen mode</summary>
       <description>Hold Home's animated background on its first frame and change art without a crossfade in fullscreen mode. Turning off animations in the system settings does the same.</description>
     </key>
+    <key name="fullscreen-text-size" type="s">
+      <choices>
+        <choice value="default"/>
+        <choice value="large"/>
+        <choice value="larger"/>
+        <choice value="largest"/>
+      </choices>
+      <default>'default'</default>
+      <summary>Text size in fullscreen mode</summary>
+      <description>How large fullscreen mode's text is, for reading from across the room: each step past default adds about a quarter. The desktop window is not affected.</description>
+    </key>
     <key name="fullscreen-large-text" type="b">
       <default>false</default>
-      <summary>Larger text in fullscreen mode</summary>
-      <description>Show fullscreen mode's text about a quarter larger, for reading from across the room. The desktop window is not affected.</description>
+      <summary>Larger text in fullscreen mode (replaced)</summary>
+      <description>Replaced by fullscreen-text-size. On start-up, when this is on and no text size is chosen yet, the text size becomes large, the size this gave, and this turns off.</description>
     </key>
     <key name="fullscreen-custom-style" type="b">
       <default>false</default>

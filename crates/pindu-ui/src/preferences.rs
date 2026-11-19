@@ -14,6 +14,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
+use pindu_core::accessibility::{TEXT_SIZE_KEY, TextSize};
 use pindu_core::custom_style::ProblemSummary;
 use pindu_core::gamepad::{PROMPTS_KEY, Prompts, SWAP_KEY, Swap};
 use pindu_core::model::{Source, SourceState};
@@ -74,7 +75,7 @@ mod imp {
         #[template_child]
         pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
-        pub large_text_row: TemplateChild<adw::SwitchRow>,
+        pub text_size_row: TemplateChild<adw::ComboRow>,
         #[template_child]
         pub custom_style_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
@@ -214,9 +215,6 @@ mod imp {
                 )
                 .build();
             settings
-                .bind("fullscreen-large-text", &*self.large_text_row, "active")
-                .build();
-            settings
                 .bind(CUSTOM_STYLE_KEY, &*self.custom_style_row, "active")
                 .build();
             settings.connect_changed(
@@ -276,6 +274,12 @@ mod imp {
                 SWAP_KEY,
                 &self.swap_row,
                 Swap::ALL.map(Swap::setting).to_vec(),
+            );
+            bind_choice(
+                &settings,
+                TEXT_SIZE_KEY,
+                &self.text_size_row,
+                TextSize::ALL.map(TextSize::setting).to_vec(),
             );
             self.settings.set(settings).expect("constructed once");
             self.obj().show_custom_style();
