@@ -14,6 +14,7 @@ mod metadata;
 mod playtime;
 mod saved_filters;
 mod sources;
+mod wikidata;
 
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -38,6 +39,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("store/migrations/0008_game_metadata.sql"),
     include_str!("store/migrations/0009_launch_outcomes.sql"),
     include_str!("store/migrations/0010_saved_filter_genre.sql"),
+    include_str!("store/migrations/0011_wikidata_items.sql"),
 ];
 
 /// The schema version a freshly opened store is at.

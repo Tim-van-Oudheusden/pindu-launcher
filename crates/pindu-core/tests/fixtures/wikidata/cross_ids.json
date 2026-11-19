@@ -1,0 +1,457 @@
+{
+  "head" : {
+    "vars" : [ "steam", "item", "field", "value", "valueLabel" ]
+  },
+  "results" : {
+    "bindings" : [ {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193559"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "developer"
+      },
+      "valueLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "Valve Corporation"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "292030"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q4267401"
+      },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q1172164"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "developer"
+      },
+      "valueLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "CD Projekt RED"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "value" : {
+        "type" : "literal",
+        "value" : "Half-Life_2"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "P6337"
+      },
+      "valueLabel" : {
+        "type" : "literal",
+        "value" : "Half-Life_2"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "292030"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q4267401"
+      },
+      "value" : {
+        "type" : "literal",
+        "value" : "The_Witcher_3:_Wild_Hunt"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "P6337"
+      },
+      "valueLabel" : {
+        "type" : "literal",
+        "value" : "The_Witcher_3:_Wild_Hunt"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "value" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "P1733"
+      },
+      "valueLabel" : {
+        "type" : "literal",
+        "value" : "220"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "292030"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q4267401"
+      },
+      "value" : {
+        "type" : "literal",
+        "value" : "292030"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "P1733"
+      },
+      "valueLabel" : {
+        "type" : "literal",
+        "value" : "292030"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "value" : {
+        "type" : "literal",
+        "value" : "2254"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "P12561"
+      },
+      "valueLabel" : {
+        "type" : "literal",
+        "value" : "2254"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "292030"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q4267401"
+      },
+      "value" : {
+        "type" : "literal",
+        "value" : "4265"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "P12561"
+      },
+      "valueLabel" : {
+        "type" : "literal",
+        "value" : "4265"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q185029"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "first-person shooter"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q27670585"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "science fiction video game"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q115101598"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "post-apocalyptic video game"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q129722891"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "science fiction horror"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "292030"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q4267401"
+      },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q1422746"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "action role-playing game"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "292030"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q4267401"
+      },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q42409239"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "genre"
+      },
+      "valueLabel" : {
+        "xml:lang" : "en",
+        "type" : "literal",
+        "value" : "fantasy video game"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "292030"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q4267401"
+      },
+      "value" : {
+        "type" : "literal",
+        "value" : "game/the_witcher_3_wild_hunt"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "P2725"
+      },
+      "valueLabel" : {
+        "type" : "literal",
+        "value" : "game/the_witcher_3_wild_hunt"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "292030"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q4267401"
+      },
+      "value" : {
+        "type" : "literal",
+        "value" : "game/the_witcher_3_wild_hunt_expansion_pass"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "P2725"
+      },
+      "valueLabel" : {
+        "type" : "literal",
+        "value" : "game/the_witcher_3_wild_hunt_expansion_pass"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "292030"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q4267401"
+      },
+      "value" : {
+        "type" : "literal",
+        "value" : "the-witcher-3-wild-hunt"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "P6278"
+      },
+      "valueLabel" : {
+        "type" : "literal",
+        "value" : "the-witcher-3-wild-hunt"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "value" : {
+        "type" : "literal",
+        "value" : "half-life-2"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "P7597"
+      },
+      "valueLabel" : {
+        "type" : "literal",
+        "value" : "half-life-2"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "292030"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q4267401"
+      },
+      "value" : {
+        "type" : "literal",
+        "value" : "the-witcher-3-wild-hunt"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "P7597"
+      },
+      "valueLabel" : {
+        "type" : "literal",
+        "value" : "the-witcher-3-wild-hunt"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "220"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q193581"
+      },
+      "value" : {
+        "type" : "literal",
+        "value" : "half-life-2"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "P5794"
+      },
+      "valueLabel" : {
+        "type" : "literal",
+        "value" : "half-life-2"
+      }
+    }, {
+      "steam" : {
+        "type" : "literal",
+        "value" : "292030"
+      },
+      "item" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q4267401"
+      },
+      "value" : {
+        "type" : "literal",
+        "value" : "the-witcher-3-wild-hunt"
+      },
+      "field" : {
+        "type" : "literal",
+        "value" : "P5794"
+      },
+      "valueLabel" : {
+        "type" : "literal",
+        "value" : "the-witcher-3-wild-hunt"
+      }
+    } ]
+  }
+}

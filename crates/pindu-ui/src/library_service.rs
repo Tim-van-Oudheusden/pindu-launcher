@@ -1,6 +1,6 @@
 //! Loads the library from the store into the shared [`LibraryModel`], off the main thread.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 
 use crate::config::APP_ID;
@@ -13,12 +13,13 @@ use pindu_core::game_groups;
 use pindu_core::library::{self, LibraryEntry};
 use pindu_core::manual;
 use pindu_core::model::{
-    ArtLayout, ArtOrigin, Collection, Game, GameId, LaunchConfig, PerformanceTool, Source,
-    Timestamp,
+    ArtLayout, ArtOrigin, Collection, Game, GameId, LaunchConfig, MetadataField, PerformanceTool,
+    Source, Timestamp,
 };
 use pindu_core::paths::{default_library_db_path, default_user_art_dir};
 use pindu_core::saved_filters::SavedFilter;
 use pindu_core::store::{self, Store};
+use pindu_core::wikidata::{self, Provenance};
 
 use crate::file_service::PickedImage;
 use crate::models::LibraryModel;
@@ -451,6 +452,14 @@ impl LibraryService {
         self.read(move |store| store.steamgriddb_match(&id))
             .await
             .flatten()
+    }
+
+    /// Where each value a game shows came from, for the values Wikidata gave.
+    pub async fn provenances(&self, id: &GameId) -> BTreeMap<MetadataField, Provenance> {
+        let id = id.clone();
+        self.read(move |store| wikidata::provenances(store, &id))
+            .await
+            .unwrap_or_default()
     }
 
     /// Remembers the SteamGridDB game the user chose for a game.
