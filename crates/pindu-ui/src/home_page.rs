@@ -20,7 +20,7 @@ use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::glib;
 use pindu_core::focus::FocusMemory;
-use pindu_core::home::{self, BackgroundContext, CardArt, Detail, Playback, Strength};
+use pindu_core::home::{self, Background, BackgroundContext, CardArt, Detail, Playback, Strength};
 use pindu_core::library::{ArtSet, HistoryGroup};
 use pindu_core::model::GameId;
 use pindu_core::sections::{Section, SectionId};
@@ -180,6 +180,8 @@ mod imp {
         pub background: TemplateChild<gtk::Picture>,
         /// Home's background video, loaded the first time the window is fullscreen.
         pub background_media: RefCell<Option<gtk::MediaFile>>,
+        /// The background chosen in Quick Access.
+        pub background_choice: Cell<Background>,
         /// Where the window is, as the window last said (`set_background_context`).
         pub background_context: Cell<BackgroundContext>,
         #[template_child]
@@ -400,6 +402,25 @@ impl HomePage {
         self.show_background_playback();
     }
 
+    /// Switches Home to the chosen background, or remembers it until Home first loads.
+    pub(crate) fn set_background(&self, choice: Background) {
+        let imp = self.imp();
+        if imp.background_choice.replace(choice) == choice {
+            return;
+        }
+        let opened = imp
+            .background_media
+            .borrow()
+            .as_ref()
+            .is_some_and(|media| media.file().is_some());
+        // A pending first map will open the latest choice. For an opened video, use a
+        // fresh stream: reassigning the file can leave GTK stuck on the new first frame.
+        if opened {
+            self.load_background();
+            self.show_background_playback();
+        }
+    }
+
     /// Follows where the window is for Home's background. `first_screen` says whether
     /// Home is the shown page; the page itself knows whether its first screen shows.
     pub fn set_background_context(&self, context: BackgroundContext) {
@@ -411,10 +432,8 @@ impl HomePage {
         self.show_background_playback();
     }
 
-    /// Loads Home's background (`home/background-*.webm` in the app's data, in the size
-    /// `home::background_video` picks for the window's screen), muted and looped. A file
-    /// that is missing or does not play is logged and leaves the black of
-    /// `.home-background`.
+    /// Loads the chosen Home background, muted and looped. A file that is missing or
+    /// does not play is logged and leaves the black of `.home-background`.
     fn load_background(&self) {
         let media = gtk::MediaFile::new();
         // Looped by hand: with `loop` set, GTK's GStreamer player on GNOME 51 stops on the
@@ -448,8 +467,10 @@ impl HomePage {
             move |_| page.show_background_playback()
         ));
         let imp = self.imp();
+        if let Some(previous) = imp.background_media.replace(Some(media.clone())) {
+            previous.pause();
+        }
         imp.background.set_paintable(Some(&media));
-        imp.background_media.replace(Some(media.clone()));
         if self.is_mapped() {
             self.open_background(&media);
         } else {
@@ -472,14 +493,11 @@ impl HomePage {
         }
     }
 
-    /// Opens Home's background in the size `home::background_video` picks for the screen
-    /// the window is on, muted.
+    /// Opens the chosen background in the size that suits the window's screen, muted.
     fn open_background(&self, media: &gtk::MediaFile) {
-        media.set_filename(Some(
-            Path::new(PKGDATADIR)
-                .join("home")
-                .join(home::background_video(self.screen_pixels())),
-        ));
+        let choice = self.imp().background_choice.get();
+        let video = choice.video(self.screen_pixels());
+        media.set_filename(Some(Path::new(PKGDATADIR).join("home").join(video)));
         // After the file: GStreamer's player, which takes the mute, comes with it.
         media.set_muted(true);
     }

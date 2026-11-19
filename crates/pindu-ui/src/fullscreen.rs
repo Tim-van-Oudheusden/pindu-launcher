@@ -13,7 +13,9 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::ngettext;
 use gtk::{gdk, gio, glib};
-use pindu_core::home::{BLUR_KEY, BackgroundContext, DIM_KEY, Strength};
+use pindu_core::home::{
+    BACKGROUND_KEY, BLUR_KEY, Background, BackgroundContext, DIM_KEY, Strength,
+};
 use pindu_core::keys::{self, Escape, Modifiers};
 use pindu_core::sound::{media_volume, tone_wav};
 use pindu_core::themes::ThemeLayout;
@@ -150,6 +152,15 @@ impl PinduWindow {
             ));
             self.apply_layout(style.layout());
         }
+        self.settings().connect_changed(
+            Some(BACKGROUND_KEY),
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_, _| window.update_background_choice()
+            ),
+        );
+        self.update_background_choice();
         for key in [BLUR_KEY, DIM_KEY] {
             self.settings().connect_changed(
                 Some(key),
@@ -168,6 +179,11 @@ impl PinduWindow {
     fn apply_layout(&self, layout: ThemeLayout) {
         self.imp().home_page.set_layout(layout);
         self.update_fullscreen_top_bar();
+    }
+
+    fn update_background_choice(&self) {
+        let choice = Background::from_setting(&self.settings().string(BACKGROUND_KEY));
+        self.imp().home_page.set_background(choice);
     }
 
     /// Blurs and dims Home's background as Quick Access's Blur and Dim say, at once.
