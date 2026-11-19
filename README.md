@@ -741,6 +741,10 @@ copy is saved to `~/.local/share/pindu-launcher/reports/` (in the Flatpak,
 `~/.var/app/io.github.tim_van_oudheusden.pindu-launcher/data/pindu-launcher/reports/`), named after the date and time;
 the newest ten are kept, and the screen says where the copy went.
 
+When a game misbehaves, add its newest log from **Play with Logs**: on the desktop, the game's **More Actions** menu has
+**Debugging Information with Log**; in fullscreen mode, the Diagnostics Report has **Add a Game's Log**. The report then
+keeps that game's title, and still no other title and no home folder.
+
 ## Acknowledgments
 
 - [Cartridges](https://codeberg.org/kramo/cartridges) by kramo, the GNOME game launcher that showed how a libadwaita
