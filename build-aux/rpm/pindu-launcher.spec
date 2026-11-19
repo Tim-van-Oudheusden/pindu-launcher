@@ -6,7 +6,7 @@
 %global app_id io.github.tim_van_oudheusden.pindu-launcher
 
 Name:           pindu-launcher
-Version:        0.5.1
+Version:        0.6.0~rc1
 Release:        1%{?dist}
 # A pre-release's Version is X.Y.Z~rcN, which sorts below X.Y.Z; its tag and tarball name
 # it X.Y.Z-rc.N
@@ -98,6 +98,9 @@ appstreamcli validate --no-net %{buildroot}%{_metainfodir}/%{app_id}.metainfo.xm
 %{_datadir}/wayland-sessions/gamescope-session-pindu.desktop
 
 %changelog
+* Fri Nov 20 2026 Tim van Oudheusden - 0.6.0~rc1-1
+- See https://github.com/Tim-van-Oudheusden/pindu-launcher/releases/tag/v0.6.0-rc.1
+
 * Thu Nov 19 2026 Tim van Oudheusden - 0.5.1-1
 - See https://github.com/Tim-van-Oudheusden/pindu-launcher/releases/tag/v0.5.1
 
