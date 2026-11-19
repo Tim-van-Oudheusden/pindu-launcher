@@ -72,12 +72,15 @@ impl Store {
     }
 }
 
-/// The stored text of a value: genres as a JSON array, a Steam Deck rating as
+/// The stored text of a value: genres as a JSON array, a release year as its number,
+/// controller support as its fixed string, a Steam Deck rating as
 /// [`metadata::deck_json`]'s object, other fields as they are.
 fn value_text(value: &FieldValue) -> String {
     match value {
         FieldValue::Developer(text) | FieldValue::Description(text) => text.clone(),
         FieldValue::Genres(genres) => to_json(genres),
+        FieldValue::ReleaseYear(year) => year.to_string(),
+        FieldValue::ControllerSupport(support) => support.as_str().to_owned(),
         FieldValue::DeckCompatibility(deck) => metadata::deck_json(deck).to_string(),
     }
 }
@@ -89,6 +92,12 @@ fn metadata_value_from_row(row: &Row<'_>) -> rusqlite::Result<MetadataValue> {
         MetadataField::Description => FieldValue::Description(text),
         MetadataField::Genres => {
             FieldValue::Genres(serde_json::from_str(&text).map_err(conversion_failure)?)
+        }
+        MetadataField::ReleaseYear => {
+            FieldValue::ReleaseYear(text.parse().map_err(conversion_failure)?)
+        }
+        MetadataField::ControllerSupport => {
+            FieldValue::ControllerSupport(text.parse().map_err(conversion_failure)?)
         }
         MetadataField::DeckCompatibility => {
             FieldValue::DeckCompatibility(deck_compatibility(&text).map_err(conversion_failure)?)

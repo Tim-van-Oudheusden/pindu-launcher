@@ -570,11 +570,14 @@ fn path(value: &Value) -> Option<PathBuf> {
 }
 
 /// A metadata value the user set or a provider fetched, with its game, field, origin and
-/// time. Genres are a list, a Steam Deck rating an object, other fields text.
+/// time. Genres are a list, a release year a number, a Steam Deck rating an object, other
+/// fields text.
 fn metadata_value_json(id: &GameId, value: &MetadataValue) -> Value {
     let text = match &value.value {
         FieldValue::Developer(text) | FieldValue::Description(text) => json!(text),
         FieldValue::Genres(genres) => json!(genres),
+        FieldValue::ReleaseYear(year) => json!(year),
+        FieldValue::ControllerSupport(support) => json!(support.as_str()),
         FieldValue::DeckCompatibility(deck) => metadata::deck_json(deck),
     };
     json!({
@@ -612,6 +615,10 @@ fn metadata_value_from(entry: &Value) -> Option<MetadataValue> {
             }
             FieldValue::Genres(genres)
         }
+        MetadataField::ReleaseYear => {
+            FieldValue::ReleaseYear(i32::try_from(entry["value"].as_i64()?).ok()?)
+        }
+        MetadataField::ControllerSupport => FieldValue::ControllerSupport(text()?.parse().ok()?),
         MetadataField::DeckCompatibility => {
             FieldValue::DeckCompatibility(metadata::deck_from_json(&entry["value"])?)
         }
@@ -1212,7 +1219,7 @@ mod tests {
             developer: Some(developer.to_owned()),
             genres: genres.iter().map(|genre| (*genre).to_owned()).collect(),
             description: None,
-            deck_compatibility: None,
+            ..Metadata::default()
         }
     }
 
@@ -1256,6 +1263,39 @@ mod tests {
             .collect();
         assert_eq!(carried.len(), 3);
         assert_eq!(fresh.metadata_values(&portal).unwrap(), carried);
+    }
+
+    #[test]
+    fn a_users_release_year_and_controller_support_are_restored() {
+        use crate::model::ControllerSupport;
+        let (_dir, store) = synced_store();
+        let portal = GameId::new(Source::Steam, "400");
+        let mine = Metadata {
+            release_year: Some(2007),
+            controller_support: Some(ControllerSupport::Full),
+            ..Metadata::default()
+        };
+        store
+            .set_metadata(&portal, MetadataOrigin::User, &mine, 1_700_000_500)
+            .unwrap();
+        let backup = export(&store, 1_700_009_000).unwrap();
+        let (_fresh_dir, fresh) = synced_store();
+
+        import(&fresh, &backup).unwrap();
+
+        let mine_only = |store: &Store| -> Vec<MetadataValue> {
+            store
+                .metadata_values(&portal)
+                .unwrap()
+                .into_iter()
+                .filter(|value| value.origin == MetadataOrigin::User)
+                .collect()
+        };
+        assert_eq!(mine_only(&fresh).len(), 2);
+        assert_eq!(mine_only(&fresh), mine_only(&store));
+        let game = fresh.game(&portal).unwrap().unwrap();
+        assert_eq!(game.release_year, Some(2007));
+        assert_eq!(game.controller_support, Some(ControllerSupport::Full));
     }
 
     #[test]

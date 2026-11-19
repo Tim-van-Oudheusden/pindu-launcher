@@ -118,6 +118,11 @@ pub fn import(root: &Path, source: Source) -> Result<Snapshot, ImportError> {
                 .filter(|text| !text.is_empty())
         })
         .map(str::to_owned);
+        // Only Amazon (nile) records a release date, as a date string.
+        game.year = info
+            .pointer("/extra/releaseDate")
+            .and_then(Json::as_str)
+            .and_then(release_year);
 
         let install = if source == Source::HeroicSideload {
             info.get("is_installed")
@@ -188,6 +193,12 @@ fn text<'a>(value: &'a Json, key: &str) -> Option<&'a str> {
         .get(key)
         .and_then(Json::as_str)
         .filter(|text| !text.is_empty())
+}
+
+/// The year of a date string that starts `YYYY-`, such as `2019-11-05T00:00:00Z`.
+fn release_year(date: &str) -> Option<i32> {
+    let (year, _) = date.split_once('-')?;
+    year.parse().ok().filter(|year| *year > 0)
 }
 
 fn platform(name: &str) -> Option<Platform> {

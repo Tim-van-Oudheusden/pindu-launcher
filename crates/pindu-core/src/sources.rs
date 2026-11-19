@@ -23,7 +23,8 @@ use std::fmt;
 use std::path::PathBuf;
 
 use crate::model::{
-    ArtLayout, DeckCompatibility, LaunchConfig, LaunchKind, Platform, Source, Timestamp,
+    ArtLayout, ControllerSupport, DeckCompatibility, LaunchConfig, LaunchKind, Platform, Source,
+    Timestamp,
 };
 
 /// Everything one import run found in a source.
@@ -79,6 +80,8 @@ pub struct ImportedGame {
     pub genres: Vec<String>,
     /// The game's description, when the source has one.
     pub description: Option<String>,
+    /// How well the game supports a controller, when its source declares it.
+    pub controller_support: Option<ControllerSupport>,
     /// Steam's Steam Deck rating of the game; only Steam has one.
     pub deck_compatibility: Option<DeckCompatibility>,
     /// The source's own art, at most one per layout.
@@ -92,7 +95,8 @@ pub struct ImportedGame {
     pub service: Option<ServiceRef>,
     /// The runner the source starts the game with, such as `wine` or `linux`.
     pub runner: Option<String>,
-    /// The year the game was released, when the source knows it.
+    /// The year the game was released, when the source knows it: the game's release year
+    /// metadata, and kept in its source details for grouping copies too.
     pub year: Option<i32>,
 }
 
@@ -138,6 +142,7 @@ impl ImportedGame {
             launch_config: None,
             genres: Vec::new(),
             description: None,
+            controller_support: None,
             deck_compatibility: None,
             artwork: Vec::new(),
             source_flags: SourceFlags::default(),

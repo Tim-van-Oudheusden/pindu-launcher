@@ -7,7 +7,23 @@
       "art_square": "",
       "art_cover": "",
       "install": {},
+      "extra": {
+        "releaseDate": "2019-11-05T00:00:00Z"
+      },
       "is_installed": true,
+      "canRunOffline": true
+    },
+    {
+      "runner": "nile",
+      "app_name": "amzn1.adg.product.0002",
+      "title": "Amazon Game Without A Date",
+      "art_square": "",
+      "art_cover": "",
+      "install": {},
+      "extra": {
+        "releaseDate": ""
+      },
+      "is_installed": false,
       "canRunOffline": true
     }
   ]

@@ -47,6 +47,15 @@ In this order, local data first:
    they are in real libraries: release year, genres, controller support and Steam Deck compatibility from Steam's
    binary `appinfo.vdf`, which the Steam importer already parses, and `year` from Lutris's `pga.db`. The fields it
    finds reliable are imported offline, with fixture tests.
+
+   As built (#527), following #523's write-up: Steam's `appinfo.vdf` gives the release year (the UTC year of
+   `original_release_date`, else `steam_release_date`; 0 means unknown), genres (the `genres` IDs named from a fixed
+   table: 1 Action, 2 Strategy, 3 RPG, 4 Casual, 9 Racing, 18 Sports, 23 Indie, 25 Adventure, 28 Simulation, 29
+   Massively Multiplayer; Free To Play, Early Access and unknown IDs are dropped) and controller support (`full` or
+   `partial`; absent means not declared, not none). Lutris gives `year` and Heroic's Amazon library the year of
+   `extra.releaseDate`. All of them become source values in `game_metadata` (fields `release-year` and
+   `controller-support` join the three below, with no migration), and both game pages show them in the About group,
+   Steam's genre names translated. The year also stays in the source details, where grouping copies compares it.
 3. **Metadata with its origin.** A table holds values by field with their origin (source, provider, user) and time.
    Reading prefers the user's value, then a provider's, then the source's; a sync changes source values only. The user
    can edit developer, genres, description and release year from the desktop game page (and from fullscreen mode if
@@ -62,24 +71,22 @@ In this order, local data first:
    go through `Store::set_metadata(game, origin, metadata, now)`, which replaces one origin's values, keeps the time
    of a value that did not change and drops a field left empty. A sync calls it for the source only; `insert_game`
    records a new game's values as its source's; `update_game` never touches metadata, so saving a game read with a
-   user's value cannot turn it into the source's. Release year stays in the source details for now; #527 decides
-   whether it joins this table.
+   user's value cannot turn it into the source's. Release year and controller support joined the table with #527.
 
    Backups (#619) carry the user's and providers' values in a `metadata` list, each with the game's per-source ID, its
-   field, origin, value (genres as a list, a Steam Deck rating as its object) and time; a source's values are left out,
-   as the next sync writes them. A
-   restore adds a value only where that origin has none for the field in this library, keeps the time it was set and
-   counts it, so it never overwrites a value already there; a value for a game the library lacks is skipped and the
-   game counted as missing. This extends backup format 2 (#509), unreleased until then, so format 1 and 2 backups
-   still import.
+   field, origin, value (genres as a list, a release year as a number, a Steam Deck rating as its object) and time; a
+   source's values are left out, as the next sync writes them. A restore adds a value only where that origin has none
+   for the field in this library, keeps the time it was set and counts it, so it never overwrites a value already
+   there; a value for a game the library lacks is skipped and the game counted as missing. This extends backup format
+   2 (#509), unreleased until then, so format 1 and 2 backups still import.
 
    As built (#530): the desktop **Edit…** dialog (a game page's ⋮ menu) has a Details group with Developer, Genres
    (separated by commas) and Description, filled with what the game shows; as #520 decided, fullscreen mode has no
    edit. Saving goes through `pindu_core::metadata::edit_by_user(store, game, shown, edited, now)`, which writes user
    values for every copy of the game's group: a field the user left as shown keeps each copy's own user value, a
    field cleared drops the user's value so the game falls back to a provider's and then the source's, and a value the
-   game would fall back to anyway is not kept as the user's, so later syncs of it still show. Release year joins the
-   dialog once #527 moves it into this table.
+   game would fall back to anyway is not kept as the user's, so later syncs of it still show. Release year is in this
+   table since #527; editing it in the dialog is #641.
 4. **An online provider, opt-in, after a spike.** The spike compares SteamGridDB, IGDB, PCGamingWiki, Wikidata and
    others on licence and terms, whether a key is needed, which store IDs it maps (which helps
    [game identity](game-identity.md)), the fields it has and its rate limits, and recommends one or none. If one is

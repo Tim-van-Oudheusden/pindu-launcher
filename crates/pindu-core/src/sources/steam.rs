@@ -1,6 +1,7 @@
 //! Steam: libraries from `libraryfolders.vdf`, install state from `appmanifest_*.acf`,
-//! type, platform, developer and Steam Deck rating from the binary `appinfo.vdf`, art
-//! from `librarycache`, and playtime from the most recently used account's
+//! type, platform, developer, release year, genres, controller support and Steam Deck
+//! rating from the binary `appinfo.vdf`, art from `librarycache`, and playtime from the
+//! most recently used account's
 //! `userdata/<account>/config/localconfig.vdf`. Everything is read offline; nothing is
 //! written.
 
@@ -266,6 +267,13 @@ fn imported_game(app: LocalApp, info: Option<&Value>, cache: &Path) -> Option<Im
             .and_then(platform);
         game.deck_compatibility = common.and_then(deck_compatibility);
     }
+    if let Some(common) = common {
+        game.year = release_year(common);
+        game.genres = genres(common);
+        game.controller_support = common
+            .str("controller_support")
+            .and_then(|support| support.parse().ok());
+    }
     let icon = common.and_then(|common| common.str("icon"));
     game.artwork = artwork(cache, app.app_id, icon);
     Some(game)
@@ -286,6 +294,47 @@ fn developer(info: &Value) -> Option<String> {
         })
         .filter(|name| !name.is_empty())
         .map(str::to_owned)
+}
+
+/// The UTC year of the original release, else of the Steam release; Steam stores both as
+/// Unix seconds, 0 when it does not know.
+fn release_year(common: &Value) -> Option<i32> {
+    ["original_release_date", "steam_release_date"]
+        .into_iter()
+        .filter_map(|key| common.get(key).and_then(Value::as_i64))
+        .find(|secs| *secs > 0)
+        .and_then(|secs| i32::try_from(crate::saves::civil_from_days(secs / 86_400).0).ok())
+}
+
+/// The app's genres, named from Steam's genre IDs. Free To Play (37) and Early Access
+/// (70) are a price model and a release state, not genres, so they are left out with any
+/// ID the table does not know.
+fn genres(common: &Value) -> Vec<String> {
+    common
+        .get("genres")
+        .map(Value::entries)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|(_, id)| id.as_i64().and_then(genre_name))
+        .map(str::to_owned)
+        .collect()
+}
+
+/// Steam's name for a genre ID, in English; the shells translate it for display.
+fn genre_name(id: i64) -> Option<&'static str> {
+    Some(match id {
+        1 => "Action",
+        2 => "Strategy",
+        3 => "RPG",
+        4 => "Casual",
+        9 => "Racing",
+        18 => "Sports",
+        23 => "Indie",
+        25 => "Adventure",
+        28 => "Simulation",
+        29 => "Massively Multiplayer",
+        _ => return None,
+    })
 }
 
 /// Steam's Deck rating from `common.steam_deck_compatibility`: its `category` 0 to 3, and

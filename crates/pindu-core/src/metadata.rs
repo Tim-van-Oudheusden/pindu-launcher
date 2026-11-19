@@ -1,17 +1,21 @@
 //! A game's metadata kept by origin.
 //!
-//! Developer, genres, description and Steam Deck rating can each come from the game's
-//! source, an online provider or the user. The store keeps every origin's value with when
-//! it was set, and a sync writes only the source's; what a game shows is [`resolve`]d from
-//! them, the user's value first, then a provider's, then the source's. The user's values
-//! are written by [`edit_by_user`] from what they type over the details a game shows.
+//! Developer, genres, description, release year, controller support and Steam Deck
+//! rating can each come from the game's source, an online provider or the user. The store
+//! keeps every origin's value with when it was set, and a sync writes only the source's;
+//! what a game shows is [`resolve`]d from them, the user's value first, then a provider's,
+//! then the source's. The user's values are written by [`edit_by_user`] from what they type
+//! over the details a game shows.
 
 use crate::game_groups;
-use crate::model::{DeckCompatibility, Game, GameId, MetadataField, MetadataOrigin, Timestamp};
+use crate::model::{
+    ControllerSupport, DeckCompatibility, Game, GameId, MetadataField, MetadataOrigin, Timestamp,
+};
 use crate::store::{self, Store};
 
-/// A game's developer, genres, description and Steam Deck rating: the values one origin
-/// gives, or, resolved, the ones the game shows. An empty field has no value.
+/// A game's developer, genres, description, release year, controller support and Steam
+/// Deck rating: the values one origin gives, or, resolved, the ones the game shows. An
+/// empty field has no value.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Metadata {
     /// Who made the game.
@@ -20,6 +24,10 @@ pub struct Metadata {
     pub genres: Vec<String>,
     /// A description of the game.
     pub description: Option<String>,
+    /// The year the game was released.
+    pub release_year: Option<i32>,
+    /// How well the game supports a controller.
+    pub controller_support: Option<ControllerSupport>,
     /// Steam's Steam Deck rating.
     pub deck_compatibility: Option<DeckCompatibility>,
 }
@@ -31,6 +39,8 @@ impl Metadata {
             developer: game.developer.clone(),
             genres: game.genres.clone(),
             description: game.description.clone(),
+            release_year: game.release_year,
+            controller_support: game.controller_support,
             deck_compatibility: game.deck_compatibility,
         }
     }
@@ -40,6 +50,8 @@ impl Metadata {
         game.developer = self.developer;
         game.genres = self.genres;
         game.description = self.description;
+        game.release_year = self.release_year;
+        game.controller_support = self.controller_support;
         game.deck_compatibility = self.deck_compatibility;
     }
 
@@ -69,6 +81,8 @@ impl Metadata {
             values.push(FieldValue::Genres(self.genres.clone()));
         }
         values.extend(self.description.clone().map(FieldValue::Description));
+        values.extend(self.release_year.map(FieldValue::ReleaseYear));
+        values.extend(self.controller_support.map(FieldValue::ControllerSupport));
         values.extend(self.deck_compatibility.map(FieldValue::DeckCompatibility));
         values
     }
@@ -85,6 +99,8 @@ impl Metadata {
             FieldValue::Developer(developer) => self.developer = Some(developer),
             FieldValue::Genres(genres) => self.genres = genres,
             FieldValue::Description(description) => self.description = Some(description),
+            FieldValue::ReleaseYear(year) => self.release_year = Some(year),
+            FieldValue::ControllerSupport(support) => self.controller_support = Some(support),
             FieldValue::DeckCompatibility(deck) => self.deck_compatibility = Some(deck),
         }
     }
@@ -99,6 +115,10 @@ pub enum FieldValue {
     Genres(Vec<String>),
     /// A description of the game.
     Description(String),
+    /// The year the game was released.
+    ReleaseYear(i32),
+    /// How well the game supports a controller.
+    ControllerSupport(ControllerSupport),
     /// Steam's Steam Deck rating.
     DeckCompatibility(DeckCompatibility),
 }
@@ -110,6 +130,8 @@ impl FieldValue {
             Self::Developer(_) => MetadataField::Developer,
             Self::Genres(_) => MetadataField::Genres,
             Self::Description(_) => MetadataField::Description,
+            Self::ReleaseYear(_) => MetadataField::ReleaseYear,
+            Self::ControllerSupport(_) => MetadataField::ControllerSupport,
             Self::DeckCompatibility(_) => MetadataField::DeckCompatibility,
         }
     }
@@ -246,10 +268,19 @@ mod tests {
     }
 
     fn value_of(field: MetadataField, text: String) -> FieldValue {
+        // Fields that are not text take a value derived from it, so equal text gives an
+        // equal value.
+        let number = text.bytes().map(i32::from).sum::<i32>();
         match field {
             MetadataField::Developer => FieldValue::Developer(text),
             MetadataField::Genres => FieldValue::Genres(vec![text]),
             MetadataField::Description => FieldValue::Description(text),
+            MetadataField::ReleaseYear => FieldValue::ReleaseYear(1970 + number),
+            MetadataField::ControllerSupport => FieldValue::ControllerSupport(if number % 2 == 0 {
+                ControllerSupport::Full
+            } else {
+                ControllerSupport::Partial
+            }),
             // The text's bytes summed tell the values apart well enough.
             MetadataField::DeckCompatibility => FieldValue::DeckCompatibility(DeckCompatibility {
                 rating: crate::model::DeckRating::Verified,
@@ -354,7 +385,7 @@ mod tests {
             developer: Some("Valve".into()),
             genres: Vec::new(),
             description: None,
-            deck_compatibility: None,
+            ..Metadata::default()
         };
 
         assert_eq!(
