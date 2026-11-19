@@ -621,13 +621,7 @@ impl PreferencesDialog {
     fn show_key_status(&self) {
         let dialog = self.downgrade();
         glib::spawn_future_local(async move {
-            let status = match steamgriddb_service::api_key().await {
-                Ok(Some(_)) => gettext("A key is stored in your keyring"),
-                Ok(None) => gettext("None yet"),
-                Err(error) => {
-                    gettext("The keyring cannot be used: {error}").replace("{error}", &error)
-                }
-            };
+            let status = steamgriddb_service::key_status(&steamgriddb_service::api_key().await);
             if let Some(dialog) = dialog.upgrade() {
                 dialog.imp().key_status_row.set_subtitle(&status);
             }

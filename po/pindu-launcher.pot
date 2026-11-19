@@ -96,7 +96,7 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_library.rs:146
 #: crates/pindu-ui/src/home_page.rs:91
 #: crates/pindu-ui/src/proton_downloads_page.rs:338
-#: crates/pindu-ui/src/widgets/cover_tile.rs:352 data/ui/quick_access.blp:1345
+#: crates/pindu-ui/src/widgets/cover_tile.rs:352 data/ui/quick_access.blp:1376
 #: data/ui/window.blp:77 data/ui/window.blp:303
 msgid "Installed"
 msgstr ""
@@ -1065,7 +1065,7 @@ msgid "View on PCGamingWiki"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_performance.rs:197 data/ui/game_page.blp:326
-#: data/ui/preferences.blp:200 data/ui/quick_access.blp:1412
+#: data/ui/preferences.blp:200 data/ui/quick_access.blp:1443
 #: data/ui/window.blp:550
 msgid "MangoHud"
 msgstr ""
@@ -1480,7 +1480,8 @@ msgstr ""
 msgid "Playtime · Tracked Here"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:742 crates/pindu-ui/src/preferences.rs:626
+#: crates/pindu-ui/src/game_page.rs:742
+#: crates/pindu-ui/src/steamgriddb_service.rs:70
 msgid "None yet"
 msgstr ""
 
@@ -1803,69 +1804,60 @@ msgstr ""
 msgid "Choose the Prefix Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:625
-msgid "A key is stored in your keyring"
-msgstr ""
-
-#: crates/pindu-ui/src/preferences.rs:628
-#, rust-format
-msgid "The keyring cannot be used: {error}"
-msgstr ""
-
-#: crates/pindu-ui/src/preferences.rs:656
+#: crates/pindu-ui/src/preferences.rs:650
 #, rust-format
 msgid "The key was not saved: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:674
-#: crates/pindu-ui/src/quick_access.rs:962
+#: crates/pindu-ui/src/preferences.rs:668
+#: crates/pindu-ui/src/quick_access.rs:983
 msgid "Your fullscreen.css, over the design"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:676
+#: crates/pindu-ui/src/preferences.rs:670
 msgid "Create the style file or import one to turn it on"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:701
+#: crates/pindu-ui/src/preferences.rs:695
 #, rust-format
 msgid "The style folder cannot be created: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:720
+#: crates/pindu-ui/src/preferences.rs:714
 msgid "Stylesheets"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:726
+#: crates/pindu-ui/src/preferences.rs:720
 msgid "Import Style"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:744
+#: crates/pindu-ui/src/preferences.rs:738
 msgid "Style imported"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:746
+#: crates/pindu-ui/src/preferences.rs:740
 #, rust-format
 msgid "The style was not imported: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:761
+#: crates/pindu-ui/src/preferences.rs:755
 msgid "Style moved to fullscreen.css.bak"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:762
+#: crates/pindu-ui/src/preferences.rs:756
 msgid "My Stylesheet is off"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:764
+#: crates/pindu-ui/src/preferences.rs:758
 #, rust-format
 msgid "The style was not reset: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:782 data/ui/preferences.blp:325
+#: crates/pindu-ui/src/preferences.rs:776 data/ui/preferences.blp:325
 msgid "No Problems"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:785
+#: crates/pindu-ui/src/preferences.rs:779
 #, rust-format
 msgid "{count} Problem"
 msgid_plural "{count} Problems"
@@ -2098,19 +2090,28 @@ msgstr ""
 msgid "Preparing…"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:374
+#: crates/pindu-ui/src/quick_access.rs:385
 #, rust-format
 msgid "Performance for {game}"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:964
+#: crates/pindu-ui/src/quick_access.rs:985
 #, rust-format
 msgid "Create {path} to restyle fullscreen mode"
 msgstr ""
 
+#: crates/pindu-ui/src/quick_access.rs:1059 data/ui/quick_access.blp:1334
+msgid "SteamGridDB Key"
+msgstr ""
+
+#: crates/pindu-ui/src/quick_access.rs:1061
+msgid ""
+"Type your API key from SteamGridDB's preferences. It is kept in your keyring."
+msgstr ""
+
 #. / Why Design cannot apply a design written for a newer style contract.
 
-#: crates/pindu-ui/src/quick_access.rs:1050
+#: crates/pindu-ui/src/quick_access.rs:1125
 msgid "Needs a newer Pindu launcher"
 msgstr ""
 
@@ -2204,7 +2205,16 @@ msgid_plural "{count} days ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/steamgriddb_service.rs:115
+#: crates/pindu-ui/src/steamgriddb_service.rs:69
+msgid "A key is stored in your keyring"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_service.rs:71
+#, rust-format
+msgid "The keyring cannot be used: {error}"
+msgstr ""
+
+#: crates/pindu-ui/src/steamgriddb_service.rs:125
 msgid "Artwork From SteamGridDB"
 msgstr ""
 
@@ -3145,14 +3155,14 @@ msgstr ""
 msgid "Choose the game's folder; its program, title and options come next."
 msgstr ""
 
-#: data/ui/game_dialog.blp:44 data/ui/quick_access.blp:1357
+#: data/ui/game_dialog.blp:44 data/ui/quick_access.blp:1388
 #: data/ui/window.blp:319
 msgid "Native"
 msgstr ""
 
 #: data/ui/game_dialog.blp:45 data/ui/game_dialog.blp:93
 #: data/ui/menu_drawer.blp:45 data/ui/preferences.blp:156
-#: data/ui/quick_access.blp:1353 data/ui/window.blp:315
+#: data/ui/quick_access.blp:1384 data/ui/window.blp:315
 msgid "Windows"
 msgstr ""
 
@@ -3234,6 +3244,7 @@ msgid "_Run Installer…"
 msgstr ""
 
 #: data/ui/game_dialog.blp:166 data/ui/preferences.blp:131
+#: data/ui/quick_access.blp:1314
 msgid "Artwork"
 msgstr ""
 
@@ -3295,7 +3306,7 @@ msgstr ""
 msgid "Ask Steam which of the game’s launch options to use"
 msgstr ""
 
-#: data/ui/game_page.blp:291 data/ui/quick_access.blp:1423
+#: data/ui/game_page.blp:291 data/ui/quick_access.blp:1454
 msgid "Changes apply the next time the game starts."
 msgstr ""
 
@@ -3308,12 +3319,12 @@ msgid "An overlay with the frame rate and how busy the computer is"
 msgstr ""
 
 #: data/ui/game_page.blp:331 data/ui/preferences.blp:205
-#: data/ui/quick_access.blp:1416 data/ui/window.blp:554
+#: data/ui/quick_access.blp:1447 data/ui/window.blp:554
 msgid "GameMode"
 msgstr ""
 
 #: data/ui/game_page.blp:332 data/ui/preferences.blp:206
-#: data/ui/quick_access.blp:1417 data/ui/window.blp:555
+#: data/ui/quick_access.blp:1448 data/ui/window.blp:555
 msgid "Asks the system to favour the game while it runs"
 msgstr ""
 
@@ -3484,11 +3495,11 @@ msgstr ""
 msgid "Stored Key"
 msgstr ""
 
-#: data/ui/preferences.blp:149
+#: data/ui/preferences.blp:149 data/ui/quick_access.blp:1339
 msgid "Prefer SteamGridDB Art"
 msgstr ""
 
-#: data/ui/preferences.blp:150
+#: data/ui/preferences.blp:150 data/ui/quick_access.blp:1340
 msgid "Show it before the launcher's own art; art you pick always comes first"
 msgstr ""
 
@@ -3656,7 +3667,7 @@ msgstr ""
 msgid "Surprise Me"
 msgstr ""
 
-#: data/ui/quick_access.blp:238 data/ui/quick_access.blp:1327
+#: data/ui/quick_access.blp:238 data/ui/quick_access.blp:1358
 msgid "Filters"
 msgstr ""
 
@@ -3799,19 +3810,19 @@ msgstr ""
 msgid "Large Covers"
 msgstr ""
 
-#: data/ui/quick_access.blp:1349 data/ui/window.blp:307
+#: data/ui/quick_access.blp:1380 data/ui/window.blp:307
 msgid "Not Installed"
 msgstr ""
 
-#: data/ui/quick_access.blp:1361 data/ui/shortcuts-dialog.blp:43
+#: data/ui/quick_access.blp:1392 data/ui/shortcuts-dialog.blp:43
 msgid "Show Hidden Games"
 msgstr ""
 
-#: data/ui/quick_access.blp:1373
+#: data/ui/quick_access.blp:1404
 msgid "Clear Filters"
 msgstr ""
 
-#: data/ui/quick_access.blp:1411 data/ui/window.blp:549
+#: data/ui/quick_access.blp:1442 data/ui/window.blp:549
 msgid "Performance Overlay"
 msgstr ""
 

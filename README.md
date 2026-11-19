@@ -226,6 +226,9 @@ Guide + A never also opens the menu drawer.
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
   - **Larger Text:** fullscreen text about a quarter larger.
+- **Artwork:** your SteamGridDB key, typed hidden with the on-screen keyboard (Show reveals it) and kept in the system
+  keyring, never in settings or files; the row says whether a key is stored, or that the keyring cannot be used and
+  why. Missing art is fetched once a key is saved. **Prefer SteamGridDB Art** is here too.
 - **Sound Output**, subtitled with the output in use, lists the outputs PipeWire has (speakers, a television over
   HDMI, a receiver, a Bluetooth headset) with a check on the one in use. Choose one to make it the default; WirePlumber
   keeps the choice after a restart, and games that follow the default move to it. It reads the outputs with `pw-dump`
