@@ -45,5 +45,8 @@ Check two axes and report them separately:
 - Every acceptance criterion named in `<ISSUE>` is implemented and tested.
 - Where the issue and the spec section it links disagree, the issue wins and the PR says so.
 - No unrequested behaviour (scope creep); no partially implemented criteria.
+- Docs follow behaviour: user-visible behaviour the change alters is described the same way in the README and
+  `docs/` (search them for the feature's name), or the PR says it changes nothing they describe. A claim left behind,
+  such as an old delay, a renamed control or an entry that now shows, is a finding.
 
 Quote the offending line and source rule for each finding. Under 400 words.
