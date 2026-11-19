@@ -20,6 +20,21 @@ In this order, local data first:
    data (installed and never played, recently added, native, Windows, no longer listed by its source, needs a
    permission) are offered as suggestions the user can save, not hard-coded sections. A genre filter and a
    never-played filter join both shells and can be saved.
+
+   As built (#524): a saved filter is a `collections` row with its view, filter toggles and normalised search in
+   `saved_filters` (migration 0007); `pindu_core::saved_filters` computes its members with the library views' own
+   matching each time the library loads, so games cannot be added to it by hand and a source's categories never land
+   in it. Saving is offered while a toggle or a search narrows a view other than Hidden or another saved filter:
+   **Save Filter…** in the desktop filter row and in fullscreen Quick Access's Filters, which name it after what it
+   shows. The suggestions offered are **Native Games** and **Windows Games**; the others need a filter that does not
+   exist yet (never played, added recently, no longer listed, needs a permission).
+
+   Backups (#600) carry each saved filter as a collection entry with no games and a `filter` beside it: its view,
+   toggles and search, with a view of a collection naming that collection, since IDs differ between libraries.
+   Importing makes it a saved filter again, first making the plain collection it views if the library lacks one. A
+   name the library already has keeps what it is here: a plain collection does not become a saved filter, and a saved
+   filter gains no stored games. A filter whose view this version does not know imports as an empty plain collection.
+   This extends backup format 2 (#509), unreleased until then, so format 1 and 2 backups still import.
 2. **Metadata the launchers already hold.** A spike lists, per source, the fields available offline and how reliable
    they are in real libraries: release year, genres, controller support and Steam Deck compatibility from Steam's
    binary `appinfo.vdf`, which the Steam importer already parses, and `year` from Lutris's `pga.db`. The fields it

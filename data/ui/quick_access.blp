@@ -680,6 +680,26 @@ template $PinduQuickAccess: Box {
                 }
               };
             }
+
+            // Fullscreen mode's Add Game, a dialog over the main window.
+            ListBoxRow add_game_row {
+              action-name: "win.add-game-fullscreen";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "applications-games-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Add a Game");
+                  xalign: 0;
+                  hexpand: true;
+                }
+              };
+            }
           }
         };
       };
@@ -1613,6 +1633,33 @@ template $PinduQuickAccess: Box {
               action-name: "win.clear-fullscreen-filters";
             }
           }
+
+          // Saves the shown tab with these filters and the search as a collection whose
+          // games are computed, or saves a suggested one.
+          ListBox save_filters {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ButtonRow {
+              title: _("Save Filter…");
+              action-name: "win.save-filter";
+            }
+
+            Adw.ButtonRow {
+              title: _("Save Native Games");
+              action-name: "win.save-suggestion";
+              action-target: "'native'";
+            }
+
+            Adw.ButtonRow {
+              title: _("Save Windows Games");
+              action-name: "win.save-suggestion";
+              action-target: "'windows'";
+            }
+          }
         };
       };
     }
@@ -1723,6 +1770,56 @@ template $PinduQuickAccess: Box {
       name: "diagnostics-report";
 
       child: $PinduReportLevel report_level {};
+    }
+
+    StackPage {
+      name: "report-log";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Add a Game's Log");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          Label {
+            label: _("The game's newest log is added to the report. The report keeps that game's title; other titles and your home folder stay out.");
+            xalign: 0;
+            wrap: true;
+
+            styles [
+              "dim-label",
+            ]
+          }
+
+          // The games with a log, the game played with logs last first, each with
+          // its newest log's name; filled in code as the level opens.
+          ListBox report_logs {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+          }
+
+          // Shown when no game has a log.
+          Label report_logs_empty {
+            label: _("No game has a log yet: start one with Play with Logs");
+            xalign: 0;
+            wrap: true;
+            visible: false;
+          }
+        };
+      };
     }
 
     StackPage {

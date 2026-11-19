@@ -257,7 +257,7 @@ impl GamePage {
             #[weak]
             library,
             move |button| {
-                let collections = library.model().collections();
+                let collections = library.model().manual_collections();
                 button.set_menu_model(Some(&more_menu(&object, &collections)));
             }
         ));
@@ -627,6 +627,11 @@ fn more_menu(object: &GameObject, collections: &[Collection]) -> gio::Menu {
             logs.append_item(&item(gettext("Start _Safely"), "app.start-safely"));
         }
         logs.append_item(&item(gettext("Open Latest L_og"), "win.open-log"));
+        // About's Debugging Information with the newest log after it, for a bug report.
+        logs.append_item(&item(
+            gettext("_Debugging Information with Log"),
+            "app.about-with-log",
+        ));
         menu.append_section(None, &logs);
     }
     menu.append_section(None, &collection_menu(object, collections));

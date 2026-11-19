@@ -18,6 +18,7 @@ pub mod file_service;
 pub mod first_sync_summary;
 pub mod fullscreen;
 pub mod fullscreen_activity;
+pub mod fullscreen_add_game;
 pub mod fullscreen_bindings;
 pub mod fullscreen_bluetooth;
 pub mod fullscreen_clock;

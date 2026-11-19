@@ -245,11 +245,16 @@ pub fn apply_snapshot(
                     game.favourite = imported.source_flags.favourite;
                     store.insert_game(&game)?;
                     for name in &imported.source_flags.categories {
-                        let collection =
-                            match store.collections()?.into_iter().find(|c| &c.name == name) {
-                                Some(collection) => collection,
-                                None => store.create_collection(name)?,
-                            };
+                        // A category fills a collection of its name, never a saved filter.
+                        let saved = store.saved_filters()?;
+                        let collection = match store
+                            .collections()?
+                            .into_iter()
+                            .find(|c| &c.name == name && !saved.contains_key(&c.id))
+                        {
+                            Some(collection) => collection,
+                            None => store.create_collection(name)?,
+                        };
                         store.add_to_collection(collection.id, &id)?;
                     }
                 }
@@ -467,6 +472,32 @@ mod tests {
         assert_eq!(collections[0].name, "Shooters");
         assert_eq!(
             store.collection_members(collections[0].id).unwrap(),
+            vec![id()]
+        );
+    }
+
+    #[test]
+    fn a_category_never_lands_in_a_saved_filter_of_its_name() {
+        let (_dir, store) = temp_store();
+        let saved = store
+            .create_saved_filter(
+                "Shooters",
+                &crate::saved_filters::Suggestion::Windows.filter(),
+            )
+            .unwrap();
+
+        apply_snapshot(
+            &store,
+            &snapshot(vec![flagged(false, false, &["Shooters"])]),
+            100,
+        )
+        .unwrap();
+
+        assert!(store.collection_members(saved.id).unwrap().is_empty());
+        let collections = store.collections().unwrap();
+        assert_eq!(collections.len(), 2);
+        assert_eq!(
+            store.collection_members(collections[1].id).unwrap(),
             vec![id()]
         );
     }

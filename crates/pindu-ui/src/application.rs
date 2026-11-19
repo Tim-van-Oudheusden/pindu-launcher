@@ -45,6 +45,7 @@ use pindu_core::health;
 use pindu_core::keys;
 use pindu_core::launch::{Start, WebPage};
 use pindu_core::library::Filters;
+use pindu_core::model::GameId;
 use pindu_core::notifications::{Kind, Target};
 use pindu_core::panels::Playing;
 use pindu_core::sources::location::HostDirs;
@@ -546,7 +547,16 @@ impl PinduApplication {
             .activate(move |app: &Self, _, _| app.quit())
             .build();
         let about_action = gio::ActionEntry::builder("about")
-            .activate(move |app: &Self, _, _| app.show_about())
+            .activate(move |app: &Self, _, _| app.show_about(None))
+            .build();
+        // About, with the game's newest log after its debugging information.
+        let about_with_log_action = gio::ActionEntry::builder("about-with-log")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                if let Some(id) = id.and_then(|id| id.str()).and_then(|id| id.parse().ok()) {
+                    app.show_about(Some(id));
+                }
+            })
             .build();
         let preferences_action = gio::ActionEntry::builder("preferences")
             .activate(move |app: &Self, _, _| {
@@ -712,6 +722,7 @@ impl PinduApplication {
         self.add_action_entries([
             quit_action,
             about_action,
+            about_with_log_action,
             preferences_action,
             permissions_action,
             source_preferences_action,
@@ -1041,13 +1052,15 @@ impl PinduApplication {
         work(&window, &game, library, toast);
     }
 
-    /// Opens About once its debugging information is gathered, which takes a moment.
-    fn show_about(&self) {
+    /// Opens About once its debugging information is gathered, which takes a moment. With
+    /// `game`, the game's newest log follows the debugging information.
+    fn show_about(&self, game: Option<GameId>) {
         let steam_gamescope = self.gamescope_service().is_active();
         let own_session = self.runs_as_own_session();
         let app = self.downgrade();
         glib::spawn_future_local(async move {
-            let debug_info = diagnostics_service::debug_info(steam_gamescope, own_session).await;
+            let debug_info =
+                diagnostics_service::debug_info(steam_gamescope, own_session, game).await;
             let Some(app) = app.upgrade() else {
                 return;
             };

@@ -4,6 +4,7 @@
 //! `cargo test` against fixture trees, without a display.
 
 pub mod accessibility;
+pub mod add_game;
 pub mod add_store;
 pub mod arch;
 pub mod art;
@@ -17,6 +18,7 @@ pub mod controls;
 pub mod custom_style;
 pub mod diagnostics;
 pub mod duplicates;
+pub mod file_picker;
 pub mod focus;
 pub mod game_control;
 pub mod game_groups;
@@ -47,6 +49,7 @@ pub mod proton_downloads;
 pub mod reading;
 pub mod renderer;
 pub mod report_screen;
+pub mod saved_filters;
 pub mod saves;
 pub mod search;
 pub mod sections;

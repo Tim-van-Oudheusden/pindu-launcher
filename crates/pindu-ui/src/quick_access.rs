@@ -22,10 +22,10 @@
 //! `fullscreen_performance`, Network `fullscreen_network`, Bluetooth `fullscreen_bluetooth`,
 //! Sound Output `fullscreen_sound_output`, System Update `fullscreen_system_update`, Library
 //! Health `fullscreen_health`, Diagnostics Report `fullscreen_report`, Add a Store
-//! `add_store`, Proton `fullscreen_proton_downloads` and Sources `fullscreen_sources`.
-//! Design and Settings are this module's: the design, its variant, Home's background blur
-//! and dim and the user's own stylesheet, then cover size, navigation sounds and their
-//! volume, exiting after a
+//! `add_store`, Proton `fullscreen_proton_downloads` and Sources `fullscreen_sources`; Add a
+//! Game opens the window's `fullscreen_add_game`. Design and Settings are this module's:
+//! the design, its variant, Home's background blur and dim and the user's own stylesheet,
+//! then cover size, navigation sounds and their volume, exiting after a
 //! launch, Reduce Motion and Larger Text, the SteamGridDB key (typed hidden with the
 //! on-screen keyboard of `secret_dialog` and kept in the keyring) and Prefer SteamGridDB
 //! Art, the same settings Preferences changes.
@@ -195,6 +195,8 @@ mod imp {
         #[template_child]
         pub clear_filters: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub save_filters: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub performance_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub performance_title: TemplateChild<gtk::Label>,
@@ -239,9 +241,15 @@ mod imp {
         #[template_child]
         pub report_level: TemplateChild<PinduReportLevel>,
         #[template_child]
+        pub report_logs: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub report_logs_empty: TemplateChild<gtk::Label>,
+        #[template_child]
         pub proton_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub proton_level: TemplateChild<PinduProtonLevel>,
+        #[template_child]
+        pub add_game_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub network_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
@@ -410,13 +418,14 @@ impl PinduQuickAccess {
 
     /// Hosts the panel over a running game, before [`Self::setup`]: it leaves out the
     /// entries that need the main window, Surprise Me (it leads to a library page), Add a
-    /// Store (its flow is the main window's) and Diagnostics Report (it needs the main
-    /// window's room, and its page turns are the main window's).
+    /// Store and Add a Game (their flows are the main window's) and Diagnostics Report (it
+    /// needs the main window's room, and its page turns are the main window's).
     pub fn set_over_game(&self) {
         let imp = self.imp();
         imp.over_game.set(true);
         imp.surprise_row.set_visible(false);
         imp.add_store_row.set_visible(false);
+        imp.add_game_row.set_visible(false);
         imp.report_row.set_visible(false);
     }
 
@@ -464,7 +473,13 @@ impl PinduQuickAccess {
             Some(QuickAccessLevel::SystemUpdate) => self.show_system_update(),
             Some(QuickAccessLevel::LibraryHealth) => self.show_health(),
             Some(QuickAccessLevel::AddStore) => self.show_add_store(),
-            Some(QuickAccessLevel::DiagnosticsReport) => self.show_diagnostics_report(),
+            // Back from the games with a log, the report stays as it was.
+            Some(QuickAccessLevel::DiagnosticsReport)
+                if before != Some(QuickAccessLevel::ReportLog) =>
+            {
+                self.show_diagnostics_report(None);
+            }
+            Some(QuickAccessLevel::ReportLog) => self.show_report_logs(),
             Some(QuickAccessLevel::Proton) => imp.proton_level.show(),
             Some(QuickAccessLevel::Network) => self.show_network(),
             Some(QuickAccessLevel::Sources) => self.show_sources(),
@@ -531,7 +546,11 @@ impl PinduQuickAccess {
             (Some(QuickAccessLevel::SystemUpdate), _) => imp.system_update_level.focus_target(),
             (Some(QuickAccessLevel::LibraryHealth), _) => imp.health_level.focus_target(),
             (Some(QuickAccessLevel::AddStore), _) => imp.add_store_level.focus_target(),
+            (Some(QuickAccessLevel::DiagnosticsReport), Some(QuickAccessLevel::ReportLog)) => {
+                Some(imp.report_level.add_log_row())
+            }
             (Some(QuickAccessLevel::DiagnosticsReport), _) => imp.report_level.focus_target(),
+            (Some(QuickAccessLevel::ReportLog), _) => first_row(&imp.report_logs),
             (Some(QuickAccessLevel::Proton), _) => imp.proton_level.focus_target(),
             (Some(QuickAccessLevel::Network), _) => imp.network_level.focus_target(),
             // Filled once the sources are read, which then focuses the first.
@@ -756,7 +775,7 @@ impl PinduQuickAccess {
             QuickAccessLevel::SystemUpdate => &imp.system_update_row,
             QuickAccessLevel::LibraryHealth => &imp.health_row,
             QuickAccessLevel::AddStore => &imp.add_store_row,
-            QuickAccessLevel::DiagnosticsReport => &imp.report_row,
+            QuickAccessLevel::DiagnosticsReport | QuickAccessLevel::ReportLog => &imp.report_row,
             QuickAccessLevel::Proton => &imp.proton_row,
             QuickAccessLevel::Network => &imp.network_row,
         };
@@ -820,6 +839,7 @@ impl PinduQuickAccess {
             imp.artwork.get(),
             imp.filters.get(),
             imp.clear_filters.get(),
+            imp.save_filters.get(),
             imp.performance.get(),
             imp.proton_builds.get(),
             bluetooth_adapter,
@@ -834,6 +854,7 @@ impl PinduQuickAccess {
             add_store_stores,
             add_store_actions,
             report_actions,
+            imp.report_logs.get(),
             proton_default,
             proton_tools,
             proton_downloaded,
