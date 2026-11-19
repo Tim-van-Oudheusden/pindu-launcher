@@ -58,13 +58,10 @@ gridview.library > child {
   font-family: monospace;
 }
 
-/* "Jump back in" cards: landscape art with the title on a gradient. */
+/* "Jump back in" cards: landscape art with the title on a gradient, both clipped to the
+   card's rounded corners (the card's overflow is hidden). */
 .jump-card {
   padding: 0;
-  border-radius: 12px;
-}
-
-.jump-card picture {
   border-radius: 12px;
 }
 
@@ -72,7 +69,6 @@ gridview.library > child {
    game without art. */
 .jump-card .jump-title {
   padding: 6px 10px;
-  border-radius: 0 0 12px 12px;
   color: white;
   background-image: linear-gradient(to bottom, rgb(0 0 0 / 55%), rgb(0 0 0 / 80%));
 }

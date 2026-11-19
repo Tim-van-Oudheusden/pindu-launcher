@@ -331,15 +331,15 @@ template $PinduWindow: Adw.ApplicationWindow {
 
                         Box jump_back_in {
                           orientation: vertical;
-                          spacing: 6;
                           visible: false;
-                          margin-start: 18;
-                          margin-end: 18;
+                          margin-start: 12;
+                          margin-end: 12;
                           margin-bottom: 6;
 
                           Label {
                             label: _("Jump Back In");
                             xalign: 0;
+                            margin-start: 6;
 
                             styles [
                               "heading",
@@ -350,9 +350,13 @@ template $PinduWindow: Adw.ApplicationWindow {
                             vscrollbar-policy: never;
                             propagate-natural-height: true;
 
+                            // The margins keep the cards' shadow clear of the row's edges.
                             child: Box jump_cards {
                               spacing: 12;
+                              margin-top: 6;
                               margin-bottom: 6;
+                              margin-start: 6;
+                              margin-end: 6;
                             };
                           }
                         }
