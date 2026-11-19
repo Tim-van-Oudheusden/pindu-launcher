@@ -8,6 +8,7 @@ use gtk::glib;
 use gtk::subclass::prelude::*;
 use pindu_core::backup::{self, BackupError, ImportSummary};
 use pindu_core::bulk::{self, BulkAction};
+use pindu_core::duplicates::{self, Review};
 use pindu_core::game_groups;
 use pindu_core::library::{self, LibraryEntry};
 use pindu_core::manual;
@@ -454,6 +455,19 @@ impl LibraryService {
     pub async fn set_steamgriddb_match(&self, id: &GameId, grid_id: u64) {
         let id = id.clone();
         self.change(move |store| store.set_steamgriddb_match(&id, grid_id))
+            .await;
+    }
+
+    /// The duplicate suggestions and the groups made automatically, read on a worker
+    /// thread; `None` when the store cannot be read.
+    pub async fn duplicate_review(&self) -> Option<Review> {
+        self.read(duplicates::review).await
+    }
+
+    /// Remembers that two copies are not the same game, so they are never suggested again.
+    pub async fn dismiss_duplicate(&self, first: &GameId, second: &GameId) {
+        let (first, second) = (first.clone(), second.clone());
+        self.change(move |store| store.remember_split(&first, &second))
             .await;
     }
 
