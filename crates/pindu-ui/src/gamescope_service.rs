@@ -15,6 +15,7 @@
 //! (`pindu_core::gamescope::mangoapp`).
 
 use std::cell::{Cell, RefCell};
+use std::collections::HashSet;
 use std::ffi::{c_int, c_long, c_uchar, c_uint, c_ulong};
 use std::path::PathBuf;
 use std::rc::{Rc, Weak};
@@ -129,6 +130,9 @@ struct Inner {
     /// Counts the Performance Overlay writes asked for, so a game's switch read late
     /// never overwrites a newer one.
     overlay_writes: Cell<u64>,
+    /// The games whose last start was a safe one, which MangoApp shows no Performance
+    /// Overlay over, whatever their switch says.
+    started_safely: RefCell<HashSet<GameId>>,
     /// The launcher's main window, which the claim pins, once it is realized.
     main_window: Cell<Option<Xid>>,
     /// The app IDs of the windows gamescope could show (`GAMESCOPE_FOCUSABLE_APPS`).
@@ -172,6 +176,7 @@ impl GamescopeService {
                 over_game_listeners: RefCell::default(),
                 mangoapp,
                 overlay_writes: Cell::default(),
+                started_safely: RefCell::default(),
                 main_window: Cell::default(),
                 focusable: RefCell::default(),
                 reclaims: RefCell::default(),
@@ -489,18 +494,31 @@ impl GamescopeService {
         }
     }
 
+    /// Notes whether the game with `id` starts safely this time, so MangoApp shows no
+    /// Performance Overlay over it while it runs.
+    pub fn set_started_safely(&self, id: &GameId, safely: bool) {
+        let mut started_safely = self.inner.started_safely.borrow_mut();
+        if safely {
+            started_safely.insert(id.clone());
+        } else {
+            started_safely.remove(id);
+        }
+    }
+
     /// The Performance Overlay switch of the game with `id` turned `on`: MangoApp shows or
-    /// hides it now when that game is in front.
+    /// hides it now when that game is in front, unless the game started safely.
     pub fn performance_overlay_switched(&self, id: &GameId, on: bool) {
         if self.inner.mangoapp.is_some()
             && mangoapp::writes_for(self.inner.front.get(), gamescope::app_id(id))
+            && !self.inner.started_safely.borrow().contains(id)
         {
             self.write_overlay(on);
         }
     }
 
     /// Writes the Performance Overlay switch of the game that came to the front for
-    /// MangoApp, once it is read; nothing with the launcher in front.
+    /// MangoApp, once it is read, or off for a game that started safely; nothing with the
+    /// launcher in front.
     fn write_overlay_for_front(&self) {
         if self.inner.mangoapp.is_none() {
             return;
@@ -517,15 +535,17 @@ impl GamescopeService {
             return;
         };
         let asked = self.next_overlay_write();
+        let safely = self.inner.started_safely.borrow().contains(&id);
         let (weak, library) = (
             Rc::downgrade(&self.inner),
             self.inner.sessions.library().clone(),
         );
         glib::spawn_future_local(async move {
-            let on = library
-                .launch_config(&id)
-                .await
-                .is_some_and(|config| config.mangohud);
+            let on = !safely
+                && library
+                    .launch_config(&id)
+                    .await
+                    .is_some_and(|config| config.mangohud);
             let Some(inner) = weak.upgrade() else {
                 return;
             };

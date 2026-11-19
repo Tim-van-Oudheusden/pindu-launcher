@@ -43,6 +43,8 @@ From AGENTS.md, Session Completion. Tick the ones you ran; say why if one does n
   rather than `#[allow]`
 - [ ] No new `finish-args` or bundled modules, and the Flathub manifest is untouched
 - [ ] No new, upgraded or removed dependency, or it is listed under Dependencies with the maintainer's approval
+- [ ] User-visible behaviour this changes is described the same way in the README and `docs/` (search them for the
+  feature's name), or the PR says it changes nothing they describe
 
 ## AI disclosure
 

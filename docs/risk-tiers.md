@@ -59,7 +59,8 @@ Application code, UI and data files: `crates/**`, `data/**` and `po/**`, plus an
 as root files like `.gitignore`. The schema migrations and the backup format under `crates/` are high (above).
 
 Review: the rubric in the `PR review rubric` job summary (`.github/workflows/review.yml`): TDD evidence,
-behaviour-level tests, no weakened tests, Adwaita first and HIG, keyboard usable, quality gates green.
+behaviour-level tests, no weakened tests, the README and `docs/` following the behaviour, Adwaita first and HIG,
+keyboard usable, quality gates green.
 
 ## Tier: low
 

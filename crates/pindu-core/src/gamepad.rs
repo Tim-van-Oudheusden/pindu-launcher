@@ -1379,6 +1379,18 @@ mod tests {
     }
 
     #[test]
+    fn unplugging_a_pad_while_back_is_held_cancels_nothing() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Xbox), ms(0));
+        intents.handle(&press(Button::East), ms(0));
+
+        intents.handle(&GamepadEvent::Disconnected { device: PAD }, ms(50));
+
+        assert_eq!(intents.next_repeat(), None);
+        assert_eq!(intents.repeat(HOLD_DURATION), None);
+    }
+
+    #[test]
     fn a_trigger_pulled_further_asks_once_until_it_is_let_go() {
         // libmanette reports every move of an axis trigger past halfway as another press.
         let mut intents = Intents::new();

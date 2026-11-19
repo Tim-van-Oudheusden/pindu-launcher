@@ -386,6 +386,7 @@ fn path_text(path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::launch::Start;
     use crate::model::{Game, GameId, LaunchConfig, LaunchKind, PerformanceTool};
 
     const PREFIXES: &str = "/home/me/Games/pindu-launcher/prefixes";
@@ -540,6 +541,61 @@ mod tests {
         );
         assert_eq!(command.environment["MANGOHUD"], "1");
         assert!(!plain.environment.contains_key("MANGOHUD"));
+    }
+
+    #[test]
+    fn a_safe_start_runs_umu_bare_in_the_game_s_build_and_prefix() {
+        let builds = [build("GE-Proton11-3"), build("GE-Proton10-34")];
+        let config = LaunchConfig {
+            proton_version: Some("GE-Proton10-34".into()),
+            prefix_path: Some("/games/Celeste/prefix".into()),
+            environment: [("LD_PRELOAD", "/lib/hook.so"), ("DXVK_HUD", "fps")]
+                .map(|(key, value)| (key.to_owned(), value.to_owned()))
+                .into(),
+            wrappers: vec!["taskset".into(), "-c".into(), "0-3".into()],
+            gamemode: true,
+            mangohud: true,
+            ..config()
+        };
+
+        let safe = Start::Safely.config(config);
+        let command = command(&game(), &safe, &builds, &defaults()).unwrap();
+
+        assert_eq!(
+            command.argv,
+            ["umu-run", "/games/Celeste/Celeste.exe", "--windowed"]
+        );
+        let mut ours = launch::session_environment(&game());
+        ours.insert("PROTONPATH".into(), "/tools/GE-Proton10-34".into());
+        ours.insert("WINEPREFIX".into(), "/games/Celeste/prefix".into());
+        assert_eq!(command.environment, ours);
+    }
+
+    #[test]
+    fn a_safe_start_runs_a_native_game_bare_in_the_steam_linux_runtime() {
+        let native = Game::new(
+            GameId::new(Source::Manual, "celeste-1a2b"),
+            "Celeste",
+            LaunchKind::RuntimeNative,
+            0,
+        );
+        let config = LaunchConfig {
+            executable: "/games/Celeste/Celeste".into(),
+            wrappers: vec!["strace".into()],
+            gamemode: true,
+            mangohud: true,
+            ..config()
+        };
+
+        let command = runtime_command(&native, &Start::Safely.config(config));
+
+        assert_eq!(
+            command.argv,
+            ["umu-run", "/games/Celeste/Celeste", "--windowed"]
+        );
+        let mut ours = launch::session_environment(&native);
+        ours.insert("UMU_NO_PROTON".into(), "1".into());
+        assert_eq!(command.environment, ours);
     }
 
     #[test]

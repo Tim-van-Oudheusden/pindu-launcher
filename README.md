@@ -51,6 +51,10 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Windows games too.** Add a Windows game, or its installer, by hand and it runs with Proton through
   [umu](https://github.com/Open-Wine-Components/umu-launcher) in a prefix of its own. Download GE-Proton and
   Proton-CachyOS builds from Preferences, and turn on MangoHud or GameMode per game.
+- **Start Safely.** When a game Pindu runs itself breaks, **Start Safely** in its page's menu, or in fullscreen's
+  options, starts it once without its wrappers, MangoHud, GameMode or its own environment variables, and keeps a log
+  as **Play with Logs** does, so a broken overlay or wrapper tells itself apart from a broken game. Its saved settings
+  stay as they are.
 - **A fullscreen mode for the couch.** A controller-first Home, library and game pages, a Quick Access panel, an
   on-screen keyboard for search and navigation sounds, with switchable designs and your own CSS
   ([Fullscreen mode](#fullscreen-mode)).
@@ -64,7 +68,8 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
 - **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
-  and import them again.
+  and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
+  beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 
 ## Game sources
 
@@ -78,7 +83,8 @@ widgets so it looks and behaves like the rest of GNOME.
 | Desktop entries and Flatpaks | Games installed as apps | On the host ([needs host access](#starting-games-on-the-host)) |
 | Added by hand | Native programs, and Windows games or installers | Native ones on the host; Windows ones with Proton in the sandbox |
 
-The importers read each launcher's data read-only and never its credentials.
+The importers read each launcher's data read-only and never its credentials. Preferences, Sources shows for each source
+the folder it was found in, when it last synced and the problems that sync ran into.
 
 ## Installing
 
@@ -164,6 +170,8 @@ Preferences.
 ### Getting around
 
 - **Move** with the D-pad or left stick, **open** with A and **go back** with B.
+- A **game page** shows the game's developer, genres and description below its buttons. Once a long description has
+  focus, Down scrolls through it and Up scrolls back to its start before moving on.
 - The **hint bar** at the bottom names the buttons that work on each screen, drawn with the app's own glyphs for the
   controller you hold.
 - **Controls** in Quick Access lists everything the buttons do, grouped into moving, the library, the panels and
@@ -616,6 +624,12 @@ Work is tracked in [GitHub issues](https://github.com/Tim-van-Oudheusden/pindu-l
 problems privately as [`SECURITY.md`](SECURITY.md) describes. For code, read [`CONTRIBUTING.md`](CONTRIBUTING.md): how
 to build, pick an issue, work test-first and open a pull request that passes the quality gates. AI agents follow
 [`AGENTS.md`](AGENTS.md), and everyone follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+When you report a bug, open **About Pindu launcher** from the main menu, then **Troubleshooting → Debugging
+Information**, and copy or save the report into the issue. It names the version, how the app was installed, your
+distribution and session, each source's state and game count, the sandbox permissions, the tools found, the library's
+schema version and the last sync's problems. It holds no game titles and writes your home folder as `~`; nothing is
+sent anywhere.
 
 ## Acknowledgments
 
