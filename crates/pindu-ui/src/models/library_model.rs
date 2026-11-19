@@ -325,12 +325,15 @@ impl LibraryModel {
             .collect()
     }
 
-    /// A game in the library by ID, shown or not.
+    /// A game in the library by ID, shown or not. A copy in a group finds the group's game.
     pub fn game_object(&self, id: &pindu_core::model::GameId) -> Option<GameObject> {
         let games = &self.imp().games;
         (0..games.n_items())
             .filter_map(|position| games.item(position).and_downcast::<GameObject>())
-            .find(|game| game.game().id == *id)
+            .find(|game| {
+                let entry = game.entry();
+                entry.game.id == *id || entry.copies.iter().any(|copy| copy.game.id == *id)
+            })
     }
 
     /// The title of a game in the library, shown or not.
