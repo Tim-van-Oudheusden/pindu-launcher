@@ -109,6 +109,22 @@ After every sync, `duplicates::group_exact_matches` groups each exact pair autom
 group already; the sync reports the new groups. Undoing one is `Store::split_group`, which remembers the pair, so the
 next sync leaves it apart. Title matches are never grouped without the user.
 
+## Reviewing duplicates
+
+Both shells show `duplicates::review` (#508): the suggestions, then the groups the sync made automatically that the
+user has not changed since. The desktop has a **Duplicates** page in the main menu; fullscreen mode has a
+**Duplicates** level in Quick Access, worked with a controller alone. Each suggestion names the copies, their
+sources, why they look alike (a Lutris store link; the same title, with the developer or the year when they agree)
+and how sure that is (certainly, likely or possibly the same game).
+
+- **Group** merges the pair as Merge With… does (`Store::merge_games`): a group made by hand, joining any group either
+  copy is in.
+- **Not the Same Game** remembers the pair (`Store::remember_split`), so it is never suggested again.
+- **Undo** on an automatic group is `Store::split_group`: its copies show on their own again, and the next sync
+  neither groups nor suggests them.
+
+The list is read again after each choice, after each sync and, on the desktop, when the page shows again.
+
 ## How groups are backed up
 
 Backup format 2 (#509) adds two lists to the backup file, both naming games by their per-source IDs:

@@ -514,3 +514,57 @@ fn an_exact_match_is_not_grouped_when_a_copy_is_in_a_group_already() {
     assert!(group_exact_matches(&store).unwrap().is_empty());
     assert_eq!(store.game_groups().unwrap().len(), 1);
 }
+
+#[test]
+fn an_accepted_suggestion_is_a_group_by_hand_and_is_not_suggested_again() {
+    let (_dir, store) = temp_store();
+    let mut library = Library::default();
+    let steam = library.add(Source::Steam, "504230", "Celeste");
+    let desktop = library.add(Source::Desktop, "celeste", "Celeste");
+    store_library(&store, &library);
+
+    let group = store
+        .merge_games(&[steam.clone(), desktop.clone()])
+        .unwrap();
+
+    let (first, second) = pair(&steam, &desktop);
+    assert_eq!(
+        store.game_groups().unwrap(),
+        vec![GameGroup {
+            id: group,
+            members: vec![first, second],
+            preferred: None,
+            automatic: false,
+        }]
+    );
+    assert_eq!(load(&store).unwrap(), vec![]);
+}
+
+#[test]
+fn the_review_lists_the_suggestions_and_the_automatic_groups_with_their_titles() {
+    let (_dir, store) = temp_store();
+    let mut library = Library::default();
+    let gog = library.add(Source::HeroicGog, "1207", "Celeste");
+    let lutris = library.lutris("1", "Celeste (Lutris)", "gog", "1207");
+    let steam = library.add(Source::Steam, "504230", "Hades");
+    let desktop = library.add(Source::Desktop, "hades", "Hades");
+    let bottles = library.add(Source::Bottles, "a", "Tunic");
+    let manual = library.add(Source::Manual, "b", "Tunic");
+    store_library(&store, &library);
+    group_exact_matches(&store).unwrap();
+    store
+        .create_group(&[bottles.clone(), manual.clone()])
+        .unwrap();
+
+    let review = review(&store).unwrap();
+
+    assert_eq!(review.suggestions, load(&store).unwrap());
+    assert_eq!(pairs(&review.suggestions), vec![pair(&steam, &desktop)]);
+    assert_eq!(review.automatic.len(), 1);
+    assert_eq!(review.automatic[0].members, {
+        let (first, second) = pair(&gog, &lutris);
+        vec![first, second]
+    });
+    assert_eq!(review.title(&lutris), "Celeste (Lutris)");
+    assert_eq!(review.title(&desktop), "Hades");
+}
