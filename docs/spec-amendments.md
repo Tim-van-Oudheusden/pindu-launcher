@@ -11,7 +11,7 @@ analysis ([`docs/product-analysis.md`](product-analysis.md), sections 4.3 and 8.
 | --- | --- |
 | No store front: buying, downloading and updating store games stays in Steam and Heroic | **Stands.** Open in Launcher and Add a Store, which installs Steam, Heroic or Lutris from Flathub, are hand-offs, not a store client (analysis section 13) |
 | Not a session or OS shell: no gamescope session, TDP or hardware control (OpenGamepadUI's territory) | **Revised.** Overtaken by 0.5.0 and Pindu OS, see below |
-| No emulation front end | **Undecided, still a non-goal.** #546 (EM-1, M9 Breadth) writes the spec page and a recommendation; the decision stays with the maintainer. Until the maintainer decides, no issue builds emulation |
+| No emulation front end | **Undecided, still a non-goal.** #546 (EM-1, M9 Breadth) wrote the spec page and a recommendation, [`docs/emulation.md`](emulation.md); the decision stays with the maintainer. Until the maintainer decides, no issue builds emulation |
 | No Xbox name, logo or brand green | **Stands**, as AGENTS.md's Safety Boundaries put it: no console branding |
 | No accounts or cloud sync | **Stands.** Saves and state travel through folders the user picks (#539) |
 
@@ -61,4 +61,6 @@ the tracker:
 | InputPlumber support | No issue; deferred (analysis section 8.12) | — |
 
 Items the analysis adds beyond the spec are tracked as #501–#559 in M6 to M9; the analysis's section 9 lists them by
-milestone.
+milestone. Two M9 spikes wrote spec pages whose recommendations the maintainer has yet to decide on: emulation
+([`docs/emulation.md`](emulation.md), #546) and the external importer contract
+([`docs/external-importers.md`](external-importers.md), #547).

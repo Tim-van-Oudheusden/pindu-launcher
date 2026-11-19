@@ -47,6 +47,7 @@ pub mod proton;
 pub mod proton_downloads;
 pub mod reading;
 pub mod renderer;
+pub mod report_screen;
 pub mod saves;
 pub mod search;
 pub mod sections;

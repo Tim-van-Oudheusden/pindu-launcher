@@ -231,6 +231,7 @@ fn action_label(action: Action) -> String {
         Action::Close => gettext("Close"),
         Action::Search => gettext("Search"),
         Action::Tabs => gettext("Tabs"),
+        Action::Pages => gettext("Pages"),
         Action::Sort => gettext("Sort"),
         Action::Adjust => gettext("Adjust"),
         Action::Options => gettext("Options"),
