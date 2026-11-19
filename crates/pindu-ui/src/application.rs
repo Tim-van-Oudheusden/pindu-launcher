@@ -14,6 +14,7 @@ use crate::game_dialog::GameDialog;
 use crate::game_overlay::PinduGameOverlay;
 use crate::gamepad_service::GamepadService;
 use crate::gamescope_service::GamescopeService;
+use crate::health_service::HealthService;
 use crate::launch_service;
 use crate::library_service::{ImportFailure, LibraryService};
 use crate::manette_backend::ManetteBackend;
@@ -23,6 +24,7 @@ use crate::notification_service::NotificationService;
 use crate::permission_service;
 use crate::power_service::PowerService;
 use crate::preferences::PreferencesDialog;
+use crate::proton_launch::UMU_INSTALL_URI;
 use crate::search_provider;
 use crate::session_service::SessionService;
 use crate::sources::source_list;
@@ -80,6 +82,8 @@ mod imp {
         pub gamepad_service: OnceCell<GamepadService>,
         /// gamescope's `--steam` focus protocol; inert outside such a gamescope.
         pub gamescope_service: OnceCell<GamescopeService>,
+        /// The Library Health report, for both shells.
+        pub health_service: OnceCell<HealthService>,
         /// The user's own stylesheet for fullscreen mode.
         pub style_service: OnceCell<StyleService>,
         /// The batteries, for Quick Access's header.
@@ -189,6 +193,12 @@ mod imp {
                 .set(GamescopeService::new(
                     self.session_service.get().expect("set above"),
                     self.gamepad_service.get().expect("set above"),
+                ))
+                .expect("start-up runs once");
+            self.health_service
+                .set(HealthService::new(
+                    &self.sync_service,
+                    self.gamescope_service.get().expect("set above").is_active(),
                 ))
                 .expect("start-up runs once");
             self.style_service
@@ -414,6 +424,14 @@ impl PinduApplication {
             .expect("the application has started")
     }
 
+    /// The Library Health report, gathered again after every sync.
+    pub fn health_service(&self) -> &HealthService {
+        self.imp()
+            .health_service
+            .get()
+            .expect("the application has started")
+    }
+
     /// The user's own stylesheet for fullscreen mode.
     pub fn style_service(&self) -> &StyleService {
         self.imp()
@@ -518,6 +536,24 @@ impl PinduApplication {
         // Preferences at its Permissions group: how to let games start on this computer.
         let permissions_action = gio::ActionEntry::builder("permissions")
             .activate(move |app: &Self, _, _| app.show_preferences().show_permissions())
+            .build();
+        // Preferences at its Sources page: each source's folder, last sync and problems.
+        let source_preferences_action = gio::ActionEntry::builder("source-preferences")
+            .activate(move |app: &Self, _, _| app.show_preferences().show_sources_page())
+            .build();
+        // umu-launcher's install instructions, in the browser.
+        let install_umu_action = gio::ActionEntry::builder("install-umu")
+            .activate(move |app: &Self, _, _| {
+                gtk::UriLauncher::new(UMU_INSTALL_URI).launch(
+                    app.active_window().as_ref(),
+                    gio::Cancellable::NONE,
+                    |result| {
+                        if let Err(error) = result {
+                            glib::g_warning!("pindu", "Could not open {UMU_INSTALL_URI}: {error}");
+                        }
+                    },
+                );
+            })
             .build();
         let add_game_action = gio::ActionEntry::builder("add-game")
             .activate(move |app: &Self, _, _| {
@@ -636,6 +672,8 @@ impl PinduApplication {
             about_action,
             preferences_action,
             permissions_action,
+            source_preferences_action,
+            install_umu_action,
             add_game_action,
             edit_game_action,
             import_action,

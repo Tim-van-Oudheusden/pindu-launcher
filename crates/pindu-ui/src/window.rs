@@ -28,6 +28,7 @@ use crate::config::APP_ID;
 use crate::fullscreen::NavigationSounds;
 use crate::fullscreen_clock::Clock;
 use crate::game_page::GamePage;
+use crate::health_page::HealthPage;
 use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
 use crate::log_service;
@@ -330,7 +331,11 @@ impl PinduWindow {
                 window.imp().navigation_view.pop();
             })
             .build();
-        self.add_action_entries([back]);
+        // The main menu's Library Health: a page of its own over the library.
+        let library_health = gio::ActionEntry::builder("library-health")
+            .activate(|window: &Self, _, _| window.show_library_health())
+            .build();
+        self.add_action_entries([back, library_health]);
 
         let sort_mode = gio::SimpleAction::new_stateful(
             "sort-mode",
@@ -422,6 +427,19 @@ impl PinduWindow {
             }
             navigation_view.push(&page);
         }
+    }
+
+    /// Pushes the Library Health page, or goes back to it when it is open.
+    fn show_library_health(&self) {
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return;
+        };
+        let navigation_view = &self.imp().navigation_view;
+        if let Some(page) = navigation_view.find_page("health") {
+            navigation_view.pop_to_page(&page);
+            return;
+        }
+        navigation_view.push(&HealthPage::new(application.health_service()));
     }
 
     /// Shows the open game page's launch settings again, after the Edit dialog saved.

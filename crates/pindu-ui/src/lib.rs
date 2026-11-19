@@ -39,6 +39,8 @@ pub mod game_overlay;
 pub mod game_page;
 pub mod gamepad_service;
 pub mod gamescope_service;
+pub mod health_page;
+pub mod health_service;
 pub mod hint_bar;
 pub mod home_page;
 pub mod host_logind_backend;
