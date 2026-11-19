@@ -1613,6 +1613,33 @@ template $PinduQuickAccess: Box {
               action-name: "win.clear-fullscreen-filters";
             }
           }
+
+          // Saves the shown tab with these filters and the search as a collection whose
+          // games are computed, or saves a suggested one.
+          ListBox save_filters {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ButtonRow {
+              title: _("Save Filter…");
+              action-name: "win.save-filter";
+            }
+
+            Adw.ButtonRow {
+              title: _("Save Native Games");
+              action-name: "win.save-suggestion";
+              action-target: "'native'";
+            }
+
+            Adw.ButtonRow {
+              title: _("Save Windows Games");
+              action-name: "win.save-suggestion";
+              action-target: "'windows'";
+            }
+          }
         };
       };
     }

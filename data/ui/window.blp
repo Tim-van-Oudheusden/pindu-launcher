@@ -350,6 +350,19 @@ template $PinduWindow: Adw.ApplicationWindow {
                               "flat",
                             ]
                           }
+
+                          // Saves the shown view, toggles and search as a collection
+                          // whose games are computed; the arrow offers suggested shelves.
+                          Adw.SplitButton save_filter {
+                            label: _("Save Filter…");
+                            action-name: "win.save-filter";
+                            menu-model: save_filter_menu;
+                            dropdown-tooltip: _("Suggested Collections");
+
+                            styles [
+                              "flat",
+                            ]
+                          }
                         }
 
                         Box jump_back_in {
@@ -726,6 +739,24 @@ menu collection_menu {
     item {
       label: _("_Delete");
       action: "win.delete-collection";
+    }
+  }
+}
+
+menu save_filter_menu {
+  section {
+    label: _("Suggested Collections");
+
+    item {
+      label: _("Native Games");
+      action: "win.save-suggestion";
+      target: "native";
+    }
+
+    item {
+      label: _("Windows Games");
+      action: "win.save-suggestion";
+      target: "windows";
     }
   }
 }

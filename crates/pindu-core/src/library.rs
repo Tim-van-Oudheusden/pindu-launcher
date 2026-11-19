@@ -10,6 +10,7 @@ use crate::game_groups::{self, CopyPlaytime};
 use crate::model::{
     ArtLayout, Artwork, Game, GameGroup, GameId, Platform, Source, SourceDetails, Timestamp,
 };
+use crate::saved_filters;
 use crate::search::{self, Query};
 use crate::store::{self, Store};
 
@@ -90,7 +91,8 @@ pub enum PlaytimeOrigin {
 ///
 /// A group of copies ([`Store::game_groups`]) is one entry, after the games in no group:
 /// the copy Play starts ([`game_groups::copy_to_play`]) under its preferred copy's title,
-/// with every copy in [`LibraryEntry::copies`].
+/// with every copy in [`LibraryEntry::copies`]. Its collections include the saved filters
+/// holding it ([`saved_filters`]), matched on the entry as shown.
 pub fn load(store: &Store, prefer_steamgriddb: bool) -> store::Result<Vec<LibraryEntry>> {
     let mut artwork: HashMap<GameId, Vec<Artwork>> = HashMap::new();
     for art in store.all_artwork()? {
@@ -98,6 +100,7 @@ pub fn load(store: &Store, prefer_steamgriddb: bool) -> store::Result<Vec<Librar
     }
     let session_totals = store.session_totals()?;
     let imported_totals = store.imported_totals()?;
+    let saved = store.saved_filters()?;
     let mut memberships = store.collection_memberships()?;
     let entries = store.games()?.into_iter().map(|game| {
         let art = artwork
@@ -119,11 +122,14 @@ pub fn load(store: &Store, prefer_steamgriddb: bool) -> store::Result<Vec<Librar
         }
     });
     let groups = store.game_groups()?;
-    if groups.is_empty() {
-        return Ok(entries.collect());
-    }
-    let details = store.all_source_details()?;
-    Ok(collapse_groups(entries, &groups, &details))
+    let mut entries = if groups.is_empty() {
+        entries.collect()
+    } else {
+        let details = store.all_source_details()?;
+        collapse_groups(entries, &groups, &details)
+    };
+    saved_filters::add_members(&mut entries, &saved);
+    Ok(entries)
 }
 
 /// Replaces the copies of each group with one entry, after the games in no group.
@@ -609,6 +615,16 @@ impl LibraryFilter {
     /// The sidebar view shown.
     pub fn view(&self) -> View {
         self.view
+    }
+
+    /// The filter toggles on.
+    pub fn filters(&self) -> Filters {
+        self.filters
+    }
+
+    /// The search, normalised; empty for none.
+    pub fn search(&self) -> &str {
+        self.search.as_str()
     }
 
     /// Shows only the games of `view`.
