@@ -98,6 +98,8 @@ mod imp {
         #[template_child]
         pub badges_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
+        pub sources_page: TemplateChild<adw::PreferencesPage>,
+        #[template_child]
         pub sources_group: TemplateChild<adw::PreferencesGroup>,
         #[template_child]
         pub artwork_page: TemplateChild<adw::PreferencesPage>,
@@ -355,6 +357,11 @@ impl PreferencesDialog {
         dialog.imp().sync.set(sync.clone()).expect("new dialog");
         dialog.show_sources();
         dialog
+    }
+
+    /// Shows the Sources page: each source's folder, last sync and that sync's problems.
+    pub fn show_sources_page(&self) {
+        self.set_visible_page(&*self.imp().sources_page);
     }
 
     /// Shows the Artwork page with focus in the SteamGridDB key field.

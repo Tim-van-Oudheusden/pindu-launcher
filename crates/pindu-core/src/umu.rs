@@ -6,6 +6,8 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
+use crate::paths;
+
 /// A step of umu's runtime setup, in the order a first start goes through them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuntimeSetup {
@@ -91,10 +93,7 @@ pub const RUN: &str = "umu-run";
 /// `is_executable` finds it. Empty and relative entries, which name the current folder,
 /// are passed over. `None` when umu-launcher is not installed.
 pub fn find_run(path: &OsStr, is_executable: impl Fn(&Path) -> bool) -> Option<PathBuf> {
-    std::env::split_paths(path)
-        .filter(|folder| folder.is_absolute())
-        .map(|folder| folder.join(RUN))
-        .find(|file| is_executable(file))
+    paths::find_program(path, RUN, is_executable)
 }
 
 /// Whether `file` is a program that can run: a file, or a link to one, with an execute
