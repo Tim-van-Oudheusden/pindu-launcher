@@ -7,6 +7,7 @@ use gtk::glib;
 use gtk::subclass::prelude::*;
 use pindu_core::backup::{self, BackupError, ImportSummary};
 use pindu_core::bulk::{self, BulkAction};
+use pindu_core::game_groups;
 use pindu_core::library::{self, LibraryEntry};
 use pindu_core::manual;
 use pindu_core::model::{
@@ -86,24 +87,24 @@ impl LibraryService {
         });
     }
 
-    /// Hides or shows a game in the library views.
+    /// Hides or shows a game, and every copy of its group, in the library views.
     pub fn set_hidden(&self, id: &GameId, hidden: bool) {
-        self.spawn_edit(id, move |game| game.hidden = hidden);
+        self.spawn_edit_copies(id, move |game| game.hidden = hidden);
     }
 
-    /// Removes a game from the library (it stays out while its source lists it), or brings
-    /// it back.
+    /// Removes a game, and every copy of its group, from the library (it stays out while
+    /// its source lists it), or brings it back.
     pub fn set_removed(&self, id: &GameId, removed: bool) {
-        self.spawn_edit(id, move |game| game.user_removed = removed);
+        self.spawn_edit_copies(id, move |game| game.user_removed = removed);
     }
 
-    /// Adds a game to Favourites or takes it out.
+    /// Adds a game, and every copy of its group, to Favourites or takes it out.
     pub fn set_favourite(&self, id: &GameId, favourite: bool) {
-        self.spawn_edit(id, move |game| game.favourite = favourite);
+        self.spawn_edit_copies(id, move |game| game.favourite = favourite);
     }
 
     /// Pins a game to "Jump back in" at the first free place; `false` when every place
-    /// is taken.
+    /// is taken. A place holds one game, so a group's pin sits on the copy given.
     pub async fn pin(&self, id: &GameId) -> bool {
         let id = id.clone();
         self.write(move |store| {
@@ -123,9 +124,9 @@ impl LibraryService {
         .unwrap_or(false)
     }
 
-    /// Takes a game out of "Jump back in".
+    /// Takes a game, and every copy of its group, out of "Jump back in".
     pub fn unpin(&self, id: &GameId) {
-        self.spawn_edit(id, |game| game.pin_order = None);
+        self.spawn_edit_copies(id, |game| game.pin_order = None);
     }
 
     /// Records that a game was just started; done once the store has it.
@@ -139,15 +140,17 @@ impl LibraryService {
         self.spawn_edit(id, move |game| game.steam_launch_dialog = dialog);
     }
 
-    /// Creates a collection after the others, optionally with a first game, and returns
-    /// it once stored.
+    /// Creates a collection after the others, optionally with a first game (every copy of
+    /// its group), and returns it once stored.
     pub async fn create_collection(&self, name: &str, game: Option<&GameId>) -> Option<Collection> {
         let (name, game) = (name.to_owned(), game.cloned());
         self.write(move |store| {
             store.in_transaction(|store| {
                 let collection = store.create_collection(&name)?;
                 if let Some(game) = &game {
-                    store.add_to_collection(collection.id, game)?;
+                    for copy in game_groups::copies_of(store, game)? {
+                        store.add_to_collection(collection.id, &copy)?;
+                    }
                 }
                 Ok(collection)
             })
@@ -218,15 +221,20 @@ impl LibraryService {
         });
     }
 
-    /// Adds a game to a collection, or takes it out.
+    /// Adds a game, and every copy of its group, to a collection, or takes it out.
     pub fn set_in_collection(&self, collection: i64, game: &GameId, member: bool) {
         let game = game.clone();
         self.spawn_write(move |store| {
-            if member {
-                store.add_to_collection(collection, &game)
-            } else {
-                store.remove_from_collection(collection, &game)
-            }
+            store.in_transaction(|store| {
+                for copy in game_groups::copies_of(store, &game)? {
+                    if member {
+                        store.add_to_collection(collection, &copy)?;
+                    } else {
+                        store.remove_from_collection(collection, &copy)?;
+                    }
+                }
+                Ok(())
+            })
         });
     }
 
@@ -437,6 +445,23 @@ impl LibraryService {
             store.update_game(&game)
         })
         .await;
+    }
+
+    /// Changes a game and every copy of its group in the background: a group is a view on
+    /// its copies, so a change made on it is written to each.
+    fn spawn_edit_copies(&self, id: &GameId, edit: impl Fn(&mut Game) + Send + 'static) {
+        let id = id.clone();
+        self.spawn_write(move |store| {
+            store.in_transaction(|store| {
+                for copy in game_groups::copies_of(store, &id)? {
+                    if let Some(mut game) = store.game(&copy)? {
+                        edit(&mut game);
+                        store.update_game(&game)?;
+                    }
+                }
+                Ok(())
+            })
+        });
     }
 
     /// Writes a backup of what the user made here to `path`, and records `now` as the time

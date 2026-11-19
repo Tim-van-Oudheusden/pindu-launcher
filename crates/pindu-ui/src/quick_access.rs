@@ -20,11 +20,11 @@
 //! `fullscreen_controllers`, Controls `fullscreen_controls`, Filters (offered on the
 //! library page) `fullscreen_library`, Performance (offered for a game we run ourselves)
 //! `fullscreen_performance`, Network `fullscreen_network`, Bluetooth `fullscreen_bluetooth`,
-//! Sound Output `fullscreen_sound_output`, System Update `fullscreen_system_update`, Add
-//! a Store `add_store`, Proton `fullscreen_proton_downloads` and Sources
-//! `fullscreen_sources`. Design and Settings are this module's: the design, its variant,
-//! Home's background blur and dim and the user's own stylesheet, then cover size,
-//! navigation sounds and their volume, exiting after a
+//! Sound Output `fullscreen_sound_output`, System Update `fullscreen_system_update`,
+//! Diagnostics Report `fullscreen_report`, Add a Store `add_store`, Proton
+//! `fullscreen_proton_downloads` and Sources `fullscreen_sources`. Design and Settings are
+//! this module's: the design, its variant, Home's background blur and dim and the user's
+//! own stylesheet, then cover size, navigation sounds and their volume, exiting after a
 //! launch, Reduce Motion and Larger Text, the SteamGridDB key (typed hidden with the
 //! on-screen keyboard of `secret_dialog` and kept in the keyring) and Prefer SteamGridDB
 //! Art, the same settings Preferences changes.
@@ -60,6 +60,7 @@ use crate::fullscreen_panels::step_out_of_list;
 use crate::fullscreen_performance::{GameProton, PerformanceSwitches};
 use crate::fullscreen_playing::{PlayingCards, card_return};
 use crate::fullscreen_proton_downloads::PinduProtonLevel;
+use crate::fullscreen_report::PinduReportLevel;
 use crate::fullscreen_sound_output::PinduSoundOutputLevel;
 use crate::fullscreen_system_update::PinduSystemUpdateLevel;
 use crate::models::GameObject;
@@ -224,6 +225,10 @@ mod imp {
         #[template_child]
         pub add_store_level: TemplateChild<PinduAddStoreLevel>,
         #[template_child]
+        pub report_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub report_level: TemplateChild<PinduReportLevel>,
+        #[template_child]
         pub proton_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub proton_level: TemplateChild<PinduProtonLevel>,
@@ -282,6 +287,7 @@ mod imp {
             PinduBluetoothLevel::ensure_type();
             PinduSystemUpdateLevel::ensure_type();
             PinduAddStoreLevel::ensure_type();
+            PinduReportLevel::ensure_type();
             PinduProtonLevel::ensure_type();
             PinduSoundOutputLevel::ensure_type();
             klass.bind_template();
@@ -385,18 +391,21 @@ impl PinduQuickAccess {
         self.setup_sound_output(application, actions);
         self.setup_system_update(application, actions);
         self.setup_add_store(application);
+        self.setup_diagnostics_report(actions);
         self.setup_proton(actions);
         self.setup_sources(application);
     }
 
     /// Hosts the panel over a running game, before [`Self::setup`]: it leaves out the
-    /// entries that need the main window, Surprise Me (it leads to a library page) and Add
-    /// a Store (its flow is the main window's).
+    /// entries that need the main window, Surprise Me (it leads to a library page), Add a
+    /// Store (its flow is the main window's) and Diagnostics Report (it needs the main
+    /// window's room, and its page turns are the main window's).
     pub fn set_over_game(&self) {
         let imp = self.imp();
         imp.over_game.set(true);
         imp.surprise_row.set_visible(false);
         imp.add_store_row.set_visible(false);
+        imp.report_row.set_visible(false);
     }
 
     /// Shows what Quick Access adds for the page under it, as it opens: `entries` from
@@ -442,6 +451,7 @@ impl PinduQuickAccess {
             Some(QuickAccessLevel::SoundOutput) => self.show_sound_output(),
             Some(QuickAccessLevel::SystemUpdate) => self.show_system_update(),
             Some(QuickAccessLevel::AddStore) => self.show_add_store(),
+            Some(QuickAccessLevel::DiagnosticsReport) => self.show_diagnostics_report(),
             Some(QuickAccessLevel::Proton) => imp.proton_level.show(),
             Some(QuickAccessLevel::Network) => self.show_network(),
             Some(QuickAccessLevel::Sources) => self.show_sources(),
@@ -507,6 +517,7 @@ impl PinduQuickAccess {
             (Some(QuickAccessLevel::SoundOutput), _) => self.sound_output_focus(),
             (Some(QuickAccessLevel::SystemUpdate), _) => imp.system_update_level.focus_target(),
             (Some(QuickAccessLevel::AddStore), _) => imp.add_store_level.focus_target(),
+            (Some(QuickAccessLevel::DiagnosticsReport), _) => imp.report_level.focus_target(),
             (Some(QuickAccessLevel::Proton), _) => imp.proton_level.focus_target(),
             (Some(QuickAccessLevel::Network), _) => imp.network_level.focus_target(),
             // Filled once the sources are read, which then focuses the first.
@@ -730,6 +741,7 @@ impl PinduQuickAccess {
             QuickAccessLevel::SoundOutput => &imp.sound_output_row,
             QuickAccessLevel::SystemUpdate => &imp.system_update_row,
             QuickAccessLevel::AddStore => &imp.add_store_row,
+            QuickAccessLevel::DiagnosticsReport => &imp.report_row,
             QuickAccessLevel::Proton => &imp.proton_row,
             QuickAccessLevel::Network => &imp.network_row,
         };
@@ -758,6 +770,7 @@ impl PinduQuickAccess {
         let [bluetooth_adapter, bluetooth_paired, bluetooth_found] = imp.bluetooth_level.lists();
         let [system_versions, system_actions] = imp.system_update_level.lists();
         let [add_store_stores, add_store_actions] = imp.add_store_level.lists();
+        let [report_actions] = imp.report_level.lists();
         let [
             proton_default,
             proton_tools,
@@ -795,6 +808,7 @@ impl PinduQuickAccess {
             system_actions,
             add_store_stores,
             add_store_actions,
+            report_actions,
             proton_default,
             proton_tools,
             proton_downloaded,

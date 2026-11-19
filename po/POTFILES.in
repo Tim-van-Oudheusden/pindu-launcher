@@ -21,6 +21,7 @@ crates/pindu-ui/src/fullscreen_performance.rs
 crates/pindu-ui/src/fullscreen_playing.rs
 crates/pindu-ui/src/fullscreen_power.rs
 crates/pindu-ui/src/fullscreen_proton_downloads.rs
+crates/pindu-ui/src/fullscreen_report.rs
 crates/pindu-ui/src/fullscreen_sources.rs
 crates/pindu-ui/src/fullscreen_status.rs
 crates/pindu-ui/src/fullscreen_system_update.rs
@@ -65,6 +66,7 @@ data/ui/fullscreen_bluetooth.blp
 data/ui/fullscreen_network.blp
 data/ui/fullscreen_power.blp
 data/ui/fullscreen_proton_downloads.blp
+data/ui/fullscreen_report.blp
 data/ui/fullscreen_sound_output.blp
 data/ui/fullscreen_system_update.blp
 data/ui/game_dialog.blp

@@ -219,6 +219,13 @@ template $PinduGamePage: Adw.NavigationPage {
                 line-spacing: 12;
               }
 
+              // A grouped game's copies: where each comes from, whether it is installed
+              // and its own playtime.
+              Adw.PreferencesGroup copies_group {
+                title: _("Copies");
+                visible: false;
+              }
+
               Adw.PreferencesGroup about_group {
                 title: _("About");
 
