@@ -292,6 +292,7 @@ fn task_state(task: &Task) -> String {
         (_, TaskKind::LibrarySync) => gettext("Reading your launchers"),
         // A name, so it is not translated.
         (_, TaskKind::ArtFetch) => "SteamGridDB".to_owned(),
+        (_, TaskKind::MetadataFetch) => "Wikidata".to_owned(),
         (Cancel::Available, TaskKind::ProtonDownload) => gettext("Downloading"),
         (Cancel::Unavailable, TaskKind::ProtonDownload) => gettext("Installing"),
         (_, TaskKind::StoreInstall) => gettext("From Flathub"),
@@ -304,6 +305,7 @@ fn kind_icon(kind: TaskKind) -> &'static str {
     match kind {
         TaskKind::LibrarySync => "view-refresh-symbolic",
         TaskKind::ArtFetch => "image-x-generic-symbolic",
+        TaskKind::MetadataFetch => "text-x-generic-symbolic",
         TaskKind::ProtonDownload => "folder-download-symbolic",
         TaskKind::StoreInstall => "system-software-install-symbolic",
         TaskKind::SaveSnapshot => "document-save-symbolic",

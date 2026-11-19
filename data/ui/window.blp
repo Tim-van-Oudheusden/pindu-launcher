@@ -877,6 +877,13 @@ menu primary_menu {
       label: _("_Duplicates");
       action: "win.review-duplicates";
     }
+
+    // Shown only while Wikidata metadata is on in Preferences.
+    item {
+      label: _("_Refresh Metadata");
+      action: "app.refresh-metadata";
+      hidden-when: "action-disabled";
+    }
   }
 
   section {
