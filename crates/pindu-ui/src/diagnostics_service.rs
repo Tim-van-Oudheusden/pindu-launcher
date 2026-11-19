@@ -1,0 +1,144 @@
+//! Gathers the debugging information About carries ([`pindu_core::diagnostics`]): reads
+//! the sandbox's and the system's files, the library and the tools on a worker thread,
+//! and asks the gamescope the app runs in for its version.
+
+use std::collections::BTreeMap;
+use std::path::PathBuf;
+use std::time::Duration;
+
+use gtk::{gio, glib};
+use pindu_core::diagnostics::{
+    self, Facts, Gamescope, HOST_OS_RELEASE_FILES, Private, SessionFacts, Tool,
+};
+use pindu_core::launch::Command;
+use pindu_core::paths::default_library_db_path;
+use pindu_core::store::Store;
+use pindu_core::system::update::{OS_RELEASE_FILES, OsRelease};
+use pindu_core::umu;
+
+use crate::config::{APP_ID, VERSION};
+use crate::{permission_service, proton_launch, session_service};
+
+/// How long `gamescope --version` may take before the report goes without it.
+const GAMESCOPE_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// The report for About's Debugging Information. `steam_gamescope` says whether the app
+/// runs in a `--steam` gamescope, `own_session` whether it runs as its own login session.
+pub async fn debug_info(steam_gamescope: bool, own_session: bool) -> String {
+    let var = |name: &str| std::env::var(name).ok().filter(|value| !value.is_empty());
+    let in_gamescope = steam_gamescope || var("GAMESCOPE_WAYLAND_DISPLAY").is_some();
+    let gamescope = if in_gamescope {
+        Some(Gamescope {
+            version: gamescope_version().await,
+            steam_mode: steam_gamescope,
+            own_session,
+        })
+    } else {
+        None
+    };
+    let session = SessionFacts {
+        session_type: var("XDG_SESSION_TYPE"),
+        desktop: var("XDG_CURRENT_DESKTOP"),
+        gamescope,
+    };
+    gio::spawn_blocking(move || report(session))
+        .await
+        .unwrap_or_else(|_| "The debugging information could not be gathered.".to_owned())
+}
+
+/// Asks the host's gamescope for its version; `None` when it cannot be run, as inside a
+/// Flatpak without host spawn.
+async fn gamescope_version() -> Option<String> {
+    if !permission_service::host_spawn_allowed() {
+        return None;
+    }
+    let command = Command {
+        argv: vec!["gamescope".to_owned(), "--version".to_owned()],
+        environment: BTreeMap::new(),
+        working_dir: None,
+    };
+    let child = session_service::spawn_captured(&command).ok()?;
+    let output =
+        glib::future_with_timeout(GAMESCOPE_TIMEOUT, child.communicate_utf8_future(None)).await;
+    let Ok(Ok((stdout, stderr))) = output else {
+        child.force_exit();
+        return None;
+    };
+    [stdout, stderr]
+        .into_iter()
+        .flatten()
+        .find_map(|output| diagnostics::gamescope_version(&output))
+}
+
+/// Reads everything else the report says, and writes it.
+fn report(session: SessionFacts) -> String {
+    let flatpak_info = std::fs::read_to_string("/.flatpak-info").ok();
+    let os_release_files = if flatpak_info.is_some() {
+        HOST_OS_RELEASE_FILES
+    } else {
+        OS_RELEASE_FILES
+    };
+    let os_release = os_release_files
+        .iter()
+        .find_map(|path| std::fs::read_to_string(path).ok())
+        .map(|text| OsRelease::parse(&text))
+        .unwrap_or_default();
+    let store = Store::open(&default_library_db_path()).ok();
+    let (states, games) = store.as_ref().map_or_else(Default::default, |store| {
+        (
+            store.source_states().unwrap_or_default(),
+            store.games().unwrap_or_default(),
+        )
+    });
+    let facts = Facts {
+        version: VERSION.to_owned(),
+        app_id: APP_ID.to_owned(),
+        install: diagnostics::install(flatpak_info.as_deref(), &os_release),
+        distribution: os_release.pretty_name,
+        session,
+        permissions: diagnostics::permissions(flatpak_info.as_deref()),
+        schema_version: store.and_then(|store| store.schema_version().ok()),
+        sources: diagnostics::source_facts(&states, &games),
+        tools: tools(flatpak_info.is_some()),
+    };
+    facts.report(&Private::new(homes(), &games))
+}
+
+/// The tools the app looks for: umu-run, the Proton builds and, in Flatpak, the MangoHud
+/// Vulkan layer.
+fn tools(in_flatpak: bool) -> Vec<Tool> {
+    let umu_run = std::env::var_os("PATH")
+        .and_then(|path| umu::find_run(&path, umu::is_executable))
+        .map(|path| path.display().to_string());
+    let builds: Vec<String> = proton_launch::builds()
+        .into_iter()
+        .map(|build| build.name)
+        .collect();
+    let mut tools = vec![
+        Tool {
+            name: umu::RUN.to_owned(),
+            found: umu_run,
+        },
+        Tool {
+            name: "Proton builds".to_owned(),
+            found: (!builds.is_empty()).then(|| builds.join(", ")),
+        },
+    ];
+    if in_flatpak {
+        tools.push(Tool {
+            name: "MangoHud Vulkan layer".to_owned(),
+            found: permission_service::mangohud_layer_installed().then(|| "installed".to_owned()),
+        });
+    }
+    tools
+}
+
+/// The spellings of the home folder: as `HOME` gives it, and with its links resolved
+/// (`/var/home/ada` for `/home/ada` on Fedora Atomic).
+fn homes() -> Vec<PathBuf> {
+    let Some(home) = std::env::home_dir() else {
+        return Vec::new();
+    };
+    let resolved = std::fs::canonicalize(&home).ok();
+    std::iter::once(home).chain(resolved).collect()
+}

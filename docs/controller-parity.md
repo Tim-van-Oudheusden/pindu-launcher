@@ -23,9 +23,13 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   - Play with Logs and the other Preferences pages.
 - **Game details.** Developer, genres and description show on the fullscreen game page in every shipped design, as
   they do on the desktop page; a long description can be scrolled with a controller.
-- **The SteamGridDB key.** It is typed hidden with the on-screen keyboard's hidden-text dialog (the one Wi-Fi
-  passphrases and Bluetooth PINs use) and stored in the keyring through oo7, never in GSettings, files or logs.
-  Without a working keyring the entry says so in place.
+- **The SteamGridDB key.** Quick Access → Settings → Artwork. It is typed hidden with the on-screen keyboard's
+  hidden-text dialog (the one Wi-Fi passphrases and Bluetooth PINs use) and stored in the keyring through oo7, never in
+  GSettings, files or logs. Without a working keyring the entry says so in place and cannot be chosen. The Prefer
+  SteamGridDB Art switch sits beside it, as #520 decided.
+- **A game's Proton build.** For a game Pindu runs through Proton, Quick Access's Performance level lists the
+  default and the builds on this machine, newest first, as check rows a controller moves through. It is the same
+  setting as the desktop game page's Proton row and applies the next time the game starts. Other games have no list.
 
 ## Flatpak, native and Pindu OS
 
@@ -47,6 +51,7 @@ permission is added.
 | #520 List what fullscreen mode cannot do that a console needs | Spike: every desktop-only flow, the issues to file, #518's destination | This page |
 | #521 Show a game's details on the fullscreen game page | Developer, genres and description in every shipped design | |
 | #522 Enter the SteamGridDB key in fullscreen mode | The hidden-text dialog and the keyring | #520 |
+| #568 Choose a game's Proton build in fullscreen mode | Quick Access, Performance: the default or a build on this machine, the desktop page's setting | #520 |
 
 The issues #520 files join this table when they exist.
 

@@ -4,9 +4,13 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use super::location::{self, HostDirs, ResolveError};
-use super::{ImportError, ImportedGame, Snapshot, bottles, desktop, faugus, heroic, lutris, steam};
+use super::{
+    ImportError, ImportedGame, Snapshot, bottles, desktop, faugus, heroic, itch, legendary, lutris,
+    steam,
+};
 use crate::model::{
-    ArtOrigin, Artwork, Game, GameId, ImportedPlaytime, Source, SourceState, Timestamp,
+    ArtOrigin, Artwork, Game, GameId, ImportedPlaytime, Source, SourceDetails, SourceState,
+    Timestamp,
 };
 use crate::store::{self, Store};
 
@@ -20,6 +24,9 @@ pub const IMPORTED_SOURCES: &[Source] = &[
     Source::Lutris,
     Source::Bottles,
     Source::Faugus,
+    // After Heroic's Epic store, whose games it leaves out.
+    Source::Legendary,
+    Source::Itch,
     Source::Desktop,
 ];
 
@@ -122,10 +129,15 @@ pub fn sync_source(
         }
     };
     let synced = match snapshot {
-        Ok(snapshot) => SourceSync {
-            changes: apply_snapshot(store, &snapshot, now)?,
-            problems: snapshot.errors,
-        },
+        Ok(mut snapshot) => {
+            if source == Source::Legendary {
+                leave_out_heroic_games(store, &mut snapshot)?;
+            }
+            SourceSync {
+                changes: apply_snapshot(store, &snapshot, now)?,
+                problems: snapshot.errors,
+            }
+        }
         Err(problem) => SourceSync {
             problems: vec![problem],
             changes: Changes::default(),
@@ -140,12 +152,28 @@ pub fn sync_source(
     Ok(synced)
 }
 
+/// Leaves out of a standalone Legendary snapshot the games Heroic's Epic store lists, so
+/// a game both know is shown once, as Heroic's.
+fn leave_out_heroic_games(store: &Store, snapshot: &mut Snapshot) -> store::Result<()> {
+    let mut kept = Vec::with_capacity(snapshot.games.len());
+    for game in snapshot.games.drain(..) {
+        let heroic = store.game(&GameId::new(Source::HeroicEpic, &game.native_id))?;
+        if heroic.is_none_or(|heroic| heroic.missing_since.is_some()) {
+            kept.push(game);
+        }
+    }
+    snapshot.games = kept;
+    Ok(())
+}
+
 fn import(source: Source, root: &Path, utc_offset: i64) -> Result<Snapshot, ImportError> {
     match source {
         Source::Steam => steam::import(root),
         Source::Lutris => lutris::import(root),
         Source::Bottles => bottles::import(root),
         Source::Faugus => faugus::import(root, utc_offset),
+        Source::Legendary => legendary::import(root),
+        Source::Itch => itch::import(root),
         _ => heroic::import(root, source),
     }
 }
@@ -205,6 +233,14 @@ pub fn apply_snapshot(
                 }
             }
             replace_source_art(store, &id, imported)?;
+            store.set_source_details(
+                &id,
+                &SourceDetails {
+                    runner: imported.runner.clone(),
+                    service: imported.service.clone(),
+                    year: imported.year,
+                },
+            )?;
             if let Some(command) = &imported.launch_config {
                 // The source owns the command; options the user set on top are kept.
                 let mut config = store.launch_config(&id)?.unwrap_or_default();
@@ -309,6 +345,84 @@ mod tests {
 
     fn id() -> GameId {
         GameId::new(Source::HeroicGog, "1207658924")
+    }
+
+    #[test]
+    fn the_sources_runner_store_link_and_year_are_stored_and_refreshed() {
+        let (_dir, store) = temp_store();
+        let mut game = flagged(false, false, &[]);
+        game.runner = Some("steam".into());
+        game.service = Some(super::super::ServiceRef {
+            service: "steam".into(),
+            service_id: "220".into(),
+        });
+        game.year = Some(2004);
+        apply_snapshot(&store, &snapshot(vec![game.clone()]), 100).unwrap();
+
+        assert_eq!(
+            store.source_details(&id()).unwrap(),
+            crate::model::SourceDetails {
+                runner: game.runner.clone(),
+                service: game.service.clone(),
+                year: Some(2004),
+            }
+        );
+
+        game.runner = None;
+        game.service = None;
+        game.year = None;
+        apply_snapshot(&store, &snapshot(vec![game]), 200).unwrap();
+
+        assert_eq!(
+            store.source_details(&id()).unwrap(),
+            crate::model::SourceDetails::default()
+        );
+    }
+
+    #[test]
+    fn a_resync_leaves_groups_splits_and_preferred_copies_alone() {
+        let (_dir, store) = temp_store();
+        let other = other_game("other");
+        apply_snapshot(
+            &store,
+            &snapshot(vec![flagged(false, false, &[]), other.clone()]),
+            100,
+        )
+        .unwrap();
+        let other_id = GameId::new(Source::HeroicGog, "other");
+        let third = Game::new(
+            GameId::new(Source::Manual, "ut"),
+            "UT",
+            LaunchKind::Proton,
+            100,
+        );
+        store.insert_game(&third).unwrap();
+        let group = store.create_group(&[id(), other_id.clone()]).unwrap();
+        store.set_preferred_copy(group, Some(&other_id)).unwrap();
+        store.remember_split(&id(), &third.id).unwrap();
+        let before = (store.game_groups().unwrap(), store.splits().unwrap());
+
+        apply_snapshot(
+            &store,
+            &snapshot(vec![flagged(false, false, &[]), other]),
+            200,
+        )
+        .unwrap();
+        assert_eq!(
+            (store.game_groups().unwrap(), store.splits().unwrap()),
+            before
+        );
+
+        // A copy gone from its source stays in the group, as the preferred copy too.
+        apply_snapshot(&store, &snapshot(vec![flagged(false, false, &[])]), 300).unwrap();
+        assert_eq!(
+            store.game(&other_id).unwrap().unwrap().missing_since,
+            Some(300)
+        );
+        assert_eq!(
+            (store.game_groups().unwrap(), store.splits().unwrap()),
+            before
+        );
     }
 
     #[test]
@@ -749,6 +863,38 @@ mod tests {
         assert!(game.in_library());
         let state = store.source_state(Source::HeroicSideload).unwrap().unwrap();
         assert_eq!(state.errors, problems);
+    }
+
+    #[test]
+    fn standalone_legendary_skips_the_games_heroic_lists() {
+        let (dir, store) = temp_store();
+        let heroic = dir.path().join(".config/heroic/store_cache");
+        std::fs::create_dir_all(&heroic).unwrap();
+        std::fs::write(
+            heroic.join("legendary_library.json"),
+            r#"{"library": [{"app_name": "Sugar", "title": "Celeste"}]}"#,
+        )
+        .unwrap();
+        let legendary = dir.path().join(".config/legendary");
+        std::fs::create_dir_all(&legendary).unwrap();
+        std::fs::write(
+            legendary.join("installed.json"),
+            r#"{"Sugar": {"title": "Celeste"}, "Fortune": {"title": "Hades"}}"#,
+        )
+        .unwrap();
+
+        let summary = sync_all(&store, &host_dirs(dir.path()), 100, 0).unwrap();
+
+        let added = summary.added().games;
+        assert!(added.contains(&GameId::new(Source::HeroicEpic, "Sugar")));
+        assert!(added.contains(&GameId::new(Source::Legendary, "Fortune")));
+        assert!(!added.contains(&GameId::new(Source::Legendary, "Sugar")));
+        assert_eq!(
+            store
+                .game(&GameId::new(Source::Legendary, "Sugar"))
+                .unwrap(),
+            None
+        );
     }
 
     #[test]

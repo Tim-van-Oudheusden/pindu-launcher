@@ -105,8 +105,12 @@ mod imp {
         }
 
         fn signals() -> &'static [glib::subclass::Signal] {
-            static SIGNALS: LazyLock<Vec<glib::subclass::Signal>> =
-                LazyLock::new(|| vec![glib::subclass::Signal::builder("art-changed").build()]);
+            static SIGNALS: LazyLock<Vec<glib::subclass::Signal>> = LazyLock::new(|| {
+                vec![
+                    glib::subclass::Signal::builder("art-changed").build(),
+                    glib::subclass::Signal::builder("changed").build(),
+                ]
+            });
             SIGNALS.as_ref()
         }
     }
@@ -191,6 +195,16 @@ impl GameObject {
         })
     }
 
+    /// Calls `callback` when any of the game's data changes, after the property
+    /// notifications.
+    pub fn connect_changed<F: Fn(&Self) + 'static>(&self, callback: F) -> glib::SignalHandlerId {
+        self.connect_local("changed", false, move |values| {
+            let object = values[0].get::<Self>().expect("emitted by the game");
+            callback(&object);
+            None
+        })
+    }
+
     /// Replaces the game's data and notifies what changed. Returns whether anything did.
     pub fn update(&self, entry: LibraryEntry) -> bool {
         let (changed, art_changed): (Vec<&str>, bool) = {
@@ -222,6 +236,7 @@ impl GameObject {
         if art_changed {
             self.emit_by_name::<()>("art-changed", &[]);
         }
+        self.emit_by_name::<()>("changed", &[]);
         true
     }
 }

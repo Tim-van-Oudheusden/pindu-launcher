@@ -1,0 +1,17 @@
+{
+    "app_name": "Sugar",
+    "app_title": "Celeste",
+    "asset_infos": {},
+    "base_urls": [],
+    "metadata": {
+        "description": "Help Madeline survive her inner demons on her journey to the top of Celeste Mountain.",
+        "developer": "Maddy Makes Games",
+        "keyImages": [
+            {
+                "type": "DieselGameBoxTall",
+                "url": "https://cdn1.epicgames.com/sugar-tall.jpg"
+            }
+        ],
+        "title": "Celeste"
+    }
+}

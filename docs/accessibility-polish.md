@@ -21,7 +21,9 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   unlabelled controls, wrong roles and focus traps, and files an issue per real defect, in M7.
 - **Navigation repeat and dead zone.** Settings for the navigation repeat delay and rate and for the stick dead zone
   used for navigation. They change navigation only and never what a game receives. The repeat and dead-zone logic is
-  tested in the core.
+  tested in the core. Quick Access's Controllers offers Repeat Delay (short 0.2 s, normal 0.3 s, long 0.6 s), Repeat
+  Rate (slow every 100 ms, normal every 50 ms, fast every 30 ms) and Stick Dead Zone (small past 30 % of the stick's
+  travel, normal past half, large past 70 %), kept in GSettings.
 
 ## Flatpak, native and Pindu OS
 

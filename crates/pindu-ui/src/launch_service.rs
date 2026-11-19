@@ -10,7 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
-use pindu_core::launch::{self, Command, Route, Start, SteamSession};
+use pindu_core::launch::{self, Command, Route, Start, SteamSession, WebPage};
 use pindu_core::model::{Game, Source};
 use pindu_core::notifications::{Kind, Target};
 
@@ -33,7 +33,8 @@ pub fn launcher_name(source: Source) -> Option<&'static str> {
         }
         Source::Lutris => Some("Lutris"),
         Source::Bottles => Some("Bottles"),
-        Source::Faugus | Source::Desktop | Source::Manual => None,
+        Source::Itch => Some("itch"),
+        Source::Faugus | Source::Legendary | Source::Desktop | Source::Manual => None,
     }
 }
 
@@ -335,6 +336,25 @@ pub fn open_in_launcher(
             toast(adw::Toast::new(
                 &gettext("Could not open {launcher}").replace("{launcher}", launcher),
             ));
+        }
+    });
+}
+
+/// Opens `page` about the game in the browser, through the OpenURI portal in the sandbox;
+/// nothing for a game that has no such page. Pindu launcher fetches nothing itself.
+pub fn open_web_page(
+    window: &impl IsA<gtk::Window>,
+    game: &GameObject,
+    page: WebPage,
+    toast: impl Fn(adw::Toast) + 'static,
+) {
+    let Some(uri) = launch::web_page_uri(&game.game(), page) else {
+        return;
+    };
+    gtk::UriLauncher::new(&uri).launch(Some(window), gio::Cancellable::NONE, move |result| {
+        if let Err(error) = result {
+            glib::g_warning!("pindu", "Could not open {uri}: {error}");
+            toast(adw::Toast::new(&gettext("Could not open the web page")));
         }
     });
 }

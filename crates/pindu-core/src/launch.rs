@@ -171,6 +171,12 @@ pub fn offers_performance(game: &Game) -> bool {
     launch_settings(game).is_some()
 }
 
+/// Whether fullscreen mode offers a game's Proton build, in Quick Access's Performance
+/// level: a Windows game we run through Proton, as the desktop's game page offers it.
+pub fn offers_proton_choice(game: &Game) -> bool {
+    launch_settings(game).is_some_and(|settings| settings.proton)
+}
+
 /// How a game we run starts this once: as its launch settings say, with a log of it, or
 /// safely, to tell a broken overlay or wrapper from a broken game.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -363,14 +369,42 @@ fn store_uri(game: &Game) -> Option<String> {
     }
 }
 
-/// A URI that brings up the game's launcher: Steam's page for the game, or Heroic
-/// itself, which has no URI for a game's page.
+/// A URI that brings up the game's launcher: Steam's or the itch app's page for the game,
+/// or Heroic itself, which has no URI for a game's page.
 pub fn launcher_uri(game: &Game) -> Option<String> {
     match game.source() {
         Source::Steam => Some(format!("steam://nav/games/details/{}", game.id.native_id())),
+        Source::Itch => Some(format!("itch://games/{}", game.id.native_id())),
         source if heroic_runner(source).is_some() => Some("heroic://ping".to_owned()),
         _ => None,
     }
+}
+
+/// A page about a game that its players keep on the web, which the browser opens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WebPage {
+    /// ProtonDB's reports of how the game runs on Linux.
+    ProtonDb,
+    /// PCGamingWiki's fixes and settings for the game.
+    PcGamingWiki,
+}
+
+/// The address of `page` for `game`, by its Steam app ID; `None` for a game that is not
+/// on Steam. Pindu launcher only hands the address to the browser and fetches nothing.
+pub fn web_page_uri(game: &Game, page: WebPage) -> Option<String> {
+    let app_id = game.id.native_id();
+    if game.source() != Source::Steam
+        || app_id.is_empty()
+        || !app_id.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return None;
+    }
+    Some(match page {
+        WebPage::ProtonDb => format!("https://www.protondb.com/app/{app_id}"),
+        WebPage::PcGamingWiki => {
+            format!("https://www.pcgamingwiki.com/api/appid.php?appid={app_id}")
+        }
+    })
 }
 
 fn heroic_runner(source: Source) -> Option<&'static str> {
@@ -474,6 +508,29 @@ mod tests {
             assert!(
                 !offers_performance(&store_game),
                 "{source}: its launcher runs it"
+            );
+        }
+    }
+
+    #[test]
+    fn only_games_we_run_through_proton_offer_a_proton_build_in_fullscreen_mode() {
+        let game = |source, kind| Game::new(GameId::new(source, "x"), "X", kind, 0);
+
+        assert!(offers_proton_choice(&game(
+            Source::Manual,
+            LaunchKind::Proton
+        )));
+        for (source, kind) in [
+            (Source::Manual, LaunchKind::HostCommand),
+            (Source::Manual, LaunchKind::RuntimeNative),
+            (Source::Lutris, LaunchKind::HostCommand),
+            (Source::Desktop, LaunchKind::DesktopEntry),
+            (Source::Steam, LaunchKind::StoreUri),
+            (Source::HeroicEpic, LaunchKind::StoreUri),
+        ] {
+            assert!(
+                !offers_proton_choice(&game(source, kind)),
+                "{source} {kind}"
             );
         }
     }
@@ -1044,6 +1101,44 @@ mod tests {
             )),
             None
         );
+    }
+
+    #[test]
+    fn open_in_launcher_shows_an_itch_game_in_the_itch_app() {
+        assert_eq!(
+            launcher_uri(&store_game(Source::Itch, "1001")).as_deref(),
+            Some("itch://games/1001")
+        );
+    }
+
+    #[test]
+    fn a_steam_game_links_to_its_protondb_and_pcgamingwiki_pages_by_app_id() {
+        let steam = store_game(Source::Steam, "570");
+        assert_eq!(
+            web_page_uri(&steam, WebPage::ProtonDb).as_deref(),
+            Some("https://www.protondb.com/app/570")
+        );
+        assert_eq!(
+            web_page_uri(&steam, WebPage::PcGamingWiki).as_deref(),
+            Some("https://www.pcgamingwiki.com/api/appid.php?appid=570")
+        );
+    }
+
+    #[test]
+    fn only_steam_games_with_a_numeric_app_id_have_web_pages() {
+        for game in [
+            store_game(Source::HeroicGog, "570"),
+            store_game(Source::Steam, "570/../x"),
+            store_game(Source::Steam, ""),
+        ] {
+            assert_eq!(
+                web_page_uri(&game, WebPage::ProtonDb),
+                None,
+                "{:?}",
+                game.id
+            );
+            assert_eq!(web_page_uri(&game, WebPage::PcGamingWiki), None);
+        }
     }
 
     fn steam_session(root: &Path) -> SteamSession<'_> {

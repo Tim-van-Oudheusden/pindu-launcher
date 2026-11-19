@@ -10,6 +10,7 @@ use crate::add_store_service::AddStoreService;
 use crate::audio_output_service::AudioOutputService;
 use crate::bluetooth_service::BluetoothService;
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
+use crate::diagnostics_service;
 use crate::game_dialog::GameDialog;
 use crate::game_overlay::PinduGameOverlay;
 use crate::gamepad_service::GamepadService;
@@ -37,7 +38,7 @@ use crate::window::PinduWindow;
 use pindu_core::backup::ImportSummary;
 use pindu_core::gamescope::session::{Session, has_os_session_select, runs_as_own_session};
 use pindu_core::keys;
-use pindu_core::launch::Start;
+use pindu_core::launch::{Start, WebPage};
 use pindu_core::library::Filters;
 use pindu_core::notifications::{Kind, Target};
 use pindu_core::panels::Playing;
@@ -627,6 +628,22 @@ impl PinduApplication {
                 });
             })
             .build();
+        let protondb_action = gio::ActionEntry::builder("open-protondb")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                app.with_game(id, |window, game, _, toast| {
+                    launch_service::open_web_page(window, game, WebPage::ProtonDb, toast)
+                });
+            })
+            .build();
+        let pcgamingwiki_action = gio::ActionEntry::builder("open-pcgamingwiki")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                app.with_game(id, |window, game, _, toast| {
+                    launch_service::open_web_page(window, game, WebPage::PcGamingWiki, toast)
+                });
+            })
+            .build();
         // `--fullscreen`: the activation that follows opens the window in fullscreen mode.
         let fullscreen_action = gio::ActionEntry::builder("fullscreen")
             .activate(move |app: &Self, _, _| app.imp().pending_fullscreen.set(true))
@@ -654,6 +671,8 @@ impl PinduApplication {
             launch_action,
             stop_action,
             open_action,
+            protondb_action,
+            pcgamingwiki_action,
             fullscreen_action,
             fetch_art_action,
         ]);
@@ -945,20 +964,32 @@ impl PinduApplication {
         work(&window, &game, library, toast);
     }
 
+    /// Opens About once its debugging information is gathered, which takes a moment.
     fn show_about(&self) {
-        let about = adw::AboutDialog::builder()
-            .application_name(gettext("Pindu launcher"))
-            .application_icon(APP_ID)
-            .developer_name("Tim van Oudheusden")
-            .version(VERSION)
-            .website("https://github.com/Tim-van-Oudheusden/pindu-launcher")
-            .issue_url("https://github.com/Tim-van-Oudheusden/pindu-launcher/issues")
-            .developers(["Tim van Oudheusden"])
-            // Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-            .translator_credits(gettext("translator-credits"))
-            .license_type(gtk::License::Gpl30)
-            .build();
-        about.present(self.active_window().as_ref());
+        let steam_gamescope = self.gamescope_service().is_active();
+        let own_session = self.runs_as_own_session();
+        let app = self.downgrade();
+        glib::spawn_future_local(async move {
+            let debug_info = diagnostics_service::debug_info(steam_gamescope, own_session).await;
+            let Some(app) = app.upgrade() else {
+                return;
+            };
+            let about = adw::AboutDialog::builder()
+                .application_name(gettext("Pindu launcher"))
+                .application_icon(APP_ID)
+                .developer_name("Tim van Oudheusden")
+                .version(VERSION)
+                .website("https://github.com/Tim-van-Oudheusden/pindu-launcher")
+                .issue_url("https://github.com/Tim-van-Oudheusden/pindu-launcher/issues")
+                .developers(["Tim van Oudheusden"])
+                // Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
+                .translator_credits(gettext("translator-credits"))
+                .license_type(gtk::License::Gpl30)
+                .debug_info(debug_info)
+                .debug_info_filename("pindu-launcher-debug-info.txt")
+                .build();
+            about.present(app.active_window().as_ref());
+        });
     }
 }
 
