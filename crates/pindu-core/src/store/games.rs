@@ -109,11 +109,15 @@ impl Store {
         Ok(games)
     }
 
-    /// Deletes a game together with its launch config, artwork, sessions and memberships.
+    /// Deletes a game together with its launch config, artwork, sessions and memberships;
+    /// a group left with one game is removed.
     pub fn delete_game(&self, id: &GameId) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM games WHERE id = ?1", [id.as_str()])?;
-        Ok(())
+        self.in_transaction(|store| {
+            store
+                .conn
+                .execute("DELETE FROM games WHERE id = ?1", [id.as_str()])?;
+            store.drop_small_groups()
+        })
     }
 }
 

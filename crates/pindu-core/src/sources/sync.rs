@@ -9,7 +9,8 @@ use super::{
     steam,
 };
 use crate::model::{
-    ArtOrigin, Artwork, Game, GameId, ImportedPlaytime, Source, SourceState, Timestamp,
+    ArtOrigin, Artwork, Game, GameId, ImportedPlaytime, Source, SourceDetails, SourceState,
+    Timestamp,
 };
 use crate::store::{self, Store};
 
@@ -248,6 +249,14 @@ pub fn apply_snapshot(
                 }
             }
             replace_source_art(store, &id, imported)?;
+            store.set_source_details(
+                &id,
+                &SourceDetails {
+                    runner: imported.runner.clone(),
+                    service: imported.service.clone(),
+                    year: imported.year,
+                },
+            )?;
             if let Some(command) = &imported.launch_config {
                 // The source owns the command; options the user set on top are kept.
                 let mut config = store.launch_config(&id)?.unwrap_or_default();
@@ -352,6 +361,84 @@ mod tests {
 
     fn id() -> GameId {
         GameId::new(Source::HeroicGog, "1207658924")
+    }
+
+    #[test]
+    fn the_sources_runner_store_link_and_year_are_stored_and_refreshed() {
+        let (_dir, store) = temp_store();
+        let mut game = flagged(false, false, &[]);
+        game.runner = Some("steam".into());
+        game.service = Some(super::super::ServiceRef {
+            service: "steam".into(),
+            service_id: "220".into(),
+        });
+        game.year = Some(2004);
+        apply_snapshot(&store, &snapshot(vec![game.clone()]), 100).unwrap();
+
+        assert_eq!(
+            store.source_details(&id()).unwrap(),
+            crate::model::SourceDetails {
+                runner: game.runner.clone(),
+                service: game.service.clone(),
+                year: Some(2004),
+            }
+        );
+
+        game.runner = None;
+        game.service = None;
+        game.year = None;
+        apply_snapshot(&store, &snapshot(vec![game]), 200).unwrap();
+
+        assert_eq!(
+            store.source_details(&id()).unwrap(),
+            crate::model::SourceDetails::default()
+        );
+    }
+
+    #[test]
+    fn a_resync_leaves_groups_splits_and_preferred_copies_alone() {
+        let (_dir, store) = temp_store();
+        let other = other_game("other");
+        apply_snapshot(
+            &store,
+            &snapshot(vec![flagged(false, false, &[]), other.clone()]),
+            100,
+        )
+        .unwrap();
+        let other_id = GameId::new(Source::HeroicGog, "other");
+        let third = Game::new(
+            GameId::new(Source::Manual, "ut"),
+            "UT",
+            LaunchKind::Proton,
+            100,
+        );
+        store.insert_game(&third).unwrap();
+        let group = store.create_group(&[id(), other_id.clone()]).unwrap();
+        store.set_preferred_copy(group, Some(&other_id)).unwrap();
+        store.remember_split(&id(), &third.id).unwrap();
+        let before = (store.game_groups().unwrap(), store.splits().unwrap());
+
+        apply_snapshot(
+            &store,
+            &snapshot(vec![flagged(false, false, &[]), other]),
+            200,
+        )
+        .unwrap();
+        assert_eq!(
+            (store.game_groups().unwrap(), store.splits().unwrap()),
+            before
+        );
+
+        // A copy gone from its source stays in the group, as the preferred copy too.
+        apply_snapshot(&store, &snapshot(vec![flagged(false, false, &[])]), 300).unwrap();
+        assert_eq!(
+            store.game(&other_id).unwrap().unwrap().missing_since,
+            Some(300)
+        );
+        assert_eq!(
+            (store.game_groups().unwrap(), store.splits().unwrap()),
+            before
+        );
     }
 
     #[test]
