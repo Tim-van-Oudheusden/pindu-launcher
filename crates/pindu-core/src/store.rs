@@ -7,6 +7,7 @@
 mod artwork;
 mod collections;
 mod games;
+mod groups;
 mod launch_configs;
 mod playtime;
 mod sources;
@@ -26,6 +27,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("store/migrations/0003_launch_uri.sql"),
     include_str!("store/migrations/0004_square_art.sql"),
     include_str!("store/migrations/0005_steamgriddb_matches.sql"),
+    include_str!("store/migrations/0006_game_groups.sql"),
 ];
 
 /// The schema version a freshly opened store is at.
@@ -58,6 +60,12 @@ pub enum StoreError {
         /// Why it failed.
         error: Box<StoreError>,
     },
+    /// A group needs two or more different games.
+    TooFewCopies,
+    /// The game is in a group already; a game is in at most one.
+    AlreadyGrouped(GameId),
+    /// The game is not one of the group's games.
+    NotInGroup(GameId),
 }
 
 impl fmt::Display for StoreError {
@@ -76,6 +84,9 @@ impl fmt::Display for StoreError {
                 "could not keep a copy of the library at {} before upgrading it: {error}",
                 path.display()
             ),
+            Self::TooFewCopies => f.write_str("a group needs two or more different games"),
+            Self::AlreadyGrouped(game) => write!(f, "{game} is in a group already"),
+            Self::NotInGroup(game) => write!(f, "{game} is not in the group"),
         }
     }
 }
@@ -86,7 +97,12 @@ impl std::error::Error for StoreError {
             Self::Sqlite(error) => Some(error),
             Self::Io(error) => Some(error),
             Self::Backup { error, .. } => Some(error.as_ref()),
-            Self::TooNew { .. } | Self::NotFound | Self::NonUtf8Path(_) => None,
+            Self::TooNew { .. }
+            | Self::NotFound
+            | Self::NonUtf8Path(_)
+            | Self::TooFewCopies
+            | Self::AlreadyGrouped(_)
+            | Self::NotInGroup(_) => None,
         }
     }
 }
@@ -314,3 +330,6 @@ fn json_column<T: serde::de::DeserializeOwned>(row: &Row<'_>, column: &str) -> r
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod group_tests;

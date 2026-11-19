@@ -8,7 +8,7 @@ use gettextrs::gettext;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, gio, glib};
-use pindu_core::library;
+use pindu_core::library::{self, GameState};
 
 use super::CoverArt;
 use crate::models::GameObject;
@@ -207,24 +207,18 @@ impl CoverTile {
     fn show_state(&self, game: &GameObject) {
         let imp = self.imp();
         let playing = game.is_playing();
-        let (installed, needs_permission) = {
-            let game = game.game();
-            (game.installed, permission_service::needs_permission(&game))
-        };
-        let state = if playing {
-            Some(("media-playback-start-symbolic", gettext("Playing")))
-        } else if needs_permission {
-            Some(("changes-prevent-symbolic", gettext("Needs permission")))
-        } else if !installed {
-            Some(("folder-download-symbolic", gettext("Not installed")))
-        } else {
-            None
+        let state = game_state(game);
+        let icon = match state {
+            GameState::Playing => Some("media-playback-start-symbolic"),
+            GameState::NeedsPermission => Some("changes-prevent-symbolic"),
+            GameState::NotInstalled => Some("folder-download-symbolic"),
+            GameState::Installed => None,
         };
         imp.state_badge
-            .set_visible(state.is_some() && imp.show_badges.get());
-        if let Some((icon, tooltip)) = state {
+            .set_visible(icon.is_some() && imp.show_badges.get());
+        if let Some(icon) = icon {
             imp.state_badge.set_icon_name(Some(icon));
-            imp.state_badge.set_tooltip_text(Some(&tooltip));
+            imp.state_badge.set_tooltip_text(Some(&state_name(state)));
         }
         let (label, action) = if playing {
             (gettext("Stop"), "app.stop")
@@ -258,101 +252,15 @@ impl CoverTile {
     /// Opens the tile's context menu, pointing at `position` or, from the keyboard, at the
     /// whole tile.
     pub fn popup_menu_at(&self, position: Option<(f64, f64)>) {
-        let Some(game) = self.game() else { return };
-        let id = game.id();
-        let target = id.as_str().to_variant();
-        let item = |label: String, action: &str| {
-            let item = gio::MenuItem::new(Some(&label), None);
-            item.set_action_and_target_value(Some(action), Some(&target));
-            item
-        };
-        let menu = gio::Menu::new();
-        let actions = gio::Menu::new();
-        actions.append_item(&item(gettext("_Play"), "app.play"));
-        actions.append_item(&item(gettext("_Details"), "win.show-details"));
-        if pindu_core::launch::launcher_uri(&game.game()).is_some() {
-            actions.append_item(&item(gettext("_Open in Launcher"), "app.open-in-launcher"));
+        if let Some(game) = self.game() {
+            popup_game_menu(self.upcast_ref(), &self.imp().menu, &game, position);
         }
-        menu.append_section(None, &actions);
-        if let Some(window) = self.root().and_downcast::<crate::window::PinduWindow>() {
-            let collections = window.library().collections();
-            menu.append_section(
-                None,
-                &crate::collection_actions::collection_menu(&game, &collections),
-            );
-        }
-        let (favourite, pinned, hidden) = {
-            let game = game.game();
-            (game.favourite, game.pin_order.is_some(), game.hidden)
-        };
-        let keep = gio::Menu::new();
-        keep.append_item(&item(
-            if favourite {
-                gettext("Remove from _Favourites")
-            } else {
-                gettext("Add to _Favourites")
-            },
-            "win.toggle-favourite",
-        ));
-        keep.append_item(&item(
-            if pinned {
-                gettext("Un_pin from Jump Back In")
-            } else {
-                gettext("_Pin to Jump Back In")
-            },
-            "win.toggle-pin",
-        ));
-        menu.append_section(None, &keep);
-        let manage = gio::Menu::new();
-        manage.append_item(&item(gettext("_Edit…"), "app.edit-game"));
-        if hidden {
-            manage.append_item(&item(gettext("_Unhide"), "win.unhide-game"));
-        } else {
-            manage.append_item(&item(gettext("_Hide"), "win.hide-game"));
-        }
-        manage.append_item(&item(gettext("_Remove"), "win.remove-game"));
-        menu.append_section(None, &manage);
-
-        let popover = self.imp().menu.get_or_init(|| {
-            let popover = gtk::PopoverMenu::from_model(None::<&gio::MenuModel>);
-            popover.set_has_arrow(true);
-            popover.set_parent(self);
-            // Closing the menu drops the focus inside it: give focus back to the cover,
-            // as a menu button takes it back, so the keyboard and the controller go on
-            // from there.
-            popover.connect_closed(glib::clone!(
-                #[weak(rename_to = tile)]
-                self,
-                move |popover| {
-                    let lost = popover.root().is_some_and(|root| root.focus().is_none());
-                    if lost && let Some(item) = tile.parent() {
-                        item.grab_focus();
-                    }
-                }
-            ));
-            popover
-        });
-        popover.set_menu_model(Some(&menu));
-        let rect = match position {
-            Some((x, y)) => gdk::Rectangle::new(x as i32, y as i32, 1, 1),
-            None => gdk::Rectangle::new(0, 0, self.width(), self.height()),
-        };
-        popover.set_pointing_to(Some(&rect));
-        popover.popup();
     }
 
     /// What a screen reader says for the tile: title, launcher and state.
     pub fn accessible_label(game_object: &GameObject) -> String {
+        let state = state_name(game_state(game_object));
         let game = game_object.game();
-        let state = if game_object.is_playing() {
-            gettext("Playing")
-        } else if permission_service::needs_permission(&game) {
-            gettext("Needs permission")
-        } else if game.installed {
-            gettext("Installed")
-        } else {
-            gettext("Not installed")
-        };
         format!("{}, {}, {state}", game.title, source_name(game.source()))
     }
 
@@ -379,4 +287,123 @@ impl CoverTile {
             ),
         );
     }
+}
+
+/// The game's state, as its tile's badge and its list row show it.
+pub(crate) fn game_state(game: &GameObject) -> GameState {
+    let playing = game.is_playing();
+    let game = game.game();
+    GameState::of(
+        playing,
+        permission_service::needs_permission(&game),
+        game.installed,
+    )
+}
+
+/// The words for a game's state.
+pub(crate) fn state_name(state: GameState) -> String {
+    match state {
+        GameState::Playing => gettext("Playing"),
+        GameState::NeedsPermission => gettext("Needs permission"),
+        GameState::NotInstalled => gettext("Not installed"),
+        GameState::Installed => gettext("Installed"),
+    }
+}
+
+/// Opens a game's context menu over `anchor`, pointing at `position` or, from the
+/// keyboard, at the whole of `anchor`. The popover is made on first use into `popover`:
+/// a grid or list makes and drops widgets by the hundred while searching, and most never
+/// open their menu.
+pub(crate) fn popup_game_menu(
+    anchor: &gtk::Widget,
+    popover: &OnceCell<gtk::PopoverMenu>,
+    game: &GameObject,
+    position: Option<(f64, f64)>,
+) {
+    let id = game.id();
+    let target = id.as_str().to_variant();
+    let item = |label: String, action: &str| {
+        let item = gio::MenuItem::new(Some(&label), None);
+        item.set_action_and_target_value(Some(action), Some(&target));
+        item
+    };
+    let menu = gio::Menu::new();
+    let actions = gio::Menu::new();
+    actions.append_item(&item(gettext("_Play"), "app.play"));
+    actions.append_item(&item(gettext("_Details"), "win.show-details"));
+    if pindu_core::launch::launcher_uri(&game.game()).is_some() {
+        actions.append_item(&item(gettext("_Open in Launcher"), "app.open-in-launcher"));
+    }
+    menu.append_section(None, &actions);
+    if let Some(window) = anchor.root().and_downcast::<crate::window::PinduWindow>() {
+        let collections = window.library().collections();
+        menu.append_section(
+            None,
+            &crate::collection_actions::collection_menu(game, &collections),
+        );
+    }
+    let (favourite, pinned, hidden) = {
+        let game = game.game();
+        (game.favourite, game.pin_order.is_some(), game.hidden)
+    };
+    let keep = gio::Menu::new();
+    keep.append_item(&item(
+        if favourite {
+            gettext("Remove from _Favourites")
+        } else {
+            gettext("Add to _Favourites")
+        },
+        "win.toggle-favourite",
+    ));
+    keep.append_item(&item(
+        if pinned {
+            gettext("Un_pin from Jump Back In")
+        } else {
+            gettext("_Pin to Jump Back In")
+        },
+        "win.toggle-pin",
+    ));
+    menu.append_section(None, &keep);
+    let manage = gio::Menu::new();
+    manage.append_item(&item(gettext("_Edit…"), "app.edit-game"));
+    if hidden {
+        manage.append_item(&item(gettext("_Unhide"), "win.unhide-game"));
+    } else {
+        manage.append_item(&item(gettext("_Hide"), "win.hide-game"));
+    }
+    manage.append_item(&item(gettext("_Remove"), "win.remove-game"));
+    menu.append_section(None, &manage);
+
+    let popover = popover.get_or_init(|| {
+        let popover = gtk::PopoverMenu::from_model(None::<&gio::MenuModel>);
+        popover.set_has_arrow(true);
+        popover.set_parent(anchor);
+        // Closing the menu drops the focus inside it: give focus back to the grid's cover
+        // or the list's row, as a menu button takes it back, so the keyboard and the
+        // controller go on from there.
+        popover.connect_closed(glib::clone!(
+            #[weak]
+            anchor,
+            move |popover| {
+                let lost = popover.root().is_some_and(|root| root.focus().is_none());
+                if lost {
+                    let mut ancestor = anchor.parent();
+                    while let Some(widget) = ancestor {
+                        if widget.grab_focus() {
+                            break;
+                        }
+                        ancestor = widget.parent();
+                    }
+                }
+            }
+        ));
+        popover
+    });
+    popover.set_menu_model(Some(&menu));
+    let rect = match position {
+        Some((x, y)) => gdk::Rectangle::new(x as i32, y as i32, 1, 1),
+        None => gdk::Rectangle::new(0, 0, anchor.width(), anchor.height()),
+    };
+    popover.set_pointing_to(Some(&rect));
+    popover.popup();
 }

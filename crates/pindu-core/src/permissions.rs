@@ -1,8 +1,8 @@
 //! Permission tiers: what the sandbox lets us do, and which games need more than it has.
 //!
 //! Store launches go through the OpenURI portal and always work. Starting a game on the
-//! host (desktop entries, Flatpak games, Faugus games, games added by hand) needs host
-//! spawn: talking to `org.freedesktop.Flatpak`, which the user grants with
+//! host (desktop entries, Flatpak games, Faugus and Legendary games, games added by hand)
+//! needs host spawn: talking to `org.freedesktop.Flatpak`, which the user grants with
 //! `flatpak override`. The manifest never asks for it.
 
 use std::path::Path;

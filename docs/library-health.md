@@ -26,8 +26,9 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **Fullscreen.** The same report is a Quick Access level.
 - **First-run summary.** After the first sync, a summary names the launchers found, the games imported and what needs
   attention, once, in both shells, and points at Library Health. Once dismissed it never shows again.
-- **Last backup.** An export records its time, and Library data shows it. It is stored without a database migration
-  (for example a GSettings key), so it stays out of the migration chain.
+- **Last backup.** A successful export records its time in the `last-backup` GSettings key (seconds since the Unix
+  epoch, 0 for never), so it stays out of the migration chain; Library data shows it. The library service reads it
+  for the report (`LibraryService::last_backup`). The copies kept before a migration do not count as backups here.
 
 ## Flatpak, native and Pindu OS
 

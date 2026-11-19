@@ -11,8 +11,8 @@
 //! `wineserver -k`; a native game's Stop asks umu to quit, which ends its container, and
 //! pressure-vessel's launch client passes the signal on to the game in it.
 //!
-//! "Play with Logs" keeps umu's output, and a Windows game's Proton log, in the game's log
-//! (see `log_service`).
+//! "Play with Logs" and "Start Safely" keep umu's output, and a Windows game's Proton log,
+//! in the game's log (see `log_service`).
 
 use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
@@ -25,7 +25,7 @@ use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::arch::Arch;
-use pindu_core::launch::{self, Command};
+use pindu_core::launch::{self, Command, Start};
 use pindu_core::model::{Game, LaunchConfig};
 use pindu_core::paths::{default_prefixes_dir, default_tools_dir};
 use pindu_core::proton::{self, ProtonError};
@@ -33,7 +33,7 @@ use pindu_core::sources::location::HostDirs;
 use pindu_core::umu::{self, RuntimeSetup};
 
 use crate::config::APP_ID;
-use crate::launch_service::now;
+use crate::launch_service::{now, starting};
 use crate::log_service::{self, GameLog};
 use crate::session_service::{SIGTERM, SessionService};
 
@@ -42,16 +42,16 @@ const PROGRESS_INTERVAL: Duration = Duration::from_millis(250);
 
 /// Starts a Windows game with the Proton build and prefix its launch config names, or the
 /// defaults from Preferences, and tracks its session from the moment umu starts it. The
-/// app stays up while the game runs, since the game writes its log to us. With `logs`,
-/// umu's output and Proton's log are kept in a new log of the game. Without `umu-run`, a
-/// dialog explains what is missing instead.
+/// app stays up while the game runs, since the game writes its log to us. With `start`
+/// keeping a log, umu's output and Proton's log are kept in a new log of the game. Without
+/// `umu-run`, a dialog explains what is missing instead.
 pub fn play(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
     game: Game,
     config: LaunchConfig,
     sessions: SessionService,
-    logs: bool,
+    start: Start,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
     if explain_missing_umu(app, window, &game.title) {
@@ -85,22 +85,23 @@ pub fn play(
             }
         };
         let program = Program::Windows { end_prefix };
-        play_command(&app, window, game, command, program, sessions, logs, toast).await;
+        play_command(&app, window, game, command, program, sessions, start, toast).await;
         drop(hold);
     });
 }
 
 /// Starts a native game in the Steam Linux Runtime with umu's `command` (see
 /// [`proton::runtime_command`]), and tracks its session from the moment umu starts it, as
-/// [`play`] does a Windows game's. With `logs`, umu's output, the game's included, is kept
-/// in a new log of the game. Without `umu-run`, a dialog explains what is missing instead.
+/// [`play`] does a Windows game's. With `start` keeping a log, umu's output, the game's
+/// included, is kept in a new log of the game. Without `umu-run`, a dialog explains what
+/// is missing instead.
 pub fn play_native(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
     game: Game,
     command: Command,
     sessions: SessionService,
-    logs: bool,
+    start: Start,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
     if explain_missing_umu(app, window, &game.title) {
@@ -112,7 +113,7 @@ pub fn play_native(
         let program = Program::Native {
             launch: command.clone(),
         };
-        play_command(&app, window, game, command, program, sessions, logs, toast).await;
+        play_command(&app, window, game, command, program, sessions, start, toast).await;
         drop(hold);
     });
 }
@@ -125,7 +126,8 @@ enum Program {
 }
 
 /// Runs a game's umu `command` and tracks its session from the moment umu starts it. With
-/// `logs`, umu's output, and a Windows game's Proton log, are kept in a new log of the game.
+/// `start` keeping a log, umu's output, and a Windows game's Proton log, are kept in a new
+/// log of the game.
 #[expect(
     clippy::too_many_arguments,
     reason = "each argument is a separate input of one launch; a struct would only rename them"
@@ -137,16 +139,16 @@ async fn play_command(
     mut command: Command,
     program: Program,
     sessions: SessionService,
-    logs: bool,
+    start: Start,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
     let title = game.title.clone();
     let proton_log = matches!(program, Program::Windows { .. });
     let mut log = None;
-    if logs {
+    if start.keeps_log() {
         let (id, log_title) = (game.id.clone(), title.clone());
         let created = gio::spawn_blocking(move || {
-            let log = GameLog::create(&id, &log_title, &mut command, proton_log);
+            let log = GameLog::create(&id, &log_title, &mut command, proton_log, start);
             (log, command)
         })
         .await;
@@ -173,9 +175,7 @@ async fn play_command(
             }
             let (library, id) = (sessions.library().clone(), game.id.clone());
             glib::spawn_future_local(async move { library.mark_played(&id, now()).await });
-            toast(adw::Toast::new(
-                &gettext("Starting “{title}”").replace("{title}", &title),
-            ));
+            toast(adw::Toast::new(&starting(&title, start)));
         }
     };
     run(

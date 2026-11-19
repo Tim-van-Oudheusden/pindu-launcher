@@ -84,6 +84,10 @@ string_enum! {
         Bottles => "bottles",
         /// Faugus Launcher.
         Faugus => "faugus",
+        /// The standalone Legendary command-line client for the Epic Games Store.
+        Legendary => "legendary",
+        /// The itch app.
+        Itch => "itch",
         /// A desktop entry.
         Desktop => "desktop",
         /// A game the user added in Pindu.
@@ -389,6 +393,35 @@ pub struct Collection {
     pub name: String,
     /// Its place in the user's order of collections, lowest first.
     pub position: i64,
+}
+
+/// Copies of one game from several sources, shown as one game.
+///
+/// A group is a view over its members: their records, IDs and user state stay as they are,
+/// so ungrouping gives back exactly what was there before.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GameGroup {
+    /// The group's row ID.
+    pub id: i64,
+    /// The games in the group, two or more, ordered by ID.
+    pub members: Vec<GameId>,
+    /// The copy the user chose; `None` lets the default order pick one.
+    pub preferred: Option<GameId>,
+    /// Whether the group was made from an exact store cross-reference rather than by the
+    /// user, so undoing it remembers its pairs as not the same game.
+    pub automatic: bool,
+}
+
+/// What a source says about a game beyond the fields of [`Game`], kept for grouping
+/// copies of one game.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SourceDetails {
+    /// The runner the source starts the game with, such as Lutris's `steam` or `wine`.
+    pub runner: Option<String>,
+    /// The store record the source links the game to.
+    pub service: Option<crate::sources::ServiceRef>,
+    /// The year the game was released, when the source knows it.
+    pub year: Option<i32>,
 }
 
 /// What we know about one source on this machine.
