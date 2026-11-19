@@ -64,6 +64,9 @@ widgets so it looks and behaves like the rest of GNOME.
   layout. Group games into your own collections, or save a filter and search as a collection that keeps itself up to
   date (**Save Filter…** beside the filters, with suggested ones under its arrow), jump back into recent games and hide
   the ones you never play.
+  layout. Group games into your own collections, jump back into recent games and hide the ones you never play. The
+  **Select** button in the header bar picks several games in the grid or the list at once, to favourite, hide, add to
+  a collection or take out of one in one go, with a toast to undo it.
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
 - **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
   [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu
@@ -670,6 +673,7 @@ so the fullscreen mode is a second presentation of the same library.
 | [`docs/save-snapshots.md`](docs/save-snapshots.md) | Save snapshots of Windows games in managed prefixes, and restoring them |
 | [`docs/accessibility-polish.md`](docs/accessibility-polish.md) | Accessibility polish: text sizes, held buttons, high contrast, screen reader, navigation settings |
 | [`docs/emulation.md`](docs/emulation.md) | Emulation: what a first version would be and cost, and a recommendation; the decision is the maintainer's |
+| [`docs/external-importers.md`](docs/external-importers.md) | External importers: a versioned JSON protocol for sources kept outside the core, and a recommendation; the decision is the maintainer's |
 | [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
 | [`docs/releasing.md`](docs/releasing.md) | How to cut a release: versions, notes, the tag and the Release workflow |
 | [`docs/ai-ops-runbook.md`](docs/ai-ops-runbook.md) | Watching, pausing and reverting agent work; CI and Release failures; the `main` ruleset |

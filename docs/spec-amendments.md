@@ -61,4 +61,6 @@ the tracker:
 | InputPlumber support | No issue; deferred (analysis section 8.12) | — |
 
 Items the analysis adds beyond the spec are tracked as #501–#559 in M6 to M9; the analysis's section 9 lists them by
-milestone.
+milestone. Two M9 spikes wrote spec pages whose recommendations the maintainer has yet to decide on: emulation
+([`docs/emulation.md`](emulation.md), #546) and the external importer contract
+([`docs/external-importers.md`](external-importers.md), #547).
