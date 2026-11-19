@@ -23,6 +23,7 @@ use pindu_core::panels::Playing;
 use pindu_core::reading;
 
 use crate::collection_actions::collection_menu;
+use crate::group_actions::group_menu;
 use crate::launch_service::launcher_name;
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
@@ -31,6 +32,7 @@ use crate::proton_choice::{FirstChoice, ProtonChoice};
 use crate::proton_launch;
 use crate::sources::source_name;
 use crate::widgets::textures;
+use crate::window::PinduWindow;
 
 mod imp {
     use super::*;
@@ -258,7 +260,11 @@ impl GamePage {
             library,
             move |button| {
                 let collections = library.model().collections();
-                button.set_menu_model(Some(&more_menu(&object, &collections)));
+                let grouping = button
+                    .root()
+                    .and_downcast::<PinduWindow>()
+                    .map(|window| group_menu(&window, &object));
+                button.set_menu_model(Some(&more_menu(&object, &collections, grouping)));
             }
         ));
         imp.launch_summary.set_label(&launch_summary(game));
@@ -267,9 +273,16 @@ impl GamePage {
         for (caption, value) in facts(game, entry.playtime_secs, entry.playtime_origin) {
             imp.facts.append(&fact(&caption, &value));
         }
-        for copy in &entry.copies {
-            imp.copies_group
-                .add(&copy_row(copy, copy.game.id == game.id));
+        let mut first_choice: Option<gtk::CheckButton> = None;
+        for (index, copy) in entry.copies.iter().enumerate() {
+            let (row, choice) = copy_row(
+                copy,
+                index == 0,
+                copy.game.id == game.id,
+                first_choice.as_ref(),
+            );
+            imp.copies_group.add(&row);
+            first_choice.get_or_insert(choice);
         }
         imp.copies_group.set_visible(!entry.copies.is_empty());
 
@@ -607,8 +620,13 @@ fn parsed<T>(row: &adw::EntryRow, parse: impl Fn(&str) -> Result<T, String>) -> 
     }
 }
 
-/// The page's "more" menu, built when it opens so collection changes show at once.
-fn more_menu(object: &GameObject, collections: &[Collection]) -> gio::Menu {
+/// The page's "more" menu, built when it opens so collection changes show at once, with
+/// `grouping`'s Merge With, Preferred Copy and Split after the collections.
+fn more_menu(
+    object: &GameObject,
+    collections: &[Collection],
+    grouping: Option<gio::Menu>,
+) -> gio::Menu {
     let game = object.game();
     let hidden = game.hidden;
     let target = game.id.as_str().to_variant();
@@ -630,6 +648,9 @@ fn more_menu(object: &GameObject, collections: &[Collection]) -> gio::Menu {
         menu.append_section(None, &logs);
     }
     menu.append_section(None, &collection_menu(object, collections));
+    if let Some(grouping) = grouping {
+        menu.append_section(None, &grouping);
+    }
     let manage = gio::Menu::new();
     manage.append_item(&item(gettext("_Edit…"), "app.edit-game"));
     manage.append_item(&item(gettext("Change _Artwork…"), "win.change-artwork"));
@@ -731,9 +752,15 @@ fn fact(caption: &str, value: &str) -> gtk::Box {
     fact
 }
 
-/// One copy of a grouped game: its source, whether it is installed, its own playtime and,
-/// on the copy Play starts, a note saying so.
-fn copy_row(copy: &GameCopy, plays: bool) -> adw::ActionRow {
+/// One copy of a grouped game: a radio marking the preferred copy, which chooses the copy
+/// when activated, its source, whether it is installed, its own playtime and, on the copy
+/// Play starts, a note saying so.
+fn copy_row(
+    copy: &GameCopy,
+    preferred: bool,
+    plays: bool,
+    group: Option<&gtk::CheckButton>,
+) -> (adw::ActionRow, gtk::CheckButton) {
     let installed = if copy.game.installed && copy.game.in_library() {
         gettext("Installed")
     } else {
@@ -752,6 +779,21 @@ fn copy_row(copy: &GameCopy, plays: bool) -> adw::ActionRow {
         .subtitle(subtitle)
         .use_markup(false)
         .build();
+    let choose = gtk::CheckButton::builder()
+        .active(preferred)
+        .valign(gtk::Align::Center)
+        .tooltip_text(gettext("Preferred copy"))
+        .build();
+    choose.set_group(group);
+    let target = copy.game.id.as_str().to_variant();
+    choose.connect_toggled(move |check| {
+        if check.is_active() {
+            // The page shows again with the copies in their new order.
+            let _ = check.activate_action("win.prefer-copy", Some(&target));
+        }
+    });
+    row.add_prefix(&choose);
+    row.set_activatable_widget(Some(&choose));
     if plays {
         row.add_suffix(
             &gtk::Label::builder()
@@ -760,7 +802,7 @@ fn copy_row(copy: &GameCopy, plays: bool) -> adw::ActionRow {
                 .build(),
         );
     }
-    row
+    (row, choose)
 }
 
 /// A playtime with where it comes from, as a list row's subtitle shows it.

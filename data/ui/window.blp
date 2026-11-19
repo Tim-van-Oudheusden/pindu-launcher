@@ -569,6 +569,14 @@ template $PinduWindow: Adw.ApplicationWindow {
                         Button favourite_button {
                           use-underline: true;
                         }
+
+                        // Two or more selected games become copies of one game.
+                        [end]
+                        Button merge_selection_button {
+                          label: _("_Merge");
+                          use-underline: true;
+                          tooltip-text: _("Merge into one game with several copies");
+                        }
                       }
                     };
                   }
@@ -660,6 +668,45 @@ template $PinduWindow: Adw.ApplicationWindow {
                   max-content-height: 360;
 
                   child: ListBox options_collections {
+                    selection-mode: none;
+
+                    styles [
+                      "boxed-list",
+                    ]
+                  };
+                };
+              }
+
+              // The other games to merge the game with, likely copies first.
+              StackPage {
+                name: "merge";
+
+                child: ScrolledWindow {
+                  hscrollbar-policy: never;
+                  propagate-natural-height: true;
+                  max-content-height: 360;
+
+                  child: ListBox options_merge {
+                    selection-mode: none;
+
+                    styles [
+                      "boxed-list",
+                    ]
+                  };
+                };
+              }
+
+              // A group's copies; the one marked is the copy the group shows and Play
+              // starts.
+              StackPage {
+                name: "copies";
+
+                child: ScrolledWindow {
+                  hscrollbar-policy: never;
+                  propagate-natural-height: true;
+                  max-content-height: 360;
+
+                  child: ListBox options_copies {
                     selection-mode: none;
 
                     styles [

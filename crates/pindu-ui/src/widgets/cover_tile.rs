@@ -372,6 +372,7 @@ pub(crate) fn popup_game_menu(
             None,
             &crate::collection_actions::collection_menu(game, &collections),
         );
+        menu.append_section(None, &crate::group_actions::group_menu(&window, game));
     }
     let (favourite, pinned, hidden) = {
         let game = game.game();
