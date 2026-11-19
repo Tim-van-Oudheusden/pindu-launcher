@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 19:37+0100\n"
+"POT-Creation-Date: 2026-11-19 19:39+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1459,7 +1459,7 @@ msgid "Launcher"
 msgstr ""
 
 #. Translators: when a source last synced; it never has.
-#: crates/pindu-ui/src/game_page.rs:698 crates/pindu-ui/src/sources.rs:55
+#: crates/pindu-ui/src/game_page.rs:698 crates/pindu-ui/src/sources.rs:56
 msgid "Never"
 msgstr ""
 
@@ -1480,7 +1480,7 @@ msgstr ""
 msgid "Playtime · Tracked Here"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:742 crates/pindu-ui/src/preferences.rs:614
+#: crates/pindu-ui/src/game_page.rs:742 crates/pindu-ui/src/preferences.rs:626
 msgid "None yet"
 msgstr ""
 
@@ -1738,130 +1738,134 @@ msgstr ""
 msgid "The connection failed (reason {reason})."
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:153
+#: crates/pindu-ui/src/preferences.rs:154
 msgid "Command copied"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:318
+#: crates/pindu-ui/src/preferences.rs:319
 msgid "Allowed"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:320
+#: crates/pindu-ui/src/preferences.rs:321
 msgid "Not allowed"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:403
+#: crates/pindu-ui/src/preferences.rs:410
+msgid "The sandbox cannot see this folder: choose it to import its games"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:412
 msgid "Not found on this computer"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:414
+#: crates/pindu-ui/src/preferences.rs:426
 msgid "Import"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:426
+#: crates/pindu-ui/src/preferences.rs:438
 msgid "Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:428
+#: crates/pindu-ui/src/preferences.rs:440
 msgid "Found automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:433 data/ui/game_dialog.blp:62
+#: crates/pindu-ui/src/preferences.rs:445 data/ui/game_dialog.blp:62
 #: data/ui/preferences.blp:187
 msgid "_Choose…"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:439
+#: crates/pindu-ui/src/preferences.rs:451
 msgid "Find Automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:470
+#: crates/pindu-ui/src/preferences.rs:482
 msgid "Show in Sidebar"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:481
+#: crates/pindu-ui/src/preferences.rs:493
 msgid "Last Synced"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:495
+#: crates/pindu-ui/src/preferences.rs:507
 #, rust-format
 msgid "The last sync ran into {count} problem"
 msgid_plural "The last sync ran into {count} problems"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/preferences.rs:527
+#: crates/pindu-ui/src/preferences.rs:539
 #, rust-format
 msgid "Choose the Folder of {source}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:569
+#: crates/pindu-ui/src/preferences.rs:581
 msgid "Choose the Prefix Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:613
+#: crates/pindu-ui/src/preferences.rs:625
 msgid "A key is stored in your keyring"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:616
+#: crates/pindu-ui/src/preferences.rs:628
 #, rust-format
 msgid "The keyring cannot be used: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:644
+#: crates/pindu-ui/src/preferences.rs:656
 #, rust-format
 msgid "The key was not saved: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:662
+#: crates/pindu-ui/src/preferences.rs:674
 #: crates/pindu-ui/src/quick_access.rs:962
 msgid "Your fullscreen.css, over the design"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:664
+#: crates/pindu-ui/src/preferences.rs:676
 msgid "Create the style file or import one to turn it on"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:689
+#: crates/pindu-ui/src/preferences.rs:701
 #, rust-format
 msgid "The style folder cannot be created: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:708
+#: crates/pindu-ui/src/preferences.rs:720
 msgid "Stylesheets"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:714
+#: crates/pindu-ui/src/preferences.rs:726
 msgid "Import Style"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:732
+#: crates/pindu-ui/src/preferences.rs:744
 msgid "Style imported"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:734
+#: crates/pindu-ui/src/preferences.rs:746
 #, rust-format
 msgid "The style was not imported: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:749
+#: crates/pindu-ui/src/preferences.rs:761
 msgid "Style moved to fullscreen.css.bak"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:750
+#: crates/pindu-ui/src/preferences.rs:762
 msgid "My Stylesheet is off"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:752
+#: crates/pindu-ui/src/preferences.rs:764
 #, rust-format
 msgid "The style was not reset: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:770 data/ui/preferences.blp:325
+#: crates/pindu-ui/src/preferences.rs:782 data/ui/preferences.blp:325
 msgid "No Problems"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:773
+#: crates/pindu-ui/src/preferences.rs:785
 #, rust-format
 msgid "{count} Problem"
 msgid_plural "{count} Problems"
@@ -2155,45 +2159,45 @@ msgstr ""
 msgid "Heroic: Sideloaded"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:18
+#: crates/pindu-ui/src/sources.rs:19
 msgid "Desktop"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:19
+#: crates/pindu-ui/src/sources.rs:20
 msgid "Added by Hand"
 msgstr ""
 
 #. Translators: the separator between the first items of a list.
-#: crates/pindu-ui/src/sources.rs:32
+#: crates/pindu-ui/src/sources.rs:33
 msgid ", "
 msgstr ""
 
 #. Translators: a list's first items and its last, as in "Steam, Lutris and Bottles".
-#: crates/pindu-ui/src/sources.rs:34
+#: crates/pindu-ui/src/sources.rs:35
 #, rust-format
 msgid "{items} and {last}"
 msgstr ""
 
 #. Translators: when a source last synced; under a minute ago.
-#: crates/pindu-ui/src/sources.rs:57
+#: crates/pindu-ui/src/sources.rs:58
 msgid "Just now"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:58
+#: crates/pindu-ui/src/sources.rs:59
 #, rust-format
 msgid "{count} minute ago"
 msgid_plural "{count} minutes ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/sources.rs:59
+#: crates/pindu-ui/src/sources.rs:60
 #, rust-format
 msgid "{count} hour ago"
 msgid_plural "{count} hours ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/sources.rs:60
+#: crates/pindu-ui/src/sources.rs:61
 #, rust-format
 msgid "{count} day ago"
 msgid_plural "{count} days ago"
@@ -2666,7 +2670,7 @@ msgid "Heroic: Epic Games, GOG, Amazon and sideloaded games"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:19
-msgid "Lutris, Bottles and Faugus"
+msgid "Lutris, Bottles, Faugus and Legendary"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:20
