@@ -15,6 +15,7 @@ use crate::game_dialog::GameDialog;
 use crate::game_overlay::PinduGameOverlay;
 use crate::gamepad_service::GamepadService;
 use crate::gamescope_service::GamescopeService;
+use crate::health_service::HealthService;
 use crate::launch_service;
 use crate::library_service::{ImportFailure, LibraryService};
 use crate::manette_backend::ManetteBackend;
@@ -24,6 +25,7 @@ use crate::notification_service::NotificationService;
 use crate::permission_service;
 use crate::power_service::PowerService;
 use crate::preferences::PreferencesDialog;
+use crate::proton_launch::UMU_INSTALL_URI;
 use crate::search_provider;
 use crate::session_service::SessionService;
 use crate::sources::source_list;
@@ -83,6 +85,8 @@ mod imp {
         pub gamepad_service: OnceCell<GamepadService>,
         /// gamescope's `--steam` focus protocol; inert outside such a gamescope.
         pub gamescope_service: OnceCell<GamescopeService>,
+        /// The Library Health report, for both shells.
+        pub health_service: OnceCell<HealthService>,
         /// The user's own stylesheet for fullscreen mode.
         pub style_service: OnceCell<StyleService>,
         /// The batteries, for Quick Access's header.
@@ -194,6 +198,13 @@ mod imp {
                 .set(GamescopeService::new(
                     self.session_service.get().expect("set above"),
                     self.gamepad_service.get().expect("set above"),
+                ))
+                .expect("start-up runs once");
+            self.health_service
+                .set(HealthService::new(
+                    &self.sync_service,
+                    &library,
+                    self.gamescope_service.get().expect("set above").is_active(),
                 ))
                 .expect("start-up runs once");
             self.style_service
@@ -419,6 +430,14 @@ impl PinduApplication {
             .expect("the application has started")
     }
 
+    /// The Library Health report, gathered again after every sync.
+    pub fn health_service(&self) -> &HealthService {
+        self.imp()
+            .health_service
+            .get()
+            .expect("the application has started")
+    }
+
     /// The user's own stylesheet for fullscreen mode.
     pub fn style_service(&self) -> &StyleService {
         self.imp()
@@ -523,6 +542,24 @@ impl PinduApplication {
         // Preferences at its Permissions group: how to let games start on this computer.
         let permissions_action = gio::ActionEntry::builder("permissions")
             .activate(move |app: &Self, _, _| app.show_preferences().show_permissions())
+            .build();
+        // Preferences at its Sources page: each source's folder, last sync and problems.
+        let source_preferences_action = gio::ActionEntry::builder("source-preferences")
+            .activate(move |app: &Self, _, _| app.show_preferences().show_sources_page())
+            .build();
+        // umu-launcher's install instructions, in the browser.
+        let install_umu_action = gio::ActionEntry::builder("install-umu")
+            .activate(move |app: &Self, _, _| {
+                gtk::UriLauncher::new(UMU_INSTALL_URI).launch(
+                    app.active_window().as_ref(),
+                    gio::Cancellable::NONE,
+                    |result| {
+                        if let Err(error) = result {
+                            glib::g_warning!("pindu", "Could not open {UMU_INSTALL_URI}: {error}");
+                        }
+                    },
+                );
+            })
             .build();
         let add_game_action = gio::ActionEntry::builder("add-game")
             .activate(move |app: &Self, _, _| {
@@ -663,6 +700,8 @@ impl PinduApplication {
             about_action,
             preferences_action,
             permissions_action,
+            source_preferences_action,
+            install_umu_action,
             add_game_action,
             edit_game_action,
             import_action,
@@ -846,6 +885,7 @@ impl PinduApplication {
             .modal(true)
             .build();
         let library = self.library_service().clone();
+        let health = self.health_service().clone();
         let parent = window.clone();
         chooser.save(parent.as_ref(), gio::Cancellable::NONE, move |file| {
             let Some(path) = file.ok().and_then(|file| file.path()) else {
@@ -856,7 +896,11 @@ impl PinduApplication {
                     .export_backup(path, glib::real_time() / 1_000_000)
                     .await
                 {
-                    Ok(()) => gettext("Library exported"),
+                    Ok(()) => {
+                        // Library data's Last Backup changed.
+                        health.refresh();
+                        gettext("Library exported")
+                    }
                     Err(error) => {
                         gettext("Could not export the library: {error}").replace("{error}", &error)
                     }
@@ -1031,30 +1075,46 @@ fn art_notice_message(notice: RunNotice) -> String {
     }
 }
 
-/// What an import restored, and how many of its games this library lacks.
+/// What an import restored, how many of its games this library lacks and how many of its
+/// groups could not be made again.
 fn import_message(summary: &ImportSummary) -> String {
     let restored = summary.manual_games
         + summary.favourites
         + summary.hidden
         + summary.collections
-        + summary.sessions;
-    let done = if restored == 0 {
+        + summary.sessions
+        + summary.groups
+        + summary.splits;
+    let mut message = if restored == 0 {
         gettext("Nothing new to restore")
     } else {
         gettext("Backup restored")
     };
-    match summary.missing_games {
-        0 => done,
-        missing => {
-            let note = ngettext(
+    let mut notes = Vec::new();
+    if summary.missing_games > 0 {
+        notes.push(
+            ngettext(
                 "one game in it is not in this library",
                 "{count} games in it are not in this library",
-                missing as u32,
+                summary.missing_games as u32,
             )
-            .replace("{count}", &missing.to_string());
-            gettext("{result}; {note}")
-                .replace("{result}", &done)
-                .replace("{note}", &note)
-        }
+            .replace("{count}", &summary.missing_games.to_string()),
+        );
     }
+    if summary.skipped_groups > 0 {
+        notes.push(
+            ngettext(
+                "one group of copies in it was skipped",
+                "{count} groups of copies in it were skipped",
+                summary.skipped_groups as u32,
+            )
+            .replace("{count}", &summary.skipped_groups.to_string()),
+        );
+    }
+    for note in notes {
+        message = gettext("{result}; {note}")
+            .replace("{result}", &message)
+            .replace("{note}", &note);
+    }
+    message
 }

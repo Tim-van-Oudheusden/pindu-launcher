@@ -370,6 +370,30 @@ template $PinduQuickAccess: Box {
               };
             }
 
+            ListBoxRow sources_row {
+              action-name: "win.quick-access-sources";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "folder-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Sources");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
             // Shown where NetworkManager runs: the connection in use, or that
             // the system does not allow changing it (then insensitive).
             ListBoxRow network_row {
@@ -552,6 +576,32 @@ template $PinduQuickAccess: Box {
 
                 Label {
                   label: _("Add a Store");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            // The Proton builds to download and remove, and the defaults for
+            // new Windows games.
+            ListBoxRow proton_row {
+              action-name: "win.quick-access-proton";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "folder-download-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Proton");
                   xalign: 0;
                   hexpand: true;
                 }
@@ -1402,6 +1452,39 @@ template $PinduQuickAccess: Box {
     }
 
     StackPage {
+      name: "sources";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Sources");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          // Each imported source with whether it was found on this computer and
+          // its Import switch, the setting Preferences, Sources changes. Filled in
+          // code as the level opens and after each sync.
+          ListBox sources {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+          }
+        };
+      };
+    }
+
+    StackPage {
       name: "filters";
 
       child: ScrolledWindow {
@@ -1560,6 +1643,12 @@ template $PinduQuickAccess: Box {
       name: "add-store";
 
       child: $PinduAddStoreLevel add_store_level {};
+    }
+
+    StackPage {
+      name: "proton";
+
+      child: $PinduProtonLevel proton_level {};
     }
 
     StackPage {
