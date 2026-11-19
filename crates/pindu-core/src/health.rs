@@ -1,0 +1,623 @@
+//! Library Health: one report of whether the library can find, start and dress its games,
+//! in four sections (Sources, Launching, Artwork, Library data), computed from facts the
+//! services gather, so the desktop page and fullscreen mode's Quick Access level show the
+//! same thing.
+//!
+//! The report only reports and points: each [`Problem`] names a [`NextStep`] that already
+//! exists in the app (a Preferences page, the `flatpak override` command, How to Install).
+//! Nothing here repairs anything; the app cannot grant itself host access. A row the
+//! session cannot have is left out (`None`), as the system panel's availability rules do
+//! (`docs/system-panel.md`): it is never shown as a problem.
+
+use std::path::{Component, Path, PathBuf};
+
+use crate::model::{Source, SourceState, Timestamp};
+use crate::permissions;
+
+/// What the services found out about one source.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceFacts {
+    /// The source's stored state: on or off, the folder found, the user's folder, the last
+    /// sync and its problems.
+    pub state: SourceState,
+    /// How many of the library's games come from the source.
+    pub games: usize,
+}
+
+/// What the services found out about starting games.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct LaunchFacts {
+    /// Whether the app runs in the Flatpak sandbox.
+    pub in_flatpak: bool,
+    /// The app's ID, which the `flatpak override` command names.
+    pub app_id: String,
+    /// Whether host spawn is allowed (always natively).
+    pub host_spawn: bool,
+    /// How many games in the library start on the host, and so need host spawn.
+    pub games_needing_host: usize,
+    /// Whether `umu-run` was found.
+    pub umu: bool,
+    /// The display names of the Proton builds installed, in the order they were found.
+    pub proton_builds: Vec<String>,
+    /// Whether MangoHud can run: in the Flatpak its Vulkan-layer extension is installed,
+    /// natively the system's `mangohud` is.
+    pub mangohud: bool,
+    /// Whether GameMode can be asked to favour a game.
+    pub gamemode: bool,
+    /// Whether this is a gamescope session.
+    pub gamescope_session: bool,
+}
+
+/// What the services found out about artwork.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ArtworkFacts {
+    /// Whether a SteamGridDB key is stored in the keyring.
+    pub key_stored: bool,
+    /// How many bytes the artwork cache takes.
+    pub cache_bytes: u64,
+}
+
+/// What the services found out about the library file.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct LibraryFacts {
+    /// Where the library file is.
+    pub file: PathBuf,
+    /// The file's schema version.
+    pub schema_version: u32,
+    /// When the library was last backed up, if it is known.
+    pub last_backup: Option<Timestamp>,
+}
+
+/// Everything the report is computed from.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct HealthFacts {
+    /// Each source, in the order the report lists them.
+    pub sources: Vec<SourceFacts>,
+    /// Starting games.
+    pub launch: LaunchFacts,
+    /// Artwork.
+    pub artwork: ArtworkFacts,
+    /// The library file.
+    pub library: LibraryFacts,
+}
+
+/// How a launcher is installed, judged from the folder its data was found in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Install {
+    /// A package of the system, or the launcher's own installer.
+    Native,
+    /// A Flatpak, whose data lives under `~/.var/app`.
+    Flatpak,
+}
+
+impl Install {
+    /// How the launcher whose data is in `folder` is installed: a Flatpak keeps it under
+    /// `.var/app`, anything else is native.
+    pub fn of(folder: &Path) -> Self {
+        let components: Vec<_> = folder.components().collect();
+        let flatpak = components.windows(2).any(|pair| {
+            pair[0] == Component::Normal(".var".as_ref())
+                && pair[1] == Component::Normal("app".as_ref())
+        });
+        if flatpak { Self::Flatpak } else { Self::Native }
+    }
+}
+
+/// A Preferences page a next step opens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PreferencesPage {
+    /// Sources, with each source's folder, its last sync and that sync's problems.
+    Sources,
+}
+
+/// A tool whose install instructions a next step opens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Tool {
+    /// umu-launcher, which runs Windows games with Proton.
+    Umu,
+}
+
+/// What the user can do about a problem, with a part of the app that already exists.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NextStep {
+    /// Open this Preferences page.
+    Preferences(PreferencesPage),
+    /// Run this `flatpak override` command, then restart the app.
+    HostOverride {
+        /// The command, as Preferences shows it.
+        command: String,
+    },
+    /// Read how to install this tool.
+    HowToInstall(Tool),
+}
+
+/// Something that keeps the library from finding or starting games.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Problem {
+    /// The folder the user chose for the source lacks what the launcher keeps there.
+    FolderIncomplete {
+        /// The source.
+        source: Source,
+        /// The folder the user chose.
+        folder: PathBuf,
+    },
+    /// The source's last sync ran into problems.
+    SyncProblems {
+        /// The source.
+        source: Source,
+        /// How many.
+        count: usize,
+    },
+    /// Games in the library start on the host, which the sandbox does not allow.
+    NoHostAccess {
+        /// How many games need it.
+        games: usize,
+    },
+    /// umu-launcher, which runs Windows games, is not installed.
+    UmuMissing,
+}
+
+impl Problem {
+    /// The step that already exists for the problem.
+    pub fn next_step(&self, app_id: &str) -> NextStep {
+        match self {
+            Self::FolderIncomplete { .. } | Self::SyncProblems { .. } => {
+                NextStep::Preferences(PreferencesPage::Sources)
+            }
+            Self::NoHostAccess { .. } => NextStep::HostOverride {
+                command: permissions::host_override_command(app_id),
+            },
+            Self::UmuMissing => NextStep::HowToInstall(Tool::Umu),
+        }
+    }
+}
+
+/// One source in the Sources section.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceHealth {
+    /// The source.
+    pub source: Source,
+    /// Whether the user has it turned on.
+    pub enabled: bool,
+    /// The folder its data was found in; `None` when it was not found on this computer.
+    pub folder: Option<PathBuf>,
+    /// How the launcher is installed; `None` when it was not found.
+    pub install: Option<Install>,
+    /// How many of the library's games come from it.
+    pub games: usize,
+    /// When it was last synced, if ever.
+    pub last_sync: Option<Timestamp>,
+    /// What its last sync could not read.
+    pub sync_problems: Vec<String>,
+    /// What keeps it from being read.
+    pub problems: Vec<Problem>,
+}
+
+/// Whether games may start on the host, a row only the Flatpak has.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HostAccess {
+    /// Whether host spawn is allowed.
+    pub allowed: bool,
+    /// How many games in the library need it.
+    pub games_needing_it: usize,
+    /// The problem when games need it and it is not allowed.
+    pub problem: Option<Problem>,
+}
+
+/// The Launching section.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LaunchingHealth {
+    /// Whether games may start on the host; `None` natively, where they always may.
+    pub host_access: Option<HostAccess>,
+    /// Whether umu-launcher is installed.
+    pub umu: bool,
+    /// The problem when it is not.
+    pub umu_problem: Option<Problem>,
+    /// The display names of the Proton builds installed. None is not a problem: umu
+    /// downloads one the first time a game needs it.
+    pub proton_builds: Vec<String>,
+    /// Whether MangoHud can run. Without it the per-game switch says so; it is not a
+    /// problem.
+    pub mangohud: bool,
+    /// Whether GameMode can be asked to favour a game.
+    pub gamemode: bool,
+    /// Whether this is a gamescope session.
+    pub gamescope_session: bool,
+}
+
+/// The Artwork section.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ArtworkHealth {
+    /// Whether a SteamGridDB key is stored. Without one the launchers' own art shows.
+    pub key_stored: bool,
+    /// How many bytes the artwork cache takes.
+    pub cache_bytes: u64,
+}
+
+/// The Library data section.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LibraryHealth {
+    /// Where the library file is.
+    pub file: PathBuf,
+    /// Its schema version.
+    pub schema_version: u32,
+    /// When it was last backed up, if that is known.
+    pub last_backup: Option<Timestamp>,
+}
+
+/// The Library Health report.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HealthReport {
+    /// Sources: each source, found or not, where, how it is installed, its games, its last
+    /// sync and its problems.
+    pub sources: Vec<SourceHealth>,
+    /// Launching: host access, umu, Proton builds, MangoHud, GameMode, gamescope.
+    pub launching: LaunchingHealth,
+    /// Artwork: the stored key and the cache.
+    pub artwork: ArtworkHealth,
+    /// Library data: the file, its schema version and the last backup.
+    pub library: LibraryHealth,
+}
+
+impl HealthReport {
+    /// Every problem in the report, section by section.
+    pub fn problems(&self) -> impl Iterator<Item = &Problem> {
+        let sources = self.sources.iter().flat_map(|source| &source.problems);
+        let launching = self
+            .launching
+            .host_access
+            .iter()
+            .flat_map(|row| &row.problem);
+        sources.chain(launching).chain(&self.launching.umu_problem)
+    }
+}
+
+/// The report the facts make.
+pub fn report(facts: &HealthFacts) -> HealthReport {
+    let launch = &facts.launch;
+    let host_access = launch.in_flatpak.then(|| HostAccess {
+        allowed: launch.host_spawn,
+        games_needing_it: launch.games_needing_host,
+        problem: (!launch.host_spawn && launch.games_needing_host > 0).then_some(
+            Problem::NoHostAccess {
+                games: launch.games_needing_host,
+            },
+        ),
+    });
+    HealthReport {
+        sources: facts.sources.iter().map(source_health).collect(),
+        launching: LaunchingHealth {
+            host_access,
+            umu: launch.umu,
+            umu_problem: (!launch.umu).then_some(Problem::UmuMissing),
+            proton_builds: launch.proton_builds.clone(),
+            mangohud: launch.mangohud,
+            gamemode: launch.gamemode,
+            gamescope_session: launch.gamescope_session,
+        },
+        artwork: ArtworkHealth {
+            key_stored: facts.artwork.key_stored,
+            cache_bytes: facts.artwork.cache_bytes,
+        },
+        library: LibraryHealth {
+            file: facts.library.file.clone(),
+            schema_version: facts.library.schema_version,
+            last_backup: facts.library.last_backup,
+        },
+    }
+}
+
+/// One source's row. A source turned off is not read, so it has no problems; one that is
+/// not installed is not a problem either.
+fn source_health(facts: &SourceFacts) -> SourceHealth {
+    let state = &facts.state;
+    let mut problems = Vec::new();
+    if state.enabled {
+        if let (Some(folder), None) = (&state.user_override, &state.resolved_location) {
+            problems.push(Problem::FolderIncomplete {
+                source: state.source,
+                folder: folder.clone(),
+            });
+        }
+        if !state.errors.is_empty() {
+            problems.push(Problem::SyncProblems {
+                source: state.source,
+                count: state.errors.len(),
+            });
+        }
+    }
+    SourceHealth {
+        source: state.source,
+        enabled: state.enabled,
+        folder: state.resolved_location.clone(),
+        install: state.resolved_location.as_deref().map(Install::of),
+        games: facts.games,
+        last_sync: state.last_sync,
+        sync_problems: state.errors.clone(),
+        problems,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const APP_ID: &str = "io.example.App";
+
+    fn found(source: Source, folder: &str, games: usize) -> SourceFacts {
+        SourceFacts {
+            state: SourceState {
+                resolved_location: Some(PathBuf::from(folder)),
+                last_sync: Some(1_700_000_000),
+                ..SourceState::new(source)
+            },
+            games,
+        }
+    }
+
+    fn missing(source: Source) -> SourceFacts {
+        SourceFacts {
+            state: SourceState::new(source),
+            games: 0,
+        }
+    }
+
+    fn library() -> LibraryFacts {
+        LibraryFacts {
+            file: PathBuf::from("/home/u/.local/share/pindu-launcher/library.sqlite3"),
+            schema_version: 6,
+            last_backup: None,
+        }
+    }
+
+    /// The Flatpak as installed: no host spawn, umu bundled, no MangoHud layer.
+    fn flatpak_without_host_access() -> HealthFacts {
+        HealthFacts {
+            sources: vec![
+                found(
+                    Source::Steam,
+                    "/home/u/.var/app/com.valvesoftware.Steam/data/Steam",
+                    40,
+                ),
+                missing(Source::Lutris),
+            ],
+            launch: LaunchFacts {
+                in_flatpak: true,
+                app_id: APP_ID.to_owned(),
+                host_spawn: false,
+                games_needing_host: 3,
+                umu: true,
+                proton_builds: vec!["GE-Proton10-1".to_owned()],
+                mangohud: false,
+                gamemode: true,
+                gamescope_session: false,
+            },
+            artwork: ArtworkFacts {
+                key_stored: false,
+                cache_bytes: 0,
+            },
+            library: library(),
+        }
+    }
+
+    /// A native install on a desktop, without umu.
+    fn native_install() -> HealthFacts {
+        HealthFacts {
+            sources: vec![
+                found(Source::Steam, "/home/u/.local/share/Steam", 40),
+                found(Source::Lutris, "/home/u/.local/share/lutris", 5),
+            ],
+            launch: LaunchFacts {
+                in_flatpak: false,
+                app_id: APP_ID.to_owned(),
+                host_spawn: true,
+                games_needing_host: 3,
+                umu: false,
+                proton_builds: Vec::new(),
+                mangohud: true,
+                gamemode: false,
+                gamescope_session: false,
+            },
+            artwork: ArtworkFacts {
+                key_stored: true,
+                cache_bytes: 12_345,
+            },
+            library: library(),
+        }
+    }
+
+    #[test]
+    fn a_flatpak_without_host_access_points_to_the_override_command() {
+        let report = report(&flatpak_without_host_access());
+
+        let host = report
+            .launching
+            .host_access
+            .as_ref()
+            .expect("a Flatpak row");
+        assert!(!host.allowed);
+        assert_eq!(host.games_needing_it, 3);
+        let problem = host.problem.as_ref().expect("games need host access");
+        assert_eq!(problem, &Problem::NoHostAccess { games: 3 });
+        assert_eq!(
+            problem.next_step(APP_ID),
+            NextStep::HostOverride {
+                command: permissions::host_override_command(APP_ID)
+            }
+        );
+        assert_eq!(report.problems().count(), 1);
+    }
+
+    #[test]
+    fn a_flatpak_reports_its_sources_and_tools_without_calling_them_problems() {
+        let report = report(&flatpak_without_host_access());
+
+        let steam = &report.sources[0];
+        assert_eq!(steam.source, Source::Steam);
+        assert_eq!(steam.install, Some(Install::Flatpak));
+        assert_eq!(steam.games, 40);
+        assert_eq!(steam.last_sync, Some(1_700_000_000));
+        let lutris = &report.sources[1];
+        assert_eq!(lutris.folder, None);
+        assert_eq!(lutris.install, None);
+        assert!(lutris.problems.is_empty(), "not installed is not a problem");
+        assert!(report.launching.umu);
+        assert!(!report.launching.mangohud);
+        assert_eq!(report.launching.proton_builds, ["GE-Proton10-1"]);
+        assert!(!report.artwork.key_stored);
+    }
+
+    #[test]
+    fn a_flatpak_whose_games_need_no_host_access_has_no_problem_there() {
+        let mut facts = flatpak_without_host_access();
+        facts.launch.games_needing_host = 0;
+
+        let report = report(&facts);
+
+        let host = report.launching.host_access.expect("a Flatpak row");
+        assert!(!host.allowed);
+        assert_eq!(host.problem, None);
+    }
+
+    #[test]
+    fn a_flatpak_with_host_access_has_no_problem_there() {
+        let mut facts = flatpak_without_host_access();
+        facts.launch.host_spawn = true;
+
+        let report = report(&facts);
+
+        let host = report.launching.host_access.expect("a Flatpak row");
+        assert!(host.allowed);
+        assert_eq!(host.problem, None);
+    }
+
+    #[test]
+    fn a_native_install_has_no_host_access_row() {
+        let report = report(&native_install());
+
+        assert_eq!(report.launching.host_access, None);
+    }
+
+    #[test]
+    fn a_native_install_without_umu_points_to_how_to_install() {
+        let report = report(&native_install());
+
+        assert!(!report.launching.umu);
+        let problem = report
+            .launching
+            .umu_problem
+            .as_ref()
+            .expect("umu is missing");
+        assert_eq!(problem, &Problem::UmuMissing);
+        assert_eq!(problem.next_step(APP_ID), NextStep::HowToInstall(Tool::Umu));
+        assert_eq!(
+            report.problems().collect::<Vec<_>>(),
+            [&Problem::UmuMissing]
+        );
+    }
+
+    #[test]
+    fn a_native_install_reports_native_sources_artwork_and_library_data() {
+        let report = report(&native_install());
+
+        assert!(
+            report
+                .sources
+                .iter()
+                .all(|source| source.install == Some(Install::Native))
+        );
+        assert_eq!(report.sources[1].games, 5);
+        assert!(report.launching.proton_builds.is_empty());
+        assert!(report.launching.mangohud);
+        assert!(!report.launching.gamemode);
+        assert_eq!(
+            report.artwork,
+            ArtworkHealth {
+                key_stored: true,
+                cache_bytes: 12_345
+            }
+        );
+        assert_eq!(report.library.file, library().file);
+        assert_eq!(report.library.schema_version, 6);
+        assert_eq!(report.library.last_backup, None);
+    }
+
+    #[test]
+    fn a_sync_s_problems_point_to_the_sources_page() {
+        let mut facts = native_install();
+        facts.sources[0].state.errors =
+            vec!["a.acf: not VDF".to_owned(), "b.acf: empty".to_owned()];
+
+        let report = report(&facts);
+
+        let steam = &report.sources[0];
+        assert_eq!(steam.sync_problems.len(), 2);
+        let problem = &steam.problems[0];
+        assert_eq!(
+            problem,
+            &Problem::SyncProblems {
+                source: Source::Steam,
+                count: 2
+            }
+        );
+        assert_eq!(
+            problem.next_step(APP_ID),
+            NextStep::Preferences(PreferencesPage::Sources)
+        );
+    }
+
+    #[test]
+    fn a_chosen_folder_that_was_not_read_points_to_the_sources_page() {
+        let mut facts = native_install();
+        facts.sources[1] = SourceFacts {
+            state: SourceState {
+                user_override: Some(PathBuf::from("/mnt/games/lutris")),
+                ..SourceState::new(Source::Lutris)
+            },
+            games: 0,
+        };
+
+        let report = report(&facts);
+
+        let problem = &report.sources[1].problems[0];
+        assert_eq!(
+            problem,
+            &Problem::FolderIncomplete {
+                source: Source::Lutris,
+                folder: PathBuf::from("/mnt/games/lutris")
+            }
+        );
+        assert_eq!(
+            problem.next_step(APP_ID),
+            NextStep::Preferences(PreferencesPage::Sources)
+        );
+    }
+
+    #[test]
+    fn a_source_turned_off_has_no_problems() {
+        let mut facts = native_install();
+        let state = &mut facts.sources[0].state;
+        state.enabled = false;
+        state.user_override = Some(PathBuf::from("/nowhere"));
+        state.resolved_location = None;
+        state.errors = vec!["old".to_owned()];
+
+        let report = report(&facts);
+
+        assert!(!report.sources[0].enabled);
+        assert!(report.sources[0].problems.is_empty());
+    }
+
+    #[test]
+    fn flatpak_data_lives_under_var_app() {
+        assert_eq!(
+            Install::of(Path::new("/home/u/.var/app/net.lutris.Lutris/data/lutris")),
+            Install::Flatpak
+        );
+        assert_eq!(
+            Install::of(Path::new("/home/u/.local/share/lutris")),
+            Install::Native
+        );
+        assert_eq!(Install::of(Path::new("/home/u/app/.var")), Install::Native);
+    }
+}

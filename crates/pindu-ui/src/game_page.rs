@@ -1,9 +1,10 @@
 //! The game page: hero art with the logo or title, Play with default focus, a ⋮ menu, a
-//! facts row, the About group and the Launch group: for games we run, their launch
-//! settings; for store games, a read-only summary. In fullscreen mode it shows hero, logo,
-//! a large Play, Favourite, Add to Collection and Options (both opening the options
-//! sheet), a Playing Now card while the game runs, and
-//! a launch summary, with the starting screen over the page while Play starts the game.
+//! facts row, the About group, the description and the Launch group: for games we run,
+//! their launch settings; for store games, a read-only summary. In fullscreen mode it
+//! shows hero, logo, a large Play, Favourite, Add to Collection and Options (both opening
+//! the options sheet), a Playing Now card while the game runs, a launch summary, the About
+//! group and a description a controller scrolls through, with the starting screen over the
+//! page while Play starts the game.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::PathBuf;
@@ -13,11 +14,13 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
+use pindu_core::gamepad::Direction;
 use pindu_core::launch::{self, LaunchSettings};
 use pindu_core::library::PlaytimeOrigin;
 use pindu_core::manual;
 use pindu_core::model::{Collection, Game, GameId, LaunchConfig, LaunchKind, Source, Timestamp};
 use pindu_core::panels::Playing;
+use pindu_core::reading;
 
 use crate::collection_actions::collection_menu;
 use crate::launch_service::launcher_name;
@@ -74,7 +77,13 @@ mod imp {
         #[template_child]
         pub genres_row: TemplateChild<adw::ActionRow>,
         #[template_child]
+        pub description_box: TemplateChild<gtk::Box>,
+        #[template_child]
         pub description: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub scroller: TemplateChild<gtk::ScrolledWindow>,
+        #[template_child]
+        pub content: TemplateChild<gtk::Box>,
         #[template_child]
         pub launch_group: TemplateChild<adw::PreferencesGroup>,
         #[template_child]
@@ -264,7 +273,7 @@ impl GamePage {
         imp.genres_row.set_subtitle(&game.genres.join(", "));
         imp.about_group
             .set_visible(game.developer.is_some() || !game.genres.is_empty());
-        imp.description.set_visible(game.description.is_some());
+        imp.description_box.set_visible(game.description.is_some());
         imp.description
             .set_label(game.description.as_deref().unwrap_or_default());
 
@@ -342,7 +351,8 @@ impl GamePage {
 
     /// Shows fullscreen mode's presentation: larger art, Add to Collection and Options
     /// beside Favourite instead of the ⋮ menu, the Playing Now card and the launch summary
-    /// instead of the About and Launch groups; or the desktop page.
+    /// instead of the Launch group, and a description that takes focus so a controller can
+    /// scroll through it; or the desktop page.
     pub fn set_fullscreen(&self, fullscreen: bool) {
         let imp = self.imp();
         let was_fullscreen = imp.fullscreen.replace(fullscreen);
@@ -356,11 +366,10 @@ impl GamePage {
         imp.options_button.set_visible(fullscreen);
         imp.more_button.set_visible(!fullscreen);
         imp.launch_summary.set_visible(fullscreen);
-        imp.about_group.set_visible(!fullscreen && self.has_about());
-        let description = self
-            .game()
-            .is_some_and(|object| object.game().description.is_some());
-        imp.description.set_visible(!fullscreen && description);
+        // A selectable text would select itself all as it takes focus.
+        imp.developer_row.set_subtitle_selectable(!fullscreen);
+        imp.description.set_selectable(!fullscreen);
+        imp.description_box.set_focusable(fullscreen);
         imp.launch_group.set_visible(
             !fullscreen
                 && self
@@ -379,13 +388,6 @@ impl GamePage {
         self.show_playing(self.game().map_or(Playing::No, |object| object.playing()));
     }
 
-    fn has_about(&self) -> bool {
-        self.game().is_some_and(|object| {
-            let game = object.game();
-            game.developer.is_some() || !game.genres.is_empty()
-        })
-    }
-
     /// Shows the starting screen with `status` ("Starting…") and, when `cancel`, its
     /// Cancel, which takes focus as it appears; or hides it.
     pub fn show_launch(&self, status: Option<&str>, cancel: bool) {
@@ -400,6 +402,38 @@ impl GamePage {
         imp.launch_cancel.set_visible(cancel);
         if appears {
             imp.launch_cancel.grab_focus();
+        }
+    }
+
+    /// Up or Down while the description has focus, in fullscreen mode: scrolls through a
+    /// description taller than the page shows, and says whether it did, or kept focus at
+    /// the page's end, rather than let focus move on (`pindu_core::reading`).
+    pub fn scroll_description(&self, direction: Direction) -> bool {
+        let imp = self.imp();
+        if !imp.description_box.has_focus() {
+            return false;
+        }
+        let Some(bounds) = imp.description_box.compute_bounds(&*imp.content) else {
+            return false;
+        };
+        let adjustment = imp.scroller.vadjustment();
+        let view = reading::View {
+            top: adjustment.value(),
+            height: adjustment.page_size(),
+        };
+        let text = reading::Span {
+            top: f64::from(bounds.y()),
+            bottom: f64::from(bounds.y() + bounds.height()),
+        };
+        // Only the Launch groups, hidden in fullscreen mode, lie below it.
+        let more_below = imp.launch_group.is_visible() || imp.settings_group.is_visible();
+        match reading::step(view, text, direction, more_below) {
+            reading::Step::Scroll(top) => {
+                adjustment.set_value(top);
+                true
+            }
+            reading::Step::Stay => true,
+            reading::Step::MoveOn => false,
         }
     }
 
@@ -577,11 +611,13 @@ fn more_menu(object: &GameObject, collections: &[Collection]) -> gio::Menu {
         item
     };
     let menu = gio::Menu::new();
-    // Games we start ourselves can keep their output, and Proton's log, in a log.
+    // Games we start ourselves can keep their output, and Proton's log, in a log, and
+    // start once without their wrappers, overlay, GameMode or environment.
     if launch::launch_settings(&game).is_some() {
         let logs = gio::Menu::new();
         if !object.is_playing() {
             logs.append_item(&item(gettext("Play with _Logs"), "app.play-with-logs"));
+            logs.append_item(&item(gettext("Start _Safely"), "app.start-safely"));
         }
         logs.append_item(&item(gettext("Open Latest L_og"), "win.open-log"));
         menu.append_section(None, &logs);

@@ -72,10 +72,15 @@ workflows:
 
   quality-report.yml: {}
 
-  # Create the GitHub Release and upload the bundles, sources and packages.
+  # Create the GitHub Release and upload the bundles, sources and packages; provenance signs
+  # the RPMs' build provenance (id-token for Sigstore, attestations to store it); recipes
+  # pushes a final release's AUR and nixpkgs bump branch, finds its "Release X.Y.Z" issue
+  # and opens the pull request.
   release.yml:
     jobs:
+      provenance: { attestations: write, contents: read, id-token: write }
       publish: { contents: write }
+      recipes: { contents: write, issues: read, pull-requests: write }
 
   review.yml: {}
 

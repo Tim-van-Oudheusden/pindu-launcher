@@ -78,6 +78,23 @@ pub struct ImportedGame {
     pub artwork: Vec<(ArtLayout, PathBuf)>,
     /// Flags the source keeps itself; applied once, when the game first enters the library.
     pub source_flags: SourceFlags,
+    /// The store record the source links the game to, when it names one.
+    ///
+    /// Not stored in the library; game grouping matches copies of one game by it.
+    pub service: Option<ServiceRef>,
+    /// The runner the source starts the game with, such as `wine` or `linux`.
+    pub runner: Option<String>,
+    /// The year the game was released, when the source knows it.
+    pub year: Option<i32>,
+}
+
+/// A game's record in a store, as another launcher links to it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceRef {
+    /// The store, in the source's own words, such as `steam`, `gog` or `egs`.
+    pub service: String,
+    /// The store's own ID for the game.
+    pub service_id: String,
 }
 
 /// Hidden, favourite and category flags a launcher keeps for a game.
@@ -115,6 +132,9 @@ impl ImportedGame {
             description: None,
             artwork: Vec::new(),
             source_flags: SourceFlags::default(),
+            service: None,
+            runner: None,
+            year: None,
         }
     }
 }
