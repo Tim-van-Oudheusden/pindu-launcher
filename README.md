@@ -82,6 +82,8 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Your artwork.** Covers, banners and logos from your launchers, from your own files, or from
   [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring. **Change
   Artwork** on a game's page, in both modes, pages through every SteamGridDB image of each kind.
+- **Your details.** **Edit…** in a game's page menu sets its developer, genres and description; what you change is
+  kept when the library is imported again, and clearing a field goes back to the launcher's.
 - **Metadata from Wikidata, if you want it.** Turn on **Get Metadata From Wikidata** in Preferences (or in Quick
   Access's settings), then **Refresh Metadata** in the main menu or in Quick Access looks your games up on
   [Wikidata](https://www.wikidata.org) by their Steam app ID and keeps their developer and genres, labelled in your
