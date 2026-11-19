@@ -236,6 +236,9 @@ Guide + A never also opens the menu drawer.
 - **Sources** lists every source Pindu imports from, says whether each was found on this computer, and has its
   **Import** switch, the same setting as Preferences, Sources: a source turned off is no longer read, and changing a
   switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences.
+  - **Text Size:** fullscreen text at its default size or Large, Larger or Largest, each step about a quarter of
+    the default larger. Preferences has the same choice; an install that had the former Larger Text on starts at
+    Large.
   - **Hold to Confirm** (off by default): Power Off, Restart, Forget and Stop then need the controller's confirm button
     held down for a second. A popover over the entry fills as you hold, and letting go early or pressing another
     button does nothing; the hint bar says **Hold to Confirm** on them. The keyboard and the pointer still act at once.
