@@ -14,7 +14,8 @@ pub enum TaskKind {
     ProtonDownload,
     /// Installing a store from Flathub (see [`crate::add_store`]).
     StoreInstall,
-    /// Taking a snapshot of a Windows game's saves (see [`crate::saves`]).
+    /// Taking a snapshot of a Windows game's saves, or restoring one (see
+    /// [`crate::saves`]).
     SaveSnapshot,
 }
 

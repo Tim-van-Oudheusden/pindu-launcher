@@ -9,8 +9,11 @@
 //! is written into a hidden `.partial` folder and renamed into place once complete, so a
 //! failed write never touches the earlier ones. Symbolic links are never followed or
 //! copied. Each new snapshot can also be copied, the same way, to a folder the user picked
-//! (see [`copy_to`]).
+//! (see [`copy_to`]). [`restore`] puts a snapshot back after a safety snapshot, never
+//! while the game runs, and writes only inside the user folders of the prefix's
+//! `drive_c/users/`.
 
+use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::os::unix::fs::MetadataExt;
@@ -19,7 +22,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde_json::{Value as Json, json};
 
-use crate::model::{Game, GameId, LaunchConfig, Timestamp};
+use crate::model::{Game, GameId, LaunchConfig, LaunchKind, Timestamp};
 use crate::proton::{self, Defaults};
 
 /// What a snapshot leaves out of the user profiles: temporary files, installed software
@@ -514,6 +517,12 @@ pub const KEEP_EXIT: usize = 5;
 /// How many snapshots taken before a restore a game keeps.
 pub const KEEP_BEFORE_RESTORE: usize = 2;
 
+/// Whether a game has save snapshots to list: a Windows game we run through Proton. Only
+/// those in a prefix Pindu manages get any (see [`managed_prefix`]).
+pub fn offers_snapshots(game: &Game) -> bool {
+    game.launch_kind == LaunchKind::Proton
+}
+
 /// The folder in `root`, the snapshots folder, that holds a game's snapshots: named after
 /// its native ID, as its prefix is.
 pub fn game_snapshots_dir(root: &Path, game: &GameId) -> PathBuf {
@@ -527,6 +536,195 @@ pub fn managed_prefix(game: &Game, config: &LaunchConfig, defaults: &Defaults) -
     let own = defaults.prefixes.join(game.id.native_id());
     let prefix = proton::prefix(game, config, defaults);
     (prefix == own).then_some(prefix)
+}
+
+/// Why a restore did not happen.
+#[derive(Debug)]
+pub enum RestoreError {
+    /// The game runs, and would write its saves over the restored ones.
+    Running,
+    /// The snapshot is another game's.
+    NotThisGame,
+    /// The prefix has no folder of user profiles to restore into: it is gone, not set up
+    /// yet, or its `drive_c` or `users` is a symbolic link.
+    NoPrefix,
+    /// The snapshot holds this path, which a restore may not write: one outside the
+    /// user folders of `drive_c/users/`, in what snapshots leave out, or through a
+    /// symbolic link, in the prefix or the snapshot.
+    Refused(String),
+    /// Reading or writing failed.
+    Io(io::Error),
+}
+
+impl From<io::Error> for RestoreError {
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
+    }
+}
+
+/// Restores `snapshot`, one of `game`'s, into `prefix`, the game's managed prefix: the
+/// files a snapshot holds become as the snapshot holds them, each written beside its
+/// place and renamed over it, with its recorded time, and those it does not hold are
+/// removed. What snapshots leave out, and everything outside the user folders of
+/// `drive_c/users/`, stays as it is.
+///
+/// It is refused while the game runs (`running`), for another game's snapshot, and for
+/// one that holds a path it may not write, before anything is written. Otherwise it first
+/// takes a safety snapshot of the saves it replaces into `game_dir`, the game's snapshots
+/// folder (see [`take`] and [`Reason::BeforeRestore`]), and returns what that did; prune
+/// the older ones after the restore (see [`prune`]), so the snapshot being restored is
+/// never removed before it is put back.
+pub fn restore(
+    prefix: &Path,
+    game_dir: &Path,
+    game: &GameId,
+    snapshot: &Snapshot,
+    running: bool,
+    now: Timestamp,
+) -> Result<Taken, RestoreError> {
+    if running {
+        return Err(RestoreError::Running);
+    }
+    if snapshot.manifest.game != *game {
+        return Err(RestoreError::NotThisGame);
+    }
+    if let Some(file) = snapshot
+        .manifest
+        .files
+        .iter()
+        .find(|file| !restorable(&file.path))
+    {
+        return Err(RestoreError::Refused(file.path.clone()));
+    }
+    let users = users_dir(prefix);
+    for dir in [prefix.join("drive_c"), users.clone()] {
+        if !is_real_dir(&dir)? {
+            return Err(RestoreError::NoPrefix);
+        }
+    }
+    let source = snapshot.files_dir();
+    for file in &snapshot.manifest.files {
+        if !fs::symlink_metadata(source.join(&file.path))?.is_file()
+            || !writable(&users, &file.path)?
+        {
+            return Err(RestoreError::Refused(file.path.clone()));
+        }
+    }
+    let safety = take(prefix, game_dir, game, Reason::BeforeRestore, now)?;
+    for file in &snapshot.manifest.files {
+        put_back(&source, &users, file)?;
+    }
+    let kept: HashSet<&str> = snapshot
+        .manifest
+        .files
+        .iter()
+        .map(|file| file.path.as_str())
+        .collect();
+    for file in collect(prefix)? {
+        if !kept.contains(file.path.as_str()) {
+            fs::remove_file(users.join(&file.path))?;
+        }
+    }
+    Ok(safety)
+}
+
+/// Whether a restore may write the file at `path` below `drive_c/users/`: one in a user
+/// folder, with no step out of it, outside what [`EXCLUDED`] leaves out.
+fn restorable(path: &str) -> bool {
+    let parts: Vec<&str> = path.split('/').collect();
+    let Some((name, [_user, folders @ ..])) = parts.split_last() else {
+        return false;
+    };
+    if parts
+        .iter()
+        .any(|part| part.is_empty() || *part == "." || *part == ".." || part.contains('\0'))
+    {
+        return false;
+    }
+    let mut below_user = Vec::new();
+    for folder in folders {
+        below_user.push((*folder).to_owned());
+        if EXCLUDED
+            .iter()
+            .any(|rule| rule.excludes_folder(&below_user))
+        {
+            return false;
+        }
+    }
+    !EXCLUDED.iter().any(|rule| rule.excludes_file(name))
+}
+
+/// Whether `path` is a folder itself, not a symbolic link to one; `false` when it is
+/// missing.
+fn is_real_dir(path: &Path) -> io::Result<bool> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) => Ok(metadata.is_dir()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(error),
+    }
+}
+
+/// Whether a restore can write the file at `path` in `users` without going through a
+/// symbolic link: each folder on its way is a real folder or missing, as is everything
+/// below a missing one.
+fn writable(users: &Path, path: &str) -> io::Result<bool> {
+    let (folders, _) = path.rsplit_once('/').expect("a file is in a user folder");
+    let mut dir = users.to_owned();
+    for part in folders.split('/') {
+        dir.push(part);
+        match fs::symlink_metadata(&dir) {
+            Ok(metadata) if metadata.is_dir() => {}
+            Ok(_) => return Ok(false),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(true),
+            Err(error) => return Err(error),
+        }
+    }
+    Ok(true)
+}
+
+/// The end of the name of a file being restored, beside the file it replaces.
+const RESTORING: &str = ".pindu-restore";
+
+/// Copies `file` from `source`, a snapshot's `files/`, to its place in `users`, the
+/// prefix's `drive_c/users/`, with its recorded time: into a hidden file beside it first,
+/// flushed to disk, then renamed over it, so a failed copy leaves the file as it was. The
+/// folders on its way are made where missing; one that is a symbolic link stops it.
+fn put_back(source: &Path, users: &Path, file: &SavedFile) -> io::Result<()> {
+    let (folders, name) = file
+        .path
+        .rsplit_once('/')
+        .expect("a file is in a user folder");
+    let mut dir = users.to_owned();
+    for part in folders.split('/') {
+        dir.push(part);
+        match fs::symlink_metadata(&dir) {
+            Ok(metadata) if metadata.is_dir() => {}
+            Ok(_) => return Err(not_a_folder(&dir)),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => fs::create_dir(&dir)?,
+            Err(error) => return Err(error),
+        }
+    }
+    let temporary = dir.join(format!(".{name}{RESTORING}"));
+    let copied = (|| {
+        fs::copy(source.join(&file.path), &temporary)?;
+        let copy = fs::OpenOptions::new().write(true).open(&temporary)?;
+        copy.set_modified(modified(file.mtime_ns))?;
+        copy.sync_all()?;
+        fs::rename(&temporary, dir.join(name))
+    })();
+    if copied.is_err() {
+        // The hidden copy is no save whether or not it goes now.
+        let _ = fs::remove_file(&temporary);
+    }
+    copied
+}
+
+/// The error for `path`, which a restore needs to be a real folder.
+fn not_a_folder(path: &Path) -> io::Error {
+    io::Error::new(
+        io::ErrorKind::NotADirectory,
+        format!("{} is not a folder", path.display()),
+    )
 }
 
 /// A game's snapshots in `game_dir`, its snapshots folder, newest first. A folder without
@@ -857,6 +1055,256 @@ mod tests {
             ..LaunchConfig::default()
         };
         assert_eq!(managed_prefix(&game, &lutris, &defaults), None);
+    }
+
+    #[test]
+    fn a_restore_puts_the_snapshot_s_files_back_and_removes_newer_ones() {
+        let (prefix, snapshots) = (prefix(), tempfile::tempdir().unwrap());
+        let game_dir = snapshots.path().join("celeste-1a2b");
+        let snapshot =
+            written(take(prefix.path(), &game_dir, &celeste(), Reason::Exit, NOW).unwrap());
+        let users = users_dir(prefix.path());
+        put(
+            &users,
+            "steamuser/Saved Games/CD Projekt Red/save.dat",
+            "later",
+        );
+        put(
+            &users,
+            "steamuser/Saved Games/CD Projekt Red/new.dat",
+            "new",
+        );
+        fs::remove_file(users.join("Public/Documents/shared.ini")).unwrap();
+        restore(
+            prefix.path(),
+            &game_dir,
+            &celeste(),
+            &snapshot,
+            false,
+            NOW + 60,
+        )
+        .unwrap();
+        assert_eq!(collect(prefix.path()).unwrap(), snapshot.manifest.files);
+        assert_eq!(
+            fs::read_to_string(users.join("steamuser/Saved Games/CD Projekt Red/save.dat"))
+                .unwrap(),
+            "cp77"
+        );
+        // What a snapshot leaves out stays as it is.
+        assert!(users.join("steamuser/Temp/a.tmp").exists());
+        assert!(
+            users
+                .join("steamuser/AppData/Roaming/Microsoft/Protect/masterkey")
+                .exists()
+        );
+    }
+
+    #[test]
+    fn a_restore_first_takes_a_safety_snapshot_of_the_saves_it_replaces() {
+        let (prefix, snapshots) = (prefix(), tempfile::tempdir().unwrap());
+        let game_dir = snapshots.path().join("celeste-1a2b");
+        let snapshot =
+            written(take(prefix.path(), &game_dir, &celeste(), Reason::Exit, NOW).unwrap());
+        let users = users_dir(prefix.path());
+        put(
+            &users,
+            "steamuser/Saved Games/CD Projekt Red/save.dat",
+            "later",
+        );
+        let replaced = collect(prefix.path()).unwrap();
+        let safety = written(
+            restore(
+                prefix.path(),
+                &game_dir,
+                &celeste(),
+                &snapshot,
+                false,
+                NOW + 60,
+            )
+            .unwrap(),
+        );
+        assert_eq!(safety.manifest.reason, Reason::BeforeRestore);
+        assert_eq!(safety.manifest.taken_at, NOW + 60);
+        assert_eq!(safety.manifest.files, replaced);
+        assert_eq!(
+            fs::read_to_string(
+                safety
+                    .files_dir()
+                    .join("steamuser/Saved Games/CD Projekt Red/save.dat")
+            )
+            .unwrap(),
+            "later"
+        );
+        assert_eq!(list(&game_dir).unwrap(), [safety, snapshot]);
+    }
+
+    #[test]
+    fn a_restore_is_refused_while_the_game_runs() {
+        let (prefix, snapshots) = (prefix(), tempfile::tempdir().unwrap());
+        let game_dir = snapshots.path().join("celeste-1a2b");
+        let snapshot =
+            written(take(prefix.path(), &game_dir, &celeste(), Reason::Exit, NOW).unwrap());
+        let users = users_dir(prefix.path());
+        put(
+            &users,
+            "steamuser/Saved Games/CD Projekt Red/save.dat",
+            "later",
+        );
+        let now = collect(prefix.path()).unwrap();
+        let refused = restore(
+            prefix.path(),
+            &game_dir,
+            &celeste(),
+            &snapshot,
+            true,
+            NOW + 60,
+        );
+        assert!(matches!(refused, Err(RestoreError::Running)), "{refused:?}");
+        assert_eq!(collect(prefix.path()).unwrap(), now);
+        assert_eq!(list(&game_dir).unwrap(), [snapshot], "no safety snapshot");
+    }
+
+    #[test]
+    fn a_restore_never_writes_outside_the_user_profiles_or_into_what_snapshots_leave_out() {
+        let (prefix, snapshots) = (prefix(), tempfile::tempdir().unwrap());
+        let game_dir = snapshots.path().join("celeste-1a2b");
+        let snapshot =
+            written(take(prefix.path(), &game_dir, &celeste(), Reason::Exit, NOW).unwrap());
+        let before = collect(prefix.path()).unwrap();
+        for path in [
+            "../user.reg",
+            "steamuser/../../user.reg",
+            "/etc/passwd",
+            "steamuser//save.dat",
+            "steamuser/./save.dat",
+            "stray.txt",
+            "steamuser/Temp/a.tmp",
+            "steamuser/AppData/Roaming/Microsoft/Protect/masterkey",
+            "steamuser/AppData/Local/Game/ShaderCache/s.bin",
+            "steamuser/AppData/Local/Game/Profile/Cookies",
+        ] {
+            let mut tampered = snapshot.clone();
+            tampered.manifest.files.push(SavedFile {
+                path: path.to_owned(),
+                size: 1,
+                mtime_ns: 0,
+            });
+            let refused = restore(
+                prefix.path(),
+                &game_dir,
+                &celeste(),
+                &tampered,
+                false,
+                NOW + 60,
+            );
+            assert!(
+                matches!(&refused, Err(RestoreError::Refused(refused)) if refused == path),
+                "{path}: {refused:?}"
+            );
+        }
+        let other = GameId::new(Source::Manual, "other-3c4d");
+        let refused = restore(prefix.path(), &game_dir, &other, &snapshot, false, NOW + 60);
+        assert!(
+            matches!(refused, Err(RestoreError::NotThisGame)),
+            "{refused:?}"
+        );
+        assert_eq!(collect(prefix.path()).unwrap(), before);
+        assert_eq!(list(&game_dir).unwrap(), [snapshot], "no safety snapshot");
+    }
+
+    #[test]
+    fn a_restore_never_writes_through_a_symbolic_link() {
+        let (prefix, snapshots) = (prefix(), tempfile::tempdir().unwrap());
+        let game_dir = snapshots.path().join("celeste-1a2b");
+        let snapshot =
+            written(take(prefix.path(), &game_dir, &celeste(), Reason::Exit, NOW).unwrap());
+        let users = users_dir(prefix.path());
+        let outside = tempfile::tempdir().unwrap();
+        fs::remove_dir_all(users.join("steamuser/Saved Games")).unwrap();
+        std::os::unix::fs::symlink(outside.path(), users.join("steamuser/Saved Games")).unwrap();
+        let before = collect(prefix.path()).unwrap();
+        let refused = restore(
+            prefix.path(),
+            &game_dir,
+            &celeste(),
+            &snapshot,
+            false,
+            NOW + 60,
+        );
+        assert!(
+            matches!(&refused, Err(RestoreError::Refused(path))
+                if path == "steamuser/Saved Games/CD Projekt Red/save.dat"),
+            "{refused:?}"
+        );
+        assert_eq!(entries(outside.path()), Vec::<String>::new());
+        assert_eq!(collect(prefix.path()).unwrap(), before);
+        assert_eq!(list(&game_dir).unwrap(), [snapshot], "no safety snapshot");
+    }
+
+    #[test]
+    fn a_restore_never_copies_a_symbolic_link_in_the_snapshot() {
+        let (prefix, snapshots) = (prefix(), tempfile::tempdir().unwrap());
+        let game_dir = snapshots.path().join("celeste-1a2b");
+        let snapshot =
+            written(take(prefix.path(), &game_dir, &celeste(), Reason::Exit, NOW).unwrap());
+        let outside = tempfile::tempdir().unwrap();
+        put(outside.path(), "secret.txt", "secret");
+        let copy = snapshot
+            .files_dir()
+            .join("steamuser/Saved Games/CD Projekt Red/save.dat");
+        fs::remove_file(&copy).unwrap();
+        std::os::unix::fs::symlink(outside.path().join("secret.txt"), &copy).unwrap();
+        let refused = restore(
+            prefix.path(),
+            &game_dir,
+            &celeste(),
+            &snapshot,
+            false,
+            NOW + 60,
+        );
+        assert!(
+            matches!(&refused, Err(RestoreError::Refused(path))
+                if path == "steamuser/Saved Games/CD Projekt Red/save.dat"),
+            "{refused:?}"
+        );
+    }
+
+    #[test]
+    fn a_prefix_without_user_profiles_is_not_restored_into() {
+        let (prefix, snapshots) = (prefix(), tempfile::tempdir().unwrap());
+        let game_dir = snapshots.path().join("celeste-1a2b");
+        let snapshot =
+            written(take(prefix.path(), &game_dir, &celeste(), Reason::Exit, NOW).unwrap());
+        let moved = tempfile::tempdir().unwrap();
+        fs::rename(prefix.path().join("drive_c"), moved.path().join("drive_c")).unwrap();
+        std::os::unix::fs::symlink(moved.path().join("drive_c"), prefix.path().join("drive_c"))
+            .unwrap();
+        let refused = restore(
+            prefix.path(),
+            &game_dir,
+            &celeste(),
+            &snapshot,
+            false,
+            NOW + 60,
+        );
+        assert!(
+            matches!(refused, Err(RestoreError::NoPrefix)),
+            "{refused:?}"
+        );
+        fs::remove_file(prefix.path().join("drive_c")).unwrap();
+        let refused = restore(
+            prefix.path(),
+            &game_dir,
+            &celeste(),
+            &snapshot,
+            false,
+            NOW + 60,
+        );
+        assert!(
+            matches!(refused, Err(RestoreError::NoPrefix)),
+            "{refused:?}"
+        );
+        assert!(!prefix.path().join("drive_c").exists());
     }
 
     #[test]

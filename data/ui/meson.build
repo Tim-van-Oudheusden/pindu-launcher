@@ -22,6 +22,7 @@ blueprint_names = [
   'merge_dialog',
   'preferences',
   'quick_access',
+  'save_snapshots_dialog',
   'secret_dialog',
   'shortcuts-dialog',
   'window',
