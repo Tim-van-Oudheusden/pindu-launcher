@@ -13,19 +13,20 @@ CREATE TABLE categories (id INTEGER PRIMARY KEY, name TEXT UNIQUE);
 CREATE TABLE games_categories (game_id INTEGER, category_id INTEGER);
 CREATE TABLE saved_searches (id INTEGER PRIMARY KEY, name TEXT UNIQUE, search TEXT);
 
--- A native game with art, playtime (in hours), a favourite and a category.
+-- A native game with art, playtime (in hours), a favourite and a category; added by
+-- hand, so Lutris left the service columns empty.
 INSERT INTO games (id, name, sortname, slug, platform, runner, directory, lastplayed,
-    installed, installed_at, configpath, playtime)
+    installed, installed_at, year, configpath, playtime, service, service_id)
 VALUES (1, 'Celeste', '', 'celeste', 'Linux', 'linux', '/games/celeste', 1700000000, 1,
-    1690000000, 'celeste-1690000000', 12.5);
--- A hidden Windows game without art or playtime.
+    1690000000, 2018, 'celeste-1690000000', 12.5, '', '');
+-- A hidden Windows game from GOG, without art or playtime.
 INSERT INTO games (id, name, slug, platform, runner, directory, lastplayed, installed,
-    configpath, playtime)
+    year, configpath, playtime, service, service_id)
 VALUES (2, 'The Witcher 3: Wild Hunt', 'the-witcher-3-wild-hunt', 'Windows', 'wine',
-    '/games/witcher3', 0, 1, 'the-witcher-3-wild-hunt-1', 0.0);
--- A game in the library that is not installed (yet).
-INSERT INTO games (id, name, slug, platform, runner, installed)
-VALUES (3, 'Hollow Knight', 'hollow-knight', NULL, 'linux', 0);
+    '/games/witcher3', 0, 1, 2015, 'the-witcher-3-wild-hunt-1', 0.0, 'gog', '1207664643');
+-- A Steam game in the library that is not installed (yet), with no year or runner.
+INSERT INTO games (id, name, slug, platform, runner, installed, year, service, service_id)
+VALUES (3, 'Hollow Knight', 'hollow-knight', NULL, '', 0, 0, 'steam', '367520');
 -- A broken row.
 INSERT INTO games (id, name, slug, installed) VALUES (4, NULL, NULL, 1);
 
