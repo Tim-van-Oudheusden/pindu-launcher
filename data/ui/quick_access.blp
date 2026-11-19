@@ -1678,6 +1678,56 @@ template $PinduQuickAccess: Box {
     }
 
     StackPage {
+      name: "report-log";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Add a Game's Log");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          Label {
+            label: _("The game's newest log is added to the report. The report keeps that game's title; other titles and your home folder stay out.");
+            xalign: 0;
+            wrap: true;
+
+            styles [
+              "dim-label",
+            ]
+          }
+
+          // The games with a log, the game played with logs last first, each with
+          // its newest log's name; filled in code as the level opens.
+          ListBox report_logs {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+          }
+
+          // Shown when no game has a log.
+          Label report_logs_empty {
+            label: _("No game has a log yet: start one with Play with Logs");
+            xalign: 0;
+            wrap: true;
+            visible: false;
+          }
+        };
+      };
+    }
+
+    StackPage {
       name: "proton";
 
       child: $PinduProtonLevel proton_level {};

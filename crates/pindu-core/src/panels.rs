@@ -93,6 +93,10 @@ pub enum QuickAccessLevel {
     /// The diagnostics report in pages to photograph, a copy of which is saved as it opens
     /// (see [`crate::report_screen`]).
     DiagnosticsReport,
+    /// The games with a log from Play with Logs, the game played with logs last first, to
+    /// add one's newest log to the diagnostics report (see
+    /// [`crate::diagnostics::log_choices`]); B leads back to the report.
+    ReportLog,
     /// The Proton builds downloaded into our tools folder, the GE-Proton and
     /// Proton-CachyOS releases to download (see [`crate::proton_downloads`]), and the
     /// defaults for new Windows games: the Proton build, MangoHud and GameMode, the same
@@ -105,7 +109,7 @@ pub enum QuickAccessLevel {
 
 impl QuickAccessLevel {
     /// Every level, the entries first.
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 18] = [
         Self::Main,
         Self::Notifications,
         Self::Activity,
@@ -121,6 +125,7 @@ impl QuickAccessLevel {
         Self::SystemUpdate,
         Self::AddStore,
         Self::DiagnosticsReport,
+        Self::ReportLog,
         Self::Proton,
         Self::Sources,
     ];
@@ -144,6 +149,7 @@ impl QuickAccessLevel {
             Self::SystemUpdate => "system-update",
             Self::AddStore => "add-store",
             Self::DiagnosticsReport => "diagnostics-report",
+            Self::ReportLog => "report-log",
             Self::Proton => "proton",
             Self::Sources => "sources",
         }
@@ -242,6 +248,9 @@ impl Panels {
             }
             (Intent::Back, Some(Panel::Options(_))) => {
                 self.open = Some(Panel::Options(OptionsLevel::Main));
+            }
+            (Intent::Back, Some(Panel::QuickAccess(QuickAccessLevel::ReportLog))) => {
+                self.open = Some(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport));
             }
             (Intent::Back, Some(Panel::QuickAccess(_))) => {
                 self.open = Some(Panel::QuickAccess(QuickAccessLevel::Main));
@@ -663,6 +672,18 @@ mod tests {
             assert!(panels.handle(Intent::Back, PAGE), "{level:?}");
             assert_eq!(panels.open(), None, "{level:?}");
         }
+    }
+
+    #[test]
+    fn b_steps_back_from_the_report_log_picker_to_the_report() {
+        let mut panels = Panels::new();
+        panels.show(Panel::QuickAccess(QuickAccessLevel::ReportLog));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(
+            panels.open(),
+            Some(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport))
+        );
+        assert_eq!(QuickAccessLevel::ReportLog.name(), "report-log");
     }
 
     #[test]
