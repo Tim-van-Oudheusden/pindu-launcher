@@ -5,6 +5,7 @@ blueprint_names = [
   'cover_tile',
   'fullscreen_add_game',
   'fullscreen_bluetooth',
+  'fullscreen_health',
   'fullscreen_network',
   'fullscreen_power',
   'fullscreen_proton_downloads',

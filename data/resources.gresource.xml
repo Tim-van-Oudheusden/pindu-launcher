@@ -6,6 +6,7 @@
     <file preprocess="xml-stripblanks">ui/cover_tile.ui</file>
     <file preprocess="xml-stripblanks">ui/fullscreen_add_game.ui</file>
     <file preprocess="xml-stripblanks">ui/fullscreen_bluetooth.ui</file>
+    <file preprocess="xml-stripblanks">ui/fullscreen_health.ui</file>
     <file preprocess="xml-stripblanks">ui/fullscreen_network.ui</file>
     <file preprocess="xml-stripblanks">ui/fullscreen_power.ui</file>
     <file preprocess="xml-stripblanks">ui/fullscreen_proton_downloads.ui</file>

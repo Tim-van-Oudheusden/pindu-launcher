@@ -61,7 +61,9 @@ widgets so it looks and behaves like the rest of GNOME.
   ([Fullscreen mode](#fullscreen-mode)).
 - **A tidy library.** Browse covers in a grid, or switch the desktop window to a list with each game's source, install
   state, last played date and playtime. Search, sort and filter by installed, favourite, Windows or native, in either
-  layout. Group games into your own collections, jump back into recent games and hide the ones you never play.
+  layout. Group games into your own collections, jump back into recent games and hide the ones you never play. The
+  **Select** button in the header bar picks several games in the grid or the list at once, to favourite, hide, add to
+  a collection or take out of one in one go, with a toast to undo it.
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
 - **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
   [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu
@@ -343,6 +345,18 @@ console restarts, so the entry never restarts it by itself.
 - If the system refuses to roll back or restart, a notification says why.
 
 Elsewhere, another distribution or the Flatpak, the entry does not show.
+
+### Library Health in Quick Access
+
+Quick Access has a **Library Health** entry, subtitled with how many problems need attention. Its level shows the
+same report as the desktop's Library Health page: **Sources**, **Launching**, **Artwork** and **Library Data**, read
+with a controller alone. Each row takes focus; a problem's row names its next step and takes it on A, closing Quick
+Access: Preferences at Sources, Preferences at the host access command, or umu-launcher's install instructions.
+
+- Over a running game the rows say the step is taken once the game has ended, since Preferences and web pages open
+  over the launcher.
+- In a gamescope session, which has no browser, umu-launcher's row shows the address to read on another device.
+- Rows the session cannot have, such as host access outside the Flatpak, are left out, never shown as errors.
 
 ### Add a Store
 
