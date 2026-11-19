@@ -77,6 +77,8 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Your artwork.** Covers, banners and logos from your launchers, from your own files, or from
   [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring. **Change
   Artwork** on a game's page, in both modes, pages through every SteamGridDB image of each kind.
+- **Your details.** **Edit…** in a game's page menu sets its developer, genres and description; what you change is
+  kept when the library is imported again, and clearing a field goes back to the launcher's.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.

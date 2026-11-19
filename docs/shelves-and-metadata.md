@@ -55,6 +55,14 @@ In this order, local data first:
    records a new game's values as its source's; `update_game` never touches metadata, so saving a game read with a
    user's value cannot turn it into the source's. Release year stays in the source details for now; #527 decides
    whether it joins this table. Backups do not carry user or provider values yet.
+
+   As built (#530): the desktop **Edit…** dialog (a game page's ⋮ menu) has a Details group with Developer, Genres
+   (separated by commas) and Description, filled with what the game shows; as #520 decided, fullscreen mode has no
+   edit. Saving goes through `pindu_core::metadata::edit_by_user(store, game, shown, edited, now)`, which writes user
+   values for every copy of the game's group: a field the user left as shown keeps each copy's own user value, a
+   field cleared drops the user's value so the game falls back to a provider's and then the source's, and a value the
+   game would fall back to anyway is not kept as the user's, so later syncs of it still show. Release year joins the
+   dialog once #527 moves it into this table.
 4. **An online provider, opt-in, after a spike.** The spike compares SteamGridDB, IGDB, PCGamingWiki, Wikidata and
    others on licence and terms, whether a key is needed, which store IDs it maps (which helps
    [game identity](game-identity.md)), the fields it has and its rate limits, and recommends one or none. If one is

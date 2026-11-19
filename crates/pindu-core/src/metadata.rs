@@ -3,9 +3,12 @@
 //! Developer, genres and description can each come from the game's source, an online
 //! provider or the user. The store keeps every origin's value with when it was set, and a
 //! sync writes only the source's; what a game shows is [`resolve`]d from them, the user's
-//! value first, then a provider's, then the source's.
+//! value first, then a provider's, then the source's. The user's values are written by
+//! [`edit_by_user`] from what they type over the details a game shows.
 
-use crate::model::{Game, MetadataField, MetadataOrigin, Timestamp};
+use crate::game_groups;
+use crate::model::{Game, GameId, MetadataField, MetadataOrigin, Timestamp};
+use crate::store::{self, Store};
 
 /// A game's developer, genres and description: the values one origin gives, or, resolved,
 /// the ones the game shows. An empty field has no value.
@@ -36,6 +39,23 @@ impl Metadata {
         game.description = self.description;
     }
 
+    /// The details as the user typed them: each trimmed, an empty one without a value,
+    /// and `genres` split at commas, each genre once.
+    pub fn typed(developer: &str, genres: &str, description: &str) -> Self {
+        let text = |text: &str| Some(text.trim().to_owned()).filter(|text| !text.is_empty());
+        let mut split = Vec::new();
+        for genre in genres.split(',').filter_map(text) {
+            if !split.contains(&genre) {
+                split.push(genre);
+            }
+        }
+        Self {
+            developer: text(developer),
+            genres: split,
+            description: text(description),
+        }
+    }
+
     /// The fields that have a value, each with it.
     pub fn values(&self) -> Vec<FieldValue> {
         let mut values = Vec::new();
@@ -45,6 +65,13 @@ impl Metadata {
         }
         values.extend(self.description.clone().map(FieldValue::Description));
         values
+    }
+
+    /// The value of one field, if it has one.
+    fn value(&self, field: MetadataField) -> Option<FieldValue> {
+        self.values()
+            .into_iter()
+            .find(|value| value.field() == field)
     }
 
     fn set(&mut self, value: FieldValue) {
@@ -107,6 +134,50 @@ pub fn resolve(values: &[MetadataValue]) -> Metadata {
         }
     }
     metadata
+}
+
+/// Saves what the user wrote over the details `game` showed (`shown`) as the user's
+/// values, for every copy of its group. A field left as shown keeps each copy's own user
+/// value, if any; a field left empty drops the user's value, so the game falls back to a
+/// provider's, then the source's; and a value the game would fall back to anyway is not
+/// kept as the user's, so a sync that changes it still shows.
+pub fn edit_by_user(
+    store: &Store,
+    game: &GameId,
+    shown: &Metadata,
+    edited: &Metadata,
+    now: Timestamp,
+) -> store::Result<()> {
+    store.in_transaction(|store| {
+        for copy in game_groups::copies_of(store, game)? {
+            let values = store.metadata_values(&copy)?;
+            let user = user_values(&values, shown, edited);
+            store.set_metadata(&copy, MetadataOrigin::User, &user, now)?;
+        }
+        Ok(())
+    })
+}
+
+/// The user's values once they edited `shown` into `edited`, given a game's stored
+/// `values`; see [`edit_by_user`].
+fn user_values(values: &[MetadataValue], shown: &Metadata, edited: &Metadata) -> Metadata {
+    let (user, others): (Vec<_>, Vec<_>) = values
+        .iter()
+        .cloned()
+        .partition(|value| value.origin == MetadataOrigin::User);
+    let (user, fallback) = (resolve(&user), resolve(&others));
+    let mut kept = Metadata::default();
+    for &field in MetadataField::ALL {
+        let value = match edited.value(field) {
+            Some(value) if Some(&value) == shown.value(field).as_ref() => user.value(field),
+            Some(value) if Some(&value) == fallback.value(field).as_ref() => None,
+            value => value,
+        };
+        if let Some(value) = value {
+            kept.set(value);
+        }
+    }
+    kept
 }
 
 #[cfg(test)]
@@ -252,5 +323,170 @@ mod tests {
             metadata.values(),
             vec![FieldValue::Developer("Valve".into())]
         );
+    }
+
+    #[test]
+    fn typed_details_are_trimmed_with_genres_split_at_commas() {
+        assert_eq!(
+            Metadata::typed("  Valve ", "Strategy, , MOBA,Strategy ,", "\n Every day.\n"),
+            Metadata {
+                developer: Some("Valve".into()),
+                genres: vec!["Strategy".into(), "MOBA".into()],
+                description: Some("Every day.".into()),
+            }
+        );
+        assert_eq!(Metadata::typed(" ", " , ", "\n"), Metadata::default());
+    }
+}
+
+#[cfg(test)]
+mod edit_tests {
+    use super::*;
+    use crate::model::{LaunchKind, Source};
+
+    fn store_with(native_ids: &[&str]) -> (tempfile::TempDir, Store, Vec<GameId>) {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::open(&dir.path().join("library.db")).unwrap();
+        let ids = native_ids
+            .iter()
+            .map(|native_id| {
+                let id = GameId::new(Source::Steam, native_id);
+                let game = Game::new(id.clone(), "Dota 2", LaunchKind::StoreUri, 0);
+                store.insert_game(&game).unwrap();
+                id
+            })
+            .collect();
+        (dir, store, ids)
+    }
+
+    fn developer(developer: &str) -> Metadata {
+        Metadata {
+            developer: Some(developer.into()),
+            ..Default::default()
+        }
+    }
+
+    fn shown_metadata(store: &Store, id: &GameId) -> Metadata {
+        Metadata::of(&store.game(id).unwrap().unwrap())
+    }
+
+    /// The user edits what `id` shows into `edited`.
+    fn edit(store: &Store, id: &GameId, edited: &Metadata, now: Timestamp) {
+        let shown = shown_metadata(store, id);
+        edit_by_user(store, id, &shown, edited, now).unwrap();
+    }
+
+    fn sync(store: &Store, id: &GameId, metadata: &Metadata, now: Timestamp) {
+        store
+            .set_metadata(id, MetadataOrigin::Source, metadata, now)
+            .unwrap();
+    }
+
+    #[test]
+    fn clearing_a_users_value_falls_back_to_the_providers_then_the_sources() {
+        let (_dir, store, ids) = store_with(&["570"]);
+        let id = &ids[0];
+        sync(&store, id, &developer("Valve"), 10);
+        store
+            .set_metadata(id, MetadataOrigin::Provider, &developer("Valve Corp"), 10)
+            .unwrap();
+        edit(&store, id, &developer("Me"), 20);
+        assert_eq!(shown_metadata(&store, id), developer("Me"));
+
+        edit(&store, id, &Metadata::default(), 30);
+        assert_eq!(shown_metadata(&store, id), developer("Valve Corp"));
+
+        store
+            .set_metadata(id, MetadataOrigin::Provider, &Metadata::default(), 40)
+            .unwrap();
+        assert_eq!(shown_metadata(&store, id), developer("Valve"));
+    }
+
+    #[test]
+    fn the_users_value_survives_a_sync_and_fields_left_as_shown_follow_it() {
+        let (_dir, store, ids) = store_with(&["570"]);
+        let id = &ids[0];
+        sync(&store, id, &developer("Valve"), 10);
+        edit(
+            &store,
+            id,
+            &Metadata {
+                developer: Some("Valve".into()),
+                genres: vec!["Strategy".into()],
+                description: None,
+            },
+            20,
+        );
+
+        let synced = Metadata {
+            developer: Some("Valve Corporation".into()),
+            genres: vec!["Action".into()],
+            description: Some("Every day".into()),
+        };
+        sync(&store, id, &synced, 30);
+
+        assert_eq!(
+            shown_metadata(&store, id),
+            Metadata {
+                genres: vec!["Strategy".into()],
+                ..synced
+            }
+        );
+    }
+
+    #[test]
+    fn a_field_left_as_shown_keeps_the_users_value() {
+        let (_dir, store, ids) = store_with(&["570"]);
+        let id = &ids[0];
+        sync(&store, id, &developer("Valve"), 10);
+        edit(&store, id, &developer("Me"), 20);
+
+        let mut edited = developer("Me");
+        edited.description = Some("Mine".into());
+        edit(&store, id, &edited, 30);
+        sync(&store, id, &developer("Valve Corporation"), 40);
+
+        assert_eq!(shown_metadata(&store, id), edited);
+        let user_developer = store
+            .metadata_values(id)
+            .unwrap()
+            .into_iter()
+            .find(|value| value.origin == MetadataOrigin::User)
+            .map(|value| (value.value, value.updated_at));
+        assert_eq!(
+            user_developer,
+            Some((FieldValue::Description("Mine".into()), 30))
+        );
+    }
+
+    #[test]
+    fn typing_what_the_game_falls_back_to_keeps_no_users_value() {
+        let (_dir, store, ids) = store_with(&["570"]);
+        let id = &ids[0];
+        sync(&store, id, &developer("Valve"), 10);
+        edit(&store, id, &developer("Me"), 20);
+
+        edit(&store, id, &developer("Valve"), 30);
+        sync(&store, id, &developer("Valve Corporation"), 40);
+
+        assert_eq!(shown_metadata(&store, id), developer("Valve Corporation"));
+    }
+
+    #[test]
+    fn an_edit_of_a_group_is_saved_for_every_copy() {
+        let (_dir, store, ids) = store_with(&["570", "571"]);
+        sync(&store, &ids[0], &developer("Valve"), 10);
+        sync(&store, &ids[1], &developer("Valve Corporation"), 10);
+        store.merge_games(&ids).unwrap();
+
+        let mut edited = shown_metadata(&store, &ids[0]);
+        edited.genres = vec!["Strategy".into()];
+        edit(&store, &ids[0], &edited, 20);
+
+        for (id, developer) in ids.iter().zip(["Valve", "Valve Corporation"]) {
+            let shown = shown_metadata(&store, id);
+            assert_eq!(shown.developer.as_deref(), Some(developer));
+            assert_eq!(shown.genres, ["Strategy"]);
+        }
     }
 }
