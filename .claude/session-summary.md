@@ -8,9 +8,8 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-19, #657: desktop **Edit… → Details → Title** renames imported and manually added games. The stored
-  source title and launch config are unchanged; both shells show the custom title and clearing it restores the
-  source title. User titles use the existing metadata and backup format; no migration or dependency change.
-- Verified with an import/sync/reopen core regression and an isolated headless Gamescope run: rename, keyboard
-  search, fullscreen display, clearing, and a manual game's unchanged launch config. For isolated UI runs, give
-  `dbus-run-session` a separate `XDG_RUNTIME_DIR` as well as a separate library and settings.
+- #660: fullscreen **Quick Access → Design → Background** selects Red Ribbons (default) or Blue Station and
+  remembers the choice. Both ship in three resolutions and share Home's existing playback and accessibility rules.
+- Verified the installed native build under headless Gamescope: Red Ribbons on first run, Blue Station via keyboard,
+  Blue Station after restart, and back to Red Ribbons via a virtual controller. The private D-Bus session and
+  `XDG_RUNTIME_DIR` kept the smoke run separate from the desktop.

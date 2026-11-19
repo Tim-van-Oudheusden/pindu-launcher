@@ -196,10 +196,15 @@ Activating a section opens the second, `.home-games`: that section's games over 
 B goes back to the first. Both screens use the same widgets and layout options, so a rule without either
 class styles both.
 
+Choose **Quick Access → Design → Background** to switch between **Red Ribbons** (the default) and
+**Blue Station**. The choice applies as soon as you select it, is saved across restarts, and is
+independent of the fullscreen design. Both animations ship at 720p, 1080p and 1440p; Home uses the
+smallest one that fills the display, or the largest if none does.
+
 The background plays muted and looped behind the first screen. It pauses on the second screen, while a
 game we started runs and while the window is hidden, and holds its first frame outside fullscreen mode and
 while the window is `reduced-motion`. While the system asks for high contrast it is not shown at all:
-`.home-background`'s plain black stands in for it, with no stars or waves behind the text.
+`.home-background`'s plain black stands in for it.
 
 Quick Access's **Background Blur** and **Background Dim** (each Off, Low or High) put `blur-low` or
 `blur-high` and `dim-low` or `dim-high` on `.home`. Pindu blurs `.home-background` and `.home-hero` with

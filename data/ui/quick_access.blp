@@ -867,6 +867,48 @@ template $PinduQuickAccess: Box {
 
           // Radio rows on the settings' actions, as Settings has its sizes.
           Label {
+            label: _("Background");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          ListBox {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow {
+              title: _("Red Ribbons");
+              activatable-widget: background_red;
+
+              [prefix]
+              CheckButton background_red {
+                action-name: "win.fullscreen-background";
+                action-target: "'red-ribbons'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Blue Station");
+              activatable-widget: background_blue;
+
+              [prefix]
+              CheckButton background_blue {
+                action-name: "win.fullscreen-background";
+                action-target: "'blue-station'";
+                can-focus: false;
+              }
+            }
+          }
+
+          Label {
             label: _("Background Blur");
             xalign: 0;
             margin-top: 6;

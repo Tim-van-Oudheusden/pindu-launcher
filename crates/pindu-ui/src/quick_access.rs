@@ -43,7 +43,7 @@ use pindu_core::accessibility::TEXT_SIZE_KEY;
 use pindu_core::gamepad::Intent;
 use pindu_core::gamescope::prompts::{PromptHost, prompt_host};
 use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
-use pindu_core::home::{BLUR_KEY, DIM_KEY};
+use pindu_core::home::{BACKGROUND_KEY, BLUR_KEY, DIM_KEY};
 use pindu_core::keys;
 use pindu_core::model::GameId;
 use pindu_core::osk::Keyboard;
@@ -1047,6 +1047,7 @@ impl PinduQuickAccess {
         let _ = imp.design_action.set(design.clone());
         let _ = imp.variant_action.set(variant.clone());
         let settings = self.settings();
+        actions.add_action(&settings.create_action(BACKGROUND_KEY));
         actions.add_action(&settings.create_action(BLUR_KEY));
         actions.add_action(&settings.create_action(DIM_KEY));
         let service = application.style_service();

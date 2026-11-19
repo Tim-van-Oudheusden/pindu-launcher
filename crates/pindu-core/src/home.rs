@@ -158,27 +158,62 @@ pub fn background_playback(context: BackgroundContext) -> Playback {
     }
 }
 
-/// Home's background video in each size it ships in: (width, height) in pixels and the
-/// file in `home/` of the app's data, smallest first.
-pub const BACKGROUND_VIDEOS: [((i32, i32), &str); 3] = [
-    ((1280, 720), "background-720p.webm"),
-    ((1920, 1080), "background-1080p.webm"),
-    ((2560, 1440), "background-1440p.webm"),
+/// Home's fullscreen background choice, independent of the fullscreen design.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Background {
+    /// Red ribbons on a dark background.
+    #[default]
+    RedRibbons,
+    /// The original blue Home animation.
+    BlueStation,
+}
+
+/// The videos in `home/`, smallest first: device pixel size, Red Ribbons, Blue Station.
+const BACKGROUND_VIDEOS: [((i32, i32), &str, &str); 3] = [
+    (
+        (1280, 720),
+        "red-ribbons-720p24.webm",
+        "background-720p.webm",
+    ),
+    (
+        (1920, 1080),
+        "red-ribbons-1080p24.webm",
+        "background-1080p.webm",
+    ),
+    (
+        (2560, 1440),
+        "red-ribbons-1440p24.webm",
+        "background-1440p.webm",
+    ),
 ];
 
-/// The file name of Home's background video for a screen of `screen` device pixels
-/// (width, height): the smallest video that fills the screen without being scaled up,
-/// or the largest for a screen bigger than all of them. An unknown screen gets 1080p.
-pub fn background_video(screen: Option<(i32, i32)>) -> &'static str {
-    let Some((width, height)) = screen else {
-        return BACKGROUND_VIDEOS[1].1;
-    };
-    BACKGROUND_VIDEOS
-        .iter()
-        .find(|((w, h), _)| *w >= width && *h >= height)
-        .unwrap_or(&BACKGROUND_VIDEOS[BACKGROUND_VIDEOS.len() - 1])
-        .1
+impl Background {
+    /// The background named by `value`; an unknown value uses Red Ribbons.
+    pub fn from_setting(value: &str) -> Self {
+        match value {
+            "blue-station" => Self::BlueStation,
+            _ => Self::default(),
+        }
+    }
+
+    /// The smallest video for this background that fills `screen` in device pixels,
+    /// or the largest if none fills it. An unknown screen uses 1080p.
+    pub fn video(self, screen: Option<(i32, i32)>) -> &'static str {
+        let &(_, red, blue) = screen.map_or(&BACKGROUND_VIDEOS[1], |(width, height)| {
+            BACKGROUND_VIDEOS
+                .iter()
+                .find(|((w, h), _, _)| *w >= width && *h >= height)
+                .unwrap_or(&BACKGROUND_VIDEOS[BACKGROUND_VIDEOS.len() - 1])
+        });
+        match self {
+            Self::RedRibbons => red,
+            Self::BlueStation => blue,
+        }
+    }
 }
+
+/// The GSettings key choosing Home's background.
+pub const BACKGROUND_KEY: &str = "fullscreen-background";
 
 /// The GSettings key of Home's background blur, a `Strength`'s setting.
 pub const BLUR_KEY: &str = "fullscreen-background-blur";
@@ -255,6 +290,27 @@ mod tests {
     };
 
     #[test]
+    fn the_background_choice_selects_the_right_video_for_the_display() {
+        assert_eq!(
+            Background::default().video(None),
+            "red-ribbons-1080p24.webm"
+        );
+        for (setting, screen, expected) in [
+            ("red-ribbons", (1280, 720), "red-ribbons-720p24.webm"),
+            ("red-ribbons", (1920, 1080), "red-ribbons-1080p24.webm"),
+            ("red-ribbons", (3840, 2160), "red-ribbons-1440p24.webm"),
+            ("blue-station", (1280, 720), "background-720p.webm"),
+            ("unknown", (1280, 800), "red-ribbons-1080p24.webm"),
+        ] {
+            assert_eq!(
+                Background::from_setting(setting).video(Some(screen)),
+                expected,
+                "{setting} on {screen:?}"
+            );
+        }
+    }
+
+    #[test]
     fn the_background_is_the_smallest_video_that_fills_the_screen() {
         for (screen, file) in [
             ((1280, 720), "background-720p.webm"),
@@ -263,7 +319,11 @@ mod tests {
             ((1920, 1200), "background-1440p.webm"),
             ((2560, 1440), "background-1440p.webm"),
         ] {
-            assert_eq!(background_video(Some(screen)), file, "{screen:?}");
+            assert_eq!(
+                Background::BlueStation.video(Some(screen)),
+                file,
+                "{screen:?}"
+            );
         }
     }
 
@@ -271,7 +331,7 @@ mod tests {
     fn a_screen_bigger_than_every_video_gets_the_largest() {
         for screen in [(3840, 2160), (1080, 1920)] {
             assert_eq!(
-                background_video(Some(screen)),
+                Background::BlueStation.video(Some(screen)),
                 "background-1440p.webm",
                 "{screen:?}"
             );
@@ -280,7 +340,7 @@ mod tests {
 
     #[test]
     fn an_unknown_screen_gets_the_1080p_background() {
-        assert_eq!(background_video(None), "background-1080p.webm");
+        assert_eq!(Background::BlueStation.video(None), "background-1080p.webm");
     }
 
     #[test]
