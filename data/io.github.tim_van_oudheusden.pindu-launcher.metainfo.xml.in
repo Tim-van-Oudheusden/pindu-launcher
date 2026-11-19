@@ -87,6 +87,19 @@
   </supports>
 
   <releases>
+    <release version="0.5.1" date="2026-11-19">
+      <description>
+        <p>Change a game's artwork from SteamGridDB or your own files, and a tidier library.</p>
+        <ul>
+          <li>Change Artwork, in a game's menu and in fullscreen mode's game options, finds covers, banners, logos, icons and square art on SteamGridDB, page by page, or uses an image file; a picked image shows at once, and Use Original brings the launcher's back</li>
+          <li>When SteamGridDB finds the wrong game for a title, Different Game… lets you choose the right one, which is remembered</li>
+          <li>Fullscreen mode switches between kinds of art with the shoulder buttons and loads more images as you reach the end</li>
+          <li>Jump Back In cards are evenly rounded, their art fills them without blurred bands, and Play shows on hover and keyboard focus</li>
+          <li>Fullscreen mode's library spaces covers evenly in rows and columns, so the focused cover is never hidden behind its neighbours</li>
+          <li>Updated translations</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.0" date="2026-11-18">
       <description>
         <p>Fullscreen mode in gamescope sessions, where the launcher takes Steam's place.</p>
