@@ -394,6 +394,30 @@ template $PinduQuickAccess: Box {
               };
             }
 
+            ListBoxRow duplicates_row {
+              action-name: "win.quick-access-duplicates";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "edit-copy-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Duplicates");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
             // Shown where NetworkManager runs: the connection in use, or that
             // the system does not allow changing it (then insensitive).
             ListBoxRow network_row {
@@ -1562,6 +1586,51 @@ template $PinduQuickAccess: Box {
           // its Import switch, the setting Preferences, Sources changes. Filled in
           // code as the level opens and after each sync.
           ListBox sources {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+          }
+        };
+      };
+    }
+
+    StackPage {
+      name: "duplicates";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Duplicates");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          // Shown while there is nothing to review.
+          Label duplicates_empty {
+            label: _("No copies of one game to review");
+            xalign: 0;
+            wrap: true;
+            visible: false;
+
+            styles [
+              "dim-label",
+            ]
+          }
+
+          // Each suggestion, opening to Group and Not the Same Game, then each
+          // group the sync made, opening to Undo. Filled in code as the level
+          // opens, after each sync and after each choice.
+          ListBox duplicates {
             selection-mode: none;
 
             styles [

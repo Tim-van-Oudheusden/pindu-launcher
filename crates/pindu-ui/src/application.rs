@@ -1127,7 +1127,8 @@ fn import_message(summary: &ImportSummary) -> String {
         + summary.collections
         + summary.sessions
         + summary.groups
-        + summary.splits;
+        + summary.splits
+        + summary.metadata;
     let mut message = if restored == 0 {
         gettext("Nothing new to restore")
     } else {

@@ -25,6 +25,7 @@ use crate::add_store::PinduAddStoreLevel;
 use crate::application::PinduApplication;
 use crate::artwork_dialog::ArtworkDialog;
 use crate::config::APP_ID;
+use crate::duplicates_page::DuplicatesPage;
 use crate::fullscreen::NavigationSounds;
 use crate::fullscreen_clock::Clock;
 use crate::game_page::GamePage;
@@ -385,7 +386,11 @@ impl PinduWindow {
         let library_health = gio::ActionEntry::builder("library-health")
             .activate(|window: &Self, _, _| window.show_library_health())
             .build();
-        self.add_action_entries([back, library_health]);
+        // The main menu's Duplicates: the suggestions and automatic groups to review.
+        let duplicates = gio::ActionEntry::builder("review-duplicates")
+            .activate(|window: &Self, _, _| window.show_duplicates())
+            .build();
+        self.add_action_entries([back, library_health, duplicates]);
 
         let sort_mode = gio::SimpleAction::new_stateful(
             "sort-mode",
@@ -491,6 +496,22 @@ impl PinduWindow {
             return;
         }
         navigation_view.push(&HealthPage::new(application.health_service()));
+    }
+
+    /// Pushes the Duplicates page, or goes back to it when it is open.
+    fn show_duplicates(&self) {
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return;
+        };
+        let navigation_view = &self.imp().navigation_view;
+        if let Some(page) = navigation_view.find_page("duplicates") {
+            navigation_view.pop_to_page(&page);
+            return;
+        }
+        navigation_view.push(&DuplicatesPage::new(
+            application.library_service(),
+            application.sync_service(),
+        ));
     }
 
     /// Shows the open game page's launch settings again, after the Edit dialog saved.

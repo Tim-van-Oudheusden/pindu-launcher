@@ -1,0 +1,42 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Duplicates in the desktop window: the suggestions to group or tell apart, then the
+// groups the sync made, to undo. The rows are filled in from the review.
+template $PinduDuplicatesPage: Adw.NavigationPage {
+  title: _("Duplicates");
+  tag: "duplicates";
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {}
+
+    content: Stack stack {
+      StackPage {
+        name: "empty";
+
+        child: Adw.StatusPage {
+          icon-name: "edit-copy-symbolic";
+          title: _("No Duplicates");
+          description: _("Copies of one game from different sources show here, to group them into one game");
+        };
+      }
+
+      StackPage {
+        name: "review";
+
+        child: Adw.PreferencesPage {
+          Adw.PreferencesGroup suggestions_group {
+            title: _("Suggestions");
+            description: _("Copies that look like one game. Grouped copies show as one game with a preferred copy.");
+          }
+
+          Adw.PreferencesGroup automatic_group {
+            title: _("Grouped Automatically");
+            description: _("A Lutris entry links to the same store game. Undo keeps the copies apart.");
+          }
+        };
+      }
+    };
+  };
+}
