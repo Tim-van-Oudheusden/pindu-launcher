@@ -316,7 +316,7 @@ fn a_database_at_schema_5_gains_groups_and_keeps_its_games() {
 
     let store = Store::open(&path).unwrap();
 
-    assert_eq!(store.schema_version().unwrap(), 7);
+    assert_eq!(store.schema_version().unwrap(), LATEST_SCHEMA_VERSION);
     let steam = GameId::new(Source::Steam, "570");
     assert_eq!(store.game(&steam).unwrap().unwrap().title, "Dota 2");
     assert!(store.game_groups().unwrap().is_empty());

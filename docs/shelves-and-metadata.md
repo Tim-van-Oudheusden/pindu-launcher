@@ -37,6 +37,18 @@ In this order, local data first:
    Reading prefers the user's value, then a provider's, then the source's; a sync changes source values only. The user
    can edit developer, genres, description and release year from the desktop game page (and from fullscreen mode if
    #520 says a console needs it), and that value survives syncs and refreshes.
+
+   As built (#526): `game_metadata` (migration 0008) holds one row per game, field (`developer`, `genres`,
+   `description`) and origin (`source`, `provider`, `user`) with the value and when that origin last changed it. The
+   migration moved the `games` columns of those names into source rows and dropped the columns, so nothing reads a
+   stale copy. `pindu_core::metadata` resolves the rows (`shown` picks one field's winning value with its origin and
+   time, `resolve` all of them), and the store hands every `Game` out with resolved `developer`, `genres` and
+   `description`, so both shells and the filters show the winning value without knowing about origins. Writes
+   go through `Store::set_metadata(game, origin, metadata, now)`, which replaces one origin's values, keeps the time
+   of a value that did not change and drops a field left empty. A sync calls it for the source only; `insert_game`
+   records a new game's values as its source's; `update_game` never touches metadata, so saving a game read with a
+   user's value cannot turn it into the source's. Release year stays in the source details for now; #527 decides
+   whether it joins this table. Backups do not carry user or provider values yet.
 4. **An online provider, opt-in, after a spike.** The spike compares SteamGridDB, IGDB, PCGamingWiki, Wikidata and
    others on licence and terms, whether a key is needed, which store IDs it maps (which helps
    [game identity](game-identity.md)), the fields it has and its rate limits, and recommends one or none. If one is

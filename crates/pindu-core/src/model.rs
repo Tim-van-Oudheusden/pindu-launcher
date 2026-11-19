@@ -151,6 +151,31 @@ string_enum! {
     }
 }
 
+string_enum! {
+    /// A piece of a game's metadata that can come from more than one origin.
+    MetadataField, "metadata field" {
+        /// Who made the game.
+        Developer => "developer",
+        /// The game's genres.
+        Genres => "genres",
+        /// A description of the game.
+        Description => "description",
+    }
+}
+
+string_enum! {
+    /// Where a metadata value came from, in order of precedence: a later origin's value
+    /// wins over an earlier one's.
+    MetadataOrigin, "metadata origin" {
+        /// The game's source, written by a sync.
+        Source => "source",
+        /// An online metadata provider.
+        Provider => "provider",
+        /// Set by the user.
+        User => "user",
+    }
+}
+
 /// A stable game ID of the form `<source>:<native id>`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct GameId(String);
@@ -217,7 +242,8 @@ pub struct Game {
     pub title: String,
     /// Title used for sorting, for example without a leading article.
     pub sort_title: String,
-    /// The developer, when the source gives one.
+    /// The developer, when one is known. Read from the store this is the value the game
+    /// shows, resolved from every origin ([`crate::metadata`]).
     pub developer: Option<String>,
     /// The operating system the build targets, when known.
     pub platform: Option<Platform>,
@@ -246,9 +272,9 @@ pub struct Game {
     /// The URI its source gives for starting the game, for sources whose URI cannot be
     /// built from the game ID (Bottles needs the bottle and program names).
     pub launch_uri: Option<String>,
-    /// The genres the source gives.
+    /// The genres, resolved like `developer`.
     pub genres: Vec<String>,
-    /// The source's description of the game.
+    /// A description of the game, resolved like `developer`.
     pub description: Option<String>,
     /// Start a Steam game through Steam's launch-options dialog
     /// (`steam://launch/<id>/dialog`), which honours the user's launch-option choice.
