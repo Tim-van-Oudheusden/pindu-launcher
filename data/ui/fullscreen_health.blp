@@ -1,0 +1,112 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Quick Access's Library Health level, the "library-health" page of the window's
+// quick_access_stack. Its entry row stays in the window's shared Quick Access list.
+// Every list is filled in code from the report, and again when it changes.
+template $PinduHealthLevel: Adw.Bin {
+  child: ScrolledWindow {
+    hscrollbar-policy: never;
+
+    child: Box {
+      orientation: vertical;
+      spacing: 12;
+
+      Label {
+        label: _("Library Health");
+        xalign: 0;
+
+        styles [
+          "title-3",
+        ]
+      }
+
+      // How many problems need attention, or that the report is being read.
+      Label quick_access_health_summary {
+        xalign: 0;
+        wrap: true;
+
+        styles [
+          "dim-label",
+        ]
+      }
+
+      Label quick_access_health_sources_title {
+        label: _("Sources");
+        xalign: 0;
+        margin-top: 6;
+
+        styles [
+          "heading",
+        ]
+      }
+
+      // Each source, followed by its problems.
+      ListBox quick_access_health_sources {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+
+      Label quick_access_health_launching_title {
+        label: _("Launching");
+        xalign: 0;
+        margin-top: 6;
+
+        styles [
+          "heading",
+        ]
+      }
+
+      // Host access in the Flatpak, umu, Proton builds, MangoHud, GameMode and the
+      // session, with their problems.
+      ListBox quick_access_health_launching {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+
+      Label quick_access_health_artwork_title {
+        label: _("Artwork");
+        xalign: 0;
+        margin-top: 6;
+
+        styles [
+          "heading",
+        ]
+      }
+
+      // The SteamGridDB key and the cache.
+      ListBox quick_access_health_artwork {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+
+      Label quick_access_health_library_title {
+        label: _("Library Data");
+        xalign: 0;
+        margin-top: 6;
+
+        styles [
+          "heading",
+        ]
+      }
+
+      // The library file, its schema version and the last backup.
+      ListBox quick_access_health_library {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+    };
+  };
+}

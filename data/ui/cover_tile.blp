@@ -74,6 +74,22 @@ template $PinduCoverTile: Box {
         "suggested-action",
       ]
     }
+
+    // Selection mode's check: activating the tile toggles it, so it takes no clicks.
+    [overlay]
+    CheckButton selected_check {
+      halign: end;
+      valign: end;
+      margin-end: 6;
+      margin-bottom: 6;
+      can-focus: false;
+      can-target: false;
+      visible: false;
+
+      styles [
+        "selection-mode",
+      ]
+    }
   }
 
   // An inscription, not a label: it never measures its text, which keeps binding
