@@ -29,6 +29,7 @@ pub mod fullscreen_panels;
 pub mod fullscreen_performance;
 pub mod fullscreen_playing;
 pub mod fullscreen_power;
+pub mod fullscreen_proton;
 pub mod fullscreen_sound_output;
 pub mod fullscreen_status;
 pub mod fullscreen_surprise;
