@@ -44,8 +44,8 @@ widgets so it looks and behaves like the rest of GNOME.
 
 ## Features
 
-- **Every launcher, one library.** Steam, Heroic, Lutris, Bottles, Faugus, games installed as apps (Flatpaks included)
-  and games you add yourself, side by side. The library resyncs when a launcher's files change.
+- **Every launcher, one library.** Steam, Heroic, Lutris, Bottles, Faugus, Legendary, games installed as apps
+  (Flatpaks included) and games you add yourself, side by side. The library resyncs when a launcher's files change.
 - **Launchers stay in charge.** Store games start through their own launcher, which keeps their settings, updates and
   playtime. Pindu launcher only reads the launchers' files and never writes to them.
 - **Windows games too.** Add a Windows game, or its installer, by hand and it runs with Proton through
@@ -61,6 +61,9 @@ widgets so it looks and behaves like the rest of GNOME.
 - **A tidy library.** Search, sort and filter by installed, favourite, Windows or native. Group games into your own
   collections, jump back into recent games and hide the ones you never play.
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
+- **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
+  [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu
+  launcher only hands the address over and fetches nothing from either site.
 - **Your artwork.** Covers, banners and logos from your launchers, from your own files, or from
   [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring. **Change
   Artwork** on a game's page, in both modes, pages through every SteamGridDB image of each kind.
@@ -80,9 +83,13 @@ widgets so it looks and behaves like the rest of GNOME.
 | Lutris, native or Flatpak | Lutris games | Through Lutris |
 | Bottles, native or Flatpak | Programs in your bottles | Through Bottles |
 | Faugus Launcher, native or Flatpak | Faugus games | On the host ([needs host access](#starting-games-on-the-host)) |
+| Legendary, the standalone client, native only | Installed Epic Games Store games that Heroic does not already list | On the host with `legendary launch` ([needs host access](#starting-games-on-the-host)) |
 | Desktop entries and Flatpaks | Games installed as apps | On the host ([needs host access](#starting-games-on-the-host)) |
 | Added by hand | Native programs, and Windows games or installers | Native ones on the host; Windows ones with Proton in the sandbox |
 
+The importers read each launcher's data read-only and never its credentials. The Flatpak has no permission for
+Legendary's `~/.config/legendary`: Preferences → Sources says so, and **Choose…** in its row imports the folder you
+pick.
 The importers read each launcher's data read-only and never its credentials. Preferences, Sources shows for each source
 the folder it was found in, when it last synced and the problems that sync ran into.
 
@@ -128,9 +135,9 @@ Pick one:
 ### Starting games on the host
 
 Store games start through the OpenURI portal and always work. Games that start as a program on the host (desktop
-entries, Flatpak games, Faugus games and native games added by hand) need the app to reach the host through
-`org.freedesktop.Flatpak`, which Pindu launcher never asks for itself. Until you grant it, those games explain what is
-missing instead of failing, and **Preferences → Permissions** shows the command:
+entries, Flatpak games, Faugus and Legendary games, and native games added by hand) need the app to reach the host
+through `org.freedesktop.Flatpak`, which Pindu launcher never asks for itself. Until you grant it, those games explain
+what is missing instead of failing, and **Preferences → Permissions** shows the command:
 
 ```sh
 flatpak override --user --talk-name=org.freedesktop.Flatpak io.github.tim_van_oudheusden.pindu-launcher
@@ -565,7 +572,7 @@ add-ons) and how to start a translation by hand.
 
 ```mermaid
 flowchart LR
-  launchers["Steam, Heroic, Lutris,<br/>Bottles, Faugus,<br/>desktop entries, Flatpaks"]
+  launchers["Steam, Heroic, Lutris,<br/>Bottles, Faugus, Legendary,<br/>desktop entries, Flatpaks"]
 
   subgraph core["pindu-core: no GTK"]
     importers["Importers<br/>sources/"] --> store[("Library<br/>SQLite")]
@@ -639,8 +646,9 @@ sent anywhere.
 - [Cartridges](https://codeberg.org/kramo/cartridges) by kramo, the GNOME game launcher that showed how a libadwaita
   game library can look.
 - [Heroic Games Launcher](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher),
-  [Lutris](https://github.com/lutris/lutris), [Bottles](https://github.com/bottlesdevs/Bottles) and
-  [Faugus Launcher](https://github.com/Faugus/faugus-launcher), whose libraries Pindu launcher reads.
+  [Lutris](https://github.com/lutris/lutris), [Bottles](https://github.com/bottlesdevs/Bottles),
+  [Faugus Launcher](https://github.com/Faugus/faugus-launcher) and [Legendary](https://github.com/legendary-gl/legendary),
+  whose libraries Pindu launcher reads.
 - [OpenGamepadUI](https://github.com/ShadowBlip/OpenGamepadUI), for how a couch-first game library behaves.
 - [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher),
   [GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom) and

@@ -531,6 +531,8 @@ impl PinduWindow {
             GameOption::Hide => ("win", "hide-game"),
             GameOption::Unhide => ("win", "unhide-game"),
             GameOption::OpenInLauncher => ("app", "open-in-launcher"),
+            GameOption::ProtonDb => ("app", "open-protondb"),
+            GameOption::PcGamingWiki => ("app", "open-pcgamingwiki"),
             GameOption::ChangeArtwork => ("win", "change-artwork"),
             GameOption::Collections => return,
         };
@@ -568,6 +570,11 @@ fn option_label(option: GameOption, game: &GameObject) -> (&'static str, String)
                 || gettext("Open in Launcher"),
                 |launcher| gettext("Open in {launcher}").replace("{launcher}", launcher),
             ),
+        ),
+        GameOption::ProtonDb => ("adw-external-link-symbolic", gettext("View on ProtonDB")),
+        GameOption::PcGamingWiki => (
+            "adw-external-link-symbolic",
+            gettext("View on PCGamingWiki"),
         ),
     }
 }
