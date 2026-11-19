@@ -2,8 +2,8 @@
 //! Windows), folder, program, title and options here, native games whether they run on
 //! the host instead of in the Steam Linux Runtime, and Windows games their Proton build,
 //! prefix and installer, with a note when umu-launcher is missing; every game can get its
-//! own cover, banner and logo, and, when edited, its own developer, genres and description
-//! (`pindu_core::metadata::edit_by_user`).
+//! own cover, banner and logo, and, when edited, its own developer, genres, release year and
+//! description (`pindu_core::metadata::edit_by_user`).
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::collections::HashMap;
@@ -15,7 +15,7 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::manual::{self, ManualGame, WindowsOptions};
-use pindu_core::metadata::{self, Metadata};
+use pindu_core::metadata::{self, Metadata, NotAYear};
 use pindu_core::model::{ArtLayout, ArtOrigin, GameId, Source};
 use pindu_core::paths::{default_library_db_path, default_user_art_dir};
 use pindu_core::pe::{self, Icon};
@@ -121,6 +121,8 @@ mod imp {
         #[template_child]
         pub genres_row: TemplateChild<adw::EntryRow>,
         #[template_child]
+        pub release_year_row: TemplateChild<adw::EntryRow>,
+        #[template_child]
         pub description_group: TemplateChild<adw::PreferencesGroup>,
         #[template_child]
         pub description_view: TemplateChild<gtk::TextView>,
@@ -182,6 +184,11 @@ mod imp {
         #[template_callback]
         fn form_changed(&self) {
             self.obj().update_save_button();
+        }
+
+        #[template_callback]
+        fn release_year_changed(&self) {
+            self.obj().release_year_changed();
         }
 
         #[template_callback]
@@ -362,14 +369,23 @@ impl GameDialog {
         imp.developer_row
             .set_text(details.developer.as_deref().unwrap_or_default());
         imp.genres_row.set_text(&details.genres.join(", "));
+        imp.release_year_row.set_text(
+            &details
+                .release_year
+                .map(|year| year.to_string())
+                .unwrap_or_default(),
+        );
         imp.description_view
             .buffer()
             .set_text(details.description.as_deref().unwrap_or_default());
-        imp.shown_details.replace(Some(self.typed_details()));
+        imp.shown_details.replace(Some(Metadata {
+            release_year: details.release_year,
+            ..self.typed_text_details()
+        }));
     }
 
-    /// The details as the rows hold them.
-    fn typed_details(&self) -> Metadata {
+    /// The details as the text rows hold them, without the release year.
+    fn typed_text_details(&self) -> Metadata {
         let imp = self.imp();
         let buffer = imp.description_view.buffer();
         let (start, end) = buffer.bounds();
@@ -380,12 +396,37 @@ impl GameDialog {
         )
     }
 
+    /// The details as the rows hold them; `Err` while the release year row holds text
+    /// that is not a year.
+    fn typed_details(&self) -> Result<Metadata, NotAYear> {
+        Ok(Metadata {
+            release_year: Metadata::typed_year(&self.imp().release_year_row.text())?,
+            ..self.typed_text_details()
+        })
+    }
+
     /// The details as the dialog showed them and as the user left them, when the user
-    /// changed them.
+    /// changed them into ones that can be saved.
     fn changed_details(&self) -> Option<(Metadata, Metadata)> {
         let shown = self.imp().shown_details.borrow().clone()?;
-        let edited = self.typed_details();
+        let edited = self.typed_details().ok()?;
         (edited != shown).then_some((shown, edited))
+    }
+
+    /// Marks the release year row while it holds text that is not a year.
+    fn release_year_changed(&self) {
+        let row = self.imp().release_year_row.get();
+        let accessible = row.upcast_ref::<gtk::Widget>();
+        if Metadata::typed_year(&row.text()).is_ok() {
+            row.remove_css_class("error");
+            accessible.reset_state(gtk::AccessibleState::Invalid);
+        } else {
+            row.add_css_class("error");
+            accessible.update_state(&[gtk::accessible::State::Invalid(
+                gtk::AccessibleInvalidState::True,
+            )]);
+        }
+        self.update_save_button();
     }
 
     fn is_windows(&self) -> bool {
@@ -733,6 +774,9 @@ impl GameDialog {
 
     fn is_ready(&self) -> bool {
         let imp = self.imp();
+        if self.typed_details().is_err() {
+            return false;
+        }
         match &*imp.mode.borrow() {
             Mode::Add | Mode::Edit { manual: true, .. } => self
                 .form()
