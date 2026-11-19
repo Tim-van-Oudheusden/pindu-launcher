@@ -75,14 +75,16 @@ impl LibraryService {
         glib::spawn_future_local(async move { service.load().await });
     }
 
-    /// Reads every game from the store on a worker thread and updates the model; done
-    /// once the model shows them.
+    /// Reads every game from the store on a worker thread and updates the model, groups
+    /// starting the copy the user's source order puts first; done once the model shows
+    /// them.
     async fn load(&self) {
-        let prefer_steamgriddb = gtk::gio::prelude::SettingsExt::boolean(
-            &gtk::gio::Settings::new(APP_ID),
-            "prefer-steamgriddb",
-        );
-        match gtk::gio::spawn_blocking(move || read_games(prefer_steamgriddb)).await {
+        let settings = gtk::gio::Settings::new(APP_ID);
+        let prefer_steamgriddb =
+            gtk::gio::prelude::SettingsExt::boolean(&settings, "prefer-steamgriddb");
+        let source_order = crate::sources::source_order(&settings);
+        match gtk::gio::spawn_blocking(move || read_games(prefer_steamgriddb, &source_order)).await
+        {
             Ok(Ok((games, collections, saved_filters))) => {
                 let model = &self.imp().model;
                 model.set_collections(collections, saved_filters);
@@ -658,9 +660,10 @@ type Library = (
     HashMap<i64, SavedFilter>,
 );
 
-fn read_games(prefer_steamgriddb: bool) -> Result<Library, String> {
+fn read_games(prefer_steamgriddb: bool, source_order: &[Source]) -> Result<Library, String> {
     let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
-    let games = library::load(&store, prefer_steamgriddb).map_err(|error| error.to_string())?;
+    let games = library::load(&store, prefer_steamgriddb, source_order)
+        .map_err(|error| error.to_string())?;
     let collections = store.collections().map_err(|error| error.to_string())?;
     let saved_filters = store.saved_filters().map_err(|error| error.to_string())?;
     Ok((games, collections, saved_filters))
