@@ -59,6 +59,23 @@ Schema migration 6 (#504) adds the grouping layer; the rules follow spike #501.
   10 h with Lutris (runner `steam`) 2 h is 10 h; Steam 10 h with Heroic GOG 5 h is 15 h. A group was last played when
   any copy was.
 
+## How a group shows
+
+- **One tile, one list row, one search result.** Both shells, the desktop list layout and GNOME Shell search show a
+  group once: under its preferred copy's title and art (a kind of art the preferred copy lacks comes from the next
+  copy that has it), standing for the copy Play starts. A `--launch` or search result naming any copy starts the
+  group's Play copy.
+- **The game page lists the copies**, the preferred one first, each with its source, whether it is installed and its
+  own playtime with where that comes from; the copy Play starts says so.
+- **Changes on a group reach every copy.** Favourite, hide, remove and collection changes made on a group's tile or
+  page are written to each copy. A group is a favourite, or in a collection, when any copy is; it is hidden or removed
+  only when every copy is. A "Jump back in" place holds one game, so pinning a group pins the copy Play starts, and
+  unpinning it unpins every copy.
+- **Playtime and last played** are the group's (above): sorting by playtime or last played, Play history, "Jump back
+  in" and the game page use them. When two or more copies played apart have playtime, the total reads "across N
+  copies"; otherwise it names where the one figure comes from.
+- A group sits in the source view of the copy Play starts.
+
 ## How duplicates are found
 
 `duplicates::suggestions` (#505) lists the pairs of library records that look like copies of one game, each with a
