@@ -903,8 +903,9 @@ impl GameDialog {
     }
 }
 
-/// Stores the dialog's changes; returns whether a game was added.
-fn save_to_store(
+/// Stores the dialog's changes; returns whether a game was added. Fullscreen mode's Add
+/// Game (`fullscreen_add_game`) stores its games through it too.
+pub(crate) fn save_to_store(
     mode: Mode,
     form: Option<ManualGame>,
     icon: Option<Icon>,

@@ -61,6 +61,9 @@ widgets so it looks and behaves like the rest of GNOME.
   ([Fullscreen mode](#fullscreen-mode)).
 - **A tidy library.** Browse covers in a grid, or switch the desktop window to a list with each game's source, install
   state, last played date and playtime. Search, sort and filter by installed, favourite, Windows or native, in either
+  layout. Group games into your own collections, or save a filter and search as a collection that keeps itself up to
+  date (**Save Filter…** beside the filters, with suggested ones under its arrow), jump back into recent games and hide
+  the ones you never play.
   layout. Group games into your own collections, jump back into recent games and hide the ones you never play. The
   **Select** button in the header bar picks several games in the grid or the list at once, to favourite, hide, add to
   a collection or take out of one in one go, with a toast to undo it.
@@ -74,6 +77,10 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
+- **Backups.** Export your collections (not yet the filters of saved ones), favourites, hidden games, games added by
+  hand and tracked playtime to a file, and import them again. Before an update changes the library's format, Pindu
+  launcher keeps a copy of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps
+  the two newest copies.
 - **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
   and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
   beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
@@ -277,6 +284,8 @@ Guide + A never also opens the menu drawer.
 On the library page, **Filters** narrows every tab to installed or not installed games, or to Windows or native ones,
 and can show hidden games too. A **Filtered** chip beside the tabs says a filter is on, and **Clear Filters** brings the
 whole tab back. These filters are separate from the desktop window's filter row and last until the app quits.
+**Save Filter…** keeps the shown tab with these filters and the search as a collection of its own, which gets a tab,
+a Home section and a drawer entry; **Save Native Games** and **Save Windows Games** save those shelves in one press.
 
 ### Performance
 
@@ -348,6 +357,18 @@ console restarts, so the entry never restarts it by itself.
 
 Elsewhere, another distribution or the Flatpak, the entry does not show.
 
+### Library Health in Quick Access
+
+Quick Access has a **Library Health** entry, subtitled with how many problems need attention. Its level shows the
+same report as the desktop's Library Health page: **Sources**, **Launching**, **Artwork** and **Library Data**, read
+with a controller alone. Each row takes focus; a problem's row names its next step and takes it on A, closing Quick
+Access: Preferences at Sources, Preferences at the host access command, or umu-launcher's install instructions.
+
+- Over a running game the rows say the step is taken once the game has ended, since Preferences and web pages open
+  over the launcher.
+- In a gamescope session, which has no browser, umu-launcher's row shows the address to read on another device.
+- Rows the session cannot have, such as host access outside the Flatpak, are left out, never shown as errors.
+
 ### Add a Store
 
 A library with no games, such as a fresh Pindu OS, offers **Add a Store** on its empty page, in fullscreen mode and on
@@ -373,6 +394,24 @@ Quick Access's **Proton** does what Preferences' Windows and Proton pages do for
 - **Check for Releases** lists the newest GE-Proton and Proton-CachyOS releases from GitHub, the only time the level
   goes online. Select one to download and install it: its row shows how far it is, and it is a task in Activity, where
   it can be cancelled; selecting its row again stops it too. A notification says how it ended.
+### Add a Game
+
+**Add a Game** in Quick Access adds a game by hand without leaving fullscreen mode, with a controller alone. Choose a
+native game, an installed Windows game, or a Windows installer, then:
+
+- Pick the game's folder, or the installer, in a picker fullscreen mode draws itself. It starts at the Games folder,
+  your home folder and the drives the system has mounted under `/run/media/<user>`, and lists only folders and, for an
+  installer, Windows programs. It shows only what the launcher can already read, and says so: the Flatpak gets no new
+  permission, so there it reaches `~/Games` and the folders it already reads, not a drive. Mounting drives is the
+  system's job.
+- An installer runs through umu with the default Proton build in a new prefix; once it ends, pick the program it
+  installed.
+- Pick the game's program from the ones found in its folder. The title is filled in from the program's name and can
+  be changed with the on-screen keyboard.
+
+A Windows game's Proton build is picked on the last step from the same list as Performance's: the default first, then
+the builds on this machine, newest first. It runs through umu, as on the desktop. Arguments, the working folder, host
+spawn, a prefix of your choice and art are set in the desktop's Add Game and Edit dialogs.
 
 ### Controllers
 

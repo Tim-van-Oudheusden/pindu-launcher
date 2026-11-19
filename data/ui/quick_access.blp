@@ -562,6 +562,48 @@ template $PinduQuickAccess: Box {
               };
             }
 
+            // The Library Health report, subtitled with how many problems need
+            // attention.
+            ListBoxRow health_row {
+              action-name: "win.quick-access-library-health";
+
+              child: Box {
+                spacing: 16;
+
+                Image health_icon {
+                  icon-name: "emblem-ok-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Box {
+                  orientation: vertical;
+                  valign: center;
+                  hexpand: true;
+
+                  Label {
+                    label: _("Library Health");
+                    xalign: 0;
+                  }
+
+                  Label health_subtitle {
+                    xalign: 0;
+                    ellipsize: end;
+                    visible: false;
+
+                    styles [
+                      "caption",
+                      "dim-label",
+                    ]
+                  }
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
             // The "add a store" flow, which installs Steam, Heroic or Lutris.
             ListBoxRow add_store_row {
               action-name: "win.quick-access-add-store";
@@ -635,6 +677,26 @@ template $PinduQuickAccess: Box {
                 Image {
                   icon-name: "go-next-symbolic";
                   accessible-role: presentation;
+                }
+              };
+            }
+
+            // Fullscreen mode's Add Game, a dialog over the main window.
+            ListBoxRow add_game_row {
+              action-name: "win.add-game-fullscreen";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "applications-games-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Add a Game");
+                  xalign: 0;
+                  hexpand: true;
                 }
               };
             }
@@ -1571,6 +1633,33 @@ template $PinduQuickAccess: Box {
               action-name: "win.clear-fullscreen-filters";
             }
           }
+
+          // Saves the shown tab with these filters and the search as a collection whose
+          // games are computed, or saves a suggested one.
+          ListBox save_filters {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ButtonRow {
+              title: _("Save Filter…");
+              action-name: "win.save-filter";
+            }
+
+            Adw.ButtonRow {
+              title: _("Save Native Games");
+              action-name: "win.save-suggestion";
+              action-target: "'native'";
+            }
+
+            Adw.ButtonRow {
+              title: _("Save Windows Games");
+              action-name: "win.save-suggestion";
+              action-target: "'windows'";
+            }
+          }
         };
       };
     }
@@ -1663,6 +1752,12 @@ template $PinduQuickAccess: Box {
       name: "system-update";
 
       child: $PinduSystemUpdateLevel system_update_level {};
+    }
+
+    StackPage {
+      name: "library-health";
+
+      child: $PinduHealthLevel health_level {};
     }
 
     StackPage {
