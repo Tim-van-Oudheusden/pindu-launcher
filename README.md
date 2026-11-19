@@ -80,7 +80,7 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
-- **Backups.** Export your collections (not yet the filters of saved ones), favourites, hidden games, games added by
+- **Backups.** Export your collections, saved filters, favourites, hidden games, games added by
   hand and tracked playtime to a file, and import them again. Before an update changes the library's format, Pindu
   launcher keeps a copy of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps
   the two newest copies.
@@ -743,6 +743,10 @@ Page** and **Next Page**, turn the pages, and Up and Down scroll a page the scre
 copy is saved to `~/.local/share/pindu-launcher/reports/` (in the Flatpak,
 `~/.var/app/io.github.tim_van_oudheusden.pindu-launcher/data/pindu-launcher/reports/`), named after the date and time;
 the newest ten are kept, and the screen says where the copy went.
+
+When a game misbehaves, add its newest log from **Play with Logs**: on the desktop, the game's **More Actions** menu has
+**Debugging Information with Log**; in fullscreen mode, the Diagnostics Report has **Add a Game's Log**. The report then
+keeps that game's title, and still no other title and no home folder.
 
 ## Acknowledgments
 

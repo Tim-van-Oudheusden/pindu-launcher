@@ -123,6 +123,31 @@ template $PinduReportLevel: Adw.Bin {
           }
         };
       }
+
+      // Leads to the games with a log, to add one's newest log to the report.
+      ListBoxRow report_add_log {
+        action-name: "win.quick-access-report-log";
+
+        child: Box {
+          spacing: 16;
+
+          Image {
+            icon-name: "text-x-generic-symbolic";
+            accessible-role: presentation;
+          }
+
+          Label {
+            label: _("Add a Game's Log");
+            xalign: 0;
+            hexpand: true;
+          }
+
+          Image {
+            icon-name: "go-next-symbolic";
+            accessible-role: presentation;
+          }
+        };
+      }
     }
   };
 }

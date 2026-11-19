@@ -241,6 +241,10 @@ mod imp {
         #[template_child]
         pub report_level: TemplateChild<PinduReportLevel>,
         #[template_child]
+        pub report_logs: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub report_logs_empty: TemplateChild<gtk::Label>,
+        #[template_child]
         pub proton_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub proton_level: TemplateChild<PinduProtonLevel>,
@@ -469,7 +473,13 @@ impl PinduQuickAccess {
             Some(QuickAccessLevel::SystemUpdate) => self.show_system_update(),
             Some(QuickAccessLevel::LibraryHealth) => self.show_health(),
             Some(QuickAccessLevel::AddStore) => self.show_add_store(),
-            Some(QuickAccessLevel::DiagnosticsReport) => self.show_diagnostics_report(),
+            // Back from the games with a log, the report stays as it was.
+            Some(QuickAccessLevel::DiagnosticsReport)
+                if before != Some(QuickAccessLevel::ReportLog) =>
+            {
+                self.show_diagnostics_report(None);
+            }
+            Some(QuickAccessLevel::ReportLog) => self.show_report_logs(),
             Some(QuickAccessLevel::Proton) => imp.proton_level.show(),
             Some(QuickAccessLevel::Network) => self.show_network(),
             Some(QuickAccessLevel::Sources) => self.show_sources(),
@@ -536,7 +546,11 @@ impl PinduQuickAccess {
             (Some(QuickAccessLevel::SystemUpdate), _) => imp.system_update_level.focus_target(),
             (Some(QuickAccessLevel::LibraryHealth), _) => imp.health_level.focus_target(),
             (Some(QuickAccessLevel::AddStore), _) => imp.add_store_level.focus_target(),
+            (Some(QuickAccessLevel::DiagnosticsReport), Some(QuickAccessLevel::ReportLog)) => {
+                Some(imp.report_level.add_log_row())
+            }
             (Some(QuickAccessLevel::DiagnosticsReport), _) => imp.report_level.focus_target(),
+            (Some(QuickAccessLevel::ReportLog), _) => first_row(&imp.report_logs),
             (Some(QuickAccessLevel::Proton), _) => imp.proton_level.focus_target(),
             (Some(QuickAccessLevel::Network), _) => imp.network_level.focus_target(),
             // Filled once the sources are read, which then focuses the first.
@@ -761,7 +775,7 @@ impl PinduQuickAccess {
             QuickAccessLevel::SystemUpdate => &imp.system_update_row,
             QuickAccessLevel::LibraryHealth => &imp.health_row,
             QuickAccessLevel::AddStore => &imp.add_store_row,
-            QuickAccessLevel::DiagnosticsReport => &imp.report_row,
+            QuickAccessLevel::DiagnosticsReport | QuickAccessLevel::ReportLog => &imp.report_row,
             QuickAccessLevel::Proton => &imp.proton_row,
             QuickAccessLevel::Network => &imp.network_row,
         };
@@ -840,6 +854,7 @@ impl PinduQuickAccess {
             add_store_stores,
             add_store_actions,
             report_actions,
+            imp.report_logs.get(),
             proton_default,
             proton_tools,
             proton_downloaded,
