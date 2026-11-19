@@ -31,6 +31,7 @@ pub mod hold;
 pub mod home;
 pub mod keys;
 pub mod launch;
+pub mod launch_outcome;
 pub mod launch_overlay;
 pub mod library;
 pub mod logs;

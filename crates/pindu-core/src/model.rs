@@ -272,6 +272,20 @@ impl fmt::Display for GameId {
     }
 }
 
+string_enum! {
+    /// How a launch of a game went out (see [`crate::launch_outcome`]).
+    LaunchRoute, "launch route" {
+        /// Handed to its store launcher.
+        HandOff => "hand-off",
+        /// Run on the host as our child.
+        Host => "host",
+        /// A Windows game run through umu and Proton.
+        Proton => "proton",
+        /// A native game run in the Steam Linux Runtime through umu.
+        Runtime => "runtime",
+    }
+}
+
 /// One game in the library.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Game {

@@ -769,6 +769,10 @@ When a game misbehaves, add its newest log from **Play with Logs**: on the deskt
 **Debugging Information with Log**; in fullscreen mode, the Diagnostics Report has **Add a Game's Log**. The report then
 keeps that game's title, and still no other title and no home folder.
 
+Every other start of a game Pindu runs itself keeps a short log beside those: the last 64 KiB of its output, in
+`~/.local/share/pindu-launcher/logs/<game>/` as `<date and time>.short.log`, the newest five per game. Pindu also
+records how each of a game's last five launches ended ([Launch outcomes](docs/launch-outcomes.md)).
+
 ## Acknowledgments
 
 - [Cartridges](https://codeberg.org/kramo/cartridges) by kramo, the GNOME game launcher that showed how a libadwaita

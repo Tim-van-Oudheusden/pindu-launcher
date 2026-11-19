@@ -1,7 +1,10 @@
-//! Per-game logs from "Play with Logs": one file per launch in
-//! `$XDG_DATA_HOME/pindu-launcher/logs/<game>/`, named after the local time it started,
-//! and only the newest few kept.
+//! Per-game logs: one file per launch in `$XDG_DATA_HOME/pindu-launcher/logs/<game>/`,
+//! named after the local time it started. "Play with Logs" and "Start Safely" keep the
+//! launch's whole output in a full log, of which the newest [`KEEP`] stay. Every other
+//! launch of a game Pindu runs keeps a short log: the last [`SHORT_LOG_BYTES`] of its
+//! output, of which the newest [`crate::launch_outcome::KEEP`] stay.
 
+use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 
 use crate::launch::Command;
@@ -44,6 +47,85 @@ pub fn stale_logs(names: &[String], keep: usize) -> Vec<String> {
 /// The newest log among a folder's `names`, ignoring files the launcher did not name.
 pub fn latest_log(names: &[String]) -> Option<&String> {
     oldest_first(names, LOG).pop()
+}
+
+/// The most a short log keeps of a launch's output: its last lines up to this many bytes.
+pub const SHORT_LOG_BYTES: usize = 64 * 1024;
+
+/// The name of a new short log started at `stamp`, unique among the folder's `existing`
+/// names, as [`new_log_name`] names a full one.
+pub fn new_short_log_name(stamp: &str, existing: &[String]) -> String {
+    new_stamped_name(stamp, SHORT_LOG, existing)
+}
+
+/// The short logs among a folder's `names` beyond the newest `keep`, oldest first.
+pub fn stale_short_logs(names: &[String], keep: usize) -> Vec<String> {
+    stale_stamped(names, SHORT_LOG, keep)
+}
+
+/// The extension of a short log's name. A full log's [`LOG`] alone never matches it: its
+/// stem does not end in a start time.
+const SHORT_LOG: &str = ".short.log";
+
+/// The end of a launch's output, for its short log: the last lines that fit in a number of
+/// bytes, newlines included, and how many earlier lines were left out.
+#[derive(Debug, Clone)]
+pub struct Tail {
+    lines: VecDeque<String>,
+    bytes: usize,
+    limit: usize,
+    left_out: usize,
+}
+
+impl Tail {
+    /// An empty tail that keeps at most `limit` bytes.
+    pub fn new(limit: usize) -> Self {
+        Self {
+            lines: VecDeque::new(),
+            bytes: 0,
+            limit,
+            left_out: 0,
+        }
+    }
+
+    /// Adds a line of output, without its newline, leaving out the oldest lines that no
+    /// longer fit. A line longer than the whole tail keeps its end.
+    pub fn push(&mut self, line: &str) {
+        let room = self.limit.saturating_sub(1);
+        let mut start = line.len().saturating_sub(room);
+        while !line.is_char_boundary(start) {
+            start += 1;
+        }
+        let line = &line[start..];
+        let size = line.len() + 1;
+        while self.bytes + size > self.limit {
+            let Some(old) = self.lines.pop_front() else {
+                // Not even an empty line fits.
+                self.left_out += 1;
+                return;
+            };
+            self.bytes -= old.len() + 1;
+            self.left_out += 1;
+        }
+        self.lines.push_back(line.to_owned());
+        self.bytes += size;
+    }
+
+    /// The kept lines, each ending in a newline, after a line saying how many earlier
+    /// lines were left out, if any were.
+    pub fn text(&self) -> String {
+        let mut text = match self.left_out {
+            0 => String::new(),
+            1 => "[1 earlier line left out]\n".to_owned(),
+            n => format!("[{n} earlier lines left out]\n"),
+        };
+        text.reserve(self.bytes);
+        for line in &self.lines {
+            text.push_str(line);
+            text.push('\n');
+        }
+        text
+    }
 }
 
 /// The extension of a log's name.
@@ -278,5 +360,64 @@ mod tests {
              Started safely: without wrappers, MangoHud, GameMode or the game's own environment variables\n\
              Command: umu-run /games/notepad.exe\n\n"
         );
+    }
+
+    #[test]
+    fn short_logs_are_named_kept_and_dropped_apart_from_full_logs() {
+        let stamp = "2026-11-05T14-03-22";
+        let names = names(&[
+            "2026-11-05T14-03-22.log",
+            "2026-11-05T14-03-22.short.log",
+            "2026-11-04T09-00-00.short.log",
+            "2026-11-06T08-00-00.short.log",
+        ]);
+
+        assert_eq!(
+            new_short_log_name(stamp, &names),
+            "2026-11-05T14-03-22_2.short.log"
+        );
+        assert_eq!(
+            stale_short_logs(&names, 2),
+            ["2026-11-04T09-00-00.short.log"]
+        );
+        assert!(stale_logs(&names, 1).is_empty());
+        assert_eq!(
+            latest_log(&names).map(String::as_str),
+            Some("2026-11-05T14-03-22.log")
+        );
+    }
+
+    #[test]
+    fn a_tail_keeps_the_last_lines_that_fit_and_says_how_many_it_left_out() {
+        let mut tail = Tail::new(12);
+
+        for line in ["one", "two", "three", "four"] {
+            tail.push(line);
+        }
+
+        // "three\n" and "four\n" make 11 bytes; "two\n" would make 15.
+        assert_eq!(tail.text(), "[2 earlier lines left out]\nthree\nfour\n");
+    }
+
+    #[test]
+    fn a_tail_that_left_nothing_out_is_the_output_itself() {
+        let mut tail = Tail::new(SHORT_LOG_BYTES);
+
+        tail.push("wine: starting");
+        tail.push("");
+
+        assert_eq!(tail.text(), "wine: starting\n\n");
+        assert_eq!(Tail::new(8).text(), "");
+    }
+
+    #[test]
+    fn a_line_longer_than_the_tail_keeps_its_end() {
+        let mut tail = Tail::new(7);
+
+        tail.push("first");
+        tail.push("abcdéfghij");
+
+        // Six bytes and the newline would cut `é` in two, so five and the newline.
+        assert_eq!(tail.text(), "[1 earlier line left out]\nfghij\n");
     }
 }
