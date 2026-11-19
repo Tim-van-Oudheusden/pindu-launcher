@@ -30,14 +30,18 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **Sources.** Quick Access's Sources level lists every imported source with its icon, whether it was found on this
   computer and its Import switch, the same setting as Preferences, Sources; changing it syncs as it does there. The
   folder override and Show in Sidebar stay desktop-only.
+- **Duplicates.** Quick Access's Duplicates level lists the duplicate suggestions and the groups the sync made, as the
+  desktop's Duplicates page does ([game identity](game-identity.md#reviewing-duplicates)). A on a suggestion opens to
+  Group and Not the Same Game; A on an automatic group opens to Undo Grouping.
 - **A game's Proton build.** For a game Pindu runs through Proton, Quick Access's Performance level lists the
   default and the builds on this machine, newest first, as check rows a controller moves through. It is the same
   setting as the desktop game page's Proton row and applies the next time the game starts. Other games have no list.
 - **Proton builds.** Quick Access's **Proton** level picks the default Proton build and the default MangoHud and
   GameMode for new Windows games (the same settings as Preferences' Windows page), lists the downloaded builds, which
   A asks to remove, and, once the player checks, the GE-Proton and Proton-CachyOS releases, which A downloads. A
-  download is a task in Activity that can be cancelled there or with A on its row. The default prefix folder stays
-  desktop-only: it needs a folder chooser.
+  download is a task in Activity that can be cancelled there or with A on its row. The default prefix folder and
+  the folder save snapshots are copied to stay desktop-only: they need the portal's folder chooser, which grants
+  access to a folder the sandbox cannot otherwise write to.
 - **Adding a game by hand.** Quick Access's Add a Game adds a native game, an installed Windows game or a Windows
   installer's game in fullscreen mode. Fullscreen mode draws its own picker, as a portal's file chooser runs in another
   process that controller navigation cannot drive. It starts at the Games folder, the home folder and the drives

@@ -187,5 +187,6 @@ fn kind_icon(kind: Kind) -> &'static str {
         Kind::SoundOutputFailed => "dialog-warning-symbolic",
         Kind::StoreInstalled => "system-software-install-symbolic",
         Kind::StoreFailed => "dialog-warning-symbolic",
+        Kind::SaveCopyFailed => "dialog-warning-symbolic",
     }
 }
