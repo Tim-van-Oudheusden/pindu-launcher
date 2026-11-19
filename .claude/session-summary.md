@@ -8,16 +8,18 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-18, #476 (fix): after Exit Steam in Big Picture from Home, the controller did nothing for 10 s.
-  `BIG_PICTURE_GRACE` keeps the session past Steam's last window while the launcher is already in front, and the
-  window dropped every intent for the whole session. Now `BigPicture::has_controller` (Steam's window shown or a game
-  Steam started) decides, through `GamescopeService::big_picture_has_controller`. The "until I click" was the grace
-  running out, not X focus: the maintainer's journal (`journalctl --user _PID=<launcher>`, debug on) logs every
-  `Gamepad intent` and `Launch overlay event: Focus(...)`, which settled it.
-- 2026-11-18, #417: 0.5.0 final cut from `main` after rc.4 plus #476 (PR #477), Weblate (#473) and README (#475).
-  The maintainer waived the soak `docs/releasing.md` asks for when code lands after the pre-release. Open: the
-  `hardware-check:passed` label on #417 (maintainer's), and the AUR and nixpkgs bumps from the release's `SHA256SUMS`
-  plus the COPR build once the release is published.
+- 2026-11-19, #488/#489/#492/#493 then #497: Jump Back In cards (clip, crop, Play on hover), fullscreen grid with
+  equal 32 px gaps (`grid::centred_columns`), and Change Artwork (`artwork_dialog.rs`, paged SteamGridDB, store
+  migration 0005 `steamgriddb_matches`). 0.5.1 cut as a final release straight away: the maintainer waived the
+  pre-release and soak. Open: `hardware-check:passed` on #497 (maintainer's), and the AUR and nixpkgs bumps from the
+  release's `SHA256SUMS` plus the COPR build once it is published.
+- Gotcha: visual checks without hardware: install a prefix build (`meson setup <dir> --prefix=<dir>/inst
+  -Dprofile=development`) and run it inside the devel app's sandbox (`flatpak run --devel --command=sh
+  io.github.tim_van_oudheusden.pindu-launcher-devel`), so glycin's `flatpak-spawn --sandbox` works, on
+  `gtk4-broadwayd :5 --port 8085` with `HOME`/`XDG_*`/`HOST_XDG_DATA_HOME` pointing at a fixture Faugus library;
+  screenshot it with the browser. Puppeteer `page.screenshot({clip})` shrinks the Broadway window; key events stop
+  reaching an `adw::Dialog` opened from the keyboard in fullscreen mode there, so drive the controller through
+  `handle_intent` instead.
 - Gotcha: parallel agents each get a `git worktree` under `~/Git/pindu-wt/<issue>` with a reflinked
   `_build/cargo-target` (`cp -a --reflink=always`, btrfs); they must use absolute paths, or edits land in the main
   checkout.
