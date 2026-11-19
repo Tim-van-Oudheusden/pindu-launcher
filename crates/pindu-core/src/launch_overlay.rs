@@ -401,6 +401,35 @@ mod tests {
     }
 
     #[test]
+    fn a_game_we_run_still_returns_after_its_starting_screen_lingers() {
+        let mut overlay = LaunchOverlay::default();
+        overlay.handle(Event::Play(id(), Launch::Run));
+        overlay.handle(Event::Playing(id(), true));
+        overlay.handle(Event::Reported);
+
+        assert_eq!(overlay.handle(Event::Lingered), None);
+        assert_eq!(overlay.shown(), Launching::No);
+        assert_eq!(overlay.game(), Some(&id()));
+        assert_eq!(
+            overlay.handle(Event::Playing(id(), false)),
+            Some(Effect::Return(id()))
+        );
+    }
+
+    #[test]
+    fn a_hand_off_whose_launcher_came_up_still_returns_after_its_timeout() {
+        let mut overlay = LaunchOverlay::default();
+        overlay.handle(Event::Play(id(), Launch::HandOff));
+        overlay.handle(Event::Focus(false));
+
+        assert_eq!(overlay.handle(Event::Lingered), None);
+        assert_eq!(
+            overlay.handle(Event::Focus(true)),
+            Some(Effect::Return(id()))
+        );
+    }
+
+    #[test]
     fn a_game_in_front_returns_to_its_page_each_time_the_window_has_focus_again() {
         let mut overlay = LaunchOverlay::default();
         overlay.handle(Event::Play(id(), Launch::Run));
