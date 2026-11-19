@@ -71,6 +71,12 @@ template $PinduGamePage: Adw.NavigationPage {
               Label title {
                 wrap: true;
                 xalign: 0;
+                // The page's heading, for a screen reader's jump from heading to heading.
+                accessible-role: heading;
+
+                accessibility {
+                  level: 1;
+                }
 
                 styles [
                   "title-1",
