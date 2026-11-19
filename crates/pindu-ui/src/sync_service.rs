@@ -10,6 +10,7 @@ use gtk::glib;
 use gtk::glib::subclass::Signal;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
+use pindu_core::health::is_first_sync;
 use pindu_core::model::{Source, SourceState};
 use pindu_core::paths::default_library_db_path;
 use pindu_core::sources::location::{self, HostDirs};
@@ -36,6 +37,8 @@ mod imp {
         /// The games the last sync added, and the games it found missing.
         pub added: RefCell<Tally>,
         pub missing: RefCell<Tally>,
+        /// Whether the last sync was the library's first.
+        pub first: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -78,6 +81,11 @@ impl SyncService {
     /// The games the last sync found gone from their sources, and those sources.
     pub fn missing(&self) -> Tally {
         self.imp().missing.borrow().clone()
+    }
+
+    /// Whether the last sync was the library's first: no source had synced before it.
+    pub fn was_first(&self) -> bool {
+        self.imp().first.get()
     }
 
     /// Each source's stored state: enabled, override, where it was last found.
@@ -144,7 +152,7 @@ impl SyncService {
                 .unwrap_or_else(|_| Err(gettext("The import stopped unexpectedly")));
             // The toast is the only other place these show up; keep them in the journal too.
             match &outcome {
-                Ok(summary) => {
+                Ok((summary, _)) => {
                     for (source, problem) in &summary.problems {
                         glib::g_warning!("pindu", "Could not import from {source}: {problem}");
                     }
@@ -153,8 +161,8 @@ impl SyncService {
                     glib::g_warning!("pindu", "Could not refresh the library: {message}")
                 }
             }
-            let (problems, added, missing) = match outcome {
-                Ok(summary) => (
+            let (problems, added, missing, first) = match outcome {
+                Ok((summary, first)) => (
                     summary
                         .problems
                         .iter()
@@ -162,13 +170,15 @@ impl SyncService {
                         .collect(),
                     summary.added(),
                     summary.missing(),
+                    first,
                 ),
-                Err(message) => (vec![message], Tally::default(), Tally::default()),
+                Err(message) => (vec![message], Tally::default(), Tally::default(), false),
             };
             let imp = service.imp();
             imp.problems.replace(problems);
             imp.added.replace(added);
             imp.missing.replace(missing);
+            imp.first.set(first);
             service.set_syncing(false);
             if let (Some(tasks), Some(task)) = (tasks, task) {
                 tasks.finish(task);
@@ -200,13 +210,20 @@ impl Default for SyncService {
     }
 }
 
-/// Opens its own connection to the library and syncs every source.
-fn run_sync() -> Result<SyncSummary, String> {
+/// Opens its own connection to the library and syncs every source. Also says whether
+/// this was the library's first sync.
+fn run_sync() -> Result<(SyncSummary, bool), String> {
     let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
+    let first = store
+        .source_states()
+        .map(|states| is_first_sync(&states))
+        .map_err(|error| error.to_string())?;
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |elapsed| elapsed.as_secs() as i64);
     // GLib reads the local time zone; the core has none of its own.
     let utc_offset = glib::DateTime::now_local().map_or(0, |local| local.utc_offset().as_seconds());
-    sync_all(&store, &HostDirs::from_env(), now, utc_offset).map_err(|error| error.to_string())
+    sync_all(&store, &HostDirs::from_env(), now, utc_offset)
+        .map(|summary| (summary, first))
+        .map_err(|error| error.to_string())
 }

@@ -224,6 +224,11 @@
       <summary>SteamGridDB prompt shown</summary>
       <description>Whether the window has offered, once, to set up a SteamGridDB API key for game art.</description>
     </key>
+    <key name="first-sync-summary-shown" type="b">
+      <default>false</default>
+      <summary>First sync summary shown</summary>
+      <description>Whether the summary of what the library's first sync found has been dismissed, after which it never shows again.</description>
+    </key>
     <key name="last-backup" type="x">
       <default>0</default>
       <summary>Last library backup</summary>

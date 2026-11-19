@@ -36,6 +36,7 @@ pub mod library;
 pub mod logs;
 pub mod manual;
 pub mod menus;
+pub mod metadata;
 pub mod model;
 pub mod notifications;
 pub mod osk;
