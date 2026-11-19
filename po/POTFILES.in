@@ -7,6 +7,7 @@ crates/pindu-ui/src/bluetooth_service.rs
 crates/pindu-ui/src/collection_actions.rs
 crates/pindu-ui/src/duplicate_review.rs
 crates/pindu-ui/src/duplicates_page.rs
+crates/pindu-ui/src/failed_launch.rs
 crates/pindu-ui/src/file_service.rs
 crates/pindu-ui/src/first_sync_summary.rs
 crates/pindu-ui/src/fullscreen.rs

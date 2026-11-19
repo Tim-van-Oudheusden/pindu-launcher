@@ -243,6 +243,12 @@ pub fn latest(id: &GameId) -> Option<PathBuf> {
     logs::latest_log(&names).map(|name| dir.join(name))
 }
 
+/// The log named `name` of one launch of the game with `id`, while it is kept. Blocks;
+/// run it on a worker thread.
+pub fn launch_log(id: &GameId, name: &str) -> Option<PathBuf> {
+    logs::launch_log(&data_home(), id, name).filter(|path| path.is_file())
+}
+
 /// The names of the files in `dir`.
 pub(crate) fn file_names(dir: &Path) -> io::Result<Vec<String>> {
     fs::read_dir(dir)?

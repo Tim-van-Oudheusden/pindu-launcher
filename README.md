@@ -55,7 +55,8 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Start Safely.** When a game Pindu runs itself breaks, **Start Safely** in its page's menu, or in fullscreen's
   options, starts it once without its wrappers, MangoHud, GameMode or its own environment variables, and keeps a log
   as **Play with Logs** does, so a broken overlay or wrapper tells itself apart from a broken game. Its saved settings
-  stay as they are.
+  stay as they are. When the last launch failed, the game's page says why and offers it with the other next steps
+  that exist for the game.
 - **A fullscreen mode for the couch.** A controller-first Home, library and game pages, a Quick Access panel, an
   on-screen keyboard for search and navigation sounds, with switchable designs and your own CSS
   ([Fullscreen mode](#fullscreen-mode)).
@@ -771,7 +772,10 @@ keeps that game's title, and still no other title and no home folder.
 
 Every other start of a game Pindu runs itself keeps a short log beside those: the last 64 KiB of its output, in
 `~/.local/share/pindu-launcher/logs/<game>/` as `<date and time>.short.log`, the newest five per game. Pindu also
-records how each of a game's last five launches ended ([Launch outcomes](docs/launch-outcomes.md)).
+records how each of a game's last five launches ended ([Launch outcomes](docs/launch-outcomes.md)), and when the
+last one failed, the game's page says why, with the next steps that exist for it: **How to Enable**, **How to Install
+umu-launcher**, **Choose Another Proton Build**, **Start Safely** and **Open Log**, which opens that launch's log. In
+fullscreen mode the game's options list them.
 
 ## Acknowledgments
 

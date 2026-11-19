@@ -16,6 +16,7 @@ pub mod controller_navigation;
 pub mod diagnostics_service;
 pub mod duplicate_review;
 pub mod duplicates_page;
+pub mod failed_launch;
 pub mod file_service;
 pub mod first_sync_summary;
 pub mod fullscreen;
