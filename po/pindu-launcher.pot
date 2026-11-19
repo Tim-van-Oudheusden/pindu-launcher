@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 19:48+0100\n"
+"POT-Creation-Date: 2026-11-19 20:02+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -262,22 +262,29 @@ msgstr ""
 msgid "Could not reach SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1042
+#: crates/pindu-ui/src/application.rs:1045
 msgid "Nothing new to restore"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1044
+#: crates/pindu-ui/src/application.rs:1047
 msgid "Backup restored"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1050
+#: crates/pindu-ui/src/application.rs:1053
 #, rust-format
 msgid "one game in it is not in this library"
 msgid_plural "{count} games in it are not in this library"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:1055
+#: crates/pindu-ui/src/application.rs:1063
+#, rust-format
+msgid "one group of copies in it was skipped"
+msgid_plural "{count} groups of copies in it were skipped"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/pindu-ui/src/application.rs:1071
 #, rust-format
 msgid "{result}; {note}"
 msgstr ""

@@ -285,10 +285,9 @@ pub fn import(store: &Store, text: &str) -> Result<ImportSummary, BackupError> {
             summary.groups += 1;
         }
         for pair in list(&backup["not_the_same"]) {
-            let (Some(first), Some(second)) = (
-                known(&pair[0], &mut missing),
-                known(&pair[1], &mut missing),
-            ) else {
+            let (Some(first), Some(second)) =
+                (known(&pair[0], &mut missing), known(&pair[1], &mut missing))
+            else {
                 continue;
             };
             if first != second && !store.is_split(&first, &second)? {
@@ -694,7 +693,9 @@ mod tests {
             .create_group(&[portal.clone(), gog.clone(), lutris.clone()])
             .unwrap();
         store.set_preferred_copy(three, Some(&gog)).unwrap();
-        store.create_group(&[portal2.clone(), lutris2.clone()]).unwrap();
+        store
+            .create_group(&[portal2.clone(), lutris2.clone()])
+            .unwrap();
         store.remember_split(&desktop2, &portal2).unwrap();
         let backup = export(&store, 300).unwrap();
         let (_fresh_dir, fresh) = synced_store();
@@ -728,7 +729,9 @@ mod tests {
         store.create_group(&[portal.clone(), gog.clone()]).unwrap();
         let backup = export(&store, 300).unwrap();
         let (_fresh_dir, fresh) = store_with_copies();
-        fresh.create_group(&[portal.clone(), lutris.clone()]).unwrap();
+        fresh
+            .create_group(&[portal.clone(), lutris.clone()])
+            .unwrap();
 
         let summary = import(&fresh, &backup).unwrap();
 
