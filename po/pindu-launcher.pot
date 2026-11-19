@@ -2632,6 +2632,16 @@ msgid ""
 "game art."
 msgstr ""
 
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:199
+msgid "Last library backup"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:200
+msgid ""
+"When the library was last exported, in seconds since the Unix epoch; 0 means "
+"never. Library Health shows it."
+msgstr ""
+
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:8
 msgid "Play all your games"
 msgstr ""
