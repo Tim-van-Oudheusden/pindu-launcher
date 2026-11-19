@@ -23,6 +23,7 @@ pub mod fullscreen_clock;
 pub mod fullscreen_controllers;
 pub mod fullscreen_controls;
 pub mod fullscreen_game;
+pub mod fullscreen_health;
 pub mod fullscreen_library;
 pub mod fullscreen_network;
 pub mod fullscreen_notifications;
