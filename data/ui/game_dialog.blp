@@ -177,6 +177,12 @@ template $PinduGameDialog: Adw.Dialog {
             title: _("Genres, Separated by Commas");
             changed => $form_changed() swapped;
           }
+
+          Adw.EntryRow release_year_row {
+            title: _("Release Year");
+            input-purpose: digits;
+            changed => $release_year_changed() swapped;
+          }
         }
 
         Adw.PreferencesGroup description_group {
