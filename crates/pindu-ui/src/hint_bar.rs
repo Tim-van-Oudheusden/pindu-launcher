@@ -14,6 +14,7 @@ use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
 
 use crate::application::PinduApplication;
 use crate::artwork_dialog::ArtworkDialog;
+use crate::fullscreen_add_game::PinduFullscreenAddGame;
 use crate::window::PinduWindow;
 
 /// How large glyphs draw, to read from across the room.
@@ -112,6 +113,10 @@ impl PinduWindow {
                 .visible_dialog()
                 .and_downcast::<ArtworkDialog>()
                 .is_some_and(|dialog| dialog.has_tabs()),
+            dialog_back: self
+                .visible_dialog()
+                .and_downcast::<PinduFullscreenAddGame>()
+                .is_some_and(|dialog| dialog.goes_back()),
             options: self.focused_game().is_some(),
             menu: self.is_fullscreen(),
             panel: self.open_panel(),

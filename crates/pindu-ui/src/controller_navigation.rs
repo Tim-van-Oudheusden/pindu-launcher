@@ -33,6 +33,7 @@ use pindu_core::panels::GameOption;
 use crate::application::PinduApplication;
 use crate::artwork_dialog::ArtworkDialog;
 use crate::fullscreen::Sound;
+use crate::fullscreen_add_game::PinduFullscreenAddGame;
 use crate::hold_progress::destructive_action;
 use crate::models::GameObject;
 use crate::window::PinduWindow;
@@ -412,7 +413,13 @@ impl PinduWindow {
                 _ => menu.popdown(),
             }
         } else if let Some(dialog) = self.visible_dialog() {
-            dialog.close();
+            // Fullscreen mode's Add Game goes back a step or up a folder before it closes.
+            if !dialog
+                .downcast_ref::<PinduFullscreenAddGame>()
+                .is_some_and(PinduFullscreenAddGame::step_back)
+            {
+                dialog.close();
+            }
         } else if self.shows_home_section() {
             self.imp().home_page.show_sections();
         } else {

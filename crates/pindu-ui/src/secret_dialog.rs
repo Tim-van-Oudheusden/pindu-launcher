@@ -1,5 +1,5 @@
-//! The passphrase and PIN dialog, for a Wi-Fi passphrase or a Bluetooth PIN typed with a
-//! controller: a title, a line saying what to type, an entry that shows its text as dots
+//! The passphrase and PIN dialog, for a Wi-Fi passphrase, a Bluetooth PIN or a name typed
+//! with a controller: a title, a line saying what to type, an entry that shows its text as dots
 //! unless the caller's keyboard shows it, and the on-screen keyboard with its lowercase,
 //! capitals and symbols layers and its Show key. The entry has the focus, so a keyboard
 //! types too. While the dialog is open the on-screen keyboard takes every button. The
@@ -135,6 +135,14 @@ impl SecretDialog {
     pub fn withdraw(&self) {
         self.imp().answer.0.take();
         self.force_close();
+    }
+
+    /// Starts the entry with `text` that is not secret, such as a title to change.
+    pub fn show_text(&self, text: &str) {
+        let entry = &self.imp().entry;
+        entry.set_input_purpose(gtk::InputPurpose::FreeForm);
+        entry.set_text(text);
+        entry.set_position(-1);
     }
 
     /// Acts on a controller intent, and says what the keyboard did.

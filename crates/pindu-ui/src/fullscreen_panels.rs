@@ -158,6 +158,7 @@ impl PinduWindow {
             }
         ));
         self.setup_add_store();
+        self.setup_fullscreen_add_game();
         self.setup_power();
         self.setup_controls_level();
         self.fill_drawer();

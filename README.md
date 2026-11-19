@@ -358,6 +358,24 @@ Quick Access's **Proton** does what Preferences' Windows and Proton pages do for
 - **Check for Releases** lists the newest GE-Proton and Proton-CachyOS releases from GitHub, the only time the level
   goes online. Select one to download and install it: its row shows how far it is, and it is a task in Activity, where
   it can be cancelled; selecting its row again stops it too. A notification says how it ended.
+### Add a Game
+
+**Add a Game** in Quick Access adds a game by hand without leaving fullscreen mode, with a controller alone. Choose a
+native game, an installed Windows game, or a Windows installer, then:
+
+- Pick the game's folder, or the installer, in a picker fullscreen mode draws itself. It starts at the Games folder,
+  your home folder and the drives the system has mounted under `/run/media/<user>`, and lists only folders and, for an
+  installer, Windows programs. It shows only what the launcher can already read, and says so: the Flatpak gets no new
+  permission, so there it reaches `~/Games` and the folders it already reads, not a drive. Mounting drives is the
+  system's job.
+- An installer runs through umu with the default Proton build in a new prefix; once it ends, pick the program it
+  installed.
+- Pick the game's program from the ones found in its folder. The title is filled in from the program's name and can
+  be changed with the on-screen keyboard.
+
+A Windows game's Proton build is picked on the last step from the same list as Performance's: the default first, then
+the builds on this machine, newest first. It runs through umu, as on the desktop. Arguments, the working folder, host
+spawn, a prefix of your choice and art are set in the desktop's Add Game and Edit dialogs.
 
 ### Controllers
 
