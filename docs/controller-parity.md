@@ -46,6 +46,9 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   prefilled from the program and typed with the on-screen keyboard. A Windows game's Proton build is picked from the
   same list as Performance's (the default, then the builds on this machine), and it runs through umu as on the
   desktop. Arguments and the working folder stay the desktop dialog's.
+- **Collections.** View or X on a collection in the menu drawer's Collections leads to Rename…, Move Up, Move Down
+  and Delete…, the desktop sidebar's collection menu. A name, new or changed, is typed with the on-screen keyboard
+  in the passphrase dialog, showing its text; Delete asks first, with Cancel chosen.
 
 ## Flatpak, native and Pindu OS
 
@@ -71,6 +74,7 @@ permission is added.
 | #568 Choose a game's Proton build in fullscreen mode | Quick Access, Performance: the default or a build on this machine, the desktop page's setting | #520 |
 | #567 Download and remove Proton builds in fullscreen mode | Proton downloads and removal, the defaults for new Windows games | |
 | #569 Add a game by hand in fullscreen mode | The fullscreen picker, the steps, the title on the on-screen keyboard | #520 |
+| #566 Rename, reorder and delete collections in fullscreen mode | The drawer's level for one collection; names typed with the on-screen keyboard | #520 |
 
 The issues #520 files join this table when they exist.
 

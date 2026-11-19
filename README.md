@@ -197,6 +197,16 @@ Preferences.
   launching. It shows the glyphs of the controller in use and the keys that do the same, including ones the hint bar
   leaves out, such as holding B to cancel a launch. Without a controller it lists the keys alone.
 
+### Collections
+
+A game's options (View or X) add it to collections or take it out, and **New Collection…** makes one. **Collections**
+in the menu drawer (Start or Guide) lists them; A opens one's tab in the library, and View or X on one leads to
+**Rename…**, **Move Up**, **Move Down** and **Delete…**, as the desktop sidebar's collection menu has them.
+
+- Names are typed with the on-screen keyboard (capitals and symbols are a key away); Start or Done saves, and B on an
+  empty name cancels.
+- Delete asks first, with Cancel chosen, so one stray press cannot delete a collection. Its games stay in the library.
+
 ### Power
 
 The menu drawer (Start or Guide) ends with a **Power** entry, leading to **Suspend**, **Restart** and **Power Off**

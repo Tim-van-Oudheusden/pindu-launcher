@@ -6,7 +6,10 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::art;
-use crate::model::{ArtLayout, Artwork, Game, GameId, Platform, Source, Timestamp};
+use crate::game_groups::{self, CopyPlaytime};
+use crate::model::{
+    ArtLayout, Artwork, Game, GameGroup, GameId, Platform, Source, SourceDetails, Timestamp,
+};
 use crate::search::{self, Query};
 use crate::store::{self, Store};
 
@@ -39,10 +42,12 @@ impl ArtSet {
     }
 }
 
-/// A game with its art and total playtime, as the library views show it.
+/// A game with its art and total playtime, as the library views show it. A group of
+/// copies shows as one entry: the copy Play starts, under its preferred copy's title and
+/// art (see [`load`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LibraryEntry {
-    /// The game.
+    /// The game; for a group, the copy Play starts, as the group shows it.
     pub game: Game,
     /// The image chosen for each layout.
     pub art: ArtSet,
@@ -52,19 +57,40 @@ pub struct LibraryEntry {
     pub playtime_origin: Option<PlaytimeOrigin>,
     /// IDs of the collections holding the game, ascending.
     pub collections: Vec<i64>,
+    /// A group's copies, the preferred one first, then in the default copy order
+    /// ([`game_groups::copy_order`]); empty for a game in no group.
+    pub copies: Vec<GameCopy>,
 }
 
-/// Whose playtime a game shows: its source's own total, or our sessions. Never both.
+/// One copy of a grouped game, as the game page lists it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GameCopy {
+    /// The copy's own record.
+    pub game: Game,
+    /// The copy's own playtime in seconds; 0 when never played.
+    pub playtime_secs: i64,
+    /// Where the copy's playtime comes from; `None` when it was never played.
+    pub playtime_origin: Option<PlaytimeOrigin>,
+}
+
+/// Whose playtime a game shows: its source's own total, our sessions, or a group's copies
+/// played apart.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PlaytimeOrigin {
     /// The total the source tracks itself.
     Source(Source),
     /// The sum of our own play sessions.
     Sessions,
+    /// The sum across this many copies of a group, each played apart.
+    Copies(usize),
 }
 
 /// Every stored game with its best art per layout (see [`art::best`]) and its playtime:
 /// the source's own total when it tracks one, else the sum of our sessions.
+///
+/// A group of copies ([`Store::game_groups`]) is one entry, after the games in no group:
+/// the copy Play starts ([`game_groups::copy_to_play`]) under its preferred copy's title,
+/// with every copy in [`LibraryEntry::copies`].
 pub fn load(store: &Store, prefer_steamgriddb: bool) -> store::Result<Vec<LibraryEntry>> {
     let mut artwork: HashMap<GameId, Vec<Artwork>> = HashMap::new();
     for art in store.all_artwork()? {
@@ -73,28 +99,151 @@ pub fn load(store: &Store, prefer_steamgriddb: bool) -> store::Result<Vec<Librar
     let session_totals = store.session_totals()?;
     let imported_totals = store.imported_totals()?;
     let mut memberships = store.collection_memberships()?;
-    Ok(store
-        .games()?
-        .into_iter()
-        .map(|game| {
-            let art = artwork
-                .get(&game.id)
-                .map_or_else(ArtSet::default, |art| ArtSet::from(art, prefer_steamgriddb));
-            let (playtime_secs, playtime_origin) =
-                match (imported_totals.get(&game.id), session_totals.get(&game.id)) {
-                    (Some(&total), _) => (total, Some(PlaytimeOrigin::Source(game.source()))),
-                    (None, Some(&total)) => (total, Some(PlaytimeOrigin::Sessions)),
-                    (None, None) => (0, None),
-                };
-            LibraryEntry {
-                collections: memberships.remove(&game.id).unwrap_or_default(),
-                game,
-                art,
-                playtime_secs,
-                playtime_origin,
-            }
-        })
-        .collect())
+    let entries = store.games()?.into_iter().map(|game| {
+        let art = artwork
+            .get(&game.id)
+            .map_or_else(ArtSet::default, |art| ArtSet::from(art, prefer_steamgriddb));
+        let (playtime_secs, playtime_origin) =
+            match (imported_totals.get(&game.id), session_totals.get(&game.id)) {
+                (Some(&total), _) => (total, Some(PlaytimeOrigin::Source(game.source()))),
+                (None, Some(&total)) => (total, Some(PlaytimeOrigin::Sessions)),
+                (None, None) => (0, None),
+            };
+        LibraryEntry {
+            collections: memberships.remove(&game.id).unwrap_or_default(),
+            game,
+            art,
+            playtime_secs,
+            playtime_origin,
+            copies: Vec::new(),
+        }
+    });
+    let groups = store.game_groups()?;
+    if groups.is_empty() {
+        return Ok(entries.collect());
+    }
+    let details = store.all_source_details()?;
+    Ok(collapse_groups(entries, &groups, &details))
+}
+
+/// Replaces the copies of each group with one entry, after the games in no group.
+fn collapse_groups(
+    entries: impl Iterator<Item = LibraryEntry>,
+    groups: &[GameGroup],
+    details: &HashMap<GameId, SourceDetails>,
+) -> Vec<LibraryEntry> {
+    let group_of: HashMap<&GameId, usize> = groups
+        .iter()
+        .enumerate()
+        .flat_map(|(index, group)| group.members.iter().map(move |id| (id, index)))
+        .collect();
+    let mut copies: Vec<Vec<LibraryEntry>> = vec![Vec::new(); groups.len()];
+    let mut collapsed = Vec::new();
+    for entry in entries {
+        match group_of.get(&entry.game.id) {
+            Some(&index) => copies[index].push(entry),
+            None => collapsed.push(entry),
+        }
+    }
+    collapsed.extend(
+        groups
+            .iter()
+            .zip(copies)
+            .filter_map(|(group, copies)| group_entry(group, copies, details)),
+    );
+    collapsed
+}
+
+/// One group as one entry; `None` when none of its copies is stored.
+fn group_entry(
+    group: &GameGroup,
+    mut copies: Vec<LibraryEntry>,
+    details: &HashMap<GameId, SourceDetails>,
+) -> Option<LibraryEntry> {
+    if copies.len() < 2 {
+        return copies.pop();
+    }
+    let order = game_groups::DEFAULT_SOURCE_ORDER;
+    let games = || copies.iter().map(|copy| &copy.game);
+    let preferred = game_groups::preferred_copy(group, games(), order)?
+        .id
+        .clone();
+    let play = game_groups::copy_to_play(group, games(), order)?.id.clone();
+    copies.sort_by(|a, b| {
+        (a.game.id != preferred)
+            .cmp(&(b.game.id != preferred))
+            .then_with(|| game_groups::copy_order(&a.game, &b.game, order))
+    });
+    let games = || copies.iter().map(|copy| &copy.game);
+    let shown = &copies[0];
+    let started = copies.iter().find(|copy| copy.game.id == play)?;
+    let mut game = started.game.clone();
+    game.title.clone_from(&shown.game.title);
+    game.sort_title.clone_from(&shown.game.sort_title);
+    // A change on the group's tile is written to every copy, so they agree; until then,
+    // the group is a favourite or pinned when any copy is, and hidden or out of the
+    // library only when every copy is.
+    game.favourite = games().any(|copy| copy.favourite);
+    game.pin_order = games().filter_map(|copy| copy.pin_order).min();
+    game.hidden = games().all(|copy| copy.hidden);
+    game.user_removed = games().all(|copy| copy.user_removed);
+    if games().any(|copy| copy.missing_since.is_none()) {
+        game.missing_since = None;
+    }
+    game.last_played_at = game_groups::group_last_played(games());
+    game.added_at = games().map(|copy| copy.added_at).min()?;
+    let mut collections: Vec<i64> = copies
+        .iter()
+        .flat_map(|copy| copy.collections.iter().copied())
+        .collect();
+    collections.sort_unstable();
+    collections.dedup();
+    let playtime = game_groups::group_playtime(
+        &copies
+            .iter()
+            .map(|copy| CopyPlaytime {
+                game: &copy.game,
+                secs: copy.playtime_secs,
+                runner: details
+                    .get(&copy.game.id)
+                    .and_then(|details| details.runner.as_deref()),
+            })
+            .collect::<Vec<_>>(),
+    );
+    let playtime_origin = match (playtime.played_copies, &playtime.from) {
+        (0, _) => None,
+        (1, Some(from)) => copies
+            .iter()
+            .find(|copy| copy.game.id == *from)
+            .and_then(|copy| copy.playtime_origin),
+        (played, _) => Some(PlaytimeOrigin::Copies(played)),
+    };
+    // The preferred copy's art; a layout it lacks comes from the next copy that has it.
+    let art = |layout: fn(&ArtSet) -> &Option<PathBuf>| {
+        copies.iter().find_map(|copy| layout(&copy.art).clone())
+    };
+    let art = ArtSet {
+        cover: art(|set| &set.cover),
+        hero: art(|set| &set.hero),
+        logo: art(|set| &set.logo),
+        icon: art(|set| &set.icon),
+        square: art(|set| &set.square),
+    };
+    Some(LibraryEntry {
+        game,
+        art,
+        playtime_secs: playtime.secs,
+        playtime_origin,
+        collections,
+        copies: copies
+            .into_iter()
+            .map(|copy| GameCopy {
+                game: copy.game,
+                playtime_secs: copy.playtime_secs,
+                playtime_origin: copy.playtime_origin,
+            })
+            .collect(),
+    })
 }
 
 /// The groups of the Play history page.
@@ -1428,5 +1577,175 @@ mod tests {
         assert_eq!(playtime(&imported.id), 7_200);
         assert_eq!(playtime(&tracked.id), 1_500);
         assert_eq!(playtime(&unplayed.id), 0);
+    }
+
+    fn group_store() -> (tempfile::TempDir, crate::store::Store) {
+        let dir = tempfile::tempdir().unwrap();
+        let store = crate::store::Store::open(&dir.path().join("library.db")).unwrap();
+        (dir, store)
+    }
+
+    fn copy(source: Source, title: &str, installed: bool) -> Game {
+        let mut game = Game::new(
+            GameId::new(source, "celeste"),
+            title,
+            LaunchKind::StoreUri,
+            0,
+        );
+        game.installed = installed;
+        game
+    }
+
+    fn entry_of<'a>(entries: &'a [LibraryEntry], id: &GameId) -> &'a LibraryEntry {
+        entries.iter().find(|entry| entry.game.id == *id).unwrap()
+    }
+
+    #[test]
+    fn loading_shows_a_group_as_one_game_that_starts_an_installed_copy() {
+        let (_dir, store) = group_store();
+        let steam = copy(Source::Steam, "Celeste", false);
+        let gog = copy(Source::HeroicGog, "Celeste (GOG)", true);
+        let loner = game("2", "Loner", None, 0);
+        for game in [&steam, &gog, &loner] {
+            store.insert_game(game).unwrap();
+        }
+        let group = store
+            .create_group(&[steam.id.clone(), gog.id.clone()])
+            .unwrap();
+        store.set_preferred_copy(group, Some(&steam.id)).unwrap();
+
+        let entries = load(&store, false).unwrap();
+
+        assert_eq!(entries.len(), 2);
+        // The preferred copy is not installed, so Play starts the GOG copy, under the
+        // preferred copy's title.
+        let celeste = entry_of(&entries, &gog.id);
+        assert_eq!(celeste.game.title, "Celeste");
+        let copies: Vec<&GameId> = celeste.copies.iter().map(|copy| &copy.game.id).collect();
+        assert_eq!(copies, [&steam.id, &gog.id]);
+        assert!(entry_of(&entries, &loner.id).copies.is_empty());
+    }
+
+    #[test]
+    fn a_group_carries_what_its_copies_carry() {
+        let (_dir, store) = group_store();
+        let mut steam = copy(Source::Steam, "Celeste", true);
+        steam.hidden = true;
+        steam.last_played_at = Some(50);
+        steam.added_at = 20;
+        let mut gog = copy(Source::HeroicGog, "Celeste", false);
+        gog.favourite = true;
+        gog.pin_order = Some(2);
+        gog.last_played_at = Some(90);
+        gog.added_at = 10;
+        gog.user_removed = true;
+        for game in [&steam, &gog] {
+            store.insert_game(game).unwrap();
+        }
+        store
+            .create_group(&[steam.id.clone(), gog.id.clone()])
+            .unwrap();
+        let first = store.create_collection("First").unwrap();
+        let second = store.create_collection("Second").unwrap();
+        store.add_to_collection(second.id, &steam.id).unwrap();
+        store.add_to_collection(first.id, &gog.id).unwrap();
+        store.add_to_collection(second.id, &gog.id).unwrap();
+
+        let entries = load(&store, false).unwrap();
+
+        let celeste = entry_of(&entries, &steam.id);
+        // Favourite and pinned when any copy is; hidden or removed only when every copy is.
+        assert!(celeste.game.favourite);
+        assert_eq!(celeste.game.pin_order, Some(2));
+        assert!(!celeste.game.hidden);
+        assert!(celeste.game.in_library());
+        assert_eq!(celeste.game.last_played_at, Some(90));
+        assert_eq!(celeste.game.added_at, 10);
+        assert_eq!(celeste.collections, [first.id, second.id]);
+    }
+
+    #[test]
+    fn a_group_totals_playtime_across_copies_and_shows_its_preferred_copys_art() {
+        use crate::model::{ArtLayout, ArtOrigin, Artwork, ImportedPlaytime};
+
+        let (_dir, store) = group_store();
+        let steam = copy(Source::Steam, "Celeste", true);
+        let lutris = copy(Source::Lutris, "Celeste", true);
+        let gog = copy(Source::HeroicGog, "Celeste", false);
+        let desktop = copy(Source::Desktop, "Celeste", true);
+        let manual = copy(Source::Manual, "Celeste", false);
+        for game in [&steam, &lutris, &gog, &desktop, &manual] {
+            store.insert_game(game).unwrap();
+        }
+        store
+            .set_source_details(
+                &lutris.id,
+                &SourceDetails {
+                    runner: Some("steam".into()),
+                    ..SourceDetails::default()
+                },
+            )
+            .unwrap();
+        let imported = |game: &Game, source, total_secs| {
+            store
+                .set_imported_playtime(&ImportedPlaytime {
+                    game_id: game.id.clone(),
+                    source,
+                    total_secs,
+                    last_played_at: None,
+                })
+                .unwrap();
+        };
+        imported(&steam, Source::Steam, 10 * 3600);
+        imported(&lutris, Source::Lutris, 2 * 3600);
+        store.add_play_session(&gog.id, 0, 3 * 3600).unwrap();
+        store
+            .create_group(&[steam.id.clone(), lutris.id.clone(), gog.id.clone()])
+            .unwrap();
+        store.add_play_session(&desktop.id, 0, 60).unwrap();
+        store
+            .create_group(&[desktop.id.clone(), manual.id.clone()])
+            .unwrap();
+        let art = |game: &Game, layout, path: &str| {
+            store
+                .set_artwork(&Artwork {
+                    game_id: game.id.clone(),
+                    layout,
+                    origin: ArtOrigin::Source,
+                    path: path.into(),
+                })
+                .unwrap();
+        };
+        art(&steam, ArtLayout::Cover, "/steam-cover.jpg");
+        art(&lutris, ArtLayout::Cover, "/lutris-cover.jpg");
+        art(&lutris, ArtLayout::Hero, "/lutris-hero.jpg");
+
+        let entries = load(&store, false).unwrap();
+
+        // Steam and the Lutris copy that only starts Steam timed the same sessions: 10 h,
+        // plus 3 h of the GOG copy played apart.
+        let celeste = entry_of(&entries, &steam.id);
+        assert_eq!(celeste.playtime_secs, 13 * 3600);
+        assert_eq!(celeste.playtime_origin, Some(PlaytimeOrigin::Copies(2)));
+        // Each copy keeps its own figure.
+        let own: Vec<i64> = celeste
+            .copies
+            .iter()
+            .map(|copy| copy.playtime_secs)
+            .collect();
+        assert_eq!(own, [10 * 3600, 2 * 3600, 3 * 3600]);
+        // The preferred copy's art, and a layout it lacks from the next copy.
+        assert_eq!(
+            celeste.art.cover.as_deref(),
+            Some("/steam-cover.jpg".as_ref())
+        );
+        assert_eq!(
+            celeste.art.hero.as_deref(),
+            Some("/lutris-hero.jpg".as_ref())
+        );
+        // One copy played: its figure and origin.
+        let other = entry_of(&entries, &desktop.id);
+        assert_eq!(other.playtime_secs, 60);
+        assert_eq!(other.playtime_origin, Some(PlaytimeOrigin::Sessions));
     }
 }

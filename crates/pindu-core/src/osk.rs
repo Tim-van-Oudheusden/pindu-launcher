@@ -1,9 +1,9 @@
 //! Fullscreen mode's on-screen keyboard: a grid of keys the D-pad moves through and A
 //! types, B deletes with, and Start confirms. The search keyboard has one layer of digits,
-//! lowercase letters and space. The passphrase keyboard, for Wi-Fi passphrases,
-//! Bluetooth PINs and names such as a game's title, has a lowercase, a capitals and a
-//! symbols layer, which keys on its bottom row switch between, so it types every
-//! printable ASCII character; it hides a passphrase until its Show key shows it.
+//! lowercase letters and space. The passphrase keyboard, for Wi-Fi passphrases, Bluetooth
+//! PINs and names such as a collection's, has a lowercase, a capitals and a symbols layer,
+//! which keys on its bottom row switch between, so it types every printable ASCII
+//! character; it hides a passphrase until its Show key shows it.
 
 use crate::gamepad::{Direction, Intent};
 
@@ -238,8 +238,8 @@ impl Keyboard {
         }
     }
 
-    /// The passphrase keyboard for a name, such as the title of a game added in fullscreen
-    /// mode: on the first lowercase letter, showing the text.
+    /// The passphrase keyboard for a name, such as a collection's: on the first lowercase
+    /// letter, and showing the text, which is no secret.
     pub fn text() -> Self {
         Self {
             layer: Layer::Lower,
@@ -657,8 +657,8 @@ mod tests {
         assert_eq!(keyboard.key(), Key::Char('q'));
         assert!(!keyboard.hidden());
         assert_eq!(
-            keyboard.handle(Activate, "Hollow Knight "),
-            Outcome::Edit("Hollow Knight q".to_owned())
+            keyboard.handle(Activate, "Racing"),
+            Outcome::Edit("Racingq".to_owned())
         );
     }
 

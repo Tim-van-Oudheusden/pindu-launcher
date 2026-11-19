@@ -25,7 +25,6 @@ use gtk::{gio, glib};
 use pindu_core::add_game::{Flow, Route, Step};
 use pindu_core::file_picker::{Accept, Entry, EntryKind, Place, PlaceKind};
 use pindu_core::manual::{self, ManualGame, WindowsOptions};
-use pindu_core::osk::Keyboard;
 use pindu_core::paths::home_relative;
 use pindu_core::pe::Icon;
 
@@ -34,7 +33,6 @@ use crate::fullscreen_proton::ProtonChecks;
 use crate::game_dialog::{Mode, save_to_store};
 use crate::proton_choice::FirstChoice;
 use crate::proton_launch;
-use crate::secret_dialog::ask_secret;
 use crate::window::PinduWindow;
 
 /// What a row of the list does when it is activated.
@@ -482,12 +480,15 @@ impl PinduFullscreenAddGame {
 
     /// Asks for the title with the on-screen keyboard, starting from the one shown.
     fn ask_title(&self) {
+        let Some(window) = self.window() else {
+            return;
+        };
+        let title = self.imp().title.borrow().clone();
         let dialog = self.downgrade();
-        let asked = ask_secret(
-            self,
+        window.ask_text(
             &gettext("Title"),
             &gettext("The game's name, as the library shows it."),
-            Keyboard::text(),
+            &title,
             move |text| {
                 let (Some(dialog), Some(text)) = (dialog.upgrade(), text) else {
                     return;
@@ -502,9 +503,6 @@ impl PinduFullscreenAddGame {
                 dialog.show_step();
             },
         );
-        if let Some(asked) = asked {
-            asked.show_text(&self.imp().title.borrow());
-        }
     }
 
     /// Runs the installer through umu in a new prefix with the default Proton build, then

@@ -1,12 +1,13 @@
-//! The passphrase and PIN dialog, for a Wi-Fi passphrase, a Bluetooth PIN or a name typed
-//! with a controller: a title, a line saying what to type, an entry that shows its text as dots
+//! The passphrase and PIN dialog, for a Wi-Fi passphrase or a Bluetooth PIN typed with a
+//! controller: a title, a line saying what to type, an entry that shows its text as dots
 //! unless the caller's keyboard shows it, and the on-screen keyboard with its lowercase,
 //! capitals and symbols layers and its Show key. The entry has the focus, so a keyboard
 //! types too. While the dialog is open the on-screen keyboard takes every button. The
 //! grid and what each button does are `pindu_core::osk`; this draws the keys, marks the
 //! cursor's, and hands the text to the caller on Done or Start, or nothing on Cancel or on
 //! B with the entry empty. It opens on the window Quick Access is in, the main window or
-//! Quick Access over a game (`game_overlay`), whose hint bar shows its buttons.
+//! Quick Access over a game (`game_overlay`), whose hint bar shows its buttons. The main
+//! window also asks for a name with it, such as a collection's ([`PinduWindow::ask_text`]).
 
 use std::cell::{Cell, RefCell};
 use std::fmt;
@@ -137,8 +138,8 @@ impl SecretDialog {
         self.force_close();
     }
 
-    /// Starts the entry with `text` that is not secret, such as a title to change.
-    pub fn show_text(&self, text: &str) {
+    /// Starts the entry with `text`, a name to edit, shown in full: no password field.
+    fn start_with(&self, text: &str) {
         let entry = &self.imp().entry;
         entry.set_input_purpose(gtk::InputPurpose::FreeForm);
         entry.set_text(text);
@@ -293,6 +294,29 @@ impl PinduWindow {
             ),
         );
         dialog
+    }
+
+    /// Asks for a name, such as a collection's, in the same dialog: titled `title`, saying
+    /// `message`, starting with `text` and typed with the passphrase keyboard showing its
+    /// text ([`Keyboard::text`]); `done` gets the text on Done or Start, or `None` once the
+    /// dialog is cancelled.
+    pub fn ask_text(
+        &self,
+        title: &str,
+        message: &str,
+        text: &str,
+        done: impl FnOnce(Option<String>) + 'static,
+    ) {
+        let dialog = SecretDialog::new(title, message, Keyboard::text(), done);
+        dialog.start_with(text);
+        dialog.present_on(
+            self,
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move || window.update_hints()
+            ),
+        );
     }
 
     /// The open passphrase dialog, if any.

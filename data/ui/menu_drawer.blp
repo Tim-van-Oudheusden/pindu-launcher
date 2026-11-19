@@ -2,10 +2,10 @@ using Gtk 4.0;
 using Adw 1;
 
 // Fullscreen mode's menu drawer (`menu_drawer.rs`): the main level with the Playing Now
-// cards and the entries, the collections, Controls and Power. The main window holds it on the
-// left, where Start or Guide opens it over the page; over a running game in a `--steam`
-// gamescope the overlay window holds it, where Guide opens it over the game. Its rows'
-// `win.*` actions are the host's.
+// cards and the entries, the collections and one collection's actions, Controls and Power.
+// The main window holds it on the left, where Start or Guide opens it over the page; over a
+// running game in a `--steam` gamescope the overlay window holds it, where Guide opens it
+// over the game. Its rows' `win.*` actions are the host's.
 template $PinduMenuDrawer: Box {
   orientation: vertical;
   accessible-role: group;
@@ -222,6 +222,38 @@ template $PinduMenuDrawer: Box {
           }
 
           ListBox collections {
+            selection-mode: none;
+
+            styles [
+              "navigation-sidebar",
+            ]
+          }
+        };
+      };
+    }
+
+    // One collection's actions, which View or X on it in the collections leads to: Rename…,
+    // Move Up, Move Down and Delete…, as the desktop sidebar's collection menu has them.
+    StackPage {
+      name: "collection";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label collection_title {
+            xalign: 0;
+            wrap: true;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          ListBox collection_actions {
             selection-mode: none;
 
             styles [

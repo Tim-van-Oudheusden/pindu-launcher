@@ -152,6 +152,7 @@ impl PinduWindow {
             self,
             move |_| {
                 window.fill_drawer();
+                window.follow_collections();
                 if let Some(game) = window.imp().options_game.borrow().as_ref() {
                     window.fill_options_collections(game);
                 }
@@ -223,24 +224,69 @@ impl PinduWindow {
             return false;
         }
         let game = self.focused_game();
+        let imp = self.imp();
+        let collection = match self.open_panel() {
+            Some(Panel::Drawer(DrawerLevel::Collections)) => imp.drawer_panel.focused_collection(),
+            _ => None,
+        };
         let under = Under {
             game: game.is_some(),
             own_game: game.as_ref().is_some_and(own_game),
             dialog: self.visible_dialog().is_some(),
-            unread: self.imp().quick_access_panel.has_unread_notifications(),
+            unread: imp.quick_access_panel.has_unread_notifications(),
             library: self.library_under_panels(),
+            collection: collection.is_some(),
         };
-        let mut panels = self.imp().panels.get();
+        let mut panels = imp.panels.get();
         if !panels.handle(intent, under) {
             return false;
         }
-        if let (Some(Panel::Options(_)), None) = (panels.open(), self.imp().panels.get().open())
-            && let Some(game) = game
-        {
-            self.fill_options(&game);
+        match (panels.open(), imp.panels.get().open()) {
+            (Some(Panel::Options(_)), None) => {
+                if let Some(game) = game {
+                    self.fill_options(&game);
+                }
+            }
+            (
+                Some(Panel::Drawer(DrawerLevel::Collection)),
+                Some(Panel::Drawer(DrawerLevel::Collections)),
+            ) => {
+                if let Some(id) = collection {
+                    imp.drawer_panel
+                        .show_collection(&self.library().collections(), id);
+                }
+            }
+            _ => {}
         }
         self.set_panels(panels);
         true
+    }
+
+    /// Keeps the drawer's collection levels in step with the collections: the shown
+    /// collection's actions after it moved or was renamed, or, once it is deleted, the
+    /// collections, or the drawer's entries when none is left.
+    fn follow_collections(&self) {
+        let drawer = &self.imp().drawer_panel;
+        let collections = self.library().collections();
+        let level = match self.open_panel() {
+            Some(Panel::Drawer(DrawerLevel::Collection)) => {
+                let shown = drawer.shown_collection();
+                if shown.is_some_and(|id| drawer.show_collection(&collections, id)) {
+                    return;
+                }
+                DrawerLevel::Collections
+            }
+            Some(Panel::Drawer(DrawerLevel::Collections)) => DrawerLevel::Collections,
+            _ => return,
+        };
+        let level = if collections.is_empty() {
+            DrawerLevel::Main
+        } else {
+            level
+        };
+        if self.open_panel() != Some(Panel::Drawer(level)) {
+            self.show_panel(Panel::Drawer(level));
+        }
     }
 
     /// The game a focused cover or card shows, or the shown game page's.

@@ -1,7 +1,8 @@
 //! The menu drawer, fullscreen mode's panel on the left, as a widget a window hosts:
 //! [`PinduMenuDrawer`], with its own Blueprint (`data/ui/menu_drawer.blp`). It holds the
 //! level stack: the main level with the Playing Now cards (`fullscreen_playing`) and the
-//! entries, the collections, Controls (`fullscreen_bindings`) and Power (`fullscreen_power`).
+//! entries, the collections and one collection's actions, Controls (`fullscreen_bindings`)
+//! and Power (`fullscreen_power`).
 //!
 //! Which level is open is the host's (`pindu_core::panels::Panels`): the host shows a
 //! level with `show_level` and fills the entries with `fill`; the rows' `win.*` actions
@@ -10,7 +11,7 @@
 //! (`game_overlay`) hosts it too, where Guide opens it over the game and it leaves out
 //! what would end the session or change the controls (`set_over_game`).
 
-use std::cell::OnceCell;
+use std::cell::{Cell, OnceCell, RefCell};
 
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
@@ -18,7 +19,9 @@ use gtk::glib;
 use gtk::prelude::*;
 use pindu_core::gamescope::Xid;
 use pindu_core::model::Collection;
-use pindu_core::panels::{DrawerEntry, DrawerLevel, drawer_entries};
+use pindu_core::panels::{
+    CollectionAction, DrawerEntry, DrawerLevel, collection_actions, drawer_entries,
+};
 
 use crate::fullscreen_panels::{drawer_row, step_out_of_list};
 use crate::fullscreen_playing::PlayingCards;
@@ -51,6 +54,10 @@ mod imp {
         #[template_child]
         pub collections: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub collection_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub collection_actions: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub controls: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub controls_reset: TemplateChild<gtk::ListBox>,
@@ -58,6 +65,10 @@ mod imp {
         pub power_level: TemplateChild<PinduPowerLevel>,
         /// The Playing Now cards over the main level's entries.
         pub(crate) cards: OnceCell<PlayingCards>,
+        /// The collection the collection level shows the actions of.
+        pub collection: Cell<Option<i64>>,
+        /// The collection level's actions, a row each.
+        pub actions: RefCell<Vec<CollectionAction>>,
     }
 
     #[glib::object_subclass]
@@ -207,19 +218,113 @@ impl PinduMenuDrawer {
         }
     }
 
+    /// The collection whose row in the collections level has focus, if one does: what View
+    /// or X shows the actions of.
+    pub(crate) fn focused_collection(&self) -> Option<i64> {
+        let list = &self.imp().collections;
+        (0..)
+            .map_while(|index| list.row_at_index(index))
+            .find(|row| row.is_focus())
+            .and_then(|row| row_collection(&row))
+    }
+
+    /// The collection the collection level shows the actions of.
+    pub(crate) fn shown_collection(&self) -> Option<i64> {
+        self.imp().collection.get()
+    }
+
+    /// Fills the collection level with the actions for the collection `id` of
+    /// `collections`, each row leading to its `win.drawer-*-collection` action with the
+    /// collection. Shown again for the same collection, after it moved or was renamed,
+    /// focus stays on the action it was on, or the move that is left. Says whether
+    /// `collections` still has it.
+    pub(crate) fn show_collection(&self, collections: &[Collection], id: i64) -> bool {
+        let imp = self.imp();
+        let Some(index) = collections
+            .iter()
+            .position(|collection| collection.id == id)
+        else {
+            imp.collection.set(None);
+            return false;
+        };
+        let focused = (imp.collection.get() == Some(id))
+            .then(|| focused_row(&imp.collection_actions))
+            .flatten()
+            .and_then(|row| imp.actions.borrow().get(row).copied());
+        imp.collection.set(Some(id));
+        let name = &collections[index].name;
+        imp.collection_title.set_label(name);
+        imp.collection_actions
+            .update_property(&[gtk::accessible::Property::Label(name)]);
+        let actions = collection_actions(index, collections.len());
+        imp.collection_actions.remove_all();
+        for action in &actions {
+            let (icon, label, name) = match action {
+                CollectionAction::Rename => (
+                    "document-edit-symbolic",
+                    gettext("Rename…"),
+                    "win.drawer-rename-collection",
+                ),
+                CollectionAction::MoveUp => (
+                    "go-up-symbolic",
+                    gettext("Move Up"),
+                    "win.drawer-move-collection-up",
+                ),
+                CollectionAction::MoveDown => (
+                    "go-down-symbolic",
+                    gettext("Move Down"),
+                    "win.drawer-move-collection-down",
+                ),
+                CollectionAction::Delete => (
+                    "user-trash-symbolic",
+                    gettext("Delete…"),
+                    "win.drawer-delete-collection",
+                ),
+            };
+            let row = drawer_row(icon, &label);
+            row.set_action_name(Some(name));
+            row.set_action_target_value(Some(&id.to_variant()));
+            imp.collection_actions.append(&row);
+        }
+        if let Some(focused) = focused {
+            let moves = |action: &CollectionAction| {
+                matches!(
+                    action,
+                    CollectionAction::MoveUp | CollectionAction::MoveDown
+                )
+            };
+            let position = actions
+                .iter()
+                .position(|action| *action == focused)
+                .or_else(|| {
+                    moves(&focused)
+                        .then(|| actions.iter().position(moves))
+                        .flatten()
+                })
+                .unwrap_or(0);
+            if let Some(row) = imp.collection_actions.row_at_index(position as i32) {
+                row.grab_focus();
+            }
+        }
+        imp.actions.replace(actions);
+        true
+    }
+
     /// Shows `level`.
     pub(crate) fn show_level(&self, level: DrawerLevel) {
         self.imp().stack.set_visible_child_name(match level {
             DrawerLevel::Main => "main",
             DrawerLevel::Collections => "collections",
+            DrawerLevel::Collection => "collection",
             DrawerLevel::Power => "power",
             DrawerLevel::Controls => "controls",
         });
     }
 
     /// Where focus goes as `level` shows, after `left` (the level focus comes from): the
-    /// entry that led to a level just left, the first Playing Now card's Return, or the
-    /// level's first entry. Power's own focus is its host's.
+    /// entry that led to a level just left (the collection whose actions were shown, too),
+    /// the first Playing Now card's Return, or the level's first entry. Power's own focus
+    /// is its host's.
     pub(crate) fn focus_target(
         &self,
         level: DrawerLevel,
@@ -241,7 +346,16 @@ impl PinduMenuDrawer {
                 .as_ref()
                 .and_then(crate::fullscreen_playing::card_return),
             (DrawerLevel::Main, _) => first_row(&imp.list),
+            (DrawerLevel::Collections, Some(DrawerLevel::Collection)) => {
+                let shown = imp.collection.get();
+                (0..)
+                    .map_while(|index| imp.collections.row_at_index(index))
+                    .find(|row| shown.is_some() && row_collection(row) == shown)
+                    .map(|row| row.upcast())
+                    .or_else(|| first_row(&imp.collections))
+            }
             (DrawerLevel::Collections, _) => first_row(&imp.collections),
+            (DrawerLevel::Collection, _) => first_row(&imp.collection_actions),
             (DrawerLevel::Power, _) => imp.power_level.focus_target(),
             (DrawerLevel::Controls, _) => first_row(&imp.controls),
         }
@@ -261,4 +375,16 @@ impl PinduMenuDrawer {
     pub(crate) fn controls(&self) -> &gtk::ListBox {
         &self.imp().controls
     }
+}
+
+/// The index of the row of `list` that has focus, if one does.
+fn focused_row(list: &gtk::ListBox) -> Option<usize> {
+    (0..)
+        .map_while(|index| list.row_at_index(index))
+        .position(|row| row.is_focus())
+}
+
+/// The collection a row of the collections level opens.
+fn row_collection(row: &gtk::ListBoxRow) -> Option<i64> {
+    row.action_target_value()?.get::<i64>()
 }
