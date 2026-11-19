@@ -44,6 +44,7 @@ pub mod proton;
 pub mod proton_downloads;
 pub mod reading;
 pub mod renderer;
+pub mod saved_filters;
 pub mod search;
 pub mod sections;
 pub mod session_time;

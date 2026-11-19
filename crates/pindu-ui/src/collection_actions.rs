@@ -1,14 +1,26 @@
 //! Collections in the main window: the sidebar row menu (rename, reorder, delete), the
-//! "Add to Collection" menus of tiles and the desktop game page, and their undo toasts.
+//! "Add to Collection" menus of tiles and the desktop game page, saving the shown filter or
+//! a suggested shelf as a saved filter (`win.save-filter`, `win.save-suggestion`), and
+//! their undo toasts.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use pindu_core::library::View;
 use pindu_core::model::{Collection, GameId};
+use pindu_core::saved_filters::{SavedFilter, Suggestion};
 
 use crate::models::GameObject;
 use crate::window::PinduWindow;
+/// A collection's icon: a folder, or a saved search for a saved filter.
+pub(crate) fn collection_icon(saved_filter: bool) -> &'static str {
+    if saved_filter {
+        "folder-saved-search-symbolic"
+    } else {
+        "folder-symbolic"
+    }
+}
 
 /// The "Add to Collection" submenu and "Remove from" items for a game's menus.
 pub fn collection_menu(game: &GameObject, collections: &[Collection]) -> gio::Menu {
@@ -110,7 +122,117 @@ impl PinduWindow {
                 window.new_collection(game);
             })
             .build();
-        self.add_action_entries([rename, up, down, delete, add, remove, new]);
+        let save = gio::ActionEntry::builder("save-filter")
+            .activate(|window: &Self, _, _| window.save_filter())
+            .build();
+        let suggestion = gio::ActionEntry::builder("save-suggestion")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(|window: &Self, _, target| {
+                if let Some(suggestion) = target.and_then(|t| t.str()).and_then(Suggestion::named) {
+                    window.save_suggestion(suggestion);
+                }
+            })
+            .build();
+        self.add_action_entries([rename, up, down, delete, add, remove, new, save, suggestion]);
+        let library = self.library();
+        library.connect_filter_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.update_save_filter()
+        ));
+        library.connect_collections_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.update_save_filter()
+        ));
+        self.update_save_filter();
+    }
+
+    /// Offers Save Filter while the shown view, toggles and search are a filter to save.
+    fn update_save_filter(&self) {
+        if let Some(action) = self
+            .lookup_action("save-filter")
+            .and_downcast::<gio::SimpleAction>()
+        {
+            action.set_enabled(self.library().filter_to_save().is_some());
+        }
+    }
+
+    /// Asks for a name, suggesting one that says what the filter shows, then saves the
+    /// shown filter as a collection.
+    fn save_filter(&self) {
+        let Some(filter) = self.library().filter_to_save() else {
+            return;
+        };
+        let window = self.downgrade();
+        self.ask_collection_name(
+            gettext("Save Filter"),
+            gettext("_Save"),
+            &self.filter_name(&filter),
+            move |name| {
+                if let Some(window) = window.upgrade() {
+                    window.create_saved_filter(name, filter.clone());
+                }
+            },
+        );
+    }
+
+    /// Saves a suggested shelf under its name, which the user can change like any
+    /// collection's.
+    fn save_suggestion(&self, suggestion: Suggestion) {
+        let name = match suggestion {
+            Suggestion::Native => gettext("Native Games"),
+            Suggestion::Windows => gettext("Windows Games"),
+        };
+        self.create_saved_filter(name, suggestion.filter());
+    }
+
+    fn create_saved_filter(&self, name: String, filter: SavedFilter) {
+        let window = self.downgrade();
+        glib::spawn_future_local(async move {
+            let Some(window) = window.upgrade() else {
+                return;
+            };
+            let service = window.library_service();
+            if let Some(collection) = service.create_saved_filter(&name, filter).await {
+                window.add_toast(adw::Toast::new(
+                    &gettext("Saved “{collection}”").replace("{collection}", &collection.name),
+                ));
+            }
+        });
+    }
+
+    /// A name for a filter: its view, its toggles and its search, as the library shows
+    /// them.
+    fn filter_name(&self, filter: &SavedFilter) -> String {
+        let mut parts = Vec::new();
+        match filter.view {
+            View::All | View::Hidden => {}
+            View::Installed => parts.push(gettext("Installed")),
+            View::Favourites => parts.push(gettext("Favourites")),
+            View::PlayHistory => parts.push(gettext("Play History")),
+            View::Source(source) => parts.push(crate::sources::source_name(source)),
+            View::Collection(id) => parts.push(self.collection_name(id)),
+        }
+        let toggles = filter.filters;
+        let labels = [
+            (toggles.installed, gettext("Installed")),
+            (toggles.not_installed, gettext("Not Installed")),
+            (toggles.favourites, gettext("Favourites")),
+            (toggles.windows, gettext("Windows")),
+            (toggles.native, gettext("Native")),
+        ];
+        parts.extend(
+            labels
+                .into_iter()
+                .filter(|(on, _)| *on)
+                .map(|(_, label)| label),
+        );
+        if !filter.search.is_empty() {
+            parts.push(gettext("“{search}”").replace("{search}", &filter.search));
+        }
+        parts.dedup();
+        parts.join(" · ")
     }
 
     fn collection_name(&self, id: i64) -> String {
@@ -177,18 +299,21 @@ impl PinduWindow {
                 return;
             };
             let service = window.library_service();
-            let Some((collection, members)) = service.delete_collection(id).await else {
+            let Some(deleted) = service.delete_collection(id).await else {
                 return;
             };
             let toast = adw::Toast::builder()
-                .title(gettext("Deleted “{collection}”").replace("{collection}", &collection.name))
+                .title(
+                    gettext("Deleted “{collection}”")
+                        .replace("{collection}", &deleted.collection.name),
+                )
                 .button_label(gettext("_Undo"))
                 .use_markup(false)
                 .build();
-            let restore = std::cell::Cell::new(Some((collection, members)));
+            let restore = std::cell::Cell::new(Some(deleted));
             toast.connect_button_clicked(move |_| {
-                if let Some((collection, members)) = restore.take() {
-                    service.restore_collection(collection, members);
+                if let Some(deleted) = restore.take() {
+                    service.restore_collection(deleted);
                 }
             });
             window.add_toast(toast);

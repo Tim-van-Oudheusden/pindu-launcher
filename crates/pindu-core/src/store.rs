@@ -10,6 +10,7 @@ mod games;
 mod groups;
 mod launch_configs;
 mod playtime;
+mod saved_filters;
 mod sources;
 
 use std::fmt;
@@ -28,6 +29,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("store/migrations/0004_square_art.sql"),
     include_str!("store/migrations/0005_steamgriddb_matches.sql"),
     include_str!("store/migrations/0006_game_groups.sql"),
+    include_str!("store/migrations/0007_saved_filters.sql"),
 ];
 
 /// The schema version a freshly opened store is at.

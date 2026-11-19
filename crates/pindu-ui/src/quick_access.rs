@@ -186,6 +186,8 @@ mod imp {
         #[template_child]
         pub clear_filters: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub save_filters: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub performance_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub performance_title: TemplateChild<gtk::Label>,
@@ -757,6 +759,7 @@ impl PinduQuickAccess {
             imp.artwork.get(),
             imp.filters.get(),
             imp.clear_filters.get(),
+            imp.save_filters.get(),
             imp.performance.get(),
             imp.proton_builds.get(),
             bluetooth_adapter,

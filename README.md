@@ -60,7 +60,9 @@ widgets so it looks and behaves like the rest of GNOME.
   ([Fullscreen mode](#fullscreen-mode)).
 - **A tidy library.** Browse covers in a grid, or switch the desktop window to a list with each game's source, install
   state, last played date and playtime. Search, sort and filter by installed, favourite, Windows or native, in either
-  layout. Group games into your own collections, jump back into recent games and hide the ones you never play.
+  layout. Group games into your own collections, or save a filter and search as a collection that keeps itself up to
+  date (**Save Filter…** beside the filters, with suggested ones under its arrow), jump back into recent games and hide
+  the ones you never play.
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
 - **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
   [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu
@@ -71,9 +73,10 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
-- **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
-  and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
-  beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
+- **Backups.** Export your collections (not yet the filters of saved ones), favourites, hidden games, games added by
+  hand and tracked playtime to a file, and import them again. Before an update changes the library's format, Pindu
+  launcher keeps a copy of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps
+  the two newest copies.
 
 ## Game sources
 
@@ -252,6 +255,8 @@ Guide + A never also opens the menu drawer.
 On the library page, **Filters** narrows every tab to installed or not installed games, or to Windows or native ones,
 and can show hidden games too. A **Filtered** chip beside the tabs says a filter is on, and **Clear Filters** brings the
 whole tab back. These filters are separate from the desktop window's filter row and last until the app quits.
+**Save Filter…** keeps the shown tab with these filters and the search as a collection of its own, which gets a tab,
+a Home section and a drawer entry; **Save Native Games** and **Save Windows Games** save those shelves in one press.
 
 ### Performance
 

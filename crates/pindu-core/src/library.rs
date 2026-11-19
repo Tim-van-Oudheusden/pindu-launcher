@@ -7,6 +7,7 @@ use std::path::PathBuf;
 
 use crate::art;
 use crate::model::{ArtLayout, Artwork, Game, GameId, Platform, Source, Timestamp};
+use crate::saved_filters;
 use crate::search::{self, Query};
 use crate::store::{self, Store};
 
@@ -64,7 +65,8 @@ pub enum PlaytimeOrigin {
 }
 
 /// Every stored game with its best art per layout (see [`art::best`]) and its playtime:
-/// the source's own total when it tracks one, else the sum of our sessions.
+/// the source's own total when it tracks one, else the sum of our sessions. Its
+/// collections include the saved filters holding it ([`saved_filters`]).
 pub fn load(store: &Store, prefer_steamgriddb: bool) -> store::Result<Vec<LibraryEntry>> {
     let mut artwork: HashMap<GameId, Vec<Artwork>> = HashMap::new();
     for art in store.all_artwork()? {
@@ -72,8 +74,9 @@ pub fn load(store: &Store, prefer_steamgriddb: bool) -> store::Result<Vec<Librar
     }
     let session_totals = store.session_totals()?;
     let imported_totals = store.imported_totals()?;
+    let saved = store.saved_filters()?;
     let mut memberships = store.collection_memberships()?;
-    Ok(store
+    let mut entries: Vec<LibraryEntry> = store
         .games()?
         .into_iter()
         .map(|game| {
@@ -94,7 +97,9 @@ pub fn load(store: &Store, prefer_steamgriddb: bool) -> store::Result<Vec<Librar
                 playtime_origin,
             }
         })
-        .collect())
+        .collect();
+    saved_filters::add_members(&mut entries, &saved);
+    Ok(entries)
 }
 
 /// The groups of the Play history page.
@@ -460,6 +465,16 @@ impl LibraryFilter {
     /// The sidebar view shown.
     pub fn view(&self) -> View {
         self.view
+    }
+
+    /// The filter toggles on.
+    pub fn filters(&self) -> Filters {
+        self.filters
+    }
+
+    /// The search, normalised; empty for none.
+    pub fn search(&self) -> &str {
+        self.search.as_str()
     }
 
     /// Shows only the games of `view`.

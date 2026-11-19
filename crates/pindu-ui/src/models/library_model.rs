@@ -17,6 +17,7 @@ use pindu_core::library::{
 };
 
 use pindu_core::model::{Collection, GameId};
+use pindu_core::saved_filters::SavedFilter;
 use pindu_core::sections::{self, Section};
 
 use super::GameObject;
@@ -36,8 +37,10 @@ mod imp {
         pub library_filter: Rc<RefCell<LibraryFilter>>,
         pub sort_mode: Rc<Cell<SortMode>>,
         pub counts: RefCell<Counts>,
-        /// The user's collections, in their order.
+        /// The user's collections, in their order, saved filters among them.
         pub collections: RefCell<Vec<Collection>>,
+        /// The filter of each saved filter, by collection ID.
+        pub saved_filters: RefCell<HashMap<i64, SavedFilter>>,
     }
 
     impl Default for LibraryModel {
@@ -64,6 +67,7 @@ mod imp {
                 sort_mode: Rc::default(),
                 counts: RefCell::default(),
                 collections: RefCell::default(),
+                saved_filters: RefCell::default(),
             }
         }
     }
@@ -81,6 +85,7 @@ mod imp {
                     vec![
                         glib::subclass::Signal::builder("counts-changed").build(),
                         glib::subclass::Signal::builder("collections-changed").build(),
+                        glib::subclass::Signal::builder("filter-changed").build(),
                     ]
                 });
             SIGNALS.as_ref()
@@ -245,17 +250,46 @@ impl LibraryModel {
             .collect()
     }
 
-    /// The user's collections, in their order.
+    /// The user's collections, in their order, saved filters among them.
     pub fn collections(&self) -> Vec<Collection> {
         self.imp().collections.borrow().clone()
     }
 
-    /// Replaces the collections, telling observers when they changed.
-    pub fn set_collections(&self, collections: Vec<Collection>) {
-        if *self.imp().collections.borrow() == collections {
+    /// The collections games are added to by hand: every one but the saved filters.
+    pub fn manual_collections(&self) -> Vec<Collection> {
+        let saved = self.imp().saved_filters.borrow();
+        self.collections()
+            .into_iter()
+            .filter(|collection| !saved.contains_key(&collection.id))
+            .collect()
+    }
+
+    /// The filter of the saved filter `id`; `None` for a collection kept by hand.
+    pub fn saved_filter(&self, id: i64) -> Option<SavedFilter> {
+        self.imp().saved_filters.borrow().get(&id).cloned()
+    }
+
+    /// The shown view, toggles and search as a filter to save, if there is one
+    /// (see [`SavedFilter::of`]).
+    pub fn filter_to_save(&self) -> Option<SavedFilter> {
+        let imp = self.imp();
+        SavedFilter::of(&imp.library_filter.borrow(), &imp.saved_filters.borrow())
+    }
+
+    /// Replaces the collections and the saved filters' filters, telling observers when
+    /// they changed.
+    pub fn set_collections(
+        &self,
+        collections: Vec<Collection>,
+        saved_filters: HashMap<i64, SavedFilter>,
+    ) {
+        let imp = self.imp();
+        if *imp.collections.borrow() == collections && *imp.saved_filters.borrow() == saved_filters
+        {
             return;
         }
-        self.imp().collections.replace(collections);
+        imp.collections.replace(collections);
+        imp.saved_filters.replace(saved_filters);
         self.emit_by_name::<()>("collections-changed", &[]);
     }
 
@@ -265,6 +299,18 @@ impl LibraryModel {
         callback: F,
     ) -> glib::SignalHandlerId {
         self.connect_local("collections-changed", false, move |values| {
+            let model = values[0].get::<Self>().expect("emitted by the model");
+            callback(&model);
+            None
+        })
+    }
+
+    /// Calls `callback` when the view, the filter toggles or the search changed.
+    pub fn connect_filter_changed<F: Fn(&Self) + 'static>(
+        &self,
+        callback: F,
+    ) -> glib::SignalHandlerId {
+        self.connect_local("filter-changed", false, move |values| {
             let model = values[0].get::<Self>().expect("emitted by the model");
             callback(&model);
             None
@@ -323,6 +369,7 @@ impl LibraryModel {
             FilterChange::Different => gtk::FilterChange::Different,
         };
         self.imp().filter.changed(change);
+        self.emit_by_name::<()>("filter-changed", &[]);
     }
 
     /// Sorts the games by `mode`; re-sorts only when it changes.
