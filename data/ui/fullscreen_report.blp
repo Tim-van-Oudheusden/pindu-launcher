@@ -1,0 +1,128 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Quick Access's Diagnostics Report level, the "diagnostics-report" page of its stack:
+// the report in large monospace text, a page at a time for a phone to photograph, and
+// where its copy was saved. Its entry row stays in Quick Access's shared list.
+template $PinduReportLevel: Adw.Bin {
+  child: Box {
+    orientation: vertical;
+    spacing: 12;
+
+    Box {
+      spacing: 12;
+
+      Label {
+        label: _("Diagnostics Report");
+        xalign: 0;
+        hexpand: true;
+
+        styles [
+          "title-3",
+        ]
+      }
+
+      // "Page 1 of 3"; filled in code.
+      Label report_counter {
+        xalign: 1;
+
+        styles [
+          "title-4",
+          "numeric",
+        ]
+      }
+    }
+
+    // The page's text. It takes focus so that Up and Down scroll it while it is taller
+    // than the panel shows.
+    ScrolledWindow report_scroller {
+      vexpand: true;
+      hscrollbar-policy: never;
+
+      child: Box report_content {
+        orientation: vertical;
+
+        Adw.Spinner report_spinner {
+          halign: center;
+          valign: center;
+          vexpand: true;
+          width-request: 48;
+          height-request: 48;
+        }
+
+        Label report_text {
+          visible: false;
+          focusable: true;
+          xalign: 0;
+          yalign: 0;
+          wrap: true;
+          wrap-mode: char;
+          accessible-role: document;
+
+          styles [
+            "monospace",
+            "diagnostics-report",
+          ]
+        }
+      };
+    }
+
+    // Where the copy of the report was saved, or why it was not; filled in code.
+    Label report_saved {
+      xalign: 0;
+      wrap: true;
+      wrap-mode: word_char;
+      visible: false;
+
+      styles [
+        "dim-label",
+      ]
+    }
+
+    ListBox report_actions {
+      selection-mode: none;
+
+      styles [
+        "navigation-sidebar",
+      ]
+
+      ListBoxRow report_previous {
+        action-name: "win.diagnostics-report-previous";
+
+        child: Box {
+          spacing: 16;
+
+          Image {
+            icon-name: "go-previous-symbolic";
+            accessible-role: presentation;
+          }
+
+          Label {
+            label: _("Previous Page");
+            xalign: 0;
+            hexpand: true;
+          }
+        };
+      }
+
+      ListBoxRow report_next {
+        action-name: "win.diagnostics-report-next";
+
+        child: Box {
+          spacing: 16;
+
+          Image {
+            icon-name: "go-next-symbolic";
+            accessible-role: presentation;
+          }
+
+          Label {
+            label: _("Next Page");
+            xalign: 0;
+            hexpand: true;
+          }
+        };
+      }
+    }
+  };
+}
