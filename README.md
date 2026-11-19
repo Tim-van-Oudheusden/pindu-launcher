@@ -61,6 +61,9 @@ widgets so it looks and behaves like the rest of GNOME.
 - **A tidy library.** Search, sort and filter by installed, favourite, Windows or native. Group games into your own
   collections, jump back into recent games and hide the ones you never play.
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
+- **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
+  [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu
+  launcher only hands the address over and fetches nothing from either site.
 - **Your artwork.** Covers, banners and logos from your launchers, from your own files, or from
   [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring. **Change
   Artwork** on a game's page, in both modes, pages through every SteamGridDB image of each kind.
@@ -319,6 +322,10 @@ ones already installed, and installs the one you pick from Flathub, all with a c
 - **Button Prompts** (there or in Preferences) picks the glyphs instead of following the controller: letters, shapes,
   or letters with A on the right. This helps under Steam Input, where every controller looks like Steam's own.
 - **Swap Confirm and Back** makes the right button confirm and the bottom one go back everywhere in fullscreen mode.
+- **Repeat Delay**, **Repeat Rate** and **Stick Dead Zone**, also in Quick Access's Controllers, set how soon and how
+  fast a held direction keeps moving focus, and how far the left stick moves before it does: a long delay for a hand
+  that lets go late, a large dead zone for a stick that drifts. They change only how the launcher moves its own focus;
+  a game receives the controller unchanged.
 - **Controls** in the menu drawer (Start or Guide) lists what the buttons can do (Select, Back, Search, Game Options,
   Menu, Quick Access and the tab and sort switches) with the button for each. Choose one and press the button to give
   it; the function that had that button takes the old one. Guide, or five seconds without a press, leaves it as it was.
