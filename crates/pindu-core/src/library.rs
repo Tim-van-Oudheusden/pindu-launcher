@@ -90,10 +90,15 @@ pub enum PlaytimeOrigin {
 /// the source's own total when it tracks one, else the sum of our sessions.
 ///
 /// A group of copies ([`Store::game_groups`]) is one entry, after the games in no group:
-/// the copy Play starts ([`game_groups::copy_to_play`]) under its preferred copy's title,
-/// with every copy in [`LibraryEntry::copies`]. Its collections include the saved filters
-/// holding it ([`saved_filters`]), matched on the entry as shown.
-pub fn load(store: &Store, prefer_steamgriddb: bool) -> store::Result<Vec<LibraryEntry>> {
+/// the copy Play starts ([`game_groups::copy_to_play`], with `source_order`, the user's
+/// [`game_groups::source_order`]) under its preferred copy's title, with every copy in
+/// [`LibraryEntry::copies`]. Its collections include the saved filters holding it
+/// ([`saved_filters`]), matched on the entry as shown.
+pub fn load(
+    store: &Store,
+    prefer_steamgriddb: bool,
+    source_order: &[Source],
+) -> store::Result<Vec<LibraryEntry>> {
     let mut artwork: HashMap<GameId, Vec<Artwork>> = HashMap::new();
     for art in store.all_artwork()? {
         artwork.entry(art.game_id.clone()).or_default().push(art);
@@ -126,7 +131,7 @@ pub fn load(store: &Store, prefer_steamgriddb: bool) -> store::Result<Vec<Librar
         entries.collect()
     } else {
         let details = store.all_source_details()?;
-        collapse_groups(entries, &groups, &details)
+        collapse_groups(entries, &groups, &details, source_order)
     };
     saved_filters::add_members(&mut entries, &saved);
     Ok(entries)
@@ -137,6 +142,7 @@ fn collapse_groups(
     entries: impl Iterator<Item = LibraryEntry>,
     groups: &[GameGroup],
     details: &HashMap<GameId, SourceDetails>,
+    source_order: &[Source],
 ) -> Vec<LibraryEntry> {
     let group_of: HashMap<&GameId, usize> = groups
         .iter()
@@ -155,7 +161,7 @@ fn collapse_groups(
         groups
             .iter()
             .zip(copies)
-            .filter_map(|(group, copies)| group_entry(group, copies, details)),
+            .filter_map(|(group, copies)| group_entry(group, copies, details, source_order)),
     );
     collapsed
 }
@@ -165,11 +171,11 @@ fn group_entry(
     group: &GameGroup,
     mut copies: Vec<LibraryEntry>,
     details: &HashMap<GameId, SourceDetails>,
+    order: &[Source],
 ) -> Option<LibraryEntry> {
     if copies.len() < 2 {
         return copies.pop();
     }
-    let order = game_groups::DEFAULT_SOURCE_ORDER;
     let games = || copies.iter().map(|copy| &copy.game);
     let preferred = game_groups::preferred_copy(group, games(), order)?
         .id
@@ -1172,7 +1178,7 @@ mod tests {
             .unwrap();
         store.add_play_session(&ours.id, 10, 70).unwrap();
 
-        let entries = load(&store, false).unwrap();
+        let entries = load(&store, false, game_groups::DEFAULT_SOURCE_ORDER).unwrap();
 
         let origin = |id: &GameId| {
             entries
@@ -1228,7 +1234,7 @@ mod tests {
         store.add_to_collection(second.id, &member.id).unwrap();
         store.add_to_collection(first.id, &member.id).unwrap();
 
-        let entries = load(&store, false).unwrap();
+        let entries = load(&store, false, game_groups::DEFAULT_SOURCE_ORDER).unwrap();
 
         let collections = |id: &GameId| {
             entries
@@ -1266,7 +1272,7 @@ mod tests {
         set(ArtLayout::Cover, ArtOrigin::User, "/user-cover.png");
         set(ArtLayout::Icon, ArtOrigin::Source, "/icon.jpg");
 
-        let entries = load(&store, false).unwrap();
+        let entries = load(&store, false, game_groups::DEFAULT_SOURCE_ORDER).unwrap();
 
         assert_eq!(entries.len(), 2);
         let first = entries
@@ -1581,7 +1587,7 @@ mod tests {
         store.add_play_session(&tracked.id, 0, 600).unwrap();
         store.add_play_session(&tracked.id, 1_000, 1_900).unwrap();
 
-        let entries = load(&store, false).unwrap();
+        let entries = load(&store, false, game_groups::DEFAULT_SOURCE_ORDER).unwrap();
 
         let playtime = |id: &GameId| {
             entries
@@ -1630,7 +1636,7 @@ mod tests {
             .unwrap();
         store.set_preferred_copy(group, Some(&steam.id)).unwrap();
 
-        let entries = load(&store, false).unwrap();
+        let entries = load(&store, false, game_groups::DEFAULT_SOURCE_ORDER).unwrap();
 
         assert_eq!(entries.len(), 2);
         // The preferred copy is not installed, so Play starts the GOG copy, under the
@@ -1640,6 +1646,25 @@ mod tests {
         let copies: Vec<&GameId> = celeste.copies.iter().map(|copy| &copy.game.id).collect();
         assert_eq!(copies, [&steam.id, &gog.id]);
         assert!(entry_of(&entries, &loner.id).copies.is_empty());
+    }
+
+    #[test]
+    fn a_group_with_no_preferred_copy_starts_the_copy_the_source_order_puts_first() {
+        let (_dir, store) = group_store();
+        let steam = copy(Source::Steam, "Celeste", true);
+        let gog = copy(Source::HeroicGog, "Celeste", true);
+        for game in [&steam, &gog] {
+            store.insert_game(game).unwrap();
+        }
+        store
+            .create_group(&[steam.id.clone(), gog.id.clone()])
+            .unwrap();
+
+        let by_default = load(&store, false, game_groups::DEFAULT_SOURCE_ORDER).unwrap();
+        let gog_first = load(&store, false, &[Source::HeroicGog, Source::Steam]).unwrap();
+
+        assert_eq!(by_default[0].game.id, steam.id);
+        assert_eq!(gog_first[0].game.id, gog.id);
     }
 
     #[test]
@@ -1667,7 +1692,7 @@ mod tests {
         store.add_to_collection(first.id, &gog.id).unwrap();
         store.add_to_collection(second.id, &gog.id).unwrap();
 
-        let entries = load(&store, false).unwrap();
+        let entries = load(&store, false, game_groups::DEFAULT_SOURCE_ORDER).unwrap();
 
         let celeste = entry_of(&entries, &steam.id);
         // Favourite and pinned when any copy is; hidden or removed only when every copy is.
@@ -1736,7 +1761,7 @@ mod tests {
         art(&lutris, ArtLayout::Cover, "/lutris-cover.jpg");
         art(&lutris, ArtLayout::Hero, "/lutris-hero.jpg");
 
-        let entries = load(&store, false).unwrap();
+        let entries = load(&store, false, game_groups::DEFAULT_SOURCE_ORDER).unwrap();
 
         // Steam and the Lutris copy that only starts Steam timed the same sessions: 10 h,
         // plus 3 h of the GOG copy played apart.
