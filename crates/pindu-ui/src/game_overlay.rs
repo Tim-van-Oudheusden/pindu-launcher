@@ -543,6 +543,7 @@ impl PinduGameOverlay {
             page_below: false,
             search: false,
             tabs: false,
+            dialog_tabs: false,
             options: false,
             menu: false,
             panel,

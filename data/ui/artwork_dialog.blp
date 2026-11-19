@@ -1,0 +1,227 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Change Artwork: a game's art from SteamGridDB, first, or from a file. The desktop
+// window lists the kinds of art down the side and pages SteamGridDB's images with arrows;
+// fullscreen mode shows the kinds as tabs the shoulder buttons switch and loads the next
+// page as focus or scrolling nears the end. When the Edit Game dialog asks for one image
+// it shows that kind alone and hands the image back. artwork_dialog.rs fills the kinds.
+template $PinduArtworkDialog: Adw.Dialog {
+  title: _("Change Artwork");
+  content-width: 960;
+  content-height: 680;
+
+  child: Adw.ToastOverlay toasts {
+    child: Adw.ToolbarView {
+      [top]
+      Adw.HeaderBar {
+        [start]
+        Button file_button {
+          label: _("Choose _File…");
+          use-underline: true;
+          tooltip-text: _("Use an Image File From Your Computer");
+          clicked => $choose_file() swapped;
+        }
+
+        [end]
+        Button reset_button {
+          label: _("Use _Original");
+          use-underline: true;
+          tooltip-text: _("Remove Your Image, so the Launcher’s or SteamGridDB’s Shows");
+          visible: false;
+          clicked => $reset() swapped;
+        }
+      }
+
+      [top]
+      Box kind_tabs {
+        visible: false;
+        halign: center;
+        spacing: 6;
+        margin-bottom: 6;
+
+        styles [
+          "library-tabs",
+        ]
+      }
+
+      content: Box {
+        ListBox kind_list {
+          selection-mode: single;
+          width-request: 220;
+          row-selected => $kind_row_selected() swapped;
+
+          styles [
+            "navigation-sidebar",
+          ]
+        }
+
+        Separator kind_separator {
+          orientation: vertical;
+        }
+
+        Box {
+          orientation: vertical;
+          hexpand: true;
+
+          Box match_bar {
+            spacing: 12;
+            margin-top: 6;
+            margin-start: 12;
+            margin-end: 12;
+            visible: false;
+
+            Label match_label {
+              xalign: 0;
+              hexpand: true;
+              ellipsize: end;
+
+              styles [
+                "dimmed",
+              ]
+            }
+
+            Button change_match {
+              label: _("_Different Game…");
+              use-underline: true;
+              clicked => $show_matches() swapped;
+
+              styles [
+                "flat",
+              ]
+            }
+          }
+
+          Stack stack {
+            vexpand: true;
+
+            StackPage {
+              name: "loading";
+
+              child: Adw.Spinner {
+                width-request: 32;
+                height-request: 32;
+                halign: center;
+                valign: center;
+              };
+            }
+
+            StackPage {
+              name: "images";
+
+              child: ScrolledWindow scroller {
+                hscrollbar-policy: never;
+
+                child: FlowBox images {
+                  selection-mode: none;
+                  homogeneous: true;
+                  activate-on-single-click: true;
+                  column-spacing: 12;
+                  row-spacing: 12;
+                  margin-top: 12;
+                  margin-bottom: 12;
+                  margin-start: 12;
+                  margin-end: 12;
+                  valign: start;
+                  child-activated => $image_activated() swapped;
+
+                  styles [
+                    "artwork-images",
+                  ]
+                };
+              };
+            }
+
+            StackPage {
+              name: "status";
+
+              child: Adw.StatusPage status {};
+            }
+
+            StackPage {
+              name: "matches";
+
+              child: ScrolledWindow {
+                hscrollbar-policy: never;
+
+                child: Adw.Clamp {
+                  maximum-size: 560;
+
+                  child: Box {
+                    orientation: vertical;
+                    spacing: 12;
+                    margin-top: 18;
+                    margin-bottom: 18;
+                    margin-start: 12;
+                    margin-end: 12;
+
+                    Label {
+                      label: _("Which game on SteamGridDB is it?");
+                      xalign: 0;
+                      wrap: true;
+
+                      styles [
+                        "heading",
+                      ]
+                    }
+
+                    SearchEntry match_entry {
+                      placeholder-text: _("Game Name");
+                      activate => $search_matches() swapped;
+                    }
+
+                    ListBox match_list {
+                      selection-mode: none;
+                      row-activated => $match_activated() swapped;
+
+                      styles [
+                        "boxed-list",
+                      ]
+                    }
+                  };
+                };
+              };
+            }
+          }
+
+          CenterBox pager {
+            visible: false;
+            margin-top: 6;
+            margin-bottom: 12;
+
+            [center]
+            Box {
+              spacing: 12;
+
+              Button previous_page {
+                icon-name: "go-previous-symbolic";
+                tooltip-text: _("Previous Page");
+                clicked => $show_previous_page() swapped;
+
+                styles [
+                  "circular",
+                ]
+              }
+
+              Label page_label {
+                styles [
+                  "numeric",
+                ]
+              }
+
+              Button next_page {
+                icon-name: "go-next-symbolic";
+                tooltip-text: _("Next Page");
+                clicked => $show_next_page() swapped;
+
+                styles [
+                  "circular",
+                ]
+              }
+            }
+          }
+        }
+      };
+    };
+  };
+}

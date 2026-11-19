@@ -28,6 +28,7 @@ use pindu_core::hints::Launching;
 use pindu_core::menus::{self, Back};
 
 use crate::application::PinduApplication;
+use crate::artwork_dialog::ArtworkDialog;
 use crate::fullscreen::Sound;
 use crate::models::GameObject;
 use crate::window::PinduWindow;
@@ -201,6 +202,16 @@ impl PinduWindow {
             Intent::PreviousSort | Intent::NextSort if self.shows_tabs() => {
                 self.cycle_sort(intent == Intent::NextSort);
                 self.play_sound(Sound::Move);
+            }
+            Intent::PreviousTab | Intent::NextTab => {
+                // Change Artwork's kinds of art, in fullscreen mode.
+                let stepped = self
+                    .visible_dialog()
+                    .and_downcast::<ArtworkDialog>()
+                    .is_some_and(|dialog| dialog.step_kind(intent == Intent::NextTab));
+                if stepped {
+                    self.play_sound(Sound::Move);
+                }
             }
             _ => {}
         }

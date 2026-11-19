@@ -23,6 +23,7 @@ use pindu_core::panels::{GameOption, Panels};
 
 use crate::add_store::PinduAddStoreLevel;
 use crate::application::PinduApplication;
+use crate::artwork_dialog::ArtworkDialog;
 use crate::config::APP_ID;
 use crate::fullscreen::NavigationSounds;
 use crate::fullscreen_clock::Clock;
@@ -356,6 +357,7 @@ impl PinduWindow {
         self.add_game_action("hide-game", Self::hide_game);
         self.add_game_action("unhide-game", Self::unhide_game);
         self.add_game_action("remove-game", Self::remove_game);
+        self.add_game_action("change-artwork", Self::change_artwork);
         let show_hidden = gio::SimpleAction::new_stateful("show-hidden", None, &false.to_variant());
         show_hidden.connect_change_state(glib::clone!(
             #[weak(rename_to = window)]
@@ -758,6 +760,13 @@ impl PinduWindow {
         let id = id.clone();
         toast.connect_button_clicked(move |_| service.set_removed(&id, false));
         self.imp().toast_overlay.add_toast(toast);
+    }
+
+    /// Opens Change Artwork for a game, laid out for the mode the window is in.
+    fn change_artwork(&self, id: &GameId) {
+        if let Some(game) = self.library().game_object(id) {
+            ArtworkDialog::change(self, self.library_service(), &game, self.is_fullscreen());
+        }
     }
 
     fn hide_game(&self, id: &GameId) {

@@ -530,6 +530,7 @@ impl PinduWindow {
             GameOption::Hide => ("win", "hide-game"),
             GameOption::Unhide => ("win", "unhide-game"),
             GameOption::OpenInLauncher => ("app", "open-in-launcher"),
+            GameOption::ChangeArtwork => ("win", "change-artwork"),
             GameOption::Collections => return,
         };
         if group == "app" {
@@ -556,6 +557,7 @@ fn option_label(option: GameOption, game: &GameObject) -> (&'static str, String)
         GameOption::AddToFavourites => ("non-starred-symbolic", gettext("Add to Favourites")),
         GameOption::RemoveFromFavourites => ("starred-symbolic", gettext("Remove from Favourites")),
         GameOption::Collections => ("folder-symbolic", gettext("Collections")),
+        GameOption::ChangeArtwork => ("image-x-generic-symbolic", gettext("Change Artwork")),
         GameOption::Hide => ("view-conceal-symbolic", gettext("Hide")),
         GameOption::Unhide => ("view-reveal-symbolic", gettext("Unhide")),
         GameOption::OpenInLauncher => (

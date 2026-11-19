@@ -14,8 +14,8 @@ use pindu_core::manual;
 use pindu_core::model::{ArtLayout, Artwork, Game, GameId, Source};
 use pindu_core::paths::{default_library_db_path, default_user_art_dir};
 use pindu_core::steamgriddb::{
-    self, ArtRun, GameRef, Image, OnFailure, RequestError, RunEnd, SearchHit, layouts_to_fetch,
-    matching_hit, on_failure, retry_delay,
+    self, ArtRun, GameRef, Image, ImagesPage, OnFailure, RequestError, RunEnd, SearchHit,
+    layouts_to_fetch, matching_hit, on_failure, retry_delay,
 };
 use pindu_core::store::Store;
 use pindu_core::tasks::{Progress, TaskKind};
@@ -159,7 +159,7 @@ async fn fetch_game_art(
             OnFailure::Stop(end) => Err(end),
         }
     };
-    let game_ref = match steam_app_id(game) {
+    let game_ref = match steam_app_id(&game.id) {
         Some(app_id) => GameRef::Steam(app_id),
         None => match client.search(&game.title).await {
             Ok(hits) => match matching_hit(&game.title, &hits) {
@@ -228,9 +228,10 @@ fn games_wanting_art(prefer_steamgriddb: bool) -> Result<Vec<(Game, Vec<ArtLayou
         .collect())
 }
 
-fn steam_app_id(game: &Game) -> Option<u32> {
-    (game.id.source() == Source::Steam)
-        .then(|| game.id.native_id().parse().ok())
+/// The Steam app ID of a Steam game, which SteamGridDB knows it by.
+pub fn steam_app_id(id: &GameId) -> Option<u32> {
+    (id.source() == Source::Steam)
+        .then(|| id.native_id().parse().ok())
         .flatten()
 }
 
@@ -272,6 +273,20 @@ impl SteamGridDb {
             .cached_get(&steamgriddb::images_url(layout, game), true)
             .await?;
         steamgriddb::parse_images(&String::from_utf8_lossy(&answer)).map_err(RequestError::Answer)
+    }
+
+    /// One page of a game's images in one layout, counting from 0.
+    pub async fn images_page(
+        &self,
+        layout: ArtLayout,
+        game: &GameRef,
+        page: u32,
+    ) -> Result<ImagesPage, RequestError> {
+        let answer = self
+            .cached_get(&steamgriddb::images_page_url(layout, game, page), true)
+            .await?;
+        steamgriddb::parse_images_page(&String::from_utf8_lossy(&answer))
+            .map_err(RequestError::Answer)
     }
 
     /// An image or thumbnail as a file in the cache, fetched the first time.

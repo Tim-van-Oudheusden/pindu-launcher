@@ -331,6 +331,8 @@ pub enum GameOption {
     RemoveFromFavourites,
     /// Lead to the collections, to add the game to or take it out of.
     Collections,
+    /// Change the game's artwork, from SteamGridDB or a file.
+    ChangeArtwork,
     /// Hide the game.
     Hide,
     /// Show the hidden game again.
@@ -355,6 +357,7 @@ pub fn game_options(game: &Game, playing: Playing) -> Vec<GameOption> {
             AddToFavourites
         }),
         Some(Collections),
+        Some(ChangeArtwork),
         Some(if game.hidden { Unhide } else { Hide }),
         launch::launcher_uri(game).map(|_| OpenInLauncher),
     ]
@@ -854,7 +857,14 @@ mod tests {
         let steam = game(Source::Steam, LaunchKind::StoreUri);
         assert_eq!(
             game_options(&steam, Playing::No),
-            [Play, AddToFavourites, Collections, Hide, OpenInLauncher]
+            [
+                Play,
+                AddToFavourites,
+                Collections,
+                ChangeArtwork,
+                Hide,
+                OpenInLauncher
+            ]
         );
     }
 
@@ -866,7 +876,13 @@ mod tests {
         manual.hidden = true;
         assert_eq!(
             game_options(&manual, Playing::Started),
-            [Stop, RemoveFromFavourites, Collections, Unhide]
+            [
+                Stop,
+                RemoveFromFavourites,
+                Collections,
+                ChangeArtwork,
+                Unhide
+            ]
         );
     }
 
@@ -881,9 +897,21 @@ mod tests {
                 Stop,
                 AddToFavourites,
                 Collections,
+                ChangeArtwork,
                 Hide,
                 OpenInLauncher
             ]
+        );
+    }
+
+    #[test]
+    fn every_game_offers_change_artwork_after_its_collections() {
+        let options = game_options(&game(Source::Lutris, LaunchKind::HostCommand), Playing::No);
+        let collections = options.iter().position(|o| *o == GameOption::Collections);
+
+        assert_eq!(
+            options.iter().position(|o| *o == GameOption::ChangeArtwork),
+            collections.map(|index| index + 1)
         );
     }
 

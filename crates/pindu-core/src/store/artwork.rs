@@ -54,6 +54,24 @@ impl Store {
         )?;
         Ok(())
     }
+
+    /// Remembers the SteamGridDB game the user chose for a game, replacing an earlier one.
+    pub fn set_steamgriddb_match(&self, game_id: &GameId, grid_id: u64) -> Result<()> {
+        self.conn.execute(
+            "INSERT OR REPLACE INTO steamgriddb_matches (game_id, grid_id) VALUES (?1, ?2)",
+            params![game_id, grid_id as i64],
+        )?;
+        Ok(())
+    }
+
+    /// The SteamGridDB game the user chose for a game, if they chose one.
+    pub fn steamgriddb_match(&self, game_id: &GameId) -> Result<Option<u64>> {
+        let mut statement = self
+            .conn
+            .prepare("SELECT grid_id FROM steamgriddb_matches WHERE game_id = ?1")?;
+        let mut rows = statement.query_map([game_id], |row| row.get::<_, i64>(0))?;
+        Ok(rows.next().transpose()?.map(|id| id as u64))
+    }
 }
 
 fn artwork_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Artwork> {
