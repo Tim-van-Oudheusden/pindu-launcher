@@ -8,11 +8,8 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- #660: fullscreen **Quick Access → Design → Background** selects Red Ribbons (default) or Blue Station and
-  remembers the choice. Both ship in three resolutions and share Home's existing playback and accessibility rules.
-- Verified the installed native build under headless Gamescope: Red Ribbons on first run, Blue Station via keyboard,
-  Blue Station after restart, and back to Red Ribbons via a virtual controller. The private D-Bus session and
-  `XDG_RUNTIME_DIR` kept the smoke run separate from the desktop.
-- Updated PR #662 with the three supplied 60 fps Red Ribbons WebMs, byte-for-byte. Blue Station is unchanged.
-- Fixed the Background focus trap by registering the list with the existing arrow-key handoff. Fixed the
-  first-frame freeze after switching by replacing the GTK media stream rather than reassigning its file.
+- 2026-11-20, #663: refreshed the README's libre desktop and commercial fullscreen galleries for `v0.6.0-rc.1`
+  using the development build from PR #662. The Quick Access screenshot shows the new background picker.
+- Captured in isolated Gamescope sessions using credited libre art and selected artwork from a real Steam library.
+  Verified the screenshot links and visually checked all ten captures. AppStream assets and MetaInfo stay pinned.
+- Release tracker: #664. Version bumps, tagging and the hardware checklist belong to the separate release work.
