@@ -78,7 +78,8 @@ widgets so it looks and behaves like the rest of GNOME.
 | Desktop entries and Flatpaks | Games installed as apps | On the host ([needs host access](#starting-games-on-the-host)) |
 | Added by hand | Native programs, and Windows games or installers | Native ones on the host; Windows ones with Proton in the sandbox |
 
-The importers read each launcher's data read-only and never its credentials.
+The importers read each launcher's data read-only and never its credentials. Preferences, Sources shows for each source
+the folder it was found in, when it last synced and the problems that sync ran into.
 
 ## Installing
 
