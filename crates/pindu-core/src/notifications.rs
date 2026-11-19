@@ -3,8 +3,9 @@
 //! not, a Proton build installed or not, a game that needs a permission, a Bluetooth device
 //! that did not pair, connect, disconnect or go, a sound output that could not be chosen, a
 //! rollback or restart the system refused, a network that could not be joined, a program
-//! that kept the machine from suspending, restarting or powering off). Kept in memory for
-//! the running session only, newest first, at most [`CAPACITY`] of them.
+//! that kept the machine from suspending, restarting or powering off, a save snapshot that
+//! could not be copied to the user's folder). Kept in memory for the running session only,
+//! newest first, at most [`CAPACITY`] of them.
 
 use std::collections::VecDeque;
 
@@ -44,6 +45,8 @@ pub enum Kind {
     StoreInstalled,
     /// A store did not install from Flathub.
     StoreFailed,
+    /// A save snapshot was not copied to the folder the user picked for copies.
+    SaveCopyFailed,
 }
 
 /// What a notification opens when the user picks it.
