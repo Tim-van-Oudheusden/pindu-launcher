@@ -132,6 +132,42 @@ pub enum NextStep {
     HowToInstall(Tool),
 }
 
+/// Where fullscreen mode's Quick Access shows the report, which decides whether a next step
+/// can be taken from it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct FullscreenSession {
+    /// Quick Access is open over a running game, where nothing opens over the launcher.
+    pub over_game: bool,
+    /// This is a gamescope session, which has no desktop for a web browser to open on.
+    pub gamescope_session: bool,
+}
+
+/// Whether fullscreen mode can take a next step, or where else it is taken. As in the
+/// system panel (`docs/system-panel.md`), a step the session cannot take stays in the
+/// report and says why, never as an error.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StepReach {
+    /// From the row itself.
+    Here,
+    /// Once the game has ended, from the library: Preferences and web pages open over the
+    /// launcher, not over a game.
+    AfterTheGame,
+    /// On another device: a gamescope session has no browser to open the page in, so the
+    /// row shows its address.
+    OnAnotherDevice,
+}
+
+impl NextStep {
+    /// Whether fullscreen mode can take the step in `session`.
+    pub fn reach_in_fullscreen(&self, session: FullscreenSession) -> StepReach {
+        match self {
+            Self::HowToInstall(_) if session.gamescope_session => StepReach::OnAnotherDevice,
+            _ if session.over_game => StepReach::AfterTheGame,
+            _ => StepReach::Here,
+        }
+    }
+}
+
 /// Something that keeps the library from finding or starting games.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Problem {
@@ -726,5 +762,66 @@ mod tests {
 
         assert_eq!(folder_bytes(folder.path()), 60);
         assert_eq!(folder_bytes(&folder.path().join("missing")), 0);
+    }
+
+    #[test]
+    fn fullscreen_takes_every_next_step_in_the_library() {
+        let session = FullscreenSession::default();
+        for step in [
+            NextStep::Preferences(PreferencesPage::Sources),
+            NextStep::HostOverride {
+                command: permissions::host_override_command(APP_ID),
+            },
+            NextStep::HowToInstall(Tool::Umu),
+        ] {
+            assert_eq!(
+                step.reach_in_fullscreen(session),
+                StepReach::Here,
+                "{step:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn over_a_game_fullscreen_leaves_the_next_steps_for_after_it() {
+        let session = FullscreenSession {
+            over_game: true,
+            gamescope_session: false,
+        };
+        for step in [
+            NextStep::Preferences(PreferencesPage::Sources),
+            NextStep::HostOverride {
+                command: permissions::host_override_command(APP_ID),
+            },
+            NextStep::HowToInstall(Tool::Umu),
+        ] {
+            assert_eq!(
+                step.reach_in_fullscreen(session),
+                StepReach::AfterTheGame,
+                "{step:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_gamescope_session_reads_install_instructions_on_another_device() {
+        for over_game in [false, true] {
+            let session = FullscreenSession {
+                over_game,
+                gamescope_session: true,
+            };
+            assert_eq!(
+                NextStep::HowToInstall(Tool::Umu).reach_in_fullscreen(session),
+                StepReach::OnAnotherDevice
+            );
+        }
+        let session = FullscreenSession {
+            over_game: false,
+            gamescope_session: true,
+        };
+        assert_eq!(
+            NextStep::Preferences(PreferencesPage::Sources).reach_in_fullscreen(session),
+            StepReach::Here
+        );
     }
 }

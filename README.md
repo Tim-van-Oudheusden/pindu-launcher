@@ -346,6 +346,18 @@ console restarts, so the entry never restarts it by itself.
 
 Elsewhere, another distribution or the Flatpak, the entry does not show.
 
+### Library Health in Quick Access
+
+Quick Access has a **Library Health** entry, subtitled with how many problems need attention. Its level shows the
+same report as the desktop's Library Health page: **Sources**, **Launching**, **Artwork** and **Library Data**, read
+with a controller alone. Each row takes focus; a problem's row names its next step and takes it on A, closing Quick
+Access: Preferences at Sources, Preferences at the host access command, or umu-launcher's install instructions.
+
+- Over a running game the rows say the step is taken once the game has ended, since Preferences and web pages open
+  over the launcher.
+- In a gamescope session, which has no browser, umu-launcher's row shows the address to read on another device.
+- Rows the session cannot have, such as host access outside the Flatpak, are left out, never shown as errors.
+
 ### Add a Store
 
 A library with no games, such as a fresh Pindu OS, offers **Add a Store** on its empty page, in fullscreen mode and on
