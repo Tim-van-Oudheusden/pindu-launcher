@@ -51,6 +51,10 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Windows games too.** Add a Windows game, or its installer, by hand and it runs with Proton through
   [umu](https://github.com/Open-Wine-Components/umu-launcher) in a prefix of its own. Download GE-Proton and
   Proton-CachyOS builds from Preferences, and turn on MangoHud or GameMode per game.
+- **Start Safely.** When a game Pindu runs itself breaks, **Start Safely** in its page's menu, or in fullscreen's
+  options, starts it once without its wrappers, MangoHud, GameMode or its own environment variables, and keeps a log
+  as **Play with Logs** does, so a broken overlay or wrapper tells itself apart from a broken game. Its saved settings
+  stay as they are.
 - **A fullscreen mode for the couch.** A controller-first Home, library and game pages, a Quick Access panel, an
   on-screen keyboard for search and navigation sounds, with switchable designs and your own CSS
   ([Fullscreen mode](#fullscreen-mode)).
@@ -65,7 +69,8 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
 - **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
-  and import them again.
+  and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
+  beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 
 ## Game sources
 
@@ -79,7 +84,8 @@ widgets so it looks and behaves like the rest of GNOME.
 | Desktop entries and Flatpaks | Games installed as apps | On the host ([needs host access](#starting-games-on-the-host)) |
 | Added by hand | Native programs, and Windows games or installers | Native ones on the host; Windows ones with Proton in the sandbox |
 
-The importers read each launcher's data read-only and never its credentials.
+The importers read each launcher's data read-only and never its credentials. Preferences, Sources shows for each source
+the folder it was found in, when it last synced and the problems that sync ran into.
 
 ## Installing
 
@@ -165,6 +171,8 @@ Preferences.
 ### Getting around
 
 - **Move** with the D-pad or left stick, **open** with A and **go back** with B.
+- A **game page** shows the game's developer, genres and description below its buttons. Once a long description has
+  focus, Down scrolls through it and Up scrolls back to its start before moving on.
 - The **hint bar** at the bottom names the buttons that work on each screen, drawn with the app's own glyphs for the
   controller you hold.
 - **Controls** in Quick Access lists everything the buttons do, grouped into moving, the library, the panels and
@@ -309,6 +317,10 @@ ones already installed, and installs the one you pick from Flathub, all with a c
 - **Button Prompts** (there or in Preferences) picks the glyphs instead of following the controller: letters, shapes,
   or letters with A on the right. This helps under Steam Input, where every controller looks like Steam's own.
 - **Swap Confirm and Back** makes the right button confirm and the bottom one go back everywhere in fullscreen mode.
+- **Repeat Delay**, **Repeat Rate** and **Stick Dead Zone**, also in Quick Access's Controllers, set how soon and how
+  fast a held direction keeps moving focus, and how far the left stick moves before it does: a long delay for a hand
+  that lets go late, a large dead zone for a stick that drifts. They change only how the launcher moves its own focus;
+  a game receives the controller unchanged.
 - **Controls** in the menu drawer (Start or Guide) lists what the buttons can do (Select, Back, Search, Game Options,
   Menu, Quick Access and the tab and sort switches) with the button for each. Choose one and press the button to give
   it; the function that had that button takes the old one. Guide, or five seconds without a press, leaves it as it was.
@@ -581,6 +593,15 @@ so the fullscreen mode is a second presentation of the same library.
 | --- | --- |
 | [`docs/Adwaita Game Library — Main Spec.pdf`](docs/) | The product spec: scope, design and the issue plan |
 | [`docs/Research — *.pdf`](docs/) | Research behind the spec: Cartridges, Heroic, Faugus, OpenGamepadUI, Flatpak and Flathub, the GNOME platform |
+| [`docs/product-analysis.md`](docs/product-analysis.md) | The product and feature analysis behind milestones M6 to M9: workstreams, milestones and the decisions taken |
+| [`docs/game-identity.md`](docs/game-identity.md) | Game identity: grouping one game's copies across sources, with a preferred copy |
+| [`docs/library-health.md`](docs/library-health.md) | Library Health: one report on sources, launching, artwork and library data, and the first-run summary |
+| [`docs/diagnostics.md`](docs/diagnostics.md) | Diagnostics: the debugging report in About, the bug form and fullscreen mode |
+| [`docs/controller-parity.md`](docs/controller-parity.md) | Controller parity: what a console needs that only the desktop window can do today |
+| [`docs/shelves-and-metadata.md`](docs/shelves-and-metadata.md) | Shelves and metadata: saved filters, offline metadata, values with their origin, an online provider |
+| [`docs/launch-outcomes.md`](docs/launch-outcomes.md) | Launch outcomes and safe start: how each launch ended, failed-launch help, Start Safely |
+| [`docs/save-snapshots.md`](docs/save-snapshots.md) | Save snapshots of Windows games in managed prefixes, and restoring them |
+| [`docs/accessibility-polish.md`](docs/accessibility-polish.md) | Accessibility polish: text sizes, held buttons, high contrast, screen reader, navigation settings |
 | [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
 | [`docs/releasing.md`](docs/releasing.md) | How to cut a release: versions, notes, the tag and the Release workflow |
 | [`docs/ai-ops-runbook.md`](docs/ai-ops-runbook.md) | Watching, pausing and reverting agent work; CI and Release failures; the `main` ruleset |
@@ -604,6 +625,12 @@ Work is tracked in [GitHub issues](https://github.com/Tim-van-Oudheusden/pindu-l
 problems privately as [`SECURITY.md`](SECURITY.md) describes. For code, read [`CONTRIBUTING.md`](CONTRIBUTING.md): how
 to build, pick an issue, work test-first and open a pull request that passes the quality gates. AI agents follow
 [`AGENTS.md`](AGENTS.md), and everyone follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+When you report a bug, open **About Pindu launcher** from the main menu, then **Troubleshooting → Debugging
+Information**, and copy or save the report into the issue. It names the version, how the app was installed, your
+distribution and session, each source's state and game count, the sandbox permissions, the tools found, the library's
+schema version and the last sync's problems. It holds no game titles and writes your home folder as `~`; nothing is
+sent anywhere.
 
 ## Acknowledgments
 

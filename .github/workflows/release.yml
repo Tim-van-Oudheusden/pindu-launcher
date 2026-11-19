@@ -231,9 +231,32 @@ jobs:
       - name: Install and start
         run: build-aux/package-smoke.sh packages/*
 
+  # Signs build provenance (SLSA, through Sigstore) for the RPMs, the files Pindu OS installs:
+  # `gh attestation verify` then proves that this workflow built them from the tag
+  # (docs/releasing.md). It runs before publish, so no release ships an RPM without it.
+  provenance:
+    name: Build provenance for the RPMs
+    needs: packages-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: package-fedora-*
+          merge-multiple: true
+          path: packages
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: packages/*.rpm
+
   publish:
     name: Publish the GitHub release
-    needs: [version, flatpak, sources, packages-smoke]
+    needs: [version, flatpak, sources, packages-smoke, provenance]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -284,3 +307,53 @@ jobs:
             gh release create "$TAG" dist/* --verify-tag --title "Pindu launcher $VERSION" \
               --notes-file notes.md "${flags[@]}"
           fi
+
+  # A final release bumps the AUR and nixpkgs recipes through a pull request of its own, from the
+  # published SHA256SUMS (docs/releasing.md, "Distribution recipes"). A pre-release (vX.Y.Z-rc.N)
+  # never does: those recipes follow final releases only. A rerun does nothing once main's
+  # recipes build the version or the bump pull request is open.
+  recipes:
+    name: Open the AUR and nixpkgs recipe bump
+    needs: [version, publish]
+    if: ${{ !contains(needs.version.outputs.version, '-') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      # Refs the "Release X.Y.Z" issue when there is one, as the bump of #497 did by hand. A pull
+      # request opened with GITHUB_TOKEN starts no workflow, so its body asks the maintainer to
+      # close and reopen it, which runs the checks.
+      - name: Bump the recipes and open the pull request
+        run: |
+          branch="chore/recipes-$VERSION"
+          if [ -n "$(gh pr list --head "$branch" --state open --json number --jq '.[].number')" ]; then
+            echo "The bump pull request from $branch is already open."
+            exit 0
+          fi
+          # A final VERSION passed check-version.sh as X.Y.Z, so it is safe inside the jq filter.
+          issue="$(gh issue list --state all --search "\"Release $VERSION\" in:title" --json number,title \
+            --jq "[.[] | select(.title == \"Release $VERSION\")][0].number // empty")"
+          gh release download "$TAG" --pattern SHA256SUMS --dir "$RUNNER_TEMP"
+          python3 -I scripts/recipe-bump.py --body "$RUNNER_TEMP/body.md" ${issue:+--issue "$issue"} \
+            --repo-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            "$VERSION" "$RUNNER_TEMP/SHA256SUMS"
+          # No body: main's recipes already build this version.
+          [ -f "$RUNNER_TEMP/body.md" ] || exit 0
+          title="chore(packaging): bump the AUR and nixpkgs recipes to $VERSION${issue:+ (#$issue)}"
+          git switch -c "$branch"
+          git -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -q -a -m "$title" -m "From the $TAG release's SHA256SUMS.${issue:+ Refs #$issue}"
+          git push --force origin "$branch"
+          gh pr create --base main --head "$branch" --title "$title" --body-file "$RUNNER_TEMP/body.md"
