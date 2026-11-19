@@ -27,13 +27,15 @@ pub const ROLLBACK_UNIT: &str = "pindu-os-rollback.service";
 /// The os-release `ID` of Pindu OS.
 const PINDU_OS_ID: &str = "pindu-os";
 
-/// What os-release says that the System Update section needs.
+/// What os-release says that the System Update section and the debugging information need.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct OsRelease {
     /// The system's `ID`, such as `pindu-os` or `fedora`.
     pub id: Option<String>,
     /// The image's version (`IMAGE_VERSION`), such as `45.20261101.0`.
     pub image_version: Option<String>,
+    /// The system's name for display (`PRETTY_NAME`), such as `Fedora Linux 45`.
+    pub pretty_name: Option<String>,
 }
 
 impl OsRelease {
@@ -48,6 +50,7 @@ impl OsRelease {
             match key {
                 "ID" => release.id = value,
                 "IMAGE_VERSION" => release.image_version = value,
+                "PRETTY_NAME" => release.pretty_name = value,
                 _ => {}
             }
         }
@@ -504,6 +507,16 @@ mod tests {
         assert!(!release.is_pindu_os());
         assert_eq!(release.id.as_deref(), Some("fedora"));
         assert_eq!(release.image_version, None);
+    }
+
+    #[test]
+    fn os_release_gives_the_distributions_pretty_name() {
+        let release = OsRelease::parse(&fixture("os_release/fedora"));
+
+        assert_eq!(
+            release.pretty_name.as_deref(),
+            Some("Fedora Linux 45 (Workstation Edition)")
+        );
     }
 
     #[test]

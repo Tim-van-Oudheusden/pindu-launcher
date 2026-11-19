@@ -191,9 +191,11 @@ The workspace enforces the Rust for Linux lint set (`[workspace.lints]` in `Carg
 - **Prefer the platform and existing dependencies** — the standard library and the GNOME runtime cover most needs
 - **Never upgrade a major version as a side-effect** of another change; major upgrades and GNOME runtime bumps are
   their own PR
-- **Approved CI tools** (not crates; the maintainer's call like dependencies): cargo-llvm-cov 0.9.1, cargo-deny
-  0.20.2, cargo-audit 0.22.2, actionlint 1.7.12, `anthropics/claude-code-action@v1`, `yq` 4 as preinstalled on
-  GitHub's Ubuntu runners (used, not installed, by the permissions policy check and the merge queue tests),
+- **Approved CI tools** (not crates; the maintainer's call like dependencies): cargo-llvm-cov 0.9.1, cargo-mutants
+  27.1.0 (approved 2026-11-19, #485; the coverage workflow's mutants job over the pindu-core lines a pull request
+  changes), cargo-deny 0.20.2, cargo-audit 0.22.2, actionlint 1.7.12, `anthropics/claude-code-action@v1`, `yq` 4 as
+  preinstalled on GitHub's Ubuntu runners (used, not installed, by the permissions policy check and the merge queue
+  tests),
   python-dbusmock 0.38.1 with the dbus-python 1.5.1 it needs (approved 2026-11-17; installed with pip in CI's Rust
   and Meson checks for the system panel's tests in `crates/pindu-ui/tests/system_panel`, which skip without it), and
   `actions/attest-build-provenance` v4.2.2, pinned by its commit SHA (approved 2026-11-19, #553; the release

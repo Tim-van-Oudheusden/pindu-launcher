@@ -10,6 +10,7 @@ use crate::add_store_service::AddStoreService;
 use crate::audio_output_service::AudioOutputService;
 use crate::bluetooth_service::BluetoothService;
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
+use crate::diagnostics_service;
 use crate::game_dialog::GameDialog;
 use crate::game_overlay::PinduGameOverlay;
 use crate::gamepad_service::GamepadService;
@@ -963,20 +964,32 @@ impl PinduApplication {
         work(&window, &game, library, toast);
     }
 
+    /// Opens About once its debugging information is gathered, which takes a moment.
     fn show_about(&self) {
-        let about = adw::AboutDialog::builder()
-            .application_name(gettext("Pindu launcher"))
-            .application_icon(APP_ID)
-            .developer_name("Tim van Oudheusden")
-            .version(VERSION)
-            .website("https://github.com/Tim-van-Oudheusden/pindu-launcher")
-            .issue_url("https://github.com/Tim-van-Oudheusden/pindu-launcher/issues")
-            .developers(["Tim van Oudheusden"])
-            // Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-            .translator_credits(gettext("translator-credits"))
-            .license_type(gtk::License::Gpl30)
-            .build();
-        about.present(self.active_window().as_ref());
+        let steam_gamescope = self.gamescope_service().is_active();
+        let own_session = self.runs_as_own_session();
+        let app = self.downgrade();
+        glib::spawn_future_local(async move {
+            let debug_info = diagnostics_service::debug_info(steam_gamescope, own_session).await;
+            let Some(app) = app.upgrade() else {
+                return;
+            };
+            let about = adw::AboutDialog::builder()
+                .application_name(gettext("Pindu launcher"))
+                .application_icon(APP_ID)
+                .developer_name("Tim van Oudheusden")
+                .version(VERSION)
+                .website("https://github.com/Tim-van-Oudheusden/pindu-launcher")
+                .issue_url("https://github.com/Tim-van-Oudheusden/pindu-launcher/issues")
+                .developers(["Tim van Oudheusden"])
+                // Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
+                .translator_credits(gettext("translator-credits"))
+                .license_type(gtk::License::Gpl30)
+                .debug_info(debug_info)
+                .debug_info_filename("pindu-launcher-debug-info.txt")
+                .build();
+            about.present(app.active_window().as_ref());
+        });
     }
 }
 
