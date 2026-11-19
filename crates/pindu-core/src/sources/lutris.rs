@@ -8,10 +8,10 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::Connection;
 
+use super::sqlite_copy::SqliteCopy;
 use super::{ImportError, ImportedGame, ServiceRef, Snapshot};
 use crate::model::{ArtLayout, LaunchKind, Platform, Source};
 
@@ -27,9 +27,8 @@ pub fn import(root: &Path) -> Result<Snapshot, ImportError> {
         path: live.clone(),
         message,
     };
-    let copy = TempCopy::of(&live).map_err(|error| fail(error.to_string()))?;
-    let db = Connection::open_with_flags(&copy.0, OpenFlags::SQLITE_OPEN_READ_ONLY)
-        .map_err(|error| fail(error.to_string()))?;
+    let copy = SqliteCopy::of(&live, "lutris").map_err(|error| fail(error.to_string()))?;
+    let db = copy.open().map_err(|error| fail(error.to_string()))?;
     read(&db, root).map_err(|error| fail(error.to_string()))
 }
 
@@ -127,27 +126,4 @@ fn artwork(root: &Path, slug: &str) -> Vec<(ArtLayout, PathBuf)> {
     .into_iter()
     .filter(|(_, path)| path.is_file())
     .collect()
-}
-
-/// A private copy of a file in the temporary folder, removed when dropped.
-struct TempCopy(PathBuf);
-
-impl TempCopy {
-    fn of(path: &Path) -> std::io::Result<Self> {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-        let name = format!(
-            "pindu-lutris-{}-{}.db",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        );
-        let copy = Self(std::env::temp_dir().join(name));
-        std::fs::copy(path, &copy.0)?;
-        Ok(copy)
-    }
-}
-
-impl Drop for TempCopy {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.0);
-    }
 }

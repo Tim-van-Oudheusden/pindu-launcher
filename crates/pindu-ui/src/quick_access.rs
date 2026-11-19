@@ -24,7 +24,9 @@
 //! a Store `add_store`. Design and Settings are this module's: the design, its variant,
 //! Home's background blur and dim and the user's own stylesheet, then cover size,
 //! navigation sounds and their volume, exiting after a launch, Reduce Motion and Larger
-//! Text, the same settings Preferences changes.
+//! Text, the SteamGridDB key (typed hidden with the on-screen keyboard of `secret_dialog`
+//! and kept in the keyring) and Prefer SteamGridDB Art, the same settings Preferences
+//! changes.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::sync::LazyLock;
@@ -37,9 +39,11 @@ use gtk::{gio, glib};
 use pindu_core::accessibility::TEXT_SIZE_KEY;
 use pindu_core::gamepad::Intent;
 use pindu_core::gamescope::prompts::{PromptHost, prompt_host};
+use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
 use pindu_core::home::{BLUR_KEY, DIM_KEY};
 use pindu_core::keys;
 use pindu_core::model::GameId;
+use pindu_core::osk::Keyboard;
 use pindu_core::panels::{PageEntry, QuickAccessLevel, design_choices, variant_choices};
 use pindu_core::paths;
 use pindu_core::tasks::Task;
@@ -52,12 +56,14 @@ use crate::fullscreen_bluetooth::PinduBluetoothLevel;
 use crate::fullscreen_clock::Clock;
 use crate::fullscreen_network::PinduNetworkLevel;
 use crate::fullscreen_panels::step_out_of_list;
-use crate::fullscreen_performance::PerformanceSwitches;
+use crate::fullscreen_performance::{GameProton, PerformanceSwitches};
 use crate::fullscreen_playing::{PlayingCards, card_return};
 use crate::fullscreen_sound_output::PinduSoundOutputLevel;
 use crate::fullscreen_system_update::PinduSystemUpdateLevel;
 use crate::models::GameObject;
 use crate::preferences::TILE_SIZES;
+use crate::secret_dialog::ask_secret;
+use crate::steamgriddb_service;
 
 mod imp {
     use super::*;
@@ -122,6 +128,12 @@ mod imp {
         #[template_child]
         pub swap: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub repeat_delay: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub repeat_rate: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub dead_zone: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub controls_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub controls: TemplateChild<gtk::Box>,
@@ -150,6 +162,14 @@ mod imp {
         #[template_child]
         pub text_sizes: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub hold_to_confirm_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub artwork: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub steamgriddb_key_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub prefer_steamgriddb_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
         pub filters_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub filters: TemplateChild<gtk::ListBox>,
@@ -177,6 +197,10 @@ mod imp {
         pub gamemode_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub performance_note: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub proton_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub proton_builds: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub sound_output_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
@@ -218,6 +242,8 @@ mod imp {
         pub(crate) playing: OnceCell<PlayingCards>,
         /// The Performance level's switches, which the host may show elsewhere too.
         pub performance_switches: OnceCell<PerformanceSwitches>,
+        /// The Performance level's Proton build, for a game we run through Proton.
+        pub game_proton: OnceCell<GameProton>,
         /// `win.design`, `win.design-variant` and `win.sound-output`, whose states are
         /// what their levels check.
         pub design_action: OnceCell<gio::SimpleAction>,
@@ -327,6 +353,11 @@ impl PinduQuickAccess {
         ));
         self.performance_switches()
             .attach(&imp.overlay_row, &imp.gamemode_row);
+        let _ = imp.game_proton.set(GameProton::new(
+            application.library_service(),
+            &imp.proton_title,
+            &imp.proton_builds,
+        ));
         self.add_level_actions(actions);
         actions.add_action(&self.settings().create_action(TEXT_SIZE_KEY));
         self.setup_designs(application, actions);
@@ -366,6 +397,9 @@ impl PinduQuickAccess {
         imp.performance_row.set_visible(performance);
         if performance && let Some(game) = game {
             self.performance_switches().show_for(game);
+            if let Some(proton) = imp.game_proton.get() {
+                proton.show_for(game);
+            }
             imp.performance_title.set_label(
                 &gettext("Performance for {game}").replace("{game}", &game.game().title),
             );
@@ -396,6 +430,7 @@ impl PinduQuickAccess {
             Some(QuickAccessLevel::SystemUpdate) => self.show_system_update(),
             Some(QuickAccessLevel::AddStore) => self.show_add_store(),
             Some(QuickAccessLevel::Network) => self.show_network(),
+            Some(QuickAccessLevel::Settings) => self.show_steamgriddb_key(),
             _ => {}
         }
         if let Some(level) = level {
@@ -712,12 +747,18 @@ impl PinduQuickAccess {
             imp.controllers.get(),
             imp.prompts.get(),
             imp.swap.get(),
+            imp.repeat_delay.get(),
+            imp.repeat_rate.get(),
+            imp.dead_zone.get(),
             imp.sizes.get(),
             imp.switches.get(),
             imp.accessibility.get(),
             imp.text_sizes.get(),
+            imp.artwork.get(),
             imp.filters.get(),
             imp.clear_filters.get(),
+            imp.performance.get(),
+            imp.proton_builds.get(),
             bluetooth_adapter,
             bluetooth_paired,
             bluetooth_found,
@@ -748,10 +789,10 @@ impl PinduQuickAccess {
         self.add_controller(escape);
     }
 
-    /// Settings: cover size, navigation sounds and their volume, exiting after a launch and
-    /// Reduce Motion, the same settings Preferences changes, applied as they change. Text
-    /// Size chooses through its setting's action. Design's My Stylesheet is bound to its
-    /// setting too.
+    /// Settings: cover size, navigation sounds and their volume, exiting after a launch,
+    /// Reduce Motion and Hold to Confirm, the same settings Preferences changes, applied as
+    /// they change. Text Size chooses through its setting's action. Design's My Stylesheet
+    /// is bound to its setting too.
     fn setup_settings(&self) {
         let imp = self.imp();
         let settings = self.settings();
@@ -769,6 +810,17 @@ impl PinduQuickAccess {
                 "active",
             )
             .build();
+        settings
+            .bind(HOLD_TO_CONFIRM_KEY, &*imp.hold_to_confirm_row, "active")
+            .build();
+        settings
+            .bind("prefer-steamgriddb", &*imp.prefer_steamgriddb_row, "active")
+            .build();
+        imp.steamgriddb_key_row.connect_activated(glib::clone!(
+            #[weak(rename_to = quick_access)]
+            self,
+            move |_| quick_access.ask_steamgriddb_key()
+        ));
         let toggles = [
             imp.tile_small.get(),
             imp.tile_medium.get(),
@@ -1004,6 +1056,60 @@ impl PinduQuickAccess {
             .into_iter()
             .find(|choice| choice.active)
             .map(|choice| choice.id)
+    }
+
+    /// The SteamGridDB key's row: whether a key is stored, without showing it, or why the
+    /// keyring cannot be used, in which case there is nothing to type the key for.
+    fn show_steamgriddb_key(&self) {
+        let quick_access = self.downgrade();
+        glib::spawn_future_local(async move {
+            let stored = steamgriddb_service::api_key().await;
+            let Some(quick_access) = quick_access.upgrade() else {
+                return;
+            };
+            let row = &quick_access.imp().steamgriddb_key_row;
+            row.set_subtitle(&steamgriddb_service::key_status(&stored));
+            row.set_sensitive(stored.is_ok());
+        });
+    }
+
+    /// Asks for the SteamGridDB key, hidden, with the on-screen keyboard, and stores it in
+    /// the keyring; missing art is fetched once it is. Nothing is kept on Cancel or with
+    /// nothing typed.
+    fn ask_steamgriddb_key(&self) {
+        ask_secret(
+            self,
+            &gettext("SteamGridDB Key"),
+            &gettext(
+                "Type your API key from SteamGridDB's preferences. It is kept in your keyring.",
+            ),
+            Keyboard::passphrase(),
+            glib::clone!(
+                #[weak(rename_to = quick_access)]
+                self,
+                move |key: Option<String>| {
+                    let Some(key) = key.filter(|key| !key.trim().is_empty()) else {
+                        return;
+                    };
+                    glib::spawn_future_local(async move {
+                        let saved = steamgriddb_service::set_api_key(&key).await;
+                        match saved {
+                            Ok(()) => {
+                                quick_access.show_steamgriddb_key();
+                                if let Some(application) = quick_access.application() {
+                                    application
+                                        .activate_action("fetch-art", Some(&true.to_variant()));
+                                }
+                            }
+                            Err(error) => quick_access.imp().steamgriddb_key_row.set_subtitle(
+                                &gettext("The key was not saved: {error}")
+                                    .replace("{error}", &error),
+                            ),
+                        }
+                    });
+                }
+            ),
+        );
     }
 }
 

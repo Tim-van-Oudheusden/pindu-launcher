@@ -7,7 +7,7 @@
 //! its kind and the user's [`ControllerSettings`], and serves the hints and the intents
 //! alike.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
 /// A connected controller, as its backend numbers it.
@@ -459,14 +459,163 @@ pub enum GamepadEvent {
     },
 }
 
-/// How long a direction is held before it repeats (Heroic's default).
+/// How long a direction is held before it repeats by default (Heroic's default).
 pub const REPEAT_DELAY: Duration = Duration::from_millis(300);
-/// How often a held direction repeats after that.
+/// How often a held direction repeats after that by default.
 pub const REPEAT_INTERVAL: Duration = Duration::from_millis(50);
 /// How long Back is held to cancel a launch.
 pub const HOLD_DURATION: Duration = Duration::from_secs(1);
-/// How far a stick must move before it navigates.
+/// How far a stick must move before it navigates by default.
 pub const DEADZONE: f64 = 0.5;
+
+/// The GSettings key of the Repeat Delay setting.
+pub const REPEAT_DELAY_KEY: &str = "navigation-repeat-delay";
+/// The GSettings key of the Repeat Rate setting.
+pub const REPEAT_RATE_KEY: &str = "navigation-repeat-rate";
+/// The GSettings key of the Stick Dead Zone setting.
+pub const DEAD_ZONE_KEY: &str = "navigation-dead-zone";
+
+/// How long a direction is held before it repeats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RepeatDelay {
+    /// 200 ms.
+    Short,
+    /// 300 ms, Heroic's default.
+    #[default]
+    Normal,
+    /// 600 ms, for a hand that lets go late.
+    Long,
+}
+
+impl RepeatDelay {
+    /// Every choice, in the order the settings list them.
+    pub const ALL: [Self; 3] = [Self::Short, Self::Normal, Self::Long];
+
+    /// The value of the `navigation-repeat-delay` key.
+    pub fn setting(self) -> &'static str {
+        match self {
+            Self::Short => "short",
+            Self::Normal => "normal",
+            Self::Long => "long",
+        }
+    }
+
+    /// The choice a `navigation-repeat-delay` value names; Normal for any other.
+    pub fn from_setting(value: &str) -> Self {
+        Self::ALL
+            .into_iter()
+            .find(|choice| choice.setting() == value)
+            .unwrap_or_default()
+    }
+
+    /// How long a direction is held before it first repeats.
+    pub fn duration(self) -> Duration {
+        match self {
+            Self::Short => Duration::from_millis(200),
+            Self::Normal => REPEAT_DELAY,
+            Self::Long => Duration::from_millis(600),
+        }
+    }
+}
+
+/// How often a held direction repeats once it does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RepeatRate {
+    /// Every 100 ms.
+    Slow,
+    /// Every 50 ms, Heroic's default.
+    #[default]
+    Normal,
+    /// Every 30 ms.
+    Fast,
+}
+
+impl RepeatRate {
+    /// Every choice, in the order the settings list them.
+    pub const ALL: [Self; 3] = [Self::Slow, Self::Normal, Self::Fast];
+
+    /// The value of the `navigation-repeat-rate` key.
+    pub fn setting(self) -> &'static str {
+        match self {
+            Self::Slow => "slow",
+            Self::Normal => "normal",
+            Self::Fast => "fast",
+        }
+    }
+
+    /// The choice a `navigation-repeat-rate` value names; Normal for any other.
+    pub fn from_setting(value: &str) -> Self {
+        Self::ALL
+            .into_iter()
+            .find(|choice| choice.setting() == value)
+            .unwrap_or_default()
+    }
+
+    /// The time between two repeats.
+    pub fn interval(self) -> Duration {
+        match self {
+            Self::Slow => Duration::from_millis(100),
+            Self::Normal => REPEAT_INTERVAL,
+            Self::Fast => Duration::from_millis(30),
+        }
+    }
+}
+
+/// How far the left stick must move before it navigates.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DeadZone {
+    /// Past 30 % of its travel, for a light touch.
+    Small,
+    /// Past half its travel.
+    #[default]
+    Normal,
+    /// Past 70 % of its travel, for a worn stick that drifts or an unsteady hand.
+    Large,
+}
+
+impl DeadZone {
+    /// Every choice, in the order the settings list them.
+    pub const ALL: [Self; 3] = [Self::Small, Self::Normal, Self::Large];
+
+    /// The value of the `navigation-dead-zone` key.
+    pub fn setting(self) -> &'static str {
+        match self {
+            Self::Small => "small",
+            Self::Normal => "normal",
+            Self::Large => "large",
+        }
+    }
+
+    /// The choice a `navigation-dead-zone` value names; Normal for any other.
+    pub fn from_setting(value: &str) -> Self {
+        Self::ALL
+            .into_iter()
+            .find(|choice| choice.setting() == value)
+            .unwrap_or_default()
+    }
+
+    /// The deflection, from 0 to 1, a stick must pass to navigate.
+    pub fn threshold(self) -> f64 {
+        match self {
+            Self::Small => 0.3,
+            Self::Normal => DEADZONE,
+            Self::Large => 0.7,
+        }
+    }
+}
+
+/// How the launcher moves its own focus with a controller: how soon and how fast a held
+/// direction repeats, and how far the stick moves first. Only the launcher's navigation
+/// reads these; a game receives the controller as it is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Navigation {
+    /// The Repeat Delay setting.
+    pub repeat_delay: RepeatDelay,
+    /// The Repeat Rate setting.
+    pub repeat_rate: RepeatRate,
+    /// The Stick Dead Zone setting.
+    pub dead_zone: DeadZone,
+}
 
 /// A rumble: how hard the strong (low-frequency) and weak (high-frequency) motors turn,
 /// from 0 to 1, and for how long.
@@ -507,8 +656,9 @@ pub struct Intents {
     /// The connected pads, by number.
     pads: BTreeMap<DeviceId, Pad>,
     sticks: HashMap<DeviceId, [f64; 2]>,
-    /// The buttons held down, so a trigger that reports each move as a press asks once.
-    pressed: HashSet<(DeviceId, Button)>,
+    /// The buttons held down, with when each went down, so a trigger that reports each
+    /// move as a press asks once, and so a hold to confirm can tell how long it has lasted.
+    pressed: HashMap<(DeviceId, Button), Duration>,
     held: Option<Held>,
     /// A button held down that asks for an intent once held (Back's, to cancel a launch):
     /// by which device and button, that intent, and when it counts as a hold.
@@ -519,6 +669,8 @@ pub struct Intents {
     /// The device last plugged in or used, whose layout the hints show.
     active: Option<DeviceId>,
     settings: ControllerSettings,
+    /// How held directions repeat and how far the stick moves before it navigates.
+    navigation: Navigation,
 }
 
 /// The direction being held, and when it next repeats.
@@ -555,7 +707,7 @@ impl Intents {
             GamepadEvent::Disconnected { device } => {
                 self.pads.remove(&device);
                 self.sticks.remove(&device);
-                self.pressed.retain(|(holder, _)| *holder != device);
+                self.pressed.retain(|(holder, _), _| *holder != device);
                 if self.held.is_some_and(|held| held.device == device) {
                     self.held = None;
                 }
@@ -576,9 +728,10 @@ impl Intents {
                 pressed: true,
             } => {
                 self.active = Some(device);
-                if !self.pressed.insert((device, button)) {
+                if self.pressed.contains_key(&(device, button)) {
                     return None;
                 }
+                self.pressed.insert((device, button), now);
                 let (first, second) = QUICK_ACCESS_CHORD;
                 if button == first {
                     self.guide = Some((device, false));
@@ -634,7 +787,7 @@ impl Intents {
             } => {
                 let stick = self.sticks.entry(device).or_default();
                 stick[axis as usize] = value;
-                let direction = stick_direction(*stick);
+                let direction = stick_direction(*stick, self.navigation.dead_zone.threshold());
                 let held = self
                     .held
                     .filter(|held| held.device == device && held.source == Source::Stick)
@@ -659,7 +812,7 @@ impl Intents {
             device,
             source,
             direction,
-            due: now + REPEAT_DELAY,
+            due: now + self.navigation.repeat_delay.duration(),
         });
     }
 
@@ -686,7 +839,7 @@ impl Intents {
             }
             (Some(_), _) => {
                 let held = self.held.as_mut()?;
-                held.due = now + REPEAT_INTERVAL;
+                held.due = now + self.navigation.repeat_rate.interval();
                 Some(Intent::Navigate(held.direction))
             }
             _ => None,
@@ -724,6 +877,22 @@ impl Intents {
         self.settings
     }
 
+    /// How long the button asking for `intent` has been held down at `now`, on whichever
+    /// pad has held it longest; `None` while none is. A hold to confirm (`hold`) follows it.
+    pub fn held_for(&self, intent: Intent, now: Duration) -> Option<Duration> {
+        self.pressed
+            .iter()
+            .filter(|&(&(device, button), _)| self.layout(device).intent(button) == intent)
+            .map(|(_, &since)| now.saturating_sub(since))
+            .max()
+    }
+
+    /// How held directions repeat and how far the stick moves before it navigates, from
+    /// the next direction on.
+    pub fn set_navigation(&mut self, navigation: Navigation) {
+        self.navigation = navigation;
+    }
+
     /// The layout of `device` under the settings; one not yet connected reads as a generic
     /// pad.
     pub fn layout(&self, device: DeviceId) -> Layout {
@@ -738,16 +907,16 @@ impl Intents {
     /// a button ([`Capture::of`]). A button still held since before the wait is no new
     /// press: a held trigger reports each further move as another press.
     pub fn capture(&self, device: DeviceId, button: Button) -> Capture {
-        if self.pressed.contains(&(device, button)) {
+        if self.pressed.contains_key(&(device, button)) {
             return Capture::Ignore;
         }
         Capture::of(button)
     }
 }
 
-/// The direction a stick points, once it is past the deadzone: the larger deflection wins.
-fn stick_direction([x, y]: [f64; 2]) -> Option<Direction> {
-    if x.abs().max(y.abs()) <= DEADZONE {
+/// The direction a stick points, once it is past `dead_zone`: the larger deflection wins.
+fn stick_direction([x, y]: [f64; 2], dead_zone: f64) -> Option<Direction> {
+    if x.abs().max(y.abs()) <= dead_zone {
         return None;
     }
     Some(if x.abs() >= y.abs() {
@@ -1222,6 +1391,18 @@ mod tests {
     }
 
     #[test]
+    fn unplugging_a_pad_while_back_is_held_cancels_nothing() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::Xbox), ms(0));
+        intents.handle(&press(Button::East), ms(0));
+
+        intents.handle(&GamepadEvent::Disconnected { device: PAD }, ms(50));
+
+        assert_eq!(intents.next_repeat(), None);
+        assert_eq!(intents.repeat(HOLD_DURATION), None);
+    }
+
+    #[test]
     fn a_trigger_pulled_further_asks_once_until_it_is_let_go() {
         // libmanette reports every move of an axis trigger past halfway as another press.
         let mut intents = Intents::new();
@@ -1329,6 +1510,27 @@ mod tests {
         assert_eq!(intents.repeat(ms(2000)), None);
     }
 
+    #[test]
+    fn a_longer_repeat_delay_and_a_slower_rate_space_the_repeats_out() {
+        let mut intents = Intents::new();
+        intents.set_navigation(Navigation {
+            repeat_delay: RepeatDelay::Long,
+            repeat_rate: RepeatRate::Slow,
+            ..Navigation::default()
+        });
+        let down = Intent::Navigate(Direction::Down);
+
+        assert_eq!(
+            intents.handle(&press(Button::DpadDown), ms(1000)),
+            Some(down)
+        );
+        assert_eq!(intents.next_repeat(), Some(ms(1600)));
+        assert_eq!(intents.repeat(ms(1599)), None);
+        assert_eq!(intents.repeat(ms(1600)), Some(down));
+        assert_eq!(intents.next_repeat(), Some(ms(1700)));
+        assert_eq!(intents.repeat(ms(1700)), Some(down));
+    }
+
     fn stick(axis: Axis, value: f64) -> GamepadEvent {
         GamepadEvent::Axis {
             device: PAD,
@@ -1363,6 +1565,48 @@ mod tests {
         assert_eq!(intents.handle(&stick(Axis::LeftY, -0.2), ms(340)), None);
 
         assert_eq!(intents.next_repeat(), None);
+    }
+
+    #[test]
+    fn the_stick_dead_zone_sets_how_far_the_stick_moves_before_it_navigates() {
+        let right = Intent::Navigate(Direction::Right);
+        let navigation = |dead_zone| Navigation {
+            dead_zone,
+            ..Navigation::default()
+        };
+
+        let mut large = Intents::new();
+        large.set_navigation(navigation(DeadZone::Large));
+        assert_eq!(large.handle(&stick(Axis::LeftX, 0.65), ms(0)), None);
+        assert_eq!(large.handle(&stick(Axis::LeftX, 0.75), ms(10)), Some(right));
+
+        let mut small = Intents::new();
+        small.set_navigation(navigation(DeadZone::Small));
+        assert_eq!(small.handle(&stick(Axis::LeftX, 0.25), ms(0)), None);
+        assert_eq!(small.handle(&stick(Axis::LeftX, 0.35), ms(10)), Some(right));
+        // Back inside the dead zone lets go of the direction.
+        assert_eq!(small.handle(&stick(Axis::LeftX, 0.2), ms(20)), None);
+        assert_eq!(small.next_repeat(), None);
+    }
+
+    #[test]
+    fn navigation_settings_read_back_what_they_store_and_normal_for_anything_else() {
+        for delay in RepeatDelay::ALL {
+            assert_eq!(RepeatDelay::from_setting(delay.setting()), delay);
+        }
+        for rate in RepeatRate::ALL {
+            assert_eq!(RepeatRate::from_setting(rate.setting()), rate);
+        }
+        for dead_zone in DeadZone::ALL {
+            assert_eq!(DeadZone::from_setting(dead_zone.setting()), dead_zone);
+        }
+        assert_eq!(RepeatDelay::from_setting("forever"), RepeatDelay::Normal);
+        assert_eq!(RepeatRate::from_setting(""), RepeatRate::Normal);
+        assert_eq!(DeadZone::from_setting("huge"), DeadZone::Normal);
+        let normal = Navigation::default();
+        assert_eq!(normal.repeat_delay.duration(), REPEAT_DELAY);
+        assert_eq!(normal.repeat_rate.interval(), REPEAT_INTERVAL);
+        assert!((normal.dead_zone.threshold() - DEADZONE).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -1611,6 +1855,18 @@ mod tests {
 
         assert_eq!(intents.next_repeat(), None);
         assert_eq!(intents.repeat(HOLD_DURATION), None);
+    }
+
+    #[test]
+    fn the_button_that_activates_counts_how_long_it_is_held_until_let_go() {
+        let mut intents = Intents::new();
+
+        assert_eq!(intents.held_for(Intent::Activate, ms(0)), None);
+        intents.handle(&press(Button::South), ms(100));
+        assert_eq!(intents.held_for(Intent::Activate, ms(400)), Some(ms(300)));
+        assert_eq!(intents.held_for(Intent::Back, ms(400)), None);
+        intents.handle(&release(Button::South), ms(500));
+        assert_eq!(intents.held_for(Intent::Activate, ms(600)), None);
     }
 
     #[test]
