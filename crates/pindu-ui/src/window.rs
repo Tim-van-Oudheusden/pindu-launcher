@@ -1322,8 +1322,8 @@ const SORT_MODES: [(SortMode, &str); 5] = [
     (SortMode::Playtime, "playtime"),
 ];
 
-/// A landscape card for "Jump back in": the game's banner (or cover) with its title,
-/// `width`×`height` pixels.
+/// A landscape card for "Jump back in": the game's banner (or cover), cropped to fill the
+/// card, with its title, `width`×`height` pixels.
 pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::Button {
     let (art, icon) = {
         let entry = game.entry();
@@ -1331,6 +1331,8 @@ pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::
         (art, entry.art.icon.clone())
     };
     let (card, picture) = jump_card_frame(game, (width, height));
+    // Cropped rather than fitted on a blurred copy, so every card is the art alone.
+    picture.set_crop(true);
     let scale = card.scale_factor().max(1);
     picture.show(
         art,
@@ -1383,6 +1385,8 @@ pub(crate) fn jump_card_frame(
         .action_target(&game.id().as_str().to_variant())
         .css_classes(["jump-card", "card"])
         .build();
+    // The card clips its art and title to its rounded corners.
+    card.set_overflow(gtk::Overflow::Hidden);
     // Named outright: from its contents it would say the title twice, once for the art.
     let name = if pinned {
         gettext("{title}, pinned").replace("{title}", &title)
