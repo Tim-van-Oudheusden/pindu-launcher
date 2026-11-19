@@ -64,7 +64,8 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
 - **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
-  and import them again.
+  and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
+  beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 
 ## Game sources
 

@@ -19,6 +19,7 @@ pub mod game_control;
 pub mod gamepad;
 pub mod gamescope;
 pub mod grid;
+pub mod health;
 pub mod hints;
 pub mod home;
 pub mod keys;
