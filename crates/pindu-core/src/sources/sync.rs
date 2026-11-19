@@ -268,6 +268,8 @@ pub fn apply_snapshot(
                     developer: imported.developer.clone(),
                     genres: imported.genres.clone(),
                     description: imported.description.clone(),
+                    release_year: imported.year,
+                    controller_support: imported.controller_support,
                     deck_compatibility: imported.deck_compatibility,
                 },
                 now,
@@ -590,6 +592,28 @@ mod tests {
         };
         assert_eq!(origin_of("Epic Games"), Some((MetadataOrigin::User, 150)));
         assert_eq!(origin_of("Epic"), Some((MetadataOrigin::Source, 200)));
+    }
+
+    #[test]
+    fn the_sources_release_year_and_controller_support_become_its_metadata() {
+        use crate::model::ControllerSupport;
+        let (_dir, store) = temp_store();
+        let mut imported = flagged(false, false, &[]);
+        imported.year = Some(2004);
+        imported.controller_support = Some(ControllerSupport::Full);
+        apply_snapshot(&store, &snapshot(vec![imported.clone()]), 100).unwrap();
+
+        let game = store.game(&id()).unwrap().unwrap();
+        assert_eq!(game.release_year, Some(2004));
+        assert_eq!(game.controller_support, Some(ControllerSupport::Full));
+
+        imported.year = None;
+        imported.controller_support = None;
+        apply_snapshot(&store, &snapshot(vec![imported]), 200).unwrap();
+
+        let game = store.game(&id()).unwrap().unwrap();
+        assert_eq!(game.release_year, None);
+        assert_eq!(game.controller_support, None);
     }
 
     #[test]

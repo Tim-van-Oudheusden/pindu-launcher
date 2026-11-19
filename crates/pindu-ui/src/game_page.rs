@@ -19,8 +19,8 @@ use pindu_core::launch::{self, LaunchSettings, WebPage};
 use pindu_core::library::{GameCopy, PlaytimeOrigin};
 use pindu_core::manual;
 use pindu_core::model::{
-    Collection, DeckCompatibility, DeckRating, Game, GameId, LaunchConfig, LaunchKind, Source,
-    Timestamp,
+    Collection, ControllerSupport, DeckCompatibility, DeckRating, Game, GameId, LaunchConfig,
+    LaunchKind, Source, Timestamp,
 };
 use pindu_core::panels::Playing;
 use pindu_core::reading;
@@ -84,6 +84,10 @@ mod imp {
         pub developer_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub genres_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub release_year_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub controller_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub deck_row: TemplateChild<adw::ActionRow>,
         #[template_child]
@@ -296,7 +300,24 @@ impl GamePage {
         imp.developer_row
             .set_subtitle(game.developer.as_deref().unwrap_or_default());
         imp.genres_row.set_visible(!game.genres.is_empty());
-        imp.genres_row.set_subtitle(&game.genres.join(", "));
+        let genres: Vec<String> = game.genres.iter().map(|genre| genre_label(genre)).collect();
+        imp.genres_row.set_subtitle(&genres.join(", "));
+        imp.release_year_row
+            .set_visible(game.release_year.is_some());
+        imp.release_year_row.set_subtitle(
+            &game
+                .release_year
+                .map(|year| year.to_string())
+                .unwrap_or_default(),
+        );
+        imp.controller_row
+            .set_visible(game.controller_support.is_some());
+        imp.controller_row.set_subtitle(
+            &game
+                .controller_support
+                .map(controller_support_label)
+                .unwrap_or_default(),
+        );
         imp.deck_row.set_visible(game.deck_compatibility.is_some());
         imp.deck_row.set_subtitle(
             &game
@@ -307,6 +328,8 @@ impl GamePage {
         imp.about_group.set_visible(
             game.developer.is_some()
                 || !game.genres.is_empty()
+                || game.release_year.is_some()
+                || game.controller_support.is_some()
                 || game.deck_compatibility.is_some(),
         );
         imp.description_box.set_visible(game.description.is_some());
@@ -755,6 +778,32 @@ fn facts(game: &Game, playtime_secs: i64, origin: Option<PlaytimeOrigin>) -> Vec
         facts.push((gettext("Size"), glib::format_size(size as u64).to_string()));
     }
     facts
+}
+
+/// A genre as the page shows it: the genres Steam's importer names, translated; any other
+/// as its source wrote it.
+fn genre_label(genre: &str) -> String {
+    match genre {
+        "Action" => gettext("Action"),
+        "Strategy" => gettext("Strategy"),
+        "RPG" => gettext("RPG"),
+        "Casual" => gettext("Casual"),
+        "Racing" => gettext("Racing"),
+        "Sports" => gettext("Sports"),
+        "Indie" => gettext("Indie"),
+        "Adventure" => gettext("Adventure"),
+        "Simulation" => gettext("Simulation"),
+        "Massively Multiplayer" => gettext("Massively Multiplayer"),
+        other => other.to_owned(),
+    }
+}
+
+/// How well a game supports a controller, as the page shows it.
+fn controller_support_label(support: ControllerSupport) -> String {
+    match support {
+        ControllerSupport::Full => gettext("Full support"),
+        ControllerSupport::Partial => gettext("Partial support"),
+    }
 }
 
 fn fact(caption: &str, value: &str) -> gtk::Box {

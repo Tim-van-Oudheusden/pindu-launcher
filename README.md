@@ -134,6 +134,10 @@ folder it was found in, when it last synced and the problems that sync ran into.
 Play starts for a game with copies from several sources when you chose none: the installed copy from the source
 highest in the list, native copies still before Windows ones. **Move Up** and **Move Down** change it.
 
+A game's page shows the details its launcher keeps offline: its developer, genres and description from Heroic; its
+developer, release year, genres and whether it has full or partial controller support from Steam's own app cache; and
+its release year from Lutris and from Heroic's Amazon library.
+
 The Flatpak has no permission for Legendary's `~/.config/legendary` or the itch app's folder (`~/.config/itch`, or
 `~/.var/app/io.itch.itch/config/itch` for the itch Flatpak), and does not ask for one: Preferences → Sources says so,
 and **Choose…** in the source's row imports the folder you pick through the file chooser. Native packages find them
@@ -223,8 +227,9 @@ Preferences.
 ### Getting around
 
 - **Move** with the D-pad or left stick, **open** with A and **go back** with B.
-- A **game page** shows the game's developer, genres, Steam Deck rating and description below its buttons. Once a long
-  description has focus, Down scrolls through it and Up scrolls back to its start before moving on.
+- A **game page** shows the game's developer, genres, release year, controller support, Steam Deck rating and
+  description below its buttons. Once a long description has focus, Down scrolls through it and Up scrolls back to its
+  start before moving on.
 - The **hint bar** at the bottom names the buttons that work on each screen, drawn with the app's own glyphs for the
   controller you hold.
 - **Controls** in Quick Access lists everything the buttons do, grouped into moving, the library, the panels and

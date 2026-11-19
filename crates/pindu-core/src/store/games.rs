@@ -161,6 +161,8 @@ fn game_from_row(row: &Row<'_>) -> rusqlite::Result<Game> {
         launch_uri: row.get("launch_uri")?,
         genres: Vec::new(),
         description: None,
+        release_year: None,
+        controller_support: None,
         deck_compatibility: None,
         steam_launch_dialog: row.get("steam_launch_dialog")?,
     })
