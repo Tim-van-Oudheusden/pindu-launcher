@@ -92,21 +92,12 @@ widgets so it looks and behaves like the rest of GNOME.
   game's page marks each detail that came from Wikidata with **Wikidata** and the date it was fetched, and on the
   desktop a button beside it opens the game's Wikidata page.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
-- **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
-  Proton builds you ask for.
-- **Backups.** Export your collections, saved filters, favourites, hidden games, games added by hand, tracked
-  playtime, groups of copies and the developer, genres and descriptions you set to a file, and import them again.
-  Before an update changes the library's format, Pindu launcher keeps a copy of the library beside it, named for the
-  format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork,
   metadata and Proton builds you ask for.
-- **Backups.** Export your collections, saved filters, favourites, hidden games, games added by
-  hand and tracked playtime to a file, and import them again. Before an update changes the library's format, Pindu
-  launcher keeps a copy of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps
-  the two newest copies.
-- **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
-  and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
-  beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
+- **Backups.** Export your collections, saved filters, favourites, hidden games, games added by hand, tracked
+  playtime, groups of copies and the game details you set to a file, and import them again. Before an update changes
+  the library's format, Pindu launcher keeps a copy of the library beside it, named for the format it had (such as
+  `library.db.v5.bak`), and keeps the two newest copies.
 - **Save snapshots.** When a Windows game you added by hand quits normally, Pindu launcher copies its saves out of the
   prefix it made for the game into `~/Games/pindu-launcher/save-snapshots`, leaving out caches, runtimes, screenshots
   and stored logins, and keeps the last five. Any game can have save folders too: add them through the file chooser

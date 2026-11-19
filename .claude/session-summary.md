@@ -8,11 +8,18 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-19, #488/#489/#492/#493 then #497: Jump Back In cards (clip, crop, Play on hover), fullscreen grid with
-  equal 32 px gaps (`grid::centred_columns`), and Change Artwork (`artwork_dialog.rs`, paged SteamGridDB, store
-  migration 0005 `steamgriddb_matches`). 0.5.1 cut as a final release straight away: the maintainer waived the
-  pre-release and soak. Open: `hardware-check:passed` on #497 (maintainer's), and the AUR and nixpkgs bumps from the
-  release's `SHA256SUMS` plus the COPR build once it is published.
+- 2026-11-19, roadmap run: the product analysis (`docs/product-analysis.md`) became milestones M6–M9 and issues
+  #501–#559 (all labelled `hold`), plus follow-ups #565–#569, #591, #600, #606, #619, #622–#630, #638, #641. Every
+  issue was built by parallel agents and admin-merged without waiting for CI, at the maintainer's request; #654 then
+  made `main`'s CI pass. Migrations now run to 0011. Open: #546 (emulation) and #547 (external importers) wait on
+  the maintainer's decision, with spec pages in `docs/`; none of the new UI has been checked on real hardware, and
+  much of it was not looked at on screen at all. Still open from before: `hardware-check:passed` on #497.
+- Gotcha: tests that make a file unreadable with `chmod 000` pass locally and fail in CI, which runs as root. Make
+  the failure root-proof (a missing file, a symlink loop, a path past PATH_MAX). Check by running the SDK-built test
+  binary on the host under `unshare -r`. The MSRV job can be run locally with CI's own rustup-init command in the SDK.
+- Gotcha: for visual checks, gamescope headless (`gamescopectl screenshot`) is more faithful than Broadway, which
+  draws stale frames during animations and crashes when text size changes live; run a second instance under
+  `dbus-run-session` so it does not hand off to the running app.
 - Gotcha: visual checks without hardware: install a prefix build (`meson setup <dir> --prefix=<dir>/inst
   -Dprofile=development`) and run it inside the devel app's sandbox (`flatpak run --devel --command=sh
   io.github.tim_van_oudheusden.pindu-launcher-devel`), so glycin's `flatpak-spawn --sandbox` works, on

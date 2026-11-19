@@ -352,7 +352,7 @@ fn random_library(random: &mut Random) -> Library {
             library.add(source, &native_id, title)
         };
         if random.below(2) == 0 {
-            library.developer(&id, random.pick(DEVELOPERS));
+            library.developer(&id, random.pick::<&str>(DEVELOPERS));
         }
         if random.below(2) == 0 {
             library.year(&id, 2018 + random.below(3) as i32);

@@ -1180,8 +1180,6 @@ mod tests {
     use super::*;
     use crate::model::{Game, LaunchKind, Source};
 
-    use std::os::unix::fs::PermissionsExt;
-
     /// 2026-11-19 18:42:07 UTC.
     const NOW: Timestamp = 1_795_113_727;
 
@@ -1205,6 +1203,34 @@ mod tests {
             .collect();
         names.sort();
         names
+    }
+
+    /// Puts a save under `users` whose path fits there but is too long for Linux once it
+    /// is copied into a snapshot of `game_dir`, so the copy fails for any user, root too.
+    fn put_too_long_to_copy(users: &Path, game_dir: &Path) {
+        // Linux refuses a path of PATH_MAX (4096) bytes or more.
+        const PATH_MAX: usize = 4096;
+        let source = users.join("steamuser").as_os_str().len() + 1;
+        let partial = game_dir
+            .join(".2026-11-19T18-43-07Z.partial/files/steamuser")
+            .as_os_str()
+            .len()
+            + 1;
+        assert!(
+            partial >= source + 8,
+            "the snapshot's path must be the longer"
+        );
+        // The source path ends 8 bytes short of the limit; its copy runs past it.
+        let mut left = PATH_MAX - 8 - source;
+        let mut parts = Vec::new();
+        while left > 201 {
+            parts.push("a".repeat(200));
+            left -= 201;
+        }
+        parts.push("b".repeat(left));
+        let file = users.join("steamuser").join(parts.join("/"));
+        fs::create_dir_all(file.parent().unwrap()).unwrap();
+        fs::write(&file, "too long").unwrap();
     }
 
     #[test]
@@ -1364,9 +1390,9 @@ mod tests {
             )
             .unwrap(),
         );
-        let unreadable = users_dir(prefix.path()).join("steamuser/Saved Games/locked.sav");
-        fs::write(&unreadable, "locked").unwrap();
-        fs::set_permissions(&unreadable, fs::Permissions::from_mode(0o000)).unwrap();
+        // A save whose path fits in the prefix but not in the snapshot's partial folder:
+        // copying it fails for any user, root included, as CI's tests run.
+        put_too_long_to_copy(&users_dir(prefix.path()), &game_dir);
         assert!(
             take(
                 Roots::prefix(prefix.path()),
@@ -1945,8 +1971,9 @@ mod tests {
             )
             .unwrap(),
         );
-        let unreadable = second.files_dir().join("steamuser/Saved Games/new.sav");
-        fs::set_permissions(&unreadable, fs::Permissions::from_mode(0o000)).unwrap();
+        // A file the snapshot lists but no longer holds: the copy fails for any user, root
+        // included, as CI's tests run.
+        fs::remove_file(second.files_dir().join("steamuser/Saved Games/new.sav")).unwrap();
         assert!(copy_to(&second, copies.path()).is_err());
         let copy_dir = copies.path().join("celeste-1a2b");
         assert_eq!(entries(&copy_dir), ["2026-11-19T18-42-07Z"]);
@@ -2127,9 +2154,9 @@ mod tests {
         let gone = other.path().join("Unplugged drive");
         let file = other.path().join("a file");
         fs::write(&file, "x").unwrap();
+        // A folder no user can open, root included as CI's tests run: a link to itself.
         let denied = other.path().join("Locked");
-        fs::create_dir(&denied).unwrap();
-        fs::set_permissions(&denied, fs::Permissions::from_mode(0o000)).unwrap();
+        std::os::unix::fs::symlink(&denied, &denied).unwrap();
         assert_eq!(reach(folder.path()), Reach::Reachable);
         assert_eq!(reach(&gone), Reach::Gone);
         assert_eq!(reach(&file), Reach::NotAFolder);
@@ -2152,7 +2179,6 @@ mod tests {
             .map(|folder| folder.path.as_path())
             .collect();
         assert_eq!(held, [folder.path()]);
-        fs::set_permissions(&denied, fs::Permissions::from_mode(0o755)).unwrap();
     }
 
     #[test]
