@@ -22,10 +22,10 @@
 //! `fullscreen_performance`, Network `fullscreen_network`, Bluetooth `fullscreen_bluetooth`,
 //! Sound Output `fullscreen_sound_output`, System Update `fullscreen_system_update`, Library
 //! Health `fullscreen_health`, Diagnostics Report `fullscreen_report`, Add a Store
-//! `add_store`, Proton `fullscreen_proton_downloads` and Sources `fullscreen_sources`.
-//! Design and Settings are this module's: the design, its variant, Home's background blur
-//! and dim and the user's own stylesheet, then cover size, navigation sounds and their
-//! volume, exiting after a
+//! `add_store`, Proton `fullscreen_proton_downloads` and Sources `fullscreen_sources`; Add a
+//! Game opens the window's `fullscreen_add_game`. Design and Settings are this module's:
+//! the design, its variant, Home's background blur and dim and the user's own stylesheet,
+//! then cover size, navigation sounds and their volume, exiting after a
 //! launch, Reduce Motion and Larger Text, the SteamGridDB key (typed hidden with the
 //! on-screen keyboard of `secret_dialog` and kept in the keyring) and Prefer SteamGridDB
 //! Art, the same settings Preferences changes.
@@ -245,6 +245,8 @@ mod imp {
         #[template_child]
         pub proton_level: TemplateChild<PinduProtonLevel>,
         #[template_child]
+        pub add_game_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
         pub network_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub network_icon: TemplateChild<gtk::Image>,
@@ -412,13 +414,14 @@ impl PinduQuickAccess {
 
     /// Hosts the panel over a running game, before [`Self::setup`]: it leaves out the
     /// entries that need the main window, Surprise Me (it leads to a library page), Add a
-    /// Store (its flow is the main window's) and Diagnostics Report (it needs the main
-    /// window's room, and its page turns are the main window's).
+    /// Store and Add a Game (their flows are the main window's) and Diagnostics Report (it
+    /// needs the main window's room, and its page turns are the main window's).
     pub fn set_over_game(&self) {
         let imp = self.imp();
         imp.over_game.set(true);
         imp.surprise_row.set_visible(false);
         imp.add_store_row.set_visible(false);
+        imp.add_game_row.set_visible(false);
         imp.report_row.set_visible(false);
     }
 

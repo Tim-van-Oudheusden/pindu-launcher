@@ -7,6 +7,7 @@ crates/pindu-ui/src/bluetooth_service.rs
 crates/pindu-ui/src/collection_actions.rs
 crates/pindu-ui/src/file_service.rs
 crates/pindu-ui/src/fullscreen.rs
+crates/pindu-ui/src/fullscreen_add_game.rs
 crates/pindu-ui/src/fullscreen_activity.rs
 crates/pindu-ui/src/fullscreen_bindings.rs
 crates/pindu-ui/src/fullscreen_bluetooth.rs
@@ -64,6 +65,7 @@ data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in
 data/ui/add_store.blp
 data/ui/artwork_dialog.blp
 data/ui/cover_tile.blp
+data/ui/fullscreen_add_game.blp
 data/ui/fullscreen_bluetooth.blp
 data/ui/fullscreen_health.blp
 data/ui/fullscreen_network.blp

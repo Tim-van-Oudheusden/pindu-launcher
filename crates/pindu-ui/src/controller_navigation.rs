@@ -34,6 +34,7 @@ use pindu_core::panels::GameOption;
 use crate::application::PinduApplication;
 use crate::artwork_dialog::ArtworkDialog;
 use crate::fullscreen::Sound;
+use crate::fullscreen_add_game::PinduFullscreenAddGame;
 use crate::hold_progress::destructive_action;
 use crate::models::GameObject;
 use crate::save_snapshots_dialog::SaveSnapshotsDialog;
@@ -419,10 +420,14 @@ impl PinduWindow {
                 _ => menu.popdown(),
             }
         } else if let Some(dialog) = self.visible_dialog() {
-            // A dialog with pages of its own goes back to its first page before it closes.
+            // Fullscreen mode's Add Game goes back a step or up a folder, and a dialog with
+            // pages of its own back to its first page, before it closes.
             let stepped_back = dialog
-                .downcast_ref::<SaveSnapshotsDialog>()
-                .is_some_and(SaveSnapshotsDialog::go_back);
+                .downcast_ref::<PinduFullscreenAddGame>()
+                .is_some_and(PinduFullscreenAddGame::step_back)
+                || dialog
+                    .downcast_ref::<SaveSnapshotsDialog>()
+                    .is_some_and(SaveSnapshotsDialog::go_back);
             if !stepped_back {
                 dialog.close();
             }
