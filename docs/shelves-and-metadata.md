@@ -72,12 +72,41 @@ In this order, local data first:
    counts it, so it never overwrites a value already there; a value for a game the library lacks is skipped and the
    game counted as missing. This extends backup format 2 (#509), unreleased until then, so format 1 and 2 backups
    still import.
+
+   As built (#530): the desktop **Edit…** dialog (a game page's ⋮ menu) has a Details group with Developer, Genres
+   (separated by commas) and Description, filled with what the game shows; as #520 decided, fullscreen mode has no
+   edit. Saving goes through `pindu_core::metadata::edit_by_user(store, game, shown, edited, now)`, which writes user
+   values for every copy of the game's group: a field the user left as shown keeps each copy's own user value, a
+   field cleared drops the user's value so the game falls back to a provider's and then the source's, and a value the
+   game would fall back to anyway is not kept as the user's, so later syncs of it still show. Release year joins the
+   dialog once #527 moves it into this table.
 4. **An online provider, opt-in, after a spike.** The spike compares SteamGridDB, IGDB, PCGamingWiki, Wikidata and
    others on licence and terms, whether a key is needed, which store IDs it maps (which helps
    [game identity](game-identity.md)), the fields it has and its rate limits, and recommends one or none. If one is
    chosen it is off by default, a refresh is a cancellable task in Activity, nothing is fetched during an import, each
    value records its provider and time, any key lives in the keyring, and it uses the HTTP stack the app already uses
    for SteamGridDB.
+
+   As built (#529, after spike #528 chose Wikidata): **Get Metadata From Wikidata** (GSettings `wikidata-metadata`,
+   off by default) in Preferences, General, and in fullscreen Quick Access's settings shows **Refresh Metadata** in
+   the desktop main menu and in Quick Access. Only that action fetches; a sync never does. `pindu_core::wikidata`
+   looks games up by Steam app ID only, never by title: a Steam game by its own, another by the Steam ID its source
+   links it to (Lutris's `steam` service) or by a grouped Steam copy's. Hidden games and games no longer in the
+   library are left out. The IDs go out in SPARQL queries of up to 100 (`VALUES ?steam { … }`, Wikidata's `P1733`),
+   one after another, to `query.wikidata.org` through the app's soup3 stack, with a User-Agent naming the project's
+   address and the SteamGridDB client's 429 back-off (`steamgriddb::retry_delay`, following `Retry-After`). Each
+   answer gives developers (`P178`) and genres (`P136`), labelled in the UI's languages, then `en`, then `mul`; a
+   value with no label in those is left out. Developers become one value, joined with commas, genres a sorted list,
+   both stored with origin `provider` through `Store::set_metadata`, timed when they were fetched (a refresh that
+   finds the same value keeps its earlier time), so a user's value still wins and a sync leaves them alone. The
+   origin `provider` means Wikidata, the only provider. A game Wikidata has no item for keeps what it had. The run
+   is a task in Activity (and a toast with Cancel on the desktop); each batch is stored as it arrives, so a
+   cancelled or failed run keeps what it got, and the outcome is a toast and a notification.
+
+   Not done in #529: the item's QID and its cross-IDs (PCGamingWiki, IGDB, GOG, Epic, Lutris) and a link out per
+   value would need a new table, and only #504, #524, #526 and #531 add migrations, so they wait for a later issue.
+   Release year, publisher and series have no `game_metadata` field yet, and Lutris slugs are not kept, so Lutris
+   games without a Steam link are not looked up.
 
 ## Flatpak, native and Pindu OS
 

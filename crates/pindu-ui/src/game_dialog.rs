@@ -2,7 +2,8 @@
 //! Windows), folder, program, title and options here, native games whether they run on
 //! the host instead of in the Steam Linux Runtime, and Windows games their Proton build,
 //! prefix and installer, with a note when umu-launcher is missing; every game can get its
-//! own cover, banner and logo.
+//! own cover, banner and logo, and, when edited, its own developer, genres and description
+//! (`pindu_core::metadata::edit_by_user`).
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::collections::HashMap;
@@ -14,6 +15,7 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::manual::{self, ManualGame, WindowsOptions};
+use pindu_core::metadata::{self, Metadata};
 use pindu_core::model::{ArtLayout, ArtOrigin, GameId, Source};
 use pindu_core::paths::{default_library_db_path, default_user_art_dir};
 use pindu_core::pe::{self, Icon};
@@ -112,6 +114,18 @@ mod imp {
         pub hero_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub logo_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub details_group: TemplateChild<adw::PreferencesGroup>,
+        #[template_child]
+        pub developer_row: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub genres_row: TemplateChild<adw::EntryRow>,
+        #[template_child]
+        pub description_group: TemplateChild<adw::PreferencesGroup>,
+        #[template_child]
+        pub description_view: TemplateChild<gtk::TextView>,
+        /// The details of the game being edited as the dialog first showed them, once read.
+        pub shown_details: RefCell<Option<Metadata>>,
         pub mode: RefCell<Mode>,
         pub library: OnceCell<LibraryService>,
         /// The chosen game folder, as the host sees it (for native games run on the host).
@@ -217,6 +231,11 @@ mod imp {
                     None,
                 ))
                 .expect("constructed once");
+            self.description_view.buffer().connect_changed(glib::clone!(
+                #[weak]
+                dialog,
+                move |_| dialog.update_save_button()
+            ));
         }
     }
     impl WidgetImpl for GameDialog {}
@@ -242,7 +261,8 @@ impl GameDialog {
         dialog
     }
 
-    /// A dialog that edits a game: everything for a game added by hand, its art for others.
+    /// A dialog that edits a game: everything for a game added by hand, its details and
+    /// art for others.
     pub fn edit(library: &LibraryService, id: &GameId, title: &str) -> Self {
         let dialog: Self = glib::Object::new();
         let imp = dialog.imp();
@@ -256,6 +276,8 @@ impl GameDialog {
         imp.game_title.replace(title.to_owned());
         imp.save_button.set_label(&gettext("_Save"));
         imp.game_group.set_visible(manual);
+        imp.details_group.set_visible(true);
+        imp.description_group.set_visible(true);
         dialog.load(id.clone(), manual);
         dialog
     }
@@ -268,7 +290,8 @@ impl GameDialog {
         self.imp().toast_overlay.add_toast(adw::Toast::new(message));
     }
 
-    /// Reads the stored form and which layouts have user art, off the main thread.
+    /// Reads the stored form, the details the game shows and which layouts have user art,
+    /// off the main thread.
     fn load(&self, id: GameId, manual: bool) {
         let dialog = self.downgrade();
         glib::spawn_future_local(async move {
@@ -286,17 +309,24 @@ impl GameDialog {
                     .filter(|art| art.origin == ArtOrigin::User)
                     .map(|art| art.layout)
                     .collect::<Vec<_>>();
-                Ok::<_, String>((form, user_art))
+                let details = store
+                    .game(&id)
+                    .map_err(|e| e.to_string())?
+                    .map(|game| Metadata::of(&game));
+                Ok::<_, String>((form, user_art, details))
             })
             .await;
             let Some(dialog) = dialog.upgrade() else {
                 return;
             };
             match read {
-                Ok(Ok((form, user_art))) => {
+                Ok(Ok((form, user_art, details))) => {
                     dialog.imp().user_art.replace(user_art);
                     if let Some(form) = form {
                         dialog.fill(&form);
+                    }
+                    if let Some(details) = details {
+                        dialog.fill_details(&details);
                     }
                     dialog.show_art_state();
                 }
@@ -324,6 +354,38 @@ impl GameDialog {
             Some(form.folder.clone()),
             Some(form.executable.clone()),
         );
+    }
+
+    /// Shows the details the game shows, as the user can edit them.
+    fn fill_details(&self, details: &Metadata) {
+        let imp = self.imp();
+        imp.developer_row
+            .set_text(details.developer.as_deref().unwrap_or_default());
+        imp.genres_row.set_text(&details.genres.join(", "));
+        imp.description_view
+            .buffer()
+            .set_text(details.description.as_deref().unwrap_or_default());
+        imp.shown_details.replace(Some(self.typed_details()));
+    }
+
+    /// The details as the rows hold them.
+    fn typed_details(&self) -> Metadata {
+        let imp = self.imp();
+        let buffer = imp.description_view.buffer();
+        let (start, end) = buffer.bounds();
+        Metadata::typed(
+            &imp.developer_row.text(),
+            &imp.genres_row.text(),
+            &buffer.text(&start, &end, false),
+        )
+    }
+
+    /// The details as the dialog showed them and as the user left them, when the user
+    /// changed them.
+    fn changed_details(&self) -> Option<(Metadata, Metadata)> {
+        let shown = self.imp().shown_details.borrow().clone()?;
+        let edited = self.typed_details();
+        (edited != shown).then_some((shown, edited))
     }
 
     fn is_windows(&self) -> bool {
@@ -675,7 +737,9 @@ impl GameDialog {
             Mode::Add | Mode::Edit { manual: true, .. } => self
                 .form()
                 .is_some_and(|form| !form.title.trim().is_empty()),
-            Mode::Edit { manual: false, .. } => !imp.art.borrow().is_empty(),
+            Mode::Edit { manual: false, .. } => {
+                !imp.art.borrow().is_empty() || self.changed_details().is_some()
+            }
         }
     }
 
@@ -862,12 +926,13 @@ impl GameDialog {
         }
     }
 
-    /// Writes the game and art changes off the main thread, then closes.
+    /// Writes the game, details and art changes off the main thread, then closes.
     fn save(&self) {
         let imp = self.imp();
         let mode = imp.mode.borrow().clone();
         let form = self.form();
         let art: Vec<(ArtLayout, ArtChange)> = imp.art.borrow().clone().into_iter().collect();
+        let details = self.changed_details();
         // A program's icon is only kept for Windows games, whose programs carry one.
         let icon = form
             .as_ref()
@@ -878,8 +943,10 @@ impl GameDialog {
         let defaults = proton_launch::defaults();
         let dialog = self.downgrade();
         glib::spawn_future_local(async move {
-            let saved =
-                gio::spawn_blocking(move || save_to_store(mode, form, icon, art, defaults)).await;
+            let saved = gio::spawn_blocking(move || {
+                save_to_store(mode, form, icon, art, details, defaults)
+            })
+            .await;
             let Some(dialog) = dialog.upgrade() else {
                 return;
             };
@@ -903,13 +970,15 @@ impl GameDialog {
     }
 }
 
-/// Stores the dialog's changes; returns whether a game was added. Fullscreen mode's Add
-/// Game (`fullscreen_add_game`) stores its games through it too.
+/// Stores the dialog's changes, with `details` as the dialog showed them and as the user
+/// left them when the user changed them; returns whether a game was added. Fullscreen
+/// mode's Add Game (`fullscreen_add_game`) stores its games through it too.
 pub(crate) fn save_to_store(
     mode: Mode,
     form: Option<ManualGame>,
     icon: Option<Icon>,
     art: Vec<(ArtLayout, ArtChange)>,
+    details: Option<(Metadata, Metadata)>,
     defaults: Defaults,
 ) -> Result<bool, String> {
     let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
@@ -947,6 +1016,10 @@ pub(crate) fn save_to_store(
             ArtChange::Remove => manual::remove_user_art(&store, &id, layout),
         }
         .map_err(|error| error.to_string())?;
+    }
+    if let Some((shown, edited)) = details {
+        metadata::edit_by_user(&store, &id, &shown, &edited, now)
+            .map_err(|error| error.to_string())?;
     }
     Ok(added)
 }

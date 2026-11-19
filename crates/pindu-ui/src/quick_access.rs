@@ -70,6 +70,7 @@ use crate::models::GameObject;
 use crate::preferences::TILE_SIZES;
 use crate::secret_dialog::ask_secret;
 use crate::steamgriddb_service;
+use crate::wikidata_service;
 
 mod imp {
     use super::*;
@@ -103,6 +104,8 @@ mod imp {
         pub activity_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub refresh_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub refresh_metadata_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub surprise_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
@@ -187,6 +190,10 @@ mod imp {
         pub steamgriddb_key_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub prefer_steamgriddb_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub metadata: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub wikidata_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub filters_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
@@ -862,6 +869,7 @@ impl PinduQuickAccess {
             imp.duplicates.get(),
             imp.text_sizes.get(),
             imp.artwork.get(),
+            imp.metadata.get(),
             imp.filters.get(),
             imp.genres.get(),
             imp.clear_filters.get(),
@@ -945,6 +953,17 @@ impl PinduQuickAccess {
             .build();
         settings
             .bind("prefer-steamgriddb", &*imp.prefer_steamgriddb_row, "active")
+            .build();
+        settings
+            .bind(wikidata_service::SETTINGS_KEY, &*imp.wikidata_row, "active")
+            .build();
+        settings
+            .bind(
+                wikidata_service::SETTINGS_KEY,
+                &*imp.refresh_metadata_row,
+                "visible",
+            )
+            .get_only()
             .build();
         imp.steamgriddb_key_row.connect_activated(glib::clone!(
             #[weak(rename_to = quick_access)]
