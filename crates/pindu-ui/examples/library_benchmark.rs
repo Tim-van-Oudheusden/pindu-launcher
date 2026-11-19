@@ -48,6 +48,7 @@ fn generated_games() -> Vec<LibraryEntry> {
                 playtime_secs: 0,
                 playtime_origin: None,
                 collections: Vec::new(),
+                copies: Vec::new(),
             }
         })
         .collect()

@@ -294,3 +294,27 @@ fn loading_works_out_each_groups_playtime_from_the_stored_figures() {
     );
     assert_eq!(summaries[0].last_played, Some(40));
 }
+
+#[test]
+fn a_change_to_a_grouped_game_reaches_every_copy() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = Store::open(&dir.path().join("library.db")).unwrap();
+    let steam = installed(Source::Steam, "1");
+    let gog = game(Source::HeroicGog, "celeste");
+    let loner = game(Source::Desktop, "loner");
+    for game in [&steam, &gog, &loner] {
+        store.insert_game(game).unwrap();
+    }
+    store
+        .create_group(&[steam.id.clone(), gog.id.clone()])
+        .unwrap();
+
+    assert_eq!(
+        copies_of(&store, &gog.id).unwrap(),
+        [gog.id.clone(), steam.id.clone()]
+    );
+    assert_eq!(
+        copies_of(&store, &loner.id).unwrap(),
+        std::slice::from_ref(&loner.id)
+    );
+}
