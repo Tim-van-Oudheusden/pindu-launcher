@@ -55,7 +55,7 @@ use crate::fullscreen_bluetooth::PinduBluetoothLevel;
 use crate::fullscreen_clock::Clock;
 use crate::fullscreen_network::PinduNetworkLevel;
 use crate::fullscreen_panels::step_out_of_list;
-use crate::fullscreen_performance::PerformanceSwitches;
+use crate::fullscreen_performance::{GameProton, PerformanceSwitches};
 use crate::fullscreen_playing::{PlayingCards, card_return};
 use crate::fullscreen_sound_output::PinduSoundOutputLevel;
 use crate::fullscreen_system_update::PinduSystemUpdateLevel;
@@ -201,6 +201,10 @@ mod imp {
         #[template_child]
         pub performance_note: TemplateChild<gtk::Label>,
         #[template_child]
+        pub proton_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub proton_builds: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub sound_output_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub sound_output_subtitle: TemplateChild<gtk::Label>,
@@ -241,6 +245,8 @@ mod imp {
         pub(crate) playing: OnceCell<PlayingCards>,
         /// The Performance level's switches, which the host may show elsewhere too.
         pub performance_switches: OnceCell<PerformanceSwitches>,
+        /// The Performance level's Proton build, for a game we run through Proton.
+        pub game_proton: OnceCell<GameProton>,
         /// `win.design`, `win.design-variant` and `win.sound-output`, whose states are
         /// what their levels check.
         pub design_action: OnceCell<gio::SimpleAction>,
@@ -350,6 +356,11 @@ impl PinduQuickAccess {
         ));
         self.performance_switches()
             .attach(&imp.overlay_row, &imp.gamemode_row);
+        let _ = imp.game_proton.set(GameProton::new(
+            application.library_service(),
+            &imp.proton_title,
+            &imp.proton_builds,
+        ));
         self.add_level_actions(actions);
         self.setup_designs(application, actions);
         self.setup_status(application);
@@ -389,6 +400,9 @@ impl PinduQuickAccess {
         imp.performance_row.set_visible(performance);
         if performance && let Some(game) = game {
             self.performance_switches().show_for(game);
+            if let Some(proton) = imp.game_proton.get() {
+                proton.show_for(game);
+            }
             imp.performance_title.set_label(
                 &gettext("Performance for {game}").replace("{game}", &game.game().title),
             );
@@ -750,6 +764,8 @@ impl PinduQuickAccess {
             imp.artwork.get(),
             imp.filters.get(),
             imp.clear_filters.get(),
+            imp.performance.get(),
+            imp.proton_builds.get(),
             bluetooth_adapter,
             bluetooth_paired,
             bluetooth_found,

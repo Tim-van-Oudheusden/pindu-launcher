@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 19:46+0100\n"
+"POT-Creation-Date: 2026-11-19 19:49+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1066,13 +1066,13 @@ msgstr ""
 msgid "View on PCGamingWiki"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_performance.rs:197 data/ui/game_page.blp:326
+#: crates/pindu-ui/src/fullscreen_performance.rs:281 data/ui/game_page.blp:326
 #: data/ui/preferences.blp:200 data/ui/quick_access.blp:1504
 #: data/ui/window.blp:600
 msgid "MangoHud"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_performance.rs:199
+#: crates/pindu-ui/src/fullscreen_performance.rs:283
 #: crates/pindu-ui/src/game_page.rs:311
 msgid "MangoHud is not installed"
 msgstr ""
@@ -1839,7 +1839,7 @@ msgid "The key was not saved: {error}"
 msgstr ""
 
 #: crates/pindu-ui/src/preferences.rs:669
-#: crates/pindu-ui/src/quick_access.rs:999
+#: crates/pindu-ui/src/quick_access.rs:1015
 msgid "Your fullscreen.css, over the design"
 msgstr ""
 
@@ -1893,31 +1893,33 @@ msgid_plural "{count} Problems"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/proton_choice.rs:96
-#, rust-format
-msgid "Newest ({proton})"
-msgstr ""
-
-#: crates/pindu-ui/src/proton_choice.rs:98
-msgid "Newest"
-msgstr ""
-
-#: crates/pindu-ui/src/proton_choice.rs:100
-#, rust-format
-msgid "Default ({proton})"
-msgstr ""
-
-#: crates/pindu-ui/src/proton_choice.rs:102
-msgid "Default"
-msgstr ""
-
-#: crates/pindu-ui/src/proton_choice.rs:106
+#: crates/pindu-ui/src/proton_choice.rs:82
 msgid ""
 "No Proton found. Install one on the Proton page of Preferences, or through "
 "Steam."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_choice.rs:142
+#: crates/pindu-ui/src/proton_choice.rs:166
+#, rust-format
+msgid "Newest ({proton})"
+msgstr ""
+
+#: crates/pindu-ui/src/proton_choice.rs:168
+msgid "Newest"
+msgstr ""
+
+#: crates/pindu-ui/src/proton_choice.rs:170
+#, rust-format
+msgid "Default ({proton})"
+msgstr ""
+
+#: crates/pindu-ui/src/proton_choice.rs:172
+msgid "Default"
+msgstr ""
+
+#. / The label of a chosen build that is not on this machine, by its internal name.
+
+#: crates/pindu-ui/src/proton_choice.rs:185
 #, rust-format
 msgid "{proton} (not installed)"
 msgstr ""
@@ -2119,28 +2121,28 @@ msgstr ""
 msgid "Preparing…"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:393
+#: crates/pindu-ui/src/quick_access.rs:407
 #, rust-format
 msgid "Performance for {game}"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:1001
+#: crates/pindu-ui/src/quick_access.rs:1017
 #, rust-format
 msgid "Create {path} to restyle fullscreen mode"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:1075 data/ui/quick_access.blp:1362
+#: crates/pindu-ui/src/quick_access.rs:1091 data/ui/quick_access.blp:1362
 msgid "SteamGridDB Key"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:1077
+#: crates/pindu-ui/src/quick_access.rs:1093
 msgid ""
 "Type your API key from SteamGridDB's preferences. It is kept in your keyring."
 msgstr ""
 
 #. / Why Design cannot apply a design written for a newer style contract.
 
-#: crates/pindu-ui/src/quick_access.rs:1141
+#: crates/pindu-ui/src/quick_access.rs:1157
 msgid "Needs a newer Pindu launcher"
 msgstr ""
 
@@ -3268,6 +3270,7 @@ msgstr ""
 
 #: data/ui/game_dialog.blp:116 data/ui/game_page.blp:295
 #: data/ui/preferences.blp:164 data/ui/preferences.blp:212
+#: data/ui/quick_access.blp:1517
 msgid "Proton"
 msgstr ""
 
@@ -3354,7 +3357,7 @@ msgstr ""
 msgid "Ask Steam which of the game’s launch options to use"
 msgstr ""
 
-#: data/ui/game_page.blp:291 data/ui/quick_access.blp:1515
+#: data/ui/game_page.blp:291 data/ui/quick_access.blp:1538
 msgid "Changes apply the next time the game starts."
 msgstr ""
 
