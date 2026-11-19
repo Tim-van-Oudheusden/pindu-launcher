@@ -37,6 +37,7 @@ use crate::system_power_service::SystemPowerService;
 use crate::system_update_service::SystemUpdateService;
 use crate::task_service::TaskService;
 use crate::watch_service::WatchService;
+use crate::wikidata_service;
 use crate::window::PinduWindow;
 use pindu_core::accessibility::{LEGACY_LARGE_TEXT_KEY, TEXT_SIZE_KEY, migrated_text_size};
 use pindu_core::backup::ImportSummary;
@@ -50,6 +51,7 @@ use pindu_core::notifications::{Kind, Target};
 use pindu_core::panels::Playing;
 use pindu_core::sources::location::HostDirs;
 use pindu_core::steamgriddb::{self, RunNotice};
+use pindu_core::wikidata::{self, RunNotice as WikidataNotice};
 
 mod imp {
     use std::cell::{OnceCell, RefCell};
@@ -74,6 +76,8 @@ mod imp {
         /// Another fetch asked for during a run, which follows it; `true` when the user
         /// asked for it.
         pub fetch_art_again: std::cell::Cell<Option<bool>>,
+        /// Whether metadata is being refreshed from Wikidata.
+        pub refreshing_metadata: std::cell::Cell<bool>,
         /// A game `--launch` asked for when this is the first instance.
         pub pending_launch: RefCell<Option<String>>,
         /// Whether `--fullscreen` asked for the window in fullscreen mode.
@@ -719,6 +723,10 @@ impl PinduApplication {
                 app.fetch_missing_art(asked.and_then(bool::from_variant).unwrap_or(false));
             })
             .build();
+        // Refreshes metadata from Wikidata, which the user asked for.
+        let refresh_metadata_action = gio::ActionEntry::builder("refresh-metadata")
+            .activate(move |app: &Self, _, _| app.refresh_metadata())
+            .build();
         self.add_action_entries([
             quit_action,
             about_action,
@@ -742,7 +750,18 @@ impl PinduApplication {
             pcgamingwiki_action,
             fullscreen_action,
             fetch_art_action,
+            refresh_metadata_action,
         ]);
+        // Refresh Metadata is there only while Wikidata metadata is on.
+        if let Some(action) = self
+            .lookup_action("refresh-metadata")
+            .and_downcast::<gio::SimpleAction>()
+        {
+            gio::Settings::new(APP_ID)
+                .bind(wikidata_service::SETTINGS_KEY, &action, "enabled")
+                .get_only()
+                .build();
+        }
     }
 
     /// Opens Preferences over the active window.
@@ -805,6 +824,62 @@ impl PinduApplication {
                 app.fetch_missing_art(asked);
             }
         });
+    }
+
+    /// Refreshes the library's metadata from Wikidata, while it is on in Preferences and
+    /// one refresh at a time. It runs only when the user asks, never after an import; a
+    /// toast with Cancel stays up while it runs, and it says how it went in a toast and a
+    /// notification.
+    fn refresh_metadata(&self) {
+        let on = gio::Settings::new(APP_ID).boolean(wikidata_service::SETTINGS_KEY);
+        if !on || self.imp().refreshing_metadata.replace(true) {
+            return;
+        }
+        let app = self.clone();
+        glib::spawn_future_local(async move {
+            let mut progress = None;
+            let run = wikidata_service::refresh_metadata(app.task_service(), |task| {
+                let toast = adw::Toast::builder()
+                    .title(gettext("Getting metadata from Wikidata…"))
+                    .button_label(gettext("Cancel"))
+                    .timeout(0)
+                    .build();
+                toast.connect_button_clicked(glib::clone!(
+                    #[weak]
+                    app,
+                    move |_| app.task_service().cancel(task)
+                ));
+                app.add_window_toast(&toast);
+                progress = Some(toast);
+            })
+            .await;
+            if let Some(toast) = progress {
+                toast.dismiss();
+            }
+            app.imp().refreshing_metadata.set(false);
+            let Some(run) = run else { return };
+            if run.updated > 0 {
+                app.library_service().reload();
+            }
+            if let Some(notice) = wikidata::run_notice(&run) {
+                let message = metadata_notice_message(notice);
+                app.add_window_toast(&adw::Toast::new(&message));
+                let kind = match notice {
+                    WikidataNotice::Unreachable => Kind::MetadataFailed,
+                    _ => Kind::Metadata,
+                };
+                // A name, so it is not translated.
+                app.notification_service()
+                    .post(kind, &message, "Wikidata", None);
+            }
+        });
+    }
+
+    /// Shows `toast` in the active window, if there is one.
+    fn add_window_toast(&self, toast: &adw::Toast) {
+        if let Some(window) = self.active_window().and_downcast::<PinduWindow>() {
+            window.add_toast(toast.clone());
+        }
     }
 
     /// Posts what the last sync changed: one notification for the games it added and one
@@ -1115,6 +1190,23 @@ fn art_notice_message(notice: RunNotice) -> String {
         RunNotice::NoneFound => gettext("No new artwork found"),
         RunNotice::KeyRejected => gettext("SteamGridDB did not accept the key"),
         RunNotice::Unreachable => gettext("Could not reach SteamGridDB"),
+    }
+}
+
+/// What a Wikidata refresh tells the user.
+fn metadata_notice_message(notice: WikidataNotice) -> String {
+    match notice {
+        WikidataNotice::Updated(games) => ngettext(
+            "Updated metadata for one game",
+            "Updated metadata for {count} games",
+            games as u32,
+        )
+        .replace("{count}", &games.to_string()),
+        WikidataNotice::NoneFound => gettext("Wikidata has no metadata for these games"),
+        WikidataNotice::NothingToLookUp => {
+            gettext("No game has a Steam app ID to look up on Wikidata")
+        }
+        WikidataNotice::Unreachable => gettext("Could not reach Wikidata"),
     }
 }
 

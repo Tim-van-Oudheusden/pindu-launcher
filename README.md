@@ -82,6 +82,13 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Your artwork.** Covers, banners and logos from your launchers, from your own files, or from
   [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring. **Change
   Artwork** on a game's page, in both modes, pages through every SteamGridDB image of each kind.
+- **Your details.** **Edit…** in a game's page menu sets its developer, genres and description; what you change is
+  kept when the library is imported again, and clearing a field goes back to the launcher's.
+- **Metadata from Wikidata, if you want it.** Turn on **Get Metadata From Wikidata** in Preferences (or in Quick
+  Access's settings), then **Refresh Metadata** in the main menu or in Quick Access looks your games up on
+  [Wikidata](https://www.wikidata.org) by their Steam app ID and keeps their developer and genres, labelled in your
+  language where Wikidata has it. It is off by default, runs only when you ask, never during an import, and can be
+  cancelled in Activity. Details your launchers give stay underneath, and details you enter yourself come first.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
@@ -89,6 +96,15 @@ widgets so it looks and behaves like the rest of GNOME.
   playtime, groups of copies and the developer, genres and descriptions you set to a file, and import them again.
   Before an update changes the library's format, Pindu launcher keeps a copy of the library beside it, named for the
   format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
+- **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork,
+  metadata and Proton builds you ask for.
+- **Backups.** Export your collections, saved filters, favourites, hidden games, games added by
+  hand and tracked playtime to a file, and import them again. Before an update changes the library's format, Pindu
+  launcher keeps a copy of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps
+  the two newest copies.
+- **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
+  and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
+  beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 - **Save snapshots.** When a Windows game you added by hand quits normally, Pindu launcher copies its saves out of the
   prefix it made for the game into `~/Games/pindu-launcher/save-snapshots`, leaving out caches, runtimes, screenshots
   and stored logins, and keeps the last five. **Save Snapshots…** in the game page's menu, or Save Snapshots in
@@ -264,7 +280,15 @@ Guide + A never also opens the menu drawer.
   restarting or powering off. Quick Access opens on them while one is unread.
 - **Activity:** a running library sync, SteamGridDB artwork fetch, Proton download, or save snapshot or restore, with
   its progress. Artwork fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
+- **Notifications** from this session: games a sync added or found missing, artwork fetched or not, metadata refreshed
+  or not, Proton downloads, games that need a permission, a Bluetooth device that did not pair, connect, disconnect or
+  go, a rollback or restart the system refused, a network that could not be joined, and a program that kept the
+  machine from suspending, restarting or powering off. Quick Access opens on them while one is unread.
+- **Activity:** a running library sync, SteamGridDB artwork fetch, Wikidata metadata refresh, Proton download or save
+  snapshot, with its progress. Artwork fetches, metadata refreshes and Proton downloads can be cancelled; a cancelled
+  download leaves nothing behind, and a cancelled refresh keeps what it had stored.
 - **Refresh Library** reads your launchers again, offline like every sync.
+- **Refresh Metadata**, while Wikidata metadata is on, asks Wikidata for your games' developer and genres.
 - **Surprise Me** opens the page of an installed game picked at random, never the same one twice in a row, so you
   still choose whether to play.
 - **Design** switches the fullscreen design (see [Styling fullscreen mode](#styling-fullscreen-mode)).
@@ -292,6 +316,7 @@ Guide + A never also opens the menu drawer.
 - **Artwork:** your SteamGridDB key, typed hidden with the on-screen keyboard (Show reveals it) and kept in the system
   keyring, never in settings or files; the row says whether a key is stored, or that the keyring cannot be used and
   why. Missing art is fetched once a key is saved. **Prefer SteamGridDB Art** is here too.
+- **Metadata:** **Get Metadata From Wikidata**, the same switch as in Preferences, which shows **Refresh Metadata**.
 - **Sound Output**, subtitled with the output in use, lists the outputs PipeWire has (speakers, a television over
   HDMI, a receiver, a Bluetooth headset) with a check on the one in use. Choose one to make it the default; WirePlumber
   keeps the choice after a restart, and games that follow the default move to it. It reads the outputs with `pw-dump`
@@ -709,7 +734,7 @@ flowchart LR
   store --> services
   logic --> services
   services -->|"OpenURI portal,<br/>host spawn, umu"| games["Games"]
-  services -.->|"only when asked"| online["SteamGridDB,<br/>Proton releases"]
+  services -.->|"only when asked"| online["SteamGridDB, Wikidata,<br/>Proton releases"]
 ```
 
 Everything that can be decided without GTK lives in `crates/pindu-core` and is tested with plain `cargo test`. The
@@ -791,6 +816,7 @@ records how each of a game's last five launches ended ([Launch outcomes](docs/la
   [GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom) and
   [Proton-CachyOS](https://github.com/CachyOS/proton-cachyos), which run the Windows games.
 - [SteamGridDB](https://www.steamgriddb.com), for community artwork.
+- [Wikidata](https://www.wikidata.org), for game metadata (CC0).
 
 ## Disclaimer
 

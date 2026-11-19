@@ -604,7 +604,7 @@ impl PinduFullscreenAddGame {
         let dialog = self.downgrade();
         glib::spawn_future_local(async move {
             let saved = gio::spawn_blocking(move || {
-                save_to_store(Mode::Add, Some(form), icon, Vec::new(), defaults)
+                save_to_store(Mode::Add, Some(form), icon, Vec::new(), None, defaults)
             })
             .await;
             let Some(dialog) = dialog.upgrade() else {
