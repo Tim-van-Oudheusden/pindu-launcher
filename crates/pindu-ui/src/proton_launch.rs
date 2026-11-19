@@ -13,7 +13,8 @@
 //!
 //! "Play with Logs" and "Start Safely" keep umu's output, and a Windows game's Proton log,
 //! in the game's log (see `log_service`). After a Windows game in a prefix Pindu manages
-//! exits cleanly, its saves are snapshotted (see `save_service`).
+//! exits cleanly, its saves are snapshotted, and it does not start while a snapshot is
+//! being restored (see `save_service`).
 
 use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
@@ -57,6 +58,13 @@ pub fn play(
     start: Start,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
+    if save_service::restoring(&game.id) {
+        // Translators: {title} is a game's title.
+        let message = gettext("The saves of “{title}” are being restored: start it once done")
+            .replace("{title}", &game.title);
+        toast(adw::Toast::new(&message));
+        return;
+    }
     if explain_missing_umu(app, window, &game.title) {
         return;
     }
