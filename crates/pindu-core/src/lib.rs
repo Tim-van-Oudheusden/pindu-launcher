@@ -14,6 +14,7 @@ pub mod clock;
 pub mod controllers;
 pub mod controls;
 pub mod custom_style;
+pub mod diagnostics;
 pub mod focus;
 pub mod game_control;
 pub mod gamepad;
