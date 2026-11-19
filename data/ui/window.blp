@@ -658,6 +658,23 @@ template $PinduWindow: Adw.ApplicationWindow {
                   orientation: vertical;
                   spacing: 12;
 
+                  // Why the game's last launch failed, and the next steps that exist
+                  // for it; Up from the first action reaches them.
+                  Label options_failure {
+                    visible: false;
+                    wrap: true;
+                    xalign: 0;
+                  }
+
+                  ListBox options_steps {
+                    selection-mode: none;
+                    visible: false;
+
+                    styles [
+                      "navigation-sidebar",
+                    ]
+                  }
+
                   ListBox options_list {
                     selection-mode: none;
 

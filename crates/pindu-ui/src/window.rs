@@ -190,6 +190,10 @@ mod imp {
         #[template_child]
         pub options_stack: TemplateChild<gtk::Stack>,
         #[template_child]
+        pub options_failure: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub options_steps: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub options_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub options_collections: TemplateChild<gtk::ListBox>,
@@ -258,6 +262,9 @@ mod imp {
         pub options_game: RefCell<Option<GameObject>>,
         /// The options the sheet lists for that game, in its rows' order.
         pub game_options: RefCell<Vec<GameOption>>,
+        /// Why the sheet's game last failed to launch, whose steps its failure list shows
+        /// in its rows' order.
+        pub options_failure_explanation: RefCell<Option<pindu_core::failed_launch::Explanation>>,
         /// The games the sheet's Merge With level lists, in its rows' order.
         pub merge_candidates: RefCell<Vec<GameId>>,
         /// The widget that had focus before a panel opened, to give it back after.
@@ -451,7 +458,19 @@ impl PinduWindow {
                 }
             })
             .build();
-        self.add_action_entries([search]);
+        // A launch's log, `(game ID, log name)`: the next step after a failed launch.
+        let open_launch_log = gio::ActionEntry::builder("open-launch-log")
+            .parameter_type(Some(glib::VariantTy::new("(ss)").expect("a valid type")))
+            .activate(|window: &Self, _, target| {
+                let Some((id, name)) = target.and_then(<(String, String)>::from_variant) else {
+                    return;
+                };
+                if let Ok(id) = id.parse() {
+                    window.open_launch_log(id, name);
+                }
+            })
+            .build();
+        self.add_action_entries([search, open_launch_log]);
     }
 
     /// Adds a `win.<name>` action that takes a game ID.
@@ -557,18 +576,41 @@ impl PinduWindow {
             let Some(window) = window.upgrade() else {
                 return;
             };
-            let Some(path) = latest else {
-                window.add_toast(adw::Toast::new(&gettext(
+            match latest {
+                Some(path) => window.open_log_file(path),
+                None => window.add_toast(adw::Toast::new(&gettext(
                     "No logs yet: start the game with Play with Logs",
-                )));
+                ))),
+            }
+        });
+    }
+
+    /// Opens the log named `name` of one launch of the game with `id`, the next step after
+    /// a failed launch, in the user's text editor.
+    fn open_launch_log(&self, id: GameId, name: String) {
+        let window = self.downgrade();
+        glib::spawn_future_local(async move {
+            let path = gio::spawn_blocking(move || log_service::launch_log(&id, &name))
+                .await
+                .ok()
+                .flatten();
+            let Some(window) = window.upgrade() else {
                 return;
             };
-            let launcher = gtk::FileLauncher::new(Some(&gio::File::for_path(path)));
-            launcher.launch(Some(&window), gio::Cancellable::NONE, |result| {
-                if let Err(error) = result {
-                    glib::g_warning!("pindu", "Could not open the log: {error}");
-                }
-            });
+            match path {
+                Some(path) => window.open_log_file(path),
+                None => window.add_toast(adw::Toast::new(&gettext("The log is gone"))),
+            }
+        });
+    }
+
+    /// Opens the log at `path` in the user's text editor.
+    fn open_log_file(&self, path: std::path::PathBuf) {
+        let launcher = gtk::FileLauncher::new(Some(&gio::File::for_path(path)));
+        launcher.launch(Some(self), gio::Cancellable::NONE, |result| {
+            if let Err(error) = result {
+                glib::g_warning!("pindu", "Could not open the log: {error}");
+            }
         });
     }
 

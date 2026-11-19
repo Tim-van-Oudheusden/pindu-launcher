@@ -1,10 +1,12 @@
 //! The game page: hero art with the logo or title, Play with default focus, a ⋮ menu, a
-//! facts row, the About group, the description and the Launch group: for games we run,
-//! their launch settings; for store games, a read-only summary. In fullscreen mode it
+//! facts row, why the last launch failed with a button per next step (see
+//! `failed_launch`), the About group, the description and the Launch group: for games we
+//! run, their launch settings; for store games, a read-only summary. In fullscreen mode it
 //! shows hero, logo, a large Play, Favourite, Add to Collection and Options (both opening
-//! the options sheet), a Playing Now card while the game runs, a launch summary, the About
-//! group and a description a controller scrolls through, with the starting screen over the
-//! page while Play starts the game.
+//! the options sheet, which lists the next steps), a Playing Now card while the game runs,
+//! a launch summary, why the last launch failed, the About group and a description a
+//! controller scrolls through, with the starting screen over the page while Play starts
+//! the game.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::PathBuf;
@@ -14,6 +16,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
+use pindu_core::failed_launch::Explanation;
 use pindu_core::gamepad::Direction;
 use pindu_core::launch::{self, LaunchSettings, WebPage};
 use pindu_core::library::{GameCopy, PlaytimeOrigin};
@@ -26,11 +29,14 @@ use pindu_core::panels::Playing;
 use pindu_core::reading;
 use pindu_core::saves;
 
+use crate::application::PinduApplication;
 use crate::collection_actions::collection_menu;
+use crate::failed_launch;
 use crate::group_actions::group_menu;
 use crate::launch_service::launcher_name;
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
+use crate::outcome_service;
 use crate::permission_service;
 use crate::proton_choice::{FirstChoice, ProtonChoice};
 use crate::proton_launch;
@@ -76,6 +82,8 @@ mod imp {
         pub favourite_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub facts: TemplateChild<adw::WrapBox>,
+        #[template_child]
+        pub failure_group: TemplateChild<adw::PreferencesGroup>,
         #[template_child]
         pub copies_group: TemplateChild<adw::PreferencesGroup>,
         #[template_child]
@@ -136,6 +144,13 @@ mod imp {
         pub prefix: RefCell<Option<PathBuf>>,
         /// Set while the rows show stored settings, so only the user's changes are saved.
         pub filling: Cell<bool>,
+        /// Why the game's last launch failed, and its next steps, once read.
+        pub failure: RefCell<Option<Explanation>>,
+        /// The failure group's step buttons, in the desktop window.
+        pub failure_rows: RefCell<Vec<adw::ButtonRow>>,
+        /// The application, and its handler that reads the last failure again whenever
+        /// a launch of the game is recorded.
+        pub recorded_handler: RefCell<Option<(PinduApplication, glib::SignalHandlerId)>>,
     }
 
     #[glib::object_subclass]
@@ -195,6 +210,9 @@ mod imp {
                 for handler in handlers {
                     object.disconnect(handler);
                 }
+            }
+            if let Some((application, handler)) = self.recorded_handler.take() {
+                application.disconnect(handler);
             }
         }
     }
@@ -377,6 +395,7 @@ impl GamePage {
             entry.art.cover.clone(),
             entry.art.logo.clone(),
         );
+        let game_id = game.id.clone();
         drop(entry);
         let page = self.downgrade();
         glib::spawn_future_local(async move {
@@ -398,6 +417,20 @@ impl GamePage {
                 imp.title.set_visible(false);
             }
         });
+        if let Some(application) = gio::Application::default().and_downcast::<PinduApplication>() {
+            let id = game_id;
+            let handler = application.connect_launch_recorded(glib::clone!(
+                #[weak(rename_to = page)]
+                self,
+                move |recorded: &GameId| {
+                    if *recorded == id {
+                        page.load_failure();
+                    }
+                }
+            ));
+            imp.recorded_handler.replace(Some((application, handler)));
+        }
+        self.load_failure();
     }
 }
 
@@ -445,6 +478,73 @@ impl GamePage {
             }
         }
         self.show_playing(self.game().map_or(Playing::No, |object| object.playing()));
+        self.show_failure();
+    }
+
+    /// Reads why the game's last launch failed, if it did, and shows it.
+    fn load_failure(&self) {
+        let Some(game) = self.game().map(|object| object.game().clone()) else {
+            return;
+        };
+        let page = self.downgrade();
+        glib::spawn_future_local(async move {
+            let failure = outcome_service::last_failure(&game).await;
+            if let Some(page) = page.upgrade() {
+                page.imp().failure.replace(failure);
+                page.show_failure();
+            }
+        });
+    }
+
+    /// Shows why the game's last launch failed: in the desktop window with a button for
+    /// each next step, in fullscreen mode with a pointer to the options sheet, which lists
+    /// them; or hides the group when it did not fail.
+    fn show_failure(&self) {
+        let imp = self.imp();
+        for row in imp.failure_rows.take() {
+            imp.failure_group.remove(&row);
+        }
+        let failure = imp.failure.borrow();
+        let (Some(failure), Some(object)) = (failure.as_ref(), self.game()) else {
+            imp.failure_group.set_visible(false);
+            return;
+        };
+        let game = object.game();
+        let reason = failed_launch::reason_text(&failure.reason, &game);
+        let fullscreen = imp.fullscreen.get();
+        let description = if fullscreen && !failure.steps.is_empty() {
+            format!("{reason}\n{}", gettext("Options lists what to try next"))
+        } else {
+            reason
+        };
+        imp.failure_group.set_description(Some(&description));
+        if !fullscreen {
+            let mut rows = Vec::with_capacity(failure.steps.len());
+            for &step in &failure.steps {
+                let row = adw::ButtonRow::builder()
+                    .title(failed_launch::step_label(step))
+                    .build();
+                match failed_launch::step_action(step, &game.id, failure.log.as_deref()) {
+                    Some((action, target)) => {
+                        row.set_action_name(Some(action));
+                        row.set_action_target_value(target.as_ref());
+                    }
+                    None => {
+                        row.connect_activated(glib::clone!(
+                            #[weak(rename_to = page)]
+                            self,
+                            move |_| {
+                                page.imp().proton_row.grab_focus();
+                            }
+                        ));
+                    }
+                }
+                imp.failure_group.add(&row);
+                rows.push(row);
+            }
+            imp.failure_rows.replace(rows);
+        }
+        imp.failure_group.set_visible(true);
     }
 
     /// Shows the starting screen with `status` ("Starting…") and, when `cancel`, its
