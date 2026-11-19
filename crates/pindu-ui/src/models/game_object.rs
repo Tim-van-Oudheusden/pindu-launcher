@@ -7,7 +7,7 @@ use gtk::glib;
 use gtk::glib::ParamSpec;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use pindu_core::library::{ArtSet, LibraryEntry, PlaytimeOrigin, SearchKey, SortKey};
+use pindu_core::library::{ArtSet, GameCopy, LibraryEntry, PlaytimeOrigin, SearchKey, SortKey};
 use pindu_core::model::{Game, GameId};
 use pindu_core::panels::Playing;
 
@@ -25,6 +25,8 @@ pub struct Entry {
     pub playtime_origin: Option<PlaytimeOrigin>,
     /// IDs of the collections holding the game.
     pub collections: Vec<i64>,
+    /// A group's copies, the preferred one first; empty for a game in no group.
+    pub copies: Vec<GameCopy>,
     /// The key searches match the title against.
     pub search_key: SearchKey,
     /// The key the library sorts by.
@@ -41,6 +43,7 @@ impl Entry {
             playtime_secs: entry.playtime_secs,
             playtime_origin: entry.playtime_origin,
             collections: entry.collections,
+            copies: entry.copies,
         }
     }
 }
@@ -215,6 +218,7 @@ impl GameObject {
                 && old.playtime_secs == entry.playtime_secs
                 && old.playtime_origin == entry.playtime_origin
                 && old.collections == entry.collections
+                && old.copies == entry.copies
             {
                 return false;
             }

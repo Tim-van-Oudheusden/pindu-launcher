@@ -181,6 +181,15 @@ pub fn group_last_played<'a>(members: impl IntoIterator<Item = &'a Game>) -> Opt
         .max()
 }
 
+/// The games a change to `game` is written to: every copy of its group, ordered by ID, or
+/// the game alone when it is in no group. Favourite, hidden, collections and removal are a
+/// view on a group, so the shells write them to each copy.
+pub fn copies_of(store: &Store, game: &GameId) -> store::Result<Vec<GameId>> {
+    Ok(store
+        .game_group_of(game)?
+        .map_or_else(|| vec![game.clone()], |group| group.members))
+}
+
 /// A group with what the library shows for it as one game.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GroupSummary {
