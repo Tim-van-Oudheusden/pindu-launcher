@@ -1,9 +1,9 @@
 //! The Preferences dialog: General (covers, launching, controller navigation, button prompts
 //! and the confirm and back swap, permissions in the Flatpak), Sources (import, folder,
 //! sidebar, and the last sync with its problems), Artwork (SteamGridDB), Windows games
-//! (default Proton, prefix folder and tools), Proton (downloaded builds and releases to
-//! install) and Fullscreen (start-up, sounds and their volume, accessibility, and the user's
-//! own stylesheet through the style service).
+//! (default Proton, prefix folder, tools and the folder save snapshots are copied to),
+//! Proton (downloaded builds and releases to install) and Fullscreen (start-up, sounds and
+//! their volume, accessibility, and the user's own stylesheet through the style service).
 //! Everything is GSettings, except the SteamGridDB key, which lives in the keyring,
 //! each source's import switch and folder, which live with the library's other source state,
 //! and the Proton builds, which are folders in our tools folder.
@@ -33,6 +33,7 @@ use crate::permission_service;
 use crate::proton_choice::{FirstChoice, ProtonChoice};
 use crate::proton_downloads_page::ProtonDownloadsPage;
 use crate::proton_launch;
+use crate::save_service;
 use crate::session_service;
 use crate::sources::{bind_source_order, source_icon, source_name, sync_age_text};
 use crate::steamgriddb_service;
@@ -118,6 +119,10 @@ mod imp {
         #[template_child]
         pub reset_prefix_folder_button: TemplateChild<gtk::Button>,
         #[template_child]
+        pub save_copy_folder_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub reset_save_copy_folder_button: TemplateChild<gtk::Button>,
+        #[template_child]
         pub default_mangohud_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub default_gamemode_row: TemplateChild<adw::SwitchRow>,
@@ -176,6 +181,20 @@ mod imp {
         fn reset_prefix_folder(&self) {
             let _ = self.obj().settings().set_string("prefix-folder", "");
             self.obj().show_prefix_folder();
+        }
+
+        #[template_callback]
+        fn choose_save_copy_folder(&self) {
+            self.obj().choose_save_copy_folder();
+        }
+
+        #[template_callback]
+        fn reset_save_copy_folder(&self) {
+            let _ = self
+                .obj()
+                .settings()
+                .set_string(save_service::COPY_FOLDER_KEY, "");
+            self.obj().show_save_copy_folder();
         }
 
         #[template_callback]
@@ -325,6 +344,7 @@ mod imp {
                 .set(downloads)
                 .expect("constructed once");
             self.obj().show_prefix_folder();
+            self.obj().show_save_copy_folder();
 
             // Outside Flatpak there is no sandbox, so games always start on this computer.
             self.permissions_group
@@ -608,6 +628,51 @@ impl PreferencesDialog {
                     .settings()
                     .set_string("prefix-folder", &path.to_string_lossy());
                 dialog.show_prefix_folder();
+            }
+        });
+    }
+
+    /// Shows the folder save snapshots are copied to, as the host names it.
+    fn show_save_copy_folder(&self) {
+        let imp = self.imp();
+        let Some(folder) = save_service::copy_folder() else {
+            imp.save_copy_folder_row
+                .set_subtitle(&gettext("Snapshots stay only on this computer"));
+            imp.reset_save_copy_folder_button.set_visible(false);
+            return;
+        };
+        imp.save_copy_folder_row
+            .set_subtitle(&folder.display().to_string());
+        imp.reset_save_copy_folder_button.set_visible(true);
+        let row = imp.save_copy_folder_row.downgrade();
+        glib::spawn_future_local(async move {
+            let shown = file_service::host_path(&gio::File::for_path(&folder)).await;
+            if let (Some(row), Some(shown)) = (row.upgrade(), shown)
+                && save_service::copy_folder().as_ref() == Some(&folder)
+            {
+                row.set_subtitle(&shown.display().to_string());
+            }
+        });
+    }
+
+    /// Picks the folder save snapshots are copied to. The path the sandbox sees is the one
+    /// kept, as the copies are written from inside it; Preferences shows the host's.
+    fn choose_save_copy_folder(&self) {
+        let chooser = gtk::FileDialog::builder()
+            .title(gettext("Choose a Folder for Save Snapshots"))
+            .modal(true)
+            .build();
+        let root = self.root().and_downcast::<gtk::Window>();
+        let dialog = self.downgrade();
+        glib::spawn_future_local(async move {
+            let Ok(folder) = chooser.select_folder_future(root.as_ref()).await else {
+                return;
+            };
+            if let (Some(dialog), Some(path)) = (dialog.upgrade(), folder.path()) {
+                let _ = dialog
+                    .settings()
+                    .set_string(save_service::COPY_FOLDER_KEY, &path.to_string_lossy());
+                dialog.show_save_copy_folder();
             }
         });
     }

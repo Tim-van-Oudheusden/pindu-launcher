@@ -25,6 +25,7 @@ use crate::add_store::PinduAddStoreLevel;
 use crate::application::PinduApplication;
 use crate::artwork_dialog::ArtworkDialog;
 use crate::config::APP_ID;
+use crate::duplicates_page::DuplicatesPage;
 use crate::fullscreen::NavigationSounds;
 use crate::fullscreen_clock::Clock;
 use crate::game_page::GamePage;
@@ -129,6 +130,8 @@ mod imp {
         #[template_child]
         pub hide_button: TemplateChild<gtk::Button>,
         #[template_child]
+        pub merge_selection_button: TemplateChild<gtk::Button>,
+        #[template_child]
         pub collection_button: TemplateChild<gtk::MenuButton>,
         #[template_child]
         pub content_stack: TemplateChild<gtk::Stack>,
@@ -172,6 +175,10 @@ mod imp {
         pub options_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub options_collections: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub options_merge: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub options_copies: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub options_performance: TemplateChild<gtk::ListBox>,
         #[template_child]
@@ -233,6 +240,8 @@ mod imp {
         pub options_game: RefCell<Option<GameObject>>,
         /// The options the sheet lists for that game, in its rows' order.
         pub game_options: RefCell<Vec<GameOption>>,
+        /// The games the sheet's Merge With level lists, in its rows' order.
+        pub merge_candidates: RefCell<Vec<GameId>>,
         /// The widget that had focus before a panel opened, to give it back after.
         pub focus_before_panel: glib::WeakRef<gtk::Widget>,
         /// The top bar's clock.
@@ -360,7 +369,11 @@ impl PinduWindow {
         let library_health = gio::ActionEntry::builder("library-health")
             .activate(|window: &Self, _, _| window.show_library_health())
             .build();
-        self.add_action_entries([back, library_health]);
+        // The main menu's Duplicates: the suggestions and automatic groups to review.
+        let duplicates = gio::ActionEntry::builder("review-duplicates")
+            .activate(|window: &Self, _, _| window.show_duplicates())
+            .build();
+        self.add_action_entries([back, library_health, duplicates]);
 
         let sort_mode = gio::SimpleAction::new_stateful(
             "sort-mode",
@@ -408,6 +421,7 @@ impl PinduWindow {
         self.add_game_action("open-log", Self::open_log);
 
         self.setup_collection_actions();
+        self.setup_group_actions();
 
         let search = gio::ActionEntry::builder("search")
             .activate(|window: &Self, _, _| {
@@ -465,6 +479,22 @@ impl PinduWindow {
             return;
         }
         navigation_view.push(&HealthPage::new(application.health_service()));
+    }
+
+    /// Pushes the Duplicates page, or goes back to it when it is open.
+    fn show_duplicates(&self) {
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return;
+        };
+        let navigation_view = &self.imp().navigation_view;
+        if let Some(page) = navigation_view.find_page("duplicates") {
+            navigation_view.pop_to_page(&page);
+            return;
+        }
+        navigation_view.push(&DuplicatesPage::new(
+            application.library_service(),
+            application.sync_service(),
+        ));
     }
 
     /// Shows the open game page's launch settings again, after the Edit dialog saved.

@@ -132,6 +132,11 @@
       <summary>Prefix folder</summary>
       <description>The folder new Windows games get their own prefix in. Empty for ~/Games/pindu-launcher/prefixes.</description>
     </key>
+    <key name="save-copy-folder" type="s">
+      <default>''</default>
+      <summary>Folder for copies of save snapshots</summary>
+      <description>The folder, picked through the file chooser, that every new save snapshot is also copied to, as the sandbox reaches it. Empty to keep snapshots only in ~/Games/pindu-launcher/save-snapshots.</description>
+    </key>
     <key name="default-mangohud" type="b">
       <default>false</default>
       <summary>MangoHud for new Windows games</summary>
@@ -223,6 +228,11 @@
       <default>false</default>
       <summary>SteamGridDB prompt shown</summary>
       <description>Whether the window has offered, once, to set up a SteamGridDB API key for game art.</description>
+    </key>
+    <key name="first-sync-summary-shown" type="b">
+      <default>false</default>
+      <summary>First sync summary shown</summary>
+      <description>Whether the summary of what the library's first sync found has been dismissed, after which it never shows again.</description>
     </key>
     <key name="last-backup" type="x">
       <default>0</default>

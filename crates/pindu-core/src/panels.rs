@@ -43,14 +43,19 @@ pub enum DrawerLevel {
     Controls,
 }
 
-/// What the options sheet shows: the game's actions, or its collections to add it to or
-/// take it out of.
+/// What the options sheet shows: the game's actions, or one of the lists an action leads
+/// to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptionsLevel {
     /// The game's actions.
     Main,
     /// The collections to add the game to or take it out of.
     Collections,
+    /// The other games to merge the game with, likely copies first (see
+    /// [`crate::game_groups::merge_candidates`]).
+    Merge,
+    /// A group's copies, to choose the one Play starts.
+    Copies,
 }
 
 /// What the Quick Access panel shows: its entries, or the list one of them leads to.
@@ -110,11 +115,14 @@ pub enum QuickAccessLevel {
     /// then the source order a game's copies follow, each source with Move Up and Move Down
     /// (see [`crate::game_groups::source_order`]).
     Sources,
+    /// The duplicate suggestions to accept or dismiss, and the groups made automatically,
+    /// to undo (see [`crate::duplicates::review`]).
+    Duplicates,
 }
 
 impl QuickAccessLevel {
     /// Every level, the entries first.
-    pub const ALL: [Self; 19] = [
+    pub const ALL: [Self; 20] = [
         Self::Main,
         Self::Notifications,
         Self::Activity,
@@ -134,6 +142,7 @@ impl QuickAccessLevel {
         Self::ReportLog,
         Self::Proton,
         Self::Sources,
+        Self::Duplicates,
     ];
 
     /// The name the level goes by: its page of the panel's stack, and what a row asks for
@@ -159,6 +168,7 @@ impl QuickAccessLevel {
             Self::ReportLog => "report-log",
             Self::Proton => "proton",
             Self::Sources => "sources",
+            Self::Duplicates => "duplicates",
         }
     }
 
@@ -415,6 +425,13 @@ pub enum GameOption {
     Collections,
     /// Change the game's artwork, from SteamGridDB or a file.
     ChangeArtwork,
+    /// Lead to the other games, to merge the game with one as copies of one game
+    /// ([`OptionsLevel::Merge`]).
+    MergeWith,
+    /// Lead to a group's copies, to choose the one Play starts ([`OptionsLevel::Copies`]).
+    PreferredCopy,
+    /// Split a group into its games again, remembering that they are not the same game.
+    Split,
     /// Hide the game.
     Hide,
     /// Show the hidden game again.
@@ -453,6 +470,25 @@ pub fn game_options(game: &Game, playing: Playing) -> Vec<GameOption> {
     .into_iter()
     .flatten()
     .collect()
+}
+
+/// The options sheet's actions for `game`, as [`game_options`] lists them with Merge With
+/// after Change Artwork, and, for a group of `copies` copies (0 for a game in no group),
+/// Preferred Copy and Split after it.
+pub fn sheet_options(game: &Game, playing: Playing, copies: usize) -> Vec<GameOption> {
+    let mut options = game_options(game, playing);
+    let at = options
+        .iter()
+        .position(|option| *option == GameOption::ChangeArtwork)
+        .map_or(options.len(), |index| index + 1);
+    let grouped = copies > 1;
+    let grouping = [
+        Some(GameOption::MergeWith),
+        grouped.then_some(GameOption::PreferredCopy),
+        grouped.then_some(GameOption::Split),
+    ];
+    options.splice(at..at, grouping.into_iter().flatten());
+    options
 }
 
 /// A design the Quick Access panel offers, or Adwaita (no design, `id` empty).
@@ -649,6 +685,20 @@ mod tests {
         );
         let mut panels = Panels::new();
         panels.show(Panel::QuickAccess(QuickAccessLevel::Sources));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), quick_access());
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), None);
+    }
+
+    #[test]
+    fn duplicates_is_a_level_of_its_own_that_b_steps_back_from() {
+        assert_eq!(
+            QuickAccessLevel::from_name("duplicates"),
+            Some(QuickAccessLevel::Duplicates)
+        );
+        let mut panels = Panels::new();
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Duplicates));
         assert!(panels.handle(Intent::Back, PAGE));
         assert_eq!(panels.open(), quick_access());
         assert!(panels.handle(Intent::Back, PAGE));
@@ -1124,6 +1174,31 @@ mod tests {
         assert_eq!(game_options(&lutris, Playing::No)[..2], [Play, StartSafely]);
         assert!(!game_options(&lutris, Playing::Started).contains(&StartSafely));
         assert!(!game_options(&steam, Playing::No).contains(&StartSafely));
+    }
+
+    #[test]
+    fn every_game_offers_merging_after_its_artwork_and_a_group_its_copies_and_a_split() {
+        use GameOption::*;
+        let steam = game(Source::Steam, LaunchKind::StoreUri);
+
+        assert_eq!(
+            sheet_options(&steam, Playing::No, 0),
+            [
+                Play,
+                AddToFavourites,
+                Collections,
+                ChangeArtwork,
+                MergeWith,
+                Hide,
+                OpenInLauncher,
+                ProtonDb,
+                PcGamingWiki
+            ]
+        );
+        assert_eq!(
+            sheet_options(&steam, Playing::No, 2)[3..7],
+            [ChangeArtwork, MergeWith, PreferredCopy, Split]
+        );
     }
 
     fn theme(id: &str, name: &str, contract: u64) -> Theme {

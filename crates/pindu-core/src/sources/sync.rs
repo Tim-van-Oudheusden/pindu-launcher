@@ -9,9 +9,10 @@ use super::{
     steam,
 };
 use crate::duplicates;
+use crate::metadata::Metadata;
 use crate::model::{
-    ArtOrigin, Artwork, Game, GameId, ImportedPlaytime, Source, SourceDetails, SourceState,
-    Timestamp,
+    ArtOrigin, Artwork, Game, GameId, ImportedPlaytime, MetadataOrigin, Source, SourceDetails,
+    SourceState, Timestamp,
 };
 use crate::store::{self, Store};
 
@@ -259,6 +260,17 @@ pub fn apply_snapshot(
                     }
                 }
             }
+            // A sync writes the source's values only; the user's and a provider's stay.
+            store.set_metadata(
+                &id,
+                MetadataOrigin::Source,
+                &Metadata {
+                    developer: imported.developer.clone(),
+                    genres: imported.genres.clone(),
+                    description: imported.description.clone(),
+                },
+                now,
+            )?;
             replace_source_art(store, &id, imported)?;
             store.set_source_details(
                 &id,
@@ -301,12 +313,12 @@ pub fn apply_snapshot(
     })
 }
 
-/// Copies the fields the source owns onto a game, which the source currently lists.
+/// Copies the fields the source owns onto a game, which the source currently lists. Its
+/// metadata is the source's to set too, but through [`Store::set_metadata`].
 fn refresh(game: &mut Game, imported: &ImportedGame) {
     game.missing_since = None;
     game.title.clone_from(&imported.title);
     game.sort_title.clone_from(&imported.title);
-    game.developer.clone_from(&imported.developer);
     game.platform = imported.platform;
     game.installed = imported.installed;
     game.install_path.clone_from(&imported.install_path);
@@ -314,8 +326,6 @@ fn refresh(game: &mut Game, imported: &ImportedGame) {
     game.last_played_at = game.last_played_at.max(imported.last_played_at);
     game.launch_kind = imported.launch_kind;
     game.launch_uri.clone_from(&imported.launch_uri);
-    game.genres.clone_from(&imported.genres);
-    game.description.clone_from(&imported.description);
 }
 
 fn replace_source_art(store: &Store, id: &GameId, imported: &ImportedGame) -> store::Result<()> {
@@ -542,6 +552,43 @@ mod tests {
             game.launch_uri.as_deref(),
             Some("heroic://launch?appName=UT2004")
         );
+    }
+
+    #[test]
+    fn a_sync_changes_only_the_sources_metadata() {
+        use crate::metadata::Metadata;
+        use crate::model::MetadataOrigin;
+        let (_dir, store) = temp_store();
+        let mut imported = flagged(false, false, &[]);
+        imported.developer = Some("Digital Extremes".into());
+        imported.genres = vec!["Shooter".into()];
+        apply_snapshot(&store, &snapshot(vec![imported.clone()]), 100).unwrap();
+        let mine = Metadata {
+            developer: Some("Epic Games".into()),
+            ..Metadata::default()
+        };
+        store
+            .set_metadata(&id(), MetadataOrigin::User, &mine, 150)
+            .unwrap();
+        imported.developer = Some("Epic".into());
+        imported.genres = vec!["Arena shooter".into()];
+        imported.description = Some("Fast".into());
+
+        apply_snapshot(&store, &snapshot(vec![imported]), 200).unwrap();
+
+        let game = store.game(&id()).unwrap().unwrap();
+        assert_eq!(game.developer.as_deref(), Some("Epic Games"));
+        assert_eq!(game.genres, ["Arena shooter"]);
+        assert_eq!(game.description.as_deref(), Some("Fast"));
+        let values = store.metadata_values(&id()).unwrap();
+        let origin_of = |text: &str| {
+            values
+                .iter()
+                .find(|v| v.value == crate::metadata::FieldValue::Developer(text.into()))
+                .map(|v| (v.origin, v.updated_at))
+        };
+        assert_eq!(origin_of("Epic Games"), Some((MetadataOrigin::User, 150)));
+        assert_eq!(origin_of("Epic"), Some((MetadataOrigin::Source, 200)));
     }
 
     #[test]

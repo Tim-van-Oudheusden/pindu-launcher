@@ -27,8 +27,14 @@ In this order, local data first:
    in it. Saving is offered while a toggle or a search narrows a view other than Hidden or another saved filter:
    **Save Filter…** in the desktop filter row and in fullscreen Quick Access's Filters, which name it after what it
    shows. The suggestions offered are **Native Games** and **Windows Games**; the others need a filter that does not
-   exist yet (never played, added recently, no longer listed, needs a permission). Backups do not carry a saved
-   filter's filter yet.
+   exist yet (never played, added recently, no longer listed, needs a permission).
+
+   Backups (#600) carry each saved filter as a collection entry with no games and a `filter` beside it: its view,
+   toggles and search, with a view of a collection naming that collection, since IDs differ between libraries.
+   Importing makes it a saved filter again, first making the plain collection it views if the library lacks one. A
+   name the library already has keeps what it is here: a plain collection does not become a saved filter, and a saved
+   filter gains no stored games. A filter whose view this version does not know imports as an empty plain collection.
+   This extends backup format 2 (#509), unreleased until then, so format 1 and 2 backups still import.
 2. **Metadata the launchers already hold.** A spike lists, per source, the fields available offline and how reliable
    they are in real libraries: release year, genres, controller support and Steam Deck compatibility from Steam's
    binary `appinfo.vdf`, which the Steam importer already parses, and `year` from Lutris's `pga.db`. The fields it
@@ -37,6 +43,18 @@ In this order, local data first:
    Reading prefers the user's value, then a provider's, then the source's; a sync changes source values only. The user
    can edit developer, genres, description and release year from the desktop game page (and from fullscreen mode if
    #520 says a console needs it), and that value survives syncs and refreshes.
+
+   As built (#526): `game_metadata` (migration 0008) holds one row per game, field (`developer`, `genres`,
+   `description`) and origin (`source`, `provider`, `user`) with the value and when that origin last changed it. The
+   migration moved the `games` columns of those names into source rows and dropped the columns, so nothing reads a
+   stale copy. `pindu_core::metadata` resolves the rows (`shown` picks one field's winning value with its origin and
+   time, `resolve` all of them), and the store hands every `Game` out with resolved `developer`, `genres` and
+   `description`, so both shells and the filters show the winning value without knowing about origins. Writes
+   go through `Store::set_metadata(game, origin, metadata, now)`, which replaces one origin's values, keeps the time
+   of a value that did not change and drops a field left empty. A sync calls it for the source only; `insert_game`
+   records a new game's values as its source's; `update_game` never touches metadata, so saving a game read with a
+   user's value cannot turn it into the source's. Release year stays in the source details for now; #527 decides
+   whether it joins this table. Backups do not carry user or provider values yet.
 4. **An online provider, opt-in, after a spike.** The spike compares SteamGridDB, IGDB, PCGamingWiki, Wikidata and
    others on licence and terms, whether a key is needed, which store IDs it maps (which helps
    [game identity](game-identity.md)), the fields it has and its rate limits, and recommends one or none. If one is

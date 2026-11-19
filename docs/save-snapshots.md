@@ -45,6 +45,15 @@ after `proton_launch` sees the game exit.
   none is written, so quitting from a menu five times does not push out the last five saves.
 - **Retention.** The newest five snapshots taken on exit and, separately, the newest two taken before a restore are
   kept; older ones are removed after each new snapshot.
+- **Copies to a folder the user picks.** Preferences → Windows → Save Snapshots → Copy Snapshots To picks a folder
+  through the file chooser portal; GSettings key `save-copy-folder` keeps it, so it survives a restart. In the
+  Flatpak the key holds the document portal path the sandbox writes through, and Preferences shows the host's path,
+  as for source folders. After each snapshot on exit, the game's newest snapshot is copied to
+  `<folder>/<native ID>/<snapshot name>/`, laid out as above, the same atomic way (`saves::copy_to`); a snapshot
+  already there is skipped, so one missed while the folder was gone follows on the next exit. The copies are pruned
+  by the same retention rules. A folder that is gone, such as a drive that is not plugged in, is not made again: a
+  toast and a notification in Quick Access say the snapshot stays on this computer, and the game's exit is not
+  treated as a failure. A copy that fails otherwise is reported the same way and leaves no partial folder.
 
 Excluded by default, with paths relative to a user folder and names matched whatever their case:
 

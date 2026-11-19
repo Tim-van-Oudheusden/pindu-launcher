@@ -220,6 +220,36 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
         subtitle: _("Asks the system to favour the game while it runs");
       }
     }
+
+    Adw.PreferencesGroup {
+      title: _("Save Snapshots");
+      description: _("When a Windows game exits, its saves are kept in ~/Games/pindu-launcher/save-snapshots. Each new snapshot can also be copied to a folder you pick, such as one a sync service or a drive keeps.");
+
+      Adw.ActionRow save_copy_folder_row {
+        title: _("Copy Snapshots To");
+        subtitle-selectable: true;
+
+        [suffix]
+        Button reset_save_copy_folder_button {
+          icon-name: "edit-clear-symbolic";
+          tooltip-text: _("Keep Snapshots Only on This Computer");
+          valign: center;
+          clicked => $reset_save_copy_folder() swapped;
+
+          styles [
+            "flat",
+          ]
+        }
+
+        [suffix]
+        Button {
+          label: _("_Choose…");
+          use-underline: true;
+          valign: center;
+          clicked => $choose_save_copy_folder() swapped;
+        }
+      }
+    }
   }
 
   Adw.PreferencesPage {

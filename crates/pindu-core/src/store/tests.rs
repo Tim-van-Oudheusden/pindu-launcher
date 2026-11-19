@@ -920,3 +920,169 @@ fn a_saved_filter_with_a_view_this_version_does_not_know_is_left_out() {
     assert!(store.saved_filters().unwrap().is_empty());
     assert!(store.collections().unwrap().contains(&saved));
 }
+
+fn metadata(developer: &str) -> crate::metadata::Metadata {
+    crate::metadata::Metadata {
+        developer: Some(developer.into()),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn a_game_shows_the_users_metadata_over_a_providers_over_the_sources() {
+    let (_dir, store) = temp_store();
+    let game = steam_game("570", "Dota 2");
+    store.insert_game(&game).unwrap();
+    let id = &game.id;
+
+    store
+        .set_metadata(id, MetadataOrigin::Source, &metadata("Valve"), 10)
+        .unwrap();
+    assert_eq!(
+        store.game(id).unwrap().unwrap().developer.as_deref(),
+        Some("Valve")
+    );
+    store
+        .set_metadata(id, MetadataOrigin::User, &metadata("Me"), 20)
+        .unwrap();
+    store
+        .set_metadata(
+            id,
+            MetadataOrigin::Provider,
+            &metadata("Valve Corporation"),
+            30,
+        )
+        .unwrap();
+
+    assert_eq!(
+        store.game(id).unwrap().unwrap().developer.as_deref(),
+        Some("Me")
+    );
+    assert_eq!(store.games().unwrap()[0].developer.as_deref(), Some("Me"));
+    assert_eq!(
+        store.games_from(Source::Steam).unwrap()[0]
+            .developer
+            .as_deref(),
+        Some("Me")
+    );
+    store
+        .set_metadata(id, MetadataOrigin::User, &Default::default(), 40)
+        .unwrap();
+    assert_eq!(
+        store.game(id).unwrap().unwrap().developer.as_deref(),
+        Some("Valve Corporation")
+    );
+}
+
+#[test]
+fn metadata_values_keep_their_origin_and_the_time_they_last_changed() {
+    use crate::metadata::{FieldValue, MetadataValue};
+    let (_dir, store) = temp_store();
+    let game = steam_game("570", "Dota 2");
+    store.insert_game(&game).unwrap();
+    let first = crate::metadata::Metadata {
+        developer: Some("Valve".into()),
+        genres: vec!["Strategy".into(), "MOBA".into()],
+        description: Some("Every day".into()),
+    };
+    store
+        .set_metadata(&game.id, MetadataOrigin::Source, &first, 10)
+        .unwrap();
+
+    let second = crate::metadata::Metadata {
+        description: Some("Every night".into()),
+        genres: Vec::new(),
+        ..first
+    };
+    store
+        .set_metadata(&game.id, MetadataOrigin::Source, &second, 20)
+        .unwrap();
+
+    assert_eq!(
+        store.metadata_values(&game.id).unwrap(),
+        [
+            MetadataValue {
+                value: FieldValue::Description("Every night".into()),
+                origin: MetadataOrigin::Source,
+                updated_at: 20,
+            },
+            MetadataValue {
+                value: FieldValue::Developer("Valve".into()),
+                origin: MetadataOrigin::Source,
+                updated_at: 10,
+            },
+        ]
+    );
+}
+
+#[test]
+fn updating_a_game_leaves_its_metadata_alone() {
+    let (_dir, store) = temp_store();
+    let mut game = steam_game("570", "Dota 2");
+    game.developer = Some("Valve".into());
+    store.insert_game(&game).unwrap();
+    store
+        .set_metadata(&game.id, MetadataOrigin::User, &metadata("Me"), 20)
+        .unwrap();
+
+    let mut shown = store.game(&game.id).unwrap().unwrap();
+    shown.favourite = true;
+    store.update_game(&shown).unwrap();
+    store
+        .set_metadata(&game.id, MetadataOrigin::User, &Default::default(), 30)
+        .unwrap();
+
+    let game = store.game(&game.id).unwrap().unwrap();
+    assert!(game.favourite);
+    assert_eq!(game.developer.as_deref(), Some("Valve"));
+}
+
+#[test]
+fn deleting_a_game_deletes_its_metadata() {
+    let (_dir, store) = temp_store();
+    let game = steam_game("570", "Dota 2");
+    store.insert_game(&game).unwrap();
+    store
+        .set_metadata(&game.id, MetadataOrigin::User, &metadata("Me"), 20)
+        .unwrap();
+
+    store.delete_game(&game.id).unwrap();
+
+    assert!(store.metadata_values(&game.id).unwrap().is_empty());
+}
+
+#[test]
+fn a_games_metadata_columns_move_into_source_values_when_migrated() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("library.db");
+    let conn = rusqlite::Connection::open(&path).unwrap();
+    for migration in &MIGRATIONS[..7] {
+        conn.execute_batch(migration).unwrap();
+    }
+    conn.pragma_update(None, "user_version", 7).unwrap();
+    conn.execute_batch(
+        "INSERT INTO games (id, source, native_id, title, sort_title, added_at, launch_kind,
+             developer, genres, description)
+         VALUES ('steam:570', 'steam', '570', 'Dota 2', 'Dota 2', 1, 'store-uri',
+             'Valve', '[\"Strategy\",\"MOBA\"]', 'Every day');
+         INSERT INTO games (id, source, native_id, title, sort_title, added_at, launch_kind)
+         VALUES ('steam:440', 'steam', '440', 'TF2', 'TF2', 1, 'store-uri');",
+    )
+    .unwrap();
+    drop(conn);
+
+    let store = Store::open(&path).unwrap();
+
+    let dota = store
+        .game(&GameId::new(Source::Steam, "570"))
+        .unwrap()
+        .unwrap();
+    assert_eq!(dota.developer.as_deref(), Some("Valve"));
+    assert_eq!(dota.genres, ["Strategy", "MOBA"]);
+    assert_eq!(dota.description.as_deref(), Some("Every day"));
+    let values = store.metadata_values(&dota.id).unwrap();
+    assert_eq!(values.len(), 3);
+    assert!(values.iter().all(|v| v.origin == MetadataOrigin::Source));
+    let tf2 = GameId::new(Source::Steam, "440");
+    assert!(store.metadata_values(&tf2).unwrap().is_empty());
+}
