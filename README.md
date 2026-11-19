@@ -93,7 +93,9 @@ widgets so it looks and behaves like the rest of GNOME.
   beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 - **Save snapshots.** When a Windows game you added by hand quits normally, Pindu launcher copies its saves out of the
   prefix it made for the game into `~/Games/pindu-launcher/save-snapshots`, leaving out caches, runtimes, screenshots
-  and stored logins, and keeps the last five ([Save snapshots](docs/save-snapshots.md)).
+  and stored logins, and keeps the last five ([Save snapshots](docs/save-snapshots.md)). Pick a folder under
+  Preferences → Windows → Save Snapshots, such as one Syncthing, Nextcloud or a drive keeps, and each new snapshot is
+  copied there too; a folder that is gone is reported, and the game is not affected.
 - **Backups.** Export your collections, favourites, hidden games, games added by hand, tracked playtime and groups of
   copies to a file, and import them again. Before an update changes the library's format, Pindu launcher keeps a copy
   of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
@@ -404,7 +406,8 @@ Quick Access's **Proton** does what Preferences' Windows and Proton pages do for
 
 - **Defaults:** the Proton build Windows games run with unless their page names one (**Newest** follows the newest
   build on the machine), and whether games added from now on start with **MangoHud** and **GameMode**. These are the
-  same settings as in Preferences. The default prefix folder needs a folder chooser, so it stays in Preferences.
+  same settings as in Preferences. The default prefix folder and the folder save snapshots are copied to need a folder
+  chooser, so they stay in Preferences.
 - **Downloaded Builds** lists the builds in the launcher's tools folder; select one to remove it, after a question.
 - **Check for Releases** lists the newest GE-Proton and Proton-CachyOS releases from GitHub, the only time the level
   goes online. Select one to download and install it: its row shows how far it is, and it is a task in Activity, where

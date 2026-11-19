@@ -159,17 +159,14 @@ impl DuplicatesPage {
             let Some(member) = group.members.first().cloned() else {
                 continue;
             };
-            row.add_suffix(&self.choice_button(
-                &gettext("Undo"),
-                false,
-                library,
-                move |library| {
+            row.add_suffix(
+                &self.choice_button(&gettext("Undo"), false, library, move |library| {
                     let member = member.clone();
                     async move {
                         library.split_group(&member).await;
                     }
-                },
-            ));
+                }),
+            );
             imp.automatic_group.add(&row);
             rows.push((imp.automatic_group.get(), row));
         }

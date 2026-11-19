@@ -523,7 +523,9 @@ fn an_accepted_suggestion_is_a_group_by_hand_and_is_not_suggested_again() {
     let desktop = library.add(Source::Desktop, "celeste", "Celeste");
     store_library(&store, &library);
 
-    let group = store.merge_games(&[steam.clone(), desktop.clone()]).unwrap();
+    let group = store
+        .merge_games(&[steam.clone(), desktop.clone()])
+        .unwrap();
 
     let (first, second) = pair(&steam, &desktop);
     assert_eq!(

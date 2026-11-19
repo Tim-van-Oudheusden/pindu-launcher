@@ -39,8 +39,9 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **Proton builds.** Quick Access's **Proton** level picks the default Proton build and the default MangoHud and
   GameMode for new Windows games (the same settings as Preferences' Windows page), lists the downloaded builds, which
   A asks to remove, and, once the player checks, the GE-Proton and Proton-CachyOS releases, which A downloads. A
-  download is a task in Activity that can be cancelled there or with A on its row. The default prefix folder stays
-  desktop-only: it needs a folder chooser.
+  download is a task in Activity that can be cancelled there or with A on its row. The default prefix folder and
+  the folder save snapshots are copied to stay desktop-only: they need the portal's folder chooser, which grants
+  access to a folder the sandbox cannot otherwise write to.
 - **Adding a game by hand.** Quick Access's Add a Game adds a native game, an installed Windows game or a Windows
   installer's game in fullscreen mode. Fullscreen mode draws its own picker, as a portal's file chooser runs in another
   process that controller navigation cannot drive. It starts at the Games folder, the home folder and the drives
