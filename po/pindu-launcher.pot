@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 18:10+0100\n"
+"POT-Creation-Date: 2026-11-19 19:29+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2525,6 +2525,16 @@ msgstr ""
 msgid ""
 "Whether the window has offered, once, to set up a SteamGridDB API key for "
 "game art."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:169
+msgid "Last library backup"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:170
+msgid ""
+"When the library was last exported, in seconds since the Unix epoch; 0 means "
+"never. Library Health shows it."
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:8
