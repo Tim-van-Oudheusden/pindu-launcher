@@ -1,5 +1,6 @@
 //! Where the app keeps its own files.
 
+use std::ffi::OsStr;
 use std::path::{Component, Path, PathBuf};
 
 /// Folder name under the XDG base directories.
@@ -102,6 +103,20 @@ pub fn home_relative(path: &Path, home: &Path) -> String {
     }
 }
 
+/// Where `program` is: in the first folder of `path`, a `PATH` value, where
+/// `is_executable` finds it. Empty and relative entries, which name the current folder,
+/// are passed over. `None` when it is not installed.
+pub fn find_program(
+    path: &OsStr,
+    program: &str,
+    is_executable: impl Fn(&Path) -> bool,
+) -> Option<PathBuf> {
+    std::env::split_paths(path)
+        .filter(|folder| folder.is_absolute())
+        .map(|folder| folder.join(program))
+        .find(|file| is_executable(file))
+}
+
 /// Splits a document portal path, `/run/user/<uid>/doc/<id>/<name>/<rest…>`, into the
 /// document ID and the parts below the document itself; `None` for any other path.
 pub fn document_portal_parts(path: &Path) -> Option<(String, Vec<PathBuf>)> {
@@ -132,6 +147,22 @@ pub fn document_root(path: &Path) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_program_is_found_in_the_first_absolute_path_folder_that_has_it() {
+        let path = std::ffi::OsStr::new(":bin:/usr/local/bin:/app/bin:/usr/bin");
+        let has = |file: &Path| {
+            file == Path::new("bin/gamemoderun")
+                || file == Path::new("/app/bin/gamemoderun")
+                || file == Path::new("/usr/bin/gamemoderun")
+        };
+
+        assert_eq!(
+            find_program(path, "gamemoderun", has),
+            Some(PathBuf::from("/app/bin/gamemoderun"))
+        );
+        assert_eq!(find_program(path, "mangohud", has), None);
+    }
 
     #[test]
     fn document_portal_paths_split_into_id_and_rest() {
