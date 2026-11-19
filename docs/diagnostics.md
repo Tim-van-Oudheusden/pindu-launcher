@@ -29,8 +29,13 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   local time, and the newest ten are kept as Play with Logs keeps logs; the screen names the file with `~`. The core
   (`pindu_core::report_screen`) splits the pages and names and prunes the copies; `diagnostics_service` writes them.
 - **A game's log, on request.** The user picks a game and its newest log (Play with Logs keeps the newest ten per
-  game) is appended to the report with the same redaction: no home path, and the chosen game's title only because the
-  user chose it.
+  game) is appended to the report with the same redaction: no home path, every other title of the library replaced,
+  and the chosen game's title kept only because the user chose it. A long log keeps its first 10 and last 100 lines
+  and says how many it left out, so a Proton log stays readable. On the desktop, **Debugging Information with Log**
+  in the More Actions menu of a game Pindu runs opens About with the log after the report. In fullscreen mode, the
+  Diagnostics Report's **Add a Game's Log** lists the games with a log, the game played with logs last first; choosing
+  one with A gathers the report again with that log after it and saves that copy, and B leads back to the report. A
+  game without a log yet says to start it with Play with Logs.
 
 ## Flatpak, native and Pindu OS
 

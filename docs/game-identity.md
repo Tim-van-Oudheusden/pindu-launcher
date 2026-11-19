@@ -76,6 +76,19 @@ Schema migration 6 (#504) adds the grouping layer; the rules follow spike #501.
   copies"; otherwise it names where the one figure comes from.
 - A group sits in the source view of the copy Play starts.
 
+## Merging and splitting by hand
+
+- **Merge With…** sits in a game's menus on the desktop (the tile's and the page's) and in its options sheet in
+  fullscreen mode. The desktop asks with a search over the other games; fullscreen mode lists them in the sheet, which
+  a controller moves through. Both list games with the same normalised title first, as the likely copies, then the
+  rest by title (`game_groups::merge_candidates`). Selection mode's **Merge** merges two or more selected games.
+- **Merging** (`Store::merge_games`) takes every copy of the groups involved: the first game's group stays, with its
+  preferred copy, the others end, and the group becomes the user's own. A remembered split does not stop the user.
+- **Preferred Copy** chooses the copy a group shows and Play starts: a submenu in the desktop menus, a list in the
+  options sheet, and the radio buttons of the game page's Copies section in both shells.
+- **Split Into Separate Games** is `Store::split_group`: the games show on their own again and every pair is
+  remembered as not the same game, so neither the automatic grouping nor a suggestion brings them back.
+
 ## How duplicates are found
 
 `duplicates::suggestions` (#505) lists the pairs of library records that look like copies of one game, each with a
@@ -110,7 +123,8 @@ Backup format 2 (#509) adds two lists to the backup file, both naming games by t
   how many groups were skipped, beside how many games the library lacks.
 - **Remembered pairs** are added when both games are in the library.
 - **Format 1** backups, which have neither list, still import and change no group. An older build refuses a format 2
-  backup rather than drop its groups.
+  backup rather than drop its groups. Format 2 also carries each saved filter's filter (#600; see
+  `docs/shelves-and-metadata.md`).
 
 ## Flatpak, native and Pindu OS
 

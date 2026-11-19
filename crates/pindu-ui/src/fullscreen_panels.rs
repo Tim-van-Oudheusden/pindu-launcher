@@ -1,11 +1,12 @@
 //! Fullscreen mode's panels over the pages: the menu drawer on the left (Start or Guide),
 //! Quick Access on the right (Guide + A, R3 or the Steam Deck's "…" button) and the
 //! options sheet at the bottom (View or X, or a game page's Options and Add to Collection
-//! buttons). Which panel is open, at which level, and what the controller does to them is
-//! `pindu_core::panels`; this fills the drawer and the sheet, shows the panels, keeps focus
-//! inside the open one and gives it back after, and does what their entries say. They are
-//! widgets in the window rather than popover menus, which the compositor dismisses on a
-//! controller press. Quick Access is a widget of its own, `PinduQuickAccess`
+//! buttons), whose levels list a game's collections, the games to merge it with and a
+//! group's copies. Which panel is open, at which level, and what the controller does to
+//! them is `pindu_core::panels`; this fills the drawer and the sheet, shows the panels,
+//! keeps focus inside the open one and gives it back after, and does what their entries
+//! say. They are widgets in the window rather than popover menus, which the compositor
+//! dismisses on a controller press. Quick Access is a widget of its own, `PinduQuickAccess`
 //! (`quick_access`), which the window hosts as the sidebar of its `quick_access` split
 //! view: the window tells it which level shows and what lies under it, and does what it
 //! asks for. The drawer's Power level is `fullscreen_power`'s, and its Controls level is
@@ -20,11 +21,12 @@ use pindu_core::keys;
 use pindu_core::launch;
 use pindu_core::library::View;
 use pindu_core::panels::{
-    DrawerLevel, GameOption, OptionsLevel, Panel, Panels, Under, game_options, page_entries,
+    DrawerLevel, GameOption, OptionsLevel, Panel, Panels, Under, page_entries, sheet_options,
 };
 
 use crate::application::PinduApplication;
 use crate::launch_service::launcher_name;
+use crate::merge_dialog::candidate_rows;
 use crate::models::GameObject;
 use crate::window::PinduWindow;
 
@@ -147,6 +149,36 @@ impl PinduWindow {
                 }
             }
         ));
+        imp.options_merge.connect_row_activated(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, row| {
+                let imp = window.imp();
+                let other = usize::try_from(row.index())
+                    .ok()
+                    .and_then(|index| imp.merge_candidates.borrow().get(index).cloned());
+                let game = imp.options_game.borrow().as_ref().map(GameObject::id);
+                if let (Some(game), Some(other)) = (game, other) {
+                    window.close_panel();
+                    window.merge_games(&game, &other);
+                }
+            }
+        ));
+        imp.options_copies.connect_row_activated(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, row| {
+                let copy = usize::try_from(row.index()).ok().and_then(|index| {
+                    let game = window.imp().options_game.borrow().clone()?;
+                    let entry = game.entry();
+                    entry.copies.get(index).map(|copy| copy.game.id.clone())
+                });
+                if let Some(copy) = copy {
+                    window.close_panel();
+                    window.prefer_copy(&copy);
+                }
+            }
+        ));
         self.library().connect_collections_changed(glib::clone!(
             #[weak(rename_to = window)]
             self,
@@ -159,6 +191,7 @@ impl PinduWindow {
             }
         ));
         self.setup_add_store();
+        self.setup_fullscreen_add_game();
         self.setup_power();
         self.setup_controls_level();
         self.fill_drawer();
@@ -342,6 +375,16 @@ impl PinduWindow {
         self.show_panel(Panel::Options(level));
     }
 
+    /// Opens the options sheet for `game` at the games to merge it with.
+    pub(crate) fn open_merge_options(&self, game: &GameObject) {
+        if self.visible_dialog().is_some() {
+            return;
+        }
+        self.fill_options(game);
+        self.fill_options_merge(game);
+        self.show_panel(Panel::Options(OptionsLevel::Merge));
+    }
+
     pub(crate) fn show_panel(&self, panel: Panel) {
         let mut panels = self.imp().panels.get();
         panels.show(panel);
@@ -414,6 +457,8 @@ impl PinduWindow {
             Some(Panel::Options(level)) => imp.options_stack.set_visible_child_name(match level {
                 OptionsLevel::Main => "main",
                 OptionsLevel::Collections => "collections",
+                OptionsLevel::Merge => "merge",
+                OptionsLevel::Copies => "copies",
             }),
             Some(Panel::QuickAccess(_)) => {}
             None => {
@@ -458,23 +503,29 @@ impl PinduWindow {
                 };
                 imp.drawer_panel.focus_target(level, left)
             }
-            (
-                Some(Panel::Options(OptionsLevel::Main)),
-                Some(Panel::Options(OptionsLevel::Collections)),
-            ) => {
+            (Some(Panel::Options(OptionsLevel::Main)), Some(Panel::Options(level))) => {
+                let entry = match level {
+                    OptionsLevel::Collections => Some(GameOption::Collections),
+                    OptionsLevel::Merge => Some(GameOption::MergeWith),
+                    OptionsLevel::Copies => Some(GameOption::PreferredCopy),
+                    OptionsLevel::Main => None,
+                };
                 let index = imp
                     .game_options
                     .borrow()
                     .iter()
-                    .position(|option| *option == GameOption::Collections);
+                    .position(|option| Some(*option) == entry);
                 index
                     .and_then(|index| imp.options_list.row_at_index(index as i32))
                     .map(|row| row.upcast())
+                    .or_else(|| first_row(&imp.options_list))
             }
             (Some(Panel::Options(OptionsLevel::Main)), _) => first_row(&imp.options_list),
             (Some(Panel::Options(OptionsLevel::Collections)), _) => {
                 first_row(&imp.options_collections)
             }
+            (Some(Panel::Options(OptionsLevel::Merge)), _) => first_row(&imp.options_merge),
+            (Some(Panel::Options(OptionsLevel::Copies)), _) => first_row(&imp.options_copies),
             (Some(Panel::QuickAccess(_)) | None, _) => None,
         };
         if let Some(target) = target {
@@ -496,17 +547,21 @@ impl PinduWindow {
     }
 
     /// The sheet's title and actions for `game`, its performance switches for a game we
-    /// run ourselves, and its collections.
+    /// run ourselves, its collections and a group's copies.
     fn fill_options(&self, game: &GameObject) {
         let imp = self.imp();
         imp.options_game.replace(Some(game.clone()));
         imp.options_title.set_label(&game.game().title);
-        let options = game_options(&game.game(), game.playing());
+        let copies = game.entry().copies.len();
+        let options = sheet_options(&game.game(), game.playing(), copies);
         imp.options_list.remove_all();
         for option in &options {
             let (icon, label) = option_label(*option, game);
             let row = drawer_row(icon, &label);
-            if *option == GameOption::Collections {
+            if matches!(
+                option,
+                GameOption::Collections | GameOption::MergeWith | GameOption::PreferredCopy
+            ) {
                 append_next_arrow(&row);
             }
             imp.options_list.append(&row);
@@ -518,6 +573,31 @@ impl PinduWindow {
             switches.show_for(game);
         }
         self.fill_options_collections(game);
+        self.fill_options_copies(game);
+    }
+
+    /// The games to merge `game` with, likely copies first, each with where it comes from
+    /// or how many copies it has.
+    fn fill_options_merge(&self, game: &GameObject) {
+        let imp = self.imp();
+        imp.options_merge.remove_all();
+        let rows = candidate_rows(game, &self.library().all_games(), "");
+        let mut ids = Vec::with_capacity(rows.len());
+        for (id, row) in rows {
+            imp.options_merge.append(&row);
+            ids.push(id);
+        }
+        imp.merge_candidates.replace(ids);
+    }
+
+    /// A group's copies, the one it shows and Play starts marked.
+    fn fill_options_copies(&self, game: &GameObject) {
+        let imp = self.imp();
+        imp.options_copies.remove_all();
+        for (index, copy) in game.entry().copies.iter().enumerate() {
+            imp.options_copies
+                .append(&crate::group_actions::copy_choice_row(copy, index == 0));
+        }
     }
 
     /// One switch per collection kept by hand, on while the game is in it, then "New
@@ -558,14 +638,23 @@ impl PinduWindow {
         imp.options_collections.append(&new);
     }
 
-    /// Does what the sheet's entry says, for its game: Collections leads to the game's
-    /// collections; every other entry closes the sheet first.
+    /// Does what the sheet's entry says, for its game: Collections, Merge With and
+    /// Preferred Copy lead to their lists; every other entry closes the sheet first.
     fn choose_option(&self, option: GameOption) {
         let Some(game) = self.imp().options_game.borrow().clone() else {
             return;
         };
-        if option == GameOption::Collections {
-            self.show_panel(Panel::Options(OptionsLevel::Collections));
+        let level = match option {
+            GameOption::Collections => Some(OptionsLevel::Collections),
+            GameOption::MergeWith => {
+                self.fill_options_merge(&game);
+                Some(OptionsLevel::Merge)
+            }
+            GameOption::PreferredCopy => Some(OptionsLevel::Copies),
+            _ => None,
+        };
+        if let Some(level) = level {
+            self.show_panel(Panel::Options(level));
             return;
         }
         self.close_panel();
@@ -584,7 +673,8 @@ impl PinduWindow {
             GameOption::ProtonDb => ("app", "open-protondb"),
             GameOption::PcGamingWiki => ("app", "open-pcgamingwiki"),
             GameOption::ChangeArtwork => ("win", "change-artwork"),
-            GameOption::Collections => return,
+            GameOption::Split => ("win", "split-group"),
+            GameOption::Collections | GameOption::MergeWith | GameOption::PreferredCopy => return,
         };
         if group == "app" {
             if let Some(application) = self.application() {
@@ -612,6 +702,9 @@ fn option_label(option: GameOption, game: &GameObject) -> (&'static str, String)
         GameOption::RemoveFromFavourites => ("starred-symbolic", gettext("Remove from Favourites")),
         GameOption::Collections => ("folder-symbolic", gettext("Collections")),
         GameOption::ChangeArtwork => ("image-x-generic-symbolic", gettext("Change Artwork")),
+        GameOption::MergeWith => ("list-add-symbolic", gettext("Merge With")),
+        GameOption::PreferredCopy => ("edit-copy-symbolic", gettext("Preferred Copy")),
+        GameOption::Split => ("edit-cut-symbolic", gettext("Split Into Separate Games")),
         GameOption::Hide => ("view-conceal-symbolic", gettext("Hide")),
         GameOption::Unhide => ("view-reveal-symbolic", gettext("Unhide")),
         GameOption::OpenInLauncher => (

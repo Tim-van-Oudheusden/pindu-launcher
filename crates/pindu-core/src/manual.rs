@@ -249,6 +249,18 @@ pub fn new_prefix(prefixes: &Path, title: &str) -> PathBuf {
     prefixes.join(new_native_id(title))
 }
 
+/// The title a game added from `program` starts with: the program's own product name
+/// (`product`, from a Windows program's version resource) when it has one, else its file
+/// name without the extension.
+pub fn program_title(program: &Path, product: Option<&str>) -> String {
+    match product.map(str::trim) {
+        Some(product) if !product.is_empty() => product.to_owned(),
+        _ => program
+            .file_stem()
+            .map_or_else(String::new, |stem| stem.to_string_lossy().into_owned()),
+    }
+}
+
 /// The programs in a game folder (files with an execute bit), at most three folders
 /// deep, skipping hidden ones; relative to the folder, shallowest first, then by name.
 pub fn find_executables(folder: &Path) -> Vec<PathBuf> {
@@ -588,6 +600,20 @@ mod tests {
             host: false,
             windows: None,
         }
+    }
+
+    #[test]
+    fn a_title_comes_from_the_program_s_own_name_or_else_its_file_name() {
+        assert_eq!(
+            program_title(Path::new("Binaries/Win64/HK.exe"), Some("  Hollow Knight ")),
+            "Hollow Knight"
+        );
+        assert_eq!(
+            program_title(Path::new("bin/Celeste.x86_64"), None),
+            "Celeste"
+        );
+        assert_eq!(program_title(Path::new("Game.EXE"), Some(" ")), "Game");
+        assert_eq!(program_title(Path::new("tunic"), None), "tunic");
     }
 
     #[test]

@@ -1,11 +1,13 @@
 //! A JSON backup of what the user made here and exists nowhere else: collections,
 //! favourites, hidden games, games added by hand, the playtime tracked here and, from
-//! format 2, game groups with their preferred copies and the pairs remembered as not the
-//! same game.
+//! format 2, game groups with their preferred copies, the pairs remembered as not the
+//! same game and the filter of each saved filter.
 //!
 //! Games are named by ID, so a backup restores into a library where the launchers have
 //! been synced again; a game the library does not have is skipped and counted, and so is
-//! a group left with fewer than two of its games. Format 1 backups still import.
+//! a group left with fewer than two of its games. A saved filter's view of a collection
+//! names that collection, as its ID differs between libraries. Format 1 backups still
+//! import.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
@@ -13,13 +15,17 @@ use std::path::PathBuf;
 
 use serde_json::{Map, Value, json};
 
+use crate::library::{Filters, View};
 use crate::model::{Game, GameId, LaunchConfig, LaunchKind, Source, Timestamp};
+use crate::saved_filters::{self, SavedFilter};
+use crate::search;
 use crate::store::{Store, StoreError};
 
 /// What the `format` field of a backup says.
 const FORMAT: &str = "pindu-launcher-backup";
 /// The backup version this build writes and the newest it reads. Version 2 added
-/// `groups` and `not_the_same`; version 1 backups have neither and still import.
+/// `groups`, `not_the_same` and a collection's `filter`; version 1 backups have none of
+/// them and still import.
 const VERSION: u64 = 2;
 
 /// Why a backup could not be written or restored.
@@ -90,8 +96,22 @@ pub fn export(store: &Store, now: Timestamp) -> Result<String, BackupError> {
             .map(|game| game.id.as_str())
             .collect()
     };
+    let saved = store.saved_filters()?;
+    let all_collections = store.collections()?;
+    let names: HashMap<i64, &str> = all_collections
+        .iter()
+        .map(|collection| (collection.id, collection.name.as_str()))
+        .collect();
     let mut collections = Vec::new();
-    for collection in store.collections()? {
+    for collection in &all_collections {
+        if let Some(filter) = saved.get(&collection.id) {
+            let mut entry = json!({ "name": collection.name, "games": [] });
+            if let Some(filter) = saved_filter_json(filter, &names) {
+                entry["filter"] = filter;
+            }
+            collections.push(entry);
+            continue;
+        }
         let members: Vec<String> = store
             .collection_members(collection.id)?
             .iter()
@@ -206,6 +226,7 @@ pub fn import(store: &Store, text: &str) -> Result<ImportSummary, BackupError> {
             .into_iter()
             .map(|collection| (collection.name, collection.id))
             .collect();
+        let mut saved_here: HashSet<i64> = store.saved_filters()?.into_keys().collect();
         for entry in list(&backup["collections"]) {
             let Some(name) = entry["name"]
                 .as_str()
@@ -216,12 +237,46 @@ pub fn import(store: &Store, text: &str) -> Result<ImportSummary, BackupError> {
             let id = match collections.get(name) {
                 Some(&id) => id,
                 None => {
-                    let collection = store.create_collection(name)?;
+                    let filter = match saved_filter_from(&entry["filter"]) {
+                        Some((BackupView::View(view), filters, search)) => Some(SavedFilter {
+                            view,
+                            filters,
+                            search,
+                        }),
+                        Some((BackupView::Collection(target), filters, search))
+                            if target != name =>
+                        {
+                            let target = collection_named(
+                                store,
+                                target,
+                                &mut collections,
+                                &mut summary.collections,
+                            )?;
+                            (!saved_here.contains(&target)).then_some(SavedFilter {
+                                view: View::Collection(target),
+                                filters,
+                                search,
+                            })
+                        }
+                        _ => None,
+                    };
+                    let collection = match &filter {
+                        Some(filter) => {
+                            let collection = store.create_saved_filter(name, filter)?;
+                            saved_here.insert(collection.id);
+                            collection
+                        }
+                        None => store.create_collection(name)?,
+                    };
                     collections.insert(collection.name, collection.id);
                     summary.collections += 1;
                     collection.id
                 }
             };
+            // A saved filter's games are computed, never stored.
+            if !entry["filter"].is_null() || saved_here.contains(&id) {
+                continue;
+            }
             for game in list(&entry["games"]).filter_map(|v| known(v, &mut missing)) {
                 store.add_to_collection(id, &game)?;
             }
@@ -316,6 +371,76 @@ fn known(ids: &HashSet<GameId>, value: &Value, missing: &mut BTreeSet<String>) -
 /// The items of a JSON array; nothing for anything else.
 fn list(value: &Value) -> impl Iterator<Item = &Value> {
     value.as_array().into_iter().flatten()
+}
+
+/// The ID of the collection named `name`, made (and counted in `created`) if this library
+/// has none.
+fn collection_named(
+    store: &Store,
+    name: &str,
+    collections: &mut HashMap<String, i64>,
+    created: &mut usize,
+) -> Result<i64, StoreError> {
+    if let Some(&id) = collections.get(name) {
+        return Ok(id);
+    }
+    let collection = store.create_collection(name)?;
+    collections.insert(collection.name, collection.id);
+    *created += 1;
+    Ok(collection.id)
+}
+
+/// A saved filter's definition, beside its collection in a backup. Collection IDs differ
+/// between libraries, so a view of a collection names it instead; `None` when that
+/// collection is gone.
+fn saved_filter_json(filter: &SavedFilter, names: &HashMap<i64, &str>) -> Option<Value> {
+    let mut value = match filter.view {
+        View::Collection(id) => json!({ "view": "collection", "collection": names.get(&id)? }),
+        view => json!({ "view": saved_filters::view_text(view) }),
+    };
+    let toggles = filter.filters;
+    value["installed"] = toggles.installed.into();
+    value["not_installed"] = toggles.not_installed.into();
+    value["favourites"] = toggles.favourites.into();
+    value["windows"] = toggles.windows.into();
+    value["native"] = toggles.native.into();
+    value["search"] = filter.search.as_str().into();
+    Some(value)
+}
+
+/// The view a saved filter in a backup starts from.
+enum BackupView<'a> {
+    /// A view every library has.
+    View(View),
+    /// The collection with this name.
+    Collection(&'a str),
+}
+
+/// A saved filter's view, toggles and normalised search as a backup holds them (see
+/// [`saved_filter_json`]); `None` for none, or a view this version does not know.
+fn saved_filter_from(value: &Value) -> Option<(BackupView<'_>, Filters, String)> {
+    let view = match value["view"].as_str()? {
+        "collection" => BackupView::Collection(
+            value["collection"]
+                .as_str()
+                .filter(|name| !name.trim().is_empty())?,
+        ),
+        text => match saved_filters::view_from_text(text)? {
+            View::Collection(_) | View::Hidden => return None,
+            view => BackupView::View(view),
+        },
+    };
+    let toggle = |key: &str| value[key] == true;
+    let filters = Filters {
+        installed: toggle("installed"),
+        not_installed: toggle("not_installed"),
+        favourites: toggle("favourites"),
+        windows: toggle("windows"),
+        native: toggle("native"),
+        hidden: false,
+    };
+    let search = search::normalize(value["search"].as_str().unwrap_or_default());
+    Some((view, filters, search))
 }
 
 fn manual_game_json(game: &Game, launch: Option<&LaunchConfig>) -> Value {
@@ -778,5 +903,185 @@ mod tests {
         assert_eq!(backup["version"], 2);
         assert_eq!(backup["groups"], json!([]));
         assert_eq!(backup["not_the_same"], json!([]));
+    }
+
+    fn saved(view: View, filters: Filters, search: &str) -> SavedFilter {
+        SavedFilter {
+            view,
+            filters,
+            search: search.to_owned(),
+        }
+    }
+
+    /// The saved filters of `store` by collection name.
+    fn saved_by_name(store: &Store) -> BTreeMap<String, SavedFilter> {
+        let saved = store.saved_filters().unwrap();
+        store
+            .collections()
+            .unwrap()
+            .into_iter()
+            .filter_map(|c| Some((c.name, saved.get(&c.id)?.clone())))
+            .collect()
+    }
+
+    #[test]
+    fn saved_filters_are_restored_as_saved_filters() {
+        let (_dir, store) = synced_store();
+        let portal = GameId::new(Source::Steam, "400");
+        let puzzles = store.create_collection("Puzzles").unwrap();
+        store.add_to_collection(puzzles.id, &portal).unwrap();
+        let windows = Filters {
+            windows: true,
+            favourites: true,
+            ..Filters::default()
+        };
+        store
+            .create_saved_filter(
+                "Steam Windows",
+                &saved(View::Source(Source::Steam), windows, "portal"),
+            )
+            .unwrap();
+        let installed = Filters {
+            installed: true,
+            ..Filters::default()
+        };
+        store
+            .create_saved_filter(
+                "Installed Puzzles",
+                &saved(View::Collection(puzzles.id), installed, ""),
+            )
+            .unwrap();
+
+        let backup = export(&store, 300).unwrap();
+        let (_fresh_dir, fresh) = synced_store();
+        fresh.create_collection("Already here").unwrap();
+        let summary = import(&fresh, &backup).unwrap();
+
+        assert_eq!(summary.collections, 3);
+        let collections = fresh.collections().unwrap();
+        let names: Vec<_> = collections.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(
+            names,
+            [
+                "Already here",
+                "Puzzles",
+                "Steam Windows",
+                "Installed Puzzles"
+            ]
+        );
+        let restored_puzzles = collections[1].id;
+        assert_eq!(
+            saved_by_name(&fresh),
+            BTreeMap::from([
+                (
+                    "Installed Puzzles".to_owned(),
+                    saved(View::Collection(restored_puzzles), installed, "")
+                ),
+                (
+                    "Steam Windows".to_owned(),
+                    saved(View::Source(Source::Steam), windows, "portal")
+                ),
+            ])
+        );
+        assert!(
+            fresh
+                .collection_members(collections[2].id)
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn a_format_2_backup_with_saved_filters_imports() {
+        let (_dir, store) = synced_store();
+        let backup = r#"{
+            "format": "pindu-launcher-backup",
+            "version": 2,
+            "exported_at": 300,
+            "collections": [
+                {"name": "Favourite Puzzles", "games": ["steam:400"],
+                 "filter": {"view": "collection", "collection": "Puzzles",
+                            "favourites": true, "search": "  PORTAL  "}},
+                {"name": "From the future", "games": [],
+                 "filter": {"view": "never-played"}},
+                {"name": "Puzzles", "games": ["steam:400"]},
+                {"name": "Plain", "games": ["steam:620"]}
+            ],
+            "favourites": [],
+            "hidden": [],
+            "manual_games": [],
+            "play_sessions": [],
+            "groups": [],
+            "not_the_same": []
+        }"#;
+
+        let summary = import(&store, backup).unwrap();
+
+        assert_eq!(summary.collections, 4);
+        let collections = store.collections().unwrap();
+        let names: Vec<_> = collections.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(
+            names,
+            ["Puzzles", "Favourite Puzzles", "From the future", "Plain"]
+        );
+        let favourites = Filters {
+            favourites: true,
+            ..Filters::default()
+        };
+        assert_eq!(
+            saved_by_name(&store),
+            BTreeMap::from([(
+                "Favourite Puzzles".to_owned(),
+                saved(View::Collection(collections[0].id), favourites, "portal")
+            )])
+        );
+        assert!(
+            store
+                .collection_members(collections[1].id)
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            store
+                .collection_members(collections[2].id)
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(
+            store.collection_members(collections[0].id).unwrap(),
+            [GameId::new(Source::Steam, "400")]
+        );
+    }
+
+    #[test]
+    fn a_name_taken_here_keeps_what_it_is_here() {
+        let (_dir, store) = synced_store();
+        let native = Filters {
+            native: true,
+            ..Filters::default()
+        };
+        let mine = store
+            .create_saved_filter("Mine", &saved(View::All, native, ""))
+            .unwrap();
+        let theirs = store.create_collection("Theirs").unwrap();
+        let backup = r#"{
+            "format": "pindu-launcher-backup",
+            "version": 2,
+            "collections": [
+                {"name": "Mine", "games": ["steam:400"]},
+                {"name": "Theirs", "games": [],
+                 "filter": {"view": "all", "windows": true}}
+            ]
+        }"#;
+
+        let summary = import(&store, backup).unwrap();
+
+        assert_eq!(summary.collections, 0);
+        assert!(store.collection_members(mine.id).unwrap().is_empty());
+        assert_eq!(
+            store.saved_filters().unwrap(),
+            HashMap::from([(mine.id, saved(View::All, native, ""))])
+        );
+        assert!(store.collection_members(theirs.id).unwrap().is_empty());
     }
 }

@@ -66,7 +66,10 @@ widgets so it looks and behaves like the rest of GNOME.
   the ones you never play.
   layout. Group games into your own collections, jump back into recent games and hide the ones you never play. The
   **Select** button in the header bar picks several games in the grid or the list at once, to favourite, hide, add to
-  a collection or take out of one in one go, with a toast to undo it.
+  a collection or take out of one in one go, with a toast to undo it, or to merge them into one game.
+- **One game, several copies.** When the same game comes from two launchers, **Merge With…** in its menu (or in its
+  options sheet in fullscreen mode) makes them one game with several copies; you choose the copy Play starts in its
+  **Preferred Copy** menu or on its page, and **Split Into Separate Games** takes them apart again for good.
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
 - **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
   [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu
@@ -77,7 +80,7 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
-- **Backups.** Export your collections (not yet the filters of saved ones), favourites, hidden games, games added by
+- **Backups.** Export your collections, saved filters, favourites, hidden games, games added by
   hand and tracked playtime to a file, and import them again. Before an update changes the library's format, Pindu
   launcher keeps a copy of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps
   the two newest copies.
@@ -391,6 +394,24 @@ Quick Access's **Proton** does what Preferences' Windows and Proton pages do for
 - **Check for Releases** lists the newest GE-Proton and Proton-CachyOS releases from GitHub, the only time the level
   goes online. Select one to download and install it: its row shows how far it is, and it is a task in Activity, where
   it can be cancelled; selecting its row again stops it too. A notification says how it ended.
+### Add a Game
+
+**Add a Game** in Quick Access adds a game by hand without leaving fullscreen mode, with a controller alone. Choose a
+native game, an installed Windows game, or a Windows installer, then:
+
+- Pick the game's folder, or the installer, in a picker fullscreen mode draws itself. It starts at the Games folder,
+  your home folder and the drives the system has mounted under `/run/media/<user>`, and lists only folders and, for an
+  installer, Windows programs. It shows only what the launcher can already read, and says so: the Flatpak gets no new
+  permission, so there it reaches `~/Games` and the folders it already reads, not a drive. Mounting drives is the
+  system's job.
+- An installer runs through umu with the default Proton build in a new prefix; once it ends, pick the program it
+  installed.
+- Pick the game's program from the ones found in its folder. The title is filled in from the program's name and can
+  be changed with the on-screen keyboard.
+
+A Windows game's Proton build is picked on the last step from the same list as Performance's: the default first, then
+the builds on this machine, newest first. It runs through umu, as on the desktop. Arguments, the working folder, host
+spawn, a prefix of your choice and art are set in the desktop's Add Game and Edit dialogs.
 
 ### Controllers
 
@@ -722,6 +743,10 @@ Page** and **Next Page**, turn the pages, and Up and Down scroll a page the scre
 copy is saved to `~/.local/share/pindu-launcher/reports/` (in the Flatpak,
 `~/.var/app/io.github.tim_van_oudheusden.pindu-launcher/data/pindu-launcher/reports/`), named after the date and time;
 the newest ten are kept, and the screen says where the copy went.
+
+When a game misbehaves, add its newest log from **Play with Logs**: on the desktop, the game's **More Actions** menu has
+**Debugging Information with Log**; in fullscreen mode, the Diagnostics Report has **Add a Game's Log**. The report then
+keeps that game's title, and still no other title and no home folder.
 
 ## Acknowledgments
 

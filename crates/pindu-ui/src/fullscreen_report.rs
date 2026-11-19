@@ -4,8 +4,11 @@
 //! report in large monospace text a page at a time ([`pindu_core::report_screen`]) for a
 //! phone to photograph, and each time it opens a copy is saved to the reports folder,
 //! whose path it shows. LB and RB, or its Previous Page and Next Page, turn the pages, and
-//! Up and Down scroll a page taller than the panel. The main window widens Quick Access
-//! while the level shows. Quick Access keeps the entry, which sits in its shared list.
+//! Up and Down scroll a page taller than the panel. Its Add a Game's Log leads to the games
+//! with a log (the `"report-log"` page of Quick Access's stack); choosing one gathers the
+//! report again with that game's newest log after it, and saves that copy. The main window
+//! widens Quick Access while either level shows. Quick Access keeps the entry, which sits
+//! in its shared list.
 
 use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
@@ -14,7 +17,9 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use pindu_core::diagnostics::LogChoice;
 use pindu_core::gamepad::{Direction, Intent};
+use pindu_core::model::GameId;
 use pindu_core::panels::{Panel, QuickAccessLevel};
 use pindu_core::report_screen::{PAGE_COLUMNS, PAGE_LINES, pages};
 use pindu_core::{paths, reading};
@@ -53,6 +58,8 @@ mod imp {
         pub report_actions: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub report_previous: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub report_add_log: TemplateChild<gtk::ListBoxRow>,
         /// The report's pages, and the one shown.
         pub pages: RefCell<Vec<String>>,
         pub page: Cell<usize>,
@@ -106,6 +113,11 @@ impl PinduReportLevel {
         } else {
             Some(imp.report_previous.get().upcast())
         }
+    }
+
+    /// Add a Game's Log, where focus goes back to from the games with a log.
+    pub(crate) fn add_log_row(&self) -> gtk::Widget {
+        self.imp().report_add_log.get().upcast()
     }
 
     /// The report's text is the new `report`, shown from its first page; focus goes to it
@@ -224,7 +236,8 @@ impl PinduReportLevel {
 
 impl PinduQuickAccess {
     /// Adds `win.diagnostics-report-previous` and `win.diagnostics-report-next`, which turn
-    /// the report's pages.
+    /// the report's pages, and `win.diagnostics-report-log`, which gathers the report again
+    /// with the newest log of the game whose ID it is given.
     pub(crate) fn setup_diagnostics_report(&self, actions: &impl IsA<gio::ActionMap>) {
         for (name, forward) in [
             ("diagnostics-report-previous", false),
@@ -234,10 +247,26 @@ impl PinduQuickAccess {
                 quick_access.imp().report_level.step_page(forward);
             });
         }
+        self.add_host_action(
+            actions,
+            "diagnostics-report-log",
+            Some(glib::VariantTy::STRING),
+            |quick_access, target| {
+                let Some(id) = target
+                    .and_then(glib::Variant::str)
+                    .and_then(|id| id.parse::<GameId>().ok())
+                else {
+                    return;
+                };
+                quick_access.show_diagnostics_report(Some(id));
+                quick_access.request_level(QuickAccessLevel::DiagnosticsReport);
+            },
+        );
     }
 
-    /// The level opens: the report is gathered again and shown, and a copy is saved.
-    pub(crate) fn show_diagnostics_report(&self) {
+    /// The level opens: the report is gathered again, with `game`'s newest log after it
+    /// when there is one, and shown, and a copy is saved.
+    pub(crate) fn show_diagnostics_report(&self, game: Option<GameId>) {
         let Some(application) = self.application() else {
             return;
         };
@@ -246,7 +275,7 @@ impl PinduQuickAccess {
         let steam_gamescope = application.gamescope_service().is_active();
         let own_session = application.runs_as_own_session();
         glib::spawn_future_local(async move {
-            let report = diagnostics_service::debug_info(steam_gamescope, own_session).await;
+            let report = diagnostics_service::debug_info(steam_gamescope, own_session, game).await;
             if !level.is_opening(opening) {
                 return;
             }
@@ -255,6 +284,29 @@ impl PinduQuickAccess {
             if level.is_opening(opening) {
                 level.show_saved(saved);
             }
+        });
+    }
+
+    /// The games with a log open: they are listed, the game played with logs last first,
+    /// and the first takes focus; or, when none has a log, how to get one shows.
+    pub(crate) fn show_report_logs(&self) {
+        let quick_access = self.downgrade();
+        glib::spawn_future_local(async move {
+            let choices = diagnostics_service::log_choices().await;
+            let Some(quick_access) = quick_access.upgrade() else {
+                return;
+            };
+            if quick_access.level() != Some(QuickAccessLevel::ReportLog) {
+                return;
+            }
+            let imp = quick_access.imp();
+            imp.report_logs.remove_all();
+            for choice in &choices {
+                imp.report_logs.append(&log_row(choice));
+            }
+            imp.report_logs.set_visible(!choices.is_empty());
+            imp.report_logs_empty.set_visible(choices.is_empty());
+            quick_access.focus_level(None);
         });
     }
 
@@ -289,10 +341,13 @@ impl PinduWindow {
         true
     }
 
-    /// Widens Quick Access while it shows `level`, if that is the report, and narrows it
-    /// again after.
+    /// Widens Quick Access while it shows `level`, if that is the report or the games with
+    /// a log, and narrows it again after.
     pub(crate) fn fit_quick_access(&self, level: Option<QuickAccessLevel>) {
-        let (width, fraction) = if level == Some(QuickAccessLevel::DiagnosticsReport) {
+        let (width, fraction) = if matches!(
+            level,
+            Some(QuickAccessLevel::DiagnosticsReport | QuickAccessLevel::ReportLog)
+        ) {
             REPORT_WIDTH
         } else {
             PANEL_WIDTH
@@ -301,4 +356,18 @@ impl PinduWindow {
         split_view.set_max_sidebar_width(width);
         split_view.set_sidebar_width_fraction(fraction);
     }
+}
+
+/// A game with a log: its title and its newest log's name; choosing it adds that log to the
+/// report.
+fn log_row(choice: &LogChoice) -> adw::ActionRow {
+    let row = adw::ActionRow::builder()
+        .title(&choice.title)
+        .subtitle(&choice.newest)
+        .use_markup(false)
+        .activatable(true)
+        .build();
+    row.set_action_name(Some("win.diagnostics-report-log"));
+    row.set_action_target_value(Some(&choice.id.as_str().to_variant()));
+    row
 }

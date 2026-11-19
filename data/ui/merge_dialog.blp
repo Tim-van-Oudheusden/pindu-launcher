@@ -1,0 +1,82 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Merge With: the other games, likely copies first, narrowed by a search; choosing one
+// merges the game with it. merge_dialog.rs fills the list from
+// pindu_core::game_groups::merge_candidates.
+template $PinduMergeDialog: Adw.Dialog {
+  title: _("Merge With");
+  content-width: 480;
+  content-height: 560;
+  focus-widget: search_entry;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {}
+
+    [top]
+    Adw.Clamp {
+      margin-start: 12;
+      margin-end: 12;
+      margin-bottom: 6;
+
+      child: SearchEntry search_entry {
+        placeholder-text: _("Search games");
+        search-changed => $search_changed() swapped;
+        activate => $choose_first() swapped;
+      };
+    }
+
+    content: Stack stack {
+      StackPage {
+        name: "games";
+
+        child: ScrolledWindow {
+          hscrollbar-policy: never;
+
+          child: Adw.Clamp {
+            margin-top: 6;
+            margin-bottom: 12;
+            margin-start: 12;
+            margin-end: 12;
+
+            child: Box {
+              orientation: vertical;
+              spacing: 12;
+
+              Label {
+                label: _("The two become copies of one game. Split them again from the game’s menu.");
+                wrap: true;
+                xalign: 0;
+
+                styles [
+                  "dimmed",
+                ]
+              }
+
+              ListBox list {
+                selection-mode: none;
+                valign: start;
+                row-activated => $row_activated() swapped;
+
+                styles [
+                  "boxed-list",
+                ]
+              }
+            };
+          };
+        };
+      }
+
+      StackPage {
+        name: "empty";
+
+        child: Adw.StatusPage {
+          icon-name: "edit-find-symbolic";
+          title: _("No Games Found");
+          description: _("Try a different search");
+        };
+      }
+    };
+  };
+}
