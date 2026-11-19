@@ -1159,14 +1159,16 @@ impl PinduWindow {
                 ),
             );
         }
-        self.settings().connect_changed(
-            Some("prefer-steamgriddb"),
-            glib::clone!(
-                #[weak(rename_to = window)]
-                self,
-                move |_, _| window.library_service().reload()
-            ),
-        );
+        for key in ["prefer-steamgriddb", crate::sources::SOURCE_ORDER_KEY] {
+            self.settings().connect_changed(
+                Some(key),
+                glib::clone!(
+                    #[weak(rename_to = window)]
+                    self,
+                    move |_, _| window.library_service().reload()
+                ),
+            );
+        }
         self.settings().connect_changed(
             Some("hidden-sources"),
             glib::clone!(
