@@ -177,6 +177,41 @@ pub fn offers_proton_choice(game: &Game) -> bool {
     launch_settings(game).is_some_and(|settings| settings.proton)
 }
 
+/// How a game we run starts this once: as its launch settings say, with a log of it, or
+/// safely, to tell a broken overlay or wrapper from a broken game.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Start {
+    /// Play: as its launch settings say.
+    Play,
+    /// "Play with Logs": as its launch settings say, keeping its output in a new log.
+    WithLogs,
+    /// "Start Safely": without its wrappers, MangoHud, GameMode or its own environment
+    /// variables, keeping its output in a new log. Its saved settings stay as they are.
+    Safely,
+}
+
+impl Start {
+    /// Whether this start keeps the game's output in a new log.
+    pub fn keeps_log(self) -> bool {
+        self != Self::Play
+    }
+
+    /// The launch config the game starts with this once: `config` itself, or for a safe
+    /// start only its program, arguments, folder, Proton build and prefix.
+    pub fn config(self, config: LaunchConfig) -> LaunchConfig {
+        match self {
+            Self::Play | Self::WithLogs => config,
+            Self::Safely => LaunchConfig {
+                environment: BTreeMap::new(),
+                mangohud: false,
+                gamemode: false,
+                wrappers: Vec::new(),
+                ..config
+            },
+        }
+    }
+}
+
 /// A game ID and window class of the game's own, so umu, the compositor and the shell
 /// tell our games apart: `pindu-<hash>` from the game's ID.
 pub(crate) fn session_environment(game: &Game) -> BTreeMap<String, String> {
@@ -342,6 +377,33 @@ pub fn launcher_uri(game: &Game) -> Option<String> {
         source if heroic_runner(source).is_some() => Some("heroic://ping".to_owned()),
         _ => None,
     }
+}
+
+/// A page about a game that its players keep on the web, which the browser opens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WebPage {
+    /// ProtonDB's reports of how the game runs on Linux.
+    ProtonDb,
+    /// PCGamingWiki's fixes and settings for the game.
+    PcGamingWiki,
+}
+
+/// The address of `page` for `game`, by its Steam app ID; `None` for a game that is not
+/// on Steam. Pindu launcher only hands the address to the browser and fetches nothing.
+pub fn web_page_uri(game: &Game, page: WebPage) -> Option<String> {
+    let app_id = game.id.native_id();
+    if game.source() != Source::Steam
+        || app_id.is_empty()
+        || !app_id.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return None;
+    }
+    Some(match page {
+        WebPage::ProtonDb => format!("https://www.protondb.com/app/{app_id}"),
+        WebPage::PcGamingWiki => {
+            format!("https://www.pcgamingwiki.com/api/appid.php?appid={app_id}")
+        }
+    })
 }
 
 fn heroic_runner(source: Source) -> Option<&'static str> {
@@ -654,6 +716,84 @@ mod tests {
     }
 
     #[test]
+    fn a_safe_start_runs_the_bare_game_with_only_our_variables() {
+        let game = host_game(LaunchKind::HostCommand);
+        let config = Start::Safely.config(LaunchConfig {
+            wrappers: vec!["gamescope".into(), "obs-gamecapture".into()],
+            gamemode: true,
+            mangohud: true,
+            ..config()
+        });
+
+        let Some(Route::HostSpawn(command)) = route(&game, Some(&config)) else {
+            panic!("no host route");
+        };
+
+        assert_eq!(command.argv, ["/opt/Celeste Game/Celeste", "--fullscreen"]);
+        assert_eq!(command.environment, session_environment(&game));
+        assert_eq!(command.working_dir, Some("/opt/Celeste Game".into()));
+    }
+
+    #[test]
+    fn a_safe_start_keeps_the_game_s_program_build_and_prefix() {
+        let config = LaunchConfig {
+            proton_version: Some("GE-Proton10-34".into()),
+            prefix_path: Some("/prefixes/celeste".into()),
+            wrappers: vec!["gamescope".into()],
+            gamemode: true,
+            mangohud: true,
+            ..config()
+        };
+
+        assert_eq!(
+            Start::Safely.config(config.clone()),
+            LaunchConfig {
+                environment: BTreeMap::new(),
+                mangohud: false,
+                gamemode: false,
+                wrappers: Vec::new(),
+                ..config
+            }
+        );
+    }
+
+    #[test]
+    fn play_keeps_the_settings_and_only_play_leaves_no_log() {
+        let config = LaunchConfig {
+            wrappers: vec!["gamescope".into()],
+            gamemode: true,
+            mangohud: true,
+            ..config()
+        };
+
+        assert_eq!(Start::Play.config(config.clone()), config);
+        assert_eq!(Start::WithLogs.config(config.clone()), config);
+        assert!(!Start::Play.keeps_log());
+        assert!(Start::WithLogs.keeps_log());
+        assert!(Start::Safely.keeps_log());
+    }
+
+    #[test]
+    fn a_safe_start_leaves_the_saved_settings_as_they_are() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = crate::store::Store::open(&dir.path().join("library.db")).unwrap();
+        let game = host_game(LaunchKind::HostCommand);
+        let saved = LaunchConfig {
+            wrappers: vec!["gamescope".into()],
+            gamemode: true,
+            mangohud: true,
+            ..config()
+        };
+        store.insert_game(&game).unwrap();
+        store.set_launch_config(&game.id, &saved).unwrap();
+
+        let loaded = store.launch_config(&game.id).unwrap().unwrap();
+        route(&game, Some(&Start::Safely.config(loaded)));
+
+        assert_eq!(store.launch_config(&game.id).unwrap(), Some(saved));
+    }
+
+    #[test]
     fn switching_a_host_game_s_tools_on_wraps_its_next_launch_in_them() {
         let dir = tempfile::tempdir().unwrap();
         let store = crate::store::Store::open(&dir.path().join("library.db")).unwrap();
@@ -960,6 +1100,36 @@ mod tests {
             )),
             None
         );
+    }
+
+    #[test]
+    fn a_steam_game_links_to_its_protondb_and_pcgamingwiki_pages_by_app_id() {
+        let steam = store_game(Source::Steam, "570");
+        assert_eq!(
+            web_page_uri(&steam, WebPage::ProtonDb).as_deref(),
+            Some("https://www.protondb.com/app/570")
+        );
+        assert_eq!(
+            web_page_uri(&steam, WebPage::PcGamingWiki).as_deref(),
+            Some("https://www.pcgamingwiki.com/api/appid.php?appid=570")
+        );
+    }
+
+    #[test]
+    fn only_steam_games_with_a_numeric_app_id_have_web_pages() {
+        for game in [
+            store_game(Source::HeroicGog, "570"),
+            store_game(Source::Steam, "570/../x"),
+            store_game(Source::Steam, ""),
+        ] {
+            assert_eq!(
+                web_page_uri(&game, WebPage::ProtonDb),
+                None,
+                "{:?}",
+                game.id
+            );
+            assert_eq!(web_page_uri(&game, WebPage::PcGamingWiki), None);
+        }
     }
 
     fn steam_session(root: &Path) -> SteamSession<'_> {

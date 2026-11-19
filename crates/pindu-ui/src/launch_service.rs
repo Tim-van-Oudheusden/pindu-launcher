@@ -10,7 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
-use pindu_core::launch::{self, Command, Route, SteamSession};
+use pindu_core::launch::{self, Command, Route, Start, SteamSession, WebPage};
 use pindu_core::model::{Game, Source};
 use pindu_core::notifications::{Kind, Target};
 
@@ -33,7 +33,7 @@ pub fn launcher_name(source: Source) -> Option<&'static str> {
         }
         Source::Lutris => Some("Lutris"),
         Source::Bottles => Some("Bottles"),
-        Source::Faugus | Source::Desktop | Source::Manual => None,
+        Source::Faugus | Source::Legendary | Source::Desktop | Source::Manual => None,
     }
 }
 
@@ -44,15 +44,17 @@ pub fn launcher_name(source: Source) -> Option<&'static str> {
 /// the toast says what happened, or why the game could not start. Without a window
 /// (`--launch`, Shell search) nothing is shown, unless the game needs a permission: then
 /// the window opens to explain it, and a notification keeps the explanation for Quick
-/// Access. With `logs` ("Play with Logs"), a game we start keeps its output, and a Windows
-/// game Proton's log too, in a new log of the game (see `log_service`).
+/// Access. With `start` keeping a log ("Play with Logs", "Start Safely"), a game we start
+/// keeps its output, and a Windows game Proton's log too, in a new log of the game (see
+/// `log_service`); a safe start runs it without its wrappers, MangoHud, GameMode or its own
+/// environment variables, this once.
 pub fn play(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
     game: &GameObject,
     library: &LibraryService,
     sessions: &SessionService,
-    logs: bool,
+    start: Start,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
     let game = game.game().clone();
@@ -82,7 +84,9 @@ pub fn play(
         if let Some(application) = app.downcast_ref::<PinduApplication>() {
             let gamescope = application.gamescope_service();
             config = config.map(|config| gamescope.launch_config(config));
+            gamescope.set_started_safely(&game.id, start == Start::Safely);
         }
+        let config = config.map(|config| start.config(config));
         match launch::route(&game, config.as_ref()) {
             Some(Route::StoreUri(uri)) => {
                 let hand_off = store_hand_off(&app, &library, &game, uri).await;
@@ -98,10 +102,10 @@ pub fn play(
             }
             Some(Route::HostSpawn(mut command)) => {
                 let mut output = None;
-                if logs {
+                if start.keeps_log() {
                     let (id, title) = (game.id.clone(), game.title.clone());
                     let created = gio::spawn_blocking(move || {
-                        let log = GameLog::create(&id, &title, &mut command, false)
+                        let log = GameLog::create(&id, &title, &mut command, false, start)
                             .and_then(|log| log.output());
                         (log, command)
                     })
@@ -130,17 +134,17 @@ pub fn play(
                 let message = match started {
                     Ok(()) => {
                         library.mark_played(&game.id, now()).await;
-                        gettext("Starting “{title}”")
+                        starting(&game.title, start)
                     }
                     Err(error) => {
                         glib::g_warning!("pindu", "Could not start {:?}: {error}", command.argv);
-                        gettext("Could not start “{title}”")
+                        gettext("Could not start “{title}”").replace("{title}", &game.title)
                     }
                 };
-                toast(adw::Toast::new(&message.replace("{title}", &game.title)));
+                toast(adw::Toast::new(&message));
             }
             Some(Route::Proton(config)) => {
-                proton_launch::play(&app, window.as_ref(), game, config, sessions, logs, toast);
+                proton_launch::play(&app, window.as_ref(), game, config, sessions, start, toast);
             }
             Some(Route::Runtime(command)) => {
                 proton_launch::play_native(
@@ -149,7 +153,7 @@ pub fn play(
                     game,
                     command,
                     sessions,
-                    logs,
+                    start,
                     toast,
                 );
             }
@@ -157,6 +161,16 @@ pub fn play(
         }
         drop(hold);
     });
+}
+
+/// What the toast says when a game we run starts: that it starts, and safely for a safe
+/// start.
+pub(crate) fn starting(title: &str, start: Start) -> String {
+    match start {
+        Start::Safely => gettext("Starting “{title}” safely"),
+        Start::Play | Start::WithLogs => gettext("Starting “{title}”"),
+    }
+    .replace("{title}", title)
 }
 
 /// How a store game goes to its launcher.
@@ -321,6 +335,25 @@ pub fn open_in_launcher(
             toast(adw::Toast::new(
                 &gettext("Could not open {launcher}").replace("{launcher}", launcher),
             ));
+        }
+    });
+}
+
+/// Opens `page` about the game in the browser, through the OpenURI portal in the sandbox;
+/// nothing for a game that has no such page. Pindu launcher fetches nothing itself.
+pub fn open_web_page(
+    window: &impl IsA<gtk::Window>,
+    game: &GameObject,
+    page: WebPage,
+    toast: impl Fn(adw::Toast) + 'static,
+) {
+    let Some(uri) = launch::web_page_uri(&game.game(), page) else {
+        return;
+    };
+    gtk::UriLauncher::new(&uri).launch(Some(window), gio::Cancellable::NONE, move |result| {
+        if let Err(error) = result {
+            glib::g_warning!("pindu", "Could not open {uri}: {error}");
+            toast(adw::Toast::new(&gettext("Could not open the web page")));
         }
     });
 }
