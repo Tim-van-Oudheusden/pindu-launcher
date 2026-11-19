@@ -3,6 +3,7 @@ blueprint_names = [
   'add_store',
   'artwork_dialog',
   'cover_tile',
+  'fullscreen_add_game',
   'fullscreen_bluetooth',
   'fullscreen_health',
   'fullscreen_network',

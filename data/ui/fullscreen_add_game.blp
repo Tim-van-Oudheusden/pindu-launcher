@@ -1,0 +1,146 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Fullscreen mode's Add Game: one step at a time, a heading, what the step is about, and a
+// list whose rows fullscreen_add_game.rs fills for the step: the kinds of game, the places
+// and folders of the picker, the programs found, or the title and Add. Every row is a list
+// row, so a controller alone gets through with the D-pad, A and B.
+template $PinduFullscreenAddGame: Adw.Dialog {
+  title: _("Add Game");
+  content-width: 960;
+  content-height: 760;
+
+  child: Adw.ToastOverlay toast_overlay {
+    child: Adw.ToolbarView {
+      [top]
+      Adw.HeaderBar {}
+
+      content: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Adw.Clamp {
+          maximum-size: 840;
+
+          child: Box {
+            orientation: vertical;
+            spacing: 18;
+            margin-top: 12;
+            margin-bottom: 24;
+            margin-start: 24;
+            margin-end: 24;
+
+            Label heading {
+              wrap: true;
+              xalign: 0;
+
+              styles [
+                "title-2",
+              ]
+            }
+
+            Label description {
+              wrap: true;
+              xalign: 0;
+              visible: false;
+
+              styles [
+                "dim-label",
+              ]
+            }
+
+            // While the installer runs.
+            Box busy {
+              spacing: 12;
+              visible: false;
+
+              Adw.Spinner {}
+
+              Label {
+                label: _("Installing… Finish the installer to go on.");
+                wrap: true;
+                xalign: 0;
+              }
+            }
+
+            ListBox list {
+              selection-mode: none;
+              row-activated => $row_activated() swapped;
+
+              [placeholder]
+              Label empty {
+                wrap: true;
+                margin-top: 12;
+                margin-bottom: 12;
+                margin-start: 12;
+                margin-end: 12;
+
+                styles [
+                  "dim-label",
+                ]
+              }
+
+              styles [
+                "boxed-list",
+              ]
+            }
+
+            // A Windows game's Proton build on the last step: the default, then the
+            // builds on this machine, newest first, with a check on the chosen one;
+            // filled in code (fullscreen_proton.rs).
+            Label proton_title {
+              label: _("Proton");
+              xalign: 0;
+              margin-top: 6;
+              visible: false;
+
+              styles [
+                "heading",
+              ]
+            }
+
+            ListBox proton_builds {
+              selection-mode: none;
+              visible: false;
+
+              styles [
+                "boxed-list",
+              ]
+            }
+
+            // Adds the game, on the last step.
+            ListBox add_list {
+              selection-mode: none;
+              visible: false;
+
+              Adw.ButtonRow add_row {
+                title: _("Add Game");
+                start-icon-name: "list-add-symbolic";
+                activated => $add_activated() swapped;
+
+                styles [
+                  "suggested-action",
+                ]
+              }
+
+              styles [
+                "boxed-list",
+              ]
+            }
+
+            // Says that the picker lists only what the launcher can already read.
+            Label note {
+              wrap: true;
+              xalign: 0;
+              visible: false;
+
+              styles [
+                "dim-label",
+                "caption",
+              ]
+            }
+          };
+        };
+      };
+    };
+  };
+}
