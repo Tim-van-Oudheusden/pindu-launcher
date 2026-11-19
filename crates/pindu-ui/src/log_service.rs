@@ -1,7 +1,7 @@
-//! Keeps the logs of "Play with Logs": one file per launch in the game's logs folder
-//! (see `pindu_core::logs`), with what the game, or umu, writes to its output. Proton
-//! writes its own log, with Wine's output, to a folder of its own while the game runs;
-//! it is added to the end of the game's log once umu exits.
+//! Keeps the logs of "Play with Logs" and "Start Safely": one file per launch in the
+//! game's logs folder (see `pindu_core::logs`), with what the game, or umu, writes to its
+//! output. Proton writes its own log, with Wine's output, to a folder of its own while the
+//! game runs; it is added to the end of the game's log once umu exits.
 
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use gettextrs::gettext;
 use gtk::glib;
-use pindu_core::launch::Command;
+use pindu_core::launch::{Command, Start};
 use pindu_core::logs::{self, KEEP};
 use pindu_core::model::GameId;
 use pindu_core::paths;
@@ -24,14 +24,16 @@ pub struct GameLog {
 }
 
 impl GameLog {
-    /// Starts a new log for a game: makes its logs folder, writes the header and drops
-    /// the logs beyond the newest `KEEP`. For a Windows game, `command` gets Proton
-    /// logging to a folder of its own. Blocks; run it on a worker thread.
+    /// Starts a new log for a game: makes its logs folder, writes the header, which for a
+    /// safe `start` says what it left out, and drops the logs beyond the newest `KEEP`. For
+    /// a Windows game, `command` gets Proton logging to a folder of its own. Blocks; run it
+    /// on a worker thread.
     pub fn create(
         id: &GameId,
         title: &str,
         command: &mut Command,
         proton: bool,
+        start: Start,
     ) -> io::Result<Self> {
         let dir = logs::game_logs_dir(&data_home(), id);
         fs::create_dir_all(&dir)?;
@@ -46,7 +48,11 @@ impl GameLog {
             .append(true)
             .create_new(true)
             .open(&path)?;
-        file.write_all(logs::header(title, &started, &command.argv).as_bytes())?;
+        let header = match start {
+            Start::Safely => logs::safe_header(title, &started, &command.argv),
+            Start::Play | Start::WithLogs => logs::header(title, &started, &command.argv),
+        };
+        file.write_all(header.as_bytes())?;
         // Proton's folder comes last, so a log that could not start leaves none behind.
         let proton_dir = if proton {
             let template = std::env::temp_dir().join("pindu-proton-log-XXXXXX");

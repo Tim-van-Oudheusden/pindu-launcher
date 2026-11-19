@@ -3,7 +3,7 @@
 use std::sync::{LazyLock, OnceLock};
 
 use pindu_core::model::Game;
-use pindu_core::permissions;
+use pindu_core::{paths, permissions, umu};
 
 use crate::config::APP_ID;
 
@@ -41,14 +41,45 @@ pub fn needs_permission(game: &Game) -> bool {
 /// Where the Flatpak mounts the MangoHud Vulkan-layer extension.
 const MANGOHUD_LAYER_DIR: &str = "/app/lib/extensions/vulkan/MangoHud";
 
-/// Whether `game`'s MangoHud switch can work. In Flatpak the extension's folder is read
-/// once; installing it needs a restart, as the extension is mounted at start-up.
-pub fn mangohud_works(game: &Game) -> bool {
+/// Whether the Flatpak's MangoHud Vulkan-layer extension is installed. The extension's
+/// folder is read once; installing it needs a restart, as it is mounted at start-up.
+pub fn mangohud_layer_installed() -> bool {
     static LAYER: LazyLock<bool> = LazyLock::new(|| {
         permissions::mangohud_layer_installed(std::path::Path::new(MANGOHUD_LAYER_DIR))
     });
+    *LAYER
+}
+
+/// Whether `game`'s MangoHud switch can work.
+pub fn mangohud_works(game: &Game) -> bool {
     let in_flatpak = in_flatpak();
-    permissions::mangohud_works(game.launch_kind, in_flatpak, in_flatpak && *LAYER)
+    permissions::mangohud_works(
+        game.launch_kind,
+        in_flatpak,
+        in_flatpak && mangohud_layer_installed(),
+    )
+}
+
+/// Whether MangoHud can run at all: in Flatpak its Vulkan-layer extension is installed,
+/// natively the system's `mangohud` is on `PATH`.
+pub fn mangohud_available() -> bool {
+    if in_flatpak() {
+        mangohud_layer_installed()
+    } else {
+        on_path("mangohud")
+    }
+}
+
+/// Whether GameMode can be asked to favour a game: `gamemoderun`, which the Flatpak
+/// bundles and a native install needs from the system, is on `PATH`.
+pub fn gamemode_available() -> bool {
+    on_path("gamemoderun")
+}
+
+/// Whether `program` is on `PATH`.
+fn on_path(program: &str) -> bool {
+    std::env::var_os("PATH")
+        .is_some_and(|path| paths::find_program(&path, program, umu::is_executable).is_some())
 }
 
 /// The command that grants host spawn to this app.

@@ -117,7 +117,7 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
     }
   }
 
-  Adw.PreferencesPage {
+  Adw.PreferencesPage sources_page {
     title: _("Sources");
     icon-name: "folder-symbolic";
 
@@ -284,9 +284,23 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
         subtitle: _("Home's background holds still and art changes without a fade, as when animations are off in the system settings");
       }
 
-      Adw.SwitchRow large_text_row {
-        title: _("Larger Text");
-        subtitle: _("Text about a quarter larger, to read from across the room");
+      Adw.ComboRow text_size_row {
+        title: _("Text Size");
+        subtitle: _("Each step makes text about a quarter larger, to read from across the room");
+
+        model: StringList {
+          strings [
+            _("Default"),
+            _("Large"),
+            _("Larger"),
+            _("Largest"),
+          ]
+        };
+      }
+
+      Adw.SwitchRow hold_to_confirm_row {
+        title: _("Hold to Confirm");
+        subtitle: _("Power Off, Restart, Forget and Stop need the controller's confirm button held down, with the progress shown");
       }
     }
 

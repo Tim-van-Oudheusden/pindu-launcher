@@ -11,8 +11,9 @@
 
 use std::path::{Component, Path, PathBuf};
 
-use crate::model::{Source, SourceState, Timestamp};
+use crate::model::{Game, Source, SourceState, Timestamp};
 use crate::permissions;
+use crate::sources::sync::IMPORTED_SOURCES;
 
 /// What the services found out about one source.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -272,6 +273,51 @@ impl HealthReport {
     }
 }
 
+/// Each source that has an importer, in sync order, with its stored state (a new one when
+/// none is stored yet) and how many of `games` come from it. Games the user removed are
+/// not counted.
+pub fn source_facts(states: &[SourceState], games: &[Game]) -> Vec<SourceFacts> {
+    IMPORTED_SOURCES
+        .iter()
+        .map(|&source| SourceFacts {
+            state: states
+                .iter()
+                .find(|state| state.source == source)
+                .cloned()
+                .unwrap_or_else(|| SourceState::new(source)),
+            games: games
+                .iter()
+                .filter(|game| !game.user_removed && game.source() == source)
+                .count(),
+        })
+        .collect()
+}
+
+/// How many of `games` start on the host, and so need host spawn in the Flatpak. Games
+/// the user removed are not counted.
+pub fn games_needing_host(games: &[Game]) -> usize {
+    games
+        .iter()
+        .filter(|game| !game.user_removed && permissions::needs_host_spawn(game.launch_kind))
+        .count()
+}
+
+/// How many bytes the files below `folder` take, such as the artwork cache's. Links are
+/// not followed, and what cannot be read counts as nothing, as does a missing folder.
+pub fn folder_bytes(folder: &Path) -> u64 {
+    let Ok(entries) = std::fs::read_dir(folder) else {
+        return 0;
+    };
+    entries
+        .flatten()
+        .map(|entry| match entry.file_type() {
+            Ok(kind) if kind.is_dir() => folder_bytes(&entry.path()),
+            Ok(kind) if kind.is_file() => entry.metadata().map_or(0, |metadata| metadata.len()),
+            _ => 0,
+        })
+        .sum()
+}
+
 /// The report the facts make.
 pub fn report(facts: &HealthFacts) -> HealthReport {
     let launch = &facts.launch;
@@ -341,6 +387,7 @@ fn source_health(facts: &SourceFacts) -> SourceHealth {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::{GameId, LaunchKind};
 
     const APP_ID: &str = "io.example.App";
 
@@ -619,5 +666,65 @@ mod tests {
             Install::Native
         );
         assert_eq!(Install::of(Path::new("/home/u/app/.var")), Install::Native);
+    }
+
+    fn game(source: Source, id: &str, kind: LaunchKind) -> Game {
+        Game::new(GameId::new(source, id), id, kind, 0)
+    }
+
+    #[test]
+    fn every_imported_source_is_listed_with_its_games_in_sync_order() {
+        let states = vec![SourceState {
+            resolved_location: Some(PathBuf::from("/home/u/.local/share/lutris")),
+            ..SourceState::new(Source::Lutris)
+        }];
+        let mut removed = game(Source::Lutris, "c", LaunchKind::HostCommand);
+        removed.user_removed = true;
+        let games = [
+            game(Source::Lutris, "a", LaunchKind::HostCommand),
+            game(Source::Lutris, "b", LaunchKind::HostCommand),
+            removed,
+            game(Source::Steam, "1", LaunchKind::StoreUri),
+        ];
+
+        let facts = source_facts(&states, &games);
+
+        let order: Vec<_> = facts.iter().map(|facts| facts.state.source).collect();
+        assert_eq!(order, IMPORTED_SOURCES);
+        let lutris = facts
+            .iter()
+            .find(|facts| facts.state.source == Source::Lutris)
+            .unwrap();
+        assert_eq!(lutris.state, states[0]);
+        assert_eq!(lutris.games, 2);
+        assert_eq!(facts[0].state, SourceState::new(Source::Steam));
+        assert_eq!(facts[0].games, 1);
+    }
+
+    #[test]
+    fn only_games_started_on_the_host_need_host_access() {
+        let mut removed = game(Source::Desktop, "gone", LaunchKind::DesktopEntry);
+        removed.user_removed = true;
+        let games = [
+            game(Source::Lutris, "a", LaunchKind::HostCommand),
+            game(Source::Desktop, "b", LaunchKind::DesktopEntry),
+            game(Source::Steam, "1", LaunchKind::StoreUri),
+            game(Source::Manual, "w", LaunchKind::Proton),
+            removed,
+        ];
+
+        assert_eq!(games_needing_host(&games), 2);
+    }
+
+    #[test]
+    fn a_folder_takes_the_bytes_of_every_file_below_it() {
+        let folder = tempfile::tempdir().unwrap();
+        std::fs::write(folder.path().join("a"), [0; 10]).unwrap();
+        std::fs::create_dir_all(folder.path().join("sub/deeper")).unwrap();
+        std::fs::write(folder.path().join("sub/b"), [0; 20]).unwrap();
+        std::fs::write(folder.path().join("sub/deeper/c"), [0; 30]).unwrap();
+
+        assert_eq!(folder_bytes(folder.path()), 60);
+        assert_eq!(folder_bytes(&folder.path().join("missing")), 0);
     }
 }

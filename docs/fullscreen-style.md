@@ -156,12 +156,14 @@ own **Reduce Motion** switch. Turn off your transitions and animations under the
 }
 ```
 
-### Larger text
+### Text size
 
-With **Larger Text** on, the window is `large-text` and its type is about a quarter larger: Pindu sets
-`font-size` on `window.fullscreen-mode.large-text`. Size your text in `em` so it follows, and give rows and
-tiles that hold text room to grow (or no fixed height) so nothing is cut off. A design can set its own scale
-under `window.fullscreen-mode.large-text`, or style anything else differently there.
+**Text Size** has four steps, Default, Large, Larger and Largest; each step past Default adds about a quarter of
+fullscreen mode's own type size. Above Default the window is `large-text` and `text-large`, `text-larger` or
+`text-largest`, and Pindu sets `font-size` on `window.fullscreen-mode.text-large` and the others. Size your text
+in `em` so it follows, and give rows and tiles that hold text room to grow (or no fixed height) so nothing is cut
+off. A design can set its own scale under the size classes, or restyle anything at every larger size under
+`window.fullscreen-mode.large-text`.
 
 ## Names
 
@@ -175,7 +177,8 @@ controller's position.
 |---|---|
 | `window.fullscreen-mode` | The window, while in fullscreen mode |
 | `window.reduced-motion` | The window, while Pindu moves less: the system asks for less motion (reduced motion, or animations off) or **Reduce Motion** is on in fullscreen mode |
-| `window.large-text` | The window, in fullscreen mode while **Larger Text** is on |
+| `window.large-text` | The window, in fullscreen mode while **Text Size** is above Default |
+| `window.text-large`, `window.text-larger`, `window.text-largest` | The window, in fullscreen mode at that **Text Size** |
 
 **Top bar** (with `top-bar`)
 
@@ -243,6 +246,8 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.game-hero` | The art at the top, with its `.hero-gradient` |
 | `.game-actions` | The row of buttons; `.game-play` is Play |
 | `.playing-card` | The Playing Now card while the game runs; the menu drawer and the top of Quick Access show it too, with `.session-time`, how long the game has run |
+| `.game-about` | The About group: the developer and the genres, in a `.boxed-list` whose rows take focus |
+| `.game-description` | The description; it takes focus, and Up and Down scroll through it while it has it |
 | `.launch-overlay` | The overlay while a game starts |
 
 **Panels and bars**

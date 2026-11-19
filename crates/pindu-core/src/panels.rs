@@ -8,7 +8,7 @@
 //! B do to them, and what each lists.
 
 use crate::gamepad::Intent;
-use crate::launch;
+use crate::launch::{self, WebPage};
 use crate::model::Game;
 use crate::themes::Theme;
 
@@ -89,11 +89,14 @@ pub enum QuickAccessLevel {
     /// The stores to install from Flathub, and the install that runs (see
     /// [`crate::add_store`]).
     AddStore,
+    /// Each imported source, whether it was found on this computer and its Import switch,
+    /// the same setting as Preferences' (see [`crate::sources::sync::imported_source_states`]).
+    Sources,
 }
 
 impl QuickAccessLevel {
     /// Every level, the entries first.
-    pub const ALL: [Self; 14] = [
+    pub const ALL: [Self; 15] = [
         Self::Main,
         Self::Notifications,
         Self::Activity,
@@ -108,6 +111,7 @@ impl QuickAccessLevel {
         Self::SoundOutput,
         Self::SystemUpdate,
         Self::AddStore,
+        Self::Sources,
     ];
 
     /// The name the level goes by: its page of the panel's stack, and what a row asks for
@@ -128,6 +132,7 @@ impl QuickAccessLevel {
             Self::SoundOutput => "sound-output",
             Self::SystemUpdate => "system-update",
             Self::AddStore => "add-store",
+            Self::Sources => "sources",
         }
     }
 
@@ -365,6 +370,9 @@ pub enum Playing {
 pub enum GameOption {
     /// Start the game.
     Play,
+    /// Start a game we run once without its wrappers, MangoHud, GameMode or its own
+    /// environment variables (see [`launch::Start::Safely`]).
+    StartSafely,
     /// Stop a game that runs: end one we started, or close the windows of one its store
     /// launcher runs.
     Stop,
@@ -384,6 +392,10 @@ pub enum GameOption {
     Unhide,
     /// Open the game in its store launcher, when it has one.
     OpenInLauncher,
+    /// Open the game's ProtonDB page in the browser, for a Steam game.
+    ProtonDb,
+    /// Open the game's PCGamingWiki page in the browser, for a Steam game.
+    PcGamingWiki,
 }
 
 /// The options sheet's actions for `game`, top to bottom, as it runs or not (`playing`).
@@ -395,6 +407,7 @@ pub fn game_options(game: &Game, playing: Playing) -> Vec<GameOption> {
             Playing::Started => Stop,
             Playing::InStore => Return,
         }),
+        (playing == Playing::No && launch::launch_settings(game).is_some()).then_some(StartSafely),
         (playing == Playing::InStore).then_some(Stop),
         Some(if game.favourite {
             RemoveFromFavourites
@@ -405,6 +418,8 @@ pub fn game_options(game: &Game, playing: Playing) -> Vec<GameOption> {
         Some(ChangeArtwork),
         Some(if game.hidden { Unhide } else { Hide }),
         launch::launcher_uri(game).map(|_| OpenInLauncher),
+        launch::web_page_uri(game, WebPage::ProtonDb).map(|_| ProtonDb),
+        launch::web_page_uri(game, WebPage::PcGamingWiki).map(|_| PcGamingWiki),
     ]
     .into_iter()
     .flatten()
@@ -572,6 +587,20 @@ mod tests {
     fn b_steps_back_from_add_a_store_and_then_closes_quick_access() {
         let mut panels = Panels::new();
         panels.show(Panel::QuickAccess(QuickAccessLevel::AddStore));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), quick_access());
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), None);
+    }
+
+    #[test]
+    fn sources_is_a_level_of_its_own_that_b_steps_back_from() {
+        assert_eq!(
+            QuickAccessLevel::from_name("sources"),
+            Some(QuickAccessLevel::Sources)
+        );
+        let mut panels = Panels::new();
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Sources));
         assert!(panels.handle(Intent::Back, PAGE));
         assert_eq!(panels.open(), quick_access());
         assert!(panels.handle(Intent::Back, PAGE));
@@ -941,7 +970,7 @@ mod tests {
     }
 
     #[test]
-    fn a_store_game_s_options_end_with_opening_its_launcher() {
+    fn a_steam_game_s_options_end_with_opening_its_launcher_and_web_pages() {
         use GameOption::*;
         let steam = game(Source::Steam, LaunchKind::StoreUri);
         assert_eq!(
@@ -952,7 +981,9 @@ mod tests {
                 Collections,
                 ChangeArtwork,
                 Hide,
-                OpenInLauncher
+                OpenInLauncher,
+                ProtonDb,
+                PcGamingWiki
             ]
         );
     }
@@ -988,7 +1019,9 @@ mod tests {
                 Collections,
                 ChangeArtwork,
                 Hide,
-                OpenInLauncher
+                OpenInLauncher,
+                ProtonDb,
+                PcGamingWiki
             ]
         );
     }
@@ -1002,6 +1035,33 @@ mod tests {
             options.iter().position(|o| *o == GameOption::ChangeArtwork),
             collections.map(|index| index + 1)
         );
+    }
+
+    #[test]
+    fn only_a_steam_game_s_options_end_with_its_protondb_and_pcgamingwiki_pages() {
+        let steam = game_options(&game(Source::Steam, LaunchKind::StoreUri), Playing::No);
+        assert_eq!(
+            steam[steam.len() - 2..],
+            [GameOption::ProtonDb, GameOption::PcGamingWiki]
+        );
+
+        let heroic = game_options(&game(Source::HeroicGog, LaunchKind::StoreUri), Playing::No);
+        assert!(
+            !heroic
+                .iter()
+                .any(|o| matches!(o, GameOption::ProtonDb | GameOption::PcGamingWiki))
+        );
+    }
+
+    #[test]
+    fn a_game_we_run_offers_a_safe_start_after_play_while_it_does_not_run() {
+        use GameOption::*;
+        let lutris = game(Source::Lutris, LaunchKind::HostCommand);
+        let steam = game(Source::Steam, LaunchKind::StoreUri);
+
+        assert_eq!(game_options(&lutris, Playing::No)[..2], [Play, StartSafely]);
+        assert!(!game_options(&lutris, Playing::Started).contains(&StartSafely));
+        assert!(!game_options(&steam, Playing::No).contains(&StartSafely));
     }
 
     fn theme(id: &str, name: &str, contract: u64) -> Theme {

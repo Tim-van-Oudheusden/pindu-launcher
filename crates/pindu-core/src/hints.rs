@@ -19,6 +19,9 @@ pub enum Focus {
     Play,
     /// The game page's Stop button, while the game runs.
     Stop,
+    /// Power Off, Restart, Forget or Stop while they need a held confirm button
+    /// (`hold`).
+    Hold,
     /// A background task the user can cancel.
     Cancel,
     /// A switch, check box or toggle button.
@@ -121,6 +124,8 @@ pub enum Action {
     Options,
     /// Hold the button to cancel the launch.
     HoldToCancel,
+    /// Hold the button to confirm Power Off, Restart, Forget or Stop.
+    HoldToConfirm,
     /// Open the menu drawer.
     Menu,
     /// Open the Quick Access panel.
@@ -213,6 +218,7 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
         Focus::Game | Focus::Link => Some(Action::Open),
         Focus::Play => Some(Action::Play),
         Focus::Stop => Some(Action::Stop),
+        Focus::Hold => Some(Action::HoldToConfirm),
         Focus::Cancel => Some(Action::Cancel),
         Focus::Toggle => Some(Action::Toggle),
         Focus::Other => Some(Action::Select),
@@ -605,6 +611,22 @@ mod tests {
         assert_eq!(
             actions(working, DeviceKind::Xbox),
             [(Button::East, Action::Back)]
+        );
+    }
+
+    #[test]
+    fn an_action_that_needs_a_hold_says_so_on_a() {
+        let power = Context {
+            menu: true,
+            panel: Some(Panel::Drawer(DrawerLevel::Power)),
+            ..context(Focus::Hold)
+        };
+        assert_eq!(
+            actions(power, DeviceKind::Xbox),
+            [
+                (Button::South, Action::HoldToConfirm),
+                (Button::East, Action::Back)
+            ]
         );
     }
 

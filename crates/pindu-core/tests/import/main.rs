@@ -5,6 +5,8 @@ mod bottles;
 mod desktop;
 mod faugus;
 mod heroic;
+mod itch;
+mod legendary;
 mod lutris;
 mod proton;
 mod steam;

@@ -179,6 +179,7 @@ fn launchers_and_their_game_shortcuts_are_skipped() {
         "bottles-epic",
         "faugus-hollow-knight",
         "com.heroicgameslauncher.hgl",
+        "io.itch.itch",
         "io.github.tim_van_oudheusden.pindu-launcher",
     ] {
         assert!(

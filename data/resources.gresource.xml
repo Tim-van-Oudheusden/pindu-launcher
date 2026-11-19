@@ -12,6 +12,7 @@
     <file preprocess="xml-stripblanks">ui/game_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/game_overlay.ui</file>
     <file preprocess="xml-stripblanks">ui/game_page.ui</file>
+    <file preprocess="xml-stripblanks">ui/health_page.ui</file>
     <file preprocess="xml-stripblanks">ui/home_page.ui</file>
     <file preprocess="xml-stripblanks">ui/menu_drawer.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences.ui</file>
@@ -31,6 +32,8 @@
     <file preprocess="xml-stripblanks">home/heroic-gog.svg</file>
     <file preprocess="xml-stripblanks">home/heroic-sideload.svg</file>
     <file preprocess="xml-stripblanks">home/installed.svg</file>
+    <file preprocess="xml-stripblanks">home/itch.svg</file>
+    <file preprocess="xml-stripblanks">home/legendary.svg</file>
     <file preprocess="xml-stripblanks">home/lutris.svg</file>
     <file preprocess="xml-stripblanks">home/manual.svg</file>
     <file preprocess="xml-stripblanks">home/recently-played.svg</file>

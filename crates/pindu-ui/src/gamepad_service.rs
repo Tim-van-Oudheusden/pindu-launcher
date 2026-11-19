@@ -2,9 +2,10 @@
 //! queued through the main loop, so a modal dialog never stalls them, and held directions
 //! repeat on a main-loop timer. Intents never become synthetic key events. Follows the
 //! Button Prompts and Swap Confirm and Back settings and the buttons the player gave other
-//! functions, which decide every pad's layout, keeps the connected pads for Quick Access's
-//! Controllers, rumbles one to identify it, and waits for the button to give a function in
-//! the menu drawer's Controls.
+//! functions, which decide every pad's layout, and the Repeat Delay, Repeat Rate and Stick
+//! Dead Zone settings, which shape only the launcher's own navigation. Keeps the connected
+//! pads for Quick Access's Controllers, rumbles one to identify it, and waits for the button
+//! to give a function in the menu drawer's Controls.
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -14,9 +15,10 @@ use std::time::Duration;
 use gtk::gio::{self, prelude::*};
 use gtk::glib;
 use pindu_core::gamepad::{
-    BINDINGS_KEY, Bindings, Button, CAPTURE_TIMEOUT, Capture, ControllerSettings, DeviceId,
-    GamepadBackend, GamepadEvent, IDENTIFY_RUMBLE, Intent, Intents, Layout, PROMPTS_KEY, Pad,
-    Prompts, SWAP_KEY, Swap,
+    BINDINGS_KEY, Bindings, Button, CAPTURE_TIMEOUT, Capture, ControllerSettings, DEAD_ZONE_KEY,
+    DeadZone, DeviceId, GamepadBackend, GamepadEvent, IDENTIFY_RUMBLE, Intent, Intents, Layout,
+    Navigation, PROMPTS_KEY, Pad, Prompts, REPEAT_DELAY_KEY, REPEAT_RATE_KEY, RepeatDelay,
+    RepeatRate, SWAP_KEY, Swap,
 };
 
 use crate::config::APP_ID;
@@ -78,6 +80,7 @@ impl GamepadService {
         let settings = gio::Settings::new(APP_ID);
         let mut intents = Intents::new();
         intents.set_settings(controller_settings(&settings));
+        intents.set_navigation(navigation(&settings));
         let service = Self {
             inner: Rc::new(Inner {
                 backend: RefCell::new(backend),
@@ -108,6 +111,20 @@ impl GamepadService {
                             .set_settings(controller_settings(settings));
                         service.notify_layout();
                         service.notify_pads();
+                    }
+                });
+        }
+        for key in [REPEAT_DELAY_KEY, REPEAT_RATE_KEY, DEAD_ZONE_KEY] {
+            let weak = Rc::downgrade(&service.inner);
+            service
+                .inner
+                .settings
+                .connect_changed(Some(key), move |settings, _| {
+                    if let Some(inner) = weak.upgrade() {
+                        inner
+                            .intents
+                            .borrow_mut()
+                            .set_navigation(navigation(settings));
                     }
                 });
         }
@@ -150,11 +167,18 @@ impl GamepadService {
             self.inner.swallowed.borrow_mut().clear();
             let mut intents = Intents::new();
             intents.set_settings(self.controller_settings());
+            intents.set_navigation(navigation(&self.inner.settings));
             self.inner.intents.replace(intents);
             glib::g_info!("pindu", "Controllers released");
             self.notify_layout();
             self.notify_pads();
         }
+    }
+
+    /// How long the button asking for `intent` has been held down, while one is: fullscreen
+    /// mode's hold to confirm follows the confirm button with it.
+    pub fn held_for(&self, intent: Intent) -> Option<Duration> {
+        self.inner.intents.borrow().held_for(intent, now())
     }
 
     /// The layout of the controller last plugged in or used, for the hints' glyphs.
@@ -423,5 +447,14 @@ fn controller_settings(settings: &gio::Settings) -> ControllerSettings {
         prompts: Prompts::from_setting(&settings.string(PROMPTS_KEY)),
         swap: Swap::from_setting(&settings.string(SWAP_KEY)),
         bindings: Bindings::from_overrides(overrides),
+    }
+}
+
+/// The Repeat Delay, Repeat Rate and Stick Dead Zone settings as `settings` hold them.
+fn navigation(settings: &gio::Settings) -> Navigation {
+    Navigation {
+        repeat_delay: RepeatDelay::from_setting(&settings.string(REPEAT_DELAY_KEY)),
+        repeat_rate: RepeatRate::from_setting(&settings.string(REPEAT_RATE_KEY)),
+        dead_zone: DeadZone::from_setting(&settings.string(DEAD_ZONE_KEY)),
     }
 }

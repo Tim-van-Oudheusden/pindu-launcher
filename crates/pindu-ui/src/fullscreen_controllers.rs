@@ -1,15 +1,18 @@
 //! Quick Access's Controllers: the Controllers entry's level, which lists each connected
 //! pad with the glyphs it shows and its battery where one can be told to be its (see
 //! `pindu_core::controllers`), rumbles a pad when its row is selected, and holds the Button
-//! Prompts and Swap Confirm and Back settings as radio rows. The list follows pads as they
-//! are plugged in and out, and the batteries as they are read.
+//! Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate and Stick Dead Zone settings
+//! as radio rows. The list follows pads as they are plugged in and out, and the batteries
+//! as they are read.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::controllers::{Controller, controllers};
-use pindu_core::gamepad::{DeviceId, Glyphs, PROMPTS_KEY, SWAP_KEY};
+use pindu_core::gamepad::{
+    DEAD_ZONE_KEY, DeviceId, Glyphs, PROMPTS_KEY, REPEAT_DELAY_KEY, REPEAT_RATE_KEY, SWAP_KEY,
+};
 use pindu_core::panels::QuickAccessLevel;
 
 use crate::application::PinduApplication;
@@ -24,8 +27,15 @@ impl PinduQuickAccess {
         actions: &impl IsA<gio::ActionMap>,
     ) {
         let settings = self.settings();
-        actions.add_action(&settings.create_action(PROMPTS_KEY));
-        actions.add_action(&settings.create_action(SWAP_KEY));
+        for key in [
+            PROMPTS_KEY,
+            SWAP_KEY,
+            REPEAT_DELAY_KEY,
+            REPEAT_RATE_KEY,
+            DEAD_ZONE_KEY,
+        ] {
+            actions.add_action(&settings.create_action(key));
+        }
         self.add_host_action(
             actions,
             "identify-controller",

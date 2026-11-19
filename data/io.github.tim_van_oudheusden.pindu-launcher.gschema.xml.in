@@ -23,6 +23,15 @@
       <summary>Cover tile size</summary>
       <description>Small is 150×225, medium 200×300 and large 250×375 pixels.</description>
     </key>
+    <key name="library-layout" type="s">
+      <choices>
+        <choice value="grid"/>
+        <choice value="list"/>
+      </choices>
+      <default>'grid'</default>
+      <summary>Library layout</summary>
+      <description>Whether the desktop library shows its games as covers in a grid or as rows in a list with their source, install state, last played date and playtime. Fullscreen mode always shows the grid.</description>
+    </key>
     <key name="exit-after-launch" type="b">
       <default>false</default>
       <summary>Exit after launching a store game</summary>
@@ -78,6 +87,36 @@
       <summary>Controller button bindings</summary>
       <description>The fullscreen functions given to other controller buttons from the menu's Controls: each changed button, such as north or left-shoulder, with its function, such as search. Buttons not listed keep their default function. Guide, the D-pad and the left stick never change.</description>
     </key>
+    <key name="navigation-repeat-delay" type="s">
+      <choices>
+        <choice value="short"/>
+        <choice value="normal"/>
+        <choice value="long"/>
+      </choices>
+      <default>'normal'</default>
+      <summary>Navigation repeat delay</summary>
+      <description>How long a controller direction is held in fullscreen mode before focus starts moving again on its own: short is 0.2 seconds, normal 0.3 and long 0.6. It changes only the launcher's own navigation, never what a game receives.</description>
+    </key>
+    <key name="navigation-repeat-rate" type="s">
+      <choices>
+        <choice value="slow"/>
+        <choice value="normal"/>
+        <choice value="fast"/>
+      </choices>
+      <default>'normal'</default>
+      <summary>Navigation repeat rate</summary>
+      <description>How fast focus keeps moving while a controller direction is held in fullscreen mode: slow is every 100 ms, normal every 50 ms and fast every 30 ms. It changes only the launcher's own navigation, never what a game receives.</description>
+    </key>
+    <key name="navigation-dead-zone" type="s">
+      <choices>
+        <choice value="small"/>
+        <choice value="normal"/>
+        <choice value="large"/>
+      </choices>
+      <default>'normal'</default>
+      <summary>Stick dead zone for navigation</summary>
+      <description>How far the left stick moves before it moves focus in fullscreen mode: small is past 30 % of its travel, normal past half and large past 70 %. It changes only the launcher's own navigation, never what a game receives.</description>
+    </key>
     <key name="default-proton" type="s">
       <default>''</default>
       <summary>Default Proton build</summary>
@@ -119,10 +158,26 @@
       <summary>Reduce motion in fullscreen mode</summary>
       <description>Hold Home's animated background on its first frame and change art without a crossfade in fullscreen mode. Turning off animations in the system settings does the same.</description>
     </key>
+    <key name="fullscreen-text-size" type="s">
+      <choices>
+        <choice value="default"/>
+        <choice value="large"/>
+        <choice value="larger"/>
+        <choice value="largest"/>
+      </choices>
+      <default>'default'</default>
+      <summary>Text size in fullscreen mode</summary>
+      <description>How large fullscreen mode's text is, for reading from across the room: each step past default adds about a quarter. The desktop window is not affected.</description>
+    </key>
     <key name="fullscreen-large-text" type="b">
       <default>false</default>
-      <summary>Larger text in fullscreen mode</summary>
-      <description>Show fullscreen mode's text about a quarter larger, for reading from across the room. The desktop window is not affected.</description>
+      <summary>Larger text in fullscreen mode (replaced)</summary>
+      <description>Replaced by fullscreen-text-size. On start-up, when this is on and no text size is chosen yet, the text size becomes large, the size this gave, and this turns off.</description>
+    </key>
+    <key name="fullscreen-hold-to-confirm" type="b">
+      <default>false</default>
+      <summary>Hold to confirm in fullscreen mode</summary>
+      <description>Make Power Off, Restart, Forget and Stop need the controller's confirm button held down for a second in fullscreen mode, with the hold's progress shown. The keyboard and the pointer act at once.</description>
     </key>
     <key name="fullscreen-custom-style" type="b">
       <default>false</default>
@@ -163,6 +218,11 @@
       <default>false</default>
       <summary>SteamGridDB prompt shown</summary>
       <description>Whether the window has offered, once, to set up a SteamGridDB API key for game art.</description>
+    </key>
+    <key name="last-backup" type="x">
+      <default>0</default>
+      <summary>Last library backup</summary>
+      <description>When the library was last exported, in seconds since the Unix epoch; 0 means never. Library Health shows it.</description>
     </key>
   </schema>
 </schemalist>

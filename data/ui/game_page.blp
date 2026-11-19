@@ -23,10 +23,10 @@ template $PinduGamePage: Adw.NavigationPage {
 
     // In fullscreen mode, Play shows the starting screen over the page.
     content: Overlay {
-      child: ScrolledWindow {
+      child: ScrolledWindow scroller {
         hscrollbar-policy: never;
 
-        child: Box {
+        child: Box content {
           orientation: vertical;
 
           Overlay {
@@ -222,6 +222,10 @@ template $PinduGamePage: Adw.NavigationPage {
               Adw.PreferencesGroup about_group {
                 title: _("About");
 
+                styles [
+                  "game-about",
+                ]
+
                 Adw.ActionRow developer_row {
                   title: _("Developer");
                   subtitle-selectable: true;
@@ -240,10 +244,26 @@ template $PinduGamePage: Adw.NavigationPage {
                 }
               }
 
-              Label description {
-                wrap: true;
-                xalign: 0;
-                selectable: true;
+              // In fullscreen mode the box takes focus instead of the text, and Up and
+              // Down scroll through a long description while it has it.
+              Box description_box {
+                visible: false;
+
+                styles [
+                  "game-description",
+                ]
+
+                accessibility {
+                  label: _("Description");
+                  described-by: description;
+                }
+
+                Label description {
+                  hexpand: true;
+                  wrap: true;
+                  xalign: 0;
+                  selectable: true;
+                }
               }
 
               Adw.PreferencesGroup launch_group {

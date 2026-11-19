@@ -10,10 +10,12 @@ use crate::add_store_service::AddStoreService;
 use crate::audio_output_service::AudioOutputService;
 use crate::bluetooth_service::BluetoothService;
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
+use crate::diagnostics_service;
 use crate::game_dialog::GameDialog;
 use crate::game_overlay::PinduGameOverlay;
 use crate::gamepad_service::GamepadService;
 use crate::gamescope_service::GamescopeService;
+use crate::health_service::HealthService;
 use crate::launch_service;
 use crate::library_service::{ImportFailure, LibraryService};
 use crate::manette_backend::ManetteBackend;
@@ -23,6 +25,7 @@ use crate::notification_service::NotificationService;
 use crate::permission_service;
 use crate::power_service::PowerService;
 use crate::preferences::PreferencesDialog;
+use crate::proton_launch::UMU_INSTALL_URI;
 use crate::search_provider;
 use crate::session_service::SessionService;
 use crate::sources::source_list;
@@ -34,9 +37,11 @@ use crate::system_update_service::SystemUpdateService;
 use crate::task_service::TaskService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
+use pindu_core::accessibility::{LEGACY_LARGE_TEXT_KEY, TEXT_SIZE_KEY, migrated_text_size};
 use pindu_core::backup::ImportSummary;
 use pindu_core::gamescope::session::{Session, has_os_session_select, runs_as_own_session};
 use pindu_core::keys;
+use pindu_core::launch::{Start, WebPage};
 use pindu_core::library::Filters;
 use pindu_core::notifications::{Kind, Target};
 use pindu_core::panels::Playing;
@@ -80,6 +85,8 @@ mod imp {
         pub gamepad_service: OnceCell<GamepadService>,
         /// gamescope's `--steam` focus protocol; inert outside such a gamescope.
         pub gamescope_service: OnceCell<GamescopeService>,
+        /// The Library Health report, for both shells.
+        pub health_service: OnceCell<HealthService>,
         /// The user's own stylesheet for fullscreen mode.
         pub style_service: OnceCell<StyleService>,
         /// The batteries, for Quick Access's header.
@@ -164,6 +171,8 @@ mod imp {
     impl ApplicationImpl for PinduApplication {
         fn startup(&self) {
             self.parent_startup();
+            // Before any window reads the text size.
+            super::carry_over_large_text(&gio::Settings::new(APP_ID));
             let library = LibraryService::new();
             self.sync_service.connect_finished(glib::clone!(
                 #[weak(rename_to = app)]
@@ -189,6 +198,13 @@ mod imp {
                 .set(GamescopeService::new(
                     self.session_service.get().expect("set above"),
                     self.gamepad_service.get().expect("set above"),
+                ))
+                .expect("start-up runs once");
+            self.health_service
+                .set(HealthService::new(
+                    &self.sync_service,
+                    &library,
+                    self.gamescope_service.get().expect("set above").is_active(),
                 ))
                 .expect("start-up runs once");
             self.style_service
@@ -414,6 +430,14 @@ impl PinduApplication {
             .expect("the application has started")
     }
 
+    /// The Library Health report, gathered again after every sync.
+    pub fn health_service(&self) -> &HealthService {
+        self.imp()
+            .health_service
+            .get()
+            .expect("the application has started")
+    }
+
     /// The user's own stylesheet for fullscreen mode.
     pub fn style_service(&self) -> &StyleService {
         self.imp()
@@ -519,6 +543,24 @@ impl PinduApplication {
         let permissions_action = gio::ActionEntry::builder("permissions")
             .activate(move |app: &Self, _, _| app.show_preferences().show_permissions())
             .build();
+        // Preferences at its Sources page: each source's folder, last sync and problems.
+        let source_preferences_action = gio::ActionEntry::builder("source-preferences")
+            .activate(move |app: &Self, _, _| app.show_preferences().show_sources_page())
+            .build();
+        // umu-launcher's install instructions, in the browser.
+        let install_umu_action = gio::ActionEntry::builder("install-umu")
+            .activate(move |app: &Self, _, _| {
+                gtk::UriLauncher::new(UMU_INSTALL_URI).launch(
+                    app.active_window().as_ref(),
+                    gio::Cancellable::NONE,
+                    |result| {
+                        if let Err(error) = result {
+                            glib::g_warning!("pindu", "Could not open {UMU_INSTALL_URI}: {error}");
+                        }
+                    },
+                );
+            })
+            .build();
         let add_game_action = gio::ActionEntry::builder("add-game")
             .activate(move |app: &Self, _, _| {
                 GameDialog::add(app.library_service()).present(app.active_window().as_ref());
@@ -550,12 +592,18 @@ impl PinduApplication {
             .build();
         let play_action = gio::ActionEntry::builder("play")
             .parameter_type(Some(glib::VariantTy::STRING))
-            .activate(move |app: &Self, _, id| app.play(id, false))
+            .activate(move |app: &Self, _, id| app.play(id, Start::Play))
             .build();
         // "Play with Logs": the game's output, and Proton's log, kept in a new log.
         let play_with_logs_action = gio::ActionEntry::builder("play-with-logs")
             .parameter_type(Some(glib::VariantTy::STRING))
-            .activate(move |app: &Self, _, id| app.play(id, true))
+            .activate(move |app: &Self, _, id| app.play(id, Start::WithLogs))
+            .build();
+        // "Start Safely": once without wrappers, MangoHud, GameMode or the game's own
+        // environment, with a log; its saved settings stay as they are.
+        let start_safely_action = gio::ActionEntry::builder("start-safely")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| app.play(id, Start::Safely))
             .build();
         // Starts a game without needing a window: `--launch <id>` and Shell search.
         let launch_action = gio::ActionEntry::builder("launch-game")
@@ -579,7 +627,7 @@ impl PinduApplication {
                                 &game,
                                 &library,
                                 app.session_service(),
-                                false,
+                                Start::Play,
                                 move |toast| {
                                     if let Some(window) = &toast_window {
                                         window.add_toast(toast);
@@ -620,6 +668,22 @@ impl PinduApplication {
                 });
             })
             .build();
+        let protondb_action = gio::ActionEntry::builder("open-protondb")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                app.with_game(id, |window, game, _, toast| {
+                    launch_service::open_web_page(window, game, WebPage::ProtonDb, toast)
+                });
+            })
+            .build();
+        let pcgamingwiki_action = gio::ActionEntry::builder("open-pcgamingwiki")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                app.with_game(id, |window, game, _, toast| {
+                    launch_service::open_web_page(window, game, WebPage::PcGamingWiki, toast)
+                });
+            })
+            .build();
         // `--fullscreen`: the activation that follows opens the window in fullscreen mode.
         let fullscreen_action = gio::ActionEntry::builder("fullscreen")
             .activate(move |app: &Self, _, _| app.imp().pending_fullscreen.set(true))
@@ -636,6 +700,8 @@ impl PinduApplication {
             about_action,
             preferences_action,
             permissions_action,
+            source_preferences_action,
+            install_umu_action,
             add_game_action,
             edit_game_action,
             import_action,
@@ -643,9 +709,12 @@ impl PinduApplication {
             import_backup_action,
             play_action,
             play_with_logs_action,
+            start_safely_action,
             launch_action,
             stop_action,
             open_action,
+            protondb_action,
+            pcgamingwiki_action,
             fullscreen_action,
             fetch_art_action,
         ]);
@@ -816,6 +885,7 @@ impl PinduApplication {
             .modal(true)
             .build();
         let library = self.library_service().clone();
+        let health = self.health_service().clone();
         let parent = window.clone();
         chooser.save(parent.as_ref(), gio::Cancellable::NONE, move |file| {
             let Some(path) = file.ok().and_then(|file| file.path()) else {
@@ -826,7 +896,11 @@ impl PinduApplication {
                     .export_backup(path, glib::real_time() / 1_000_000)
                     .await
                 {
-                    Ok(()) => gettext("Library exported"),
+                    Ok(()) => {
+                        // Library data's Last Backup changed.
+                        health.refresh();
+                        gettext("Library exported")
+                    }
                     Err(error) => {
                         gettext("Could not export the library: {error}").replace("{error}", &error)
                     }
@@ -875,9 +949,10 @@ impl PinduApplication {
         });
     }
 
-    /// Starts a game from the window, with or without keeping its log. A game its store
-    /// launcher already runs is brought back instead of handed to the store again.
-    fn play(&self, id: Option<&glib::Variant>, logs: bool) {
+    /// Starts a game from the window as `start` says: plainly, keeping its log, or safely.
+    /// A game its store launcher already runs is brought back instead of handed to the
+    /// store again.
+    fn play(&self, id: Option<&glib::Variant>, start: Start) {
         let sessions = self.session_service().clone();
         let app = self.clone();
         self.with_game(id, move |window, game, library, toast| {
@@ -899,7 +974,7 @@ impl PinduApplication {
                 game,
                 library,
                 &sessions,
-                logs,
+                start,
                 move |message| {
                     toast(message);
                     if let Some(window) = reported.upgrade() {
@@ -936,26 +1011,52 @@ impl PinduApplication {
         work(&window, &game, library, toast);
     }
 
+    /// Opens About once its debugging information is gathered, which takes a moment.
     fn show_about(&self) {
-        let about = adw::AboutDialog::builder()
-            .application_name(gettext("Pindu launcher"))
-            .application_icon(APP_ID)
-            .developer_name("Tim van Oudheusden")
-            .version(VERSION)
-            .website("https://github.com/Tim-van-Oudheusden/pindu-launcher")
-            .issue_url("https://github.com/Tim-van-Oudheusden/pindu-launcher/issues")
-            .developers(["Tim van Oudheusden"])
-            // Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-            .translator_credits(gettext("translator-credits"))
-            .license_type(gtk::License::Gpl30)
-            .build();
-        about.present(self.active_window().as_ref());
+        let steam_gamescope = self.gamescope_service().is_active();
+        let own_session = self.runs_as_own_session();
+        let app = self.downgrade();
+        glib::spawn_future_local(async move {
+            let debug_info = diagnostics_service::debug_info(steam_gamescope, own_session).await;
+            let Some(app) = app.upgrade() else {
+                return;
+            };
+            let about = adw::AboutDialog::builder()
+                .application_name(gettext("Pindu launcher"))
+                .application_icon(APP_ID)
+                .developer_name("Tim van Oudheusden")
+                .version(VERSION)
+                .website("https://github.com/Tim-van-Oudheusden/pindu-launcher")
+                .issue_url("https://github.com/Tim-van-Oudheusden/pindu-launcher/issues")
+                .developers(["Tim van Oudheusden"])
+                // Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
+                .translator_credits(gettext("translator-credits"))
+                .license_type(gtk::License::Gpl30)
+                .debug_info(debug_info)
+                .debug_info_filename("pindu-launcher-debug-info.txt")
+                .build();
+            about.present(app.active_window().as_ref());
+        });
     }
 }
 
 impl Default for PinduApplication {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Carries the former Larger Text setting over to Text Size once, so an install that had
+/// it on keeps the size it gave, and turns the former setting off.
+fn carry_over_large_text(settings: &gio::Settings) {
+    let large_text = settings.boolean(LEGACY_LARGE_TEXT_KEY);
+    let chosen = settings.user_value(TEXT_SIZE_KEY).is_some();
+    if let Some(size) = migrated_text_size(large_text, chosen) {
+        // Best effort: a read-only settings backend keeps the default size.
+        let _ = settings.set_string(TEXT_SIZE_KEY, size.setting());
+    }
+    if large_text {
+        settings.reset(LEGACY_LARGE_TEXT_KEY);
     }
 }
 
@@ -974,30 +1075,46 @@ fn art_notice_message(notice: RunNotice) -> String {
     }
 }
 
-/// What an import restored, and how many of its games this library lacks.
+/// What an import restored, how many of its games this library lacks and how many of its
+/// groups could not be made again.
 fn import_message(summary: &ImportSummary) -> String {
     let restored = summary.manual_games
         + summary.favourites
         + summary.hidden
         + summary.collections
-        + summary.sessions;
-    let done = if restored == 0 {
+        + summary.sessions
+        + summary.groups
+        + summary.splits;
+    let mut message = if restored == 0 {
         gettext("Nothing new to restore")
     } else {
         gettext("Backup restored")
     };
-    match summary.missing_games {
-        0 => done,
-        missing => {
-            let note = ngettext(
+    let mut notes = Vec::new();
+    if summary.missing_games > 0 {
+        notes.push(
+            ngettext(
                 "one game in it is not in this library",
                 "{count} games in it are not in this library",
-                missing as u32,
+                summary.missing_games as u32,
             )
-            .replace("{count}", &missing.to_string());
-            gettext("{result}; {note}")
-                .replace("{result}", &done)
-                .replace("{note}", &note)
-        }
+            .replace("{count}", &summary.missing_games.to_string()),
+        );
     }
+    if summary.skipped_groups > 0 {
+        notes.push(
+            ngettext(
+                "one group of copies in it was skipped",
+                "{count} groups of copies in it were skipped",
+                summary.skipped_groups as u32,
+            )
+            .replace("{count}", &summary.skipped_groups.to_string()),
+        );
+    }
+    for note in notes {
+        message = gettext("{result}; {note}")
+            .replace("{result}", &message)
+            .replace("{note}", &note);
+    }
+    message
 }
