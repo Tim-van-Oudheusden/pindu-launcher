@@ -79,3 +79,67 @@ jobs:
           path: coverage.json
           if-no-files-found: ignore
           retention-days: 14
+
+  # An aggregate floor cannot fail on one new branch that no test asserts (#346, #450, #485).
+  # cargo-mutants mutates only the pindu-core lines this pull request changes, and a mutant that
+  # survives the tests on a changed line fails the job; survivors already on main block nothing.
+  # A pull request without a pindu-core change passes at once. No `paths:` filter: a
+  # filtered-out run of a required check would block the merge instead of skipping.
+  mutants:
+    name: Mutants in changed pindu-core code
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install the Rust SDK extension
+        run: flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
+
+      # Under the ignored _build/, so cargo-mutants' copy of the tree leaves them out.
+      - uses: actions/cache@v6
+        with:
+          path: |
+            _build/cargo-home
+            _build/cargo-target
+          key: mutants-${{ hashFiles('Cargo.lock') }}
+          restore-keys: mutants-
+
+      # The checkout is the pull request merged into its base, so the diff from the base is the
+      # pull request's own change.
+      - name: Mutate the changed pindu-core lines
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          mkdir -p _build
+          git diff "$BASE...HEAD" -- crates/pindu-core > _build/pr.diff
+          if [ ! -s _build/pr.diff ]; then
+            echo "No pindu-core change."
+            exit 0
+          fi
+          chown -R "$(id -u):$(id -g)" "$PWD"
+          flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
+            --env=CARGO_HOME="$PWD/_build/cargo-home" \
+            --env=CARGO_TARGET_DIR="$PWD/_build/cargo-target" \
+            --env=PATH="$PWD/_build/cargo-home/bin:/usr/lib/sdk/rust-stable/bin:/usr/bin" \
+            --command=sh org.gnome.Sdk//51 -c '
+              set -e
+              cargo install --locked cargo-mutants --version 27.1.0
+              cargo mutants --package pindu-core --in-diff _build/pr.diff --output _build
+            '
+
+      - name: Upload mutants report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutants-report
+          path: _build/mutants.out
+          if-no-files-found: ignore
+          retention-days: 14

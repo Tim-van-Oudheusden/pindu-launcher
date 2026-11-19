@@ -13,6 +13,7 @@ pub mod bluez_backend;
 pub mod collection_actions;
 pub mod config;
 pub mod controller_navigation;
+pub mod diagnostics_service;
 pub mod file_service;
 pub mod fullscreen;
 pub mod fullscreen_activity;

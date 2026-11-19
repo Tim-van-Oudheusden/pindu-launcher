@@ -41,24 +41,30 @@ pub fn needs_permission(game: &Game) -> bool {
 /// Where the Flatpak mounts the MangoHud Vulkan-layer extension.
 const MANGOHUD_LAYER_DIR: &str = "/app/lib/extensions/vulkan/MangoHud";
 
-/// Whether the MangoHud Vulkan-layer extension is installed, read once; installing it
-/// needs a restart, as the extension is mounted at start-up.
-static MANGOHUD_LAYER: LazyLock<bool> = LazyLock::new(|| {
-    permissions::mangohud_layer_installed(std::path::Path::new(MANGOHUD_LAYER_DIR))
-});
+/// Whether the Flatpak's MangoHud Vulkan-layer extension is installed. The extension's
+/// folder is read once; installing it needs a restart, as it is mounted at start-up.
+pub fn mangohud_layer_installed() -> bool {
+    static LAYER: LazyLock<bool> = LazyLock::new(|| {
+        permissions::mangohud_layer_installed(std::path::Path::new(MANGOHUD_LAYER_DIR))
+    });
+    *LAYER
+}
 
-/// Whether `game`'s MangoHud switch can work. In Flatpak the extension's folder is read
-/// once.
+/// Whether `game`'s MangoHud switch can work.
 pub fn mangohud_works(game: &Game) -> bool {
     let in_flatpak = in_flatpak();
-    permissions::mangohud_works(game.launch_kind, in_flatpak, in_flatpak && *MANGOHUD_LAYER)
+    permissions::mangohud_works(
+        game.launch_kind,
+        in_flatpak,
+        in_flatpak && mangohud_layer_installed(),
+    )
 }
 
 /// Whether MangoHud can run at all: in Flatpak its Vulkan-layer extension is installed,
 /// natively the system's `mangohud` is on `PATH`.
 pub fn mangohud_available() -> bool {
     if in_flatpak() {
-        *MANGOHUD_LAYER
+        mangohud_layer_installed()
     } else {
         on_path("mangohud")
     }

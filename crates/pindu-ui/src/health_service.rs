@@ -4,7 +4,7 @@
 //! keeps the report the core makes of them for both shells. It gathers again after every
 //! sync.
 
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 
 use gettextrs::{gettext, ngettext};
 use gtk::glib;
@@ -20,6 +20,7 @@ use pindu_core::paths::default_library_db_path;
 use pindu_core::store::Store;
 
 use crate::config::APP_ID;
+use crate::library_service::LibraryService;
 use crate::permission_service;
 use crate::proton_launch;
 use crate::sources::source_name;
@@ -39,6 +40,8 @@ mod imp {
         pub generation: Cell<u64>,
         /// Whether this is a gamescope session, as gamescope's service found at start-up.
         pub gamescope_session: Cell<bool>,
+        /// The library, which knows when it was last backed up.
+        pub library: OnceCell<LibraryService>,
     }
 
     #[glib::object_subclass]
@@ -62,11 +65,16 @@ glib::wrapper! {
 }
 
 impl HealthService {
-    /// A service that gathers after every sync of `sync`; `gamescope_session` says
-    /// whether this is a gamescope session. It starts gathering at once.
-    pub fn new(sync: &SyncService, gamescope_session: bool) -> Self {
+    /// A service that gathers after every sync of `sync`, with the last backup `library`
+    /// recorded; `gamescope_session` says whether this is a gamescope session. It starts
+    /// gathering at once.
+    pub fn new(sync: &SyncService, library: &LibraryService, gamescope_session: bool) -> Self {
         let service: Self = glib::Object::new();
-        service.imp().gamescope_session.set(gamescope_session);
+        let imp = service.imp();
+        imp.gamescope_session.set(gamescope_session);
+        imp.library
+            .set(library.clone())
+            .expect("a new service has no library");
         sync.connect_finished(glib::clone!(
             #[weak]
             service,
@@ -88,6 +96,7 @@ impl HealthService {
         let generation = imp.generation.get() + 1;
         imp.generation.set(generation);
         let gamescope_session = imp.gamescope_session.get();
+        let last_backup = imp.library.get().and_then(LibraryService::last_backup);
         let service = self.clone();
         glib::spawn_future_local(async move {
             let gathered = gtk::gio::spawn_blocking(gather_stored).await;
@@ -120,7 +129,7 @@ impl HealthService {
                 library: LibraryFacts {
                     file: default_library_db_path(),
                     schema_version: stored.schema_version,
-                    last_backup: None,
+                    last_backup,
                 },
             };
             if service.imp().generation.get() != generation {
