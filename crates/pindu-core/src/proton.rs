@@ -183,14 +183,20 @@ pub fn command(
         .as_deref()
         .or(defaults.proton_version.as_deref());
     let build = pick_build(chosen, builds)?;
-    let prefix = config
-        .prefix_path
-        .clone()
-        .unwrap_or_else(|| defaults.prefixes.join(game.id.native_id()));
+    let prefix = prefix(game, config, defaults);
     let mut environment = launch::session_environment(game);
     environment.insert("PROTONPATH".to_owned(), path_text(&build.path));
     environment.insert("WINEPREFIX".to_owned(), path_text(&prefix));
     Ok(umu_command(environment, config, Program::Windows))
+}
+
+/// The prefix a Windows game runs in: the one its launch config names, or its own folder
+/// in the default prefixes folder.
+pub fn prefix(game: &Game, config: &LaunchConfig, defaults: &Defaults) -> PathBuf {
+    config
+        .prefix_path
+        .clone()
+        .unwrap_or_else(|| defaults.prefixes.join(game.id.native_id()))
 }
 
 /// The command that runs a native game in the Steam Linux Runtime: `umu-run` with the

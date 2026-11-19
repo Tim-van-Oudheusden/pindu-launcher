@@ -89,6 +89,11 @@ pub enum QuickAccessLevel {
     /// The diagnostics report in pages to photograph, a copy of which is saved as it opens
     /// (see [`crate::report_screen`]).
     DiagnosticsReport,
+    /// The Proton builds downloaded into our tools folder, the GE-Proton and
+    /// Proton-CachyOS releases to download (see [`crate::proton_downloads`]), and the
+    /// defaults for new Windows games: the Proton build, MangoHud and GameMode, the same
+    /// settings as Preferences'.
+    Proton,
     /// Each imported source, whether it was found on this computer and its Import switch,
     /// the same setting as Preferences' (see [`crate::sources::sync::imported_source_states`]).
     Sources,
@@ -96,7 +101,7 @@ pub enum QuickAccessLevel {
 
 impl QuickAccessLevel {
     /// Every level, the entries first.
-    pub const ALL: [Self; 16] = [
+    pub const ALL: [Self; 17] = [
         Self::Main,
         Self::Notifications,
         Self::Activity,
@@ -112,6 +117,7 @@ impl QuickAccessLevel {
         Self::SystemUpdate,
         Self::AddStore,
         Self::DiagnosticsReport,
+        Self::Proton,
         Self::Sources,
     ];
 
@@ -134,6 +140,7 @@ impl QuickAccessLevel {
             Self::SystemUpdate => "system-update",
             Self::AddStore => "add-store",
             Self::DiagnosticsReport => "diagnostics-report",
+            Self::Proton => "proton",
             Self::Sources => "sources",
         }
     }
@@ -549,6 +556,20 @@ mod tests {
     fn b_steps_back_from_add_a_store_and_then_closes_quick_access() {
         let mut panels = Panels::new();
         panels.show(Panel::QuickAccess(QuickAccessLevel::AddStore));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), quick_access());
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), None);
+    }
+
+    #[test]
+    fn proton_is_a_level_of_its_own_that_b_steps_back_from() {
+        assert_eq!(
+            QuickAccessLevel::from_name("proton"),
+            Some(QuickAccessLevel::Proton)
+        );
+        let mut panels = Panels::new();
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Proton));
         assert!(panels.handle(Intent::Back, PAGE));
         assert_eq!(panels.open(), quick_access());
         assert!(panels.handle(Intent::Back, PAGE));

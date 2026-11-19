@@ -18,11 +18,20 @@ use crate::proton_download_service as service;
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(200);
 
 /// The fork's name, as its makers write it.
-fn fork_name(fork: Fork) -> &'static str {
+pub(crate) fn fork_name(fork: Fork) -> &'static str {
     match fork {
         Fork::GeProton => "GE-Proton",
         Fork::CachyOs => "Proton-CachyOS",
     }
+}
+
+/// Whether every fork's check failed for being offline.
+pub(crate) fn all_offline(answers: &[(Fork, Result<Vec<Release>, String>)]) -> bool {
+    answers.iter().all(|(_, answer)| {
+        answer
+            .as_ref()
+            .is_err_and(|error| *error == service::offline_message())
+    })
 }
 
 /// The widgets of the page, from the Preferences template, and what they show.
@@ -92,11 +101,7 @@ impl ProtonDownloadsPage {
                 return;
             };
             page.check_button.set_sensitive(true);
-            if answers.iter().all(|(_, answer)| {
-                answer
-                    .as_ref()
-                    .is_err_and(|error| *error == service::offline_message())
-            }) {
+            if all_offline(&answers) {
                 page.status_row.set_title(&gettext("Offline"));
                 page.status_row.set_subtitle(&service::offline_message());
                 return;
@@ -123,13 +128,9 @@ impl ProtonDownloadsPage {
         for row in rows.drain(..) {
             expander.remove(&row.row);
         }
+        expander.set_subtitle(&fork_subtitle(fork, &answer));
         match answer {
             Ok(releases) => {
-                expander.set_subtitle(
-                    &gettext("{count} newest releases from {repository}")
-                        .replace("{count}", &releases.len().to_string())
-                        .replace("{repository}", fork.repository()),
-                );
                 for release in releases {
                     let row = ReleaseRow::new(release, Rc::downgrade(self));
                     expander.add_row(&row.row);
@@ -137,10 +138,7 @@ impl ProtonDownloadsPage {
                 }
                 expander.set_expanded(true);
             }
-            Err(error) => {
-                expander.set_subtitle(&error);
-                expander.set_expanded(false);
-            }
+            Err(_) => expander.set_expanded(false),
         }
         drop(forks);
         self.show_states();
@@ -374,17 +372,6 @@ impl ReleaseRow {
     }
 
     fn show(&self, state: InstallState) {
-        let size = glib::format_size(self.release.tarball.size);
-        let published = glib::DateTime::from_iso8601(&self.release.published_at, None)
-            .and_then(|date| date.to_local())
-            .and_then(|date| date.format("%-d %B %Y"))
-            .map_or_else(
-                |_| self.release.published_at.clone(),
-                |date| date.to_string(),
-            );
-        let about = gettext("{size}, published {date}")
-            .replace("{size}", &size)
-            .replace("{date}", &published);
         let installing = matches!(state, InstallState::Installing(_));
         self.install.set_visible(state == InstallState::Available);
         self.installed.set_visible(state == InstallState::Installed);
@@ -393,23 +380,51 @@ impl ReleaseRow {
             state,
             InstallState::Installing(Step::Downloading { .. })
         ));
-        match state {
-            InstallState::Installing(step @ Step::Downloading { received, total }) => {
-                self.row.set_subtitle(
-                    &gettext("Downloading {received} of {total}")
-                        .replace("{received}", &glib::format_size(received))
-                        .replace("{total}", &glib::format_size(total)),
-                );
-                match step.fraction() {
-                    Some(fraction) => self.progress.set_fraction(fraction),
-                    None => self.progress.pulse(),
-                }
-            }
-            InstallState::Installing(Step::Unpacking) => {
-                self.row.set_subtitle(&gettext("Unpacking…"));
-                self.progress.pulse();
-            }
-            InstallState::Available | InstallState::Installed => self.row.set_subtitle(&about),
+        self.row
+            .set_subtitle(&release_subtitle(&self.release, state));
+        show_progress(&self.progress, state);
+    }
+}
+
+/// What a release's row says under its tag: its size and date, or how far its install is.
+pub(crate) fn release_subtitle(release: &Release, state: InstallState) -> String {
+    match state {
+        InstallState::Installing(Step::Downloading { received, total }) => {
+            gettext("Downloading {received} of {total}")
+                .replace("{received}", &glib::format_size(received))
+                .replace("{total}", &glib::format_size(total))
         }
+        InstallState::Installing(Step::Unpacking) => gettext("Unpacking…"),
+        InstallState::Available | InstallState::Installed => {
+            let published = glib::DateTime::from_iso8601(&release.published_at, None)
+                .and_then(|date| date.to_local())
+                .and_then(|date| date.format("%-d %B %Y"))
+                .map_or_else(|_| release.published_at.clone(), |date| date.to_string());
+            gettext("{size}, published {date}")
+                .replace("{size}", &glib::format_size(release.tarball.size))
+                .replace("{date}", &published)
+        }
+    }
+}
+
+/// Moves a release's progress bar on to how far its install is.
+pub(crate) fn show_progress(progress: &gtk::ProgressBar, state: InstallState) {
+    match state {
+        InstallState::Installing(step @ Step::Downloading { .. }) => match step.fraction() {
+            Some(fraction) => progress.set_fraction(fraction),
+            None => progress.pulse(),
+        },
+        InstallState::Installing(Step::Unpacking) => progress.pulse(),
+        InstallState::Available | InstallState::Installed => {}
+    }
+}
+
+/// The subtitle of a fork's releases: how many, from where, or why they are not listed.
+pub(crate) fn fork_subtitle(fork: Fork, answer: &Result<Vec<Release>, String>) -> String {
+    match answer {
+        Ok(releases) => gettext("{count} newest releases from {repository}")
+            .replace("{count}", &releases.len().to_string())
+            .replace("{repository}", fork.repository()),
+        Err(error) => error.clone(),
     }
 }
