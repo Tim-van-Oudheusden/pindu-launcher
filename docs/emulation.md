@@ -157,10 +157,10 @@ A draft, to be filed only if the maintainer decides yes:
   launch kind and no new Flatpak permission. The core stays responsive at 30,000 games.
 - The cost is ongoing rather than up front: every emulator, multi-file format and Flatpak file-access case becomes a
   support question in a project that has so far kept to "PC games across launchers" (the README's own promise).
-- The external importer contract (#547, XP-1) is the cheaper way to let emulation in without owning it: a
-  helper that scans ROM folders and returns argv launches would give the same games through the same model, and keep
-  the maintenance outside the core. If the maintainer adopts that contract, this page recommends trying ROMs as its
-  first outside integration before building EM-2 to EM-5.
+- The [external importer contract](external-importers.md) (#547, XP-1) is the cheaper way to let emulation in without
+  owning it: a helper that scans ROM folders and returns Flatpak or host launches would give the same games through the
+  same model, and keep the maintenance outside the core. If the maintainer adopts that contract, this page recommends
+  trying ROMs as its first outside integration before building EM-2 to EM-5.
 
 ## Decisions
 
