@@ -72,9 +72,11 @@ workflows:
 
   quality-report.yml: {}
 
-  # Create the GitHub Release and upload the bundles, sources and packages.
+  # Create the GitHub Release and upload the bundles, sources and packages; provenance signs
+  # the RPMs' build provenance (id-token for Sigstore, attestations to store it).
   release.yml:
     jobs:
+      provenance: { attestations: write, contents: read, id-token: write }
       publish: { contents: write }
 
   review.yml: {}
