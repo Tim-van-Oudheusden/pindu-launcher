@@ -40,18 +40,23 @@ A mistake here can bypass every other check or ship to every user.
 | `clippy.toml`, `rustfmt.toml` | Lint and formatting configuration the CI gates read |
 | `data/*.metainfo.xml.in` | Release notes, licence, branding and content rating shown to users |
 | `data/*.gschema.xml.in` | Stored settings: a removed or retyped key breaks existing installs |
+| `crates/pindu-core/src/store/migrations/**` | Library schema migrations: every install runs a released one once and can never run it again, so an edit or a lossy step damages libraries for good |
+| `crates/pindu-core/src/backup.rs` | The backup format: a backup written today must restore in every later version, and an older build must refuse a newer one |
 | `AGENTS.md`, `CLAUDE.md`, `.claude/**`, `.cursor/**`, `prompts/**` | Agent instructions, permissions and governance |
 
 Review: a human reviews the full diff line by line. Dependency changes follow the rules in `AGENTS.md` (approved,
 exact version, real repository). Workflow changes give every workflow least-privilege `permissions:`, keep event fields
 such as pull request titles in `env:`, never inline in `run:`, and update `.github/policies/workflow-permissions.yml`
 when they add a workflow or change a token grant. Manifest changes never grow `finish-args` or the bundled modules, and
-never touch the Flathub manifest.
+never touch the Flathub manifest. A schema change is a new migration appended to `MIGRATIONS` in `store.rs`, never an
+edit to a released one, with a test that opens a database at the previous version and checks its rows survive. A
+backup-format change raises `VERSION` in `backup.rs` when older builds could misread the new file, and keeps reading
+every older version, with a test for each.
 
 ## Tier: medium
 
 Application code, UI and data files: `crates/**`, `data/**` and `po/**`, plus anything not otherwise classified, such
-as root files like `.gitignore`.
+as root files like `.gitignore`. The schema migrations and the backup format under `crates/` are high (above).
 
 Review: the rubric in the `PR review rubric` job summary (`.github/workflows/review.yml`): TDD evidence,
 behaviour-level tests, no weakened tests, Adwaita first and HIG, keyboard usable, quality gates green.

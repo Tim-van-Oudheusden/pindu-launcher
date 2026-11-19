@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use pindu_core::model::{ArtLayout, LaunchKind, Platform, Source};
 use pindu_core::sources::location::{HostDirs, Location};
-use pindu_core::sources::{ImportedGame, Snapshot, lutris};
+use pindu_core::sources::{ImportedGame, ServiceRef, Snapshot, lutris};
 
 use crate::support::fixture_into;
 
@@ -124,6 +124,42 @@ fn games_without_art_playtime_or_install_import_without_them() {
     assert!(!hollow_knight.installed);
     assert_eq!(hollow_knight.platform, None);
     assert_eq!(hollow_knight.install_path, None);
+}
+
+#[test]
+fn a_game_takes_its_service_runner_and_year_in_both_layouts() {
+    for data in [NATIVE, FLATPAK] {
+        let (_dir, root) = lutris_home(data);
+
+        let snapshot = lutris::import(&root).unwrap();
+
+        let witcher = game(&snapshot, "2");
+        assert_eq!(
+            witcher.service,
+            Some(ServiceRef {
+                service: "gog".into(),
+                service_id: "1207664643".into(),
+            }),
+            "{data}"
+        );
+        assert_eq!(witcher.runner.as_deref(), Some("wine"), "{data}");
+        assert_eq!(witcher.year, Some(2015), "{data}");
+        let celeste = game(&snapshot, "1");
+        assert_eq!(celeste.service, None, "{data}");
+        assert_eq!(celeste.runner.as_deref(), Some("linux"), "{data}");
+        assert_eq!(celeste.year, Some(2018), "{data}");
+        let hollow_knight = game(&snapshot, "3");
+        assert_eq!(
+            hollow_knight.service,
+            Some(ServiceRef {
+                service: "steam".into(),
+                service_id: "367520".into(),
+            }),
+            "{data}"
+        );
+        assert_eq!(hollow_knight.runner, None, "{data}");
+        assert_eq!(hollow_knight.year, None, "{data}");
+    }
 }
 
 #[test]
