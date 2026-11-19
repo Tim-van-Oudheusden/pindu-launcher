@@ -129,6 +129,7 @@ impl Store {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(StoreError::Io)?;
         }
+        let _setting_up = SettingUp::begin(path)?;
         let conn = Connection::open(path)?;
         // Another thread or process may hold the database for a moment (start-up loads
         // the library while the sync writes): wait for it instead of failing.
@@ -169,6 +170,64 @@ impl Store {
         transaction.commit()?;
         Ok(value)
     }
+}
+
+/// Claims setting up one database (switching it to WAL, migrating it) for this thread.
+///
+/// Setting up commits several times, and under heavy disk load one commit can hold the
+/// write lock for longer than [`BUSY_TIMEOUT`]: threads of this process opening the
+/// same database would give up with "database is locked" while the first one is still
+/// making progress. So they set it up one at a time, waiting here for as long as it
+/// takes; the next one then finds it set up and needs no write lock. Only waits on
+/// other processes stay bounded by the timeout.
+struct SettingUp(PathBuf);
+
+/// The databases a thread of this process is setting up, by [`setup_key`].
+static SETTING_UP: std::sync::Mutex<Vec<PathBuf>> = std::sync::Mutex::new(Vec::new());
+
+/// Signalled whenever a database leaves [`SETTING_UP`].
+static SET_UP: std::sync::Condvar = std::sync::Condvar::new();
+
+impl SettingUp {
+    /// Waits until no other thread is setting up the database at `path`, whose folder
+    /// exists, then claims it until the guard drops.
+    fn begin(path: &Path) -> Result<Self> {
+        let key = setup_key(path)?;
+        let mut claimed = SETTING_UP
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        while claimed.contains(&key) {
+            claimed = SET_UP
+                .wait(claimed)
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+        }
+        claimed.push(key.clone());
+        Ok(Self(key))
+    }
+}
+
+impl Drop for SettingUp {
+    fn drop(&mut self) {
+        SETTING_UP
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .retain(|key| *key != self.0);
+        SET_UP.notify_all();
+    }
+}
+
+/// One name for the database at `path` however it is spelt: its file name in the
+/// canonical form of its folder, which exists while the file itself may not yet.
+fn setup_key(path: &Path) -> Result<PathBuf> {
+    let folder = path
+        .parent()
+        .filter(|folder| !folder.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let folder = std::fs::canonicalize(folder).map_err(StoreError::Io)?;
+    Ok(match path.file_name() {
+        Some(name) => folder.join(name),
+        None => path.to_owned(),
+    })
 }
 
 /// Switches to write-ahead logging. The switch needs the database to itself, and while
