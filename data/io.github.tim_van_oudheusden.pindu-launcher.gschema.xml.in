@@ -23,6 +23,15 @@
       <summary>Cover tile size</summary>
       <description>Small is 150×225, medium 200×300 and large 250×375 pixels.</description>
     </key>
+    <key name="library-layout" type="s">
+      <choices>
+        <choice value="grid"/>
+        <choice value="list"/>
+      </choices>
+      <default>'grid'</default>
+      <summary>Library layout</summary>
+      <description>Whether the desktop library shows its games as covers in a grid or as rows in a list with their source, install state, last played date and playtime. Fullscreen mode always shows the grid.</description>
+    </key>
     <key name="exit-after-launch" type="b">
       <default>false</default>
       <summary>Exit after launching a store game</summary>
