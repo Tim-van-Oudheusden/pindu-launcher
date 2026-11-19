@@ -45,6 +45,7 @@ jobs:
           - [ ] **Behaviour, not implementation**: tests assert observable output; parsers run against fixture trees.
           - [ ] **No test tampering**: no test deleted, `#[ignore]`d or weakened, no `#[allow]` added to silence a failure.
           - [ ] **Scope**: one issue per PR, one commit referencing it; unrelated changes split out.
+          - [ ] **Docs follow behaviour**: the README and `docs/` still describe what the change does to the app, or the PR says they describe nothing it changes.
           - [ ] **Dependencies**: none added, upgraded or removed without the maintainer's approval.
           - [ ] **Adwaita first**: stock libadwaita widgets and style classes, layout in Blueprint, no custom theme; usable with the keyboard alone.
           - [ ] **Rust for Linux lints**: docs on public items, `// SAFETY:` comments, `#[expect(..., reason = "...")]` rather than `#[allow]`.

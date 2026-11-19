@@ -10,6 +10,7 @@ use crate::add_store_service::AddStoreService;
 use crate::audio_output_service::AudioOutputService;
 use crate::bluetooth_service::BluetoothService;
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
+use crate::diagnostics_service;
 use crate::game_dialog::GameDialog;
 use crate::game_overlay::PinduGameOverlay;
 use crate::gamepad_service::GamepadService;
@@ -37,6 +38,7 @@ use crate::window::PinduWindow;
 use pindu_core::backup::ImportSummary;
 use pindu_core::gamescope::session::{Session, has_os_session_select, runs_as_own_session};
 use pindu_core::keys;
+use pindu_core::launch::Start;
 use pindu_core::library::Filters;
 use pindu_core::notifications::{Kind, Target};
 use pindu_core::panels::Playing;
@@ -550,12 +552,18 @@ impl PinduApplication {
             .build();
         let play_action = gio::ActionEntry::builder("play")
             .parameter_type(Some(glib::VariantTy::STRING))
-            .activate(move |app: &Self, _, id| app.play(id, false))
+            .activate(move |app: &Self, _, id| app.play(id, Start::Play))
             .build();
         // "Play with Logs": the game's output, and Proton's log, kept in a new log.
         let play_with_logs_action = gio::ActionEntry::builder("play-with-logs")
             .parameter_type(Some(glib::VariantTy::STRING))
-            .activate(move |app: &Self, _, id| app.play(id, true))
+            .activate(move |app: &Self, _, id| app.play(id, Start::WithLogs))
+            .build();
+        // "Start Safely": once without wrappers, MangoHud, GameMode or the game's own
+        // environment, with a log; its saved settings stay as they are.
+        let start_safely_action = gio::ActionEntry::builder("start-safely")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| app.play(id, Start::Safely))
             .build();
         // Starts a game without needing a window: `--launch <id>` and Shell search.
         let launch_action = gio::ActionEntry::builder("launch-game")
@@ -579,7 +587,7 @@ impl PinduApplication {
                                 &game,
                                 &library,
                                 app.session_service(),
-                                false,
+                                Start::Play,
                                 move |toast| {
                                     if let Some(window) = &toast_window {
                                         window.add_toast(toast);
@@ -643,6 +651,7 @@ impl PinduApplication {
             import_backup_action,
             play_action,
             play_with_logs_action,
+            start_safely_action,
             launch_action,
             stop_action,
             open_action,
@@ -875,9 +884,10 @@ impl PinduApplication {
         });
     }
 
-    /// Starts a game from the window, with or without keeping its log. A game its store
-    /// launcher already runs is brought back instead of handed to the store again.
-    fn play(&self, id: Option<&glib::Variant>, logs: bool) {
+    /// Starts a game from the window as `start` says: plainly, keeping its log, or safely.
+    /// A game its store launcher already runs is brought back instead of handed to the
+    /// store again.
+    fn play(&self, id: Option<&glib::Variant>, start: Start) {
         let sessions = self.session_service().clone();
         let app = self.clone();
         self.with_game(id, move |window, game, library, toast| {
@@ -899,7 +909,7 @@ impl PinduApplication {
                 game,
                 library,
                 &sessions,
-                logs,
+                start,
                 move |message| {
                     toast(message);
                     if let Some(window) = reported.upgrade() {
@@ -936,20 +946,32 @@ impl PinduApplication {
         work(&window, &game, library, toast);
     }
 
+    /// Opens About once its debugging information is gathered, which takes a moment.
     fn show_about(&self) {
-        let about = adw::AboutDialog::builder()
-            .application_name(gettext("Pindu launcher"))
-            .application_icon(APP_ID)
-            .developer_name("Tim van Oudheusden")
-            .version(VERSION)
-            .website("https://github.com/Tim-van-Oudheusden/pindu-launcher")
-            .issue_url("https://github.com/Tim-van-Oudheusden/pindu-launcher/issues")
-            .developers(["Tim van Oudheusden"])
-            // Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-            .translator_credits(gettext("translator-credits"))
-            .license_type(gtk::License::Gpl30)
-            .build();
-        about.present(self.active_window().as_ref());
+        let steam_gamescope = self.gamescope_service().is_active();
+        let own_session = self.runs_as_own_session();
+        let app = self.downgrade();
+        glib::spawn_future_local(async move {
+            let debug_info = diagnostics_service::debug_info(steam_gamescope, own_session).await;
+            let Some(app) = app.upgrade() else {
+                return;
+            };
+            let about = adw::AboutDialog::builder()
+                .application_name(gettext("Pindu launcher"))
+                .application_icon(APP_ID)
+                .developer_name("Tim van Oudheusden")
+                .version(VERSION)
+                .website("https://github.com/Tim-van-Oudheusden/pindu-launcher")
+                .issue_url("https://github.com/Tim-van-Oudheusden/pindu-launcher/issues")
+                .developers(["Tim van Oudheusden"])
+                // Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
+                .translator_credits(gettext("translator-credits"))
+                .license_type(gtk::License::Gpl30)
+                .debug_info(debug_info)
+                .debug_info_filename("pindu-launcher-debug-info.txt")
+                .build();
+            about.present(app.active_window().as_ref());
+        });
     }
 }
 

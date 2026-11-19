@@ -1,8 +1,9 @@
 //! The Preferences dialog: General (covers, launching, controller navigation, button prompts
 //! and the confirm and back swap, permissions in the Flatpak), Sources (import, folder,
-//! sidebar), Artwork (SteamGridDB), Windows games (default Proton, prefix folder and tools),
-//! Proton (downloaded builds and releases to install) and Fullscreen (start-up, sounds and
-//! their volume, accessibility, and the user's own stylesheet through the style service).
+//! sidebar, and the last sync with its problems), Artwork (SteamGridDB), Windows games
+//! (default Proton, prefix folder and tools), Proton (downloaded builds and releases to
+//! install) and Fullscreen (start-up, sounds and their volume, accessibility, and the user's
+//! own stylesheet through the style service).
 //! Everything is GSettings, except the SteamGridDB key, which lives in the keyring,
 //! each source's import switch and folder, which live with the library's other source state,
 //! and the Proton builds, which are folders in our tools folder.
@@ -20,6 +21,7 @@ use pindu_core::model::{Source, SourceState};
 use pindu_core::paths;
 use pindu_core::sources::location::sandbox_hides;
 use pindu_core::sources::sync::IMPORTED_SOURCES;
+use pindu_core::sync_age::sync_age;
 
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
@@ -29,7 +31,8 @@ use crate::permission_service;
 use crate::proton_choice::{FirstChoice, ProtonChoice};
 use crate::proton_downloads_page::ProtonDownloadsPage;
 use crate::proton_launch;
-use crate::sources::{source_icon, source_name};
+use crate::session_service;
+use crate::sources::{source_icon, source_name, sync_age_text};
 use crate::steamgriddb_service;
 use crate::style_service::StyleService;
 use crate::sync_service::SyncService;
@@ -374,7 +377,8 @@ impl PreferencesDialog {
         self.imp().settings.get().expect("constructed")
     }
 
-    /// One expander per source: import on or off, its folder, and its sidebar row.
+    /// One expander per source: import on or off, its folder, its sidebar row, and when it
+    /// last synced with the problems that sync ran into.
     fn show_sources(&self) {
         let dialog = self.downgrade();
         glib::spawn_future_local(async move {
@@ -484,6 +488,46 @@ impl PreferencesDialog {
             move |row| dialog.set_in_sidebar(source, row.is_active())
         ));
         row.add_row(&in_sidebar);
+
+        let last_sync = adw::ActionRow::builder()
+            .title(gettext("Last Synced"))
+            .subtitle(sync_age_text(sync_age(
+                state.last_sync,
+                session_service::now(),
+            )))
+            .css_classes(["property"])
+            .build();
+        row.add_row(&last_sync);
+        if !state.errors.is_empty() {
+            let count = u32::try_from(state.errors.len()).unwrap_or(u32::MAX);
+            let warning = gtk::Image::builder()
+                .icon_name("dialog-warning-symbolic")
+                .tooltip_text(
+                    ngettext(
+                        "The last sync ran into {count} problem",
+                        "The last sync ran into {count} problems",
+                        count,
+                    )
+                    .replace("{count}", &count.to_string()),
+                )
+                .css_classes(["warning"])
+                .build();
+            row.add_suffix(&warning);
+        }
+        for problem in &state.errors {
+            let problem_row = adw::ActionRow::builder()
+                .title(problem)
+                .use_markup(false)
+                .title_selectable(true)
+                .build();
+            problem_row.add_prefix(
+                &gtk::Image::builder()
+                    .icon_name("dialog-warning-symbolic")
+                    .css_classes(["warning"])
+                    .build(),
+            );
+            row.add_row(&problem_row);
+        }
         row
     }
 

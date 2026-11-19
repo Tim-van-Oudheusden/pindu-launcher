@@ -1,7 +1,8 @@
-//! User-facing names of game sources.
+//! User-facing names of game sources, and when they last synced.
 
-use gettextrs::gettext;
+use gettextrs::{gettext, ngettext};
 use pindu_core::model::Source;
+use pindu_core::sync_age::SyncAge;
 
 /// The name of a source as the user sees it.
 pub fn source_name(source: Source) -> String {
@@ -44,5 +45,19 @@ pub fn source_icon(source: Source) -> &'static str {
         Source::Desktop => "computer-symbolic",
         Source::Manual => "document-edit-symbolic",
         _ => "applications-games-symbolic",
+    }
+}
+
+/// How long ago a source last synced, as Preferences says it.
+pub fn sync_age_text(age: SyncAge) -> String {
+    let count = |text: String, n: u32| text.replace("{count}", &n.to_string());
+    match age {
+        // Translators: when a source last synced; it never has.
+        SyncAge::Never => gettext("Never"),
+        // Translators: when a source last synced; under a minute ago.
+        SyncAge::JustNow => gettext("Just now"),
+        SyncAge::Minutes(n) => count(ngettext("{count} minute ago", "{count} minutes ago", n), n),
+        SyncAge::Hours(n) => count(ngettext("{count} hour ago", "{count} hours ago", n), n),
+        SyncAge::Days(n) => count(ngettext("{count} day ago", "{count} days ago", n), n),
     }
 }
