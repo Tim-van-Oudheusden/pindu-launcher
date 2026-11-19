@@ -1,7 +1,9 @@
-//! Collections in the main window: the sidebar row menu (rename, reorder, delete), the
-//! "Add to Collection" menus of tiles and the desktop game page, saving the shown filter or
-//! a suggested shelf as a saved filter (`win.save-filter`, `win.save-suggestion`), and
-//! their undo toasts.
+//! Collections in the main window: the sidebar row menu (rename, reorder, delete), the same
+//! actions on the fullscreen drawer's level for one collection, the "Add to Collection"
+//! menus of tiles and the desktop game page, saving the shown filter or a suggested shelf as
+//! a saved filter (`win.save-filter`, `win.save-suggestion`), and their undo toasts. In
+//! fullscreen mode a name is typed with the on-screen keyboard, and a collection is deleted
+//! only after asking. A saved filter is renamed, moved and deleted like any collection.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -145,6 +147,40 @@ impl PinduWindow {
             self,
             move |_| window.update_save_filter()
         ));
+        // The fullscreen drawer's level for one collection, which names it.
+        let rename = gio::ActionEntry::builder("drawer-rename-collection")
+            .parameter_type(Some(glib::VariantTy::INT64))
+            .activate(|window: &Self, _, target| {
+                if let Some(id) = target.and_then(i64::from_variant) {
+                    window.rename_collection(id);
+                }
+            })
+            .build();
+        let up = gio::ActionEntry::builder("drawer-move-collection-up")
+            .parameter_type(Some(glib::VariantTy::INT64))
+            .activate(|window: &Self, _, target| {
+                if let Some(id) = target.and_then(i64::from_variant) {
+                    window.library_service().move_collection(id, -1);
+                }
+            })
+            .build();
+        let down = gio::ActionEntry::builder("drawer-move-collection-down")
+            .parameter_type(Some(glib::VariantTy::INT64))
+            .activate(|window: &Self, _, target| {
+                if let Some(id) = target.and_then(i64::from_variant) {
+                    window.library_service().move_collection(id, 1);
+                }
+            })
+            .build();
+        let delete = gio::ActionEntry::builder("drawer-delete-collection")
+            .parameter_type(Some(glib::VariantTy::INT64))
+            .activate(|window: &Self, _, target| {
+                if let Some(id) = target.and_then(i64::from_variant) {
+                    window.ask_delete_collection(id);
+                }
+            })
+            .build();
+        self.add_action_entries([rename, up, down, delete]);
         self.update_save_filter();
     }
 
@@ -320,6 +356,35 @@ impl PinduWindow {
         });
     }
 
+    /// Asks before deleting a collection, for the fullscreen drawer, so that one stray
+    /// press cannot delete it; the deletion then has its toast to undo it too.
+    fn ask_delete_collection(&self, id: i64) {
+        let dialog = adw::AlertDialog::builder()
+            // Translators: {collection} is the name of a collection of games.
+            .heading(
+                gettext("Delete “{collection}”?")
+                    .replace("{collection}", &self.collection_name(id)),
+            )
+            .body(gettext("Its games stay in the library."))
+            .close_response("cancel")
+            .default_response("cancel")
+            .build();
+        dialog.add_responses(&[
+            ("cancel", &gettext("_Cancel")),
+            ("delete", &gettext("_Delete")),
+        ]);
+        dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
+        dialog.connect_response(
+            Some("delete"),
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_, _| window.delete_collection(id)
+            ),
+        );
+        dialog.present(Some(self));
+    }
+
     /// Adds a game to a collection or takes it out, with a toast to undo it.
     fn set_in_collection(&self, game: &GameId, collection: i64, member: bool) {
         let service = self.library_service();
@@ -341,7 +406,8 @@ impl PinduWindow {
         self.add_toast(toast);
     }
 
-    /// A small dialog with a name entry; `done` gets the trimmed, non-empty name.
+    /// A small dialog with a name entry; `done` gets the trimmed, non-empty name. In
+    /// fullscreen mode the name is typed with the on-screen keyboard instead.
     fn ask_collection_name(
         &self,
         heading: String,
@@ -349,6 +415,20 @@ impl PinduWindow {
         initial: &str,
         done: impl Fn(String) + 'static,
     ) {
+        if self.is_fullscreen() {
+            self.ask_text(
+                &heading,
+                &gettext("Name the collection."),
+                initial,
+                move |name| {
+                    let name = name.as_deref().map(str::trim).unwrap_or_default();
+                    if !name.is_empty() {
+                        done(name.to_owned());
+                    }
+                },
+            );
+            return;
+        }
         let entry = gtk::Entry::builder()
             .text(initial)
             .activates_default(true)

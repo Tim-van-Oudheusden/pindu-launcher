@@ -295,6 +295,7 @@ fn task_state(task: &Task) -> String {
         (Cancel::Available, TaskKind::ProtonDownload) => gettext("Downloading"),
         (Cancel::Unavailable, TaskKind::ProtonDownload) => gettext("Installing"),
         (_, TaskKind::StoreInstall) => gettext("From Flathub"),
+        (_, TaskKind::SaveSnapshot) => gettext("Backing up saves"),
     }
 }
 
@@ -305,5 +306,6 @@ fn kind_icon(kind: TaskKind) -> &'static str {
         TaskKind::ArtFetch => "image-x-generic-symbolic",
         TaskKind::ProtonDownload => "folder-download-symbolic",
         TaskKind::StoreInstall => "system-software-install-symbolic",
+        TaskKind::SaveSnapshot => "document-save-symbolic",
     }
 }

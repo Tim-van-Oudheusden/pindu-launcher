@@ -7,11 +7,13 @@
     <file preprocess="xml-stripblanks">ui/fullscreen_bluetooth.ui</file>
     <file preprocess="xml-stripblanks">ui/fullscreen_network.ui</file>
     <file preprocess="xml-stripblanks">ui/fullscreen_power.ui</file>
+    <file preprocess="xml-stripblanks">ui/fullscreen_proton_downloads.ui</file>
     <file preprocess="xml-stripblanks">ui/fullscreen_sound_output.ui</file>
     <file preprocess="xml-stripblanks">ui/fullscreen_system_update.ui</file>
     <file preprocess="xml-stripblanks">ui/game_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/game_overlay.ui</file>
     <file preprocess="xml-stripblanks">ui/game_page.ui</file>
+    <file preprocess="xml-stripblanks">ui/health_page.ui</file>
     <file preprocess="xml-stripblanks">ui/home_page.ui</file>
     <file preprocess="xml-stripblanks">ui/menu_drawer.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences.ui</file>

@@ -50,6 +50,7 @@ widgets so it looks and behaves like the rest of GNOME.
   playtime. Pindu launcher only reads the launchers' files and never writes to them.
 - **Windows games too.** Add a Windows game, or its installer, by hand and it runs with Proton through
   [umu](https://github.com/Open-Wine-Components/umu-launcher) in a prefix of its own. Download GE-Proton and
+  Proton-CachyOS builds from Preferences or fullscreen mode's Quick Access, and turn on MangoHud or GameMode per game.
   Proton-CachyOS builds from Preferences, and turn on MangoHud or GameMode per game.
 - **Start Safely.** When a game Pindu runs itself breaks, **Start Safely** in its page's menu, or in fullscreen's
   options, starts it once without its wrappers, MangoHud, GameMode or its own environment variables, and keeps a log
@@ -77,6 +78,15 @@ widgets so it looks and behaves like the rest of GNOME.
   hand and tracked playtime to a file, and import them again. Before an update changes the library's format, Pindu
   launcher keeps a copy of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps
   the two newest copies.
+- **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
+  and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
+  beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
+- **Save snapshots.** When a Windows game you added by hand quits normally, Pindu launcher copies its saves out of the
+  prefix it made for the game into `~/Games/pindu-launcher/save-snapshots`, leaving out caches, runtimes, screenshots
+  and stored logins, and keeps the last five ([Save snapshots](docs/save-snapshots.md)).
+- **Backups.** Export your collections, favourites, hidden games, games added by hand, tracked playtime and groups of
+  copies to a file, and import them again. Before an update changes the library's format, Pindu launcher keeps a copy
+  of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 
 ## Game sources
 
@@ -193,6 +203,16 @@ Preferences.
   launching. It shows the glyphs of the controller in use and the keys that do the same, including ones the hint bar
   leaves out, such as holding B to cancel a launch. Without a controller it lists the keys alone.
 
+### Collections
+
+A game's options (View or X) add it to collections or take it out, and **New Collection…** makes one. **Collections**
+in the menu drawer (Start or Guide) lists them; A opens one's tab in the library, and View or X on one leads to
+**Rename…**, **Move Up**, **Move Down** and **Delete…**, as the desktop sidebar's collection menu has them.
+
+- Names are typed with the on-screen keyboard (capitals and symbols are a key away); Start or Done saves, and B on an
+  empty name cancels.
+- Delete asks first, with Cancel chosen, so one stray press cannot delete a collection. Its games stay in the library.
+
 ### Power
 
 The menu drawer (Start or Guide) ends with a **Power** entry, leading to **Suspend**, **Restart** and **Power Off**
@@ -224,8 +244,8 @@ Guide + A never also opens the menu drawer.
   games that need a permission, a Bluetooth device that did not pair, connect, disconnect or go, a rollback or restart
   the system refused, a network that could not be joined, and a program that kept the machine from suspending,
   restarting or powering off. Quick Access opens on them while one is unread.
-- **Activity:** a running library sync, SteamGridDB artwork fetch or Proton download, with its progress. Artwork
-  fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
+- **Activity:** a running library sync, SteamGridDB artwork fetch, Proton download or save snapshot, with its progress.
+  Artwork fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
 - **Refresh Library** reads your launchers again, offline like every sync.
 - **Surprise Me** opens the page of an installed game picked at random, never the same one twice in a row, so you
   still choose whether to play.
@@ -235,6 +255,10 @@ Guide + A never also opens the menu drawer.
 - **Accessibility:**
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
+  - **Larger Text:** fullscreen text about a quarter larger.
+- **Sources** lists every source Pindu imports from, says whether each was found on this computer, and has its
+  **Import** switch, the same setting as Preferences, Sources: a source turned off is no longer read, and changing a
+  switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences.
   - **Text Size:** fullscreen text at its default size or Large, Larger or Largest, each step about a quarter of
     the default larger. Preferences has the same choice; an install that had the former Larger Text on starts at
     Large.
@@ -340,6 +364,18 @@ ones already installed, and installs the one you pick from Flathub, all with a c
 - The Flatpak cannot install apps and gets no permission to, so it opens the store's page in your software centre
   and says so.
 - Once a store is installed the library refreshes; sign in to the store, and its games show.
+
+### Proton
+
+Quick Access's **Proton** does what Preferences' Windows and Proton pages do for Proton, with a controller alone:
+
+- **Defaults:** the Proton build Windows games run with unless their page names one (**Newest** follows the newest
+  build on the machine), and whether games added from now on start with **MangoHud** and **GameMode**. These are the
+  same settings as in Preferences. The default prefix folder needs a folder chooser, so it stays in Preferences.
+- **Downloaded Builds** lists the builds in the launcher's tools folder; select one to remove it, after a question.
+- **Check for Releases** lists the newest GE-Proton and Proton-CachyOS releases from GitHub, the only time the level
+  goes online. Select one to download and install it: its row shows how far it is, and it is a task in Activity, where
+  it can be cancelled; selecting its row again stops it too. A notification says how it ended.
 
 ### Controllers
 

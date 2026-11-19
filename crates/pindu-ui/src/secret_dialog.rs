@@ -6,7 +6,8 @@
 //! grid and what each button does are `pindu_core::osk`; this draws the keys, marks the
 //! cursor's, and hands the text to the caller on Done or Start, or nothing on Cancel or on
 //! B with the entry empty. It opens on the window Quick Access is in, the main window or
-//! Quick Access over a game (`game_overlay`), whose hint bar shows its buttons.
+//! Quick Access over a game (`game_overlay`), whose hint bar shows its buttons. The main
+//! window also asks for a name with it, such as a collection's ([`PinduWindow::ask_text`]).
 
 use std::cell::{Cell, RefCell};
 use std::fmt;
@@ -135,6 +136,14 @@ impl SecretDialog {
     pub fn withdraw(&self) {
         self.imp().answer.0.take();
         self.force_close();
+    }
+
+    /// Starts the entry with `text`, a name to edit, shown in full: no password field.
+    fn start_with(&self, text: &str) {
+        let entry = &self.imp().entry;
+        entry.set_input_purpose(gtk::InputPurpose::FreeForm);
+        entry.set_text(text);
+        entry.set_position(-1);
     }
 
     /// Acts on a controller intent, and says what the keyboard did.
@@ -285,6 +294,29 @@ impl PinduWindow {
             ),
         );
         dialog
+    }
+
+    /// Asks for a name, such as a collection's, in the same dialog: titled `title`, saying
+    /// `message`, starting with `text` and typed with the passphrase keyboard showing its
+    /// text ([`Keyboard::text`]); `done` gets the text on Done or Start, or `None` once the
+    /// dialog is cancelled.
+    pub fn ask_text(
+        &self,
+        title: &str,
+        message: &str,
+        text: &str,
+        done: impl FnOnce(Option<String>) + 'static,
+    ) {
+        let dialog = SecretDialog::new(title, message, Keyboard::text(), done);
+        dialog.start_with(text);
+        dialog.present_on(
+            self,
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move || window.update_hints()
+            ),
+        );
     }
 
     /// The open passphrase dialog, if any.

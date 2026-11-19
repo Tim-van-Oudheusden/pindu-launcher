@@ -8,6 +8,7 @@ use super::{
     ImportError, ImportedGame, Snapshot, bottles, desktop, faugus, heroic, itch, legendary, lutris,
     steam,
 };
+use crate::duplicates;
 use crate::model::{
     ArtOrigin, Artwork, Game, GameId, ImportedPlaytime, Source, SourceDetails, SourceState,
     Timestamp,
@@ -30,6 +31,22 @@ pub const IMPORTED_SOURCES: &[Source] = &[
     Source::Desktop,
 ];
 
+/// The state of each source in [`IMPORTED_SOURCES`], in that order, from the stored
+/// `states`: what Preferences and fullscreen mode's Sources list, one Import switch each. A
+/// source with no stored state is a new one, turned on ([`SourceState::new`]).
+pub fn imported_source_states(states: &[SourceState]) -> Vec<SourceState> {
+    IMPORTED_SOURCES
+        .iter()
+        .map(|&source| {
+            states
+                .iter()
+                .find(|state| state.source == source)
+                .cloned()
+                .unwrap_or_else(|| SourceState::new(source))
+        })
+        .collect()
+}
+
 /// What a sync of every source could not read, and how it changed the library, by
 /// source.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -38,6 +55,9 @@ pub struct SyncSummary {
     pub problems: Vec<(Source, String)>,
     /// Each synced source's changes, in sync order.
     pub changes: Vec<(Source, Changes)>,
+    /// The groups the sync made of copies an exact store cross-reference links, which
+    /// [`Store::split_group`] undoes.
+    pub grouped: Vec<i64>,
 }
 
 /// The games a sync added, or found missing, and the sources they belong to.
@@ -82,8 +102,9 @@ pub struct SourceSync {
     pub changes: Changes,
 }
 
-/// Syncs every enabled source with an importer. `utc_offset` (seconds east of UTC) reads
-/// the local times some sources record.
+/// Syncs every enabled source with an importer, then groups the copies exact store
+/// cross-references link ([`duplicates::group_exact_matches`]). `utc_offset` (seconds
+/// east of UTC) reads the local times some sources record.
 pub fn sync_all(
     store: &Store,
     dirs: &HostDirs,
@@ -103,6 +124,7 @@ pub fn sync_all(
             summary.changes.push((source, synced.changes));
         }
     }
+    summary.grouped = duplicates::group_exact_matches(store)?;
     Ok(summary)
 }
 
@@ -1041,5 +1063,57 @@ mod tests {
                 sources: vec![Source::HeroicSideload],
             }
         );
+    }
+
+    #[test]
+    fn sync_all_groups_the_copies_a_lutris_store_link_names_and_keeps_an_undo() {
+        let (dir, store) = temp_store();
+        let lutris = dir.path().join(".local/share/lutris");
+        std::fs::create_dir_all(&lutris).unwrap();
+        rusqlite::Connection::open(lutris.join("pga.db"))
+            .unwrap()
+            .execute_batch(include_str!("../../tests/fixtures/lutris/lutris/pga.sql"))
+            .unwrap();
+        let heroic = dir.path().join(".config/heroic/store_cache");
+        std::fs::create_dir_all(&heroic).unwrap();
+        std::fs::write(
+            heroic.join("gog_library.json"),
+            r#"{"games": [{"app_name": "1207664643", "title": "The Witcher 3: Wild Hunt"}]}"#,
+        )
+        .unwrap();
+
+        let summary = sync_all(&store, &host_dirs(dir.path()), 100, 0).unwrap();
+
+        let groups = store.game_groups().unwrap();
+        assert_eq!(summary.grouped, vec![groups[0].id]);
+        assert!(groups[0].automatic);
+        assert_eq!(
+            groups[0].members,
+            vec![
+                GameId::new(Source::HeroicGog, "1207664643"),
+                GameId::new(Source::Lutris, "2"),
+            ]
+        );
+
+        store.split_group(groups[0].id).unwrap();
+        let again = sync_all(&store, &host_dirs(dir.path()), 200, 0).unwrap();
+
+        assert!(again.grouped.is_empty());
+        assert_eq!(store.game_groups().unwrap(), vec![]);
+    }
+
+    #[test]
+    fn every_imported_source_has_a_state_in_sync_order_and_unknown_ones_are_turned_on() {
+        let mut lutris = SourceState::new(Source::Lutris);
+        lutris.enabled = false;
+        let manual = SourceState::new(Source::Manual);
+        let states = imported_source_states(&[manual, lutris.clone()]);
+        assert_eq!(
+            states.iter().map(|state| state.source).collect::<Vec<_>>(),
+            IMPORTED_SOURCES,
+            "Added by Hand has no importer, so no switch"
+        );
+        assert_eq!(states[5], lutris);
+        assert_eq!(states[0], SourceState::new(Source::Steam));
     }
 }

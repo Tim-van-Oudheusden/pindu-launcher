@@ -9,13 +9,14 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 
 ## What it does
 
-- **What a snapshot holds.** A spike measures snapshot sizes for a few real prefixes, defines which user-profile
-  folders of a managed prefix are included and which caches and credential stores are left out, settles the folder
-  layout, and settles Ludusavi.
-- **Snapshot on exit.** After a clean exit of a Windows game in a prefix Pindu manages, the user-profile folders the
-  spike named are copied as a plain folder, atomically: written to a temporary folder, then renamed. The last few
-  snapshots are kept with their time and size; a failed write leaves the earlier ones intact. It runs as a task in
-  Activity.
+- **What a snapshot holds.** The spike in #536 settled it: every real folder under the prefix's `drive_c/users/`
+  (Proton prefixes have `steamuser` and `Public`), minus temporary files, installed software and runtimes, launcher
+  and anti-cheat runtimes, credential stores, embedded browser profiles, caches, crash dumps and media libraries.
+  Symbolic links are never followed or copied. The registry, `drive_c/ProgramData` and saves inside a game's install
+  folder are not covered. Ludusavi is neither called nor its manifest used.
+- **Snapshot on exit.** After a Windows game in a prefix Pindu manages exits cleanly, which is umu ending by itself
+  with status 0, its saves are copied as a plain folder, atomically. It runs as a task in Activity, and a failed write
+  says so in a toast and leaves the earlier snapshots intact. See [How snapshots are stored](#how-snapshots-are-stored).
 - **Restore.** Both shells list a game's snapshots with time, size and the exact paths included. A restore first takes
   a safety snapshot, refuses while the game runs, and restores only inside the prefix or the folders the user
   configured.
@@ -24,6 +25,37 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   is gone is reported, not treated as a failure of the game. There is no Pindu cloud.
 - **Save folders by hand.** The user can add save folders for any game through the file chooser; snapshots and
   restores cover them, and a folder the app cannot reach is explained in place.
+
+## How snapshots are stored
+
+`crates/pindu-core/src/saves.rs` holds the logic, `crates/pindu-ui/src/save_service.rs` runs it on a worker thread
+after `proton_launch` sees the game exit.
+
+- **Managed prefixes only.** A prefix is managed when Pindu chose it: `<prefixes folder>/<native ID>`, by default
+  `~/Games/pindu-launcher/prefixes/<native ID>`. A prefix the user pointed at another tool's folder is left out.
+- **Layout.** `~/Games/pindu-launcher/save-snapshots/<native ID>/<UTC time, as 2026-11-19T18-42-07Z>/`, holding
+  `files/`, which mirrors the paths under `drive_c/users/`, and `snapshot.json`: the format version, game ID, prefix,
+  time, reason (`exit` or `before-restore`), the user folders included, the exclusion rules used, and every file with
+  its path, size and modification time. Snapshots sit beside the prefixes, so removing a prefix keeps them, and on
+  the same filesystem, so on btrfs the copies share the files' blocks until the game rewrites them.
+- **Atomic.** A snapshot is written into `.<time>.partial/`, every file and `snapshot.json` flushed to disk, then
+  renamed into place. A failed write removes its partial folder, and one a crash left behind is removed before the
+  next snapshot.
+- **Unchanged saves are skipped.** When every file's path, size and modification time equal the newest snapshot's,
+  none is written, so quitting from a menu five times does not push out the last five saves.
+- **Retention.** The newest five snapshots taken on exit and, separately, the newest two taken before a restore are
+  kept; older ones are removed after each new snapshot.
+
+Excluded by default, with paths relative to a user folder and names matched whatever their case:
+
+- `Temp`, `AppData/Local/Temp`, `AppData/Local/Programs`, `AppData/Local/dxvk`, `AppData/Roaming/wine_gecko`,
+  `AppData/Local/D3DSCache`, `AppData/Local/NVIDIA`;
+- `AppData/Local/Epic Games`, `AppData/Local/EpicGamesLauncher`, `AppData/Local/EpicOnlineServicesUIHelper`,
+  `AppData/Roaming/EasyAntiCheat`;
+- `AppData/Roaming/Microsoft` and `AppData/Local/Microsoft` (credential stores);
+- `Pictures`, `Videos`, `Music` and `Downloads`, and the same names under `Documents`;
+- at any depth, folders named `Local Storage`, `Session Storage`, `IndexedDB`, `*cache*`, `Crashes`, `CrashDumps` and
+  `Crash Reports`, and files named `Cookies`, `Cookies-journal`, `Login Data` and `Web Data`.
 
 ## Flatpak, native and Pindu OS
 

@@ -1,6 +1,7 @@
 //! Proton downloads: GE-Proton and Proton-CachyOS releases from the GitHub releases API,
 //! installed into and removed from our tools folder. Everything here runs only when the
-//! user asks on the Preferences' Proton page; launching a game never downloads anything.
+//! user asks on the Preferences' Proton page or Quick Access's Proton level; launching a
+//! game never downloads anything.
 //!
 //! An install fetches the release's `.sha512sum` first when it has one, hashes the
 //! tarball as it downloads, unpacks it with `tar` in a hidden work folder beside the

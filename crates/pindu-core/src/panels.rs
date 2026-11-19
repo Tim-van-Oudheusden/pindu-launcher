@@ -28,8 +28,12 @@ pub enum Panel {
 pub enum DrawerLevel {
     /// The drawer's entries.
     Main,
-    /// The collections, each opening its tab in the library.
+    /// The collections, each opening its tab in the library; View or X on one leads to
+    /// [`DrawerLevel::Collection`].
     Collections,
+    /// One collection's actions: rename, move up or down, and delete (see
+    /// [`collection_actions`]).
+    Collection,
     /// Suspend, Restart and Power Off, as the system allows them (see
     /// [`crate::system::power`]), and Exit Pindu Launcher.
     Power,
@@ -85,11 +89,19 @@ pub enum QuickAccessLevel {
     /// The stores to install from Flathub, and the install that runs (see
     /// [`crate::add_store`]).
     AddStore,
+    /// The Proton builds downloaded into our tools folder, the GE-Proton and
+    /// Proton-CachyOS releases to download (see [`crate::proton_downloads`]), and the
+    /// defaults for new Windows games: the Proton build, MangoHud and GameMode, the same
+    /// settings as Preferences'.
+    Proton,
+    /// Each imported source, whether it was found on this computer and its Import switch,
+    /// the same setting as Preferences' (see [`crate::sources::sync::imported_source_states`]).
+    Sources,
 }
 
 impl QuickAccessLevel {
     /// Every level, the entries first.
-    pub const ALL: [Self; 14] = [
+    pub const ALL: [Self; 16] = [
         Self::Main,
         Self::Notifications,
         Self::Activity,
@@ -104,6 +116,8 @@ impl QuickAccessLevel {
         Self::SoundOutput,
         Self::SystemUpdate,
         Self::AddStore,
+        Self::Proton,
+        Self::Sources,
     ];
 
     /// The name the level goes by: its page of the panel's stack, and what a row asks for
@@ -124,6 +138,8 @@ impl QuickAccessLevel {
             Self::SoundOutput => "sound-output",
             Self::SystemUpdate => "system-update",
             Self::AddStore => "add-store",
+            Self::Proton => "proton",
+            Self::Sources => "sources",
         }
     }
 
@@ -147,6 +163,9 @@ pub struct Under {
     pub unread: bool,
     /// The page is fullscreen mode's library: Quick Access offers its filters.
     pub library: bool,
+    /// A collection in the drawer's Collections level has focus: View or X has a
+    /// collection to show actions for.
+    pub collection: bool,
 }
 
 /// The panel that is open, if any.
@@ -169,7 +188,8 @@ impl Panels {
     /// Acts on a controller intent and says whether the panels took it, so the page does
     /// not act on it too. Start and Guide toggle the drawer, R3, Guide + A and the Steam
     /// Deck's "…" toggle Quick Access (at its notifications while one is unread, as
-    /// Steam's does), View or X opens the options for a game, and B steps back a level or
+    /// Steam's does), View or X opens the options for a game, or in the drawer's
+    /// Collections leads to the focused collection's actions, and B steps back a level or
     /// closes. Opening one panel closes the other. While a panel is open the page's own
     /// buttons (search, tabs, sort) wait; directions and A move and act inside it.
     pub fn handle(&mut self, intent: Intent, under: Under) -> bool {
@@ -193,6 +213,11 @@ impl Panels {
             (Intent::Options, None) if under.game => {
                 self.open = Some(Panel::Options(OptionsLevel::Main));
             }
+            (Intent::Options, Some(Panel::Drawer(DrawerLevel::Collections)))
+                if under.collection =>
+            {
+                self.open = Some(Panel::Drawer(DrawerLevel::Collection));
+            }
             (
                 Intent::Back,
                 Some(
@@ -202,6 +227,9 @@ impl Panels {
                 ),
             ) => {
                 self.open = None;
+            }
+            (Intent::Back, Some(Panel::Drawer(DrawerLevel::Collection))) => {
+                self.open = Some(Panel::Drawer(DrawerLevel::Collections));
             }
             (Intent::Back, Some(Panel::Drawer(_))) => {
                 self.open = Some(Panel::Drawer(DrawerLevel::Main));
@@ -273,6 +301,35 @@ pub fn drawer_entries(playing: bool, collections: bool, power: bool) -> Vec<Draw
         collections,
         Some(ExitFullscreen),
         power,
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
+}
+
+/// An action of the drawer's level for one collection ([`DrawerLevel::Collection`]), as
+/// the desktop sidebar's collection menu has them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CollectionAction {
+    /// Give the collection another name, typed with the on-screen keyboard.
+    Rename,
+    /// Move the collection one place up, before the one above it.
+    MoveUp,
+    /// Move the collection one place down, after the one below it.
+    MoveDown,
+    /// Delete the collection, after asking; its games stay in the library.
+    Delete,
+}
+
+/// The actions for the collection at `index` of `count` collections, top to bottom: Move
+/// Up unless it is first, Move Down unless it is last.
+pub fn collection_actions(index: usize, count: usize) -> Vec<CollectionAction> {
+    use CollectionAction::*;
+    [
+        Some(Rename),
+        (index > 0).then_some(MoveUp),
+        (index + 1 < count).then_some(MoveDown),
+        Some(Delete),
     ]
     .into_iter()
     .flatten()
@@ -462,6 +519,7 @@ mod tests {
         dialog: false,
         unread: false,
         library: false,
+        collection: false,
     };
     const GAME: Under = Under {
         game: true,
@@ -469,6 +527,7 @@ mod tests {
         dialog: false,
         unread: false,
         library: false,
+        collection: false,
     };
     const DIALOG: Under = Under {
         game: true,
@@ -476,6 +535,7 @@ mod tests {
         dialog: true,
         unread: false,
         library: false,
+        collection: false,
     };
 
     fn drawer() -> Option<Panel> {
@@ -534,6 +594,34 @@ mod tests {
     fn b_steps_back_from_add_a_store_and_then_closes_quick_access() {
         let mut panels = Panels::new();
         panels.show(Panel::QuickAccess(QuickAccessLevel::AddStore));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), quick_access());
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), None);
+    }
+
+    #[test]
+    fn proton_is_a_level_of_its_own_that_b_steps_back_from() {
+        assert_eq!(
+            QuickAccessLevel::from_name("proton"),
+            Some(QuickAccessLevel::Proton)
+        );
+        let mut panels = Panels::new();
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Proton));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), quick_access());
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), None);
+    }
+
+    #[test]
+    fn sources_is_a_level_of_its_own_that_b_steps_back_from() {
+        assert_eq!(
+            QuickAccessLevel::from_name("sources"),
+            Some(QuickAccessLevel::Sources)
+        );
+        let mut panels = Panels::new();
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Sources));
         assert!(panels.handle(Intent::Back, PAGE));
         assert_eq!(panels.open(), quick_access());
         assert!(panels.handle(Intent::Back, PAGE));
@@ -653,6 +741,34 @@ mod tests {
         assert!(panels.handle(Intent::Back, PAGE));
         assert_eq!(panels.open(), drawer());
         assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), None);
+    }
+
+    #[test]
+    fn view_or_x_on_a_collection_leads_to_its_actions_and_b_back_to_the_collections() {
+        let collection = Under {
+            collection: true,
+            ..PAGE
+        };
+        let mut panels = Panels::new();
+        panels.show(Panel::Drawer(DrawerLevel::Collections));
+        assert!(panels.handle(Intent::Options, PAGE), "taken, not acted on");
+        assert_eq!(
+            panels.open(),
+            Some(Panel::Drawer(DrawerLevel::Collections)),
+            "no collection has focus"
+        );
+        assert!(panels.handle(Intent::Options, collection));
+        assert_eq!(panels.open(), Some(Panel::Drawer(DrawerLevel::Collection)));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), Some(Panel::Drawer(DrawerLevel::Collections)));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), drawer());
+        panels.handle(Intent::Menu, collection);
+        assert!(
+            !panels.handle(Intent::Options, collection),
+            "closed, a game's"
+        );
         assert_eq!(panels.open(), None);
     }
 
@@ -810,6 +926,19 @@ mod tests {
             drawer_entries(true, false, true),
             [PlayingNow, Home, Library, ExitFullscreen, Power]
         );
+    }
+
+    #[test]
+    fn a_collection_moves_only_where_it_can_and_is_always_renamed_and_deleted() {
+        use CollectionAction::*;
+        assert_eq!(collection_actions(1, 3), [Rename, MoveUp, MoveDown, Delete]);
+        assert_eq!(
+            collection_actions(0, 3),
+            [Rename, MoveDown, Delete],
+            "first"
+        );
+        assert_eq!(collection_actions(2, 3), [Rename, MoveUp, Delete], "last");
+        assert_eq!(collection_actions(0, 1), [Rename, Delete], "the only one");
     }
 
     #[test]

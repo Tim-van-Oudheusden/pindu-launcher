@@ -23,8 +23,8 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **Conservative, staged matching.**
   1. Exact cross-references, such as a Lutris record's store ID (`service`, `service_id`) against the Steam, Heroic
      GOG or Heroic Epic record with that ID, are grouped automatically, with an undo.
-  2. Normalised title (`search::normalize`) together with developer or year, where both records have one, is a
-     suggestion only, with its reason and a confidence.
+  2. Equal normalised titles (`search::normalize`) of records from different sources are a suggestion only, with its
+     reason and a confidence: high when the developer or the year agrees on both records, low otherwise.
   3. Merge and split by hand, from the desktop game menu and from fullscreen mode's options sheet. A split is
      remembered ("not the same game"), so the suggestion does not come back.
 
@@ -58,6 +58,42 @@ Schema migration 6 (#504) adds the grouping layer; the rules follow spike #501.
   together, so they count once, by the largest figure among them; every other copy was played apart and adds up. Steam
   10 h with Lutris (runner `steam`) 2 h is 10 h; Steam 10 h with Heroic GOG 5 h is 15 h. A group was last played when
   any copy was.
+
+## How duplicates are found
+
+`duplicates::suggestions` (#505) lists the pairs of library records that look like copies of one game, each with a
+reason and a confidence, and writes nothing. It follows spike #501:
+
+- **Exact cross-references come first.** Only a Lutris record's store link counts, compared after trimming
+  whitespace, against a record in the library (installed or not): `steam` and `steamwindows` name `steam:<id>`, `gog`
+  names `heroic-gog:<id>`, `egs` names `heroic-epic:<id>`. Amazon does not count, because Lutris stores the
+  entitlement ID and Heroic the product ID; other services have no Pindu source to match.
+- **Then equal normalised titles**, only between records of different sources, never on a prefix or substring. The
+  confidence is high when both records name a developer and the names agree (ignoring `inc`, `ltd`, `llc`, `gmbh`,
+  `corp`, `co`) or both know the year and the years are at most one apart; otherwise it is low. A disagreement only
+  lowers the confidence.
+- **Left out:** records gone from their source or removed by the user, pairs already in one group, and pairs
+  remembered as not the same game, so a dismissed or split pair never returns.
+
+After every sync, `duplicates::group_exact_matches` groups each exact pair automatically, unless either copy is in a
+group already; the sync reports the new groups. Undoing one is `Store::split_group`, which remembers the pair, so the
+next sync leaves it apart. Title matches are never grouped without the user.
+
+## How groups are backed up
+
+Backup format 2 (#509) adds two lists to the backup file, both naming games by their per-source IDs:
+`groups`, each with its games, the preferred copy when the user chose one and whether it was made automatically, and
+`not_the_same`, the remembered pairs. Importing adds and never removes:
+
+- **A group is made again** from those of its games that are in the library, when at least two are and none of them
+  is in a group here already. A preferred copy that is not in the library falls back to the default order. A group
+  this library already has is left as it is and not counted.
+- **Skipped and counted** is every other group: fewer than two of its games are in the library, one of them is in
+  another group here, or an automatic group's pair is remembered here as not the same game. The import result says
+  how many groups were skipped, beside how many games the library lacks.
+- **Remembered pairs** are added when both games are in the library.
+- **Format 1** backups, which have neither list, still import and change no group. An older build refuses a format 2
+  backup rather than drop its groups.
 
 ## Flatpak, native and Pindu OS
 
