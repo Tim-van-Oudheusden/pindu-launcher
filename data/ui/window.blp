@@ -388,6 +388,11 @@ template $PinduWindow: Adw.ApplicationWindow {
                             label: _("Jump Back In");
                             xalign: 0;
                             margin-start: 6;
+                            accessible-role: heading;
+
+                            accessibility {
+                              level: 2;
+                            }
 
                             styles [
                               "heading",
