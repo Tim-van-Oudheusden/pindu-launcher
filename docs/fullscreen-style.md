@@ -198,7 +198,8 @@ class styles both.
 
 The background plays muted and looped behind the first screen. It pauses on the second screen, while a
 game we started runs and while the window is hidden, and holds its first frame outside fullscreen mode and
-while the window is `reduced-motion`.
+while the window is `reduced-motion`. While the system asks for high contrast it is not shown at all:
+`.home-background`'s plain black stands in for it, with no stars or waves behind the text.
 
 Quick Access's **Background Blur** and **Background Dim** (each Off, Low or High) put `blur-low` or
 `blur-high` and `dim-low` or `dim-high` on `.home`. Pindu blurs `.home-background` and `.home-hero` with

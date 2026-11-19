@@ -432,11 +432,15 @@ impl PinduWindow {
             );
             return;
         }
+        let label = gettext("Name");
         let entry = gtk::Entry::builder()
             .text(initial)
             .activates_default(true)
-            .placeholder_text(gettext("Name"))
+            .placeholder_text(&label)
             .build();
+        // A placeholder is no accessible name: without one a screen reader announces an
+        // unnamed text field.
+        entry.update_property(&[gtk::accessible::Property::Label(&label)]);
         let dialog = adw::AlertDialog::builder()
             .heading(heading)
             .extra_child(&entry)
