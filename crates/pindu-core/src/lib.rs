@@ -38,6 +38,7 @@ pub mod permissions;
 pub mod power;
 pub mod proton;
 pub mod proton_downloads;
+pub mod reading;
 pub mod renderer;
 pub mod search;
 pub mod sections;
