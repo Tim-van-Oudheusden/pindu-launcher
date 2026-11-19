@@ -38,6 +38,7 @@ use gtk::glib::subclass::Signal;
 use gtk::{gio, glib};
 use pindu_core::gamepad::Intent;
 use pindu_core::gamescope::prompts::{PromptHost, prompt_host};
+use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
 use pindu_core::home::{BLUR_KEY, DIM_KEY};
 use pindu_core::keys;
 use pindu_core::model::GameId;
@@ -159,6 +160,8 @@ mod imp {
         pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub large_text_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub hold_to_confirm_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub artwork: TemplateChild<gtk::ListBox>,
         #[template_child]
@@ -805,6 +808,9 @@ impl PinduQuickAccess {
             .build();
         settings
             .bind("fullscreen-large-text", &*imp.large_text_row, "active")
+            .build();
+        settings
+            .bind(HOLD_TO_CONFIRM_KEY, &*imp.hold_to_confirm_row, "active")
             .build();
         settings
             .bind("prefer-steamgriddb", &*imp.prefer_steamgriddb_row, "active")

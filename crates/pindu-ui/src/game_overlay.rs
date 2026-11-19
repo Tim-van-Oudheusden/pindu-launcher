@@ -27,6 +27,7 @@ use pindu_core::gamepad::{Direction, Intent, Layout, WindowFocus};
 use pindu_core::gamescope::Xid;
 use pindu_core::gamescope::overlay::OverGame;
 use pindu_core::hints::{self, Context, Focus, Hint, Launching};
+use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
 use pindu_core::launch;
 use pindu_core::model::GameId;
 use pindu_core::panels::{DrawerLevel, Panel, Panels, QuickAccessLevel, Under, page_entries};
@@ -34,6 +35,7 @@ use pindu_core::panels::{DrawerLevel, Panel, Panels, QuickAccessLevel, Under, pa
 use crate::application::PinduApplication;
 use crate::fullscreen::Sound;
 use crate::hint_bar::{fill_hint_bar, focus_kind};
+use crate::hold_progress::{HoldProgress, destructive_action};
 use crate::menu_drawer::PinduMenuDrawer;
 use crate::quick_access::PinduQuickAccess;
 use crate::window::PinduWindow;
@@ -66,6 +68,8 @@ mod imp {
         /// The hints shown, with whether they are the drawer's and the layout they were
         /// drawn for.
         pub hints: RefCell<Option<(bool, Layout, Vec<Hint>)>>,
+        /// The hold to confirm, while the option is on.
+        pub(crate) hold: std::rc::Rc<HoldProgress>,
     }
 
     #[glib::object_subclass]
@@ -432,7 +436,7 @@ impl PinduGameOverlay {
             return;
         }
         self.set_focus_visible(true);
-        if self.secret_dialog_intent(intent) {
+        if self.hold_intent(intent) || self.secret_dialog_intent(intent) {
             return;
         }
         match intent {
@@ -464,6 +468,39 @@ impl PinduGameOverlay {
             }
             _ => {}
         }
+    }
+
+    /// Hands `intent` to the hold to confirm, and says whether it started a hold, which
+    /// takes it: the confirm button on Forget or Stop with the option on.
+    fn hold_intent(&self, intent: Intent) -> bool {
+        let Some(application) = self.imp().application.upgrade() else {
+            return false;
+        };
+        let focus = gtk::prelude::GtkWindowExt::focus(self)
+            .and_then(|focus| Some((focus.clone(), destructive_action(&focus)?)));
+        self.imp().hold.intent(
+            intent,
+            focus,
+            self.holds_to_confirm(),
+            application.gamepad_service(),
+            glib::clone!(
+                #[weak(rename_to = overlay)]
+                self,
+                move |target| {
+                    target.activate();
+                    overlay.play_sound(Sound::Select);
+                }
+            ),
+        )
+    }
+
+    /// Whether Forget and Stop need the confirm button held, as the main window's option
+    /// says.
+    fn holds_to_confirm(&self) -> bool {
+        self.imp()
+            .main_window
+            .upgrade()
+            .is_some_and(|window| window.settings().boolean(HOLD_TO_CONFIRM_KEY))
     }
 
     /// Whether this window has focus, so the controller is its (see `WindowFocus`).
@@ -536,9 +573,16 @@ impl PinduGameOverlay {
             return;
         };
         let context = Context {
-            focus: gtk::prelude::GtkWindowExt::focus(self)
-                .as_ref()
-                .map_or(Focus::Nothing, focus_kind),
+            focus: gtk::prelude::GtkWindowExt::focus(self).as_ref().map_or(
+                Focus::Nothing,
+                |focus| {
+                    if self.holds_to_confirm() && destructive_action(focus).is_some() {
+                        Focus::Hold
+                    } else {
+                        focus_kind(focus)
+                    }
+                },
+            ),
             dialog: self.visible_dialog().is_some(),
             page_below: false,
             search: false,
