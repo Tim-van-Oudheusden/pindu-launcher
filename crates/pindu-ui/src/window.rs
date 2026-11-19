@@ -1136,15 +1136,30 @@ impl PinduWindow {
         }
     }
 
-    /// Caps the grid's columns at what fits its width (see [`grid::max_columns`]).
-    fn update_grid_columns(&self) {
+    /// Caps the grid's columns at what fits its width (see [`grid::max_columns`]). In
+    /// fullscreen mode the columns are exactly a cover and its gap wide and centred, so the
+    /// gap between columns is the gap between rows (see [`grid::centred_columns`]).
+    pub(crate) fn update_grid_columns(&self) {
         let grid = &self.imp().grid;
         let Some(width) = grid.hadjustment() else {
             return;
         };
         let size = TileSize::from_setting(&self.settings().string("tile-size"));
-        let column = size.cover_size().0 + GRID_CHILD_PADDING;
-        grid.set_max_columns(grid::max_columns(width.page_size() - GRID_PADDING, column));
+        let cover = size.cover_size().0;
+        if self.is_fullscreen() {
+            // The width the grid would have without its margins, so new margins leave the
+            // result as it is.
+            let available = width.page_size() + f64::from(grid.margin_start() + grid.margin_end());
+            let (columns, margin) = grid::centred_columns(available, cover + FULLSCREEN_GRID_GAP);
+            grid.set_margin_start(margin);
+            grid.set_margin_end(margin);
+            grid.set_max_columns(columns);
+        } else {
+            grid.set_margin_start(0);
+            grid.set_margin_end(0);
+            let column = cover + GRID_CHILD_PADDING;
+            grid.set_max_columns(grid::max_columns(width.page_size() - GRID_PADDING, column));
+        }
     }
 
     /// Shows a header spinner while importing, and one toast summarising any problems.
@@ -1313,6 +1328,10 @@ const LARGE_TEXT_KEY: &str = "fullscreen-large-text";
 /// Horizontal padding around the cover grid and around each tile, as in `style.css`.
 const GRID_PADDING: f64 = 24.0;
 const GRID_CHILD_PADDING: i32 = 12;
+/// The gap between covers in fullscreen mode, between rows and columns alike: twice a
+/// tile's padding there, as in `style.css`. Wider than the lifted, ringed cover reaches
+/// past its edge (about 15 pixels for a large cover), so it never overlaps a neighbour.
+const FULLSCREEN_GRID_GAP: i32 = 32;
 
 const SORT_MODES: [(SortMode, &str); 5] = [
     (SortMode::LastPlayed, "last-played"),

@@ -84,7 +84,15 @@ window.fullscreen-mode.large-text {
   font-size: 1.6875em;
 }
 
+/* Covers 32px apart, rows and columns alike (FULLSCREEN_GRID_GAP in window.rs, which
+   centres the columns with the grid's margins, so the grid has no side padding): more
+   than the lifted, ringed cover reaches past its edge, so it never overlaps a neighbour. */
+window.fullscreen-mode gridview.library {
+  padding: 12px 0;
+}
+
 window.fullscreen-mode gridview.library > child {
+  padding: 16px;
   outline: none;
   transition: transform 120ms ease-out;
 }
