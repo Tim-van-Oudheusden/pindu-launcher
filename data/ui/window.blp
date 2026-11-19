@@ -420,6 +420,9 @@ template $PinduWindow: Adw.ApplicationWindow {
 
                               child: GridView grid {
                                 single-click-activate: true;
+                                // Tab enters the grid once and leaves it on the next
+                                // press; the arrow keys move between the games.
+                                tab-behavior: item;
 
                                 styles [
                                   "library",
@@ -436,6 +439,8 @@ template $PinduWindow: Adw.ApplicationWindow {
                             child: ScrolledWindow {
                               child: ColumnView game_list {
                                 single-click-activate: true;
+                                // As in the grid: one Tab in, the next one out.
+                                tab-behavior: item;
                                 show-row-separators: true;
                                 reorderable: false;
 
