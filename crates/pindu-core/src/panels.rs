@@ -114,11 +114,14 @@ pub enum QuickAccessLevel {
     /// Each imported source, whether it was found on this computer and its Import switch,
     /// the same setting as Preferences' (see [`crate::sources::sync::imported_source_states`]).
     Sources,
+    /// The duplicate suggestions to accept or dismiss, and the groups made automatically,
+    /// to undo (see [`crate::duplicates::review`]).
+    Duplicates,
 }
 
 impl QuickAccessLevel {
     /// Every level, the entries first.
-    pub const ALL: [Self; 19] = [
+    pub const ALL: [Self; 20] = [
         Self::Main,
         Self::Notifications,
         Self::Activity,
@@ -138,6 +141,7 @@ impl QuickAccessLevel {
         Self::ReportLog,
         Self::Proton,
         Self::Sources,
+        Self::Duplicates,
     ];
 
     /// The name the level goes by: its page of the panel's stack, and what a row asks for
@@ -163,6 +167,7 @@ impl QuickAccessLevel {
             Self::ReportLog => "report-log",
             Self::Proton => "proton",
             Self::Sources => "sources",
+            Self::Duplicates => "duplicates",
         }
     }
 
@@ -682,6 +687,20 @@ mod tests {
         );
         let mut panels = Panels::new();
         panels.show(Panel::QuickAccess(QuickAccessLevel::Sources));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), quick_access());
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), None);
+    }
+
+    #[test]
+    fn duplicates_is_a_level_of_its_own_that_b_steps_back_from() {
+        assert_eq!(
+            QuickAccessLevel::from_name("duplicates"),
+            Some(QuickAccessLevel::Duplicates)
+        );
+        let mut panels = Panels::new();
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Duplicates));
         assert!(panels.handle(Intent::Back, PAGE));
         assert_eq!(panels.open(), quick_access());
         assert!(panels.handle(Intent::Back, PAGE));
