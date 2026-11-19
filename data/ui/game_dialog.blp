@@ -162,6 +162,46 @@ template $PinduGameDialog: Adw.Dialog {
           }
         }
 
+        // Editing a game: the details the game page shows, kept as the user's own.
+        Adw.PreferencesGroup details_group {
+          title: _("Details");
+          description: _("Details you change are kept when the library is imported again. Clear one to go back to the launcher's.");
+          visible: false;
+
+          Adw.EntryRow developer_row {
+            title: _("Developer");
+            changed => $form_changed() swapped;
+          }
+
+          Adw.EntryRow genres_row {
+            title: _("Genres, Separated by Commas");
+            changed => $form_changed() swapped;
+          }
+        }
+
+        Adw.PreferencesGroup description_group {
+          title: _("Description");
+          visible: false;
+
+          TextView description_view {
+            wrap-mode: word_char;
+            accepts-tab: false;
+            height-request: 120;
+            top-margin: 12;
+            bottom-margin: 12;
+            left-margin: 12;
+            right-margin: 12;
+
+            accessibility {
+              label: _("Description");
+            }
+
+            styles [
+              "card",
+            ]
+          }
+        }
+
         Adw.PreferencesGroup {
           title: _("Artwork");
           description: _("Pick an image file or paste a web address. Art you pick is used instead of the launcher's.");

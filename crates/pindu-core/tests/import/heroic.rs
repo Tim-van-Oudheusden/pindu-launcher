@@ -112,6 +112,29 @@ fn amazon_games_are_joined_by_id_and_run_on_windows() {
 }
 
 #[test]
+fn amazon_release_year_comes_from_its_release_date_in_both_layouts() {
+    for at in [
+        ".config/heroic",
+        ".var/app/com.heroicgameslauncher.hgl/config/heroic",
+    ] {
+        let (_dir, home, _root) = heroic_home(at);
+        let resolved = Location::of(Source::HeroicAmazon, &dirs(&home))
+            .unwrap()
+            .resolve(None)
+            .unwrap();
+
+        let snapshot = import(&resolved, Source::HeroicAmazon);
+
+        assert_eq!(
+            game(&snapshot, "amzn1.adg.product.0001").year,
+            Some(2019),
+            "{at}"
+        );
+        assert_eq!(game(&snapshot, "amzn1.adg.product.0002").year, None, "{at}");
+    }
+}
+
+#[test]
 fn sideloaded_games_use_their_own_install_info_and_local_art() {
     let (_dir, _home, root) = heroic_home(".config/heroic");
 

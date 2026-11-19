@@ -26,8 +26,16 @@ In this order, local data first:
    matching each time the library loads, so games cannot be added to it by hand and a source's categories never land
    in it. Saving is offered while a toggle or a search narrows a view other than Hidden or another saved filter:
    **Save Filter…** in the desktop filter row and in fullscreen Quick Access's Filters, which name it after what it
-   shows. The suggestions offered are **Native Games** and **Windows Games**; the others need a filter that does not
-   exist yet (never played, added recently, no longer listed, needs a permission).
+   shows. The suggestions offered are **Native Games**, **Windows Games** and, since #525, **Installed and Never
+   Played**; the others need a filter that does not exist yet (added recently, no longer listed, needs a permission).
+
+   As built (#525): the filters gain **Never Played** (games with no last played time) and a genre, matched ignoring
+   case against the game's resolved genres. The desktop filter row has a **Never Played** toggle and a **Genre** menu
+   (Any Genre, then each genre of the library); fullscreen Quick Access's Filters has a **Never Played** switch and a
+   **Genre** list with a check on the one chosen, reached with the D-pad like every row there. `pindu_core::library`
+   matches them (`Filters::never_played`, `Filters::genre`) and lists the genres to offer (`genres`); saved filters
+   keep both in `saved_filters` (migration 0010), and backups carry them as `never_played` and `genre` beside the other
+   toggles.
 
    Backups (#600) carry each saved filter as a collection entry with no games and a `filter` beside it: its view,
    toggles and search, with a view of a collection naming that collection, since IDs differ between libraries.
@@ -39,6 +47,15 @@ In this order, local data first:
    they are in real libraries: release year, genres, controller support and Steam Deck compatibility from Steam's
    binary `appinfo.vdf`, which the Steam importer already parses, and `year` from Lutris's `pga.db`. The fields it
    finds reliable are imported offline, with fixture tests.
+
+   As built (#527), following #523's write-up: Steam's `appinfo.vdf` gives the release year (the UTC year of
+   `original_release_date`, else `steam_release_date`; 0 means unknown), genres (the `genres` IDs named from a fixed
+   table: 1 Action, 2 Strategy, 3 RPG, 4 Casual, 9 Racing, 18 Sports, 23 Indie, 25 Adventure, 28 Simulation, 29
+   Massively Multiplayer; Free To Play, Early Access and unknown IDs are dropped) and controller support (`full` or
+   `partial`; absent means not declared, not none). Lutris gives `year` and Heroic's Amazon library the year of
+   `extra.releaseDate`. All of them become source values in `game_metadata` (fields `release-year` and
+   `controller-support` join the three below, with no migration), and both game pages show them in the About group,
+   Steam's genre names translated. The year also stays in the source details, where grouping copies compares it.
 3. **Metadata with its origin.** A table holds values by field with their origin (source, provider, user) and time.
    Reading prefers the user's value, then a provider's, then the source's; a sync changes source values only. The user
    can edit developer, genres, description and release year from the desktop game page (and from fullscreen mode if
@@ -54,22 +71,49 @@ In this order, local data first:
    go through `Store::set_metadata(game, origin, metadata, now)`, which replaces one origin's values, keeps the time
    of a value that did not change and drops a field left empty. A sync calls it for the source only; `insert_game`
    records a new game's values as its source's; `update_game` never touches metadata, so saving a game read with a
-   user's value cannot turn it into the source's. Release year stays in the source details for now; #527 decides
-   whether it joins this table.
+   user's value cannot turn it into the source's. Release year and controller support joined the table with #527.
 
    Backups (#619) carry the user's and providers' values in a `metadata` list, each with the game's per-source ID, its
-   field, origin, value (genres as a list, a Steam Deck rating as its object) and time; a source's values are left out,
-   as the next sync writes them. A
-   restore adds a value only where that origin has none for the field in this library, keeps the time it was set and
-   counts it, so it never overwrites a value already there; a value for a game the library lacks is skipped and the
-   game counted as missing. This extends backup format 2 (#509), unreleased until then, so format 1 and 2 backups
-   still import.
+   field, origin, value (genres as a list, a release year as a number, a Steam Deck rating as its object) and time; a
+   source's values are left out, as the next sync writes them. A restore adds a value only where that origin has none
+   for the field in this library, keeps the time it was set and counts it, so it never overwrites a value already
+   there; a value for a game the library lacks is skipped and the game counted as missing. This extends backup format
+   2 (#509), unreleased until then, so format 1 and 2 backups still import.
+
+   As built (#530): the desktop **Edit…** dialog (a game page's ⋮ menu) has a Details group with Developer, Genres
+   (separated by commas) and Description, filled with what the game shows; as #520 decided, fullscreen mode has no
+   edit. Saving goes through `pindu_core::metadata::edit_by_user(store, game, shown, edited, now)`, which writes user
+   values for every copy of the game's group: a field the user left as shown keeps each copy's own user value, a
+   field cleared drops the user's value so the game falls back to a provider's and then the source's, and a value the
+   game would fall back to anyway is not kept as the user's, so later syncs of it still show. Release year is in this
+   table since #527; editing it in the dialog is #641.
 4. **An online provider, opt-in, after a spike.** The spike compares SteamGridDB, IGDB, PCGamingWiki, Wikidata and
    others on licence and terms, whether a key is needed, which store IDs it maps (which helps
    [game identity](game-identity.md)), the fields it has and its rate limits, and recommends one or none. If one is
    chosen it is off by default, a refresh is a cancellable task in Activity, nothing is fetched during an import, each
    value records its provider and time, any key lives in the keyring, and it uses the HTTP stack the app already uses
    for SteamGridDB.
+
+   As built (#529, after spike #528 chose Wikidata): **Get Metadata From Wikidata** (GSettings `wikidata-metadata`,
+   off by default) in Preferences, General, and in fullscreen Quick Access's settings shows **Refresh Metadata** in
+   the desktop main menu and in Quick Access. Only that action fetches; a sync never does. `pindu_core::wikidata`
+   looks games up by Steam app ID only, never by title: a Steam game by its own, another by the Steam ID its source
+   links it to (Lutris's `steam` service) or by a grouped Steam copy's. Hidden games and games no longer in the
+   library are left out. The IDs go out in SPARQL queries of up to 100 (`VALUES ?steam { … }`, Wikidata's `P1733`),
+   one after another, to `query.wikidata.org` through the app's soup3 stack, with a User-Agent naming the project's
+   address and the SteamGridDB client's 429 back-off (`steamgriddb::retry_delay`, following `Retry-After`). Each
+   answer gives developers (`P178`) and genres (`P136`), labelled in the UI's languages, then `en`, then `mul`; a
+   value with no label in those is left out. Developers become one value, joined with commas, genres a sorted list,
+   both stored with origin `provider` through `Store::set_metadata`, timed when they were fetched (a refresh that
+   finds the same value keeps its earlier time), so a user's value still wins and a sync leaves them alone. The
+   origin `provider` means Wikidata, the only provider. A game Wikidata has no item for keeps what it had. The run
+   is a task in Activity (and a toast with Cancel on the desktop); each batch is stored as it arrives, so a
+   cancelled or failed run keeps what it got, and the outcome is a toast and a notification.
+
+   Not done in #529: the item's QID and its cross-IDs (PCGamingWiki, IGDB, GOG, Epic, Lutris) and a link out per
+   value would need a new table, and only #504, #524, #526 and #531 add migrations, so they wait for a later issue.
+   Release year, publisher and series have no `game_metadata` field yet, and Lutris slugs are not kept, so Lutris
+   games without a Steam link are not looked up.
 
 ## Flatpak, native and Pindu OS
 

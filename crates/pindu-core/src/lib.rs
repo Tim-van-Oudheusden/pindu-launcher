@@ -66,3 +66,4 @@ pub mod system;
 pub mod tasks;
 pub mod themes;
 pub mod umu;
+pub mod wikidata;

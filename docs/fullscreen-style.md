@@ -198,7 +198,8 @@ class styles both.
 
 The background plays muted and looped behind the first screen. It pauses on the second screen, while a
 game we started runs and while the window is hidden, and holds its first frame outside fullscreen mode and
-while the window is `reduced-motion`.
+while the window is `reduced-motion`. While the system asks for high contrast it is not shown at all:
+`.home-background`'s plain black stands in for it, with no stars or waves behind the text.
 
 Quick Access's **Background Blur** and **Background Dim** (each Off, Low or High) put `blur-low` or
 `blur-high` and `dim-low` or `dim-high` on `.home`. Pindu blurs `.home-background` and `.home-hero` with
@@ -246,7 +247,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.game-hero` | The art at the top, with its `.hero-gradient` |
 | `.game-actions` | The row of buttons; `.game-play` is Play |
 | `.playing-card` | The Playing Now card while the game runs; the menu drawer and the top of Quick Access show it too, with `.session-time`, how long the game has run |
-| `.game-about` | The About group: the developer, the genres and a Steam game's Steam Deck rating, in a `.boxed-list` whose rows take focus |
+| `.game-about` | The About group: the developer, genres, release year, controller support and a Steam game's Steam Deck rating, in a `.boxed-list` whose rows take focus |
 | `.game-description` | The description; it takes focus, and Up and Down scroll through it while it has it |
 | `.launch-overlay` | The overlay while a game starts |
 

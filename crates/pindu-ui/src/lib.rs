@@ -95,5 +95,6 @@ pub mod system_update_service;
 pub mod task_service;
 pub mod watch_service;
 pub mod widgets;
+pub mod wikidata_service;
 pub mod window;
 pub mod wireplumber_backend;

@@ -13,12 +13,12 @@ impl Store {
     pub fn create_saved_filter(&self, name: &str, filter: &SavedFilter) -> Result<Collection> {
         self.in_transaction(|store| {
             let collection = store.create_collection(name)?;
-            let toggles = filter.filters;
+            let toggles = &filter.filters;
             store.conn.execute(
                 "INSERT INTO saved_filters
                      (collection_id, view, installed, not_installed, favourites, windows,
-                      native, search)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                      native, never_played, genre, search)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
                 params![
                     collection.id,
                     saved_filters::view_text(filter.view),
@@ -27,6 +27,8 @@ impl Store {
                     toggles.favourites,
                     toggles.windows,
                     toggles.native,
+                    toggles.never_played,
+                    toggles.genre,
                     filter.search,
                 ],
             )?;
@@ -39,7 +41,7 @@ impl Store {
     pub fn saved_filters(&self) -> Result<HashMap<i64, SavedFilter>> {
         let mut statement = self.conn.prepare(
             "SELECT collection_id, view, installed, not_installed, favourites, windows, native,
-                    search
+                    never_played, genre, search
              FROM saved_filters",
         )?;
         let rows = statement.query_map([], |row| {
@@ -50,6 +52,8 @@ impl Store {
                 favourites: row.get("favourites")?,
                 windows: row.get("windows")?,
                 native: row.get("native")?,
+                never_played: row.get("never_played")?,
+                genre: row.get("genre")?,
                 hidden: false,
             };
             Ok((

@@ -37,6 +37,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("store/migrations/0007_saved_filters.sql"),
     include_str!("store/migrations/0008_game_metadata.sql"),
     include_str!("store/migrations/0009_launch_outcomes.sql"),
+    include_str!("store/migrations/0010_saved_filter_genre.sql"),
 ];
 
 /// The schema version a freshly opened store is at.
