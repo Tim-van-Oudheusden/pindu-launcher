@@ -143,6 +143,14 @@ tier_of 'CLAUDE.md is high' 'CLAUDE.md' high
 tier_of 'Claude settings are high' '.claude/settings.json' high
 tier_of 'Cursor rules are high' '.cursor/rules/agent-guidance.mdc' high
 tier_of 'prompts are high' 'prompts/code-review.md' high
+tier_of 'a new schema migration is high although crates/** is medium' \
+  'crates/pindu-core/src/store/migrations/0006_next.sql' high
+tier_of 'a released schema migration is high' 'crates/pindu-core/src/store/migrations/0001_initial.sql' high
+tier_of 'the backup format is high although crates/** is medium' 'crates/pindu-core/src/backup.rs' high
+tier_of 'the rest of the store is medium' 'crates/pindu-core/src/store.rs' medium
+expect 'a migration makes a core code PR high' "$shipped" \
+  "crates/pindu-core/src/store.rs${nl}crates/pindu-core/src/store/migrations/0006_next.sql${nl}" \
+  "medium  crates/pindu-core/src/store.rs${nl}high    crates/pindu-core/src/store/migrations/0006_next.sql${nl}tier=high"
 tier_of 'core code is medium' 'crates/pindu-core/src/sources/steam.rs' medium
 tier_of 'UI code is medium' 'crates/pindu-ui/src/application.rs' medium
 tier_of 'a Blueprint file is medium' 'data/ui/window.blp' medium
