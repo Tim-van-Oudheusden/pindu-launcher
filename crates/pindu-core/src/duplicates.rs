@@ -258,5 +258,77 @@ pub fn group_exact_matches(store: &Store) -> store::Result<Vec<i64>> {
     Ok(grouped)
 }
 
+/// What the user reviews: the [`suggestions`] to accept or dismiss, and the groups made
+/// automatically from exact cross-references, which [`Store::split_group`] undoes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Review {
+    /// The library's suggestions, as [`load`] finds them.
+    pub suggestions: Vec<Suggestion>,
+    /// The groups the sync made and the user has not changed since, ordered by ID.
+    pub automatic: Vec<GameGroup>,
+    /// The title of every record the review names.
+    titles: HashMap<GameId, String>,
+}
+
+impl Review {
+    /// A record's title; its ID when the store holds no such record.
+    pub fn title(&self, game: &GameId) -> String {
+        self.titles
+            .get(game)
+            .cloned()
+            .unwrap_or_else(|| game.to_string())
+    }
+}
+
+/// The library's [`Review`], read from the store. Writes nothing.
+pub fn review(store: &Store) -> store::Result<Review> {
+    let games = store.games()?;
+    let groups = store.game_groups()?;
+    let suggestions = suggestions(
+        &games,
+        &store.all_source_details()?,
+        &groups,
+        &store.splits()?,
+    );
+    let automatic: Vec<GameGroup> = groups.into_iter().filter(|group| group.automatic).collect();
+    let named: HashSet<&GameId> = suggestions
+        .iter()
+        .flat_map(|suggestion| [&suggestion.first, &suggestion.second])
+        .chain(automatic.iter().flat_map(|group| &group.members))
+        .collect();
+    let titles = games
+        .iter()
+        .filter(|game| named.contains(&game.id))
+        .map(|game| (game.id.clone(), game.title.clone()))
+        .collect();
+    Ok(Review {
+        suggestions,
+        automatic,
+        titles,
+    })
+}
+
+/// Accepts a suggestion: the user says `first` and `second` are copies of one game, so
+/// they are grouped by hand. A copy beside a group joins that group, and copies in two
+/// groups make one: `first`'s, with its preferred copy. A pair in one group already
+/// changes nothing. Returns the group's ID.
+pub fn accept(store: &Store, first: &GameId, second: &GameId) -> store::Result<i64> {
+    store.in_transaction(|store| {
+        match (store.game_group_of(first)?, store.game_group_of(second)?) {
+            (Some(group), None) => store.add_to_group(group.id, second).map(|()| group.id),
+            (None, Some(group)) => store.add_to_group(group.id, first).map(|()| group.id),
+            (Some(kept), Some(joining)) if kept.id == joining.id => Ok(kept.id),
+            (Some(kept), Some(joining)) => {
+                store.ungroup(joining.id)?;
+                for game in &joining.members {
+                    store.add_to_group(kept.id, game)?;
+                }
+                Ok(kept.id)
+            }
+            (None, None) => store.create_group(&[first.clone(), second.clone()]),
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests;

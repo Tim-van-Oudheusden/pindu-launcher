@@ -21,8 +21,9 @@
 //! library page) `fullscreen_library`, Performance (offered for a game we run ourselves)
 //! `fullscreen_performance`, Network `fullscreen_network`, Bluetooth `fullscreen_bluetooth`,
 //! Sound Output `fullscreen_sound_output`, System Update `fullscreen_system_update`, Add
-//! a Store `add_store`, Proton `fullscreen_proton_downloads` and Sources
-//! `fullscreen_sources`. Design and Settings are this module's: the design, its variant,
+//! a Store `add_store`, Proton `fullscreen_proton_downloads`, Sources
+//! `fullscreen_sources` and Duplicates `fullscreen_duplicates`. Design and Settings are
+//! this module's: the design, its variant,
 //! Home's background blur and dim and the user's own stylesheet, then cover size,
 //! navigation sounds and their volume, exiting after a
 //! launch, Reduce Motion and Larger Text, the SteamGridDB key (typed hidden with the
@@ -125,6 +126,12 @@ mod imp {
         pub sources_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub sources: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub duplicates_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub duplicates_empty: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub duplicates: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub controllers_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
@@ -387,6 +394,7 @@ impl PinduQuickAccess {
         self.setup_add_store(application);
         self.setup_proton(actions);
         self.setup_sources(application);
+        self.setup_duplicates(application);
     }
 
     /// Hosts the panel over a running game, before [`Self::setup`]: it leaves out the
@@ -445,6 +453,7 @@ impl PinduQuickAccess {
             Some(QuickAccessLevel::Proton) => imp.proton_level.show(),
             Some(QuickAccessLevel::Network) => self.show_network(),
             Some(QuickAccessLevel::Sources) => self.show_sources(),
+            Some(QuickAccessLevel::Duplicates) => self.show_duplicates(),
             Some(QuickAccessLevel::Settings) => self.show_steamgriddb_key(),
             _ => {}
         }
@@ -511,6 +520,8 @@ impl PinduQuickAccess {
             (Some(QuickAccessLevel::Network), _) => imp.network_level.focus_target(),
             // Filled once the sources are read, which then focuses the first.
             (Some(QuickAccessLevel::Sources), _) => first_row(&imp.sources),
+            // Filled once the review is read, which then focuses the first.
+            (Some(QuickAccessLevel::Duplicates), _) => first_row(&imp.duplicates),
             // The first controller that can rumble, or else the first button prompt.
             (Some(QuickAccessLevel::Controllers), _) => {
                 std::iter::successors(imp.controllers.first_child(), |row| row.next_sibling())
@@ -724,6 +735,7 @@ impl PinduQuickAccess {
             QuickAccessLevel::Controls => &imp.controls_row,
             QuickAccessLevel::Settings => &imp.settings_row,
             QuickAccessLevel::Sources => &imp.sources_row,
+            QuickAccessLevel::Duplicates => &imp.duplicates_row,
             QuickAccessLevel::Filters => &imp.filters_row,
             QuickAccessLevel::Performance => &imp.performance_row,
             QuickAccessLevel::Bluetooth => &imp.bluetooth_row,
@@ -782,6 +794,7 @@ impl PinduQuickAccess {
             imp.switches.get(),
             imp.accessibility.get(),
             imp.sources.get(),
+            imp.duplicates.get(),
             imp.text_sizes.get(),
             imp.artwork.get(),
             imp.filters.get(),

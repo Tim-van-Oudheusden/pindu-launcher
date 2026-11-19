@@ -62,6 +62,11 @@ widgets so it looks and behaves like the rest of GNOME.
 - **A tidy library.** Browse covers in a grid, or switch the desktop window to a list with each game's source, install
   state, last played date and playtime. Search, sort and filter by installed, favourite, Windows or native, in either
   layout. Group games into your own collections, jump back into recent games and hide the ones you never play.
+- **One game, many copies.** A game that arrives from several launchers can show as one game whose page lists every
+  copy, and Play starts the preferred one. A Lutris entry that links to a Steam, GOG or Epic game in the library is
+  grouped with it as the library syncs; copies that only share a title are suggested under **Duplicates**, in the
+  main menu and in fullscreen mode's Quick Access, where you group them or say they are not the same game. Groups
+  made automatically can be undone there ([Game identity](docs/game-identity.md)).
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
 - **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
   [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu
@@ -250,6 +255,10 @@ Guide + A never also opens the menu drawer.
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
   - **Larger Text:** fullscreen text about a quarter larger.
+- **Duplicates** lists the copies that look like one game, with why and how sure that is. A on one opens to **Group**
+  and **Not the Same Game**; a pair said not to be the same game is never suggested again. Groups the sync made from a
+  Lutris store link show there too, with **Undo Grouping**. The desktop window has the same list under **Duplicates**
+  in the main menu.
 - **Sources** lists every source Pindu imports from, says whether each was found on this computer, and has its
   **Import** switch, the same setting as Preferences, Sources: a source turned off is no longer read, and changing a
   switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences.

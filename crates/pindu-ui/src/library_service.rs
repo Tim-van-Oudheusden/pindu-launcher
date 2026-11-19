@@ -6,6 +6,7 @@ use crate::config::APP_ID;
 use gtk::glib;
 use gtk::subclass::prelude::*;
 use pindu_core::backup::{self, BackupError, ImportSummary};
+use pindu_core::duplicates::{self, Review};
 use pindu_core::game_groups;
 use pindu_core::library::{self, LibraryEntry};
 use pindu_core::manual;
@@ -381,6 +382,32 @@ impl LibraryService {
         let id = id.clone();
         self.change(move |store| store.set_steamgriddb_match(&id, grid_id))
             .await;
+    }
+
+    /// The duplicate suggestions and the groups made automatically, read on a worker
+    /// thread; `None` when the store cannot be read.
+    pub async fn duplicate_review(&self) -> Option<Review> {
+        self.read(duplicates::review).await
+    }
+
+    /// Groups two copies the user says are one game, then reloads the model.
+    pub async fn accept_duplicate(&self, first: &GameId, second: &GameId) {
+        let (first, second) = (first.clone(), second.clone());
+        self.change(move |store| duplicates::accept(store, &first, &second).map(|_| ()))
+            .await;
+    }
+
+    /// Remembers that two copies are not the same game, so they are never suggested again.
+    pub async fn dismiss_duplicate(&self, first: &GameId, second: &GameId) {
+        let (first, second) = (first.clone(), second.clone());
+        self.change(move |store| store.remember_split(&first, &second))
+            .await;
+    }
+
+    /// Undoes a group the sync made: its copies show on their own again and are not
+    /// grouped or suggested again.
+    pub async fn undo_automatic_group(&self, group_id: i64) {
+        self.change(move |store| store.split_group(group_id)).await;
     }
 
     /// Changes a game's art on a worker thread, then reloads the model.
