@@ -259,7 +259,7 @@ impl GamePage {
             #[weak]
             library,
             move |button| {
-                let collections = library.model().collections();
+                let collections = library.model().manual_collections();
                 let grouping = button
                     .root()
                     .and_downcast::<PinduWindow>()

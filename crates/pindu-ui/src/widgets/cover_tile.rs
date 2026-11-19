@@ -367,7 +367,7 @@ pub(crate) fn popup_game_menu(
     }
     menu.append_section(None, &actions);
     if let Some(window) = anchor.root().and_downcast::<crate::window::PinduWindow>() {
-        let collections = window.library().collections();
+        let collections = window.library().manual_collections();
         menu.append_section(
             None,
             &crate::collection_actions::collection_menu(game, &collections),

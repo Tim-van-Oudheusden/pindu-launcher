@@ -140,7 +140,8 @@ impl PinduWindow {
             entries
                 .iter()
                 .map(|entry| (&entry.game, entry.collections.as_slice())),
-            &self.library().collections(),
+            // Saved filters pick their games themselves.
+            &self.library().manual_collections(),
         )
     }
 
@@ -177,7 +178,7 @@ impl PinduWindow {
         imp.hide_button.set_sensitive(some);
         imp.merge_selection_button.set_sensitive(count > 1);
 
-        let collections = self.library().collections();
+        let collections = self.library().manual_collections();
         let name = |id: &i64| {
             collections
                 .iter()

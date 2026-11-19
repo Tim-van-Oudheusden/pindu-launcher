@@ -1,5 +1,6 @@
 //! Loads the library from the store into the shared [`LibraryModel`], off the main thread.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::config::APP_ID;
@@ -15,6 +16,7 @@ use pindu_core::model::{
     Timestamp,
 };
 use pindu_core::paths::{default_library_db_path, default_user_art_dir};
+use pindu_core::saved_filters::SavedFilter;
 use pindu_core::store::{self, Store};
 
 use crate::file_service::PickedImage;
@@ -80,9 +82,9 @@ impl LibraryService {
             "prefer-steamgriddb",
         );
         match gtk::gio::spawn_blocking(move || read_games(prefer_steamgriddb)).await {
-            Ok(Ok((games, collections))) => {
+            Ok(Ok((games, collections, saved_filters))) => {
                 let model = &self.imp().model;
-                model.set_collections(collections);
+                model.set_collections(collections, saved_filters);
                 model.set_games(games);
                 self.imp().loaded.set(true);
             }
@@ -162,6 +164,13 @@ impl LibraryService {
         .await
     }
 
+    /// Saves `filter` as a collection after the others, and returns it once stored.
+    pub async fn create_saved_filter(&self, name: &str, filter: SavedFilter) -> Option<Collection> {
+        let name = name.to_owned();
+        self.write(move |store| store.create_saved_filter(&name, &filter))
+            .await
+    }
+
     /// Renames a collection.
     pub fn rename_collection(&self, id: i64, name: &str) {
         let name = name.to_owned();
@@ -187,8 +196,8 @@ impl LibraryService {
         });
     }
 
-    /// Deletes a collection and returns what undoing needs: the collection and its games.
-    pub async fn delete_collection(&self, id: i64) -> Option<(Collection, Vec<GameId>)> {
+    /// Deletes a collection and returns what undoing needs.
+    pub async fn delete_collection(&self, id: i64) -> Option<DeletedCollection> {
         self.write(move |store| {
             store.in_transaction(|store| {
                 let collection = store
@@ -197,19 +206,33 @@ impl LibraryService {
                     .find(|c| c.id == id)
                     .ok_or(store::StoreError::NotFound)?;
                 let members = store.collection_members(id)?;
+                let filter = store.saved_filters()?.remove(&id);
                 store.delete_collection(id)?;
-                Ok((collection, members))
+                Ok(DeletedCollection {
+                    collection,
+                    members,
+                    filter,
+                })
             })
         })
         .await
     }
 
-    /// Brings back a deleted collection at its old place, with its games.
-    pub fn restore_collection(&self, collection: Collection, members: Vec<GameId>) {
+    /// Brings back a deleted collection at its old place, with its games, or its filter
+    /// when it was a saved filter.
+    pub fn restore_collection(&self, deleted: DeletedCollection) {
         self.spawn_write(move |store| {
             store.in_transaction(|store| {
-                let restored = store.create_collection(&collection.name)?;
-                for game in &members {
+                let DeletedCollection {
+                    collection,
+                    members,
+                    filter,
+                } = &deleted;
+                let restored = match filter {
+                    Some(filter) => store.create_saved_filter(&collection.name, filter)?,
+                    None => store.create_collection(&collection.name)?,
+                };
+                for game in members {
                     store.add_to_collection(restored.id, game)?;
                 }
                 let mut ids: Vec<i64> = store
@@ -614,11 +637,29 @@ impl Default for LibraryService {
     }
 }
 
-fn read_games(prefer_steamgriddb: bool) -> Result<(Vec<LibraryEntry>, Vec<Collection>), String> {
+/// What reloading reads: the games, the collections and the saved filters' filters.
+type Library = (
+    Vec<LibraryEntry>,
+    Vec<Collection>,
+    HashMap<i64, SavedFilter>,
+);
+
+fn read_games(prefer_steamgriddb: bool) -> Result<Library, String> {
     let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
     let games = library::load(&store, prefer_steamgriddb).map_err(|error| error.to_string())?;
     let collections = store.collections().map_err(|error| error.to_string())?;
-    Ok((games, collections))
+    let saved_filters = store.saved_filters().map_err(|error| error.to_string())?;
+    Ok((games, collections, saved_filters))
+}
+
+/// A deleted collection, with what bringing it back needs.
+pub struct DeletedCollection {
+    /// The collection as it was.
+    pub collection: Collection,
+    /// Its games kept by hand.
+    pub members: Vec<GameId>,
+    /// Its filter, when it was a saved filter.
+    pub filter: Option<SavedFilter>,
 }
 
 /// Why a backup could not be imported.
