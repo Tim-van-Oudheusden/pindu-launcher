@@ -521,13 +521,14 @@ impl PinduWindow {
         self.fill_options_collections(game);
     }
 
-    /// One switch per collection, on while the game is in it, then "New Collection…".
+    /// One switch per collection kept by hand, on while the game is in it, then "New
+    /// Collection…". Saved filters pick their games themselves.
     fn fill_options_collections(&self, game: &GameObject) {
         let imp = self.imp();
         imp.options_collections.remove_all();
         let id = game.id();
         let member_of = game.entry().collections.clone();
-        for collection in self.library().collections() {
+        for collection in self.library().manual_collections() {
             let row = adw::SwitchRow::builder()
                 .title(&collection.name)
                 .use_markup(false)

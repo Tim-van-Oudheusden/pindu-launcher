@@ -629,7 +629,7 @@ impl PinduWindow {
             }
         } else if library.counts().get(View::All) == 0 {
             "empty"
-        } else if matches!(library.view(), View::Collection(id) if library.counts().get(View::Collection(id)) == 0)
+        } else if matches!(library.view(), View::Collection(id) if library.counts().get(View::Collection(id)) == 0 && library.saved_filter(id).is_none())
         {
             "empty-collection"
         } else if library.view() == View::Hidden && library.counts().get(View::Hidden) == 0 {
@@ -955,7 +955,8 @@ impl PinduWindow {
         self.select_tab();
     }
 
-    /// One sidebar row per collection, in the user's order, keeping the shown view.
+    /// One sidebar row per collection, in the user's order, keeping the shown view; a
+    /// saved filter has its own icon.
     fn show_collections(&self) {
         let imp = self.imp();
         let collections = self.library().collections();
@@ -969,7 +970,9 @@ impl PinduWindow {
                 .build();
             let item = adw::SidebarItem::builder()
                 .title(&collection.name)
-                .icon_name("folder-symbolic")
+                .icon_name(crate::collection_actions::collection_icon(
+                    self.library().saved_filter(collection.id).is_some(),
+                ))
                 .suffix(&count)
                 .build();
             imp.collections_section.append(item.clone());

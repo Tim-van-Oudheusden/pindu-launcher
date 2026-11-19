@@ -867,3 +867,56 @@ fn data_for_an_unknown_game_is_rejected() {
     );
     assert!(store.add_play_session(&unknown, 1, 2).is_err());
 }
+
+#[test]
+fn a_saved_filter_is_a_collection_with_its_filter() {
+    use crate::library::{Filters, View};
+    use crate::saved_filters::SavedFilter;
+
+    let (_dir, store) = temp_store();
+    let manual = store.create_collection("Manual").unwrap();
+    let filter = SavedFilter {
+        view: View::Source(Source::Lutris),
+        filters: Filters {
+            installed: true,
+            not_installed: true,
+            favourites: true,
+            windows: true,
+            native: true,
+            hidden: false,
+        },
+        search: "witcher".to_owned(),
+    };
+
+    let saved = store.create_saved_filter("Witchers", &filter).unwrap();
+
+    assert_eq!(saved.name, "Witchers");
+    assert_eq!(saved.position, manual.position + 1);
+    assert_eq!(
+        store.collections().unwrap(),
+        [manual.clone(), saved.clone()]
+    );
+    assert_eq!(
+        store.saved_filters().unwrap(),
+        std::collections::HashMap::from([(saved.id, filter)])
+    );
+
+    store.delete_collection(saved.id).unwrap();
+    assert!(store.saved_filters().unwrap().is_empty());
+    assert_eq!(store.collections().unwrap(), [manual]);
+}
+
+#[test]
+fn a_saved_filter_with_a_view_this_version_does_not_know_is_left_out() {
+    let (_dir, store) = temp_store();
+    let saved = store
+        .create_saved_filter("Later", &crate::saved_filters::Suggestion::Native.filter())
+        .unwrap();
+    store
+        .conn
+        .execute("UPDATE saved_filters SET view = 'future:1'", [])
+        .unwrap();
+
+    assert!(store.saved_filters().unwrap().is_empty());
+    assert!(store.collections().unwrap().contains(&saved));
+}
