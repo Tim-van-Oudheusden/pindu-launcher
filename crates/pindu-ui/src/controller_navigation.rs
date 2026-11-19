@@ -13,7 +13,8 @@
 //! dialog is open, as the search keyboard does. Once a game we started plays, the
 //! controller is the game's and only Guide and the Quick Access of Guide + A or "…" reach
 //! the window (`pindu_core::game_control`). Intents never become synthetic key events, and
-//! only the active window acts on them.
+//! only the active window acts on them. With Hold to Confirm on, A on Power Off, Restart,
+//! Forget or Stop in fullscreen mode acts only once held down (`hold_progress`).
 
 use std::cell::RefCell;
 use std::collections::BTreeSet;
@@ -26,11 +27,14 @@ use pindu_core::game_control::GameControl;
 use pindu_core::gamepad::{Direction, Intent, WindowFocus};
 use pindu_core::grid;
 use pindu_core::hints::Launching;
+use pindu_core::hold::{Destructive, HOLD_TO_CONFIRM_KEY};
 use pindu_core::menus::{self, Back};
+use pindu_core::panels::GameOption;
 
 use crate::application::PinduApplication;
 use crate::artwork_dialog::ArtworkDialog;
 use crate::fullscreen::Sound;
+use crate::hold_progress::destructive_action;
 use crate::models::GameObject;
 use crate::window::PinduWindow;
 
@@ -151,6 +155,10 @@ impl PinduWindow {
                 }
                 _ => {}
             }
+            return;
+        }
+        // A hold to confirm under way ends on any other button.
+        if self.hold_intent(intent) {
             return;
         }
         // The passphrase dialog's keyboard and the search keyboard take every button while
@@ -344,10 +352,54 @@ impl PinduWindow {
             open_without_grab(&button);
             return;
         }
-        if !focus.activate() {
-            // Covers are grid items, which activate through their list item action.
-            let _ = focus.activate_action("listitem.activate", None);
+        activate_widget(&focus);
+    }
+
+    /// Hands `intent` to fullscreen mode's hold to confirm, and says whether it started a
+    /// hold, which takes it: the confirm button on Power Off, Restart, Forget or Stop with
+    /// the option on. The widget activates once the button has been held long enough.
+    fn hold_intent(&self, intent: Intent) -> bool {
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
+            return false;
+        };
+        let focus = gtk::prelude::GtkWindowExt::focus(self)
+            .and_then(|focus| Some((focus.clone(), self.destructive_focus(&focus)?)));
+        self.imp().hold.intent(
+            intent,
+            focus,
+            self.holds_to_confirm(),
+            application.gamepad_service(),
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |target| {
+                    activate_widget(target);
+                    window.play_sound(Sound::Select);
+                }
+            ),
+        )
+    }
+
+    /// Whether Power Off, Restart, Forget and Stop need the confirm button held: in
+    /// fullscreen mode, with the option on.
+    pub(crate) fn holds_to_confirm(&self) -> bool {
+        self.is_fullscreen() && self.settings().boolean(HOLD_TO_CONFIRM_KEY)
+    }
+
+    /// The destructive action `focus` does, if it does one: by its action, or for the
+    /// options sheet's rows, which have none, by the option a row stands for.
+    pub(crate) fn destructive_focus(&self, focus: &gtk::Widget) -> Option<Destructive> {
+        if let Some(action) = destructive_action(focus) {
+            return Some(action);
         }
+        let row = focus.downcast_ref::<gtk::ListBoxRow>()?;
+        let imp = self.imp();
+        if row.parent().as_ref() != Some(imp.options_list.upcast_ref()) {
+            return None;
+        }
+        let index = usize::try_from(row.index()).ok()?;
+        let option = imp.game_options.borrow().get(index).copied();
+        (option == Some(GameOption::Stop)).then_some(Destructive::Stop)
     }
 
     /// Steps out of the open submenu or closes the open menu, closes the open dialog,
@@ -392,6 +444,14 @@ impl PinduWindow {
                 title.find_property("menu-name").is_some()
                     && title.property::<Option<String>>("menu-name").is_some()
             })
+    }
+}
+
+/// Activates `widget` as Enter or Space would.
+fn activate_widget(widget: &gtk::Widget) {
+    if !widget.activate() {
+        // Covers are grid items, which activate through their list item action.
+        let _ = widget.activate_action("listitem.activate", None);
     }
 }
 

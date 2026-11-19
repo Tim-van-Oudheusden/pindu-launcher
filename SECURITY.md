@@ -59,8 +59,8 @@ In scope:
 
 Out of scope:
 
-- flaws in Steam, Heroic, Lutris, Bottles, Faugus, umu-launcher, Proton, SteamGridDB or the games themselves; report
-  those to their projects
+- flaws in Steam, Heroic, Lutris, Bottles, Faugus, itch, umu-launcher, Proton, SteamGridDB or the games themselves;
+  report those to their projects
 - flaws in GTK, libadwaita, the GNOME runtime, Flatpak or the portals; report those upstream
 - what a host command can do after you grant Pindu launcher `--talk-name=org.freedesktop.Flatpak` yourself (see
   [Starting games on the host](README.md#starting-games-on-the-host)); that access is a sandbox escape by design. A

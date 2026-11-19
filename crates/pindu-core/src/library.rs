@@ -342,6 +342,61 @@ pub fn tile_shows_title(show_titles: bool, fullscreen: bool) -> bool {
     show_titles && !fullscreen
 }
 
+/// How the desktop library lays out its games: covers in a grid, or rows in a list.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum LibraryLayout {
+    /// Cover tiles in a grid.
+    #[default]
+    Grid,
+    /// One row per game, with its source, install state, last played and playtime.
+    List,
+}
+
+impl LibraryLayout {
+    /// From the `library-layout` setting; anything unknown is the grid.
+    pub fn from_setting(value: &str) -> Self {
+        match value {
+            "list" => Self::List,
+            _ => Self::Grid,
+        }
+    }
+
+    /// The layout the library shows: this one on the desktop, and always the grid in
+    /// fullscreen mode, which the controller moves through cover by cover.
+    pub fn shown(self, fullscreen: bool) -> Self {
+        if fullscreen { Self::Grid } else { self }
+    }
+}
+
+/// What a library tile's state badge and a list row's State column show about a game.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GameState {
+    /// A game the launcher started is running.
+    Playing,
+    /// The sandbox cannot reach the game's files yet.
+    NeedsPermission,
+    /// The game is not installed.
+    NotInstalled,
+    /// The game is installed and ready to play.
+    Installed,
+}
+
+impl GameState {
+    /// The state that matters most: playing first, then needing permission, then whether
+    /// the game is installed.
+    pub fn of(playing: bool, needs_permission: bool, installed: bool) -> Self {
+        if playing {
+            Self::Playing
+        } else if needs_permission {
+            Self::NeedsPermission
+        } else if installed {
+            Self::Installed
+        } else {
+            Self::NotInstalled
+        }
+    }
+}
+
 /// The tab after `current`, or before it, which the shoulder buttons switch to: none past
 /// either end, and the first tab from a view without one.
 pub fn step_tab(tabs: &[View], current: View, forward: bool) -> Option<View> {
@@ -514,6 +569,28 @@ mod tests {
                 View::Collection(1)
             ]
         );
+    }
+
+    #[test]
+    fn a_games_state_is_playing_first_then_needing_permission_then_whether_it_is_installed() {
+        assert_eq!(GameState::of(true, true, false), GameState::Playing);
+        assert_eq!(
+            GameState::of(false, true, false),
+            GameState::NeedsPermission
+        );
+        assert_eq!(GameState::of(false, false, false), GameState::NotInstalled);
+        assert_eq!(GameState::of(false, false, true), GameState::Installed);
+    }
+
+    #[test]
+    fn the_library_layout_follows_the_setting_on_the_desktop_and_is_a_grid_in_fullscreen_mode() {
+        assert_eq!(LibraryLayout::from_setting("list"), LibraryLayout::List);
+        assert_eq!(LibraryLayout::from_setting("grid"), LibraryLayout::Grid);
+        assert_eq!(LibraryLayout::from_setting("unknown"), LibraryLayout::Grid);
+
+        assert_eq!(LibraryLayout::List.shown(false), LibraryLayout::List);
+        assert_eq!(LibraryLayout::List.shown(true), LibraryLayout::Grid);
+        assert_eq!(LibraryLayout::Grid.shown(false), LibraryLayout::Grid);
     }
 
     #[test]

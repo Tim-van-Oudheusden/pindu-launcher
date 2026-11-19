@@ -16,9 +16,11 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   core function that already does that. A test checks that the report holds no game title and no home path.
 - **Desktop.** About's Debugging Information page, which libadwaita's About dialog has and the app leaves empty today,
   carries the report. libadwaita supplies Copy and Save, so no new interface is needed.
-- **Bug form.** `.github/ISSUE_TEMPLATE/bug.yml` asks for About's Debugging Information in place of hand-pasted
-  version output, and says where to find it on the desktop and in fullscreen mode. It is a `.github/` change, so the
-  maintainer merges it.
+- **Bug form.** `.github/ISSUE_TEMPLATE/bug.yml` has a required "Debugging information" field in place of the
+  hand-pasted version output. It says where to find the report: on the desktop, About Pindu launcher, Troubleshooting,
+  Debugging Information, Copy or Save; in fullscreen mode, Quick Access's diagnostics report, which also saves a copy
+  under `reports/` in the app's data folder. GitHub has no check for issue forms, so a change is checked by parsing the
+  YAML and previewing the form on GitHub.
 - **Fullscreen.** Quick Access's **Diagnostics Report** shows the same report, with the same redaction, as large
   monospace text in pages that fit a 1080p screen, with a counter such as "Page 1 of 3", for a phone to photograph
   page by page. LB and RB, or Previous Page and Next Page, turn the pages; Up and Down scroll a page taller than the

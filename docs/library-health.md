@@ -22,12 +22,16 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   Each problem names a next step that already exists: the Preferences page, the `flatpak override` command, How to
   Install.
 - **Desktop.** A Library Health page of its own, opened from the main menu, shows the report and refreshes after a
-  sync. Every next step is a working link or button.
+  sync. Every next step is a working link or button: a **Needs Attention** group at the top lists each problem with
+  **Open Sources** (Preferences at its Sources page), **Copy Command** (the `flatpak override` command) or **How to
+  Install** (umu-launcher's instructions). The UI-side `HealthService` (`crates/pindu-ui/src/health_service.rs`)
+  gathers the report's facts through the existing services, for both shells.
 - **Fullscreen.** The same report is a Quick Access level.
 - **First-run summary.** After the first sync, a summary names the launchers found, the games imported and what needs
   attention, once, in both shells, and points at Library Health. Once dismissed it never shows again.
-- **Last backup.** An export records its time, and Library data shows it. It is stored without a database migration
-  (for example a GSettings key), so it stays out of the migration chain.
+- **Last backup.** A successful export records its time in the `last-backup` GSettings key (seconds since the Unix
+  epoch, 0 for never), so it stays out of the migration chain; Library data shows it. The library service reads it
+  for the report (`LibraryService::last_backup`). The copies kept before a migration do not count as backups here.
 
 ## Flatpak, native and Pindu OS
 

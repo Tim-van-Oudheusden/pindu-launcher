@@ -1,0 +1,36 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Library Health in the desktop window: the report's four sections, and what needs
+// attention with a button for each next step. The rows are filled in from the report.
+template $PinduHealthPage: Adw.NavigationPage {
+  title: _("Library Health");
+  tag: "health";
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {}
+
+    content: Adw.PreferencesPage page {
+      Adw.PreferencesGroup attention_group {
+        title: _("Needs Attention");
+      }
+
+      Adw.PreferencesGroup sources_group {
+        title: _("Sources");
+      }
+
+      Adw.PreferencesGroup launching_group {
+        title: _("Launching");
+      }
+
+      Adw.PreferencesGroup artwork_group {
+        title: _("Artwork");
+      }
+
+      Adw.PreferencesGroup library_group {
+        title: _("Library Data");
+      }
+    };
+  };
+}

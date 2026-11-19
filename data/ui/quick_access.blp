@@ -370,6 +370,30 @@ template $PinduQuickAccess: Box {
               };
             }
 
+            ListBoxRow sources_row {
+              action-name: "win.quick-access-sources";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "folder-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Sources");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
             // Shown where NetworkManager runs: the connection in use, or that
             // the system does not allow changing it (then insensitive).
             ListBoxRow network_row {
@@ -1331,9 +1355,130 @@ template $PinduQuickAccess: Box {
               title: _("Reduce Motion");
             }
 
-            Adw.SwitchRow large_text_row {
-              title: _("Larger Text");
+            Adw.SwitchRow hold_to_confirm_row {
+              title: _("Hold to Confirm");
             }
+          }
+
+          // Radio rows on the setting's action, as Settings has its sizes.
+          ListBox text_sizes {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow {
+              title: _("Default Text");
+              activatable-widget: text_default;
+
+              [prefix]
+              CheckButton text_default {
+                action-name: "win.fullscreen-text-size";
+                action-target: "'default'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Large Text");
+              activatable-widget: text_large;
+
+              [prefix]
+              CheckButton text_large {
+                action-name: "win.fullscreen-text-size";
+                action-target: "'large'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Larger Text");
+              activatable-widget: text_larger;
+
+              [prefix]
+              CheckButton text_larger {
+                action-name: "win.fullscreen-text-size";
+                action-target: "'larger'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Largest Text");
+              activatable-widget: text_largest;
+
+              [prefix]
+              CheckButton text_largest {
+                action-name: "win.fullscreen-text-size";
+                action-target: "'largest'";
+                can-focus: false;
+              }
+            }
+          }
+
+          Label {
+            label: _("Artwork");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          // The key is typed hidden with the on-screen keyboard and kept in the
+          // keyring; the row's subtitle says whether one is stored, or why the
+          // keyring cannot be used.
+          ListBox artwork {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow steamgriddb_key_row {
+              title: _("SteamGridDB Key");
+              activatable: true;
+            }
+
+            Adw.SwitchRow prefer_steamgriddb_row {
+              title: _("Prefer SteamGridDB Art");
+              subtitle: _("Show it before the launcher's own art; art you pick always comes first");
+            }
+          }
+        };
+      };
+    }
+
+    StackPage {
+      name: "sources";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Sources");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          // Each imported source with whether it was found on this computer and
+          // its Import switch, the setting Preferences, Sources changes. Filled in
+          // code as the level opens and after each sync.
+          ListBox sources {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
           }
         };
       };
@@ -1442,6 +1587,29 @@ template $PinduQuickAccess: Box {
               title: _("GameMode");
               subtitle: _("Asks the system to favour the game while it runs");
             }
+          }
+
+          // The game's Proton build, for a game Pindu runs through Proton: the
+          // default, then the builds on this machine, newest first, with a check
+          // on the game's; filled in code, and hidden for other games.
+          Label proton_title {
+            label: _("Proton");
+            xalign: 0;
+            margin-top: 6;
+            visible: false;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          ListBox proton_builds {
+            selection-mode: none;
+            visible: false;
+
+            styles [
+              "boxed-list",
+            ]
           }
 
           // Shown while the game runs.

@@ -228,6 +228,21 @@ template $PinduWindow: Adw.ApplicationWindow {
                           tooltip-text: _("Sort");
                           menu-model: sort_menu;
                         }
+
+                        [end]
+                        Adw.ToggleGroup layout_switch {
+                          Adw.Toggle {
+                            name: "grid";
+                            icon-name: "view-grid-symbolic";
+                            tooltip: _("Grid");
+                          }
+
+                          Adw.Toggle {
+                            name: "list";
+                            icon-name: "view-list-symbolic";
+                            tooltip: _("List");
+                          }
+                        }
                       }
 
                       content: Box {
@@ -376,6 +391,41 @@ template $PinduWindow: Adw.ApplicationWindow {
                                 styles [
                                   "library",
                                 ]
+                              };
+                            };
+                          }
+
+                          // The desktop's list layout, over the same sorted and filtered
+                          // games as the grid. Fullscreen mode always shows the grid.
+                          StackPage {
+                            name: "list";
+
+                            child: ScrolledWindow {
+                              child: ColumnView game_list {
+                                single-click-activate: true;
+                                show-row-separators: true;
+                                reorderable: false;
+
+                                ColumnViewColumn title_column {
+                                  title: _("Title");
+                                  expand: true;
+                                }
+
+                                ColumnViewColumn source_column {
+                                  title: _("Source");
+                                }
+
+                                ColumnViewColumn state_column {
+                                  title: _("State");
+                                }
+
+                                ColumnViewColumn last_played_column {
+                                  title: _("Last Played");
+                                }
+
+                                ColumnViewColumn playtime_column {
+                                  title: _("Playtime");
+                                }
                               };
                             };
                           }
@@ -695,6 +745,11 @@ menu primary_menu {
     item {
       label: _("_Fullscreen Mode");
       action: "win.fullscreen-mode";
+    }
+
+    item {
+      label: _("_Library Health");
+      action: "win.library-health";
     }
   }
 

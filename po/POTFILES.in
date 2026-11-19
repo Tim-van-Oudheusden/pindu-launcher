@@ -21,11 +21,15 @@ crates/pindu-ui/src/fullscreen_performance.rs
 crates/pindu-ui/src/fullscreen_playing.rs
 crates/pindu-ui/src/fullscreen_power.rs
 crates/pindu-ui/src/fullscreen_report.rs
+crates/pindu-ui/src/fullscreen_sources.rs
 crates/pindu-ui/src/fullscreen_status.rs
 crates/pindu-ui/src/fullscreen_system_update.rs
 crates/pindu-ui/src/game_dialog.rs
 crates/pindu-ui/src/game_page.rs
+crates/pindu-ui/src/health_page.rs
+crates/pindu-ui/src/health_service.rs
 crates/pindu-ui/src/hint_bar.rs
+crates/pindu-ui/src/hold_progress.rs
 crates/pindu-ui/src/home_page.rs
 crates/pindu-ui/src/launch_service.rs
 crates/pindu-ui/src/log_service.rs
@@ -46,6 +50,7 @@ crates/pindu-ui/src/sync_service.rs
 crates/pindu-ui/src/system_power_service.rs
 crates/pindu-ui/src/system_update_service.rs
 crates/pindu-ui/src/widgets/cover_tile.rs
+crates/pindu-ui/src/widgets/game_list_cell.rs
 crates/pindu-ui/src/window.rs
 data/gamescope-session/gamescope-session-pindu.desktop.in
 data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in
@@ -63,6 +68,7 @@ data/ui/fullscreen_system_update.blp
 data/ui/game_dialog.blp
 data/ui/game_overlay.blp
 data/ui/game_page.blp
+data/ui/health_page.blp
 data/ui/home_page.blp
 data/ui/menu_drawer.blp
 data/ui/preferences.blp

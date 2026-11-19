@@ -10,6 +10,7 @@ use gettextrs::gettext;
 use gtk::glib;
 use pindu_core::gamepad::Layout;
 use pindu_core::hints::{self, Action, Context, Focus, GlyphName, Hint};
+use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
 
 use crate::application::PinduApplication;
 use crate::artwork_dialog::ArtworkDialog;
@@ -40,6 +41,14 @@ impl PinduWindow {
                 self,
                 move |_| window.update_hints()
             ));
+        self.settings().connect_changed(
+            Some(HOLD_TO_CONFIRM_KEY),
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_, _| window.update_hints()
+            ),
+        );
         self.update_hints();
     }
 
@@ -120,6 +129,9 @@ impl PinduWindow {
         };
         if self.focused_tile().is_some() {
             return Focus::Game;
+        }
+        if self.holds_to_confirm() && self.destructive_focus(&focus).is_some() {
+            return Focus::Hold;
         }
         focus_kind(&focus)
     }
@@ -211,6 +223,7 @@ fn action_label(action: Action) -> String {
         Action::Sort => gettext("Sort"),
         Action::Adjust => gettext("Adjust"),
         Action::Options => gettext("Options"),
+        Action::HoldToConfirm => gettext("Hold to Confirm"),
         Action::HoldToCancel => gettext("Hold to Cancel"),
         Action::Menu => gettext("Menu"),
         Action::QuickAccess => gettext("Quick Access"),

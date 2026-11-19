@@ -1,0 +1,40 @@
+{
+    "Sugar": {
+        "app_name": "Sugar",
+        "base_urls": [],
+        "can_run_offline": true,
+        "egl_guid": "",
+        "executable": "Celeste.exe",
+        "install_path": "/home/me/Games/Celeste",
+        "install_size": 1288490188,
+        "install_tags": [],
+        "is_dlc": false,
+        "launch_parameters": "",
+        "manifest_path": null,
+        "needs_verification": false,
+        "platform": "Windows",
+        "prereq_info": null,
+        "requires_ot": false,
+        "save_path": null,
+        "title": "Celeste",
+        "version": "1.4.0.0"
+    },
+    "Fortune": {
+        "app_name": "Fortune",
+        "install_path": "/home/me/Games/Hades",
+        "install_size": 15032385536,
+        "is_dlc": false,
+        "platform": "Windows",
+        "title": "",
+        "version": "1.38290"
+    },
+    "SugarFarewell": {
+        "app_name": "SugarFarewell",
+        "install_path": "/home/me/Games/Celeste",
+        "install_size": 1024,
+        "is_dlc": true,
+        "platform": "Windows",
+        "title": "Celeste: Farewell",
+        "version": "1.0"
+    }
+}

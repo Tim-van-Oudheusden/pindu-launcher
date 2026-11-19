@@ -15,6 +15,7 @@ use crate::game_dialog::GameDialog;
 use crate::game_overlay::PinduGameOverlay;
 use crate::gamepad_service::GamepadService;
 use crate::gamescope_service::GamescopeService;
+use crate::health_service::HealthService;
 use crate::launch_service;
 use crate::library_service::{ImportFailure, LibraryService};
 use crate::manette_backend::ManetteBackend;
@@ -24,6 +25,7 @@ use crate::notification_service::NotificationService;
 use crate::permission_service;
 use crate::power_service::PowerService;
 use crate::preferences::PreferencesDialog;
+use crate::proton_launch::UMU_INSTALL_URI;
 use crate::search_provider;
 use crate::session_service::SessionService;
 use crate::sources::source_list;
@@ -35,10 +37,11 @@ use crate::system_update_service::SystemUpdateService;
 use crate::task_service::TaskService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
+use pindu_core::accessibility::{LEGACY_LARGE_TEXT_KEY, TEXT_SIZE_KEY, migrated_text_size};
 use pindu_core::backup::ImportSummary;
 use pindu_core::gamescope::session::{Session, has_os_session_select, runs_as_own_session};
 use pindu_core::keys;
-use pindu_core::launch::Start;
+use pindu_core::launch::{Start, WebPage};
 use pindu_core::library::Filters;
 use pindu_core::notifications::{Kind, Target};
 use pindu_core::panels::Playing;
@@ -82,6 +85,8 @@ mod imp {
         pub gamepad_service: OnceCell<GamepadService>,
         /// gamescope's `--steam` focus protocol; inert outside such a gamescope.
         pub gamescope_service: OnceCell<GamescopeService>,
+        /// The Library Health report, for both shells.
+        pub health_service: OnceCell<HealthService>,
         /// The user's own stylesheet for fullscreen mode.
         pub style_service: OnceCell<StyleService>,
         /// The batteries, for Quick Access's header.
@@ -166,6 +171,8 @@ mod imp {
     impl ApplicationImpl for PinduApplication {
         fn startup(&self) {
             self.parent_startup();
+            // Before any window reads the text size.
+            super::carry_over_large_text(&gio::Settings::new(APP_ID));
             let library = LibraryService::new();
             self.sync_service.connect_finished(glib::clone!(
                 #[weak(rename_to = app)]
@@ -191,6 +198,13 @@ mod imp {
                 .set(GamescopeService::new(
                     self.session_service.get().expect("set above"),
                     self.gamepad_service.get().expect("set above"),
+                ))
+                .expect("start-up runs once");
+            self.health_service
+                .set(HealthService::new(
+                    &self.sync_service,
+                    &library,
+                    self.gamescope_service.get().expect("set above").is_active(),
                 ))
                 .expect("start-up runs once");
             self.style_service
@@ -416,6 +430,14 @@ impl PinduApplication {
             .expect("the application has started")
     }
 
+    /// The Library Health report, gathered again after every sync.
+    pub fn health_service(&self) -> &HealthService {
+        self.imp()
+            .health_service
+            .get()
+            .expect("the application has started")
+    }
+
     /// The user's own stylesheet for fullscreen mode.
     pub fn style_service(&self) -> &StyleService {
         self.imp()
@@ -520,6 +542,24 @@ impl PinduApplication {
         // Preferences at its Permissions group: how to let games start on this computer.
         let permissions_action = gio::ActionEntry::builder("permissions")
             .activate(move |app: &Self, _, _| app.show_preferences().show_permissions())
+            .build();
+        // Preferences at its Sources page: each source's folder, last sync and problems.
+        let source_preferences_action = gio::ActionEntry::builder("source-preferences")
+            .activate(move |app: &Self, _, _| app.show_preferences().show_sources_page())
+            .build();
+        // umu-launcher's install instructions, in the browser.
+        let install_umu_action = gio::ActionEntry::builder("install-umu")
+            .activate(move |app: &Self, _, _| {
+                gtk::UriLauncher::new(UMU_INSTALL_URI).launch(
+                    app.active_window().as_ref(),
+                    gio::Cancellable::NONE,
+                    |result| {
+                        if let Err(error) = result {
+                            glib::g_warning!("pindu", "Could not open {UMU_INSTALL_URI}: {error}");
+                        }
+                    },
+                );
+            })
             .build();
         let add_game_action = gio::ActionEntry::builder("add-game")
             .activate(move |app: &Self, _, _| {
@@ -628,6 +668,22 @@ impl PinduApplication {
                 });
             })
             .build();
+        let protondb_action = gio::ActionEntry::builder("open-protondb")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                app.with_game(id, |window, game, _, toast| {
+                    launch_service::open_web_page(window, game, WebPage::ProtonDb, toast)
+                });
+            })
+            .build();
+        let pcgamingwiki_action = gio::ActionEntry::builder("open-pcgamingwiki")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                app.with_game(id, |window, game, _, toast| {
+                    launch_service::open_web_page(window, game, WebPage::PcGamingWiki, toast)
+                });
+            })
+            .build();
         // `--fullscreen`: the activation that follows opens the window in fullscreen mode.
         let fullscreen_action = gio::ActionEntry::builder("fullscreen")
             .activate(move |app: &Self, _, _| app.imp().pending_fullscreen.set(true))
@@ -644,6 +700,8 @@ impl PinduApplication {
             about_action,
             preferences_action,
             permissions_action,
+            source_preferences_action,
+            install_umu_action,
             add_game_action,
             edit_game_action,
             import_action,
@@ -655,6 +713,8 @@ impl PinduApplication {
             launch_action,
             stop_action,
             open_action,
+            protondb_action,
+            pcgamingwiki_action,
             fullscreen_action,
             fetch_art_action,
         ]);
@@ -825,6 +885,7 @@ impl PinduApplication {
             .modal(true)
             .build();
         let library = self.library_service().clone();
+        let health = self.health_service().clone();
         let parent = window.clone();
         chooser.save(parent.as_ref(), gio::Cancellable::NONE, move |file| {
             let Some(path) = file.ok().and_then(|file| file.path()) else {
@@ -835,7 +896,11 @@ impl PinduApplication {
                     .export_backup(path, glib::real_time() / 1_000_000)
                     .await
                 {
-                    Ok(()) => gettext("Library exported"),
+                    Ok(()) => {
+                        // Library data's Last Backup changed.
+                        health.refresh();
+                        gettext("Library exported")
+                    }
                     Err(error) => {
                         gettext("Could not export the library: {error}").replace("{error}", &error)
                     }
@@ -981,6 +1046,20 @@ impl Default for PinduApplication {
     }
 }
 
+/// Carries the former Larger Text setting over to Text Size once, so an install that had
+/// it on keeps the size it gave, and turns the former setting off.
+fn carry_over_large_text(settings: &gio::Settings) {
+    let large_text = settings.boolean(LEGACY_LARGE_TEXT_KEY);
+    let chosen = settings.user_value(TEXT_SIZE_KEY).is_some();
+    if let Some(size) = migrated_text_size(large_text, chosen) {
+        // Best effort: a read-only settings backend keeps the default size.
+        let _ = settings.set_string(TEXT_SIZE_KEY, size.setting());
+    }
+    if large_text {
+        settings.reset(LEGACY_LARGE_TEXT_KEY);
+    }
+}
+
 /// What a run fetching SteamGridDB art tells the user.
 fn art_notice_message(notice: RunNotice) -> String {
     match notice {
@@ -996,30 +1075,46 @@ fn art_notice_message(notice: RunNotice) -> String {
     }
 }
 
-/// What an import restored, and how many of its games this library lacks.
+/// What an import restored, how many of its games this library lacks and how many of its
+/// groups could not be made again.
 fn import_message(summary: &ImportSummary) -> String {
     let restored = summary.manual_games
         + summary.favourites
         + summary.hidden
         + summary.collections
-        + summary.sessions;
-    let done = if restored == 0 {
+        + summary.sessions
+        + summary.groups
+        + summary.splits;
+    let mut message = if restored == 0 {
         gettext("Nothing new to restore")
     } else {
         gettext("Backup restored")
     };
-    match summary.missing_games {
-        0 => done,
-        missing => {
-            let note = ngettext(
+    let mut notes = Vec::new();
+    if summary.missing_games > 0 {
+        notes.push(
+            ngettext(
                 "one game in it is not in this library",
                 "{count} games in it are not in this library",
-                missing as u32,
+                summary.missing_games as u32,
             )
-            .replace("{count}", &missing.to_string());
-            gettext("{result}; {note}")
-                .replace("{result}", &done)
-                .replace("{note}", &note)
-        }
+            .replace("{count}", &summary.missing_games.to_string()),
+        );
     }
+    if summary.skipped_groups > 0 {
+        notes.push(
+            ngettext(
+                "one group of copies in it was skipped",
+                "{count} groups of copies in it were skipped",
+                summary.skipped_groups as u32,
+            )
+            .replace("{count}", &summary.skipped_groups.to_string()),
+        );
+    }
+    for note in notes {
+        message = gettext("{result}; {note}")
+            .replace("{result}", &message)
+            .replace("{note}", &note);
+    }
+    message
 }

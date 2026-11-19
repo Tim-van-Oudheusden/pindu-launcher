@@ -15,11 +15,14 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
+use pindu_core::accessibility::{TEXT_SIZE_KEY, TextSize};
 use pindu_core::custom_style::ProblemSummary;
 use pindu_core::gamepad::{PROMPTS_KEY, Prompts, SWAP_KEY, Swap};
+use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
 use pindu_core::model::{Source, SourceState};
 use pindu_core::paths;
-use pindu_core::sources::sync::IMPORTED_SOURCES;
+use pindu_core::sources::location::sandbox_hides;
+use pindu_core::sources::sync::imported_source_states;
 use pindu_core::sync_age::sync_age;
 
 use crate::application::PinduApplication;
@@ -77,7 +80,9 @@ mod imp {
         #[template_child]
         pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
-        pub large_text_row: TemplateChild<adw::SwitchRow>,
+        pub text_size_row: TemplateChild<adw::ComboRow>,
+        #[template_child]
+        pub hold_to_confirm_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub custom_style_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
@@ -92,6 +97,8 @@ mod imp {
         pub titles_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub badges_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub sources_page: TemplateChild<adw::PreferencesPage>,
         #[template_child]
         pub sources_group: TemplateChild<adw::PreferencesGroup>,
         #[template_child]
@@ -217,7 +224,7 @@ mod imp {
                 )
                 .build();
             settings
-                .bind("fullscreen-large-text", &*self.large_text_row, "active")
+                .bind(HOLD_TO_CONFIRM_KEY, &*self.hold_to_confirm_row, "active")
                 .build();
             settings
                 .bind(CUSTOM_STYLE_KEY, &*self.custom_style_row, "active")
@@ -279,6 +286,12 @@ mod imp {
                 SWAP_KEY,
                 &self.swap_row,
                 Swap::ALL.map(Swap::setting).to_vec(),
+            );
+            bind_choice(
+                &settings,
+                TEXT_SIZE_KEY,
+                &self.text_size_row,
+                TextSize::ALL.map(TextSize::setting).to_vec(),
             );
             self.settings.set(settings).expect("constructed once");
             self.obj().show_custom_style();
@@ -346,6 +359,11 @@ impl PreferencesDialog {
         dialog
     }
 
+    /// Shows the Sources page: each source's folder, last sync and that sync's problems.
+    pub fn show_sources_page(&self) {
+        self.set_visible_page(&*self.imp().sources_page);
+    }
+
     /// Shows the Artwork page with focus in the SteamGridDB key field.
     pub fn show_key_field(&self) {
         let imp = self.imp();
@@ -386,12 +404,7 @@ impl PreferencesDialog {
             };
             let sync = dialog.imp().sync.get().expect("set").clone();
             let states = sync.source_states().await;
-            for &source in IMPORTED_SOURCES {
-                let state = states
-                    .iter()
-                    .find(|state| state.source == source)
-                    .cloned()
-                    .unwrap_or_else(|| SourceState::new(source));
+            for state in imported_source_states(&states) {
                 dialog.imp().sources_group.add(&dialog.source_row(&state));
             }
         });
@@ -399,13 +412,24 @@ impl PreferencesDialog {
 
     fn source_row(&self, state: &SourceState) -> adw::ExpanderRow {
         let source = state.source;
+        let hidden = state.resolved_location.is_none()
+            && state.user_override.is_none()
+            && permission_service::in_flatpak()
+            && sandbox_hides(source);
         let found = state.resolved_location.as_ref().map_or_else(
-            || gettext("Not found on this computer"),
+            || {
+                if hidden {
+                    gettext("The sandbox cannot see this folder: choose it to import its games")
+                } else {
+                    gettext("Not found on this computer")
+                }
+            },
             |path| path.display().to_string(),
         );
         let row = adw::ExpanderRow::builder()
             .title(source_name(source))
             .subtitle(&found)
+            .expanded(hidden && state.enabled)
             .build();
         row.add_prefix(&gtk::Image::from_icon_name(source_icon(source)));
         let sync = self.imp().sync.get().expect("set").clone();
@@ -609,13 +633,7 @@ impl PreferencesDialog {
     fn show_key_status(&self) {
         let dialog = self.downgrade();
         glib::spawn_future_local(async move {
-            let status = match steamgriddb_service::api_key().await {
-                Ok(Some(_)) => gettext("A key is stored in your keyring"),
-                Ok(None) => gettext("None yet"),
-                Err(error) => {
-                    gettext("The keyring cannot be used: {error}").replace("{error}", &error)
-                }
-            };
+            let status = steamgriddb_service::key_status(&steamgriddb_service::api_key().await);
             if let Some(dialog) = dialog.upgrade() {
                 dialog.imp().key_status_row.set_subtitle(&status);
             }

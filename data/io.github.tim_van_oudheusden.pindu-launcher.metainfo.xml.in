@@ -16,7 +16,7 @@
     <ul>
       <li>Steam, native or Flatpak</li>
       <li>Heroic: Epic Games, GOG, Amazon and sideloaded games</li>
-      <li>Lutris, Bottles and Faugus</li>
+      <li>Lutris, Bottles, Faugus, Legendary and itch</li>
       <li>Games installed as apps, including Flatpaks</li>
       <li>Games you add yourself</li>
     </ul>
@@ -170,7 +170,7 @@
           <li>Run native games in the Steam Linux Runtime, and turn on MangoHud or GameMode for a game</li>
           <li>A fullscreen mode with Home, Library and game pages, an on-screen keyboard for search and a Quick Access panel</li>
           <li>Fullscreen designs, Ribbon and Panorama, with variants, and your own stylesheet</li>
-          <li>Reduce Motion, Larger Text and a volume for navigation sounds in fullscreen mode</li>
+          <li>Reduce Motion, four text sizes and a volume for navigation sounds in fullscreen mode</li>
           <li>Control the desktop window and its menus with a controller</li>
           <li>SteamGridDB art arrives as soon as you save your key</li>
         </ul>

@@ -8,9 +8,12 @@ pub mod desktop;
 pub mod faugus;
 pub mod heroic;
 mod iso_time;
+pub mod itch;
+pub mod legendary;
 pub mod location;
 pub mod lutris;
 pub(crate) mod sha256;
+mod sqlite_copy;
 pub mod steam;
 pub mod sync;
 pub mod vdf;
@@ -80,7 +83,8 @@ pub struct ImportedGame {
     pub source_flags: SourceFlags,
     /// The store record the source links the game to, when it names one.
     ///
-    /// Not stored in the library; game grouping matches copies of one game by it.
+    /// Stored with the runner and year as the game's [`SourceDetails`](crate::model::SourceDetails);
+    /// game grouping matches copies of one game by it.
     pub service: Option<ServiceRef>,
     /// The runner the source starts the game with, such as `wine` or `linux`.
     pub runner: Option<String>,

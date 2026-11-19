@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder art for Home's "itch" section; the maintainer replaces it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1c1d21"/>
+  <path d="M136 220l24-68h192l24 68M136 220v140h240V220M136 220c0 22 18 36 40 36s40-14 40-36c0 22 18 36 40 36s40-14 40-36c0 22 18 36 40 36s40-14 40-36" fill="none" stroke="#c0c4cc" stroke-width="20" stroke-linejoin="round"/><path d="M226 360v-60h60v60" fill="none" stroke="#c0c4cc" stroke-width="16" stroke-linejoin="round"/>
+</svg>
