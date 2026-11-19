@@ -26,8 +26,16 @@ In this order, local data first:
    matching each time the library loads, so games cannot be added to it by hand and a source's categories never land
    in it. Saving is offered while a toggle or a search narrows a view other than Hidden or another saved filter:
    **Save Filter…** in the desktop filter row and in fullscreen Quick Access's Filters, which name it after what it
-   shows. The suggestions offered are **Native Games** and **Windows Games**; the others need a filter that does not
-   exist yet (never played, added recently, no longer listed, needs a permission).
+   shows. The suggestions offered are **Native Games**, **Windows Games** and, since #525, **Installed and Never
+   Played**; the others need a filter that does not exist yet (added recently, no longer listed, needs a permission).
+
+   As built (#525): the filters gain **Never Played** (games with no last played time) and a genre, matched ignoring
+   case against the game's resolved genres. The desktop filter row has a **Never Played** toggle and a **Genre** menu
+   (Any Genre, then each genre of the library); fullscreen Quick Access's Filters has a **Never Played** switch and a
+   **Genre** list with a check on the one chosen, reached with the D-pad like every row there. `pindu_core::library`
+   matches them (`Filters::never_played`, `Filters::genre`) and lists the genres to offer (`genres`); saved filters
+   keep both in `saved_filters` (migration 0010), and backups carry them as `never_played` and `genre` beside the other
+   toggles.
 
    Backups (#600) carry each saved filter as a collection entry with no games and a `filter` beside it: its view,
    toggles and search, with a view of a collection naming that collection, since IDs differ between libraries.

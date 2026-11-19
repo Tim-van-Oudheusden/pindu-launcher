@@ -13,15 +13,18 @@ use gtk::{gio, glib};
 use pindu_core::library::{self, Filters, SortMode, View};
 
 use crate::application::PinduApplication;
-use crate::quick_access::PinduQuickAccess;
+use crate::quick_access::{PinduQuickAccess, radio_row};
 use crate::window::{PinduWindow, sort_mode_from_name, sort_mode_name};
 
 /// A toggle of fullscreen mode's filters: the part of [`Filters`] it turns on.
 type FilterField = fn(&mut Filters) -> &mut bool;
 
+/// Filters' genre: a stateful string action on the window, empty for any genre.
+const GENRE_ACTION: &str = "fullscreen-genre";
+
 impl PinduQuickAccess {
-    /// Filters: each switch turns its filter on or off at once, and Clear Filters turns
-    /// them all off.
+    /// Filters: each switch turns its filter on or off at once, a genre row chooses the
+    /// genre (`win.fullscreen-genre`), and Clear Filters turns them all off.
     pub(crate) fn setup_filters(&self, actions: &impl IsA<gio::ActionMap>) {
         for (row, field) in self.filter_rows() {
             row.connect_active_notify(glib::clone!(
@@ -34,6 +37,27 @@ impl PinduQuickAccess {
                 }
             ));
         }
+        let genre = gio::SimpleAction::new_stateful(
+            GENRE_ACTION,
+            Some(glib::VariantTy::STRING),
+            &String::new().to_variant(),
+        );
+        genre.connect_change_state(glib::clone!(
+            #[weak(rename_to = quick_access)]
+            self,
+            move |_, state| {
+                let Some(genre) = state.and_then(String::from_variant) else {
+                    return;
+                };
+                let filters = Filters {
+                    genre: (!genre.is_empty()).then_some(genre),
+                    ..quick_access.fullscreen_filters()
+                };
+                quick_access.set_fullscreen_filters(filters);
+            }
+        ));
+        actions.add_action(&genre);
+        let _ = self.imp().genre_action.set(genre);
         self.add_host_action(
             actions,
             "clear-fullscreen-filters",
@@ -45,7 +69,7 @@ impl PinduQuickAccess {
     }
 
     /// The switches of Filters, each with the filter it turns on.
-    fn filter_rows(&self) -> [(adw::SwitchRow, FilterField); 5] {
+    fn filter_rows(&self) -> [(adw::SwitchRow, FilterField); 6] {
         let imp = self.imp();
         [
             (imp.installed_row.get(), |filters| &mut filters.installed),
@@ -54,8 +78,34 @@ impl PinduQuickAccess {
             }),
             (imp.windows_row.get(), |filters| &mut filters.windows),
             (imp.native_row.get(), |filters| &mut filters.native),
+            (imp.never_played_row.get(), |filters| {
+                &mut filters.never_played
+            }),
             (imp.hidden_row.get(), |filters| &mut filters.hidden),
         ]
+    }
+
+    /// The genre list: Any Genre, then each genre of the library, and the genre chosen if
+    /// the library no longer has it, so it can be cleared.
+    pub(crate) fn fill_genres(&self) {
+        let imp = self.imp();
+        let mut genres = self
+            .root()
+            .and_downcast::<PinduWindow>()
+            .map(|window| window.library().genres())
+            .unwrap_or_default();
+        if let Some(chosen) = self.fullscreen_filters().genre
+            && !genres.contains(&chosen)
+        {
+            genres.push(chosen);
+        }
+        imp.genres.remove_all();
+        let action = format!("win.{GENRE_ACTION}");
+        imp.genres
+            .append(&radio_row(&action, "", &gettext("Any Genre")));
+        for genre in genres {
+            imp.genres.append(&radio_row(&action, &genre, &genre));
+        }
     }
 
     /// Fullscreen mode's filters, which last until the app quits.
@@ -78,12 +128,15 @@ impl PinduQuickAccess {
         self.show_filters();
     }
 
-    /// Sets the switches to fullscreen mode's filters: each switch then finds its filter
-    /// as it says, so nothing applies again.
+    /// Sets the switches and the genre check to fullscreen mode's filters: each switch then
+    /// finds its filter as it says, so nothing applies again.
     pub(crate) fn show_filters(&self) {
         let mut filters = self.fullscreen_filters();
         for (row, field) in self.filter_rows() {
             row.set_active(*field(&mut filters));
+        }
+        if let Some(action) = self.imp().genre_action.get() {
+            action.set_state(&filters.genre.unwrap_or_default().to_variant());
         }
     }
 }

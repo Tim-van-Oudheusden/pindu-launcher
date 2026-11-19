@@ -207,7 +207,11 @@ mod imp {
         #[template_child]
         pub native_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
+        pub never_played_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
         pub hidden_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub genres: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub clear_filters: TemplateChild<gtk::ListBox>,
         #[template_child]
@@ -298,6 +302,8 @@ mod imp {
         pub design_action: OnceCell<gio::SimpleAction>,
         pub variant_action: OnceCell<gio::SimpleAction>,
         pub sound_output_action: OnceCell<gio::SimpleAction>,
+        /// `win.fullscreen-genre`, whose state is the genre Filters chose, empty for any.
+        pub genre_action: OnceCell<gio::SimpleAction>,
         /// The intents Controls lists, in its rows' order across its groups.
         pub shown_controls: RefCell<Vec<Intent>>,
         /// The tasks Activity shows, each with its progress bar, and the next pulse of the
@@ -484,7 +490,10 @@ impl PinduQuickAccess {
             Some(QuickAccessLevel::Designs) => self.fill_designs(),
             Some(QuickAccessLevel::Controllers) => self.fill_controllers(),
             Some(QuickAccessLevel::Controls) => self.fill_controls(),
-            Some(QuickAccessLevel::Filters) => self.show_filters(),
+            Some(QuickAccessLevel::Filters) => {
+                self.fill_genres();
+                self.show_filters();
+            }
             Some(QuickAccessLevel::Bluetooth) => self.show_bluetooth(),
             Some(QuickAccessLevel::SoundOutput) => self.show_sound_output(),
             Some(QuickAccessLevel::SystemUpdate) => self.show_system_update(),
@@ -862,6 +871,7 @@ impl PinduQuickAccess {
             imp.artwork.get(),
             imp.metadata.get(),
             imp.filters.get(),
+            imp.genres.get(),
             imp.clear_filters.get(),
             imp.save_filters.get(),
             imp.performance.get(),
@@ -1265,9 +1275,9 @@ fn no_design_name() -> String {
     "Adwaita".to_owned()
 }
 
-/// A row of Design's design and variant lists: `title`, with a check on the stateful
-/// `action` for `id`, which the row's activation sets.
-fn radio_row(action: &str, id: &str, title: &str) -> adw::ActionRow {
+/// A row of a list of choices (Design's designs and variants, Filters' genres): `title`,
+/// with a check on the stateful `action` for `id`, which the row's activation sets.
+pub(crate) fn radio_row(action: &str, id: &str, title: &str) -> adw::ActionRow {
     let check = gtk::CheckButton::builder()
         .action_name(action)
         .action_target(&id.to_variant())

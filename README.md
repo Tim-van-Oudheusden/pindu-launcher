@@ -60,11 +60,10 @@ widgets so it looks and behaves like the rest of GNOME.
   on-screen keyboard for search and navigation sounds, with switchable designs and your own CSS
   ([Fullscreen mode](#fullscreen-mode)).
 - **A tidy library.** Browse covers in a grid, or switch the desktop window to a list with each game's source, install
-  state, last played date and playtime. Search, sort and filter by installed, favourite, Windows or native, in either
-  layout. Group games into your own collections, or save a filter and search as a collection that keeps itself up to
-  date (**Save Filter…** beside the filters, with suggested ones under its arrow), jump back into recent games and hide
-  the ones you never play.
-  layout. Group games into your own collections, jump back into recent games and hide the ones you never play. The
+  state, last played date and playtime. Search, sort and filter by installed, favourite, Windows or native, genre or
+  never played, in either layout. Group games into your own collections, or save a filter and search as a collection
+  that keeps itself up to date (**Save Filter…** beside the filters, with suggested ones such as installed and never
+  played under its arrow), jump back into recent games and hide the ones you never play. The
   **Select** button in the header bar picks several games in the grid or the list at once, to favourite, hide, add to
   a collection or take out of one in one go, with a toast to undo it, or to merge them into one game.
 - **One game, several copies.** When the same game comes from two launchers, **Merge With…** in its menu (or in its
@@ -325,11 +324,13 @@ Guide + A never also opens the menu drawer.
 
 ### Filters
 
-On the library page, **Filters** narrows every tab to installed or not installed games, or to Windows or native ones,
-and can show hidden games too. A **Filtered** chip beside the tabs says a filter is on, and **Clear Filters** brings the
-whole tab back. These filters are separate from the desktop window's filter row and last until the app quits.
-**Save Filter…** keeps the shown tab with these filters and the search as a collection of its own, which gets a tab,
-a Home section and a drawer entry; **Save Native Games** and **Save Windows Games** save those shelves in one press.
+On the library page, **Filters** narrows every tab to installed or not installed games, to Windows or native ones, or
+to games never played, and can show hidden games too; under **Genre**, choose one of the library's genres, or **Any
+Genre**. A **Filtered** chip beside the tabs says a filter is on, and **Clear Filters** brings the whole tab back. These
+filters are separate from the desktop window's filter row and last until the app quits. **Save Filter…** keeps the
+shown tab with these filters and the search as a collection of its own, which gets a tab, a Home section and a drawer
+entry; **Save Native Games**, **Save Windows Games** and **Save Installed and Never Played** save those shelves in one
+press.
 
 ### Performance
 

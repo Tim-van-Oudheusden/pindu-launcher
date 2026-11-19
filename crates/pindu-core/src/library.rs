@@ -572,10 +572,10 @@ pub fn step_tab(tabs: &[View], current: View, forward: bool) -> Option<View> {
     tabs.get(next).copied()
 }
 
-/// The stacking filter toggles of the library page, and of fullscreen mode's Quick Access.
+/// The stacking filters of the library page, and of fullscreen mode's Quick Access.
 /// Toggles of one kind widen each other (Installed and Not installed together show both);
-/// kinds narrow each other.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+/// kinds narrow each other, and so does the genre.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Filters {
     /// Installed games.
     pub installed: bool,
@@ -587,26 +587,63 @@ pub struct Filters {
     pub windows: bool,
     /// Native Linux games.
     pub native: bool,
+    /// Games never played: no last played time.
+    pub never_played: bool,
+    /// Only games of this genre, matched ignoring case; `None` for any genre.
+    pub genre: Option<String>,
     /// Hidden games too, in whichever view (fullscreen mode's Show hidden games); the
     /// desktop window shows them in their own view instead.
     pub hidden: bool,
 }
 
 impl Filters {
-    /// Whether any toggle is on.
-    pub fn any(self) -> bool {
-        self != Self::default()
+    /// Whether any filter is on.
+    pub fn any(&self) -> bool {
+        *self != Self::default()
     }
 
-    fn includes(self, game: &Game) -> bool {
+    fn includes(&self, game: &Game) -> bool {
         let install_state = (!self.installed && !self.not_installed)
             || (self.installed && game.installed)
             || (self.not_installed && !game.installed);
         let platform = (!self.windows && !self.native)
             || (self.windows && game.platform == Some(Platform::Windows))
             || (self.native && game.platform == Some(Platform::Linux));
-        install_state && platform && (!self.favourites || game.favourite)
+        install_state
+            && platform
+            && (!self.favourites || game.favourite)
+            && (!self.never_played || game.last_played_at.is_none())
+            && self
+                .genre
+                .as_deref()
+                .is_none_or(|genre| game.genres.iter().any(|own| same_genre(own, genre)))
     }
+}
+
+/// Whether two genre names are the same, ignoring case: sources spell them differently.
+fn same_genre(a: &str, b: &str) -> bool {
+    a.chars()
+        .flat_map(char::to_lowercase)
+        .eq(b.chars().flat_map(char::to_lowercase))
+}
+
+/// The genres to filter the library by: each genre of a game in the library once, hidden
+/// games' too, in alphabetical order ignoring case. Spellings that differ only in case are
+/// one genre, named as first seen.
+pub fn genres<'a>(games: impl IntoIterator<Item = &'a Game>) -> Vec<String> {
+    let mut genres: Vec<(String, &str)> = Vec::new();
+    for game in games.into_iter().filter(|game| game.in_library()) {
+        for genre in &game.genres {
+            let key = genre.to_lowercase();
+            if let Err(index) = genres.binary_search_by(|(other, _)| other.cmp(&key)) {
+                genres.insert(index, (key, genre));
+            }
+        }
+    }
+    genres
+        .into_iter()
+        .map(|(_, genre)| genre.to_owned())
+        .collect()
 }
 
 /// Which games the library views show.
@@ -623,9 +660,9 @@ impl LibraryFilter {
         self.view
     }
 
-    /// The filter toggles on.
-    pub fn filters(&self) -> Filters {
-        self.filters
+    /// The filters on.
+    pub fn filters(&self) -> &Filters {
+        &self.filters
     }
 
     /// The search, normalised; empty for none.
@@ -1376,6 +1413,57 @@ mod tests {
         assert_eq!(shown_with(Filters::default(), &platform_games()).len(), 3);
     }
 
+    #[test]
+    fn never_played_shows_only_games_without_a_last_played_time() {
+        let games = [
+            game("1", "Played", Some(1_700_000_000), 0),
+            game("2", "Never Played", None, 0),
+        ];
+        let never_played = Filters {
+            never_played: true,
+            ..Filters::default()
+        };
+
+        assert!(never_played.any());
+        assert_eq!(shown_with(never_played, &games), ["Never Played"]);
+    }
+
+    #[test]
+    fn a_genre_shows_only_games_of_that_genre_whatever_its_case() {
+        let mut rpg = game("1", "RPG", None, 0);
+        rpg.genres = vec!["Action".to_owned(), "RPG".to_owned()];
+        let mut puzzle = game("2", "Puzzle", None, 0);
+        puzzle.genres = vec!["Puzzle".to_owned()];
+        let unknown = game("3", "No Genres", None, 0);
+        let rpgs = Filters {
+            genre: Some("rpg".to_owned()),
+            ..Filters::default()
+        };
+
+        assert!(rpgs.any());
+        assert_eq!(shown_with(rpgs, &[rpg, puzzle, unknown]), ["RPG"]);
+    }
+
+    #[test]
+    fn the_genres_to_filter_by_are_each_library_genre_once_in_order() {
+        // Hidden games count: fullscreen mode can show them, and the Hidden view does.
+        let mut rpg = game("1", "RPG", None, 0);
+        rpg.genres = vec!["RPG".to_owned(), "action".to_owned()];
+        let mut action = game("2", "Action", None, 0);
+        action.genres = vec!["Action".to_owned(), "Puzzle".to_owned()];
+        let mut hidden = game("3", "Hidden", None, 0);
+        hidden.genres = vec!["Horror".to_owned()];
+        hidden.hidden = true;
+        let mut removed = game("4", "Removed", None, 0);
+        removed.genres = vec!["Racing".to_owned()];
+        removed.user_removed = true;
+
+        assert_eq!(
+            genres(&[rpg, action, hidden, removed]),
+            ["action", "Horror", "Puzzle", "RPG"]
+        );
+    }
+
     /// The games a fullscreen tab shows with `filters` on, each held by the collections
     /// beside it.
     fn tab_with(view: View, filters: Filters, games: &[(Game, &[i64])]) -> Vec<String> {
@@ -1425,14 +1513,14 @@ mod tests {
         };
 
         assert_eq!(
-            tab_with(View::All, windows, &games),
+            tab_with(View::All, windows.clone(), &games),
             ["Windows Favourite", "Windows Installed Favourite"]
         );
         assert_eq!(
             tab_with(View::Installed, windows, &games),
             ["Windows Installed Favourite"]
         );
-        assert!(tab_with(View::Installed, not_installed, &games).is_empty());
+        assert!(tab_with(View::Installed, not_installed.clone(), &games).is_empty());
         assert_eq!(
             tab_with(View::Favourites, not_installed, &games),
             ["Windows Favourite"]
@@ -1457,9 +1545,9 @@ mod tests {
         };
 
         assert!(hidden.any());
-        assert_eq!(tab_with(View::All, hidden, &games).len(), 4);
+        assert_eq!(tab_with(View::All, hidden.clone(), &games).len(), 4);
         assert_eq!(
-            tab_with(View::Installed, hidden, &games),
+            tab_with(View::Installed, hidden.clone(), &games),
             [
                 "Native Installed",
                 "Windows Installed Favourite",
@@ -1467,7 +1555,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            tab_with(View::Collection(5), hidden, &games),
+            tab_with(View::Collection(5), hidden.clone(), &games),
             [
                 "Native Installed",
                 "Windows Installed Favourite",
