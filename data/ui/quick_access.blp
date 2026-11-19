@@ -370,6 +370,30 @@ template $PinduQuickAccess: Box {
               };
             }
 
+            ListBoxRow sources_row {
+              action-name: "win.quick-access-sources";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "folder-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Sources");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
             // Shown where NetworkManager runs: the connection in use, or that
             // the system does not allow changing it (then insensitive).
             ListBoxRow network_row {
@@ -1125,6 +1149,39 @@ template $PinduQuickAccess: Box {
             Adw.SwitchRow large_text_row {
               title: _("Larger Text");
             }
+          }
+        };
+      };
+    }
+
+    StackPage {
+      name: "sources";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Sources");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          // Each imported source with whether it was found on this computer and
+          // its Import switch, the setting Preferences, Sources changes. Filled in
+          // code as the level opens and after each sync.
+          ListBox sources {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
           }
         };
       };

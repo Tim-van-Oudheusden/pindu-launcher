@@ -85,11 +85,14 @@ pub enum QuickAccessLevel {
     /// The stores to install from Flathub, and the install that runs (see
     /// [`crate::add_store`]).
     AddStore,
+    /// Each imported source, whether it was found on this computer and its Import switch,
+    /// the same setting as Preferences' (see [`crate::sources::sync::imported_source_states`]).
+    Sources,
 }
 
 impl QuickAccessLevel {
     /// Every level, the entries first.
-    pub const ALL: [Self; 14] = [
+    pub const ALL: [Self; 15] = [
         Self::Main,
         Self::Notifications,
         Self::Activity,
@@ -104,6 +107,7 @@ impl QuickAccessLevel {
         Self::SoundOutput,
         Self::SystemUpdate,
         Self::AddStore,
+        Self::Sources,
     ];
 
     /// The name the level goes by: its page of the panel's stack, and what a row asks for
@@ -124,6 +128,7 @@ impl QuickAccessLevel {
             Self::SoundOutput => "sound-output",
             Self::SystemUpdate => "system-update",
             Self::AddStore => "add-store",
+            Self::Sources => "sources",
         }
     }
 
@@ -524,6 +529,20 @@ mod tests {
     fn b_steps_back_from_add_a_store_and_then_closes_quick_access() {
         let mut panels = Panels::new();
         panels.show(Panel::QuickAccess(QuickAccessLevel::AddStore));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), quick_access());
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), None);
+    }
+
+    #[test]
+    fn sources_is_a_level_of_its_own_that_b_steps_back_from() {
+        assert_eq!(
+            QuickAccessLevel::from_name("sources"),
+            Some(QuickAccessLevel::Sources)
+        );
+        let mut panels = Panels::new();
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Sources));
         assert!(panels.handle(Intent::Back, PAGE));
         assert_eq!(panels.open(), quick_access());
         assert!(panels.handle(Intent::Back, PAGE));

@@ -213,6 +213,9 @@ Guide + A never also opens the menu drawer.
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
   - **Larger Text:** fullscreen text about a quarter larger.
+- **Sources** lists every source Pindu imports from, says whether each was found on this computer, and has its
+  **Import** switch, the same setting as Preferences, Sources: a source turned off is no longer read, and changing a
+  switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences.
 - **Sound Output**, subtitled with the output in use, lists the outputs PipeWire has (speakers, a television over
   HDMI, a receiver, a Bluetooth headset) with a check on the one in use. Choose one to make it the default; WirePlumber
   keeps the choice after a restart, and games that follow the default move to it. It reads the outputs with `pw-dump`
