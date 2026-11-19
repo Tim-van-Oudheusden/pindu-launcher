@@ -624,6 +624,12 @@ problems privately as [`SECURITY.md`](SECURITY.md) describes. For code, read [`C
 to build, pick an issue, work test-first and open a pull request that passes the quality gates. AI agents follow
 [`AGENTS.md`](AGENTS.md), and everyone follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+When you report a bug, open **About Pindu launcher** from the main menu, then **Troubleshooting → Debugging
+Information**, and copy or save the report into the issue. It names the version, how the app was installed, your
+distribution and session, each source's state and game count, the sandbox permissions, the tools found, the library's
+schema version and the last sync's problems. It holds no game titles and writes your home folder as `~`; nothing is
+sent anywhere.
+
 ## Acknowledgments
 
 - [Cartridges](https://codeberg.org/kramo/cartridges) by kramo, the GNOME game launcher that showed how a libadwaita
