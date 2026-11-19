@@ -320,6 +320,9 @@ pub enum Playing {
 pub enum GameOption {
     /// Start the game.
     Play,
+    /// Start a game we run once without its wrappers, MangoHud, GameMode or its own
+    /// environment variables (see [`launch::Start::Safely`]).
+    StartSafely,
     /// Stop a game that runs: end one we started, or close the windows of one its store
     /// launcher runs.
     Stop,
@@ -350,6 +353,7 @@ pub fn game_options(game: &Game, playing: Playing) -> Vec<GameOption> {
             Playing::Started => Stop,
             Playing::InStore => Return,
         }),
+        (playing == Playing::No && launch::launch_settings(game).is_some()).then_some(StartSafely),
         (playing == Playing::InStore).then_some(Stop),
         Some(if game.favourite {
             RemoveFromFavourites
@@ -913,6 +917,17 @@ mod tests {
             options.iter().position(|o| *o == GameOption::ChangeArtwork),
             collections.map(|index| index + 1)
         );
+    }
+
+    #[test]
+    fn a_game_we_run_offers_a_safe_start_after_play_while_it_does_not_run() {
+        use GameOption::*;
+        let lutris = game(Source::Lutris, LaunchKind::HostCommand);
+        let steam = game(Source::Steam, LaunchKind::StoreUri);
+
+        assert_eq!(game_options(&lutris, Playing::No)[..2], [Play, StartSafely]);
+        assert!(!game_options(&lutris, Playing::Started).contains(&StartSafely));
+        assert!(!game_options(&steam, Playing::No).contains(&StartSafely));
     }
 
     fn theme(id: &str, name: &str, contract: u64) -> Theme {
