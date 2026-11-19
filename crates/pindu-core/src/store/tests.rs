@@ -883,6 +883,8 @@ fn a_saved_filter_is_a_collection_with_its_filter() {
             favourites: true,
             windows: true,
             native: true,
+            never_played: true,
+            genre: Some("Role-playing".to_owned()),
             hidden: false,
         },
         search: "witcher".to_owned(),

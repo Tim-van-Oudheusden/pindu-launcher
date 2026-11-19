@@ -219,6 +219,14 @@ impl LibraryModel {
             .collect()
     }
 
+    /// The genres to filter by: each genre of the library once, in order
+    /// (see [`pindu_core::library::genres`]).
+    pub fn genres(&self) -> Vec<String> {
+        let objects = self.all_games();
+        let games: Vec<_> = objects.iter().map(GameObject::game).collect();
+        pindu_core::library::genres(games.iter().map(|game| &**game))
+    }
+
     /// Fullscreen Home's sections (`pindu_core::sections`), each with its games.
     pub fn home_sections(&self) -> Vec<(Section, Vec<GameObject>)> {
         let games = &self.imp().games;
