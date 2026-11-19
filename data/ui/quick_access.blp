@@ -963,6 +963,189 @@ template $PinduQuickAccess: Box {
               }
             }
           }
+
+          Label {
+            label: _("Repeat Delay");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          // How the launcher moves its own focus; a game receives the
+          // controller unchanged. Radio rows on the settings' actions.
+          ListBox repeat_delay {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow {
+              title: _("Short");
+              subtitle: _("After 0.2 seconds");
+              activatable-widget: repeat_delay_short;
+
+              [prefix]
+              CheckButton repeat_delay_short {
+                action-name: "win.navigation-repeat-delay";
+                action-target: "'short'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Normal");
+              subtitle: _("After 0.3 seconds");
+              activatable-widget: repeat_delay_normal;
+
+              [prefix]
+              CheckButton repeat_delay_normal {
+                action-name: "win.navigation-repeat-delay";
+                action-target: "'normal'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Long");
+              subtitle: _("After 0.6 seconds");
+              activatable-widget: repeat_delay_long;
+
+              [prefix]
+              CheckButton repeat_delay_long {
+                action-name: "win.navigation-repeat-delay";
+                action-target: "'long'";
+                can-focus: false;
+              }
+            }
+          }
+
+          Label {
+            label: _("Repeat Rate");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          ListBox repeat_rate {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow {
+              title: _("Slow");
+              subtitle: _("10 moves a second");
+              activatable-widget: repeat_rate_slow;
+
+              [prefix]
+              CheckButton repeat_rate_slow {
+                action-name: "win.navigation-repeat-rate";
+                action-target: "'slow'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Normal");
+              subtitle: _("20 moves a second");
+              activatable-widget: repeat_rate_normal;
+
+              [prefix]
+              CheckButton repeat_rate_normal {
+                action-name: "win.navigation-repeat-rate";
+                action-target: "'normal'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Fast");
+              subtitle: _("About 33 moves a second");
+              activatable-widget: repeat_rate_fast;
+
+              [prefix]
+              CheckButton repeat_rate_fast {
+                action-name: "win.navigation-repeat-rate";
+                action-target: "'fast'";
+                can-focus: false;
+              }
+            }
+          }
+
+          Label {
+            label: _("Stick Dead Zone");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          ListBox dead_zone {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow {
+              title: _("Small");
+              subtitle: _("A light push moves focus");
+              activatable-widget: dead_zone_small;
+
+              [prefix]
+              CheckButton dead_zone_small {
+                action-name: "win.navigation-dead-zone";
+                action-target: "'small'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Normal");
+              subtitle: _("A push halfway");
+              activatable-widget: dead_zone_normal;
+
+              [prefix]
+              CheckButton dead_zone_normal {
+                action-name: "win.navigation-dead-zone";
+                action-target: "'normal'";
+                can-focus: false;
+              }
+            }
+
+            Adw.ActionRow {
+              title: _("Large");
+              subtitle: _("A firm push, for a stick that drifts");
+              activatable-widget: dead_zone_large;
+
+              [prefix]
+              CheckButton dead_zone_large {
+                action-name: "win.navigation-dead-zone";
+                action-target: "'large'";
+                can-focus: false;
+              }
+            }
+          }
+
+          Label {
+            label: _("These change only how focus moves here. Games receive the controller unchanged.");
+            xalign: 0;
+            wrap: true;
+
+            styles [
+              "dim-label",
+            ]
+          }
         };
       };
     }
@@ -1124,6 +1307,37 @@ template $PinduQuickAccess: Box {
 
             Adw.SwitchRow large_text_row {
               title: _("Larger Text");
+            }
+          }
+
+          Label {
+            label: _("Artwork");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          // The key is typed hidden with the on-screen keyboard and kept in the
+          // keyring; the row's subtitle says whether one is stored, or why the
+          // keyring cannot be used.
+          ListBox artwork {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow steamgriddb_key_row {
+              title: _("SteamGridDB Key");
+              activatable: true;
+            }
+
+            Adw.SwitchRow prefer_steamgriddb_row {
+              title: _("Prefer SteamGridDB Art");
+              subtitle: _("Show it before the launcher's own art; art you pick always comes first");
             }
           }
         };

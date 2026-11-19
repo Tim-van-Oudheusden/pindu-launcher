@@ -1,8 +1,9 @@
 //! The Preferences dialog: General (covers, launching, controller navigation, button prompts
 //! and the confirm and back swap, permissions in the Flatpak), Sources (import, folder,
-//! sidebar), Artwork (SteamGridDB), Windows games (default Proton, prefix folder and tools),
-//! Proton (downloaded builds and releases to install) and Fullscreen (start-up, sounds and
-//! their volume, accessibility, and the user's own stylesheet through the style service).
+//! sidebar, and the last sync with its problems), Artwork (SteamGridDB), Windows games
+//! (default Proton, prefix folder and tools), Proton (downloaded builds and releases to
+//! install) and Fullscreen (start-up, sounds and their volume, accessibility, and the user's
+//! own stylesheet through the style service).
 //! Everything is GSettings, except the SteamGridDB key, which lives in the keyring,
 //! each source's import switch and folder, which live with the library's other source state,
 //! and the Proton builds, which are folders in our tools folder.
@@ -18,8 +19,9 @@ use pindu_core::custom_style::ProblemSummary;
 use pindu_core::gamepad::{PROMPTS_KEY, Prompts, SWAP_KEY, Swap};
 use pindu_core::model::{Source, SourceState};
 use pindu_core::paths;
-use pindu_core::sources::location;
+use pindu_core::sources::location::sandbox_hides;
 use pindu_core::sources::sync::IMPORTED_SOURCES;
+use pindu_core::sync_age::sync_age;
 
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
@@ -29,7 +31,8 @@ use crate::permission_service;
 use crate::proton_choice::{FirstChoice, ProtonChoice};
 use crate::proton_downloads_page::ProtonDownloadsPage;
 use crate::proton_launch;
-use crate::sources::{source_icon, source_name};
+use crate::session_service;
+use crate::sources::{source_icon, source_name, sync_age_text};
 use crate::steamgriddb_service;
 use crate::style_service::StyleService;
 use crate::sync_service::SyncService;
@@ -374,7 +377,8 @@ impl PreferencesDialog {
         self.imp().settings.get().expect("constructed")
     }
 
-    /// One expander per source: import on or off, its folder, and its sidebar row.
+    /// One expander per source: import on or off, its folder, its sidebar row, and when it
+    /// last synced with the problems that sync ran into.
     fn show_sources(&self) {
         let dialog = self.downgrade();
         glib::spawn_future_local(async move {
@@ -396,24 +400,24 @@ impl PreferencesDialog {
 
     fn source_row(&self, state: &SourceState) -> adw::ExpanderRow {
         let source = state.source;
-        // The sandbox cannot see some launchers' folders until the user chooses them.
-        let outside_sandbox =
-            permission_service::in_flatpak() && !location::sandbox_can_read(source);
-        let found = match &state.resolved_location {
-            Some(path) => path.display().to_string(),
-            None if outside_sandbox => {
-                gettext("Outside the sandbox: choose its folder to import it")
-            }
-            None => gettext("Not found on this computer"),
-        };
-        let automatic = if outside_sandbox {
-            gettext("The sandbox cannot see it until you choose it")
-        } else {
-            gettext("Found automatically")
-        };
+        let hidden = state.resolved_location.is_none()
+            && state.user_override.is_none()
+            && permission_service::in_flatpak()
+            && sandbox_hides(source);
+        let found = state.resolved_location.as_ref().map_or_else(
+            || {
+                if hidden {
+                    gettext("The sandbox cannot see this folder: choose it to import its games")
+                } else {
+                    gettext("Not found on this computer")
+                }
+            },
+            |path| path.display().to_string(),
+        );
         let row = adw::ExpanderRow::builder()
             .title(source_name(source))
             .subtitle(&found)
+            .expanded(hidden && state.enabled)
             .build();
         row.add_prefix(&gtk::Image::from_icon_name(source_icon(source)));
         let sync = self.imp().sync.get().expect("set").clone();
@@ -432,12 +436,10 @@ impl PreferencesDialog {
         if source != Source::Desktop {
             let folder = adw::ActionRow::builder()
                 .title(gettext("Folder"))
-                .subtitle(
-                    state
-                        .user_override
-                        .as_ref()
-                        .map_or_else(|| automatic.clone(), |path| path.display().to_string()),
-                )
+                .subtitle(state.user_override.as_ref().map_or_else(
+                    || gettext("Found automatically"),
+                    |path| path.display().to_string(),
+                ))
                 .build();
             let choose = gtk::Button::builder()
                 .label(gettext("_Choose…"))
@@ -469,7 +471,7 @@ impl PreferencesDialog {
                 folder,
                 move |button| {
                     sync.set_source_override(source, None);
-                    folder.set_subtitle(&automatic);
+                    folder.set_subtitle(&gettext("Found automatically"));
                     button.set_visible(false);
                 }
             ));
@@ -486,6 +488,46 @@ impl PreferencesDialog {
             move |row| dialog.set_in_sidebar(source, row.is_active())
         ));
         row.add_row(&in_sidebar);
+
+        let last_sync = adw::ActionRow::builder()
+            .title(gettext("Last Synced"))
+            .subtitle(sync_age_text(sync_age(
+                state.last_sync,
+                session_service::now(),
+            )))
+            .css_classes(["property"])
+            .build();
+        row.add_row(&last_sync);
+        if !state.errors.is_empty() {
+            let count = u32::try_from(state.errors.len()).unwrap_or(u32::MAX);
+            let warning = gtk::Image::builder()
+                .icon_name("dialog-warning-symbolic")
+                .tooltip_text(
+                    ngettext(
+                        "The last sync ran into {count} problem",
+                        "The last sync ran into {count} problems",
+                        count,
+                    )
+                    .replace("{count}", &count.to_string()),
+                )
+                .css_classes(["warning"])
+                .build();
+            row.add_suffix(&warning);
+        }
+        for problem in &state.errors {
+            let problem_row = adw::ActionRow::builder()
+                .title(problem)
+                .use_markup(false)
+                .title_selectable(true)
+                .build();
+            problem_row.add_prefix(
+                &gtk::Image::builder()
+                    .icon_name("dialog-warning-symbolic")
+                    .css_classes(["warning"])
+                    .build(),
+            );
+            row.add_row(&problem_row);
+        }
         row
     }
 
@@ -579,13 +621,7 @@ impl PreferencesDialog {
     fn show_key_status(&self) {
         let dialog = self.downgrade();
         glib::spawn_future_local(async move {
-            let status = match steamgriddb_service::api_key().await {
-                Ok(Some(_)) => gettext("A key is stored in your keyring"),
-                Ok(None) => gettext("None yet"),
-                Err(error) => {
-                    gettext("The keyring cannot be used: {error}").replace("{error}", &error)
-                }
-            };
+            let status = steamgriddb_service::key_status(&steamgriddb_service::api_key().await);
             if let Some(dialog) = dialog.upgrade() {
                 dialog.imp().key_status_row.set_subtitle(&status);
             }

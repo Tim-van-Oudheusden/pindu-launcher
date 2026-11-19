@@ -69,6 +69,16 @@ pub fn header(title: &str, started: &str, argv: &[String]) -> String {
     format!("Game: {title}\nStarted: {started}\nCommand: {command}\n\n")
 }
 
+/// The lines the log of a safe start ("Start Safely") begins with: [`header`]'s, and what
+/// the start left out.
+pub fn safe_header(title: &str, started: &str, argv: &[String]) -> String {
+    let command = join_arguments(argv);
+    format!(
+        "Game: {title}\nStarted: {started}\nStarted safely: without wrappers, MangoHud, \
+         GameMode or the game's own environment variables\nCommand: {command}\n\n"
+    )
+}
+
 /// The logs among `names`, oldest first: by start, then by the number that keeps logs
 /// started in the same second apart.
 fn oldest_first(names: &[String]) -> Vec<&String> {
@@ -237,6 +247,21 @@ mod tests {
             "Game: Notepad\n\
              Started: 2026-11-05 14:03:22\n\
              Command: umu-run '/games/Note pad.exe' -x\n\n"
+        );
+    }
+
+    #[test]
+    fn a_safe_start_s_log_says_what_it_left_out() {
+        let argv = ["umu-run", "/games/notepad.exe"].map(str::to_owned);
+
+        let header = safe_header("Notepad", "2026-11-05 14:03:22", &argv);
+
+        assert_eq!(
+            header,
+            "Game: Notepad\n\
+             Started: 2026-11-05 14:03:22\n\
+             Started safely: without wrappers, MangoHud, GameMode or the game's own environment variables\n\
+             Command: umu-run /games/notepad.exe\n\n"
         );
     }
 }

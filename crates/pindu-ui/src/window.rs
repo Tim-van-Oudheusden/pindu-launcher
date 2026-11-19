@@ -15,7 +15,7 @@ use pindu_core::grid;
 use pindu_core::hints::Hint;
 use pindu_core::launch_overlay::LaunchOverlay;
 use pindu_core::library::{
-    Counts, Filters, HistoryGroup, PlaytimeOrigin, SortMode, View, history_group,
+    Counts, Filters, HistoryGroup, LibraryLayout, PlaytimeOrigin, SortMode, View, history_group,
 };
 use pindu_core::model::{GameId, Source};
 use pindu_core::osk::Keyboard;
@@ -36,7 +36,7 @@ use crate::models::{GameObject, LibraryModel};
 use crate::quick_access::PinduQuickAccess;
 use crate::sources::{source_icon, source_name};
 use crate::sync_service::SyncService;
-use crate::widgets::{CoverArt, CoverTile, TileSize};
+use crate::widgets::{CoverArt, CoverTile, GameListCell, ListColumn, TileSize};
 
 mod imp {
     use std::cell::OnceCell;
@@ -110,6 +110,10 @@ mod imp {
         pub search_entry: TemplateChild<gtk::SearchEntry>,
         #[template_child]
         pub grid: TemplateChild<gtk::GridView>,
+        #[template_child]
+        pub game_list: TemplateChild<gtk::ColumnView>,
+        #[template_child]
+        pub layout_switch: TemplateChild<adw::ToggleGroup>,
         #[template_child]
         pub content_stack: TemplateChild<gtk::Stack>,
         #[template_child]
@@ -288,6 +292,7 @@ impl PinduWindow {
         window.setup_actions();
         window.setup_sidebar();
         window.setup_grid();
+        window.setup_list();
         window.setup_search_and_filters();
         window.observe_sync(sync_service);
         window.setup_home();
@@ -572,15 +577,18 @@ impl PinduWindow {
         self.update_content_page();
     }
 
-    /// The grid when it has games; otherwise the first-run page for an empty library, the
-    /// empty collection, hidden games or filters page, or the no-results page.
+    /// The grid or the list when it has games; otherwise the first-run page for an empty
+    /// library, the empty collection, hidden games or filters page, or the no-results page.
     fn update_content_page(&self) {
         let library = self.library();
         let page = if library.model().n_items() > 0 && library.view() == View::PlayHistory {
             self.show_history();
             "history"
         } else if library.model().n_items() > 0 {
-            "grid"
+            match self.library_layout().shown(self.is_fullscreen()) {
+                LibraryLayout::Grid => "grid",
+                LibraryLayout::List => "list",
+            }
         } else if library.counts().get(View::All) == 0 {
             "empty"
         } else if matches!(library.view(), View::Collection(id) if library.counts().get(View::Collection(id)) == 0)
@@ -1089,6 +1097,139 @@ impl PinduWindow {
         );
     }
 
+    /// The layout the `library-layout` setting asks for on the desktop.
+    fn library_layout(&self) -> LibraryLayout {
+        LibraryLayout::from_setting(&self.settings().string("library-layout"))
+    }
+
+    /// The desktop's list layout: one row per game with its title, source, state, last
+    /// played date and playtime, over the same sorted and filtered games as the grid. The
+    /// header bar's switch picks the layout, remembered in the `library-layout` setting;
+    /// fullscreen mode always shows the grid.
+    fn setup_list(&self) {
+        let imp = self.imp();
+        let list = &imp.game_list;
+        list.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
+        let columns = list.columns();
+        let kinds = [
+            ListColumn::Title,
+            ListColumn::Source,
+            ListColumn::State,
+            ListColumn::LastPlayed,
+            ListColumn::Playtime,
+        ];
+        for (position, kind) in (0..).zip(kinds) {
+            let Some(column) = columns
+                .item(position)
+                .and_downcast::<gtk::ColumnViewColumn>()
+            else {
+                continue;
+            };
+            let factory = gtk::SignalListItemFactory::new();
+            factory.connect_setup(move |_, item| {
+                let item = item
+                    .downcast_ref::<gtk::ColumnViewCell>()
+                    .expect("a column view cell");
+                item.set_child(Some(&GameListCell::new(kind)));
+            });
+            factory.connect_bind(|_, item| {
+                let item = item
+                    .downcast_ref::<gtk::ColumnViewCell>()
+                    .expect("a column view cell");
+                if let (Some(game), Some(cell)) = (
+                    item.item().and_downcast::<GameObject>(),
+                    item.child().and_downcast::<GameListCell>(),
+                ) {
+                    cell.bind(&game);
+                }
+            });
+            factory.connect_unbind(|_, item| {
+                let item = item
+                    .downcast_ref::<gtk::ColumnViewCell>()
+                    .expect("a column view cell");
+                if let Some(cell) = item.child().and_downcast::<GameListCell>() {
+                    cell.unbind();
+                }
+            });
+            column.set_factory(Some(&factory));
+        }
+        list.connect_activate(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |list, position| {
+                let game = list
+                    .model()
+                    .and_then(|model| model.item(position))
+                    .and_downcast::<GameObject>();
+                if let Some(game) = game {
+                    window.show_details(&game.id());
+                }
+            }
+        ));
+        // Delete and the Menu key act on the focused row only, as in the grid.
+        let keys = gtk::EventControllerKey::new();
+        keys.connect_key_pressed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[upgrade_or]
+            glib::Propagation::Proceed,
+            move |_, key, _, modifiers| {
+                let Some(cell) = window.focused_list_cell() else {
+                    return glib::Propagation::Proceed;
+                };
+                let menu_key = key == gdk::Key::Menu
+                    || (key == gdk::Key::F10 && modifiers.contains(gdk::ModifierType::SHIFT_MASK));
+                if menu_key {
+                    cell.popup_menu_at(None);
+                } else if key == gdk::Key::Delete && modifiers.is_empty() {
+                    let Some(game) = cell.game() else {
+                        return glib::Propagation::Proceed;
+                    };
+                    window.remove_game(&game.id());
+                } else {
+                    return glib::Propagation::Proceed;
+                }
+                glib::Propagation::Stop
+            }
+        ));
+        list.add_controller(keys);
+
+        self.settings()
+            .bind("library-layout", &*imp.layout_switch, "active-name")
+            .build();
+        self.settings().connect_changed(
+            Some("library-layout"),
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_, _| window.update_content_page()
+            ),
+        );
+        self.connect_fullscreened_notify(|window| {
+            window
+                .imp()
+                .layout_switch
+                .set_visible(!window.is_fullscreen());
+            window.update_content_page();
+        });
+    }
+
+    /// The list cell of the row that has keyboard focus, if any: the row's first cell.
+    fn focused_list_cell(&self) -> Option<GameListCell> {
+        let focus = gtk::prelude::GtkWindowExt::focus(self)?;
+        if !focus.is_ancestor(&*self.imp().game_list) {
+            return None;
+        }
+        let mut widget = Some(focus);
+        while let Some(current) = widget {
+            if let Some(cell) = current.downcast_ref::<GameListCell>() {
+                return Some(cell.clone());
+            }
+            widget = current.first_child();
+        }
+        None
+    }
+
     fn update_tile_factory(&self) {
         let settings = self.settings();
         let size = TileSize::from_setting(&settings.string("tile-size"));
@@ -1133,15 +1274,22 @@ impl PinduWindow {
     /// change, and stopping a fling, also keeps GTK's grid from drawing nothing when the
     /// list shrinks under a scroll still in motion.
     fn scroll_grid_to_top(&self) {
-        let grid = &self.imp().grid;
-        self.imp().grid_cursor.set(0);
-        if let Some(scrolled) = grid.parent().and_downcast::<gtk::ScrolledWindow>() {
+        let imp = self.imp();
+        let grid = &imp.grid;
+        imp.grid_cursor.set(0);
+        let list = &imp.game_list;
+        for scrolled in [grid.parent(), list.parent()]
+            .into_iter()
+            .flatten()
+            .filter_map(|parent| parent.downcast::<gtk::ScrolledWindow>().ok())
+        {
             // Turning kinetic scrolling off ends any deceleration in progress.
             scrolled.set_kinetic_scrolling(false);
             scrolled.set_kinetic_scrolling(true);
         }
         if grid.model().is_some_and(|model| model.n_items() > 0) {
             grid.scroll_to(0, gtk::ListScrollFlags::NONE, None);
+            list.scroll_to(0, None, gtk::ListScrollFlags::NONE, None);
         }
     }
 

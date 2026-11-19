@@ -9,6 +9,7 @@ pub mod faugus;
 pub mod heroic;
 mod iso_time;
 pub mod itch;
+pub mod legendary;
 pub mod location;
 pub mod lutris;
 pub(crate) mod sha256;

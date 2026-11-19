@@ -145,6 +145,11 @@ impl Location {
                 ],
                 &["games.json"],
             ),
+            // Legendary has no Flatpak; Heroic keeps its own copy under its folder.
+            Source::Legendary => (
+                vec![dirs.config_home.join("legendary")],
+                &["installed.json"],
+            ),
             Source::Itch => (
                 vec![
                     dirs.config_home.join("itch"),
@@ -191,13 +196,6 @@ impl Location {
     }
 }
 
-/// Whether the Flatpak sandbox can read a source's usual folders, which its manifest grants
-/// read-only. It cannot read the itch app's: the user chooses that folder, which the
-/// portal then shares with the sandbox.
-pub fn sandbox_can_read(source: Source) -> bool {
-    source != Source::Itch
-}
-
 /// Resolves a source's folder, honouring and keeping the user override stored in its
 /// [`SourceState`], and records the result as the state's resolved location.
 pub fn resolve_and_record(
@@ -224,6 +222,13 @@ pub fn set_user_override(store: &Store, source: Source, path: Option<&Path>) -> 
         .unwrap_or_else(|| SourceState::new(source));
     state.user_override = path.map(Path::to_owned);
     store.set_source_state(&state)
+}
+
+/// Whether the Flatpak's permissions leave a source's folder out of view, so inside the
+/// sandbox it is only read from a folder the user chooses: standalone Legendary's
+/// `~/.config/legendary` and the itch app's folders, which the manifest does not ask for.
+pub fn sandbox_hides(source: Source) -> bool {
+    matches!(source, Source::Legendary | Source::Itch)
 }
 
 #[cfg(test)]
@@ -458,7 +463,7 @@ mod tests {
     }
 
     #[test]
-    fn the_sandbox_reads_exactly_the_sources_the_release_manifest_grants() {
+    fn the_sandbox_hides_exactly_the_sources_the_release_manifest_does_not_grant() {
         let dirs = dirs(Path::new("/home/me"));
         let manifest = std::fs::read_to_string(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -490,7 +495,7 @@ mod tests {
                 .candidates()
                 .iter()
                 .all(|candidate| granted.iter().any(|grant| candidate.starts_with(grant)));
-            assert_eq!(sandbox_can_read(source), readable, "{source}");
+            assert_eq!(sandbox_hides(source), !readable, "{source}");
         }
     }
 }

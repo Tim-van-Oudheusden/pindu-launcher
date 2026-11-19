@@ -62,6 +62,16 @@ pub async fn set_api_key(key: &str) -> Result<(), String> {
         .map_err(|error| error.to_string())
 }
 
+/// What the stored key's row says about [`api_key`]'s answer, without showing the key:
+/// one is stored, none is yet, or the keyring cannot be used and why.
+pub(crate) fn key_status(stored: &Result<Option<String>, String>) -> String {
+    match stored {
+        Ok(Some(_)) => gettext("A key is stored in your keyring"),
+        Ok(None) => gettext("None yet"),
+        Err(error) => gettext("The keyring cannot be used: {error}").replace("{error}", error),
+    }
+}
+
 /// Fetches SteamGridDB art for the games in the library that lack it (see
 /// [`layouts_to_fetch`]), the top image per layout, and says what it did; `on_start` hears
 /// how many games want art before the first request. Without a stored key nothing is

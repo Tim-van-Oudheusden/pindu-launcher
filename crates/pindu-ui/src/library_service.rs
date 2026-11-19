@@ -431,7 +431,8 @@ impl LibraryService {
         .await;
     }
 
-    /// Writes a backup of what the user made here to `path`.
+    /// Writes a backup of what the user made here to `path`, and records `now` as the time
+    /// of the last backup once it is written.
     pub async fn export_backup(&self, path: PathBuf, now: Timestamp) -> Result<(), String> {
         gtk::gio::spawn_blocking(move || {
             let store =
@@ -440,7 +441,22 @@ impl LibraryService {
             std::fs::write(&path, text).map_err(|error| error.to_string())
         })
         .await
-        .unwrap_or_else(|_| Err("the export stopped unexpectedly".into()))
+        .unwrap_or_else(|_| Err("the export stopped unexpectedly".into()))?;
+        let settings = gtk::gio::Settings::new(APP_ID);
+        if let Err(error) = gtk::gio::prelude::SettingsExt::set_int64(&settings, "last-backup", now)
+        {
+            glib::g_warning!("pindu", "Could not record the backup time: {error}");
+        }
+        Ok(())
+    }
+
+    /// When the library was last backed up (exported), if it ever was; the last-backup
+    /// input of the Library Health report's Library data section.
+    pub fn last_backup(&self) -> Option<Timestamp> {
+        backup::last_backup(gtk::gio::prelude::SettingsExt::int64(
+            &gtk::gio::Settings::new(APP_ID),
+            "last-backup",
+        ))
     }
 
     /// Restores the backup at `path` into the library, then reloads the model.

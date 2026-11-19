@@ -24,7 +24,9 @@
 //! a Store `add_store`. Design and Settings are this module's: the design, its variant,
 //! Home's background blur and dim and the user's own stylesheet, then cover size,
 //! navigation sounds and their volume, exiting after a launch, Reduce Motion and Larger
-//! Text, the same settings Preferences changes.
+//! Text, the SteamGridDB key (typed hidden with the on-screen keyboard of `secret_dialog`
+//! and kept in the keyring) and Prefer SteamGridDB Art, the same settings Preferences
+//! changes.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::sync::LazyLock;
@@ -39,6 +41,7 @@ use pindu_core::gamescope::prompts::{PromptHost, prompt_host};
 use pindu_core::home::{BLUR_KEY, DIM_KEY};
 use pindu_core::keys;
 use pindu_core::model::GameId;
+use pindu_core::osk::Keyboard;
 use pindu_core::panels::{PageEntry, QuickAccessLevel, design_choices, variant_choices};
 use pindu_core::paths;
 use pindu_core::tasks::Task;
@@ -57,6 +60,8 @@ use crate::fullscreen_sound_output::PinduSoundOutputLevel;
 use crate::fullscreen_system_update::PinduSystemUpdateLevel;
 use crate::models::GameObject;
 use crate::preferences::TILE_SIZES;
+use crate::secret_dialog::ask_secret;
+use crate::steamgriddb_service;
 
 mod imp {
     use super::*;
@@ -121,6 +126,12 @@ mod imp {
         #[template_child]
         pub swap: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub repeat_delay: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub repeat_rate: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub dead_zone: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub controls_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub controls: TemplateChild<gtk::Box>,
@@ -148,6 +159,12 @@ mod imp {
         pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub large_text_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub artwork: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub steamgriddb_key_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub prefer_steamgriddb_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub filters_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
@@ -394,6 +411,7 @@ impl PinduQuickAccess {
             Some(QuickAccessLevel::SystemUpdate) => self.show_system_update(),
             Some(QuickAccessLevel::AddStore) => self.show_add_store(),
             Some(QuickAccessLevel::Network) => self.show_network(),
+            Some(QuickAccessLevel::Settings) => self.show_steamgriddb_key(),
             _ => {}
         }
         if let Some(level) = level {
@@ -710,9 +728,13 @@ impl PinduQuickAccess {
             imp.controllers.get(),
             imp.prompts.get(),
             imp.swap.get(),
+            imp.repeat_delay.get(),
+            imp.repeat_rate.get(),
+            imp.dead_zone.get(),
             imp.sizes.get(),
             imp.switches.get(),
             imp.accessibility.get(),
+            imp.artwork.get(),
             imp.filters.get(),
             imp.clear_filters.get(),
             bluetooth_adapter,
@@ -768,6 +790,14 @@ impl PinduQuickAccess {
         settings
             .bind("fullscreen-large-text", &*imp.large_text_row, "active")
             .build();
+        settings
+            .bind("prefer-steamgriddb", &*imp.prefer_steamgriddb_row, "active")
+            .build();
+        imp.steamgriddb_key_row.connect_activated(glib::clone!(
+            #[weak(rename_to = quick_access)]
+            self,
+            move |_| quick_access.ask_steamgriddb_key()
+        ));
         let toggles = [
             imp.tile_small.get(),
             imp.tile_medium.get(),
@@ -1003,6 +1033,60 @@ impl PinduQuickAccess {
             .into_iter()
             .find(|choice| choice.active)
             .map(|choice| choice.id)
+    }
+
+    /// The SteamGridDB key's row: whether a key is stored, without showing it, or why the
+    /// keyring cannot be used, in which case there is nothing to type the key for.
+    fn show_steamgriddb_key(&self) {
+        let quick_access = self.downgrade();
+        glib::spawn_future_local(async move {
+            let stored = steamgriddb_service::api_key().await;
+            let Some(quick_access) = quick_access.upgrade() else {
+                return;
+            };
+            let row = &quick_access.imp().steamgriddb_key_row;
+            row.set_subtitle(&steamgriddb_service::key_status(&stored));
+            row.set_sensitive(stored.is_ok());
+        });
+    }
+
+    /// Asks for the SteamGridDB key, hidden, with the on-screen keyboard, and stores it in
+    /// the keyring; missing art is fetched once it is. Nothing is kept on Cancel or with
+    /// nothing typed.
+    fn ask_steamgriddb_key(&self) {
+        ask_secret(
+            self,
+            &gettext("SteamGridDB Key"),
+            &gettext(
+                "Type your API key from SteamGridDB's preferences. It is kept in your keyring.",
+            ),
+            Keyboard::passphrase(),
+            glib::clone!(
+                #[weak(rename_to = quick_access)]
+                self,
+                move |key: Option<String>| {
+                    let Some(key) = key.filter(|key| !key.trim().is_empty()) else {
+                        return;
+                    };
+                    glib::spawn_future_local(async move {
+                        let saved = steamgriddb_service::set_api_key(&key).await;
+                        match saved {
+                            Ok(()) => {
+                                quick_access.show_steamgriddb_key();
+                                if let Some(application) = quick_access.application() {
+                                    application
+                                        .activate_action("fetch-art", Some(&true.to_variant()));
+                                }
+                            }
+                            Err(error) => quick_access.imp().steamgriddb_key_row.set_subtitle(
+                                &gettext("The key was not saved: {error}")
+                                    .replace("{error}", &error),
+                            ),
+                        }
+                    });
+                }
+            ),
+        );
     }
 }
 

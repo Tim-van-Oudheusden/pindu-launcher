@@ -32,6 +32,7 @@
     <file preprocess="xml-stripblanks">home/heroic-sideload.svg</file>
     <file preprocess="xml-stripblanks">home/installed.svg</file>
     <file preprocess="xml-stripblanks">home/itch.svg</file>
+    <file preprocess="xml-stripblanks">home/legendary.svg</file>
     <file preprocess="xml-stripblanks">home/lutris.svg</file>
     <file preprocess="xml-stripblanks">home/manual.svg</file>
     <file preprocess="xml-stripblanks">home/recently-played.svg</file>

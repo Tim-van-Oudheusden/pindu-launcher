@@ -44,19 +44,27 @@ widgets so it looks and behaves like the rest of GNOME.
 
 ## Features
 
-- **Every launcher, one library.** Steam, Heroic, Lutris, Bottles, Faugus, itch, games installed as apps (Flatpaks
-  included) and games you add yourself, side by side. The library resyncs when a launcher's files change.
+- **Every launcher, one library.** Steam, Heroic, Lutris, Bottles, Faugus, Legendary, itch, games installed as apps
+  (Flatpaks included) and games you add yourself, side by side. The library resyncs when a launcher's files change.
 - **Launchers stay in charge.** Store games start through their own launcher, which keeps their settings, updates and
   playtime. Pindu launcher only reads the launchers' files and never writes to them.
 - **Windows games too.** Add a Windows game, or its installer, by hand and it runs with Proton through
   [umu](https://github.com/Open-Wine-Components/umu-launcher) in a prefix of its own. Download GE-Proton and
   Proton-CachyOS builds from Preferences, and turn on MangoHud or GameMode per game.
+- **Start Safely.** When a game Pindu runs itself breaks, **Start Safely** in its page's menu, or in fullscreen's
+  options, starts it once without its wrappers, MangoHud, GameMode or its own environment variables, and keeps a log
+  as **Play with Logs** does, so a broken overlay or wrapper tells itself apart from a broken game. Its saved settings
+  stay as they are.
 - **A fullscreen mode for the couch.** A controller-first Home, library and game pages, a Quick Access panel, an
   on-screen keyboard for search and navigation sounds, with switchable designs and your own CSS
   ([Fullscreen mode](#fullscreen-mode)).
-- **A tidy library.** Search, sort and filter by installed, favourite, Windows or native. Group games into your own
-  collections, jump back into recent games and hide the ones you never play.
+- **A tidy library.** Browse covers in a grid, or switch the desktop window to a list with each game's source, install
+  state, last played date and playtime. Search, sort and filter by installed, favourite, Windows or native, in either
+  layout. Group games into your own collections, jump back into recent games and hide the ones you never play.
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
+- **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
+  [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu
+  launcher only hands the address over and fetches nothing from either site.
 - **Your artwork.** Covers, banners and logos from your launchers, from your own files, or from
   [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring. **Change
   Artwork** on a game's page, in both modes, pages through every SteamGridDB image of each kind.
@@ -64,7 +72,8 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
 - **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
-  and import them again.
+  and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
+  beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 
 ## Game sources
 
@@ -75,16 +84,19 @@ widgets so it looks and behaves like the rest of GNOME.
 | Lutris, native or Flatpak | Lutris games | Through Lutris |
 | Bottles, native or Flatpak | Programs in your bottles | Through Bottles |
 | Faugus Launcher, native or Flatpak | Faugus games | On the host ([needs host access](#starting-games-on-the-host)) |
+| Legendary, the standalone client, native only | Installed Epic Games Store games that Heroic does not already list | On the host with `legendary launch` ([needs host access](#starting-games-on-the-host)) |
 | itch, native or Flatpak | Games installed through the itch app, with their playtime | Through the itch app |
 | Desktop entries and Flatpaks | Games installed as apps | On the host ([needs host access](#starting-games-on-the-host)) |
 | Added by hand | Native programs, and Windows games or installers | Native ones on the host; Windows ones with Proton in the sandbox |
 
 The importers read each launcher's data read-only and never its credentials: from the itch app's database they read
-its installs and games, never the profiles that hold your itch.io key.
+its installs and games, never the profiles that hold your itch.io key. Preferences, Sources shows for each source the
+folder it was found in, when it last synced and the problems that sync ran into.
 
-The Flatpak cannot see the itch app's folder (`~/.config/itch`, or `~/.var/app/io.itch.itch/config/itch` for the itch
-Flatpak) on its own, and Pindu launcher does not ask for access to it. **Preferences → Sources → itch** says so; choose
-the folder there with **Choose…** and the file chooser shares it with the sandbox. Native packages find it themselves.
+The Flatpak has no permission for Legendary's `~/.config/legendary` or the itch app's folder (`~/.config/itch`, or
+`~/.var/app/io.itch.itch/config/itch` for the itch Flatpak), and does not ask for one: Preferences → Sources says so,
+and **Choose…** in the source's row imports the folder you pick through the file chooser. Native packages find them
+themselves.
 
 ## Installing
 
@@ -128,9 +140,9 @@ Pick one:
 ### Starting games on the host
 
 Store games start through the OpenURI portal and always work. Games that start as a program on the host (desktop
-entries, Flatpak games, Faugus games and native games added by hand) need the app to reach the host through
-`org.freedesktop.Flatpak`, which Pindu launcher never asks for itself. Until you grant it, those games explain what is
-missing instead of failing, and **Preferences → Permissions** shows the command:
+entries, Flatpak games, Faugus and Legendary games, and native games added by hand) need the app to reach the host
+through `org.freedesktop.Flatpak`, which Pindu launcher never asks for itself. Until you grant it, those games explain
+what is missing instead of failing, and **Preferences → Permissions** shows the command:
 
 ```sh
 flatpak override --user --talk-name=org.freedesktop.Flatpak io.github.tim_van_oudheusden.pindu-launcher
@@ -170,6 +182,8 @@ Preferences.
 ### Getting around
 
 - **Move** with the D-pad or left stick, **open** with A and **go back** with B.
+- A **game page** shows the game's developer, genres and description below its buttons. Once a long description has
+  focus, Down scrolls through it and Up scrolls back to its start before moving on.
 - The **hint bar** at the bottom names the buttons that work on each screen, drawn with the app's own glyphs for the
   controller you hold.
 - **Controls** in Quick Access lists everything the buttons do, grouped into moving, the library, the panels and
@@ -217,6 +231,9 @@ Guide + A never also opens the menu drawer.
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
   - **Larger Text:** fullscreen text about a quarter larger.
+- **Artwork:** your SteamGridDB key, typed hidden with the on-screen keyboard (Show reveals it) and kept in the system
+  keyring, never in settings or files; the row says whether a key is stored, or that the keyring cannot be used and
+  why. Missing art is fetched once a key is saved. **Prefer SteamGridDB Art** is here too.
 - **Sound Output**, subtitled with the output in use, lists the outputs PipeWire has (speakers, a television over
   HDMI, a receiver, a Bluetooth headset) with a check on the one in use. Choose one to make it the default; WirePlumber
   keeps the choice after a restart, and games that follow the default move to it. It reads the outputs with `pw-dump`
@@ -314,6 +331,10 @@ ones already installed, and installs the one you pick from Flathub, all with a c
 - **Button Prompts** (there or in Preferences) picks the glyphs instead of following the controller: letters, shapes,
   or letters with A on the right. This helps under Steam Input, where every controller looks like Steam's own.
 - **Swap Confirm and Back** makes the right button confirm and the bottom one go back everywhere in fullscreen mode.
+- **Repeat Delay**, **Repeat Rate** and **Stick Dead Zone**, also in Quick Access's Controllers, set how soon and how
+  fast a held direction keeps moving focus, and how far the left stick moves before it does: a long delay for a hand
+  that lets go late, a large dead zone for a stick that drifts. They change only how the launcher moves its own focus;
+  a game receives the controller unchanged.
 - **Controls** in the menu drawer (Start or Guide) lists what the buttons can do (Select, Back, Search, Game Options,
   Menu, Quick Access and the tab and sort switches) with the button for each. Choose one and press the button to give
   it; the function that had that button takes the old one. Guide, or five seconds without a press, leaves it as it was.
@@ -556,7 +577,7 @@ add-ons) and how to start a translation by hand.
 
 ```mermaid
 flowchart LR
-  launchers["Steam, Heroic, Lutris,<br/>Bottles, Faugus, itch,<br/>desktop entries, Flatpaks"]
+  launchers["Steam, Heroic, Lutris,<br/>Bottles, Faugus, Legendary,<br/>itch, desktop entries, Flatpaks"]
 
   subgraph core["pindu-core: no GTK"]
     importers["Importers<br/>sources/"] --> store[("Library<br/>SQLite")]
@@ -619,14 +640,20 @@ problems privately as [`SECURITY.md`](SECURITY.md) describes. For code, read [`C
 to build, pick an issue, work test-first and open a pull request that passes the quality gates. AI agents follow
 [`AGENTS.md`](AGENTS.md), and everyone follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+When you report a bug, open **About Pindu launcher** from the main menu, then **Troubleshooting → Debugging
+Information**, and copy or save the report into the issue. It names the version, how the app was installed, your
+distribution and session, each source's state and game count, the sandbox permissions, the tools found, the library's
+schema version and the last sync's problems. It holds no game titles and writes your home folder as `~`; nothing is
+sent anywhere.
+
 ## Acknowledgments
 
 - [Cartridges](https://codeberg.org/kramo/cartridges) by kramo, the GNOME game launcher that showed how a libadwaita
   game library can look.
 - [Heroic Games Launcher](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher),
   [Lutris](https://github.com/lutris/lutris), [Bottles](https://github.com/bottlesdevs/Bottles),
-  [Faugus Launcher](https://github.com/Faugus/faugus-launcher) and [itch](https://github.com/itchio/itch), whose
-  libraries Pindu launcher reads.
+  [Faugus Launcher](https://github.com/Faugus/faugus-launcher), [Legendary](https://github.com/legendary-gl/legendary)
+  and [itch](https://github.com/itchio/itch), whose libraries Pindu launcher reads.
 - [OpenGamepadUI](https://github.com/ShadowBlip/OpenGamepadUI), for how a couch-first game library behaves.
 - [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher),
   [GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom) and
