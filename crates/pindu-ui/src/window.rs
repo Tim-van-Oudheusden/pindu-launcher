@@ -20,6 +20,7 @@ use pindu_core::library::{
 use pindu_core::model::{GameId, Source};
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{GameOption, Panels};
+use pindu_core::search::ResultCount;
 
 use crate::add_store::PinduAddStoreLevel;
 use crate::application::PinduApplication;
@@ -215,6 +216,9 @@ mod imp {
         pub library: OnceCell<LibraryModel>,
         /// The desktop library's selection mode and the games it selected.
         pub selection: LibrarySelection,
+        /// The number of matching games, told to screen readers once search or filter
+        /// changes pause, and the timer that waits for the pause.
+        pub result_count: RefCell<(ResultCount, Option<glib::SourceId>)>,
         /// Every sidebar row with the view it selects and, for sources, its count label.
         pub views: RefCell<Vec<(adw::SidebarItem, View, gtk::Label)>>,
         /// The collection whose sidebar menu is open.
@@ -625,6 +629,7 @@ impl PinduWindow {
             self,
             move |entry| {
                 window.scroll_grid_to_top();
+                window.results_changing();
                 window.library().set_search(&entry.text());
                 window.update_jump_back_in();
             }
@@ -642,7 +647,10 @@ impl PinduWindow {
             toggle.connect_toggled(glib::clone!(
                 #[weak(rename_to = window)]
                 self,
-                move |_| window.apply_filters()
+                move |_| {
+                    window.results_changing();
+                    window.apply_filters();
+                }
             ));
         }
         imp.clear_filters.connect_clicked(glib::clone!(
@@ -704,6 +712,7 @@ impl PinduWindow {
                     Some(genre) => genre.clone(),
                     None => gettext("Genre"),
                 });
+                window.results_changing();
                 window.apply_filters();
             }
         ));
@@ -731,6 +740,44 @@ impl PinduWindow {
         }
         menu.append_section(None, &genres);
         self.imp().genre_filter.set_menu_model(Some(&menu));
+    }
+
+    /// The search or a filter is about to change the shown games: once the changes pause
+    /// for [`RESULT_COUNT_DELAY`], screen readers hear how many games now match, unless
+    /// that is as many as before. Fullscreen mode's search keyboard speaks for itself.
+    fn results_changing(&self) {
+        if self.is_fullscreen() {
+            return;
+        }
+        let count = self.library().model().n_items();
+        let mut result_count = self.imp().result_count.borrow_mut();
+        result_count.0.change(count);
+        if let Some(source) = result_count.1.take() {
+            source.remove();
+        }
+        let source = glib::timeout_add_local_once(
+            RESULT_COUNT_DELAY,
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move || {
+                    let count = window.library().model().n_items();
+                    let settled = {
+                        let mut result_count = window.imp().result_count.borrow_mut();
+                        // This timer has fired.
+                        result_count.1.take();
+                        result_count.0.settle(count)
+                    };
+                    if let Some(count) = settled {
+                        window.announce(
+                            &result_count_text(count),
+                            gtk::AccessibleAnnouncementPriority::Medium,
+                        );
+                    }
+                }
+            ),
+        );
+        result_count.1.replace(source);
     }
 
     /// Applies the filters: the desktop window's filter row, or fullscreen mode's own from
@@ -1698,6 +1745,19 @@ const GRID_CHILD_PADDING: i32 = 12;
 /// tile's padding there, as in `style.css`. Wider than the lifted, ringed cover reaches
 /// past its edge (about 15 pixels for a large cover), so it never overlaps a neighbour.
 const FULLSCREEN_GRID_GAP: i32 = 32;
+
+/// How long search and filter changes pause before screen readers hear the number of
+/// matching games: long enough that typing a word gives one announcement.
+const RESULT_COUNT_DELAY: std::time::Duration = std::time::Duration::from_millis(1000);
+
+/// What a screen reader hears for `count` matching games.
+fn result_count_text(count: u32) -> String {
+    if count == 0 {
+        gettext("No games found")
+    } else {
+        ngettext("{count} game", "{count} games", count).replace("{count}", &count.to_string())
+    }
+}
 
 const SORT_MODES: [(SortMode, &str); 5] = [
     (SortMode::LastPlayed, "last-played"),

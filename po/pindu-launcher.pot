@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 21:26+0100\n"
+"POT-Creation-Date: 2026-11-19 21:27+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -594,8 +594,8 @@ msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:349
 #: crates/pindu-ui/src/collection_actions.rs:403
-#: crates/pindu-ui/src/selection_mode.rs:247 crates/pindu-ui/src/window.rs:942
-#: crates/pindu-ui/src/window.rs:981
+#: crates/pindu-ui/src/selection_mode.rs:247 crates/pindu-ui/src/window.rs:989
+#: crates/pindu-ui/src/window.rs:1028
 msgid "_Undo"
 msgstr ""
 
@@ -790,7 +790,7 @@ msgstr ""
 #: crates/pindu-ui/src/first_sync_summary.rs:33
 #: crates/pindu-ui/src/launch_service.rs:364
 #: crates/pindu-ui/src/proton_launch.rs:446
-#: crates/pindu-ui/src/proton_launch.rs:695 crates/pindu-ui/src/window.rs:1585
+#: crates/pindu-ui/src/proton_launch.rs:695 crates/pindu-ui/src/window.rs:1632
 msgid "_Close"
 msgstr ""
 
@@ -1436,6 +1436,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_health.rs:356
 #: crates/pindu-ui/src/health_page.rs:307 crates/pindu-ui/src/home_page.rs:82
+#: crates/pindu-ui/src/window.rs:1758
 #, rust-format
 msgid "{count} game"
 msgid_plural "{count} games"
@@ -1476,7 +1477,7 @@ msgid "Read how to install it on another device: {address}"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:105
-#: crates/pindu-ui/src/window.rs:725
+#: crates/pindu-ui/src/window.rs:734
 msgid "Any Genre"
 msgstr ""
 
@@ -1612,14 +1613,14 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_panels.rs:789
 #: crates/pindu-ui/src/hint_bar.rs:225
 #: crates/pindu-ui/src/widgets/cover_tile.rs:265
-#: crates/pindu-ui/src/window.rs:1754 data/ui/cover_tile.blp:65
+#: crates/pindu-ui/src/window.rs:1814 data/ui/cover_tile.blp:65
 msgid "Play"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:791
 #: crates/pindu-ui/src/hint_bar.rs:226
 #: crates/pindu-ui/src/widgets/cover_tile.rs:263
-#: crates/pindu-ui/src/window.rs:1752
+#: crates/pindu-ui/src/window.rs:1812
 msgid "Stop"
 msgstr ""
 
@@ -2560,11 +2561,11 @@ msgstr ""
 msgid "Hold to Stop"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:47 crates/pindu-ui/src/window.rs:836
+#: crates/pindu-ui/src/home_page.rs:47 crates/pindu-ui/src/window.rs:883
 msgid "Today"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:48 crates/pindu-ui/src/window.rs:837
+#: crates/pindu-ui/src/home_page.rs:48 crates/pindu-ui/src/window.rs:884
 msgid "This Week"
 msgstr ""
 
@@ -3467,56 +3468,60 @@ msgstr ""
 msgid "Metadata From Wikidata"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:582
+#: crates/pindu-ui/src/window.rs:586
 msgid "No logs yet: start the game with Play with Logs"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:602
+#: crates/pindu-ui/src/window.rs:606
 msgid "The log is gone"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:838
+#: crates/pindu-ui/src/window.rs:885
 msgid "Earlier"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:906
+#: crates/pindu-ui/src/window.rs:953
 msgid "Three games are pinned already; unpin one first"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:920
+#: crates/pindu-ui/src/window.rs:967
 msgid "Hidden Games"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:941
+#: crates/pindu-ui/src/window.rs:988
 #, rust-format
 msgid "“{title}” removed"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:980
+#: crates/pindu-ui/src/window.rs:1027
 #, rust-format
 msgid "“{title}” hidden"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1564
+#: crates/pindu-ui/src/window.rs:1611
 #, rust-format
 msgid "One import problem"
 msgid_plural "{count} import problems"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/window.rs:1567 data/ui/game_dialog.blp:167
+#: crates/pindu-ui/src/window.rs:1614 data/ui/game_dialog.blp:167
 msgid "Details"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1582
+#: crates/pindu-ui/src/window.rs:1629
 msgid "Some Games Could Not Be Imported"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1800
+#: crates/pindu-ui/src/window.rs:1756
+msgid "No games found"
+msgstr ""
+
+#: crates/pindu-ui/src/window.rs:1860
 msgid "Pinned"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1820
+#: crates/pindu-ui/src/window.rs:1880
 #, rust-format
 msgid "{title}, pinned"
 msgstr ""
