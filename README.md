@@ -232,7 +232,9 @@ Guide + A never also opens the menu drawer.
 - **Accessibility:**
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
-  - **Larger Text:** fullscreen text about a quarter larger.
+  - **Text Size:** fullscreen text at its default size or Large, Larger or Largest, each step about a quarter of
+    the default larger. Preferences has the same choice; an install that had the former Larger Text on starts at
+    Large.
   - **Hold to Confirm** (off by default): Power Off, Restart, Forget and Stop then need the controller's confirm button
     held down for a second. A popover over the entry fills as you hold, and letting go early or pressing another
     button does nothing; the hint bar says **Hold to Confirm** on them. The keyboard and the pointer still act at once.
@@ -256,7 +258,12 @@ whole tab back. These filters are separate from the desktop window's filter row 
 With a game Pindu runs itself focused, or on its page, **Performance** turns its **Performance Overlay** (MangoHud)
 and **GameMode** on or off from its next launch. Its options sheet (View or X) has the same switches.
 
-- Store games have neither, since their launcher keeps their settings.
+For a Windows game Pindu runs through Proton, Performance also lists its **Proton** build: the default from
+Preferences, then the builds on this machine, newest first. It is the same setting as the desktop game page's Proton
+row, and it applies the next time the game starts.
+
+- Store games have neither, since their launcher keeps their settings; games that do not run through Proton have no
+  Proton list.
 - While the game runs, the panel says a change waits for its next start.
 - In the Flatpak, Windows games and games in the Steam Linux Runtime get MangoHud from the
   `org.freedesktop.Platform.VulkanLayer.MangoHud` extension, which Flathub builds for x86_64 only. Games started on the
