@@ -4,7 +4,7 @@ GitHub Releases are the release channel. A `v*` tag runs `.github/workflows/rele
 Flatpak from `build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml`, a source tarball with the crates
 vendored (`meson dist`), and from that tarball an RPM for Fedora 45 and `.deb`s for Debian testing and Ubuntu 26.10.
 The bundle and the packages are built for x86_64 and aarch64, each natively on a GitHub runner of that architecture.
-It publishes them with checksums and notes. Nothing is uploaded by hand.
+It publishes them with checksums and notes, and signs build provenance for the RPMs. Nothing is uploaded by hand.
 
 ```mermaid
 flowchart LR
@@ -13,9 +13,10 @@ flowchart LR
   version --> sources[meson dist: vendor crates, build and test offline]
   sources --> packages[RPM and DEBs, built offline]
   packages --> smoke[install in clean containers, UI smoke test, cover decoded through glycin]
+  smoke --> provenance[RPM build provenance, signed through Sigstore]
   flatpak --> publish[GitHub release: bundle, tarball, packages, SHA256SUMS, notes]
   sources --> publish
-  smoke --> publish
+  provenance --> publish
 ```
 
 ## Cut a release
@@ -47,7 +48,7 @@ flowchart LR
    architecture, `pindu-launcher-X.Y.Z-<x86_64|aarch64>.flatpak`, `pindu-launcher-X.Y.Z-1.fc45.<x86_64|aarch64>.rpm`,
    `pindu-launcher-X.Y.Z-debian-testing-<amd64|arm64>.deb` and `pindu-launcher-X.Y.Z-ubuntu-26.10-<amd64|arm64>.deb`,
    plus `pindu-launcher-X.Y.Z.tar.xz` and `SHA256SUMS`. Install the bundle (the notes say how), start it, and check
-   that it opens and imports a library.
+   that it opens and imports a library. Check an RPM's [build provenance](#verify-an-rpms-build-provenance).
 9. **Run the [hardware checklist](#hardware-checklist)** on the release's files, on one real machine, and record the
    result on the "Release X.Y.Z" issue. Run it on a pre-release, then tag the final version, so a failed check never
    reaches a final release.
@@ -109,6 +110,25 @@ release's `SHA256SUMS`.
   `nix hash convert --hash-algo sha256 --to sri <sha256>`. There is no `cargoHash`: the build uses the tarball's
   vendored crates. Try it in a `nixos/nix` container with
   `nix-build -E 'with import <nixpkgs> { }; callPackage ./build-aux/nix/package.nix { }'`.
+
+## Verify an RPM's build provenance
+
+The Release workflow's `provenance` job signs a [build provenance
+attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations) for each RPM
+with `actions/attest-build-provenance`, before the release is published. It records which workflow run built the file,
+from which commit, and is signed through Sigstore with the run's identity, so no one can forge it without this
+repository's workflow. Pindu OS asks for it, so it can check a release RPM before it installs one. Check one with the
+GitHub CLI:
+
+```sh
+gh release download vX.Y.Z -R Tim-van-Oudheusden/pindu-launcher -p 'pindu-launcher-*.fc45.x86_64.rpm'
+gh attestation verify pindu-launcher-X.Y.Z-1.fc45.x86_64.rpm -R Tim-van-Oudheusden/pindu-launcher \
+  --signer-workflow Tim-van-Oudheusden/pindu-launcher/.github/workflows/release.yml
+```
+
+It prints `Verification succeeded!` and the workflow run that built the file; a changed file, or one built anywhere
+else, fails. A rerun of the workflow by hand signs the rebuilt files again; that attestation names the branch the run
+was started from as its source, and the tag is the run's input.
 
 ## When something goes wrong
 
