@@ -36,6 +36,29 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **Backups.** Backup format 2 carries groups, preferred copies and remembered splits, naming games by their
   per-source IDs. Format 1 still imports; a group whose games are absent is skipped and counted.
 
+## How groups are stored and read
+
+Schema migration 6 (#504) adds the grouping layer; the rules follow spike #501.
+
+- **Stored:** each group's games (a game is in at most one group), the preferred copy only when the user chose one,
+  whether the group was made automatically, and the remembered "not the same game" pairs. Beside them, every sync
+  stores what a source says beyond the game's own fields: Lutris's runner, the store record it links the game to
+  (`service`, `service_id`) and the release year.
+- **Untouched by a sync.** A sync never changes a group, a preferred copy or a remembered pair. A copy gone from its
+  source stays in its group and keeps its playtime; only deleting a game takes it out, and a group left with one game
+  ends.
+- **Ungrouping** removes only the group, so the games are exactly as they were. Splitting a group, by hand or as the
+  undo of an automatic group, also remembers each pair, so neither the automatic grouping nor a suggestion brings it
+  back. An automatic group is never made for a game already in a group or for a remembered pair.
+- **Default preferred copy** (computed, never stored): installed before not installed, then Linux, unknown, Windows,
+  then the source order (default Steam, Heroic GOG, Heroic Epic, Heroic Amazon, Lutris, Faugus, Bottles, Heroic
+  sideload, manual, desktop), then most recently played, then game ID. Play starts the preferred copy, or the first
+  installed copy in that order when the user's choice is not installed.
+- **Playtime** (computed, never stored): the Steam copy and every Lutris copy whose runner is `steam` were timed
+  together, so they count once, by the largest figure among them; every other copy was played apart and adds up. Steam
+  10 h with Lutris (runner `steam`) 2 h is 10 h; Steam 10 h with Heroic GOG 5 h is 15 h. A group was last played when
+  any copy was.
+
 ## Flatpak, native and Pindu OS
 
 The same everywhere: grouping needs no permission and no network. The Lutris fields are read from `pga.db` in its

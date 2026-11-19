@@ -16,6 +16,7 @@ pub mod controls;
 pub mod custom_style;
 pub mod focus;
 pub mod game_control;
+pub mod game_groups;
 pub mod gamepad;
 pub mod gamescope;
 pub mod grid;
