@@ -628,6 +628,11 @@ fn more_menu(object: &GameObject, collections: &[Collection]) -> gio::Menu {
             logs.append_item(&item(gettext("Start _Safely"), "app.start-safely"));
         }
         logs.append_item(&item(gettext("Open Latest L_og"), "win.open-log"));
+        // About's Debugging Information with the newest log after it, for a bug report.
+        logs.append_item(&item(
+            gettext("_Debugging Information with Log"),
+            "app.about-with-log",
+        ));
         if saves::offers_snapshots(&game) {
             logs.append_item(&item(gettext("Save S_napshots…"), "win.save-snapshots"));
         }
