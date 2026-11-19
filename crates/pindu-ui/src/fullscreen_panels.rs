@@ -356,6 +356,9 @@ impl PinduWindow {
             .set_can_focus(!drawer && !quick_access && !sheet);
         imp.drawer.set_can_focus(!sheet);
         imp.drawer.set_show_sidebar(drawer);
+        if quick_access {
+            self.fit_quick_access(quick_access_level);
+        }
         imp.quick_access.set_show_sidebar(quick_access);
         imp.options_sheet.set_open(sheet);
         // After the sidebar shows, as the split view gives focus back into it.

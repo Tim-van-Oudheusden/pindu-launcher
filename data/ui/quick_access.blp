@@ -562,6 +562,32 @@ template $PinduQuickAccess: Box {
                 }
               };
             }
+
+            // The diagnostics report, to photograph a page at a time; a copy is
+            // saved as it opens.
+            ListBoxRow report_row {
+              action-name: "win.quick-access-diagnostics-report";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "dialog-information-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Diagnostics Report");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
           }
         };
       };
@@ -1449,6 +1475,12 @@ template $PinduQuickAccess: Box {
       name: "add-store";
 
       child: $PinduAddStoreLevel add_store_level {};
+    }
+
+    StackPage {
+      name: "diagnostics-report";
+
+      child: $PinduReportLevel report_level {};
     }
 
     StackPage {

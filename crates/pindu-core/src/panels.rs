@@ -1,9 +1,10 @@
 //! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
 //! leaving, and the machine's power), the Quick Access panel on the right (notifications,
 //! what runs in the background, the design, the controllers and what each button does, a
-//! few settings, the network, Bluetooth, the sound output, OS updates on Pindu OS, and
-//! entries for the page under it such as the library's filters and a focused game's
-//! performance switches) and the options sheet at the bottom (what to do with one game).
+//! few settings, the network, Bluetooth, the sound output, OS updates on Pindu OS, the
+//! diagnostics report, and entries for the page under it such as the library's filters
+//! and a focused game's performance switches) and the options sheet at the bottom (what
+//! to do with one game).
 //! This decides which one is open and at which level, what Start, Guide, R3, View or X and
 //! B do to them, and what each lists.
 
@@ -85,11 +86,14 @@ pub enum QuickAccessLevel {
     /// The stores to install from Flathub, and the install that runs (see
     /// [`crate::add_store`]).
     AddStore,
+    /// The diagnostics report in pages to photograph, a copy of which is saved as it opens
+    /// (see [`crate::report_screen`]).
+    DiagnosticsReport,
 }
 
 impl QuickAccessLevel {
     /// Every level, the entries first.
-    pub const ALL: [Self; 14] = [
+    pub const ALL: [Self; 15] = [
         Self::Main,
         Self::Notifications,
         Self::Activity,
@@ -104,6 +108,7 @@ impl QuickAccessLevel {
         Self::SoundOutput,
         Self::SystemUpdate,
         Self::AddStore,
+        Self::DiagnosticsReport,
     ];
 
     /// The name the level goes by: its page of the panel's stack, and what a row asks for
@@ -124,6 +129,7 @@ impl QuickAccessLevel {
             Self::SoundOutput => "sound-output",
             Self::SystemUpdate => "system-update",
             Self::AddStore => "add-store",
+            Self::DiagnosticsReport => "diagnostics-report",
         }
     }
 
@@ -491,6 +497,10 @@ mod tests {
         assert_eq!(QuickAccessLevel::SoundOutput.name(), "sound-output");
         assert_eq!(QuickAccessLevel::SystemUpdate.name(), "system-update");
         assert_eq!(QuickAccessLevel::AddStore.name(), "add-store");
+        assert_eq!(
+            QuickAccessLevel::DiagnosticsReport.name(),
+            "diagnostics-report"
+        );
     }
 
     #[test]
@@ -549,6 +559,7 @@ mod tests {
             QuickAccessLevel::Bluetooth,
             QuickAccessLevel::SoundOutput,
             QuickAccessLevel::SystemUpdate,
+            QuickAccessLevel::DiagnosticsReport,
         ] {
             let mut panels = Panels::new();
             panels.handle(Intent::QuickAccess, PAGE);

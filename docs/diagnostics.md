@@ -19,8 +19,13 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **Bug form.** `.github/ISSUE_TEMPLATE/bug.yml` asks for About's Debugging Information in place of hand-pasted
   version output, and says where to find it on the desktop and in fullscreen mode. It is a `.github/` change, so the
   maintainer merges it.
-- **Fullscreen.** The report is reachable from fullscreen mode with a controller alone and delivered where #520's
-  write-up recommends: a file in a known folder, a USB drive, or text on screen to photograph.
+- **Fullscreen.** Quick Access's **Diagnostics Report** shows the same report, with the same redaction, as large
+  monospace text in pages that fit a 1080p screen, with a counter such as "Page 1 of 3", for a phone to photograph
+  page by page. LB and RB, or Previous Page and Next Page, turn the pages; Up and Down scroll a page taller than the
+  panel, which widens while the report shows. Each time it opens, a copy is saved to
+  `$XDG_DATA_HOME/pindu-launcher/reports/` (`~/.local/share/…`, or the Flatpak's own data folder), named after the
+  local time, and the newest ten are kept as Play with Logs keeps logs; the screen names the file with `~`. The core
+  (`pindu_core::report_screen`) splits the pages and names and prunes the copies; `diagnostics_service` writes them.
 - **A game's log, on request.** The user picks a game and its newest log (Play with Logs keeps the newest ten per
   game) is appended to the report with the same redaction: no home path, and the chosen game's title only because the
   user chose it.
@@ -30,8 +35,9 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 The report says which of them it came from: how the app was installed, the permission tier (in the Flatpak, whether
 games may start on the host) and whether this is a gamescope session. On the desktop, Save goes through libadwaita's
 dialog and the file chooser portal, so the Flatpak needs no new permission. A console is the hard case: on Pindu OS
-nothing can be pasted and fullscreen mode is the whole interface, so where its report goes is #518's job, settled by
-#520.
+nothing can be pasted and fullscreen mode is the whole interface, so its report goes on screen and into the app's own
+data folder, which the Flatpak can already write, as #520 recommended. A USB drive waits until Pindu OS mounts
+removable drives and fullscreen mode has a folder picker (#569); a QR code was rejected because it needs a new crate.
 
 ## Out of scope
 
@@ -51,5 +57,5 @@ nothing can be pasted and fullscreen mode is the whole interface, so where its r
 
 Decided by the maintainer on 2026-11-19 (analysis [section 14](product-analysis.md#14-decisions-to-take-before-issues-are-filed)):
 
-- Where a console's report goes is settled after #520 (CP-1), whose write-up recommends the destination for #518
-  (DX-3).
+- Where a console's report goes was settled by #520 (CP-1): on screen in pages to photograph, plus a dated copy in
+  `~/.local/share/pindu-launcher/reports/` keeping the newest ten; no USB drive and no QR code for now.

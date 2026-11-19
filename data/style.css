@@ -343,6 +343,12 @@ window.game-overlay {
   background-color: var(--accent-color);
 }
 
+/* Quick Access's diagnostics report: large enough for a phone to photograph from the
+   screen, a page at a time. */
+.quick-access .diagnostics-report {
+  font-size: 1.25em;
+}
+
 .menu-drawer button:focus-visible,
 .quick-access .playing-card button:focus-visible {
   outline: 3px solid var(--window-fg-color);
