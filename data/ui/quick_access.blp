@@ -1333,6 +1333,37 @@ template $PinduQuickAccess: Box {
               title: _("Larger Text");
             }
           }
+
+          Label {
+            label: _("Artwork");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          // The key is typed hidden with the on-screen keyboard and kept in the
+          // keyring; the row's subtitle says whether one is stored, or why the
+          // keyring cannot be used.
+          ListBox artwork {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ActionRow steamgriddb_key_row {
+              title: _("SteamGridDB Key");
+              activatable: true;
+            }
+
+            Adw.SwitchRow prefer_steamgriddb_row {
+              title: _("Prefer SteamGridDB Art");
+              subtitle: _("Show it before the launcher's own art; art you pick always comes first");
+            }
+          }
         };
       };
     }

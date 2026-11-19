@@ -4,7 +4,9 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use super::location::{self, HostDirs, ResolveError};
-use super::{ImportError, ImportedGame, Snapshot, bottles, desktop, faugus, heroic, lutris, steam};
+use super::{
+    ImportError, ImportedGame, Snapshot, bottles, desktop, faugus, heroic, legendary, lutris, steam,
+};
 use crate::model::{
     ArtOrigin, Artwork, Game, GameId, ImportedPlaytime, Source, SourceState, Timestamp,
 };
@@ -20,6 +22,8 @@ pub const IMPORTED_SOURCES: &[Source] = &[
     Source::Lutris,
     Source::Bottles,
     Source::Faugus,
+    // After Heroic's Epic store, whose games it leaves out.
+    Source::Legendary,
     Source::Desktop,
 ];
 
@@ -138,10 +142,15 @@ pub fn sync_source(
         }
     };
     let synced = match snapshot {
-        Ok(snapshot) => SourceSync {
-            changes: apply_snapshot(store, &snapshot, now)?,
-            problems: snapshot.errors,
-        },
+        Ok(mut snapshot) => {
+            if source == Source::Legendary {
+                leave_out_heroic_games(store, &mut snapshot)?;
+            }
+            SourceSync {
+                changes: apply_snapshot(store, &snapshot, now)?,
+                problems: snapshot.errors,
+            }
+        }
         Err(problem) => SourceSync {
             problems: vec![problem],
             changes: Changes::default(),
@@ -156,12 +165,27 @@ pub fn sync_source(
     Ok(synced)
 }
 
+/// Leaves out of a standalone Legendary snapshot the games Heroic's Epic store lists, so
+/// a game both know is shown once, as Heroic's.
+fn leave_out_heroic_games(store: &Store, snapshot: &mut Snapshot) -> store::Result<()> {
+    let mut kept = Vec::with_capacity(snapshot.games.len());
+    for game in snapshot.games.drain(..) {
+        let heroic = store.game(&GameId::new(Source::HeroicEpic, &game.native_id))?;
+        if heroic.is_none_or(|heroic| heroic.missing_since.is_some()) {
+            kept.push(game);
+        }
+    }
+    snapshot.games = kept;
+    Ok(())
+}
+
 fn import(source: Source, root: &Path, utc_offset: i64) -> Result<Snapshot, ImportError> {
     match source {
         Source::Steam => steam::import(root),
         Source::Lutris => lutris::import(root),
         Source::Bottles => bottles::import(root),
         Source::Faugus => faugus::import(root, utc_offset),
+        Source::Legendary => legendary::import(root),
         _ => heroic::import(root, source),
     }
 }
@@ -765,6 +789,38 @@ mod tests {
         assert!(game.in_library());
         let state = store.source_state(Source::HeroicSideload).unwrap().unwrap();
         assert_eq!(state.errors, problems);
+    }
+
+    #[test]
+    fn standalone_legendary_skips_the_games_heroic_lists() {
+        let (dir, store) = temp_store();
+        let heroic = dir.path().join(".config/heroic/store_cache");
+        std::fs::create_dir_all(&heroic).unwrap();
+        std::fs::write(
+            heroic.join("legendary_library.json"),
+            r#"{"library": [{"app_name": "Sugar", "title": "Celeste"}]}"#,
+        )
+        .unwrap();
+        let legendary = dir.path().join(".config/legendary");
+        std::fs::create_dir_all(&legendary).unwrap();
+        std::fs::write(
+            legendary.join("installed.json"),
+            r#"{"Sugar": {"title": "Celeste"}, "Fortune": {"title": "Hades"}}"#,
+        )
+        .unwrap();
+
+        let summary = sync_all(&store, &host_dirs(dir.path()), 100, 0).unwrap();
+
+        let added = summary.added().games;
+        assert!(added.contains(&GameId::new(Source::HeroicEpic, "Sugar")));
+        assert!(added.contains(&GameId::new(Source::Legendary, "Fortune")));
+        assert!(!added.contains(&GameId::new(Source::Legendary, "Sugar")));
+        assert_eq!(
+            store
+                .game(&GameId::new(Source::Legendary, "Sugar"))
+                .unwrap(),
+            None
+        );
     }
 
     #[test]
