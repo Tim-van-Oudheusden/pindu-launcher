@@ -45,8 +45,9 @@ In this order, local data first:
    #520 says a console needs it), and that value survives syncs and refreshes.
 
    As built (#526): `game_metadata` (migration 0008) holds one row per game, field (`developer`, `genres`,
-   `description`) and origin (`source`, `provider`, `user`) with the value and when that origin last changed it. The
-   migration moved the `games` columns of those names into source rows and dropped the columns, so nothing reads a
+   `description`, and since #534 `deck-compatibility`, Steam's Steam Deck rating) and origin (`source`, `provider`,
+   `user`) with the value and when that origin last changed it. The migration moved the `games` columns of the first
+   three names into source rows and dropped the columns, so nothing reads a
    stale copy. `pindu_core::metadata` resolves the rows (`shown` picks one field's winning value with its origin and
    time, `resolve` all of them), and the store hands every `Game` out with resolved `developer`, `genres` and
    `description`, so both shells and the filters show the winning value without knowing about origins. Writes

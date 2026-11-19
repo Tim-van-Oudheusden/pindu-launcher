@@ -22,7 +22,9 @@ pub mod watch;
 use std::fmt;
 use std::path::PathBuf;
 
-use crate::model::{ArtLayout, LaunchConfig, LaunchKind, Platform, Source, Timestamp};
+use crate::model::{
+    ArtLayout, DeckCompatibility, LaunchConfig, LaunchKind, Platform, Source, Timestamp,
+};
 
 /// Everything one import run found in a source.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -77,6 +79,8 @@ pub struct ImportedGame {
     pub genres: Vec<String>,
     /// The game's description, when the source has one.
     pub description: Option<String>,
+    /// Steam's Steam Deck rating of the game; only Steam has one.
+    pub deck_compatibility: Option<DeckCompatibility>,
     /// The source's own art, at most one per layout.
     pub artwork: Vec<(ArtLayout, PathBuf)>,
     /// Flags the source keeps itself; applied once, when the game first enters the library.
@@ -134,6 +138,7 @@ impl ImportedGame {
             launch_config: None,
             genres: Vec::new(),
             description: None,
+            deck_compatibility: None,
             artwork: Vec::new(),
             source_flags: SourceFlags::default(),
             service: None,
