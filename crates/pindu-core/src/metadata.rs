@@ -1,14 +1,14 @@
 //! A game's metadata kept by origin.
 //!
-//! Developer, genres and description can each come from the game's source, an online
-//! provider or the user. The store keeps every origin's value with when it was set, and a
-//! sync writes only the source's; what a game shows is [`resolve`]d from them, the user's
-//! value first, then a provider's, then the source's.
+//! Developer, genres, description and Steam Deck rating can each come from the game's
+//! source, an online provider or the user. The store keeps every origin's value with when
+//! it was set, and a sync writes only the source's; what a game shows is [`resolve`]d from
+//! them, the user's value first, then a provider's, then the source's.
 
-use crate::model::{Game, MetadataField, MetadataOrigin, Timestamp};
+use crate::model::{DeckCompatibility, Game, MetadataField, MetadataOrigin, Timestamp};
 
-/// A game's developer, genres and description: the values one origin gives, or, resolved,
-/// the ones the game shows. An empty field has no value.
+/// A game's developer, genres, description and Steam Deck rating: the values one origin
+/// gives, or, resolved, the ones the game shows. An empty field has no value.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Metadata {
     /// Who made the game.
@@ -17,6 +17,8 @@ pub struct Metadata {
     pub genres: Vec<String>,
     /// A description of the game.
     pub description: Option<String>,
+    /// Steam's Steam Deck rating.
+    pub deck_compatibility: Option<DeckCompatibility>,
 }
 
 impl Metadata {
@@ -26,6 +28,7 @@ impl Metadata {
             developer: game.developer.clone(),
             genres: game.genres.clone(),
             description: game.description.clone(),
+            deck_compatibility: game.deck_compatibility,
         }
     }
 
@@ -34,6 +37,7 @@ impl Metadata {
         game.developer = self.developer;
         game.genres = self.genres;
         game.description = self.description;
+        game.deck_compatibility = self.deck_compatibility;
     }
 
     /// The fields that have a value, each with it.
@@ -44,6 +48,7 @@ impl Metadata {
             values.push(FieldValue::Genres(self.genres.clone()));
         }
         values.extend(self.description.clone().map(FieldValue::Description));
+        values.extend(self.deck_compatibility.map(FieldValue::DeckCompatibility));
         values
     }
 
@@ -52,6 +57,7 @@ impl Metadata {
             FieldValue::Developer(developer) => self.developer = Some(developer),
             FieldValue::Genres(genres) => self.genres = genres,
             FieldValue::Description(description) => self.description = Some(description),
+            FieldValue::DeckCompatibility(deck) => self.deck_compatibility = Some(deck),
         }
     }
 }
@@ -65,6 +71,8 @@ pub enum FieldValue {
     Genres(Vec<String>),
     /// A description of the game.
     Description(String),
+    /// Steam's Steam Deck rating.
+    DeckCompatibility(DeckCompatibility),
 }
 
 impl FieldValue {
@@ -74,8 +82,27 @@ impl FieldValue {
             Self::Developer(_) => MetadataField::Developer,
             Self::Genres(_) => MetadataField::Genres,
             Self::Description(_) => MetadataField::Description,
+            Self::DeckCompatibility(_) => MetadataField::DeckCompatibility,
         }
     }
+}
+
+/// A Steam Deck rating as the store and backups keep it:
+/// `{"rating": "verified", "tested_at": 1700000000}`.
+pub(crate) fn deck_json(deck: &DeckCompatibility) -> serde_json::Value {
+    serde_json::json!({
+        "rating": deck.rating.as_str(),
+        "tested_at": deck.tested_at,
+    })
+}
+
+/// A Steam Deck rating from [`deck_json`]'s form; `None` when it names no rating this
+/// version knows.
+pub(crate) fn deck_from_json(json: &serde_json::Value) -> Option<DeckCompatibility> {
+    Some(DeckCompatibility {
+        rating: json["rating"].as_str()?.parse().ok()?,
+        tested_at: json["tested_at"].as_i64(),
+    })
 }
 
 /// A stored value: one field of a game from one origin, and when that origin set it.
@@ -147,6 +174,11 @@ mod tests {
             MetadataField::Developer => FieldValue::Developer(text),
             MetadataField::Genres => FieldValue::Genres(vec![text]),
             MetadataField::Description => FieldValue::Description(text),
+            // The text's bytes summed tell the values apart well enough.
+            MetadataField::DeckCompatibility => FieldValue::DeckCompatibility(DeckCompatibility {
+                rating: crate::model::DeckRating::Verified,
+                tested_at: Some(text.bytes().map(Timestamp::from).sum()),
+            }),
         }
     }
 
@@ -246,6 +278,7 @@ mod tests {
             developer: Some("Valve".into()),
             genres: Vec::new(),
             description: None,
+            deck_compatibility: None,
         };
 
         assert_eq!(

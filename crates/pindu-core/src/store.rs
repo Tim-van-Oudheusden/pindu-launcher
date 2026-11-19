@@ -9,6 +9,7 @@ mod collections;
 mod games;
 mod groups;
 mod launch_configs;
+mod launch_outcomes;
 mod metadata;
 mod playtime;
 mod saved_filters;
@@ -21,7 +22,8 @@ use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, 
 use rusqlite::{Connection, Row, TransactionBehavior};
 
 use crate::model::{
-    ArtLayout, ArtOrigin, GameId, LaunchKind, MetadataField, MetadataOrigin, Platform, Source,
+    ArtLayout, ArtOrigin, GameId, LaunchKind, LaunchRoute, MetadataField, MetadataOrigin, Platform,
+    Source,
 };
 
 /// Schema migrations in order; entry `n` takes the database from version `n` to `n + 1`.
@@ -34,6 +36,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("store/migrations/0006_game_groups.sql"),
     include_str!("store/migrations/0007_saved_filters.sql"),
     include_str!("store/migrations/0008_game_metadata.sql"),
+    include_str!("store/migrations/0009_launch_outcomes.sql"),
 ];
 
 /// The schema version a freshly opened store is at.
@@ -379,7 +382,8 @@ sql_text!(
     ArtLayout,
     ArtOrigin,
     MetadataField,
-    MetadataOrigin
+    MetadataOrigin,
+    LaunchRoute
 );
 
 fn path_to_sql(path: &Path) -> Result<&str> {

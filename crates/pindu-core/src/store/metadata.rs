@@ -1,10 +1,11 @@
 use std::collections::HashMap;
+use std::error::Error;
 
 use rusqlite::{Row, params};
 
 use super::{Result, Store, to_json};
-use crate::metadata::{FieldValue, Metadata, MetadataValue};
-use crate::model::{GameId, MetadataField, MetadataOrigin, Timestamp};
+use crate::metadata::{self, FieldValue, Metadata, MetadataValue};
+use crate::model::{DeckCompatibility, GameId, MetadataField, MetadataOrigin, Timestamp};
 
 impl Store {
     /// Replaces the metadata values one origin gives a game. A value that did not change
@@ -71,11 +72,13 @@ impl Store {
     }
 }
 
-/// The stored text of a value: genres as a JSON array, other fields as they are.
+/// The stored text of a value: genres as a JSON array, a Steam Deck rating as
+/// [`metadata::deck_json`]'s object, other fields as they are.
 fn value_text(value: &FieldValue) -> String {
     match value {
         FieldValue::Developer(text) | FieldValue::Description(text) => text.clone(),
         FieldValue::Genres(genres) => to_json(genres),
+        FieldValue::DeckCompatibility(deck) => metadata::deck_json(deck).to_string(),
     }
 }
 
@@ -85,13 +88,10 @@ fn metadata_value_from_row(row: &Row<'_>) -> rusqlite::Result<MetadataValue> {
         MetadataField::Developer => FieldValue::Developer(text),
         MetadataField::Description => FieldValue::Description(text),
         MetadataField::Genres => {
-            FieldValue::Genres(serde_json::from_str(&text).map_err(|error| {
-                rusqlite::Error::FromSqlConversionFailure(
-                    0,
-                    rusqlite::types::Type::Text,
-                    Box::new(error),
-                )
-            })?)
+            FieldValue::Genres(serde_json::from_str(&text).map_err(conversion_failure)?)
+        }
+        MetadataField::DeckCompatibility => {
+            FieldValue::DeckCompatibility(deck_compatibility(&text).map_err(conversion_failure)?)
         }
     };
     Ok(MetadataValue {
@@ -99,4 +99,16 @@ fn metadata_value_from_row(row: &Row<'_>) -> rusqlite::Result<MetadataValue> {
         origin: row.get("origin")?,
         updated_at: row.get("updated_at")?,
     })
+}
+
+/// A Steam Deck rating from its stored JSON object.
+fn deck_compatibility(text: &str) -> std::result::Result<DeckCompatibility, BoxedError> {
+    let json: serde_json::Value = serde_json::from_str(text)?;
+    metadata::deck_from_json(&json).ok_or_else(|| format!("not a Steam Deck rating: {text}").into())
+}
+
+type BoxedError = Box<dyn Error + Send + Sync>;
+
+fn conversion_failure(error: impl Into<BoxedError>) -> rusqlite::Error {
+    rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, error.into())
 }

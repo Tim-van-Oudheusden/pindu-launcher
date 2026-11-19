@@ -367,7 +367,8 @@ mod tests {
             .create_saved_filter("Windows Games", &Suggestion::Windows.filter())
             .unwrap();
 
-        let entries = crate::library::load(&store, false).unwrap();
+        let entries =
+            crate::library::load(&store, false, crate::game_groups::DEFAULT_SOURCE_ORDER).unwrap();
         let collections = |id: &GameId| {
             entries
                 .iter()
@@ -393,7 +394,8 @@ mod tests {
             .unwrap();
         store.add_to_collection(saved.id, &native.id).unwrap();
 
-        let entries = crate::library::load(&store, false).unwrap();
+        let entries =
+            crate::library::load(&store, false, crate::game_groups::DEFAULT_SOURCE_ORDER).unwrap();
         assert!(entries[0].collections.is_empty());
     }
 }

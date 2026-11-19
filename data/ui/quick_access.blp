@@ -1637,6 +1637,37 @@ template $PinduQuickAccess: Box {
               "boxed-list",
             ]
           }
+
+          Label {
+            label: _("Copy Order");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          Label {
+            label: _("When a game has copies from several sources and you chose none, Play starts the installed copy from the source highest here. Native copies still come before Windows ones.");
+            xalign: 0;
+            wrap: true;
+
+            styles [
+              "dim-label",
+            ]
+          }
+
+          // The source order a game's copies follow, the setting Preferences,
+          // Sources changes: each row's Move Up and Move Down are reached with
+          // Right. Filled in code.
+          ListBox source_order {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+          }
         };
       };
     }

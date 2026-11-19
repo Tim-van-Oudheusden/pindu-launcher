@@ -112,7 +112,9 @@ pub enum QuickAccessLevel {
     /// settings as Preferences'.
     Proton,
     /// Each imported source, whether it was found on this computer and its Import switch,
-    /// the same setting as Preferences' (see [`crate::sources::sync::imported_source_states`]).
+    /// the same setting as Preferences' (see [`crate::sources::sync::imported_source_states`]),
+    /// then the source order a game's copies follow, each source with Move Up and Move Down
+    /// (see [`crate::game_groups::source_order`]).
     Sources,
     /// The duplicate suggestions to accept or dismiss, and the groups made automatically,
     /// to undo (see [`crate::duplicates::review`]).

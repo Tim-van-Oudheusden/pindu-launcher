@@ -51,9 +51,13 @@ Schema migration 6 (#504) adds the grouping layer; the rules follow spike #501.
   undo of an automatic group, also remembers each pair, so neither the automatic grouping nor a suggestion brings it
   back. An automatic group is never made for a game already in a group or for a remembered pair.
 - **Default preferred copy** (computed, never stored): installed before not installed, then Linux, unknown, Windows,
-  then the source order (default Steam, Heroic GOG, Heroic Epic, Heroic Amazon, Lutris, Faugus, Bottles, Heroic
-  sideload, manual, desktop), then most recently played, then game ID. Play starts the preferred copy, or the first
+  then the source order, then most recently played, then game ID. Play starts the preferred copy, or the first
   installed copy in that order when the user's choice is not installed.
+- **Source order** (the `source-order` setting): by default Steam, Heroic GOG, Heroic Epic, Heroic Amazon, Legendary,
+  itch, Lutris, Faugus, Bottles, Heroic sideload, manual, desktop. The user changes it with Move Up and Move Down under
+  Copy Order in Preferences, Sources and in fullscreen mode's Sources level, where a controller reaches each row's
+  buttons with Right. A stored order is read with unknown sources dropped and the sources it leaves out appended in
+  the default order, so an order from another version still names every source once.
 - **Playtime** (computed, never stored): the Steam copy and every Lutris copy whose runner is `steam` were timed
   together, so they count once, by the largest figure among them; every other copy was played apart and adds up. Steam
   10 h with Lutris (runner `steam`) 2 h is 10 h; Steam 10 h with Heroic GOG 5 h is 15 h. A group was last played when
@@ -169,6 +173,7 @@ interface.
 | #507 Merge and split games by hand | Desktop menu and fullscreen options sheet; remembered splits; choosing the preferred copy | #506 |
 | #508 Review duplicate suggestions | Accept and dismiss in both shells; undo for automatic groups | #505, #506 |
 | #509 Carry game groups in backups | Backup format 2; format 1 still imports | #504 |
+| #606 Let the user change the source order for preferred copies | The `source-order` setting; Copy Order in Preferences and fullscreen mode | #504, #565 |
 
 ## Decisions
 

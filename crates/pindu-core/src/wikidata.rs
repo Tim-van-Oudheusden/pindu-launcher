@@ -158,7 +158,7 @@ impl Item {
         Metadata {
             developer: (!self.developers.is_empty()).then(|| self.developers.join(", ")),
             genres: self.genres.clone(),
-            description: None,
+            ..Metadata::default()
         }
     }
 }
@@ -458,7 +458,7 @@ mod tests {
             Metadata {
                 developer: Some("Arkane Studios, Bethesda Game Studios".into()),
                 genres: vec!["immersive sim".into()],
-                description: None,
+                ..Metadata::default()
             }
         );
         assert_eq!(Item::default().metadata(), Metadata::default());

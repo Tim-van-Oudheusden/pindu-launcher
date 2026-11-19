@@ -77,7 +77,8 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
 - **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
   [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu
-  launcher only hands the address over and fetches nothing from either site.
+  launcher only hands the address over and fetches nothing from either site. Their page, in both modes, also shows
+  the game's Steam Deck rating (Verified, Playable, Unsupported or Unknown) as Steam's own files record it.
 - **Your artwork.** Covers, banners and logos from your launchers, from your own files, or from
   [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring. **Change
   Artwork** on a game's page, in both modes, pages through every SteamGridDB image of each kind.
@@ -116,7 +117,7 @@ widgets so it looks and behaves like the rest of GNOME.
 
 | Source | Games | How they start |
 | --- | --- | --- |
-| Steam, native or Flatpak | Installed games, with their playtime | Through Steam |
+| Steam, native or Flatpak | Installed games, with their playtime and Steam Deck rating | Through Steam |
 | Heroic, native or Flatpak | Epic Games, GOG, Amazon and sideloaded games, installed or not | Through Heroic |
 | Lutris, native or Flatpak | Lutris games | Through Lutris |
 | Bottles, native or Flatpak | Programs in your bottles | Through Bottles |
@@ -128,7 +129,9 @@ widgets so it looks and behaves like the rest of GNOME.
 
 The importers read each launcher's data read-only and never its credentials: from the itch app's database they read
 its installs and games, never the profiles that hold your itch.io key. Preferences, Sources shows for each source the
-folder it was found in, when it last synced and the problems that sync ran into.
+folder it was found in, when it last synced and the problems that sync ran into. Its **Copy Order** decides which copy
+Play starts for a game with copies from several sources when you chose none: the installed copy from the source
+highest in the list, native copies still before Windows ones. **Move Up** and **Move Down** change it.
 
 The Flatpak has no permission for Legendary's `~/.config/legendary` or the itch app's folder (`~/.config/itch`, or
 `~/.var/app/io.itch.itch/config/itch` for the itch Flatpak), and does not ask for one: Preferences → Sources says so,
@@ -219,8 +222,8 @@ Preferences.
 ### Getting around
 
 - **Move** with the D-pad or left stick, **open** with A and **go back** with B.
-- A **game page** shows the game's developer, genres and description below its buttons. Once a long description has
-  focus, Down scrolls through it and Up scrolls back to its start before moving on.
+- A **game page** shows the game's developer, genres, Steam Deck rating and description below its buttons. Once a long
+  description has focus, Down scrolls through it and Up scrolls back to its start before moving on.
 - The **hint bar** at the bottom names the buttons that work on each screen, drawn with the app's own glyphs for the
   controller you hold.
 - **Controls** in Quick Access lists everything the buttons do, grouped into moving, the library, the panels and
@@ -294,7 +297,9 @@ Guide + A never also opens the menu drawer.
   in the main menu.
 - **Sources** lists every source Pindu imports from, says whether each was found on this computer, and has its
   **Import** switch, the same setting as Preferences, Sources: a source turned off is no longer read, and changing a
-  switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences.
+  switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences. Below them,
+  **Copy Order** lists the sources in the order a game's copies follow: Right on a source reaches its **Move Up** and
+  **Move Down**.
   - **Text Size:** fullscreen text at its default size or Large, Larger or Largest, each step about a quarter of
     the default larger. Preferences has the same choice; an install that had the former Larger Text on starts at
     Large.
@@ -786,6 +791,10 @@ the newest ten are kept, and the screen says where the copy went.
 When a game misbehaves, add its newest log from **Play with Logs**: on the desktop, the game's **More Actions** menu has
 **Debugging Information with Log**; in fullscreen mode, the Diagnostics Report has **Add a Game's Log**. The report then
 keeps that game's title, and still no other title and no home folder.
+
+Every other start of a game Pindu runs itself keeps a short log beside those: the last 64 KiB of its output, in
+`~/.local/share/pindu-launcher/logs/<game>/` as `<date and time>.short.log`, the newest five per game. Pindu also
+records how each of a game's last five launches ended ([Launch outcomes](docs/launch-outcomes.md)).
 
 ## Acknowledgments
 
