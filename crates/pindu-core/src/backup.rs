@@ -563,13 +563,15 @@ fn path(value: &Value) -> Option<PathBuf> {
 }
 
 /// A metadata value the user set or a provider fetched, with its game, field, origin and
-/// time. Genres are a list, a release year a number, other fields text.
+/// time. Genres are a list, a release year a number, a Steam Deck rating an object, other
+/// fields text.
 fn metadata_value_json(id: &GameId, value: &MetadataValue) -> Value {
     let text = match &value.value {
         FieldValue::Developer(text) | FieldValue::Description(text) => json!(text),
         FieldValue::Genres(genres) => json!(genres),
         FieldValue::ReleaseYear(year) => json!(year),
         FieldValue::ControllerSupport(support) => json!(support.as_str()),
+        FieldValue::DeckCompatibility(deck) => metadata::deck_json(deck),
     };
     json!({
         "game": id.as_str(),
@@ -610,6 +612,9 @@ fn metadata_value_from(entry: &Value) -> Option<MetadataValue> {
             FieldValue::ReleaseYear(i32::try_from(entry["value"].as_i64()?).ok()?)
         }
         MetadataField::ControllerSupport => FieldValue::ControllerSupport(text()?.parse().ok()?),
+        MetadataField::DeckCompatibility => {
+            FieldValue::DeckCompatibility(metadata::deck_from_json(&entry["value"])?)
+        }
     };
     Some(MetadataValue {
         value,

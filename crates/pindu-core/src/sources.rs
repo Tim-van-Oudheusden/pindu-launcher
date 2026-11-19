@@ -23,7 +23,8 @@ use std::fmt;
 use std::path::PathBuf;
 
 use crate::model::{
-    ArtLayout, ControllerSupport, LaunchConfig, LaunchKind, Platform, Source, Timestamp,
+    ArtLayout, ControllerSupport, DeckCompatibility, LaunchConfig, LaunchKind, Platform, Source,
+    Timestamp,
 };
 
 /// Everything one import run found in a source.
@@ -81,6 +82,8 @@ pub struct ImportedGame {
     pub description: Option<String>,
     /// How well the game supports a controller, when its source declares it.
     pub controller_support: Option<ControllerSupport>,
+    /// Steam's Steam Deck rating of the game; only Steam has one.
+    pub deck_compatibility: Option<DeckCompatibility>,
     /// The source's own art, at most one per layout.
     pub artwork: Vec<(ArtLayout, PathBuf)>,
     /// Flags the source keeps itself; applied once, when the game first enters the library.
@@ -140,6 +143,7 @@ impl ImportedGame {
             genres: Vec::new(),
             description: None,
             controller_support: None,
+            deck_compatibility: None,
             artwork: Vec::new(),
             source_flags: SourceFlags::default(),
             service: None,

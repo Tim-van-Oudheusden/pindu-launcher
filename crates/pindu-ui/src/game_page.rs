@@ -19,7 +19,8 @@ use pindu_core::launch::{self, LaunchSettings, WebPage};
 use pindu_core::library::{GameCopy, PlaytimeOrigin};
 use pindu_core::manual;
 use pindu_core::model::{
-    Collection, ControllerSupport, Game, GameId, LaunchConfig, LaunchKind, Source, Timestamp,
+    Collection, ControllerSupport, DeckCompatibility, DeckRating, Game, GameId, LaunchConfig,
+    LaunchKind, Source, Timestamp,
 };
 use pindu_core::panels::Playing;
 use pindu_core::reading;
@@ -87,6 +88,8 @@ mod imp {
         pub release_year_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub controller_row: TemplateChild<adw::ActionRow>,
+        #[template_child]
+        pub deck_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub description_box: TemplateChild<gtk::Box>,
         #[template_child]
@@ -315,11 +318,19 @@ impl GamePage {
                 .map(controller_support_label)
                 .unwrap_or_default(),
         );
+        imp.deck_row.set_visible(game.deck_compatibility.is_some());
+        imp.deck_row.set_subtitle(
+            &game
+                .deck_compatibility
+                .map(|deck| deck_rating(&deck))
+                .unwrap_or_default(),
+        );
         imp.about_group.set_visible(
             game.developer.is_some()
                 || !game.genres.is_empty()
                 || game.release_year.is_some()
-                || game.controller_support.is_some(),
+                || game.controller_support.is_some()
+                || game.deck_compatibility.is_some(),
         );
         imp.description_box.set_visible(game.description.is_some());
         imp.description
@@ -924,4 +935,21 @@ pub(crate) fn date(timestamp: Timestamp) -> String {
         .and_then(|date| date.format("%x"))
         .map(|text| text.to_string())
         .unwrap_or_default()
+}
+
+/// Steam's Steam Deck rating in words, with the day Valve tested the game when it says.
+fn deck_rating(deck: &DeckCompatibility) -> String {
+    let rating = match deck.rating {
+        DeckRating::Verified => gettext("Verified"),
+        DeckRating::Playable => gettext("Playable"),
+        DeckRating::Unsupported => gettext("Unsupported"),
+        DeckRating::Unknown => gettext("Unknown"),
+    };
+    match deck.tested_at {
+        // Translators: a Steam Deck rating, such as "Verified", and the day Valve tested the game.
+        Some(tested_at) => gettext("{rating}, tested {date}")
+            .replace("{rating}", &rating)
+            .replace("{date}", &date(tested_at)),
+        None => rating,
+    }
 }

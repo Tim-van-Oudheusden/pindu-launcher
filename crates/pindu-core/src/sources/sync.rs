@@ -270,6 +270,7 @@ pub fn apply_snapshot(
                     description: imported.description.clone(),
                     release_year: imported.year,
                     controller_support: imported.controller_support,
+                    deck_compatibility: imported.deck_compatibility,
                 },
                 now,
             )?;
@@ -613,6 +614,42 @@ mod tests {
         let game = store.game(&id()).unwrap().unwrap();
         assert_eq!(game.release_year, None);
         assert_eq!(game.controller_support, None);
+    }
+
+    #[test]
+    fn the_steam_deck_rating_is_the_sources_value_and_follows_each_sync() {
+        use crate::metadata::FieldValue;
+        use crate::model::{DeckCompatibility, DeckRating, MetadataOrigin};
+        let (_dir, store) = temp_store();
+        let mut imported = flagged(false, false, &[]);
+        let playable = DeckCompatibility {
+            rating: DeckRating::Playable,
+            tested_at: Some(50),
+        };
+        imported.deck_compatibility = Some(playable);
+        apply_snapshot(&store, &snapshot(vec![imported.clone()]), 100).unwrap();
+        assert_eq!(
+            store.metadata_values(&id()).unwrap()[0].value,
+            FieldValue::DeckCompatibility(playable)
+        );
+        let verified = DeckCompatibility {
+            rating: DeckRating::Verified,
+            tested_at: Some(150),
+        };
+        imported.deck_compatibility = Some(verified);
+
+        apply_snapshot(&store, &snapshot(vec![imported.clone()]), 200).unwrap();
+
+        let game = store.game(&id()).unwrap().unwrap();
+        assert_eq!(game.deck_compatibility, Some(verified));
+        let values = store.metadata_values(&id()).unwrap();
+        assert_eq!(values.len(), 1);
+        assert_eq!(values[0].origin, MetadataOrigin::Source);
+        assert_eq!(values[0].updated_at, 200);
+
+        imported.deck_compatibility = None;
+        apply_snapshot(&store, &snapshot(vec![imported]), 300).unwrap();
+        assert_eq!(store.game(&id()).unwrap().unwrap().deck_compatibility, None);
     }
 
     #[test]

@@ -246,7 +246,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.game-hero` | The art at the top, with its `.hero-gradient` |
 | `.game-actions` | The row of buttons; `.game-play` is Play |
 | `.playing-card` | The Playing Now card while the game runs; the menu drawer and the top of Quick Access show it too, with `.session-time`, how long the game has run |
-| `.game-about` | The About group: the developer, genres, release year and controller support, in a `.boxed-list` whose rows take focus |
+| `.game-about` | The About group: the developer, genres, release year, controller support and a Steam game's Steam Deck rating, in a `.boxed-list` whose rows take focus |
 | `.game-description` | The description; it takes focus, and Up and Down scroll through it while it has it |
 | `.launch-overlay` | The overlay while a game starts |
 

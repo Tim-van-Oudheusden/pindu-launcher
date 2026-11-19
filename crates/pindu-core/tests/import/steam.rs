@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use pindu_core::model::{ArtLayout, ControllerSupport, LaunchKind, Platform, Source};
+use pindu_core::model::{
+    ArtLayout, ControllerSupport, DeckCompatibility, DeckRating, LaunchKind, Platform, Source,
+};
 use pindu_core::sources::location::{HostDirs, Location};
 use pindu_core::sources::vdf::Value;
 use pindu_core::sources::{ImportedGame, Snapshot, steam};
@@ -26,6 +28,15 @@ fn app(name: &str, kind: &str, oslist: &str) -> Value {
             ("oslist", text(oslist)),
         ]),
     )])
+}
+
+/// Steam's Deck rating as `appinfo.vdf` stores it: Ints, the category from 0 to 3.
+fn deck(category: i64, tested_at: Option<i64>) -> Value {
+    let category = ("category", Value::Int(category));
+    match tested_at {
+        Some(time) => map([category, ("test_timestamp", Value::Int(time))]),
+        None => map([category]),
+    }
 }
 
 fn write_appinfo(steam_root: &Path) {
@@ -55,6 +66,7 @@ fn write_appinfo(steam_root: &Path) {
                 ]),
             ),
             ("controller_support", text("full")),
+            ("steam_deck_compatibility", deck(3, Some(1_700_000_000))),
         ]),
     )]);
     let cyberpunk = map([
@@ -77,6 +89,7 @@ fn write_appinfo(steam_root: &Path) {
                     ]),
                 ),
                 ("controller_support", text("partial")),
+                ("steam_deck_compatibility", deck(2, None)),
             ]),
         ),
         ("extended", map([("developer", text("CD PROJEKT RED"))])),
@@ -95,10 +108,22 @@ fn write_appinfo(steam_root: &Path) {
                     ("oslist", text("windows")),
                     // Zero means Steam does not know the date.
                     ("steam_release_date", Value::Int(0)),
+                    ("steam_deck_compatibility", deck(1, Some(1_650_000_000))),
                 ]),
             )]),
         ),
-        (292030, app("The Witcher 3: Wild Hunt", "Game", "windows")),
+        (
+            292030,
+            map([(
+                "common",
+                map([
+                    ("name", text("The Witcher 3: Wild Hunt")),
+                    ("type", text("Game")),
+                    ("oslist", text("windows")),
+                    ("steam_deck_compatibility", deck(0, Some(0))),
+                ]),
+            )]),
+        ),
     ];
     std::fs::create_dir_all(steam_root.join("appcache")).unwrap();
     std::fs::write(
@@ -199,6 +224,54 @@ fn non_games_are_filtered_and_platform_and_developer_come_from_appinfo() {
     let cyberpunk = game(&snapshot, "1091500");
     assert_eq!(cyberpunk.platform, Some(Platform::Windows));
     assert_eq!(cyberpunk.developer.as_deref(), Some("CD PROJEKT RED"));
+}
+
+#[test]
+fn the_steam_deck_rating_comes_from_appinfo() {
+    let (_dir, _root, snapshot) = import_fixture("steam", true);
+
+    let rating = |id| game(&snapshot, id).deck_compatibility;
+    assert_eq!(
+        rating("570"),
+        Some(DeckCompatibility {
+            rating: DeckRating::Verified,
+            tested_at: Some(1_700_000_000),
+        })
+    );
+    assert_eq!(
+        rating("1091500"),
+        Some(DeckCompatibility {
+            rating: DeckRating::Playable,
+            tested_at: None,
+        })
+    );
+    assert_eq!(
+        rating("1245620"),
+        Some(DeckCompatibility {
+            rating: DeckRating::Unsupported,
+            tested_at: Some(1_650_000_000),
+        })
+    );
+    // Valve has not rated it yet; a zero test time means it was never tested.
+    assert_eq!(
+        rating("292030"),
+        Some(DeckCompatibility {
+            rating: DeckRating::Unknown,
+            tested_at: None,
+        })
+    );
+}
+
+#[test]
+fn without_appinfo_there_is_no_steam_deck_rating() {
+    let (_dir, _root, snapshot) = import_fixture("steam", false);
+
+    assert!(
+        snapshot
+            .games
+            .iter()
+            .all(|game| game.deck_compatibility.is_none())
+    );
 }
 
 #[test]

@@ -265,6 +265,15 @@ template $PinduGamePage: Adw.NavigationPage {
                     "property",
                   ]
                 }
+
+                // Steam's own Steam Deck rating, read from its files.
+                Adw.ActionRow deck_row {
+                  title: _("Steam Deck");
+
+                  styles [
+                    "property",
+                  ]
+                }
               }
 
               // In fullscreen mode the box takes focus instead of the text, and Up and

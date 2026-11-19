@@ -1,7 +1,7 @@
 //! Steam: libraries from `libraryfolders.vdf`, install state from `appmanifest_*.acf`,
-//! type, platform, developer, release year, genres and controller support from the binary
-//! `appinfo.vdf`, art from `librarycache`,
-//! and playtime from the most recently used account's
+//! type, platform, developer, release year, genres, controller support and Steam Deck
+//! rating from the binary `appinfo.vdf`, art from `librarycache`, and playtime from the
+//! most recently used account's
 //! `userdata/<account>/config/localconfig.vdf`. Everything is read offline; nothing is
 //! written.
 
@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use super::vdf::{self, Value};
 use super::{ImportError, ImportedGame, Snapshot};
-use crate::model::{ArtLayout, LaunchKind, Platform, Source};
+use crate::model::{ArtLayout, DeckCompatibility, DeckRating, LaunchKind, Platform, Source};
 
 /// `StateFlags` bit for a fully installed app.
 const STATE_FULLY_INSTALLED: i64 = 4;
@@ -265,6 +265,7 @@ fn imported_game(app: LocalApp, info: Option<&Value>, cache: &Path) -> Option<Im
         game.platform = common
             .and_then(|common| common.str("oslist"))
             .and_then(platform);
+        game.deck_compatibility = common.and_then(deck_compatibility);
     }
     if let Some(common) = common {
         game.year = release_year(common);
@@ -333,6 +334,22 @@ fn genre_name(id: i64) -> Option<&'static str> {
         28 => "Simulation",
         29 => "Massively Multiplayer",
         _ => return None,
+    })
+}
+
+/// Steam's Deck rating from `common.steam_deck_compatibility`: its `category` 0 to 3, and
+/// `test_timestamp`, where 0 means Valve has not tested the game.
+fn deck_compatibility(common: &Value) -> Option<DeckCompatibility> {
+    let deck = common.get("steam_deck_compatibility")?;
+    Some(DeckCompatibility {
+        rating: deck
+            .get("category")
+            .and_then(Value::as_i64)
+            .and_then(DeckRating::from_category)?,
+        tested_at: deck
+            .get("test_timestamp")
+            .and_then(Value::as_i64)
+            .filter(|time| *time > 0),
     })
 }
 
