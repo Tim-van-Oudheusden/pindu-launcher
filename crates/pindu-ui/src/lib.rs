@@ -33,6 +33,7 @@ pub mod fullscreen_power;
 pub mod fullscreen_proton;
 pub mod fullscreen_proton_downloads;
 pub mod fullscreen_sound_output;
+pub mod fullscreen_sources;
 pub mod fullscreen_status;
 pub mod fullscreen_surprise;
 pub mod fullscreen_system_update;

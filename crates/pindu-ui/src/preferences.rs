@@ -22,7 +22,7 @@ use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
 use pindu_core::model::{Source, SourceState};
 use pindu_core::paths;
 use pindu_core::sources::location::sandbox_hides;
-use pindu_core::sources::sync::IMPORTED_SOURCES;
+use pindu_core::sources::sync::imported_source_states;
 use pindu_core::sync_age::sync_age;
 
 use crate::application::PinduApplication;
@@ -404,12 +404,7 @@ impl PreferencesDialog {
             };
             let sync = dialog.imp().sync.get().expect("set").clone();
             let states = sync.source_states().await;
-            for &source in IMPORTED_SOURCES {
-                let state = states
-                    .iter()
-                    .find(|state| state.source == source)
-                    .cloned()
-                    .unwrap_or_else(|| SourceState::new(source));
+            for state in imported_source_states(&states) {
                 dialog.imp().sources_group.add(&dialog.source_row(&state));
             }
         });

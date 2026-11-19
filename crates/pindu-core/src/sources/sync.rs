@@ -30,6 +30,22 @@ pub const IMPORTED_SOURCES: &[Source] = &[
     Source::Desktop,
 ];
 
+/// The state of each source in [`IMPORTED_SOURCES`], in that order, from the stored
+/// `states`: what Preferences and fullscreen mode's Sources list, one Import switch each. A
+/// source with no stored state is a new one, turned on ([`SourceState::new`]).
+pub fn imported_source_states(states: &[SourceState]) -> Vec<SourceState> {
+    IMPORTED_SOURCES
+        .iter()
+        .map(|&source| {
+            states
+                .iter()
+                .find(|state| state.source == source)
+                .cloned()
+                .unwrap_or_else(|| SourceState::new(source))
+        })
+        .collect()
+}
+
 /// What a sync of every source could not read, and how it changed the library, by
 /// source.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -1010,5 +1026,20 @@ mod tests {
                 sources: vec![Source::HeroicSideload],
             }
         );
+    }
+
+    #[test]
+    fn every_imported_source_has_a_state_in_sync_order_and_unknown_ones_are_turned_on() {
+        let mut lutris = SourceState::new(Source::Lutris);
+        lutris.enabled = false;
+        let manual = SourceState::new(Source::Manual);
+        let states = imported_source_states(&[manual, lutris.clone()]);
+        assert_eq!(
+            states.iter().map(|state| state.source).collect::<Vec<_>>(),
+            IMPORTED_SOURCES,
+            "Added by Hand has no importer, so no switch"
+        );
+        assert_eq!(states[5], lutris);
+        assert_eq!(states[0], SourceState::new(Source::Steam));
     }
 }
