@@ -157,6 +157,12 @@ impl GamepadService {
         }
     }
 
+    /// How long the button asking for `intent` has been held down, while one is: fullscreen
+    /// mode's hold to confirm follows the confirm button with it.
+    pub fn held_for(&self, intent: Intent) -> Option<Duration> {
+        self.inner.intents.borrow().held_for(intent, now())
+    }
+
     /// The layout of the controller last plugged in or used, for the hints' glyphs.
     pub fn active_layout(&self) -> Option<Layout> {
         self.inner.intents.borrow().active_layout()

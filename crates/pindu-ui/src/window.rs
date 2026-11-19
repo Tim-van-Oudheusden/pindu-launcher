@@ -28,6 +28,7 @@ use crate::config::APP_ID;
 use crate::fullscreen::NavigationSounds;
 use crate::fullscreen_clock::Clock;
 use crate::game_page::GamePage;
+use crate::hold_progress::HoldProgress;
 use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
 use crate::log_service;
@@ -184,6 +185,8 @@ mod imp {
         /// Whether a game the launcher started has the controller, which only Guide,
         /// Guide + A, the window's focus coming back or the last game ending gives back.
         pub game_control: Cell<GameControl>,
+        /// Fullscreen mode's hold to confirm, while the option is on.
+        pub(crate) hold: std::rc::Rc<HoldProgress>,
         /// Whether the sidebar showed before fullscreen mode hid it, to show it again after.
         pub sidebar_before_hiding: Cell<Option<bool>>,
         /// Fullscreen mode's library tabs, each with the view it shows.

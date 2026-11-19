@@ -20,6 +20,7 @@ pub mod gamepad;
 pub mod gamescope;
 pub mod grid;
 pub mod hints;
+pub mod hold;
 pub mod home;
 pub mod keys;
 pub mod launch;

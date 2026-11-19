@@ -179,6 +179,8 @@ controller. B steps back to the drawer's entries.
 - An action the system does not allow is greyed out and says so; one the machine cannot do at all is not listed.
 - While a game Pindu started is running, Restart and Power Off ask first, since its unsaved progress would be lost.
   Suspend does not ask: the game carries on when the machine wakes.
+- With **Hold to Confirm** on in Quick Access's Accessibility or Preferences, Restart and Power Off act only once the
+  confirm button has been held down for a second.
 - When a program holds the machine on (an update installing, for example), a notification names it.
 
 The Flatpak has no access to the system bus, so it asks the host's logind through
@@ -211,6 +213,9 @@ Guide + A never also opens the menu drawer.
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
   - **Larger Text:** fullscreen text about a quarter larger.
+  - **Hold to Confirm** (off by default): Power Off, Restart, Forget and Stop then need the controller's confirm button
+    held down for a second. A popover over the entry fills as you hold, and letting go early or pressing another
+    button does nothing; the hint bar says **Hold to Confirm** on them. The keyboard and the pointer still act at once.
 - **Sound Output**, subtitled with the output in use, lists the outputs PipeWire has (speakers, a television over
   HDMI, a receiver, a Bluetooth headset) with a check on the one in use. Choose one to make it the default; WirePlumber
   keeps the choice after a restart, and games that follow the default move to it. It reads the outputs with `pw-dump`

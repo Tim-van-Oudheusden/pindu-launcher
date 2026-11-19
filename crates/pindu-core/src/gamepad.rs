@@ -7,7 +7,7 @@
 //! its kind and the user's [`ControllerSettings`], and serves the hints and the intents
 //! alike.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
 /// A connected controller, as its backend numbers it.
@@ -507,8 +507,9 @@ pub struct Intents {
     /// The connected pads, by number.
     pads: BTreeMap<DeviceId, Pad>,
     sticks: HashMap<DeviceId, [f64; 2]>,
-    /// The buttons held down, so a trigger that reports each move as a press asks once.
-    pressed: HashSet<(DeviceId, Button)>,
+    /// The buttons held down, with when each went down, so a trigger that reports each
+    /// move as a press asks once, and so a hold to confirm can tell how long it has lasted.
+    pressed: HashMap<(DeviceId, Button), Duration>,
     held: Option<Held>,
     /// A button held down that asks for an intent once held (Back's, to cancel a launch):
     /// by which device and button, that intent, and when it counts as a hold.
@@ -555,7 +556,7 @@ impl Intents {
             GamepadEvent::Disconnected { device } => {
                 self.pads.remove(&device);
                 self.sticks.remove(&device);
-                self.pressed.retain(|(holder, _)| *holder != device);
+                self.pressed.retain(|(holder, _), _| *holder != device);
                 if self.held.is_some_and(|held| held.device == device) {
                     self.held = None;
                 }
@@ -576,9 +577,10 @@ impl Intents {
                 pressed: true,
             } => {
                 self.active = Some(device);
-                if !self.pressed.insert((device, button)) {
+                if self.pressed.contains_key(&(device, button)) {
                     return None;
                 }
+                self.pressed.insert((device, button), now);
                 let (first, second) = QUICK_ACCESS_CHORD;
                 if button == first {
                     self.guide = Some((device, false));
@@ -724,6 +726,16 @@ impl Intents {
         self.settings
     }
 
+    /// How long the button asking for `intent` has been held down at `now`, on whichever
+    /// pad has held it longest; `None` while none is. A hold to confirm (`hold`) follows it.
+    pub fn held_for(&self, intent: Intent, now: Duration) -> Option<Duration> {
+        self.pressed
+            .iter()
+            .filter(|&(&(device, button), _)| self.layout(device).intent(button) == intent)
+            .map(|(_, &since)| now.saturating_sub(since))
+            .max()
+    }
+
     /// The layout of `device` under the settings; one not yet connected reads as a generic
     /// pad.
     pub fn layout(&self, device: DeviceId) -> Layout {
@@ -738,7 +750,7 @@ impl Intents {
     /// a button ([`Capture::of`]). A button still held since before the wait is no new
     /// press: a held trigger reports each further move as another press.
     pub fn capture(&self, device: DeviceId, button: Button) -> Capture {
-        if self.pressed.contains(&(device, button)) {
+        if self.pressed.contains_key(&(device, button)) {
             return Capture::Ignore;
         }
         Capture::of(button)
@@ -1611,6 +1623,18 @@ mod tests {
 
         assert_eq!(intents.next_repeat(), None);
         assert_eq!(intents.repeat(HOLD_DURATION), None);
+    }
+
+    #[test]
+    fn the_button_that_activates_counts_how_long_it_is_held_until_let_go() {
+        let mut intents = Intents::new();
+
+        assert_eq!(intents.held_for(Intent::Activate, ms(0)), None);
+        intents.handle(&press(Button::South), ms(100));
+        assert_eq!(intents.held_for(Intent::Activate, ms(400)), Some(ms(300)));
+        assert_eq!(intents.held_for(Intent::Back, ms(400)), None);
+        intents.handle(&release(Button::South), ms(500));
+        assert_eq!(intents.held_for(Intent::Activate, ms(600)), None);
     }
 
     #[test]
