@@ -36,8 +36,8 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **Proton builds.** Quick Access's **Proton** level picks the default Proton build and the default MangoHud and
   GameMode for new Windows games (the same settings as Preferences' Windows page), lists the downloaded builds, which
   A asks to remove, and, once the player checks, the GE-Proton and Proton-CachyOS releases, which A downloads. A
-  download is a task in Activity that can be cancelled there or with A on its row. The default prefix folder stays
-  desktop-only: it needs a folder chooser.
+  download is a task in Activity that can be cancelled there or with A on its row. The default prefix folder and
+  the folder save snapshots are copied to stay desktop-only: they need a folder chooser.
 - **Collections.** View or X on a collection in the menu drawer's Collections leads to Rename…, Move Up, Move Down
   and Delete…, the desktop sidebar's collection menu. A name, new or changed, is typed with the on-screen keyboard
   in the passphrase dialog, showing its text; Delete asks first, with Cancel chosen.
