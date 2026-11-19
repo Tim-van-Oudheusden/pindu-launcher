@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 21:12+0100\n"
+"POT-Creation-Date: 2026-11-19 21:14+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -609,7 +609,7 @@ msgid "Its games stay in the library."
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:376
-#: crates/pindu-ui/src/collection_actions.rs:447
+#: crates/pindu-ui/src/collection_actions.rs:451
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:485
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:635
 #: crates/pindu-ui/src/fullscreen_network.rs:414
@@ -642,7 +642,7 @@ msgstr ""
 msgid "Name the collection."
 msgstr ""
 
-#: crates/pindu-ui/src/collection_actions.rs:438
+#: crates/pindu-ui/src/collection_actions.rs:435
 msgid "Name"
 msgstr ""
 
@@ -757,7 +757,7 @@ msgid_plural "{count} things need attention:"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/fullscreen.rs:610
+#: crates/pindu-ui/src/fullscreen.rs:617
 #, rust-format
 msgid "Your fullscreen style has a problem"
 msgid_plural "Your fullscreen style has {count} problems"
@@ -1144,7 +1144,7 @@ msgid "Moving"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controls.rs:217
-#: crates/pindu-ui/src/home_page.rs:976 data/ui/home_page.blp:185
+#: crates/pindu-ui/src/home_page.rs:983 data/ui/home_page.blp:185
 #: data/ui/menu_drawer.blp:100 data/ui/preferences.blp:10
 #: data/ui/shortcuts-dialog.blp:35 data/ui/window.blp:62 data/ui/window.blp:161
 msgid "Library"
@@ -2498,11 +2498,11 @@ msgstr ""
 msgid "Recently Played"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:571 data/ui/home_page.blp:245
+#: crates/pindu-ui/src/home_page.rs:578 data/ui/home_page.blp:245
 msgid "Opening…"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:882
+#: crates/pindu-ui/src/home_page.rs:889
 msgid "Steam Big Picture"
 msgstr ""
 
