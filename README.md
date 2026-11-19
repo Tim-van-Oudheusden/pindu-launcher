@@ -87,7 +87,9 @@ widgets so it looks and behaves like the rest of GNOME.
   Access's settings), then **Refresh Metadata** in the main menu or in Quick Access looks your games up on
   [Wikidata](https://www.wikidata.org) by their Steam app ID and keeps their developer and genres, labelled in your
   language where Wikidata has it. It is off by default, runs only when you ask, never during an import, and can be
-  cancelled in Activity. Details your launchers give stay underneath, and details you enter yourself come first.
+  cancelled in Activity. Details your launchers give stay underneath, and details you enter yourself come first. A
+  game's page marks each detail that came from Wikidata with **Wikidata** and the date it was fetched, and on the
+  desktop a button beside it opens the game's Wikidata page.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.

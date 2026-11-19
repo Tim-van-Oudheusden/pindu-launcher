@@ -1,5 +1,6 @@
 //! The game page: hero art with the logo or title, Play with default focus, a ⋮ menu, a
-//! facts row, the About group, the description and the Launch group: for games we run,
+//! facts row, the About group, where a value Wikidata gave says so and when, with a link
+//! to its item, the description and the Launch group: for games we run,
 //! their launch settings; for store games, a read-only summary. In fullscreen mode it
 //! shows hero, logo, a large Play, Favourite, Add to Collection and Options (both opening
 //! the options sheet), a Playing Now card while the game runs, a launch summary, the About
@@ -7,6 +8,7 @@
 //! page while Play starts the game.
 
 use std::cell::{Cell, OnceCell, RefCell};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -20,11 +22,12 @@ use pindu_core::library::{GameCopy, PlaytimeOrigin};
 use pindu_core::manual;
 use pindu_core::model::{
     Collection, ControllerSupport, DeckCompatibility, DeckRating, Game, GameId, LaunchConfig,
-    LaunchKind, Source, Timestamp,
+    LaunchKind, MetadataField, Source, Timestamp,
 };
 use pindu_core::panels::Playing;
 use pindu_core::reading;
 use pindu_core::saves;
+use pindu_core::wikidata::Provenance;
 
 use crate::collection_actions::collection_menu;
 use crate::group_actions::group_menu;
@@ -136,6 +139,9 @@ mod imp {
         pub prefix: RefCell<Option<PathBuf>>,
         /// Set while the rows show stored settings, so only the user's changes are saved.
         pub filling: Cell<bool>,
+        /// The links to the Wikidata items of values Wikidata gave, which fullscreen mode
+        /// leaves out.
+        pub origin_links: RefCell<Vec<gtk::Button>>,
     }
 
     #[glib::object_subclass]
@@ -335,6 +341,7 @@ impl GamePage {
         imp.description_box.set_visible(game.description.is_some());
         imp.description
             .set_label(game.description.as_deref().unwrap_or_default());
+        self.load_provenances(library, &game.id);
 
         imp.permission_banner
             .set_revealed(permission_service::needs_permission(game));
@@ -428,6 +435,9 @@ impl GamePage {
         // A selectable text would select itself all as it takes focus.
         imp.developer_row.set_subtitle_selectable(!fullscreen);
         imp.description.set_selectable(!fullscreen);
+        for link in imp.origin_links.borrow().iter() {
+            link.set_visible(!fullscreen);
+        }
         imp.description_box.set_focusable(fullscreen);
         imp.launch_group.set_visible(
             !fullscreen
@@ -584,6 +594,44 @@ impl GamePage {
                 page.show_launch_settings(&id, config);
             }
         });
+    }
+
+    /// Reads where the game's values came from and shows it next to the ones Wikidata
+    /// gave.
+    fn load_provenances(&self, library: &LibraryService, id: &GameId) {
+        let (library, id) = (library.clone(), id.clone());
+        let page = self.downgrade();
+        glib::spawn_future_local(async move {
+            let provenances = library.provenances(&id).await;
+            if let Some(page) = page.upgrade() {
+                page.show_provenances(&provenances);
+            }
+        });
+    }
+
+    /// Shows "Wikidata" and the fetch time beside each About row whose value Wikidata gave,
+    /// with a link to its item on the desktop.
+    fn show_provenances(&self, provenances: &BTreeMap<MetadataField, Provenance>) {
+        let imp = self.imp();
+        let rows = [
+            (MetadataField::Developer, &*imp.developer_row),
+            (MetadataField::Genres, &*imp.genres_row),
+            (MetadataField::ReleaseYear, &*imp.release_year_row),
+            (MetadataField::ControllerSupport, &*imp.controller_row),
+            (MetadataField::DeckCompatibility, &*imp.deck_row),
+        ];
+        for (field, row) in rows {
+            let Some(provenance) = provenances.get(&field) else {
+                continue;
+            };
+            row.add_suffix(&origin_label(provenance));
+            if let Some(link) = &provenance.link {
+                let button = origin_link(link);
+                button.set_visible(!imp.fullscreen.get());
+                row.add_suffix(&button);
+                imp.origin_links.borrow_mut().push(button);
+            }
+        }
     }
 
     fn show_launch_settings(&self, id: &GameId, config: Option<LaunchConfig>) {
@@ -935,6 +983,50 @@ pub(crate) fn date(timestamp: Timestamp) -> String {
         .and_then(|date| date.format("%x"))
         .map(|text| text.to_string())
         .unwrap_or_default()
+}
+
+/// "Wikidata" and when it gave a value, shown beside the value.
+fn origin_label(provenance: &Provenance) -> gtk::Label {
+    gtk::Label::builder()
+        .label(
+            // Translators: beside a game's developer or genres; {date} is when they were
+            // fetched from Wikidata, the online database.
+            gettext("Wikidata, {date}").replace("{date}", &date(provenance.fetched_at)),
+        )
+        .valign(gtk::Align::Center)
+        .css_classes(["dim-label", "caption"])
+        .build()
+}
+
+/// A button that opens the Wikidata item a value came from in the browser, through the
+/// OpenURI portal in the sandbox.
+fn origin_link(uri: &str) -> gtk::Button {
+    let name = gettext("Open the Wikidata Item");
+    let button = gtk::Button::builder()
+        .icon_name("adw-external-link-symbolic")
+        .tooltip_text(&name)
+        .valign(gtk::Align::Center)
+        .css_classes(["flat"])
+        .build();
+    button.update_property(&[gtk::accessible::Property::Label(&name)]);
+    let uri = uri.to_owned();
+    button.connect_clicked(move |button| {
+        let window = button.root().and_downcast::<PinduWindow>();
+        let (uri, toast_window) = (uri.clone(), window.clone());
+        gtk::UriLauncher::new(&uri).launch(
+            window.as_ref(),
+            gio::Cancellable::NONE,
+            move |result| {
+                if let Err(error) = result {
+                    glib::g_warning!("pindu", "Could not open {uri}: {error}");
+                    if let Some(window) = toast_window {
+                        window.add_toast(adw::Toast::new(&gettext("Could not open the web page")));
+                    }
+                }
+            },
+        );
+    });
+    button
 }
 
 /// Steam's Steam Deck rating in words, with the day Valve tested the game when it says.

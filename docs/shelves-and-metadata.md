@@ -110,10 +110,20 @@ In this order, local data first:
    is a task in Activity (and a toast with Cancel on the desktop); each batch is stored as it arrives, so a
    cancelled or failed run keeps what it got, and the outcome is a toast and a notification.
 
-   Not done in #529: the item's QID and its cross-IDs (PCGamingWiki, IGDB, GOG, Epic, Lutris) and a link out per
-   value would need a new table, and only #504, #524, #526 and #531 add migrations, so they wait for a later issue.
-   Release year, publisher and series have no `game_metadata` field yet, and Lutris slugs are not kept, so Lutris
-   games without a Steam link are not looked up.
+   As built (#638): the query also asks for the item's cross-IDs, PCGamingWiki `P6337`, IGDB `P5794`, SteamGridDB
+   `P12561`, GOG `P2725`, Epic `P6278`, Lutris `P7597` and Steam `P1733` (`wikidata::CrossId`). A refresh keeps each
+   game's item (`wikidata::store_items` → `Store::set_wikidata_item`): its QID and fetch time in `wikidata_items` and
+   every cross-ID value in `wikidata_cross_ids` (migration 0011), both dropped with the game and replaced by the next
+   refresh that finds the item. On the game page, in both shells, an About row whose shown value is the provider's
+   says **Wikidata** and the date of the last refresh that fetched the item (`wikidata::provenance`); on the desktop a
+   button beside it opens `https://www.wikidata.org/wiki/<QID>` through the OpenURI portal. A provider value with no
+   item kept (restored from a backup) shows its own time and no link. Backups do not carry items; a refresh fetches
+   them again. Grouping suggestions do not use the cross-IDs yet: Wikidata keeps GOG store paths, Epic slugs and
+   Lutris slugs, not the product IDs and app names the importers read, so only Steam's would match exactly, and
+   grouping already has it.
+
+   Not done: publisher and series have no `game_metadata` field, and Lutris slugs are not kept, so Lutris games
+   without a Steam link are not looked up.
 
 ## Flatpak, native and Pindu OS
 
