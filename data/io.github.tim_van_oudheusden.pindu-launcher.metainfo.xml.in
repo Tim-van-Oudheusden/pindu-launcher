@@ -87,6 +87,25 @@
   </supports>
 
   <releases>
+    <release version="0.6.0~rc1" date="2026-11-20" type="development">
+      <description>
+        <p>The first 0.6.0 release candidate brings a more unified library, save snapshots and more ways to manage games in fullscreen mode.</p>
+        <ul>
+          <li>Review duplicate suggestions, merge or split games by hand and choose which store's copy Pindu launcher prefers.</li>
+          <li>Import games from the itch app and standalone Legendary. Library Health and the first-sync summary show what each source found and what needs attention.</li>
+          <li>Rename games and edit their developer, genres, release year and description. Game pages show where details came from, and can look up more on Wikidata on request.</li>
+          <li>Game pages show Steam Deck compatibility and controller support where available. Steam games link to ProtonDB and PCGamingWiki.</li>
+          <li>Switch the desktop library to a list, select several games at once, filter by genre or never played, and save filters as collections that update automatically.</li>
+          <li>Keep snapshots of Windows game saves when a game exits, add save folders by hand, and restore a snapshot or copy it to another folder.</li>
+          <li>Failed launches explain what happened and suggest a next step. Start a game once in safe mode, or include its latest log in a diagnostics report.</li>
+          <li>In fullscreen mode, add games by hand, manage collections and sources, and download, remove or choose Proton builds.</li>
+          <li>Choose Red Ribbons or Blue Station for fullscreen Home in Quick Access → Design. Red Ribbons is the default.</li>
+          <li>Fullscreen mode offers larger text, optional hold-to-confirm, and controller repeat and dead-zone settings. High contrast improves text over artwork and uses a still, plain Home background.</li>
+          <li>Keyboard and screen-reader improvements make it easier to leave the cover grid, identify Play buttons and selected games, and hear search and filter result counts.</li>
+          <li>Backups include game groups, saved filters and edited metadata. Pindu launcher keeps a copy of the library before updating its database format.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.1" date="2026-11-19">
       <description>
         <p>Change a game's artwork from SteamGridDB or your own files, and a tidier library.</p>

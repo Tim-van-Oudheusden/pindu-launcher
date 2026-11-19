@@ -8,8 +8,7 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-20, #663: refreshed the README's libre desktop and commercial fullscreen galleries for `v0.6.0-rc.1`
-  using the development build from PR #662. The Quick Access screenshot shows the new background picker.
-- Captured in isolated Gamescope sessions using credited libre art and selected artwork from a real Steam library.
-  Verified the screenshot links and visually checked all ten captures. AppStream assets and MetaInfo stay pinned.
-- Release tracker: #664. Version bumps, tagging and the hardware checklist belong to the separate release work.
+- 2026-11-20, #664: prepared `v0.6.0-rc.1` from main, including the fullscreen background picker and README galleries.
+- Candidate tags use `v0.6.0-rc.1`; RPM, Debian and MetaInfo use the corresponding `0.6.0~rc1` version.
+  Tag the release PR's merge commit on main and let the Release workflow publish it.
+- Keep #664 open for the hardware checklist, the candidate soak and the final release. No hardware pass is recorded.
