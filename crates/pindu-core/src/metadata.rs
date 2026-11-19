@@ -87,6 +87,24 @@ impl FieldValue {
     }
 }
 
+/// A Steam Deck rating as the store and backups keep it:
+/// `{"rating": "verified", "tested_at": 1700000000}`.
+pub(crate) fn deck_json(deck: &DeckCompatibility) -> serde_json::Value {
+    serde_json::json!({
+        "rating": deck.rating.as_str(),
+        "tested_at": deck.tested_at,
+    })
+}
+
+/// A Steam Deck rating from [`deck_json`]'s form; `None` when it names no rating this
+/// version knows.
+pub(crate) fn deck_from_json(json: &serde_json::Value) -> Option<DeckCompatibility> {
+    Some(DeckCompatibility {
+        rating: json["rating"].as_str()?.parse().ok()?,
+        tested_at: json["tested_at"].as_i64(),
+    })
+}
+
 /// A stored value: one field of a game from one origin, and when that origin set it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetadataValue {

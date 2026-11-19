@@ -4,7 +4,7 @@ use std::error::Error;
 use rusqlite::{Row, params};
 
 use super::{Result, Store, to_json};
-use crate::metadata::{FieldValue, Metadata, MetadataValue};
+use crate::metadata::{self, FieldValue, Metadata, MetadataValue};
 use crate::model::{DeckCompatibility, GameId, MetadataField, MetadataOrigin, Timestamp};
 
 impl Store {
@@ -72,17 +72,13 @@ impl Store {
     }
 }
 
-/// The stored text of a value: genres as a JSON array, a Steam Deck rating as a JSON
-/// object `{"rating": "verified", "tested_at": 1700000000}`, other fields as they are.
+/// The stored text of a value: genres as a JSON array, a Steam Deck rating as
+/// [`metadata::deck_json`]'s object, other fields as they are.
 fn value_text(value: &FieldValue) -> String {
     match value {
         FieldValue::Developer(text) | FieldValue::Description(text) => text.clone(),
         FieldValue::Genres(genres) => to_json(genres),
-        FieldValue::DeckCompatibility(deck) => serde_json::json!({
-            "rating": deck.rating.as_str(),
-            "tested_at": deck.tested_at,
-        })
-        .to_string(),
+        FieldValue::DeckCompatibility(deck) => metadata::deck_json(deck).to_string(),
     }
 }
 
@@ -108,10 +104,7 @@ fn metadata_value_from_row(row: &Row<'_>) -> rusqlite::Result<MetadataValue> {
 /// A Steam Deck rating from its stored JSON object.
 fn deck_compatibility(text: &str) -> std::result::Result<DeckCompatibility, BoxedError> {
     let json: serde_json::Value = serde_json::from_str(text)?;
-    Ok(DeckCompatibility {
-        rating: json["rating"].as_str().unwrap_or_default().parse()?,
-        tested_at: json["tested_at"].as_i64(),
-    })
+    metadata::deck_from_json(&json).ok_or_else(|| format!("not a Steam Deck rating: {text}").into())
 }
 
 type BoxedError = Box<dyn Error + Send + Sync>;
