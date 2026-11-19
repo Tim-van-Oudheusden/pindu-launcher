@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 20:05+0100\n"
+"POT-Creation-Date: 2026-11-19 20:12+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,7 +19,7 @@ msgstr ""
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
 #: crates/pindu-ui/src/add_store.rs:158 data/ui/add_store.blp:17
-#: data/ui/quick_access.blp:596
+#: data/ui/quick_access.blp:620
 msgid "Add a Store"
 msgstr ""
 
@@ -96,9 +96,10 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_health.rs:251
 #: crates/pindu-ui/src/fullscreen_health.rs:270
 #: crates/pindu-ui/src/fullscreen_library.rs:146
+#: crates/pindu-ui/src/fullscreen_proton_downloads.rs:469
 #: crates/pindu-ui/src/health_page.rs:186 crates/pindu-ui/src/home_page.rs:91
-#: crates/pindu-ui/src/proton_downloads_page.rs:338
-#: crates/pindu-ui/src/widgets/cover_tile.rs:309 data/ui/quick_access.blp:1475
+#: crates/pindu-ui/src/proton_downloads_page.rs:336
+#: crates/pindu-ui/src/widgets/cover_tile.rs:309 data/ui/quick_access.blp:1558
 #: data/ui/window.blp:77 data/ui/window.blp:318
 msgid "Installed"
 msgstr ""
@@ -264,22 +265,29 @@ msgstr ""
 msgid "Could not reach SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1086
+#: crates/pindu-ui/src/application.rs:1089
 msgid "Nothing new to restore"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1088
+#: crates/pindu-ui/src/application.rs:1091
 msgid "Backup restored"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1094
+#: crates/pindu-ui/src/application.rs:1097
 #, rust-format
 msgid "one game in it is not in this library"
 msgid_plural "{count} games in it are not in this library"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:1099
+#: crates/pindu-ui/src/application.rs:1107
+#, rust-format
+msgid "one group of copies in it was skipped"
+msgid_plural "{count} groups of copies in it were skipped"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/pindu-ui/src/application.rs:1115
 #, rust-format
 msgid "{result}; {note}"
 msgstr ""
@@ -514,10 +522,11 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:635
 #: crates/pindu-ui/src/fullscreen_network.rs:414
 #: crates/pindu-ui/src/fullscreen_power.rs:214
+#: crates/pindu-ui/src/fullscreen_proton_downloads.rs:368
 #: crates/pindu-ui/src/fullscreen_system_update.rs:164
 #: crates/pindu-ui/src/game_dialog.rs:809
-#: crates/pindu-ui/src/proton_downloads_page.rs:227
-#: crates/pindu-ui/src/proton_launch.rs:629 data/ui/game_dialog.blp:16
+#: crates/pindu-ui/src/proton_downloads_page.rs:225
+#: crates/pindu-ui/src/proton_launch.rs:670 data/ui/game_dialog.blp:16
 #: data/ui/game_page.blp:405 data/ui/secret_dialog.blp:19
 msgid "_Cancel"
 msgstr ""
@@ -543,6 +552,10 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_activity.rs:297
 msgid "From Flathub"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_activity.rs:298
+msgid "Backing up saves"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_bindings.rs:149
@@ -598,8 +611,8 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:505
 #: crates/pindu-ui/src/fullscreen_network.rs:466 data/ui/preferences.blp:74
-#: data/ui/quick_access.blp:746 data/ui/quick_access.blp:800
-#: data/ui/quick_access.blp:983
+#: data/ui/quick_access.blp:796 data/ui/quick_access.blp:850
+#: data/ui/quick_access.blp:1033
 msgid "Off"
 msgstr ""
 
@@ -698,17 +711,17 @@ msgid "{percent} %"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:182
-#: data/ui/quick_access.blp:916
+#: data/ui/quick_access.blp:966
 msgid "Letters"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:183
-#: data/ui/quick_access.blp:928
+#: data/ui/quick_access.blp:978
 msgid "Shapes"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:184
-#: data/ui/quick_access.blp:940
+#: data/ui/quick_access.blp:990
 msgid "Letters, A on the Right"
 msgstr ""
 
@@ -924,7 +937,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_health.rs:294
 #: crates/pindu-ui/src/health_page.rs:130
-#: crates/pindu-ui/src/quick_access.rs:1106 data/ui/quick_access.blp:1433
+#: crates/pindu-ui/src/quick_access.rs:1150 data/ui/quick_access.blp:1483
 msgid "SteamGridDB Key"
 msgstr ""
 
@@ -994,7 +1007,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_health.rs:359
 #: crates/pindu-ui/src/health_page.rs:301 data/ui/game_dialog.blp:44
-#: data/ui/quick_access.blp:1487 data/ui/window.blp:334
+#: data/ui/quick_access.blp:1570 data/ui/window.blp:334
 msgid "Native"
 msgstr ""
 
@@ -1004,8 +1017,9 @@ msgid "Last synced: {when}"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_health.rs:367
+#: crates/pindu-ui/src/fullscreen_sources.rs:79
 #: crates/pindu-ui/src/health_page.rs:280
-#: crates/pindu-ui/src/preferences.rs:429
+#: crates/pindu-ui/src/preferences.rs:424
 msgid "Not found on this computer"
 msgstr ""
 
@@ -1086,7 +1100,7 @@ msgid "Wired"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_network.rs:438
-#: crates/pindu-ui/src/proton_downloads_page.rs:100 data/ui/quick_access.blp:56
+#: crates/pindu-ui/src/proton_downloads_page.rs:105 data/ui/quick_access.blp:56
 msgid "Offline"
 msgstr ""
 
@@ -1229,8 +1243,9 @@ msgid "View on PCGamingWiki"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_performance.rs:281
-#: crates/pindu-ui/src/health_page.rs:199 data/ui/game_page.blp:326
-#: data/ui/preferences.blp:200 data/ui/quick_access.blp:1542
+#: crates/pindu-ui/src/health_page.rs:199
+#: data/ui/fullscreen_proton_downloads.blp:70 data/ui/game_page.blp:326
+#: data/ui/preferences.blp:200 data/ui/quick_access.blp:1625
 #: data/ui/window.blp:600
 msgid "MangoHud"
 msgstr ""
@@ -1337,6 +1352,63 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_power.rs:370
 msgid "Power Off"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_proton_downloads.rs:202
+#: crates/pindu-ui/src/proton_downloads_page.rs:91
+msgid "Checking GitHub…"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_proton_downloads.rs:221
+#: data/ui/fullscreen_proton_downloads.blp:139
+msgid "Check for Releases"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_proton_downloads.rs:225
+#, rust-format
+msgid "Offline: {reason}"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_proton_downloads.rs:343
+#: crates/pindu-ui/src/proton_downloads_page.rs:202
+msgid "None Yet"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_proton_downloads.rs:360
+#: crates/pindu-ui/src/proton_downloads_page.rs:217
+#, rust-format
+msgid "Remove {build}?"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_proton_downloads.rs:362
+#: crates/pindu-ui/src/proton_downloads_page.rs:219
+msgid "Games set to this build will not start until you choose another one."
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_proton_downloads.rs:369
+#: crates/pindu-ui/src/game_page.rs:634
+#: crates/pindu-ui/src/proton_downloads_page.rs:226
+#: crates/pindu-ui/src/widgets/cover_tile.rs:374
+msgid "_Remove"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_proton_downloads.rs:385
+#: crates/pindu-ui/src/proton_downloads_page.rs:239
+#, rust-format
+msgid "The build was not removed: {error}"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_proton_downloads.rs:498
+#: crates/pindu-ui/src/proton_downloads_page.rs:347
+msgid "Stop Download"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_proton_downloads.rs:500
+msgid "Download"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_sources.rs:77
+msgid "Found on this computer"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_status.rs:49
@@ -1576,12 +1648,6 @@ msgstr ""
 msgid "_Hide"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:634
-#: crates/pindu-ui/src/proton_downloads_page.rs:228
-#: crates/pindu-ui/src/widgets/cover_tile.rs:374
-msgid "_Remove"
-msgstr ""
-
 #: crates/pindu-ui/src/game_page.rs:636
 #: crates/pindu-ui/src/widgets/cover_tile.rs:335
 msgid "_Open in Launcher"
@@ -1697,8 +1763,9 @@ msgstr ""
 msgid ", "
 msgstr ""
 
-#: crates/pindu-ui/src/health_page.rs:200 data/ui/game_page.blp:331
-#: data/ui/preferences.blp:205 data/ui/quick_access.blp:1546
+#: crates/pindu-ui/src/health_page.rs:200
+#: data/ui/fullscreen_proton_downloads.blp:75 data/ui/game_page.blp:331
+#: data/ui/preferences.blp:205 data/ui/quick_access.blp:1629
 #: data/ui/window.blp:604
 msgid "GameMode"
 msgstr ""
@@ -1738,7 +1805,7 @@ msgid "Games"
 msgstr ""
 
 #: crates/pindu-ui/src/health_page.rs:310
-#: crates/pindu-ui/src/preferences.rs:510
+#: crates/pindu-ui/src/preferences.rs:505
 msgid "Last Synced"
 msgstr ""
 
@@ -1810,7 +1877,7 @@ msgid "Options"
 msgstr ""
 
 #: crates/pindu-ui/src/hint_bar.rs:225 data/ui/preferences.blp:302
-#: data/ui/quick_access.blp:1351
+#: data/ui/quick_access.blp:1401
 msgid "Hold to Confirm"
 msgstr ""
 
@@ -1926,7 +1993,7 @@ msgid "Steam Big Picture"
 msgstr ""
 
 #: crates/pindu-ui/src/launch_service.rs:142
-#: crates/pindu-ui/src/proton_launch.rs:504
+#: crates/pindu-ui/src/proton_launch.rs:545
 #, rust-format
 msgid "Could not start “{title}”"
 msgstr ""
@@ -1958,8 +2025,8 @@ msgid "Could not open {launcher}"
 msgstr ""
 
 #: crates/pindu-ui/src/launch_service.rs:292
-#: crates/pindu-ui/src/proton_launch.rs:374
-#: crates/pindu-ui/src/proton_launch.rs:603 crates/pindu-ui/src/window.rs:1396
+#: crates/pindu-ui/src/proton_launch.rs:410
+#: crates/pindu-ui/src/proton_launch.rs:644 crates/pindu-ui/src/window.rs:1396
 msgid "_Close"
 msgstr ""
 
@@ -2029,105 +2096,105 @@ msgstr ""
 msgid "The connection failed (reason {reason})."
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:427
+#: crates/pindu-ui/src/preferences.rs:422
 msgid "The sandbox cannot see this folder: choose it to import its games"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:443
+#: crates/pindu-ui/src/preferences.rs:438
 msgid "Import"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:455
+#: crates/pindu-ui/src/preferences.rs:450
 msgid "Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:457
+#: crates/pindu-ui/src/preferences.rs:452
 msgid "Found automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:462 data/ui/game_dialog.blp:62
+#: crates/pindu-ui/src/preferences.rs:457 data/ui/game_dialog.blp:62
 #: data/ui/preferences.blp:187
 msgid "_Choose…"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:468
+#: crates/pindu-ui/src/preferences.rs:463
 msgid "Find Automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:499
+#: crates/pindu-ui/src/preferences.rs:494
 msgid "Show in Sidebar"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:524
+#: crates/pindu-ui/src/preferences.rs:519
 #, rust-format
 msgid "The last sync ran into {count} problem"
 msgid_plural "The last sync ran into {count} problems"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/preferences.rs:556
+#: crates/pindu-ui/src/preferences.rs:551
 #, rust-format
 msgid "Choose the Folder of {source}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:598
+#: crates/pindu-ui/src/preferences.rs:593
 msgid "Choose the Prefix Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:667
+#: crates/pindu-ui/src/preferences.rs:662
 #, rust-format
 msgid "The key was not saved: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:685
-#: crates/pindu-ui/src/quick_access.rs:1030
+#: crates/pindu-ui/src/preferences.rs:680
+#: crates/pindu-ui/src/quick_access.rs:1074
 msgid "Your fullscreen.css, over the design"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:687
+#: crates/pindu-ui/src/preferences.rs:682
 msgid "Create the style file or import one to turn it on"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:712
+#: crates/pindu-ui/src/preferences.rs:707
 #, rust-format
 msgid "The style folder cannot be created: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:731
+#: crates/pindu-ui/src/preferences.rs:726
 msgid "Stylesheets"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:737
+#: crates/pindu-ui/src/preferences.rs:732
 msgid "Import Style"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:755
+#: crates/pindu-ui/src/preferences.rs:750
 msgid "Style imported"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:757
+#: crates/pindu-ui/src/preferences.rs:752
 #, rust-format
 msgid "The style was not imported: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:772
+#: crates/pindu-ui/src/preferences.rs:767
 msgid "Style moved to fullscreen.css.bak"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:773
+#: crates/pindu-ui/src/preferences.rs:768
 msgid "My Stylesheet is off"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:775
+#: crates/pindu-ui/src/preferences.rs:770
 #, rust-format
 msgid "The style was not reset: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:793 data/ui/preferences.blp:339
+#: crates/pindu-ui/src/preferences.rs:788 data/ui/preferences.blp:339
 msgid "No Problems"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:796
+#: crates/pindu-ui/src/preferences.rs:791
 #, rust-format
 msgid "{count} Problem"
 msgid_plural "{count} Problems"
@@ -2165,47 +2232,47 @@ msgstr ""
 msgid "{proton} (not installed)"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:116
+#: crates/pindu-ui/src/proton_download_service.rs:117
 #, rust-format
 msgid "{build} is already being installed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:158
+#: crates/pindu-ui/src/proton_download_service.rs:159
 #, rust-format
 msgid "{build} installed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:159
+#: crates/pindu-ui/src/proton_download_service.rs:160
 msgid "Windows games can now run with it"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:163
+#: crates/pindu-ui/src/proton_download_service.rs:164
 #, rust-format
 msgid "{build} was not installed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:176
+#: crates/pindu-ui/src/proton_download_service.rs:177
 msgid "The build could not be removed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:191
+#: crates/pindu-ui/src/proton_download_service.rs:192
 msgid "The download folder could not be made"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:201
+#: crates/pindu-ui/src/proton_download_service.rs:202
 msgid "The download was stopped"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:206
-#: crates/pindu-ui/src/proton_download_service.rs:251
+#: crates/pindu-ui/src/proton_download_service.rs:207
+#: crates/pindu-ui/src/proton_download_service.rs:252
 msgid "The tarball could not be unpacked"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:225
+#: crates/pindu-ui/src/proton_download_service.rs:226
 msgid "The release's checksum file does not list its tarball"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:233
+#: crates/pindu-ui/src/proton_download_service.rs:234
 msgid ""
 "The download does not match the checksum the release published; nothing was "
 "installed"
@@ -2213,174 +2280,159 @@ msgstr ""
 
 #. / What the user is told when GitHub cannot be reached.
 
-#: crates/pindu-ui/src/proton_download_service.rs:328
+#: crates/pindu-ui/src/proton_download_service.rs:329
 msgid ""
 "You are offline. Connect to the internet to see and download Proton releases."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:343
+#: crates/pindu-ui/src/proton_download_service.rs:344
 #, rust-format
 msgid "GitHub could not be reached: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:352
+#: crates/pindu-ui/src/proton_download_service.rs:353
 msgid "GitHub was asked too often from this network; try again in an hour"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_download_service.rs:354
+#: crates/pindu-ui/src/proton_download_service.rs:355
 #, rust-format
 msgid "GitHub answered {status}"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_downloads_page.rs:82
-msgid "Checking GitHub…"
-msgstr ""
-
-#: crates/pindu-ui/src/proton_downloads_page.rs:129
-#, rust-format
-msgid "{count} newest releases from {repository}"
-msgstr ""
-
-#: crates/pindu-ui/src/proton_downloads_page.rs:183
+#: crates/pindu-ui/src/proton_downloads_page.rs:181
 msgid "Remove"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_downloads_page.rs:204
-msgid "None Yet"
-msgstr ""
-
-#: crates/pindu-ui/src/proton_downloads_page.rs:219
-#, rust-format
-msgid "Remove {build}?"
-msgstr ""
-
-#: crates/pindu-ui/src/proton_downloads_page.rs:221
-msgid "Games set to this build will not start until you choose another one."
-msgstr ""
-
-#: crates/pindu-ui/src/proton_downloads_page.rs:241
-#, rust-format
-msgid "The build was not removed: {error}"
-msgstr ""
-
-#: crates/pindu-ui/src/proton_downloads_page.rs:260
+#: crates/pindu-ui/src/proton_downloads_page.rs:258
 #, rust-format
 msgid "{build} was not installed: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_downloads_page.rs:343
+#: crates/pindu-ui/src/proton_downloads_page.rs:341
 msgid "_Install"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_downloads_page.rs:349
-msgid "Stop Download"
-msgstr ""
-
-#: crates/pindu-ui/src/proton_downloads_page.rs:385
-#, rust-format
-msgid "{size}, published {date}"
-msgstr ""
-
-#: crates/pindu-ui/src/proton_downloads_page.rs:399
+#: crates/pindu-ui/src/proton_downloads_page.rs:393
 #, rust-format
 msgid "Downloading {received} of {total}"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_downloads_page.rs:409
-#: crates/pindu-ui/src/proton_launch.rs:673
+#: crates/pindu-ui/src/proton_downloads_page.rs:397
+#: crates/pindu-ui/src/proton_launch.rs:714
 msgid "Unpacking…"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:364
+#: crates/pindu-ui/src/proton_downloads_page.rs:403
+#, rust-format
+msgid "{size}, published {date}"
+msgstr ""
+
+#: crates/pindu-ui/src/proton_downloads_page.rs:425
+#, rust-format
+msgid "{count} newest releases from {repository}"
+msgstr ""
+
+#: crates/pindu-ui/src/proton_launch.rs:400
 msgid "umu-launcher Needed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:367
+#: crates/pindu-ui/src/proton_launch.rs:403
 #, rust-format
 msgid ""
 "“{title}” runs through umu-launcher, which is not installed on this "
 "computer. Install it, then try again."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:375
+#: crates/pindu-ui/src/proton_launch.rs:411
 msgid "_How to Install"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:494
+#: crates/pindu-ui/src/proton_launch.rs:535
 #, rust-format
 msgid "Could not start “{title}”: no Proton found"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:496
+#: crates/pindu-ui/src/proton_launch.rs:537
 #, rust-format
 msgid "Could not start “{title}”: {proton} is not installed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:563
+#: crates/pindu-ui/src/proton_launch.rs:604
 msgid "No Internet Connection"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:565
+#: crates/pindu-ui/src/proton_launch.rs:606
 msgid ""
 "Windows games need the Steam Linux Runtime, a one-time download. Connect to "
 "the internet, then try again."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:574
+#: crates/pindu-ui/src/proton_launch.rs:615
 msgid "Could Not Set Up Windows Games"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:575
+#: crates/pindu-ui/src/proton_launch.rs:616
 msgid "The Steam Linux Runtime could not be installed. Try again later."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:618
+#: crates/pindu-ui/src/proton_launch.rs:659
 msgid "Setting Up Windows Games"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:621
+#: crates/pindu-ui/src/proton_launch.rs:662
 #, rust-format
 msgid ""
 "Windows games need the Steam Linux Runtime, a one-time download. “{title}” "
 "starts when it is ready."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:669
+#: crates/pindu-ui/src/proton_launch.rs:710
 #, rust-format
 msgid "Downloading… {size}"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:671
+#: crates/pindu-ui/src/proton_launch.rs:712
 msgid "Downloading…"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:674
+#: crates/pindu-ui/src/proton_launch.rs:715
 msgid "Checking…"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:676
+#: crates/pindu-ui/src/proton_launch.rs:717
 msgid "Preparing…"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:415
+#: crates/pindu-ui/src/quick_access.rs:428
 #, rust-format
 msgid "Performance for {game}"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:1032
+#: crates/pindu-ui/src/quick_access.rs:1076
 #, rust-format
 msgid "Create {path} to restyle fullscreen mode"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:1108
+#: crates/pindu-ui/src/quick_access.rs:1152
 msgid ""
 "Type your API key from SteamGridDB's preferences. It is kept in your keyring."
 msgstr ""
 
 #. / Why Design cannot apply a design written for a newer style contract.
 
-#: crates/pindu-ui/src/quick_access.rs:1172
+#: crates/pindu-ui/src/quick_access.rs:1216
 msgid "Needs a newer Pindu launcher"
+msgstr ""
+
+#. Translators: {title} is a game's title.
+#: crates/pindu-ui/src/save_service.rs:37
+#, rust-format
+msgid "Saves of “{title}”"
+msgstr ""
+
+#: crates/pindu-ui/src/save_service.rs:82
+#, rust-format
+msgid "Could not back up the saves of “{title}”"
 msgstr ""
 
 #: crates/pindu-ui/src/search_keyboard.rs:167
@@ -3392,7 +3444,7 @@ msgid "Next Page"
 msgstr ""
 
 #: data/ui/fullscreen_bluetooth.blp:15 data/ui/fullscreen_bluetooth.blp:32
-#: data/ui/fullscreen_bluetooth.blp:36 data/ui/quick_access.blp:435
+#: data/ui/fullscreen_bluetooth.blp:36 data/ui/quick_access.blp:459
 msgid "Bluetooth"
 msgstr ""
 
@@ -3409,19 +3461,20 @@ msgid "Found Devices"
 msgstr ""
 
 #: data/ui/fullscreen_health.blp:16 data/ui/health_page.blp:7
-#: data/ui/quick_access.blp:560
+#: data/ui/quick_access.blp:584
 msgid "Library Health"
 msgstr ""
 
 #: data/ui/fullscreen_health.blp:35 data/ui/health_page.blp:20
 #: data/ui/preferences.blp:121 data/ui/preferences.blp:125
+#: data/ui/quick_access.blp:385 data/ui/quick_access.blp:1507
 #: data/ui/window.blp:114
 msgid "Sources"
 msgstr ""
 
 #: data/ui/fullscreen_health.blp:74 data/ui/game_dialog.blp:166
 #: data/ui/health_page.blp:28 data/ui/preferences.blp:131
-#: data/ui/quick_access.blp:1413
+#: data/ui/quick_access.blp:1463
 msgid "Artwork"
 msgstr ""
 
@@ -3429,7 +3482,7 @@ msgstr ""
 msgid "Library Data"
 msgstr ""
 
-#: data/ui/fullscreen_network.blp:15 data/ui/quick_access.blp:393
+#: data/ui/fullscreen_network.blp:15 data/ui/quick_access.blp:417
 msgid "Network"
 msgstr ""
 
@@ -3445,11 +3498,58 @@ msgstr ""
 msgid "Power"
 msgstr ""
 
-#: data/ui/fullscreen_sound_output.blp:15 data/ui/quick_access.blp:477
+#: data/ui/fullscreen_proton_downloads.blp:16 data/ui/game_dialog.blp:116
+#: data/ui/game_page.blp:295 data/ui/preferences.blp:164
+#: data/ui/preferences.blp:212 data/ui/quick_access.blp:646
+#: data/ui/quick_access.blp:1638
+msgid "Proton"
+msgstr ""
+
+#: data/ui/fullscreen_proton_downloads.blp:25 data/ui/preferences.blp:160
+msgid "Defaults"
+msgstr ""
+
+#: data/ui/fullscreen_proton_downloads.blp:34 data/ui/preferences.blp:161
+msgid "Windows games run with these unless their page says otherwise."
+msgstr ""
+
+#: data/ui/fullscreen_proton_downloads.blp:53 data/ui/preferences.blp:197
+msgid ""
+"Games added from now on start with these switched on; each game's page can "
+"change them."
+msgstr ""
+
+#: data/ui/fullscreen_proton_downloads.blp:71 data/ui/game_page.blp:327
+#: data/ui/preferences.blp:201
+msgid "An overlay with the frame rate and how busy the computer is"
+msgstr ""
+
+#: data/ui/fullscreen_proton_downloads.blp:76 data/ui/game_page.blp:332
+#: data/ui/preferences.blp:206 data/ui/quick_access.blp:1630
+#: data/ui/window.blp:605
+msgid "Asks the system to favour the game while it runs"
+msgstr ""
+
+#: data/ui/fullscreen_proton_downloads.blp:81 data/ui/preferences.blp:216
+msgid "Downloaded Builds"
+msgstr ""
+
+#: data/ui/fullscreen_proton_downloads.blp:112 data/ui/preferences.blp:221
+msgid "Releases"
+msgstr ""
+
+#: data/ui/fullscreen_proton_downloads.blp:122 data/ui/preferences.blp:222
+msgid ""
+"GE-Proton and Proton-CachyOS builds published on GitHub. Pindu launcher only "
+"goes online when you check for releases or install one; games never download "
+"Proton when they start."
+msgstr ""
+
+#: data/ui/fullscreen_sound_output.blp:15 data/ui/quick_access.blp:501
 msgid "Sound Output"
 msgstr ""
 
-#: data/ui/fullscreen_system_update.blp:15 data/ui/quick_access.blp:519
+#: data/ui/fullscreen_system_update.blp:15 data/ui/quick_access.blp:543
 msgid "System Update"
 msgstr ""
 
@@ -3467,7 +3567,7 @@ msgstr ""
 
 #: data/ui/game_dialog.blp:45 data/ui/game_dialog.blp:93
 #: data/ui/menu_drawer.blp:45 data/ui/preferences.blp:156
-#: data/ui/quick_access.blp:1483 data/ui/window.blp:330
+#: data/ui/quick_access.blp:1566 data/ui/window.blp:330
 msgid "Windows"
 msgstr ""
 
@@ -3517,12 +3617,6 @@ msgstr ""
 
 #: data/ui/game_dialog.blp:100
 msgid "Windows games and their installers run through it"
-msgstr ""
-
-#: data/ui/game_dialog.blp:116 data/ui/game_page.blp:295
-#: data/ui/preferences.blp:164 data/ui/preferences.blp:212
-#: data/ui/quick_access.blp:1555
-msgid "Proton"
 msgstr ""
 
 #: data/ui/game_dialog.blp:122 data/ui/game_page.blp:301
@@ -3603,21 +3697,12 @@ msgstr ""
 msgid "Ask Steam which of the game’s launch options to use"
 msgstr ""
 
-#: data/ui/game_page.blp:291 data/ui/quick_access.blp:1576
+#: data/ui/game_page.blp:291 data/ui/quick_access.blp:1659
 msgid "Changes apply the next time the game starts."
 msgstr ""
 
 #: data/ui/game_page.blp:320
 msgid "Environment, Such as NAME=value"
-msgstr ""
-
-#: data/ui/game_page.blp:327 data/ui/preferences.blp:201
-msgid "An overlay with the frame rate and how busy the computer is"
-msgstr ""
-
-#: data/ui/game_page.blp:332 data/ui/preferences.blp:206
-#: data/ui/quick_access.blp:1547 data/ui/window.blp:605
-msgid "Asks the system to favour the game while it runs"
 msgstr ""
 
 #: data/ui/game_page.blp:336
@@ -3634,7 +3719,7 @@ msgstr ""
 
 #: data/ui/menu_drawer.blp:143 data/ui/menu_drawer.blp:248
 #: data/ui/menu_drawer.blp:260 data/ui/quick_access.blp:337
-#: data/ui/quick_access.blp:1206
+#: data/ui/quick_access.blp:1256
 msgid "Controls"
 msgstr ""
 
@@ -3654,7 +3739,7 @@ msgstr ""
 msgid "Cover Size"
 msgstr ""
 
-#: data/ui/preferences.blp:17 data/ui/quick_access.blp:1143
+#: data/ui/preferences.blp:17 data/ui/quick_access.blp:1193
 msgid "Small"
 msgstr ""
 
@@ -3663,7 +3748,7 @@ msgid "Medium"
 msgstr ""
 
 #: data/ui/preferences.blp:19 data/ui/preferences.blp:294
-#: data/ui/quick_access.blp:1169
+#: data/ui/quick_access.blp:1219
 msgid "Large"
 msgstr ""
 
@@ -3683,7 +3768,7 @@ msgstr ""
 msgid "The launcher and state badges on covers"
 msgstr ""
 
-#: data/ui/preferences.blp:39 data/ui/quick_access.blp:1325
+#: data/ui/preferences.blp:39 data/ui/quick_access.blp:1375
 msgid "Exit After Launching"
 msgstr ""
 
@@ -3703,7 +3788,7 @@ msgid ""
 "this is on, a Steam Deck's own controls work only as a controller."
 msgstr ""
 
-#: data/ui/preferences.blp:54 data/ui/quick_access.blp:885
+#: data/ui/preferences.blp:54 data/ui/quick_access.blp:935
 msgid "Button Prompts"
 msgstr ""
 
@@ -3714,7 +3799,7 @@ msgid ""
 msgstr ""
 
 #: data/ui/preferences.blp:59 data/ui/preferences.blp:73
-#: data/ui/quick_access.blp:903 data/ui/quick_access.blp:970
+#: data/ui/quick_access.blp:953 data/ui/quick_access.blp:1020
 msgid "Automatic"
 msgstr ""
 
@@ -3730,7 +3815,7 @@ msgstr ""
 msgid "Letters (Nintendo)"
 msgstr ""
 
-#: data/ui/preferences.blp:68 data/ui/quick_access.blp:953
+#: data/ui/preferences.blp:68 data/ui/quick_access.blp:1003
 msgid "Swap Confirm and Back"
 msgstr ""
 
@@ -3740,7 +3825,7 @@ msgid ""
 "them for Nintendo letters."
 msgstr ""
 
-#: data/ui/preferences.blp:75 data/ui/quick_access.blp:996
+#: data/ui/preferences.blp:75 data/ui/quick_access.blp:1046
 msgid "On"
 msgstr ""
 
@@ -3779,20 +3864,12 @@ msgstr ""
 msgid "Stored Key"
 msgstr ""
 
-#: data/ui/preferences.blp:149 data/ui/quick_access.blp:1438
+#: data/ui/preferences.blp:149 data/ui/quick_access.blp:1488
 msgid "Prefer SteamGridDB Art"
 msgstr ""
 
-#: data/ui/preferences.blp:150 data/ui/quick_access.blp:1439
+#: data/ui/preferences.blp:150 data/ui/quick_access.blp:1489
 msgid "Show it before the launcher's own art; art you pick always comes first"
-msgstr ""
-
-#: data/ui/preferences.blp:160
-msgid "Defaults"
-msgstr ""
-
-#: data/ui/preferences.blp:161
-msgid "Windows games run with these unless their page says otherwise."
 msgstr ""
 
 #: data/ui/preferences.blp:170
@@ -3807,31 +3884,10 @@ msgstr ""
 msgid "Tools"
 msgstr ""
 
-#: data/ui/preferences.blp:197
-msgid ""
-"Games added from now on start with these switched on; each game's page can "
-"change them."
-msgstr ""
-
-#: data/ui/preferences.blp:216
-msgid "Downloaded Builds"
-msgstr ""
-
 #: data/ui/preferences.blp:217
 msgid ""
 "Builds installed here can be chosen for any Windows game, like those from "
 "Steam."
-msgstr ""
-
-#: data/ui/preferences.blp:221
-msgid "Releases"
-msgstr ""
-
-#: data/ui/preferences.blp:222
-msgid ""
-"GE-Proton and Proton-CachyOS builds published on GitHub. Pindu launcher only "
-"goes online when you check for releases or install one; games never download "
-"Proton when they start."
 msgstr ""
 
 #: data/ui/preferences.blp:225
@@ -3862,7 +3918,7 @@ msgstr ""
 msgid "Start in Fullscreen Mode"
 msgstr ""
 
-#: data/ui/preferences.blp:250 data/ui/quick_access.blp:1295
+#: data/ui/preferences.blp:250 data/ui/quick_access.blp:1345
 msgid "Navigation Sounds"
 msgstr ""
 
@@ -3870,19 +3926,19 @@ msgstr ""
 msgid "A soft sound when the controller moves, selects or goes back"
 msgstr ""
 
-#: data/ui/preferences.blp:255 data/ui/quick_access.blp:1301
+#: data/ui/preferences.blp:255 data/ui/quick_access.blp:1351
 msgid "Volume"
 msgstr ""
 
-#: data/ui/preferences.blp:273 data/ui/quick_access.blp:1319
+#: data/ui/preferences.blp:273 data/ui/quick_access.blp:1369
 msgid "Navigation Sound Volume"
 msgstr ""
 
-#: data/ui/preferences.blp:280 data/ui/quick_access.blp:1330
+#: data/ui/preferences.blp:280 data/ui/quick_access.blp:1380
 msgid "Accessibility"
 msgstr ""
 
-#: data/ui/preferences.blp:283 data/ui/quick_access.blp:1347
+#: data/ui/preferences.blp:283 data/ui/quick_access.blp:1397
 msgid "Reduce Motion"
 msgstr ""
 
@@ -3915,7 +3971,7 @@ msgid ""
 "held down, with the progress shown"
 msgstr ""
 
-#: data/ui/preferences.blp:310 data/ui/quick_access.blp:847
+#: data/ui/preferences.blp:310 data/ui/quick_access.blp:897
 msgid "My Stylesheet"
 msgstr ""
 
@@ -3954,11 +4010,11 @@ msgstr ""
 msgid "Artwork downloads wait until you are online"
 msgstr ""
 
-#: data/ui/quick_access.blp:130 data/ui/quick_access.blp:623
+#: data/ui/quick_access.blp:130 data/ui/quick_access.blp:673
 msgid "Notifications"
 msgstr ""
 
-#: data/ui/quick_access.blp:167 data/ui/quick_access.blp:655
+#: data/ui/quick_access.blp:167 data/ui/quick_access.blp:705
 msgid "Activity"
 msgstr ""
 
@@ -3966,7 +4022,7 @@ msgstr ""
 msgid "Surprise Me"
 msgstr ""
 
-#: data/ui/quick_access.blp:238 data/ui/quick_access.blp:1457
+#: data/ui/quick_access.blp:238 data/ui/quick_access.blp:1540
 msgid "Filters"
 msgstr ""
 
@@ -3974,170 +4030,170 @@ msgstr ""
 msgid "Performance"
 msgstr ""
 
-#: data/ui/quick_access.blp:289 data/ui/quick_access.blp:687
+#: data/ui/quick_access.blp:289 data/ui/quick_access.blp:737
 msgid "Design"
 msgstr ""
 
-#: data/ui/quick_access.blp:313 data/ui/quick_access.blp:865
+#: data/ui/quick_access.blp:313 data/ui/quick_access.blp:915
 msgid "Controllers"
 msgstr ""
 
-#: data/ui/quick_access.blp:361 data/ui/quick_access.blp:1236
+#: data/ui/quick_access.blp:361 data/ui/quick_access.blp:1286
 msgid "Settings"
 msgstr ""
 
-#: data/ui/quick_access.blp:708
+#: data/ui/quick_access.blp:758
 msgid "Variant"
 msgstr ""
 
-#: data/ui/quick_access.blp:729
+#: data/ui/quick_access.blp:779
 msgid "Background Blur"
 msgstr ""
 
-#: data/ui/quick_access.blp:758 data/ui/quick_access.blp:812
+#: data/ui/quick_access.blp:808 data/ui/quick_access.blp:862
 msgid "Low"
 msgstr ""
 
-#: data/ui/quick_access.blp:770 data/ui/quick_access.blp:824
+#: data/ui/quick_access.blp:820 data/ui/quick_access.blp:874
 msgid "High"
 msgstr ""
 
-#: data/ui/quick_access.blp:783
+#: data/ui/quick_access.blp:833
 msgid "Background Dim"
 msgstr ""
 
-#: data/ui/quick_access.blp:904
+#: data/ui/quick_access.blp:954
 msgid "As the controller shows them"
 msgstr ""
 
-#: data/ui/quick_access.blp:971
+#: data/ui/quick_access.blp:1021
 msgid "Swapped when A is on the right"
 msgstr ""
 
-#: data/ui/quick_access.blp:984
+#: data/ui/quick_access.blp:1034
 msgid "The bottom button confirms"
 msgstr ""
 
-#: data/ui/quick_access.blp:997
+#: data/ui/quick_access.blp:1047
 msgid "The right button confirms"
 msgstr ""
 
-#: data/ui/quick_access.blp:1010
+#: data/ui/quick_access.blp:1060
 msgid "Repeat Delay"
 msgstr ""
 
-#: data/ui/quick_access.blp:1029
+#: data/ui/quick_access.blp:1079
 msgid "Short"
 msgstr ""
 
-#: data/ui/quick_access.blp:1030
+#: data/ui/quick_access.blp:1080
 msgid "After 0.2 seconds"
 msgstr ""
 
-#: data/ui/quick_access.blp:1042 data/ui/quick_access.blp:1099
-#: data/ui/quick_access.blp:1156
+#: data/ui/quick_access.blp:1092 data/ui/quick_access.blp:1149
+#: data/ui/quick_access.blp:1206
 msgid "Normal"
 msgstr ""
 
-#: data/ui/quick_access.blp:1043
+#: data/ui/quick_access.blp:1093
 msgid "After 0.3 seconds"
 msgstr ""
 
-#: data/ui/quick_access.blp:1055
+#: data/ui/quick_access.blp:1105
 msgid "Long"
 msgstr ""
 
-#: data/ui/quick_access.blp:1056
+#: data/ui/quick_access.blp:1106
 msgid "After 0.6 seconds"
 msgstr ""
 
-#: data/ui/quick_access.blp:1069
+#: data/ui/quick_access.blp:1119
 msgid "Repeat Rate"
 msgstr ""
 
-#: data/ui/quick_access.blp:1086
+#: data/ui/quick_access.blp:1136
 msgid "Slow"
 msgstr ""
 
-#: data/ui/quick_access.blp:1087
+#: data/ui/quick_access.blp:1137
 msgid "10 moves a second"
 msgstr ""
 
-#: data/ui/quick_access.blp:1100
+#: data/ui/quick_access.blp:1150
 msgid "20 moves a second"
 msgstr ""
 
-#: data/ui/quick_access.blp:1112
+#: data/ui/quick_access.blp:1162
 msgid "Fast"
 msgstr ""
 
-#: data/ui/quick_access.blp:1113
+#: data/ui/quick_access.blp:1163
 msgid "About 33 moves a second"
 msgstr ""
 
-#: data/ui/quick_access.blp:1126
+#: data/ui/quick_access.blp:1176
 msgid "Stick Dead Zone"
 msgstr ""
 
-#: data/ui/quick_access.blp:1144
+#: data/ui/quick_access.blp:1194
 msgid "A light push moves focus"
 msgstr ""
 
-#: data/ui/quick_access.blp:1157
+#: data/ui/quick_access.blp:1207
 msgid "A push halfway"
 msgstr ""
 
-#: data/ui/quick_access.blp:1170
+#: data/ui/quick_access.blp:1220
 msgid "A firm push, for a stick that drifts"
 msgstr ""
 
-#: data/ui/quick_access.blp:1183
+#: data/ui/quick_access.blp:1233
 msgid ""
 "These change only how focus moves here. Games receive the controller "
 "unchanged."
 msgstr ""
 
-#: data/ui/quick_access.blp:1255
+#: data/ui/quick_access.blp:1305
 msgid "Small Covers"
 msgstr ""
 
-#: data/ui/quick_access.blp:1265
+#: data/ui/quick_access.blp:1315
 msgid "Medium Covers"
 msgstr ""
 
-#: data/ui/quick_access.blp:1276
+#: data/ui/quick_access.blp:1326
 msgid "Large Covers"
 msgstr ""
 
-#: data/ui/quick_access.blp:1364
+#: data/ui/quick_access.blp:1414
 msgid "Default Text"
 msgstr ""
 
-#: data/ui/quick_access.blp:1376
+#: data/ui/quick_access.blp:1426
 msgid "Large Text"
 msgstr ""
 
-#: data/ui/quick_access.blp:1388
+#: data/ui/quick_access.blp:1438
 msgid "Larger Text"
 msgstr ""
 
-#: data/ui/quick_access.blp:1400
+#: data/ui/quick_access.blp:1450
 msgid "Largest Text"
 msgstr ""
 
-#: data/ui/quick_access.blp:1479 data/ui/window.blp:322
+#: data/ui/quick_access.blp:1562 data/ui/window.blp:322
 msgid "Not Installed"
 msgstr ""
 
-#: data/ui/quick_access.blp:1491 data/ui/shortcuts-dialog.blp:43
+#: data/ui/quick_access.blp:1574 data/ui/shortcuts-dialog.blp:43
 msgid "Show Hidden Games"
 msgstr ""
 
-#: data/ui/quick_access.blp:1503
+#: data/ui/quick_access.blp:1586
 msgid "Clear Filters"
 msgstr ""
 
-#: data/ui/quick_access.blp:1541 data/ui/window.blp:599
+#: data/ui/quick_access.blp:1624 data/ui/window.blp:599
 msgid "Performance Overlay"
 msgstr ""
 

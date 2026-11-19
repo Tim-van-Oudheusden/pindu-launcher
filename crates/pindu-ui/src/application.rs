@@ -1075,30 +1075,46 @@ fn art_notice_message(notice: RunNotice) -> String {
     }
 }
 
-/// What an import restored, and how many of its games this library lacks.
+/// What an import restored, how many of its games this library lacks and how many of its
+/// groups could not be made again.
 fn import_message(summary: &ImportSummary) -> String {
     let restored = summary.manual_games
         + summary.favourites
         + summary.hidden
         + summary.collections
-        + summary.sessions;
-    let done = if restored == 0 {
+        + summary.sessions
+        + summary.groups
+        + summary.splits;
+    let mut message = if restored == 0 {
         gettext("Nothing new to restore")
     } else {
         gettext("Backup restored")
     };
-    match summary.missing_games {
-        0 => done,
-        missing => {
-            let note = ngettext(
+    let mut notes = Vec::new();
+    if summary.missing_games > 0 {
+        notes.push(
+            ngettext(
                 "one game in it is not in this library",
                 "{count} games in it are not in this library",
-                missing as u32,
+                summary.missing_games as u32,
             )
-            .replace("{count}", &missing.to_string());
-            gettext("{result}; {note}")
-                .replace("{result}", &done)
-                .replace("{note}", &note)
-        }
+            .replace("{count}", &summary.missing_games.to_string()),
+        );
     }
+    if summary.skipped_groups > 0 {
+        notes.push(
+            ngettext(
+                "one group of copies in it was skipped",
+                "{count} groups of copies in it were skipped",
+                summary.skipped_groups as u32,
+            )
+            .replace("{count}", &summary.skipped_groups.to_string()),
+        );
+    }
+    for note in notes {
+        message = gettext("{result}; {note}")
+            .replace("{result}", &message)
+            .replace("{note}", &note);
+    }
+    message
 }

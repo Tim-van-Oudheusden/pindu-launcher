@@ -21,9 +21,10 @@
 //! library page) `fullscreen_library`, Performance (offered for a game we run ourselves)
 //! `fullscreen_performance`, Network `fullscreen_network`, Bluetooth `fullscreen_bluetooth`,
 //! Sound Output `fullscreen_sound_output`, System Update `fullscreen_system_update`, Library
-//! Health `fullscreen_health` and Add a Store `add_store`. Design and Settings are this
-//! module's: the design, its variant, Home's background blur and dim and the user's own
-//! stylesheet, then cover size, navigation sounds and their volume, exiting after a
+//! Health `fullscreen_health`, Add a Store `add_store`, Proton `fullscreen_proton_downloads`
+//! and Sources `fullscreen_sources`. Design and Settings are this module's: the design, its
+//! variant, Home's background blur and dim and the user's own stylesheet, then cover size,
+//! navigation sounds and their volume, exiting after a
 //! launch, Reduce Motion and Larger Text, the SteamGridDB key (typed hidden with the
 //! on-screen keyboard of `secret_dialog` and kept in the keyring) and Prefer SteamGridDB
 //! Art, the same settings Preferences changes.
@@ -59,6 +60,7 @@ use crate::fullscreen_network::PinduNetworkLevel;
 use crate::fullscreen_panels::step_out_of_list;
 use crate::fullscreen_performance::{GameProton, PerformanceSwitches};
 use crate::fullscreen_playing::{PlayingCards, card_return};
+use crate::fullscreen_proton_downloads::PinduProtonLevel;
 use crate::fullscreen_sound_output::PinduSoundOutputLevel;
 use crate::fullscreen_system_update::PinduSystemUpdateLevel;
 use crate::models::GameObject;
@@ -120,6 +122,10 @@ mod imp {
         pub custom_style_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub settings_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub sources_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub sources: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub controllers_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
@@ -227,6 +233,10 @@ mod imp {
         #[template_child]
         pub add_store_level: TemplateChild<PinduAddStoreLevel>,
         #[template_child]
+        pub proton_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub proton_level: TemplateChild<PinduProtonLevel>,
+        #[template_child]
         pub network_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub network_icon: TemplateChild<gtk::Image>,
@@ -282,6 +292,7 @@ mod imp {
             PinduSystemUpdateLevel::ensure_type();
             PinduHealthLevel::ensure_type();
             PinduAddStoreLevel::ensure_type();
+            PinduProtonLevel::ensure_type();
             PinduSoundOutputLevel::ensure_type();
             klass.bind_template();
         }
@@ -385,6 +396,8 @@ impl PinduQuickAccess {
         self.setup_system_update(application, actions);
         self.setup_health(application, actions);
         self.setup_add_store(application);
+        self.setup_proton(actions);
+        self.setup_sources(application);
     }
 
     /// Hosts the panel over a running game, before [`Self::setup`]: it leaves out the
@@ -441,7 +454,9 @@ impl PinduQuickAccess {
             Some(QuickAccessLevel::SystemUpdate) => self.show_system_update(),
             Some(QuickAccessLevel::LibraryHealth) => self.show_health(),
             Some(QuickAccessLevel::AddStore) => self.show_add_store(),
+            Some(QuickAccessLevel::Proton) => imp.proton_level.show(),
             Some(QuickAccessLevel::Network) => self.show_network(),
+            Some(QuickAccessLevel::Sources) => self.show_sources(),
             Some(QuickAccessLevel::Settings) => self.show_steamgriddb_key(),
             _ => {}
         }
@@ -505,7 +520,10 @@ impl PinduQuickAccess {
             (Some(QuickAccessLevel::SystemUpdate), _) => imp.system_update_level.focus_target(),
             (Some(QuickAccessLevel::LibraryHealth), _) => imp.health_level.focus_target(),
             (Some(QuickAccessLevel::AddStore), _) => imp.add_store_level.focus_target(),
+            (Some(QuickAccessLevel::Proton), _) => imp.proton_level.focus_target(),
             (Some(QuickAccessLevel::Network), _) => imp.network_level.focus_target(),
+            // Filled once the sources are read, which then focuses the first.
+            (Some(QuickAccessLevel::Sources), _) => first_row(&imp.sources),
             // The first controller that can rumble, or else the first button prompt.
             (Some(QuickAccessLevel::Controllers), _) => {
                 std::iter::successors(imp.controllers.first_child(), |row| row.next_sibling())
@@ -718,6 +736,7 @@ impl PinduQuickAccess {
             QuickAccessLevel::Controllers => &imp.controllers_row,
             QuickAccessLevel::Controls => &imp.controls_row,
             QuickAccessLevel::Settings => &imp.settings_row,
+            QuickAccessLevel::Sources => &imp.sources_row,
             QuickAccessLevel::Filters => &imp.filters_row,
             QuickAccessLevel::Performance => &imp.performance_row,
             QuickAccessLevel::Bluetooth => &imp.bluetooth_row,
@@ -725,6 +744,7 @@ impl PinduQuickAccess {
             QuickAccessLevel::SystemUpdate => &imp.system_update_row,
             QuickAccessLevel::LibraryHealth => &imp.health_row,
             QuickAccessLevel::AddStore => &imp.add_store_row,
+            QuickAccessLevel::Proton => &imp.proton_row,
             QuickAccessLevel::Network => &imp.network_row,
         };
         Some(row.get().upcast())
@@ -758,6 +778,14 @@ impl PinduQuickAccess {
             health_artwork,
             health_library,
         ] = imp.health_level.lists();
+        let [
+            proton_default,
+            proton_tools,
+            proton_downloaded,
+            proton_check,
+            proton_releases_1,
+            proton_releases_2,
+        ] = imp.proton_level.lists();
         for list in [
             imp.designs.get(),
             imp.variants.get(),
@@ -773,6 +801,7 @@ impl PinduQuickAccess {
             imp.sizes.get(),
             imp.switches.get(),
             imp.accessibility.get(),
+            imp.sources.get(),
             imp.text_sizes.get(),
             imp.artwork.get(),
             imp.filters.get(),
@@ -790,6 +819,12 @@ impl PinduQuickAccess {
             health_library,
             add_store_stores,
             add_store_actions,
+            proton_default,
+            proton_tools,
+            proton_downloaded,
+            proton_check,
+            proton_releases_1,
+            proton_releases_2,
             network_devices,
             wifi_radio,
             wifi_networks,
@@ -811,6 +846,15 @@ impl PinduQuickAccess {
             })),
         ));
         self.add_controller(escape);
+    }
+
+    /// Proton: the defaults bound to their settings, and `win.check-proton-releases`.
+    fn setup_proton(&self, actions: &impl IsA<gio::ActionMap>) {
+        let level = &self.imp().proton_level;
+        level.setup(self.settings());
+        self.add_host_action(actions, "check-proton-releases", None, |quick_access, _| {
+            quick_access.imp().proton_level.check_releases();
+        });
     }
 
     /// Settings: cover size, navigation sounds and their volume, exiting after a launch,
