@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 21:22+0100\n"
+"POT-Creation-Date: 2026-11-19 21:24+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -508,15 +508,15 @@ msgstr ""
 msgid "_Save"
 msgstr ""
 
-#: crates/pindu-ui/src/collection_actions.rs:220 data/ui/window.blp:832
+#: crates/pindu-ui/src/collection_actions.rs:220 data/ui/window.blp:837
 msgid "Native Games"
 msgstr ""
 
-#: crates/pindu-ui/src/collection_actions.rs:221 data/ui/window.blp:838
+#: crates/pindu-ui/src/collection_actions.rs:221 data/ui/window.blp:843
 msgid "Windows Games"
 msgstr ""
 
-#: crates/pindu-ui/src/collection_actions.rs:222 data/ui/window.blp:844
+#: crates/pindu-ui/src/collection_actions.rs:222 data/ui/window.blp:849
 msgid "Installed and Never Played"
 msgstr ""
 
@@ -620,11 +620,11 @@ msgstr ""
 #: crates/pindu-ui/src/proton_downloads_page.rs:225
 #: crates/pindu-ui/src/proton_launch.rs:717
 #: crates/pindu-ui/src/save_snapshots_dialog.rs:287 data/ui/game_dialog.blp:16
-#: data/ui/game_page.blp:444 data/ui/secret_dialog.blp:19
+#: data/ui/game_page.blp:450 data/ui/secret_dialog.blp:19
 msgid "_Cancel"
 msgstr ""
 
-#: crates/pindu-ui/src/collection_actions.rs:377 data/ui/window.blp:821
+#: crates/pindu-ui/src/collection_actions.rs:377 data/ui/window.blp:826
 msgid "_Delete"
 msgstr ""
 
@@ -904,7 +904,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:349
 #: crates/pindu-ui/src/fullscreen_add_game.rs:489 data/ui/game_dialog.blp:77
-#: data/ui/window.blp:448
+#: data/ui/window.blp:453
 msgid "Title"
 msgstr ""
 
@@ -1486,7 +1486,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:326
 #: crates/pindu-ui/src/game_page.rs:872 crates/pindu-ui/src/home_page.rs:54
-#: data/ui/window.blp:461
+#: data/ui/window.blp:466
 msgid "Last Played"
 msgstr ""
 
@@ -1504,7 +1504,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:330
 #: crates/pindu-ui/src/game_page.rs:1016 crates/pindu-ui/src/home_page.rs:43
-#: data/ui/window.blp:465
+#: data/ui/window.blp:470
 msgid "Playtime"
 msgstr ""
 
@@ -1628,7 +1628,7 @@ msgid "Return"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:789
-#: crates/pindu-ui/src/game_page.rs:610 data/ui/game_page.blp:113
+#: crates/pindu-ui/src/game_page.rs:610 data/ui/game_page.blp:119
 msgid "Add to Favourites"
 msgstr ""
 
@@ -1692,9 +1692,9 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_performance.rs:281
 #: crates/pindu-ui/src/health_page.rs:199
-#: data/ui/fullscreen_proton_downloads.blp:70 data/ui/game_page.blp:365
+#: data/ui/fullscreen_proton_downloads.blp:70 data/ui/game_page.blp:371
 #: data/ui/preferences.blp:224 data/ui/quick_access.blp:1872
-#: data/ui/window.blp:698
+#: data/ui/window.blp:703
 msgid "MangoHud"
 msgstr ""
 
@@ -1723,7 +1723,7 @@ msgstr ""
 msgid "{hours} h {minutes} min"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_playing.rs:288 data/ui/game_page.blp:186
+#: crates/pindu-ui/src/fullscreen_playing.rs:288 data/ui/game_page.blp:192
 msgid "Playing Now"
 msgstr ""
 
@@ -2047,7 +2047,7 @@ msgid "Options lists what to try next"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:623
-#: crates/pindu-ui/src/widgets/cover_tile.rs:390 data/ui/game_page.blp:100
+#: crates/pindu-ui/src/widgets/cover_tile.rs:390 data/ui/game_page.blp:106
 msgid "_Play"
 msgstr ""
 
@@ -2351,9 +2351,9 @@ msgid ", "
 msgstr ""
 
 #: crates/pindu-ui/src/health_page.rs:200
-#: data/ui/fullscreen_proton_downloads.blp:75 data/ui/game_page.blp:370
+#: data/ui/fullscreen_proton_downloads.blp:75 data/ui/game_page.blp:376
 #: data/ui/preferences.blp:229 data/ui/quick_access.blp:1876
-#: data/ui/window.blp:702
+#: data/ui/window.blp:707
 msgid "GameMode"
 msgstr ""
 
@@ -2459,7 +2459,7 @@ msgstr ""
 msgid "Adjust"
 msgstr ""
 
-#: crates/pindu-ui/src/hint_bar.rs:237 data/ui/game_page.blp:140
+#: crates/pindu-ui/src/hint_bar.rs:237 data/ui/game_page.blp:146
 msgid "Options"
 msgstr ""
 
@@ -4297,7 +4297,7 @@ msgstr ""
 
 #: data/ui/fullscreen_add_game.blp:91
 #: data/ui/fullscreen_proton_downloads.blp:16 data/ui/game_dialog.blp:116
-#: data/ui/game_page.blp:334 data/ui/preferences.blp:188
+#: data/ui/game_page.blp:340 data/ui/preferences.blp:188
 #: data/ui/preferences.blp:266 data/ui/quick_access.blp:717
 #: data/ui/quick_access.blp:1885
 msgid "Proton"
@@ -4372,14 +4372,14 @@ msgid ""
 "change them."
 msgstr ""
 
-#: data/ui/fullscreen_proton_downloads.blp:71 data/ui/game_page.blp:366
+#: data/ui/fullscreen_proton_downloads.blp:71 data/ui/game_page.blp:372
 #: data/ui/preferences.blp:225
 msgid "An overlay with the frame rate and how busy the computer is"
 msgstr ""
 
-#: data/ui/fullscreen_proton_downloads.blp:76 data/ui/game_page.blp:371
+#: data/ui/fullscreen_proton_downloads.blp:76 data/ui/game_page.blp:377
 #: data/ui/preferences.blp:230 data/ui/quick_access.blp:1877
-#: data/ui/window.blp:703
+#: data/ui/window.blp:708
 msgid "Asks the system to favour the game while it runs"
 msgstr ""
 
@@ -4444,7 +4444,7 @@ msgstr ""
 msgid "None chosen"
 msgstr ""
 
-#: data/ui/game_dialog.blp:82 data/ui/game_page.blp:353
+#: data/ui/game_dialog.blp:82 data/ui/game_page.blp:359
 msgid "Arguments"
 msgstr ""
 
@@ -4466,7 +4466,7 @@ msgstr ""
 msgid "Windows games and their installers run through it"
 msgstr ""
 
-#: data/ui/game_dialog.blp:122 data/ui/game_page.blp:340
+#: data/ui/game_dialog.blp:122 data/ui/game_page.blp:346
 msgid "Prefix"
 msgstr ""
 
@@ -4474,7 +4474,7 @@ msgstr ""
 msgid "Use a New Prefix"
 msgstr ""
 
-#: data/ui/game_dialog.blp:139 data/ui/game_page.blp:345
+#: data/ui/game_dialog.blp:139 data/ui/game_page.blp:351
 msgid "C_hoose…"
 msgstr ""
 
@@ -4492,7 +4492,7 @@ msgid ""
 "go back to the launcher's."
 msgstr ""
 
-#: data/ui/game_dialog.blp:172 data/ui/game_page.blp:244
+#: data/ui/game_dialog.blp:172 data/ui/game_page.blp:250
 msgid "Developer"
 msgstr ""
 
@@ -4505,7 +4505,7 @@ msgid "Release Year"
 msgstr ""
 
 #: data/ui/game_dialog.blp:189 data/ui/game_dialog.blp:202
-#: data/ui/game_page.blp:296
+#: data/ui/game_page.blp:302
 msgid "Description"
 msgstr ""
 
@@ -4519,71 +4519,71 @@ msgstr ""
 msgid "Starting this game needs your permission"
 msgstr ""
 
-#: data/ui/game_page.blp:128
+#: data/ui/game_page.blp:134
 msgid "Add to Collection"
 msgstr ""
 
-#: data/ui/game_page.blp:152
+#: data/ui/game_page.blp:158
 msgid "More Actions"
 msgstr ""
 
-#: data/ui/game_page.blp:195
+#: data/ui/game_page.blp:201
 msgid "Your playtime is being recorded"
 msgstr ""
 
-#: data/ui/game_page.blp:225
+#: data/ui/game_page.blp:231
 msgid "Last Launch Failed"
 msgstr ""
 
-#: data/ui/game_page.blp:232
+#: data/ui/game_page.blp:238
 msgid "Copies"
 msgstr ""
 
-#: data/ui/game_page.blp:237
+#: data/ui/game_page.blp:243
 msgid "About"
 msgstr ""
 
-#: data/ui/game_page.blp:253
+#: data/ui/game_page.blp:259
 msgid "Genres"
 msgstr ""
 
-#: data/ui/game_page.blp:261
+#: data/ui/game_page.blp:267
 msgid "Released"
 msgstr ""
 
-#: data/ui/game_page.blp:269
+#: data/ui/game_page.blp:275
 msgid "Controller support"
 msgstr ""
 
-#: data/ui/game_page.blp:278
+#: data/ui/game_page.blp:284
 msgid "Steam Deck"
 msgstr ""
 
-#: data/ui/game_page.blp:309 data/ui/game_page.blp:329
+#: data/ui/game_page.blp:315 data/ui/game_page.blp:335
 msgid "Launch"
 msgstr ""
 
-#: data/ui/game_page.blp:312
+#: data/ui/game_page.blp:318
 msgid "Started by the launcher"
 msgstr ""
 
-#: data/ui/game_page.blp:322
+#: data/ui/game_page.blp:328
 msgid "Choose Launch Options"
 msgstr ""
 
-#: data/ui/game_page.blp:323
+#: data/ui/game_page.blp:329
 msgid "Ask Steam which of the game’s launch options to use"
 msgstr ""
 
-#: data/ui/game_page.blp:330 data/ui/quick_access.blp:1906
+#: data/ui/game_page.blp:336 data/ui/quick_access.blp:1906
 msgid "Changes apply the next time the game starts."
 msgstr ""
 
-#: data/ui/game_page.blp:359
+#: data/ui/game_page.blp:365
 msgid "Environment, Such as NAME=value"
 msgstr ""
 
-#: data/ui/game_page.blp:375
+#: data/ui/game_page.blp:381
 msgid "Wrapper Command, Such as taskset -c 0-3"
 msgstr ""
 
@@ -5161,7 +5161,7 @@ msgstr ""
 msgid "Save Installed and Never Played"
 msgstr ""
 
-#: data/ui/quick_access.blp:1871 data/ui/window.blp:697
+#: data/ui/quick_access.blp:1871 data/ui/window.blp:702
 msgid "Performance Overlay"
 msgstr ""
 
@@ -5296,7 +5296,7 @@ msgstr ""
 msgid "Clear"
 msgstr ""
 
-#: data/ui/window.blp:372 data/ui/window.blp:829
+#: data/ui/window.blp:372 data/ui/window.blp:834
 msgid "Suggested Collections"
 msgstr ""
 
@@ -5304,151 +5304,151 @@ msgstr ""
 msgid "Jump Back In"
 msgstr ""
 
-#: data/ui/window.blp:453
+#: data/ui/window.blp:458
 msgid "Source"
 msgstr ""
 
-#: data/ui/window.blp:457
+#: data/ui/window.blp:462
 msgid "State"
 msgstr ""
 
-#: data/ui/window.blp:475
+#: data/ui/window.blp:480
 msgid "No Games Yet"
 msgstr ""
 
-#: data/ui/window.blp:476
+#: data/ui/window.blp:481
 msgid ""
 "Add a store and sign in to it, or import the games of the launchers you have"
 msgstr ""
 
-#: data/ui/window.blp:484
+#: data/ui/window.blp:489
 msgid "Add a _Store"
 msgstr ""
 
-#: data/ui/window.blp:495 data/ui/window.blp:859
+#: data/ui/window.blp:500 data/ui/window.blp:864
 msgid "_Import Now"
 msgstr ""
 
-#: data/ui/window.blp:512
+#: data/ui/window.blp:517
 msgid "No Results Found"
 msgstr ""
 
-#: data/ui/window.blp:513
+#: data/ui/window.blp:518
 msgid "Try a different search or filter"
 msgstr ""
 
-#: data/ui/window.blp:522
+#: data/ui/window.blp:527
 msgid "No Games Match the Filters"
 msgstr ""
 
-#: data/ui/window.blp:523
+#: data/ui/window.blp:528
 msgid "Clear the filters in Quick Access to see the whole tab"
 msgstr ""
 
-#: data/ui/window.blp:552
+#: data/ui/window.blp:557
 msgid "No Hidden Games"
 msgstr ""
 
-#: data/ui/window.blp:553
+#: data/ui/window.blp:558
 msgid "Games you hide show here, to unhide them"
 msgstr ""
 
-#: data/ui/window.blp:562
+#: data/ui/window.blp:567
 msgid "Empty Collection"
 msgstr ""
 
-#: data/ui/window.blp:563
+#: data/ui/window.blp:568
 msgid "Add games with “Add to Collection” in their menu"
 msgstr ""
 
-#: data/ui/window.blp:575
+#: data/ui/window.blp:580
 msgid "Select _All"
 msgstr ""
 
-#: data/ui/window.blp:588
+#: data/ui/window.blp:593
 msgid "_Collections"
 msgstr ""
 
-#: data/ui/window.blp:606
+#: data/ui/window.blp:611
 msgid "_Merge"
 msgstr ""
 
-#: data/ui/window.blp:608
+#: data/ui/window.blp:613
 msgid "Merge into one game with several copies"
 msgstr ""
 
-#: data/ui/window.blp:804
+#: data/ui/window.blp:809
 msgid "_Rename…"
 msgstr ""
 
-#: data/ui/window.blp:809
+#: data/ui/window.blp:814
 msgid "Move _Up"
 msgstr ""
 
-#: data/ui/window.blp:814
+#: data/ui/window.blp:819
 msgid "Move _Down"
 msgstr ""
 
-#: data/ui/window.blp:854
+#: data/ui/window.blp:859
 msgid "_Add Game…"
 msgstr ""
 
-#: data/ui/window.blp:868
+#: data/ui/window.blp:873
 msgid "_Last Played"
 msgstr ""
 
-#: data/ui/window.blp:874
+#: data/ui/window.blp:879
 msgid "Name _A–Z"
 msgstr ""
 
-#: data/ui/window.blp:880
+#: data/ui/window.blp:885
 msgid "Name _Z–A"
 msgstr ""
 
-#: data/ui/window.blp:886
+#: data/ui/window.blp:891
 msgid "_Recently Added"
 msgstr ""
 
-#: data/ui/window.blp:892
+#: data/ui/window.blp:897
 msgid "_Playtime"
 msgstr ""
 
-#: data/ui/window.blp:902
+#: data/ui/window.blp:907
 msgid "Show _Hidden Games"
 msgstr ""
 
-#: data/ui/window.blp:907
+#: data/ui/window.blp:912
 msgid "_Fullscreen Mode"
 msgstr ""
 
-#: data/ui/window.blp:912
+#: data/ui/window.blp:917
 msgid "_Library Health"
 msgstr ""
 
-#: data/ui/window.blp:917
+#: data/ui/window.blp:922
 msgid "_Duplicates"
 msgstr ""
 
-#: data/ui/window.blp:923
+#: data/ui/window.blp:928
 msgid "_Refresh Metadata"
 msgstr ""
 
-#: data/ui/window.blp:931
+#: data/ui/window.blp:936
 msgid "_Export Library…"
 msgstr ""
 
-#: data/ui/window.blp:936
+#: data/ui/window.blp:941
 msgid "I_mport Backup…"
 msgstr ""
 
-#: data/ui/window.blp:943
+#: data/ui/window.blp:948
 msgid "_Preferences"
 msgstr ""
 
-#: data/ui/window.blp:948
+#: data/ui/window.blp:953
 msgid "_Keyboard Shortcuts"
 msgstr ""
 
-#: data/ui/window.blp:953
+#: data/ui/window.blp:958
 msgid "_About Pindu launcher"
 msgstr ""
