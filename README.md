@@ -404,9 +404,12 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   in 10 seconds. Its games come to the front as usual.
 - Where a Steam folder was found, Home has a **Big Picture** tile that hands `steam://open/bigpicture` to Steam the way
   Play hands it a Steam game. In this session Big Picture then takes the app's place: the Steam client's newest window
-  is pinned, a game Steam starts comes to the front, and the app leaves the controller to Steam. The app is back in
-  front 10 seconds after Big Picture's last window closes, or after a minute if none opened; choosing the tile again
-  while it says Opening… gives up.
+  is pinned, a game Steam starts comes to the front, and the app leaves the controller to Steam while Steam's window or
+  that game is in front, also after Steam hides its window for the game. Once Big Picture's last window has closed and
+  no game Steam started is running, the app is back in front with the controller at once; a Steam window that opens in
+  the next 10 seconds, such as Big Picture's after an update window on a cold start, takes its place again. Until
+  Steam's first window shows, the app keeps the controller and the tile says Opening…; choosing the tile again gives
+  up, as does a minute with no window.
 - While a Steam store launch waits for the game's window, the Steam client's window (Big Picture, which shows a
   sign-in, install, launch option or cloud conflict prompt inside it) is pinned in the app's place, the newest first,
   so the user can answer what Steam asks. The launch does not time out while one is open; once the last one closes the
