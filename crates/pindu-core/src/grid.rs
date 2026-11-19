@@ -13,6 +13,19 @@ pub fn max_columns(available: f64, column_width: i32) -> u32 {
     fit + 1
 }
 
+/// The columns `column_width` pixels wide that fit in `available` pixels, at least one,
+/// and the whole-pixel margin on either side that centres them. Columns exactly as wide as
+/// a cover plus its gap keep the gap between columns the gap between rows, whatever the
+/// width; what is left over goes to the sides.
+pub fn centred_columns(available: f64, column_width: i32) -> (u32, i32) {
+    let column_width = f64::from(column_width.max(1));
+    let columns = (available / column_width).floor().max(1.0);
+    let margin = ((available - columns * column_width) / 2.0)
+        .floor()
+        .max(0.0);
+    (columns as u32, margin as i32)
+}
+
 /// The cover a controller direction moves to from `position`, in a grid of `n_items`
 /// covers laid out `columns` to a row; `None` at the grid's edge, where focus leaves it.
 /// Down into a short last row lands on its last cover.
@@ -40,6 +53,18 @@ mod tests {
         assert_eq!(max_columns(636.0, 212), 4);
         assert_eq!(max_columns(100.0, 212), 1);
         assert_eq!(max_columns(0.0, 212), 1);
+    }
+
+    #[test]
+    fn centred_columns_fill_the_width_and_split_what_is_left_between_the_sides() {
+        // Four columns of 232 take 928 of 1000: 36 on either side.
+        assert_eq!(centred_columns(1000.0, 232), (4, 36));
+        // An odd leftover rounds the sides down, so the columns always fit.
+        assert_eq!(centred_columns(929.0, 232), (4, 0));
+        assert_eq!(centred_columns(931.5, 232), (4, 1));
+        // Narrower than a column: one column, no margin.
+        assert_eq!(centred_columns(100.0, 232), (1, 0));
+        assert_eq!(centred_columns(0.0, 232), (1, 0));
     }
 
     #[test]

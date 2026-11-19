@@ -215,6 +215,8 @@ impl PinduWindow {
         }
         self.update_listening();
         self.show_fullscreen_library(fullscreen);
+        // The grid's spacing differs between the modes.
+        self.update_grid_columns();
         self.show_fullscreen_game(fullscreen);
         self.arrange_pages(fullscreen);
         self.hide_sidebar_in_fullscreen();
