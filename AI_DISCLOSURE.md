@@ -13,6 +13,12 @@ explains the method and the command that repeats it.
 
 - **Planning**: the main spec and the research documents in `docs/` (the `*.pdf` files) are AI-assisted (deep
   research and drafting), and the GitHub issues generated from the spec count as AI-assisted planning.
+- **Product analysis and workstream specs**: [`docs/product-analysis.md`](docs/product-analysis.md) is AI-written:
+  an analysis by OpenAI's model, reviewed and revised against the repository by Claude, as its front matter says. The
+  maintainer took its decisions (section 14) on 2026-11-19. The workstream spec pages drawn from it and from the
+  issues (`docs/game-identity.md`, `docs/library-health.md`, `docs/diagnostics.md`, `docs/controller-parity.md`,
+  `docs/shelves-and-metadata.md`, `docs/launch-outcomes.md`, `docs/save-snapshots.md`,
+  `docs/accessibility-polish.md`) are AI-written by Claude Code (#550).
 - **Code**: the Rust crates, the Blueprint UI, the GSettings, desktop and D-Bus files, the CSS and the fullscreen
   designs.
 - **Tests**: unit, integration and end-to-end tests, and the test fixtures.
