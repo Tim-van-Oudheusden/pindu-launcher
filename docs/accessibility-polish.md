@@ -48,6 +48,7 @@ its own focus, so a game, in a gamescope session or on a desktop, receives the c
 | #625 Name the selection check boxes and expose a tile's selected state | Selection mode's check boxes are named "Select {game}", and selected tiles and rows report themselves selected | #544 |
 | #626 Label the collection name entry in the New and Rename Collection dialogs | The name entry is named "Name" for screen readers, not only by its placeholder | #544 |
 | #627 Name each Play button after its game | Play and Stop on tiles and Jump Back In cards are named "Play {game}" for screen readers | #544 |
+| #628 Let Tab leave the library grid in one step | Tab enters the grid and the list once and leaves on the next press; the arrow keys move between games | #544 |
 
 The issues #543 and #544 file join this table when they exist.
 
