@@ -1453,6 +1453,29 @@ template $PinduQuickAccess: Box {
             }
           }
 
+          // The game's Proton build, for a game Pindu runs through Proton: the
+          // default, then the builds on this machine, newest first, with a check
+          // on the game's; filled in code, and hidden for other games.
+          Label proton_title {
+            label: _("Proton");
+            xalign: 0;
+            margin-top: 6;
+            visible: false;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          ListBox proton_builds {
+            selection-mode: none;
+            visible: false;
+
+            styles [
+              "boxed-list",
+            ]
+          }
+
           // Shown while the game runs.
           Label performance_note {
             label: _("Changes apply the next time the game starts.");

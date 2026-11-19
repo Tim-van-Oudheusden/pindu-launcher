@@ -77,30 +77,6 @@ impl ProtonChoice {
     }
 
     fn fill(&self, builds: Vec<ProtonBuild>) {
-        let name_of = |name: &str| {
-            builds
-                .iter()
-                .find(|build| build.name == name)
-                .map_or_else(|| name.to_owned(), |build| build.display_name.clone())
-        };
-        let shown = match self.first {
-            FirstChoice::Newest => None,
-            FirstChoice::Default => proton_launch::defaults().proton_version,
-        };
-        let proton = match shown {
-            Some(name) => Some(name_of(&name)),
-            None => builds.first().map(|build| build.display_name.clone()),
-        };
-        let first = match (self.first, proton) {
-            (FirstChoice::Newest, Some(proton)) => {
-                gettext("Newest ({proton})").replace("{proton}", &proton)
-            }
-            (FirstChoice::Newest, None) => gettext("Newest"),
-            (FirstChoice::Default, Some(proton)) => {
-                gettext("Default ({proton})").replace("{proton}", &proton)
-            }
-            (FirstChoice::Default, None) => gettext("Default"),
-        };
         self.row.set_subtitle(&if builds.is_empty() {
             gettext(
                 "No Proton found. Install one on the Proton page of Preferences, or through Steam.",
@@ -108,12 +84,8 @@ impl ProtonChoice {
         } else {
             String::new()
         });
-        let mut labels = vec![first];
-        let mut names = vec![None];
-        for build in builds {
-            labels.push(build.display_name);
-            names.push(Some(build.name));
-        }
+        let (labels, names): (Vec<String>, Vec<Option<String>>) =
+            entries(self.first, builds).into_iter().unzip();
         let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
         self.filling.set(true);
         self.list.splice(0, self.list.n_items(), &refs);
@@ -138,8 +110,7 @@ impl ProtonChoice {
         self.filling.set(true);
         let index = found.unwrap_or_else(|| {
             let wanted = name.unwrap_or_default();
-            self.list
-                .append(&gettext("{proton} (not installed)").replace("{proton}", &wanted));
+            self.list.append(&not_installed(&wanted));
             self.names.borrow_mut().push(Some(wanted));
             self.names.borrow().len() - 1
         });
@@ -168,4 +139,48 @@ impl ProtonChoice {
             }
         });
     }
+}
+
+/// The entries of a Proton list, by label and internal name: first the entry for no build
+/// named (`None`), saying which build it stands for, then `builds`, newest first.
+pub(crate) fn entries(
+    first: FirstChoice,
+    builds: Vec<ProtonBuild>,
+) -> Vec<(String, Option<String>)> {
+    let name_of = |name: &str| {
+        builds
+            .iter()
+            .find(|build| build.name == name)
+            .map_or_else(|| name.to_owned(), |build| build.display_name.clone())
+    };
+    let shown = match first {
+        FirstChoice::Newest => None,
+        FirstChoice::Default => proton_launch::defaults().proton_version,
+    };
+    let proton = match shown {
+        Some(name) => Some(name_of(&name)),
+        None => builds.first().map(|build| build.display_name.clone()),
+    };
+    let label = match (first, proton) {
+        (FirstChoice::Newest, Some(proton)) => {
+            gettext("Newest ({proton})").replace("{proton}", &proton)
+        }
+        (FirstChoice::Newest, None) => gettext("Newest"),
+        (FirstChoice::Default, Some(proton)) => {
+            gettext("Default ({proton})").replace("{proton}", &proton)
+        }
+        (FirstChoice::Default, None) => gettext("Default"),
+    };
+    std::iter::once((label, None))
+        .chain(
+            builds
+                .into_iter()
+                .map(|build| (build.display_name, Some(build.name))),
+        )
+        .collect()
+}
+
+/// The label of a chosen build that is not on this machine, by its internal name.
+pub(crate) fn not_installed(name: &str) -> String {
+    gettext("{proton} (not installed)").replace("{proton}", name)
 }

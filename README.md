@@ -256,7 +256,12 @@ whole tab back. These filters are separate from the desktop window's filter row 
 With a game Pindu runs itself focused, or on its page, **Performance** turns its **Performance Overlay** (MangoHud)
 and **GameMode** on or off from its next launch. Its options sheet (View or X) has the same switches.
 
-- Store games have neither, since their launcher keeps their settings.
+For a Windows game Pindu runs through Proton, Performance also lists its **Proton** build: the default from
+Preferences, then the builds on this machine, newest first. It is the same setting as the desktop game page's Proton
+row, and it applies the next time the game starts.
+
+- Store games have neither, since their launcher keeps their settings; games that do not run through Proton have no
+  Proton list.
 - While the game runs, the panel says a change waits for its next start.
 - In the Flatpak, Windows games and games in the Steam Linux Runtime get MangoHud from the
   `org.freedesktop.Platform.VulkanLayer.MangoHud` extension, which Flathub builds for x86_64 only. Games started on the

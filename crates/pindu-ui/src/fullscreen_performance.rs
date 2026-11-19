@@ -9,6 +9,11 @@
 //! its switches are insensitive and say why. In a gamescope session whose MangoApp the
 //! launcher drives, the Performance Overlay switch of the game in front shows or hides
 //! MangoApp at once (`GamescopeService`), and works wherever MangoHud is not installed.
+//!
+//! For a game we run through Proton (`pindu_core::launch::offers_proton_choice`), the
+//! level also lists its Proton build ([`GameProton`]): the default, then the builds on this
+//! machine, newest first, as the desktop game page's Proton row lists them. The choice is
+//! the same stored setting (`LaunchConfig::proton_version`) and applies from the next launch.
 
 use std::cell::{Cell, RefCell};
 use std::rc::{Rc, Weak};
@@ -16,12 +21,15 @@ use std::rc::{Rc, Weak};
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
-use pindu_core::model::PerformanceTool;
+use pindu_core::launch;
+use pindu_core::model::{GameId, PerformanceTool};
 
+use crate::fullscreen_proton::ProtonChecks;
 use crate::gamescope_service::GamescopeService;
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
 use crate::permission_service;
+use crate::proton_choice::FirstChoice;
 
 /// The tools in the order the switches keep their state and list their switches.
 const TOOLS: [PerformanceTool; 2] = [PerformanceTool::Overlay, PerformanceTool::GameMode];
@@ -186,6 +194,82 @@ impl PerformanceSwitches {
             _ => {}
         }
         self.show_tools();
+    }
+}
+
+/// The Proton build of the game Quick Access's Performance level is for: the default, then
+/// the builds on this machine, newest first, as check rows. Hidden for a game that does not
+/// run through Proton.
+#[derive(Debug, Clone)]
+pub struct GameProton(Rc<ProtonInner>);
+
+#[derive(Debug)]
+struct ProtonInner {
+    library: LibraryService,
+    /// The list's heading, shown and hidden with it.
+    title: gtk::Label,
+    list: gtk::ListBox,
+    checks: Rc<ProtonChecks>,
+    /// The game the list is for, and whether its build is read: before it is, a check
+    /// turned writes nothing.
+    game: RefCell<Option<(GameId, bool)>>,
+}
+
+impl GameProton {
+    /// Check rows in `list`, under `title`, that write the game's build through `library`.
+    pub(crate) fn new(library: &LibraryService, title: &gtk::Label, list: &gtk::ListBox) -> Self {
+        let checks = ProtonChecks::new(list, FirstChoice::Default, None);
+        let inner = Rc::new(ProtonInner {
+            library: library.clone(),
+            title: title.clone(),
+            list: list.clone(),
+            checks: checks.clone(),
+            game: RefCell::new(None),
+        });
+        let weak = Rc::downgrade(&inner);
+        checks.connect_changed(move |name| {
+            let Some(inner) = weak.upgrade() else {
+                return;
+            };
+            if let Some((id, true)) = &*inner.game.borrow() {
+                inner
+                    .library
+                    .edit_launch_config(id, move |config| config.proton_version = name);
+            }
+        });
+        Self(inner)
+    }
+
+    /// Shows the list for `game` when it runs through Proton, once its settings are read
+    /// (afresh each time, as the desktop's game page edits them too): the game's own build
+    /// checked, and the builds on this machine read again, as one may have been installed
+    /// or removed.
+    pub fn show_for(&self, game: &GameObject) {
+        let inner = &self.0;
+        inner.title.set_visible(false);
+        inner.list.set_visible(false);
+        let id = game.id();
+        let offered = launch::offers_proton_choice(&game.game());
+        inner.game.replace(offered.then(|| (id.clone(), false)));
+        if !offered {
+            return;
+        }
+        let library = inner.library.clone();
+        let weak = Rc::downgrade(inner);
+        glib::spawn_future_local(async move {
+            let config = library.launch_config(&id).await;
+            let Some(inner) = weak.upgrade() else {
+                return;
+            };
+            let still = matches!(&*inner.game.borrow(), Some((held, _)) if *held == id);
+            if let (Some(config), true) = (config, still) {
+                inner.checks.select(config.proton_version);
+                inner.checks.reload();
+                inner.game.replace(Some((id, true)));
+                inner.title.set_visible(true);
+                inner.list.set_visible(true);
+            }
+        });
     }
 }
 

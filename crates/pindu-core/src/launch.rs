@@ -171,6 +171,12 @@ pub fn offers_performance(game: &Game) -> bool {
     launch_settings(game).is_some()
 }
 
+/// Whether fullscreen mode offers a game's Proton build, in Quick Access's Performance
+/// level: a Windows game we run through Proton, as the desktop's game page offers it.
+pub fn offers_proton_choice(game: &Game) -> bool {
+    launch_settings(game).is_some_and(|settings| settings.proton)
+}
+
 /// How a game we run starts this once: as its launch settings say, with a log of it, or
 /// safely, to tell a broken overlay or wrapper from a broken game.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -502,6 +508,29 @@ mod tests {
             assert!(
                 !offers_performance(&store_game),
                 "{source}: its launcher runs it"
+            );
+        }
+    }
+
+    #[test]
+    fn only_games_we_run_through_proton_offer_a_proton_build_in_fullscreen_mode() {
+        let game = |source, kind| Game::new(GameId::new(source, "x"), "X", kind, 0);
+
+        assert!(offers_proton_choice(&game(
+            Source::Manual,
+            LaunchKind::Proton
+        )));
+        for (source, kind) in [
+            (Source::Manual, LaunchKind::HostCommand),
+            (Source::Manual, LaunchKind::RuntimeNative),
+            (Source::Lutris, LaunchKind::HostCommand),
+            (Source::Desktop, LaunchKind::DesktopEntry),
+            (Source::Steam, LaunchKind::StoreUri),
+            (Source::HeroicEpic, LaunchKind::StoreUri),
+        ] {
+            assert!(
+                !offers_proton_choice(&game(source, kind)),
+                "{source} {kind}"
             );
         }
     }
