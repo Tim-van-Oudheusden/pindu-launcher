@@ -26,7 +26,13 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   **Open Sources** (Preferences at its Sources page), **Copy Command** (the `flatpak override` command) or **How to
   Install** (umu-launcher's instructions). The UI-side `HealthService` (`crates/pindu-ui/src/health_service.rs`)
   gathers the report's facts through the existing services, for both shells.
-- **Fullscreen.** The same report is a Quick Access level.
+- **Fullscreen.** The same report is a Quick Access level (`QuickAccessLevel::LibraryHealth`, `fullscreen_health.rs`)
+  over the same `HealthService`, its entry subtitled with how many problems need attention. Every row takes focus, so
+  it reads with a controller alone; a problem's row takes its next step on A where fullscreen mode can
+  (`NextStep::reach_in_fullscreen`): Preferences at its Sources page, Preferences at the host access command, or
+  umu-launcher's instructions. Over a running game the row says the step waits for the game to end, since Preferences
+  and web pages open over the launcher; in a gamescope session, which has no browser, How to Install shows the address
+  to read on another device. Rows the session cannot have, such as host access outside the Flatpak, are left out.
 - **First-run summary.** After the first sync, a summary names the launchers found, the games imported and what needs
   attention, once, in both shells, and points at Library Health. Once dismissed it never shows again.
 - **Last backup.** A successful export records its time in the `last-backup` GSettings key (seconds since the Unix
