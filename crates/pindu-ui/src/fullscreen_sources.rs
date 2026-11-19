@@ -4,7 +4,9 @@
 //! A switch changes the setting through the sync service, which then syncs, so a source
 //! turned off drops its games and one turned on brings them back, as on the desktop. The
 //! list is read again as the level opens and after each sync. A source's folder and its
-//! sidebar row stay the desktop's.
+//! sidebar row stay the desktop's. Below it, the copy order: the source order a game's
+//! copies follow, with Move Up and Move Down on each source, the same setting as
+//! Preferences' (see `crate::sources::bind_source_order`).
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -16,12 +18,13 @@ use pindu_core::sources::sync::imported_source_states;
 
 use crate::application::PinduApplication;
 use crate::quick_access::PinduQuickAccess;
-use crate::sources::{source_icon, source_name};
+use crate::sources::{bind_source_order, source_icon, source_name};
 
 impl PinduQuickAccess {
     /// Reads the sources again after each sync while the level shows: a sync finds a
-    /// source's folder, or no longer does.
+    /// source's folder, or no longer does. The copy order follows its setting.
     pub(crate) fn setup_sources(&self, application: &PinduApplication) {
+        bind_source_order(&self.imp().source_order, self.settings());
         let quick_access = self.downgrade();
         application.sync_service().connect_finished(move |_| {
             if let Some(quick_access) = quick_access.upgrade()
@@ -48,9 +51,14 @@ impl PinduQuickAccess {
             if quick_access.level() != Some(QuickAccessLevel::Sources) {
                 return;
             }
-            let list = quick_access.imp().sources.get();
-            let focused = quick_access
-                .focus_widget()
+            let imp = quick_access.imp();
+            let list = imp.sources.get();
+            let focus = quick_access.focus_widget();
+            // Focus on the copy order stays there.
+            let ordering = focus
+                .as_ref()
+                .is_some_and(|focus| focus.is_ancestor(&*imp.source_order));
+            let focused = focus
                 .filter(|focus| focus.is_ancestor(&list))
                 .and_then(|focus| {
                     focus
@@ -62,7 +70,7 @@ impl PinduQuickAccess {
             for state in imported_source_states(&states) {
                 list.append(&source_row(&application, &state));
             }
-            if let Some(row) = list.row_at_index(focused) {
+            if !ordering && let Some(row) = list.row_at_index(focused) {
                 row.grab_focus();
             }
         });
