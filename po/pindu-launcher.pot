@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 19:35+0100\n"
+"POT-Creation-Date: 2026-11-19 19:37+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -96,7 +96,7 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_library.rs:146
 #: crates/pindu-ui/src/home_page.rs:91
 #: crates/pindu-ui/src/proton_downloads_page.rs:338
-#: crates/pindu-ui/src/widgets/cover_tile.rs:352 data/ui/quick_access.blp:1162
+#: crates/pindu-ui/src/widgets/cover_tile.rs:352 data/ui/quick_access.blp:1345
 #: data/ui/window.blp:77 data/ui/window.blp:303
 msgid "Installed"
 msgstr ""
@@ -676,36 +676,36 @@ msgstr ""
 msgid "Then press Enter on it."
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_controllers.rs:93
+#: crates/pindu-ui/src/fullscreen_controllers.rs:103
 msgid "No Controllers Connected"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_controllers.rs:119 data/ui/preferences.blp:45
+#: crates/pindu-ui/src/fullscreen_controllers.rs:129 data/ui/preferences.blp:45
 msgid "Controller"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_controllers.rs:133
+#: crates/pindu-ui/src/fullscreen_controllers.rs:143
 msgid "Rumble to tell which controller this is"
 msgstr ""
 
 #. Translators: a battery's charge; {percent} is a number from 0 to 100.
-#: crates/pindu-ui/src/fullscreen_controllers.rs:156
+#: crates/pindu-ui/src/fullscreen_controllers.rs:166
 #: crates/pindu-ui/src/fullscreen_status.rs:46
 #, rust-format
 msgid "{percent} %"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_controllers.rs:172
+#: crates/pindu-ui/src/fullscreen_controllers.rs:182
 #: data/ui/quick_access.blp:874
 msgid "Letters"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_controllers.rs:173
+#: crates/pindu-ui/src/fullscreen_controllers.rs:183
 #: data/ui/quick_access.blp:886
 msgid "Shapes"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_controllers.rs:174
+#: crates/pindu-ui/src/fullscreen_controllers.rs:184
 #: data/ui/quick_access.blp:898
 msgid "Letters, A on the Right"
 msgstr ""
@@ -1057,7 +1057,7 @@ msgid "Open in {launcher}"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_performance.rs:197 data/ui/game_page.blp:326
-#: data/ui/preferences.blp:200 data/ui/quick_access.blp:1229
+#: data/ui/preferences.blp:200 data/ui/quick_access.blp:1412
 #: data/ui/window.blp:550
 msgid "MangoHud"
 msgstr ""
@@ -1794,7 +1794,7 @@ msgid "The key was not saved: {error}"
 msgstr ""
 
 #: crates/pindu-ui/src/preferences.rs:662
-#: crates/pindu-ui/src/quick_access.rs:953
+#: crates/pindu-ui/src/quick_access.rs:962
 msgid "Your fullscreen.css, over the design"
 msgstr ""
 
@@ -2074,19 +2074,19 @@ msgstr ""
 msgid "Preparing…"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:368
+#: crates/pindu-ui/src/quick_access.rs:374
 #, rust-format
 msgid "Performance for {game}"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:955
+#: crates/pindu-ui/src/quick_access.rs:964
 #, rust-format
 msgid "Create {path} to restyle fullscreen mode"
 msgstr ""
 
 #. / Why Design cannot apply a design written for a newer style contract.
 
-#: crates/pindu-ui/src/quick_access.rs:1041
+#: crates/pindu-ui/src/quick_access.rs:1050
 msgid "Needs a newer Pindu launcher"
 msgstr ""
 
@@ -2428,160 +2428,195 @@ msgid ""
 "Guide, the D-pad and the left stick never change."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:83
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:88
+msgid "Navigation repeat delay"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:89
+msgid ""
+"How long a controller direction is held in fullscreen mode before focus "
+"starts moving again on its own: short is 0.2 seconds, normal 0.3 and long "
+"0.6. It changes only the launcher's own navigation, never what a game "
+"receives."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:98
+msgid "Navigation repeat rate"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:99
+msgid ""
+"How fast focus keeps moving while a controller direction is held in "
+"fullscreen mode: slow is every 100 ms, normal every 50 ms and fast every 30 "
+"ms. It changes only the launcher's own navigation, never what a game "
+"receives."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:108
+msgid "Stick dead zone for navigation"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:109
+msgid ""
+"How far the left stick moves before it moves focus in fullscreen mode: small "
+"is past 30 % of its travel, normal past half and large past 70 %. It changes "
+"only the launcher's own navigation, never what a game receives."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:113
 msgid "Default Proton build"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:84
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:114
 msgid ""
 "The internal name of the Proton build Windows games run with unless they "
 "name their own. Empty for the newest build on this computer."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:88
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:118
 msgid "Prefix folder"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:89
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:119
 msgid ""
 "The folder new Windows games get their own prefix in. Empty for ~/Games/"
 "pindu-launcher/prefixes."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:93
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:123
 msgid "MangoHud for new Windows games"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:94
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:124
 msgid ""
 "Whether Windows games added from now on start with the MangoHud performance "
 "overlay."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:98
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:128
 msgid "GameMode for new Windows games"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:99
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:129
 msgid "Whether Windows games added from now on start with GameMode."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:103
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:133
 msgid "Start in fullscreen mode"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:104
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:134
 msgid ""
 "Open the window in fullscreen mode, the controller-driven presentation of "
 "the library."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:108
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:138
 msgid "Navigation sounds"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:109
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:139
 msgid ""
 "Play a soft sound in fullscreen mode when the controller moves focus, "
 "selects or goes back."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:114
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:144
 msgid "Navigation sound volume"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:115
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:145
 msgid "How loud the navigation sounds play, from 0 (silent) to 100 (full)."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:119
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:149
 msgid "Reduce motion in fullscreen mode"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:120
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:150
 msgid ""
 "Hold Home's animated background on its first frame and change art without a "
 "crossfade in fullscreen mode. Turning off animations in the system settings "
 "does the same."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:124
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:154
 msgid "Larger text in fullscreen mode"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:125
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:155
 msgid ""
 "Show fullscreen mode's text about a quarter larger, for reading from across "
 "the room. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:129
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:159
 msgid "Custom fullscreen style"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:130
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:160
 msgid ""
 "Restyle fullscreen mode with your own stylesheet, fullscreen.css in the "
 "app's config folder. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:134
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:164
 msgid "Fullscreen design"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:135
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:165
 msgid ""
 "The id of the design fullscreen mode is shown in: a theme folder shipped "
 "with the app or in the app's config folder under themes. Empty for Adwaita, "
 "the standard look. The desktop window is not affected."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:139
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:169
 msgid "Fullscreen design variant"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:140
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:170
 msgid ""
 "The id of the chosen variant of the fullscreen design, for a design that "
 "offers variants; its stylesheet applies after the design's own. An empty or "
 "unknown id picks the design's first variant."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:149
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:179
 msgid "Fullscreen background blur"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:150
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:180
 msgid ""
 "How much Home's background and the focused game's art behind it are blurred "
 "in fullscreen mode. A design can restyle each strength."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:159
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:189
 msgid "Fullscreen background dim"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:160
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:190
 msgid ""
 "How much Home's background and the focused game's art behind it are darkened "
 "in fullscreen mode. A design can restyle each strength."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:164
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:194
 msgid "SteamGridDB prompt shown"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:165
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:195
 msgid ""
 "Whether the window has offered, once, to set up a SteamGridDB API key for "
 "game art."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:169
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:199
 msgid "Last library backup"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:170
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:200
 msgid ""
 "When the library was last exported, in seconds since the Unix epoch; 0 means "
 "never. Library Health shows it."
@@ -3086,14 +3121,14 @@ msgstr ""
 msgid "Choose the game's folder; its program, title and options come next."
 msgstr ""
 
-#: data/ui/game_dialog.blp:44 data/ui/quick_access.blp:1174
+#: data/ui/game_dialog.blp:44 data/ui/quick_access.blp:1357
 #: data/ui/window.blp:319
 msgid "Native"
 msgstr ""
 
 #: data/ui/game_dialog.blp:45 data/ui/game_dialog.blp:93
 #: data/ui/menu_drawer.blp:45 data/ui/preferences.blp:156
-#: data/ui/quick_access.blp:1170 data/ui/window.blp:315
+#: data/ui/quick_access.blp:1353 data/ui/window.blp:315
 msgid "Windows"
 msgstr ""
 
@@ -3236,7 +3271,7 @@ msgstr ""
 msgid "Ask Steam which of the game’s launch options to use"
 msgstr ""
 
-#: data/ui/game_page.blp:291 data/ui/quick_access.blp:1240
+#: data/ui/game_page.blp:291 data/ui/quick_access.blp:1423
 msgid "Changes apply the next time the game starts."
 msgstr ""
 
@@ -3249,12 +3284,12 @@ msgid "An overlay with the frame rate and how busy the computer is"
 msgstr ""
 
 #: data/ui/game_page.blp:331 data/ui/preferences.blp:205
-#: data/ui/quick_access.blp:1233 data/ui/window.blp:554
+#: data/ui/quick_access.blp:1416 data/ui/window.blp:554
 msgid "GameMode"
 msgstr ""
 
 #: data/ui/game_page.blp:332 data/ui/preferences.blp:206
-#: data/ui/quick_access.blp:1234 data/ui/window.blp:555
+#: data/ui/quick_access.blp:1417 data/ui/window.blp:555
 msgid "Asks the system to favour the game while it runs"
 msgstr ""
 
@@ -3268,7 +3303,7 @@ msgstr ""
 
 #: data/ui/menu_drawer.blp:143 data/ui/menu_drawer.blp:248
 #: data/ui/menu_drawer.blp:260 data/ui/quick_access.blp:337
-#: data/ui/quick_access.blp:981
+#: data/ui/quick_access.blp:1164
 msgid "Controls"
 msgstr ""
 
@@ -3288,7 +3323,7 @@ msgstr ""
 msgid "Cover Size"
 msgstr ""
 
-#: data/ui/preferences.blp:17
+#: data/ui/preferences.blp:17 data/ui/quick_access.blp:1101
 msgid "Small"
 msgstr ""
 
@@ -3296,7 +3331,7 @@ msgstr ""
 msgid "Medium"
 msgstr ""
 
-#: data/ui/preferences.blp:19
+#: data/ui/preferences.blp:19 data/ui/quick_access.blp:1127
 msgid "Large"
 msgstr ""
 
@@ -3316,7 +3351,7 @@ msgstr ""
 msgid "The launcher and state badges on covers"
 msgstr ""
 
-#: data/ui/preferences.blp:39 data/ui/quick_access.blp:1100
+#: data/ui/preferences.blp:39 data/ui/quick_access.blp:1283
 msgid "Exit After Launching"
 msgstr ""
 
@@ -3508,7 +3543,7 @@ msgstr ""
 msgid "Start in Fullscreen Mode"
 msgstr ""
 
-#: data/ui/preferences.blp:250 data/ui/quick_access.blp:1070
+#: data/ui/preferences.blp:250 data/ui/quick_access.blp:1253
 msgid "Navigation Sounds"
 msgstr ""
 
@@ -3516,19 +3551,19 @@ msgstr ""
 msgid "A soft sound when the controller moves, selects or goes back"
 msgstr ""
 
-#: data/ui/preferences.blp:255 data/ui/quick_access.blp:1076
+#: data/ui/preferences.blp:255 data/ui/quick_access.blp:1259
 msgid "Volume"
 msgstr ""
 
-#: data/ui/preferences.blp:273 data/ui/quick_access.blp:1094
+#: data/ui/preferences.blp:273 data/ui/quick_access.blp:1277
 msgid "Navigation Sound Volume"
 msgstr ""
 
-#: data/ui/preferences.blp:280 data/ui/quick_access.blp:1105
+#: data/ui/preferences.blp:280 data/ui/quick_access.blp:1288
 msgid "Accessibility"
 msgstr ""
 
-#: data/ui/preferences.blp:283 data/ui/quick_access.blp:1122
+#: data/ui/preferences.blp:283 data/ui/quick_access.blp:1305
 msgid "Reduce Motion"
 msgstr ""
 
@@ -3538,7 +3573,7 @@ msgid ""
 "animations are off in the system settings"
 msgstr ""
 
-#: data/ui/preferences.blp:288 data/ui/quick_access.blp:1126
+#: data/ui/preferences.blp:288 data/ui/quick_access.blp:1309
 msgid "Larger Text"
 msgstr ""
 
@@ -3597,7 +3632,7 @@ msgstr ""
 msgid "Surprise Me"
 msgstr ""
 
-#: data/ui/quick_access.blp:238 data/ui/quick_access.blp:1144
+#: data/ui/quick_access.blp:238 data/ui/quick_access.blp:1327
 msgid "Filters"
 msgstr ""
 
@@ -3613,7 +3648,7 @@ msgstr ""
 msgid "Controllers"
 msgstr ""
 
-#: data/ui/quick_access.blp:361 data/ui/quick_access.blp:1011
+#: data/ui/quick_access.blp:361 data/ui/quick_access.blp:1194
 msgid "Settings"
 msgstr ""
 
@@ -3653,31 +3688,106 @@ msgstr ""
 msgid "The right button confirms"
 msgstr ""
 
-#: data/ui/quick_access.blp:1030
+#: data/ui/quick_access.blp:968
+msgid "Repeat Delay"
+msgstr ""
+
+#: data/ui/quick_access.blp:987
+msgid "Short"
+msgstr ""
+
+#: data/ui/quick_access.blp:988
+msgid "After 0.2 seconds"
+msgstr ""
+
+#: data/ui/quick_access.blp:1000 data/ui/quick_access.blp:1057
+#: data/ui/quick_access.blp:1114
+msgid "Normal"
+msgstr ""
+
+#: data/ui/quick_access.blp:1001
+msgid "After 0.3 seconds"
+msgstr ""
+
+#: data/ui/quick_access.blp:1013
+msgid "Long"
+msgstr ""
+
+#: data/ui/quick_access.blp:1014
+msgid "After 0.6 seconds"
+msgstr ""
+
+#: data/ui/quick_access.blp:1027
+msgid "Repeat Rate"
+msgstr ""
+
+#: data/ui/quick_access.blp:1044
+msgid "Slow"
+msgstr ""
+
+#: data/ui/quick_access.blp:1045
+msgid "10 moves a second"
+msgstr ""
+
+#: data/ui/quick_access.blp:1058
+msgid "20 moves a second"
+msgstr ""
+
+#: data/ui/quick_access.blp:1070
+msgid "Fast"
+msgstr ""
+
+#: data/ui/quick_access.blp:1071
+msgid "About 33 moves a second"
+msgstr ""
+
+#: data/ui/quick_access.blp:1084
+msgid "Stick Dead Zone"
+msgstr ""
+
+#: data/ui/quick_access.blp:1102
+msgid "A light push moves focus"
+msgstr ""
+
+#: data/ui/quick_access.blp:1115
+msgid "A push halfway"
+msgstr ""
+
+#: data/ui/quick_access.blp:1128
+msgid "A firm push, for a stick that drifts"
+msgstr ""
+
+#: data/ui/quick_access.blp:1141
+msgid ""
+"These change only how focus moves here. Games receive the controller "
+"unchanged."
+msgstr ""
+
+#: data/ui/quick_access.blp:1213
 msgid "Small Covers"
 msgstr ""
 
-#: data/ui/quick_access.blp:1040
+#: data/ui/quick_access.blp:1223
 msgid "Medium Covers"
 msgstr ""
 
-#: data/ui/quick_access.blp:1051
+#: data/ui/quick_access.blp:1234
 msgid "Large Covers"
 msgstr ""
 
-#: data/ui/quick_access.blp:1166 data/ui/window.blp:307
+#: data/ui/quick_access.blp:1349 data/ui/window.blp:307
 msgid "Not Installed"
 msgstr ""
 
-#: data/ui/quick_access.blp:1178 data/ui/shortcuts-dialog.blp:43
+#: data/ui/quick_access.blp:1361 data/ui/shortcuts-dialog.blp:43
 msgid "Show Hidden Games"
 msgstr ""
 
-#: data/ui/quick_access.blp:1190
+#: data/ui/quick_access.blp:1373
 msgid "Clear Filters"
 msgstr ""
 
-#: data/ui/quick_access.blp:1228 data/ui/window.blp:549
+#: data/ui/quick_access.blp:1411 data/ui/window.blp:549
 msgid "Performance Overlay"
 msgstr ""
 
