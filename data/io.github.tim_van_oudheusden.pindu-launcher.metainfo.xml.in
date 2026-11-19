@@ -87,6 +87,38 @@
   </supports>
 
   <releases>
+    <release version="0.6.0~rc1" type="development" date="2026-11-20">
+      <description>
+        <p>Copies of one game shown as one, save snapshots, Library Health, richer game details, two new sources and much more of the launcher in fullscreen mode.</p>
+        <ul>
+          <li>Fullscreen mode's Quick Access lets you choose Home's background under Design: the new Red Ribbons, now the default, or Blue Station</li>
+          <li>Rename a game, or set its developer, genres, release year and description, in its Edit dialog; your changes survive every sync</li>
+          <li>Steam games show their release year, genres, controller support and Steam Deck rating, and Lutris and Heroic Amazon games their release year</li>
+          <li>Get Metadata From Wikidata, off by default, fills in Steam games' developers and genres on request, and the game page says which values came from Wikidata</li>
+          <li>Filter the library by genre or to games never played, and save a filter as a collection whose games follow it</li>
+          <li>A list view beside the library grid, and a selection mode that favourites, hides or adds many games to a collection at once, with Undo</li>
+          <li>Copies of a game from several sources show as one game: Duplicates suggests copies to group, you can merge and split games by hand, and Copy Order in Preferences decides which copy Play starts</li>
+          <li>A Windows game's saves are kept as a snapshot when it exits, can be restored from Save Snapshots, and can also be copied to a folder you choose; any game can have its save folders added by hand</li>
+          <li>Library Health, in the main menu and in Quick Access, shows what needs attention with a button for the next step, and the first sync ends with a summary of what it found</li>
+          <li>Preferences shows when each source last synced and the problems it ran into</li>
+          <li>Games installed with the itch app or with the standalone Legendary command-line tool join the library</li>
+          <li>When a launch fails, the game page says why and offers the next step, and Start Safely runs a game once without MangoHud, GameMode or its wrappers</li>
+          <li>Steam games link to ProtonDB and PCGamingWiki</li>
+          <li>About's Debugging Information holds a report for bug reports, which can include a game's newest log; in fullscreen mode Quick Access shows it to photograph and saves a copy</li>
+          <li>Fullscreen mode can add a game, turn sources on and off, take the SteamGridDB key, download and remove Proton builds, choose a game's Proton build, and rename, reorder and delete collections, all with a controller</li>
+          <li>The fullscreen game page shows a game's details and description</li>
+          <li>Fullscreen mode offers four text sizes, and Hold to Confirm makes Power Off, Restart, Forget and Stop wait for a held button</li>
+          <li>Quick Access sets the controller's repeat delay, repeat rate and stick dead zone</li>
+          <li>Under high contrast, fullscreen Home's background is still and plain, and text over game art sits on darker shading</li>
+          <li>Screen readers hear how many games match a search or filter, Play buttons and check boxes are named after their game, and the game title and Jump Back In are headings</li>
+          <li>Tab leaves the library grid in one step, and the arrow keys move between games</li>
+          <li>Backups carry game groups, saved filters and the details you or a provider set, and the launcher remembers when you last backed up</li>
+          <li>The launcher keeps a copy of your library before it updates the library's format</li>
+          <li>Fixed a rare "database is locked" error when the library opens</li>
+          <li>Updated translations</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.1" date="2026-11-19">
       <description>
         <p>Change a game's artwork from SteamGridDB or your own files, and a tidier library.</p>
