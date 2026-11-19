@@ -2,9 +2,9 @@
 //! leaving, and the machine's power), the Quick Access panel on the right (notifications,
 //! what runs in the background, the design, the controllers and what each button does, a
 //! few settings, the network, Bluetooth, the sound output, OS updates on Pindu OS, Library
-//! Health, and entries for the page under it such as the library's filters and a focused
-//! game's performance switches) and the options sheet at the bottom (what to do with one
-//! game).
+//! Health, the diagnostics report, and entries for the page under it such as the library's
+//! filters and a focused game's performance switches) and the options sheet at the bottom
+//! (what to do with one game).
 //! This decides which one is open and at which level, what Start, Guide, R3, View or X and
 //! B do to them, and what each lists.
 
@@ -93,6 +93,9 @@ pub enum QuickAccessLevel {
     /// The Library Health report (see [`crate::health`]): the sources, starting games,
     /// artwork and the library file, each problem with its next step.
     LibraryHealth,
+    /// The diagnostics report in pages to photograph, a copy of which is saved as it opens
+    /// (see [`crate::report_screen`]).
+    DiagnosticsReport,
     /// The Proton builds downloaded into our tools folder, the GE-Proton and
     /// Proton-CachyOS releases to download (see [`crate::proton_downloads`]), and the
     /// defaults for new Windows games: the Proton build, MangoHud and GameMode, the same
@@ -105,7 +108,7 @@ pub enum QuickAccessLevel {
 
 impl QuickAccessLevel {
     /// Every level, the entries first.
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 18] = [
         Self::Main,
         Self::Notifications,
         Self::Activity,
@@ -121,6 +124,7 @@ impl QuickAccessLevel {
         Self::SystemUpdate,
         Self::AddStore,
         Self::LibraryHealth,
+        Self::DiagnosticsReport,
         Self::Proton,
         Self::Sources,
     ];
@@ -144,6 +148,7 @@ impl QuickAccessLevel {
             Self::SystemUpdate => "system-update",
             Self::AddStore => "add-store",
             Self::LibraryHealth => "library-health",
+            Self::DiagnosticsReport => "diagnostics-report",
             Self::Proton => "proton",
             Self::Sources => "sources",
         }
@@ -564,6 +569,10 @@ mod tests {
         assert_eq!(QuickAccessLevel::SystemUpdate.name(), "system-update");
         assert_eq!(QuickAccessLevel::AddStore.name(), "add-store");
         assert_eq!(QuickAccessLevel::LibraryHealth.name(), "library-health");
+        assert_eq!(
+            QuickAccessLevel::DiagnosticsReport.name(),
+            "diagnostics-report"
+        );
     }
 
     #[test]
@@ -651,6 +660,7 @@ mod tests {
             QuickAccessLevel::SoundOutput,
             QuickAccessLevel::SystemUpdate,
             QuickAccessLevel::LibraryHealth,
+            QuickAccessLevel::DiagnosticsReport,
         ] {
             let mut panels = Panels::new();
             panels.handle(Intent::QuickAccess, PAGE);

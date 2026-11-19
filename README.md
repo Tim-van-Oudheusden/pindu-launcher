@@ -703,6 +703,13 @@ distribution and session, each source's state and game count, the sandbox permis
 schema version and the last sync's problems. It holds no game titles and writes your home folder as `~`; nothing is
 sent anywhere.
 
+In fullscreen mode, where nothing can be copied, open Quick Access and choose **Diagnostics Report**. It shows the
+same report in large text, a page at a time ("Page 1 of 3"), for a phone to photograph: LB and RB, or **Previous
+Page** and **Next Page**, turn the pages, and Up and Down scroll a page the screen cannot fit. Each time it opens, a
+copy is saved to `~/.local/share/pindu-launcher/reports/` (in the Flatpak,
+`~/.var/app/io.github.tim_van_oudheusden.pindu-launcher/data/pindu-launcher/reports/`), named after the date and time;
+the newest ten are kept, and the screen says where the copy went.
+
 ## Acknowledgments
 
 - [Cartridges](https://codeberg.org/kramo/cartridges) by kramo, the GNOME game launcher that showed how a libadwaita
