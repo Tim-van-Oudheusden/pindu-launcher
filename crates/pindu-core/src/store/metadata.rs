@@ -71,27 +71,29 @@ impl Store {
     }
 }
 
-/// The stored text of a value: genres as a JSON array, other fields as they are.
+/// The stored text of a value: genres as a JSON array, a release year as its number,
+/// controller support as its fixed string, other fields as they are.
 fn value_text(value: &FieldValue) -> String {
     match value {
         FieldValue::Developer(text) | FieldValue::Description(text) => text.clone(),
         FieldValue::Genres(genres) => to_json(genres),
+        FieldValue::ReleaseYear(year) => year.to_string(),
+        FieldValue::ControllerSupport(support) => support.as_str().to_owned(),
     }
 }
 
 fn metadata_value_from_row(row: &Row<'_>) -> rusqlite::Result<MetadataValue> {
+    fn invalid(error: impl std::error::Error + Send + Sync + 'static) -> rusqlite::Error {
+        rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(error))
+    }
     let text: String = row.get("value")?;
     let value = match row.get("field")? {
         MetadataField::Developer => FieldValue::Developer(text),
         MetadataField::Description => FieldValue::Description(text),
-        MetadataField::Genres => {
-            FieldValue::Genres(serde_json::from_str(&text).map_err(|error| {
-                rusqlite::Error::FromSqlConversionFailure(
-                    0,
-                    rusqlite::types::Type::Text,
-                    Box::new(error),
-                )
-            })?)
+        MetadataField::Genres => FieldValue::Genres(serde_json::from_str(&text).map_err(invalid)?),
+        MetadataField::ReleaseYear => FieldValue::ReleaseYear(text.parse().map_err(invalid)?),
+        MetadataField::ControllerSupport => {
+            FieldValue::ControllerSupport(text.parse().map_err(invalid)?)
         }
     };
     Ok(MetadataValue {

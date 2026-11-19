@@ -1,14 +1,15 @@
 //! A game's metadata kept by origin.
 //!
-//! Developer, genres and description can each come from the game's source, an online
-//! provider or the user. The store keeps every origin's value with when it was set, and a
-//! sync writes only the source's; what a game shows is [`resolve`]d from them, the user's
-//! value first, then a provider's, then the source's.
+//! Developer, genres, description, release year and controller support can each come
+//! from the game's source, an online provider or the user. The store keeps every origin's
+//! value with when it was set, and a sync writes only the source's; what a game shows is
+//! [`resolve`]d from them, the user's value first, then a provider's, then the source's.
 
-use crate::model::{Game, MetadataField, MetadataOrigin, Timestamp};
+use crate::model::{ControllerSupport, Game, MetadataField, MetadataOrigin, Timestamp};
 
-/// A game's developer, genres and description: the values one origin gives, or, resolved,
-/// the ones the game shows. An empty field has no value.
+/// A game's developer, genres, description, release year and controller support: the
+/// values one origin gives, or, resolved, the ones the game shows. An empty field has no
+/// value.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Metadata {
     /// Who made the game.
@@ -17,6 +18,10 @@ pub struct Metadata {
     pub genres: Vec<String>,
     /// A description of the game.
     pub description: Option<String>,
+    /// The year the game was released.
+    pub release_year: Option<i32>,
+    /// How well the game supports a controller.
+    pub controller_support: Option<ControllerSupport>,
 }
 
 impl Metadata {
@@ -26,6 +31,8 @@ impl Metadata {
             developer: game.developer.clone(),
             genres: game.genres.clone(),
             description: game.description.clone(),
+            release_year: game.release_year,
+            controller_support: game.controller_support,
         }
     }
 
@@ -34,6 +41,8 @@ impl Metadata {
         game.developer = self.developer;
         game.genres = self.genres;
         game.description = self.description;
+        game.release_year = self.release_year;
+        game.controller_support = self.controller_support;
     }
 
     /// The fields that have a value, each with it.
@@ -44,6 +53,8 @@ impl Metadata {
             values.push(FieldValue::Genres(self.genres.clone()));
         }
         values.extend(self.description.clone().map(FieldValue::Description));
+        values.extend(self.release_year.map(FieldValue::ReleaseYear));
+        values.extend(self.controller_support.map(FieldValue::ControllerSupport));
         values
     }
 
@@ -52,6 +63,8 @@ impl Metadata {
             FieldValue::Developer(developer) => self.developer = Some(developer),
             FieldValue::Genres(genres) => self.genres = genres,
             FieldValue::Description(description) => self.description = Some(description),
+            FieldValue::ReleaseYear(year) => self.release_year = Some(year),
+            FieldValue::ControllerSupport(support) => self.controller_support = Some(support),
         }
     }
 }
@@ -65,6 +78,10 @@ pub enum FieldValue {
     Genres(Vec<String>),
     /// A description of the game.
     Description(String),
+    /// The year the game was released.
+    ReleaseYear(i32),
+    /// How well the game supports a controller.
+    ControllerSupport(ControllerSupport),
 }
 
 impl FieldValue {
@@ -74,6 +91,8 @@ impl FieldValue {
             Self::Developer(_) => MetadataField::Developer,
             Self::Genres(_) => MetadataField::Genres,
             Self::Description(_) => MetadataField::Description,
+            Self::ReleaseYear(_) => MetadataField::ReleaseYear,
+            Self::ControllerSupport(_) => MetadataField::ControllerSupport,
         }
     }
 }
@@ -143,10 +162,19 @@ mod tests {
     }
 
     fn value_of(field: MetadataField, text: String) -> FieldValue {
+        // Fields that are not text take a value derived from it, so equal text gives an
+        // equal value.
+        let number = text.bytes().map(i32::from).sum::<i32>();
         match field {
             MetadataField::Developer => FieldValue::Developer(text),
             MetadataField::Genres => FieldValue::Genres(vec![text]),
             MetadataField::Description => FieldValue::Description(text),
+            MetadataField::ReleaseYear => FieldValue::ReleaseYear(1970 + number),
+            MetadataField::ControllerSupport => FieldValue::ControllerSupport(if number % 2 == 0 {
+                ControllerSupport::Full
+            } else {
+                ControllerSupport::Partial
+            }),
         }
     }
 
@@ -246,6 +274,7 @@ mod tests {
             developer: Some("Valve".into()),
             genres: Vec::new(),
             description: None,
+            ..Metadata::default()
         };
 
         assert_eq!(

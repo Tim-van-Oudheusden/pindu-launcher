@@ -984,6 +984,7 @@ fn metadata_values_keep_their_origin_and_the_time_they_last_changed() {
         developer: Some("Valve".into()),
         genres: vec!["Strategy".into(), "MOBA".into()],
         description: Some("Every day".into()),
+        ..Default::default()
     };
     store
         .set_metadata(&game.id, MetadataOrigin::Source, &first, 10)
@@ -1013,6 +1014,37 @@ fn metadata_values_keep_their_origin_and_the_time_they_last_changed() {
             },
         ]
     );
+}
+
+#[test]
+fn release_year_and_controller_support_are_stored_and_resolved_like_other_metadata() {
+    use crate::model::ControllerSupport;
+    let (_dir, store) = temp_store();
+    let game = steam_game("570", "Dota 2");
+    store.insert_game(&game).unwrap();
+    let source = crate::metadata::Metadata {
+        release_year: Some(2013),
+        controller_support: Some(ControllerSupport::Partial),
+        ..Default::default()
+    };
+    store
+        .set_metadata(&game.id, MetadataOrigin::Source, &source, 10)
+        .unwrap();
+    let mine = crate::metadata::Metadata {
+        release_year: Some(2011),
+        ..Default::default()
+    };
+    store
+        .set_metadata(&game.id, MetadataOrigin::User, &mine, 20)
+        .unwrap();
+
+    let shown = store.game(&game.id).unwrap().unwrap();
+    assert_eq!(shown.release_year, Some(2011));
+    assert_eq!(shown.controller_support, Some(ControllerSupport::Partial));
+    let listed = &store.games().unwrap()[0];
+    assert_eq!(listed.release_year, Some(2011));
+    assert_eq!(listed.controller_support, Some(ControllerSupport::Partial));
+    assert_eq!(store.metadata_values(&game.id).unwrap().len(), 3);
 }
 
 #[test]

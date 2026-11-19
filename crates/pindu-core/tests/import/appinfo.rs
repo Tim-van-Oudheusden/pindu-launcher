@@ -9,7 +9,7 @@ fn dota() -> Value {
             ("name", text("Dota 2")),
             ("type", text("Game")),
             ("oslist", text("windows,linux")),
-            ("controller_support", Value::Int(1)),
+            ("controller_support", text("full")),
         ]),
     )])
 }

@@ -160,6 +160,21 @@ string_enum! {
         Genres => "genres",
         /// A description of the game.
         Description => "description",
+        /// The year the game was released.
+        ReleaseYear => "release-year",
+        /// How well the game supports a controller, as its developer declares it.
+        ControllerSupport => "controller-support",
+    }
+}
+
+string_enum! {
+    /// How well a game supports a controller, as its developer declares it to its store.
+    /// A game that declares nothing has no value, which is not the same as no support.
+    ControllerSupport, "controller support" {
+        /// The whole game can be played with a controller.
+        Full => "full",
+        /// Parts of the game need a keyboard or mouse.
+        Partial => "partial",
     }
 }
 
@@ -276,6 +291,10 @@ pub struct Game {
     pub genres: Vec<String>,
     /// A description of the game, resolved like `developer`.
     pub description: Option<String>,
+    /// The year the game was released, resolved like `developer`.
+    pub release_year: Option<i32>,
+    /// How well the game supports a controller, resolved like `developer`.
+    pub controller_support: Option<ControllerSupport>,
     /// Start a Steam game through Steam's launch-options dialog
     /// (`steam://launch/<id>/dialog`), which honours the user's launch-option choice.
     pub steam_launch_dialog: bool,
@@ -310,6 +329,8 @@ impl Game {
             launch_uri: None,
             genres: Vec::new(),
             description: None,
+            release_year: None,
+            controller_support: None,
             steam_launch_dialog: false,
         }
     }
