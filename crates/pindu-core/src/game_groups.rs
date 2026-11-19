@@ -8,6 +8,7 @@ use std::cmp::{Ordering, Reverse};
 use std::collections::HashMap;
 
 use crate::model::{Game, GameGroup, GameId, Platform, Source, Timestamp};
+use crate::search;
 use crate::store::{self, Store};
 
 /// The source order the default copy follows until the user changes it: store clients
@@ -188,6 +189,28 @@ pub fn copies_of(store: &Store, game: &GameId) -> store::Result<Vec<GameId>> {
     Ok(store
         .game_group_of(game)?
         .map_or_else(|| vec![game.clone()], |group| group.members))
+}
+
+/// The games the user can merge `target` with, as the library shows them (one game per
+/// group), whose titles match `query` as library search matches them: games with the same
+/// normalised title first, as the likely copies, then the rest by title. The target itself
+/// and games removed or gone from their source are left out.
+pub fn merge_candidates<'a>(
+    target: &Game,
+    games: impl IntoIterator<Item = &'a Game>,
+    query: &str,
+) -> Vec<&'a Game> {
+    let title = search::normalize(&target.title);
+    let query = search::Query::new(query);
+    let mut candidates: Vec<(bool, String, &Game)> = games
+        .into_iter()
+        .filter(|game| game.id != target.id && game.in_library())
+        .map(|game| (search::normalize(&game.title), game))
+        .filter(|(name, _)| query.matches(name))
+        .map(|(name, game)| (name != title, name, game))
+        .collect();
+    candidates.sort_by(|a, b| (a.0, &a.1, &a.2.id).cmp(&(b.0, &b.1, &b.2.id)));
+    candidates.into_iter().map(|(_, _, game)| game).collect()
 }
 
 /// A group with what the library shows for it as one game.

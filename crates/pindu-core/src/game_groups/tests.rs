@@ -318,3 +318,33 @@ fn a_change_to_a_grouped_game_reaches_every_copy() {
         std::slice::from_ref(&loner.id)
     );
 }
+
+fn titled(source: Source, native_id: &str, title: &str) -> Game {
+    let mut game = game(source, native_id);
+    game.title = title.to_owned();
+    game
+}
+
+#[test]
+fn merge_candidates_list_likely_copies_first_then_the_rest_by_title() {
+    let target = titled(Source::Steam, "1", "Celeste");
+    let hollow = titled(Source::Steam, "2", "Hollow Knight");
+    let classic = titled(Source::Lutris, "classic", "Celeste Classic");
+    let gog = titled(Source::HeroicGog, "3", "CELESTE™");
+    let mut removed = titled(Source::Desktop, "celeste", "Celeste");
+    removed.user_removed = true;
+    let games = [&target, &hollow, &classic, &gog, &removed];
+
+    let ids = |query: &str| -> Vec<GameId> {
+        merge_candidates(&target, games.iter().copied(), query)
+            .into_iter()
+            .map(|game| game.id.clone())
+            .collect()
+    };
+
+    assert_eq!(
+        ids(""),
+        [gog.id.clone(), classic.id.clone(), hollow.id.clone()]
+    );
+    assert_eq!(ids("hol"), std::slice::from_ref(&hollow.id));
+}

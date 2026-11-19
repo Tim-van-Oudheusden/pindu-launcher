@@ -85,6 +85,55 @@ impl Store {
         })
     }
 
+    /// Merges games the user says are copies of one game, with every copy of their groups,
+    /// into one group made by hand; returns its ID. The first game's group, or else the
+    /// first group among them, stays with its preferred copy, and the others end. Games
+    /// already all in one group change nothing. A remembered split does not stop the user.
+    pub fn merge_games(&self, games: &[GameId]) -> Result<i64> {
+        let mut distinct = games.to_vec();
+        distinct.sort_unstable();
+        distinct.dedup();
+        if distinct.len() < 2 {
+            return Err(StoreError::TooFewCopies);
+        }
+        self.in_transaction(|store| {
+            let mut kept = None;
+            let mut loose = Vec::new();
+            let mut others = Vec::new();
+            for game in games {
+                match store.group_id_of(game)? {
+                    None => loose.push(game.clone()),
+                    Some(group) if kept.is_none() => kept = Some(group),
+                    Some(group) if Some(group) != kept && !others.contains(&group) => {
+                        others.push(group);
+                    }
+                    Some(_) => {}
+                }
+            }
+            loose.sort_unstable();
+            loose.dedup();
+            let Some(kept) = kept else {
+                return store.create_group(&loose);
+            };
+            if loose.is_empty() && others.is_empty() {
+                return Ok(kept);
+            }
+            for group in others {
+                store.conn.execute(
+                    "UPDATE game_group_members SET group_id = ?1 WHERE group_id = ?2",
+                    params![kept, group],
+                )?;
+                store.ungroup(group)?;
+            }
+            for game in &loose {
+                store.check_ungrouped(game)?;
+                store.insert_member(kept, game)?;
+            }
+            store.mark_by_hand(kept)?;
+            Ok(kept)
+        })
+    }
+
     /// Removes a group; its games show on their own again exactly as before. An unknown
     /// group changes nothing.
     pub fn ungroup(&self, group_id: i64) -> Result<()> {
