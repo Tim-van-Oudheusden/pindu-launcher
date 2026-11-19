@@ -37,6 +37,7 @@ use crate::window::PinduWindow;
 use pindu_core::backup::ImportSummary;
 use pindu_core::gamescope::session::{Session, has_os_session_select, runs_as_own_session};
 use pindu_core::keys;
+use pindu_core::launch::WebPage;
 use pindu_core::library::Filters;
 use pindu_core::notifications::{Kind, Target};
 use pindu_core::panels::Playing;
@@ -620,6 +621,22 @@ impl PinduApplication {
                 });
             })
             .build();
+        let protondb_action = gio::ActionEntry::builder("open-protondb")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                app.with_game(id, |window, game, _, toast| {
+                    launch_service::open_web_page(window, game, WebPage::ProtonDb, toast)
+                });
+            })
+            .build();
+        let pcgamingwiki_action = gio::ActionEntry::builder("open-pcgamingwiki")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                app.with_game(id, |window, game, _, toast| {
+                    launch_service::open_web_page(window, game, WebPage::PcGamingWiki, toast)
+                });
+            })
+            .build();
         // `--fullscreen`: the activation that follows opens the window in fullscreen mode.
         let fullscreen_action = gio::ActionEntry::builder("fullscreen")
             .activate(move |app: &Self, _, _| app.imp().pending_fullscreen.set(true))
@@ -646,6 +663,8 @@ impl PinduApplication {
             launch_action,
             stop_action,
             open_action,
+            protondb_action,
+            pcgamingwiki_action,
             fullscreen_action,
             fetch_art_action,
         ]);

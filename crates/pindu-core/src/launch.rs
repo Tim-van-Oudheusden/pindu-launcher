@@ -338,6 +338,33 @@ pub fn launcher_uri(game: &Game) -> Option<String> {
     }
 }
 
+/// A page about a game that its players keep on the web, which the browser opens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WebPage {
+    /// ProtonDB's reports of how the game runs on Linux.
+    ProtonDb,
+    /// PCGamingWiki's fixes and settings for the game.
+    PcGamingWiki,
+}
+
+/// The address of `page` for `game`, by its Steam app ID; `None` for a game that is not
+/// on Steam. Pindu launcher only hands the address to the browser and fetches nothing.
+pub fn web_page_uri(game: &Game, page: WebPage) -> Option<String> {
+    let app_id = game.id.native_id();
+    if game.source() != Source::Steam
+        || app_id.is_empty()
+        || !app_id.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return None;
+    }
+    Some(match page {
+        WebPage::ProtonDb => format!("https://www.protondb.com/app/{app_id}"),
+        WebPage::PcGamingWiki => {
+            format!("https://www.pcgamingwiki.com/api/appid.php?appid={app_id}")
+        }
+    })
+}
+
 fn heroic_runner(source: Source) -> Option<&'static str> {
     Some(match source {
         Source::HeroicEpic => "legendary",
@@ -931,6 +958,36 @@ mod tests {
             )),
             None
         );
+    }
+
+    #[test]
+    fn a_steam_game_links_to_its_protondb_and_pcgamingwiki_pages_by_app_id() {
+        let steam = store_game(Source::Steam, "570");
+        assert_eq!(
+            web_page_uri(&steam, WebPage::ProtonDb).as_deref(),
+            Some("https://www.protondb.com/app/570")
+        );
+        assert_eq!(
+            web_page_uri(&steam, WebPage::PcGamingWiki).as_deref(),
+            Some("https://www.pcgamingwiki.com/api/appid.php?appid=570")
+        );
+    }
+
+    #[test]
+    fn only_steam_games_with_a_numeric_app_id_have_web_pages() {
+        for game in [
+            store_game(Source::HeroicGog, "570"),
+            store_game(Source::Steam, "570/../x"),
+            store_game(Source::Steam, ""),
+        ] {
+            assert_eq!(
+                web_page_uri(&game, WebPage::ProtonDb),
+                None,
+                "{:?}",
+                game.id
+            );
+            assert_eq!(web_page_uri(&game, WebPage::PcGamingWiki), None);
+        }
     }
 
     fn steam_session(root: &Path) -> SteamSession<'_> {
