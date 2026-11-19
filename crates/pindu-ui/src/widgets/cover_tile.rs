@@ -67,7 +67,7 @@ mod imp {
         pub selected_check: TemplateChild<gtk::CheckButton>,
         #[template_child]
         pub title: TemplateChild<gtk::Inscription>,
-        /// The shown game and the handler that follows its art.
+        /// The shown game and the handlers that follow its changes.
         pub bound: RefCell<Option<(GameObject, Vec<glib::SignalHandlerId>)>>,
         /// From the `show-badges` setting.
         pub show_badges: Cell<bool>,
@@ -183,7 +183,7 @@ impl CoverTile {
     }
 
     /// Shows `game` until [`Self::unbind`].
-    pub fn bind(&self, game: &GameObject) {
+    pub fn bind(&self, game: &GameObject, item: &gtk::ListItem) {
         self.unbind();
         let imp = self.imp();
         let handlers = vec![
@@ -200,16 +200,23 @@ impl CoverTile {
                     move |game, _| tile.show_state(game)
                 ),
             ),
+            game.connect_notify_local(
+                Some("title"),
+                glib::clone!(
+                    #[weak(rename_to = tile)]
+                    self,
+                    #[weak]
+                    item,
+                    move |game, _| {
+                        tile.show_title(game, &item);
+                        tile.show_play_button_name(game, game.is_playing());
+                    }
+                ),
+            ),
         ];
         imp.bound.replace(Some((game.clone(), handlers)));
         let entry = game.entry();
         let source = entry.game.source();
-        imp.title.set_text(Some(&entry.game.title));
-        imp.cover.set_alternative_text(&entry.game.title);
-        imp.selected_check
-            .update_property(&[gtk::accessible::Property::Label(&select_name(
-                &entry.game.title,
-            ))]);
         imp.source_badge.set_icon_name(Some(source_icon(source)));
         imp.source_badge
             .set_tooltip_text(Some(&source_name(source)));
@@ -221,9 +228,21 @@ impl CoverTile {
         imp.play_button
             .set_action_target_value(Some(&entry.game.id.as_str().to_variant()));
         drop(entry);
+        self.show_title(game, item);
         self.show_state(game);
         self.show_art(game);
         self.show_selection();
+    }
+
+    fn show_title(&self, game: &GameObject, item: &gtk::ListItem) {
+        let imp = self.imp();
+        let data = game.game();
+        let title = &data.title;
+        imp.title.set_text(Some(title));
+        imp.cover.set_alternative_text(title);
+        imp.selected_check
+            .update_property(&[gtk::accessible::Property::Label(&select_name(title))]);
+        item.set_accessible_label(&Self::accessible_label(game));
     }
 
     /// The check of selection mode, ticked when the game is selected; the Play button
@@ -266,9 +285,13 @@ impl CoverTile {
         };
         imp.play_button.set_label(&label);
         imp.play_button.set_action_name(Some(action));
+        self.show_play_button_name(game, playing);
+    }
+
+    fn show_play_button_name(&self, game: &GameObject, playing: bool) {
         let name = Self::play_button_name(&game.game().title, playing);
-        imp.play_button
-            .update_property(&[gtk::accessible::Property::Label(&name)]);
+        let button = &self.imp().play_button;
+        button.update_property(&[gtk::accessible::Property::Label(&name)]);
     }
 
     /// What a screen reader says for a game's Play or Stop button: the visible word alone

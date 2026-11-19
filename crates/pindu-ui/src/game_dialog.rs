@@ -2,8 +2,8 @@
 //! Windows), folder, program, title and options here, native games whether they run on
 //! the host instead of in the Steam Linux Runtime, and Windows games their Proton build,
 //! prefix and installer, with a note when umu-launcher is missing; every game can get its
-//! own cover, banner and logo, and, when edited, its own developer, genres, release year and
-//! description (`pindu_core::metadata::edit_by_user`).
+//! own cover, banner and logo, and, when edited, its own title, developer, genres, release
+//! year and description (`pindu_core::metadata::edit_by_user`).
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::collections::HashMap;
@@ -117,6 +117,8 @@ mod imp {
         #[template_child]
         pub details_group: TemplateChild<adw::PreferencesGroup>,
         #[template_child]
+        pub display_title_row: TemplateChild<adw::EntryRow>,
+        #[template_child]
         pub developer_row: TemplateChild<adw::EntryRow>,
         #[template_child]
         pub genres_row: TemplateChild<adw::EntryRow>,
@@ -128,6 +130,8 @@ mod imp {
         pub description_view: TemplateChild<gtk::TextView>,
         /// The details of the game being edited as the dialog first showed them, once read.
         pub shown_details: RefCell<Option<Metadata>>,
+        /// The manual game's original form, kept so a title-only edit does not rewrite it.
+        pub original_form: RefCell<Option<ManualGame>>,
         pub mode: RefCell<Mode>,
         pub library: OnceCell<LibraryService>,
         /// The chosen game folder, as the host sees it (for native games run on the host).
@@ -149,7 +153,7 @@ mod imp {
         /// Layouts that already have art the user picked.
         pub user_art: RefCell<Vec<ArtLayout>>,
         pub remove_buttons: RefCell<HashMap<ArtLayout, gtk::Button>>,
-        /// The title of the game being edited.
+        /// The source title, used for artwork lookup when the Add Game title is empty.
         pub game_title: RefCell<String>,
     }
 
@@ -268,8 +272,8 @@ impl GameDialog {
         dialog
     }
 
-    /// A dialog that edits a game: everything for a game added by hand, its details and
-    /// art for others.
+    /// A dialog that edits a game's title, details and art, plus launch options for a
+    /// game added by hand.
     pub fn edit(library: &LibraryService, id: &GameId, title: &str) -> Self {
         let dialog: Self = glib::Object::new();
         let imp = dialog.imp();
@@ -283,6 +287,9 @@ impl GameDialog {
         imp.game_title.replace(title.to_owned());
         imp.save_button.set_label(&gettext("_Save"));
         imp.game_group.set_visible(manual);
+        imp.title_row.set_visible(false);
+        imp.display_title_row.set_text(title);
+        imp.details_group.set_sensitive(false);
         imp.details_group.set_visible(true);
         imp.description_group.set_visible(true);
         dialog.load(id.clone(), manual);
@@ -319,7 +326,7 @@ impl GameDialog {
                 let details = store
                     .game(&id)
                     .map_err(|e| e.to_string())?
-                    .map(|game| Metadata::of(&game));
+                    .map(|game| (Metadata::of(&game), game.title));
                 Ok::<_, String>((form, user_art, details))
             })
             .await;
@@ -331,11 +338,15 @@ impl GameDialog {
                     dialog.imp().user_art.replace(user_art);
                     if let Some(form) = form {
                         dialog.fill(&form);
+                        dialog.imp().original_form.replace(Some(form));
                     }
-                    if let Some(details) = details {
+                    if let Some((details, source_title)) = details {
+                        dialog.imp().game_title.replace(source_title);
                         dialog.fill_details(&details);
+                        dialog.imp().details_group.set_sensitive(true);
                     }
                     dialog.show_art_state();
+                    dialog.update_save_button();
                 }
                 Ok(Err(error)) => dialog.toast(&error),
                 Err(_) => {}
@@ -389,11 +400,16 @@ impl GameDialog {
         let imp = self.imp();
         let buffer = imp.description_view.buffer();
         let (start, end) = buffer.bounds();
-        Metadata::typed(
-            &imp.developer_row.text(),
-            &imp.genres_row.text(),
-            &buffer.text(&start, &end, false),
-        )
+        let title = imp.display_title_row.text();
+        let title = title.trim();
+        Metadata {
+            title: (!title.is_empty()).then(|| title.to_owned()),
+            ..Metadata::typed(
+                &imp.developer_row.text(),
+                &imp.genres_row.text(),
+                &buffer.text(&start, &end, false),
+            )
+        }
     }
 
     /// The details as the rows hold them; `Err` while the release year row holds text
@@ -534,8 +550,12 @@ impl GameDialog {
     }
 
     /// A title the dialog fills in itself, until the user types their own.
+    /// Only used when adding a game; edits keep the original title as the fallback.
     fn set_auto_title(&self, title: &str) {
         let imp = self.imp();
+        if !matches!(*imp.mode.borrow(), Mode::Add) {
+            return;
+        }
         imp.auto_title.replace(Some(title.to_owned()));
         imp.title_row.set_text(title);
     }
@@ -777,6 +797,9 @@ impl GameDialog {
         if self.typed_details().is_err() {
             return false;
         }
+        if matches!(*imp.mode.borrow(), Mode::Edit { .. }) && imp.shown_details.borrow().is_none() {
+            return false;
+        }
         match &*imp.mode.borrow() {
             Mode::Add | Mode::Edit { manual: true, .. } => self
                 .form()
@@ -974,7 +997,9 @@ impl GameDialog {
     fn save(&self) {
         let imp = self.imp();
         let mode = imp.mode.borrow().clone();
-        let form = self.form();
+        let form = self
+            .form()
+            .filter(|form| imp.original_form.borrow().as_ref() != Some(form));
         let art: Vec<(ArtLayout, ArtChange)> = imp.art.borrow().clone().into_iter().collect();
         let details = self.changed_details();
         // A program's icon is only kept for Windows games, whose programs carry one.
@@ -1039,8 +1064,8 @@ pub(crate) fn save_to_store(
                 .map_err(|e| e.to_string())?;
             (id, false)
         }
-        (Mode::Edit { id, manual: false }, _) => (id, false),
-        (_, None) => return Err(gettext("Choose a folder and a program first")),
+        (Mode::Edit { id, .. }, _) => (id, false),
+        (Mode::Add, None) => return Err(gettext("Choose a folder and a program first")),
     };
     let art_dir = default_user_art_dir();
     if let Some(icon) = icon {

@@ -1514,8 +1514,7 @@ impl PinduWindow {
             ) else {
                 return;
             };
-            tile.bind(&game);
-            item.set_accessible_label(&CoverTile::accessible_label(&game));
+            tile.bind(&game, item);
         });
         factory.connect_unbind(|_, item| {
             let item = item.downcast_ref::<gtk::ListItem>().expect("a list item");

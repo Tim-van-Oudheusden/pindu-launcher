@@ -107,7 +107,11 @@ pub fn load(
     let imported_totals = store.imported_totals()?;
     let saved = store.saved_filters()?;
     let mut memberships = store.collection_memberships()?;
-    let entries = store.games()?.into_iter().map(|game| {
+    let entries = store.games()?.into_iter().map(|mut game| {
+        if let Some(title) = game.custom_title.take() {
+            game.sort_title.clone_from(&title);
+            game.title = title;
+        }
         let art = artwork
             .get(&game.id)
             .map_or_else(ArtSet::default, |art| ArtSet::from(art, prefer_steamgriddb));

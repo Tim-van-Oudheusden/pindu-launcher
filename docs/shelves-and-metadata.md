@@ -92,6 +92,12 @@ In this order, local data first:
    `Metadata::typed_year` reads the row: four digits not starting with 0, trimmed, or nothing. Other text marks the
    row as an error (and invalid for assistive technologies) and keeps **Save** insensitive, so a typo is corrected
    rather than saved as a cleared year.
+
+   As built (#657): use **Edit… → Details → Title** to rename an imported or manually added game. The title is
+   used for display, search and sorting in both shells, and it is saved for every copy if the game is grouped.
+   Clear the field to restore the original title. The custom title is included in library backups; it does not
+   change the game ID, launch settings or title in the owning launcher.
+
 4. **An online provider, opt-in, after a spike.** The spike compares SteamGridDB, IGDB, PCGamingWiki, Wikidata and
    others on licence and terms, whether a key is needed, which store IDs it maps (which helps
    [game identity](game-identity.md)), the fields it has and its rate limits, and recommends one or none. If one is
