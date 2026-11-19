@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 23:03+0100\n"
+"POT-Creation-Date: 2026-11-19 23:25+0100\n"
 "PO-Revision-Date: 2026-11-07 18:15+0000\n"
 "Last-Translator: Tim <tim-van-oudheusden@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/pindu-launcher/"
@@ -103,7 +103,7 @@ msgstr ""
 #: crates/pindu-ui/src/game_page.rs:997 crates/pindu-ui/src/group_actions.rs:69
 #: crates/pindu-ui/src/health_page.rs:186 crates/pindu-ui/src/home_page.rs:91
 #: crates/pindu-ui/src/proton_downloads_page.rs:336
-#: crates/pindu-ui/src/widgets/cover_tile.rs:390 data/ui/quick_access.blp:1749
+#: crates/pindu-ui/src/widgets/cover_tile.rs:390 data/ui/quick_access.blp:1791
 #: data/ui/window.blp:77 data/ui/window.blp:326
 msgid "Installed"
 msgstr ""
@@ -528,14 +528,14 @@ msgstr ""
 msgid "Play History"
 msgstr ""
 
-#: crates/pindu-ui/src/collection_actions.rs:257 data/ui/quick_access.blp:1753
+#: crates/pindu-ui/src/collection_actions.rs:257 data/ui/quick_access.blp:1795
 #: data/ui/window.blp:330
 msgid "Not Installed"
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:259 data/ui/game_dialog.blp:45
 #: data/ui/game_dialog.blp:93 data/ui/menu_drawer.blp:45
-#: data/ui/preferences.blp:180 data/ui/quick_access.blp:1757
+#: data/ui/preferences.blp:180 data/ui/quick_access.blp:1799
 #: data/ui/window.blp:338
 msgid "Windows"
 msgstr ""
@@ -543,11 +543,11 @@ msgstr ""
 #: crates/pindu-ui/src/collection_actions.rs:260
 #: crates/pindu-ui/src/fullscreen_health.rs:359
 #: crates/pindu-ui/src/health_page.rs:301 data/ui/game_dialog.blp:44
-#: data/ui/quick_access.blp:1761 data/ui/window.blp:342
+#: data/ui/quick_access.blp:1803 data/ui/window.blp:342
 msgid "Native"
 msgstr ""
 
-#: crates/pindu-ui/src/collection_actions.rs:261 data/ui/quick_access.blp:1765
+#: crates/pindu-ui/src/collection_actions.rs:261 data/ui/quick_access.blp:1807
 #: data/ui/window.blp:346
 msgid "Never Played"
 msgstr ""
@@ -828,7 +828,7 @@ msgid_plural "{count} things need attention:"
 msgstr[0] "Niks om te herstellen op dit moment"
 msgstr[1] "Niks om te herstellen op dit moment"
 
-#: crates/pindu-ui/src/fullscreen.rs:617
+#: crates/pindu-ui/src/fullscreen.rs:633
 msgid "Your fullscreen style has a problem"
 msgid_plural "Your fullscreen style has {count} problems"
 msgstr[0] "Je Volledig Scherm stijl heeft een probleem"
@@ -1047,8 +1047,8 @@ msgstr "Geen Controller Gedetecteerd"
 
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:505
 #: crates/pindu-ui/src/fullscreen_network.rs:466 data/ui/preferences.blp:84
-#: data/ui/quick_access.blp:887 data/ui/quick_access.blp:941
-#: data/ui/quick_access.blp:1124
+#: data/ui/quick_access.blp:929 data/ui/quick_access.blp:983
+#: data/ui/quick_access.blp:1166
 msgid "Off"
 msgstr ""
 
@@ -1148,17 +1148,17 @@ msgid "{percent} %"
 msgstr "{percent} %"
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:182
-#: data/ui/quick_access.blp:1057
+#: data/ui/quick_access.blp:1099
 msgid "Letters"
 msgstr "Letters"
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:183
-#: data/ui/quick_access.blp:1069
+#: data/ui/quick_access.blp:1111
 msgid "Shapes"
 msgstr "Vormen"
 
 #: crates/pindu-ui/src/fullscreen_controllers.rs:184
-#: data/ui/quick_access.blp:1081
+#: data/ui/quick_access.blp:1123
 msgid "Letters, A on the Right"
 msgstr ""
 
@@ -1213,7 +1213,7 @@ msgid "Moving"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controls.rs:217
-#: crates/pindu-ui/src/home_page.rs:983 data/ui/home_page.blp:185
+#: crates/pindu-ui/src/home_page.rs:994 data/ui/home_page.blp:184
 #: data/ui/menu_drawer.blp:100 data/ui/preferences.blp:10
 #: data/ui/shortcuts-dialog.blp:35 data/ui/window.blp:62 data/ui/window.blp:161
 msgid "Library"
@@ -1374,7 +1374,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_health.rs:294
 #: crates/pindu-ui/src/health_page.rs:130
-#: crates/pindu-ui/src/quick_access.rs:1231 data/ui/quick_access.blp:1574
+#: crates/pindu-ui/src/quick_access.rs:1232 data/ui/quick_access.blp:1616
 msgid "SteamGridDB Key"
 msgstr ""
 
@@ -1687,7 +1687,7 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_performance.rs:281
 #: crates/pindu-ui/src/health_page.rs:199
 #: data/ui/fullscreen_proton_downloads.blp:70 data/ui/game_page.blp:371
-#: data/ui/preferences.blp:224 data/ui/quick_access.blp:1872
+#: data/ui/preferences.blp:224 data/ui/quick_access.blp:1914
 #: data/ui/window.blp:703
 msgid "MangoHud"
 msgstr ""
@@ -2354,7 +2354,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/health_page.rs:200
 #: data/ui/fullscreen_proton_downloads.blp:75 data/ui/game_page.blp:376
-#: data/ui/preferences.blp:229 data/ui/quick_access.blp:1876
+#: data/ui/preferences.blp:229 data/ui/quick_access.blp:1918
 #: data/ui/window.blp:707
 msgid "GameMode"
 msgstr ""
@@ -2466,7 +2466,7 @@ msgid "Options"
 msgstr ""
 
 #: crates/pindu-ui/src/hint_bar.rs:238 data/ui/preferences.blp:356
-#: data/ui/quick_access.blp:1492
+#: data/ui/quick_access.blp:1534
 msgid "Hold to Confirm"
 msgstr ""
 
@@ -2577,13 +2577,13 @@ msgstr ""
 msgid "Recently Played"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:578 data/ui/home_page.blp:245
+#: crates/pindu-ui/src/home_page.rs:589 data/ui/home_page.blp:244
 #, fuzzy
 #| msgid "Cancelling…"
 msgid "Opening…"
 msgstr "Aan het annuleren…"
 
-#: crates/pindu-ui/src/home_page.rs:889
+#: crates/pindu-ui/src/home_page.rs:900
 msgid "Steam Big Picture"
 msgstr ""
 
@@ -2747,7 +2747,7 @@ msgid "The key was not saved: {error}"
 msgstr ""
 
 #: crates/pindu-ui/src/preferences.rs:758
-#: crates/pindu-ui/src/quick_access.rs:1155
+#: crates/pindu-ui/src/quick_access.rs:1156
 msgid "Your fullscreen.css, over the design"
 msgstr ""
 
@@ -2990,17 +2990,17 @@ msgstr ""
 msgid "Performance for {game}"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:1157
+#: crates/pindu-ui/src/quick_access.rs:1158
 msgid "Create {path} to restyle fullscreen mode"
 msgstr ""
 
-#: crates/pindu-ui/src/quick_access.rs:1233
+#: crates/pindu-ui/src/quick_access.rs:1234
 msgid ""
 "Type your API key from SteamGridDB's preferences. It is kept in your keyring."
 msgstr ""
 
 #. / Why Design cannot apply a design written for a newer style contract.
-#: crates/pindu-ui/src/quick_access.rs:1297
+#: crates/pindu-ui/src/quick_access.rs:1298
 msgid "Needs a newer Pindu launcher"
 msgstr ""
 
@@ -3821,53 +3821,61 @@ msgid ""
 "unknown id picks the design's first variant."
 msgstr ""
 
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:223
+msgid "Fullscreen Home background"
+msgstr ""
+
 #: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:224
+msgid "The animated background behind Home's first screen in fullscreen mode."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:233
 msgid "Fullscreen background blur"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:225
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:234
 msgid ""
 "How much Home's background and the focused game's art behind it are blurred "
 "in fullscreen mode. A design can restyle each strength."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:234
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:243
 msgid "Fullscreen background dim"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:235
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:244
 msgid ""
 "How much Home's background and the focused game's art behind it are darkened "
 "in fullscreen mode. A design can restyle each strength."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:239
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:248
 msgid "SteamGridDB prompt shown"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:240
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:249
 msgid ""
 "Whether the window has offered, once, to set up a SteamGridDB API key for "
 "game art."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:244
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:253
 msgid "First sync summary shown"
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:245
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:254
 msgid ""
 "Whether the summary of what the library's first sync found has been "
 "dismissed, after which it never shows again."
 msgstr ""
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:249
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:258
 #, fuzzy
 #| msgid "Library Backups"
 msgid "Last library backup"
 msgstr "Bibliotheek Backups"
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:250
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:259
 msgid ""
 "When the library was last exported, in seconds since the Unix epoch; 0 means "
 "never. Library Health shows it."
@@ -4322,7 +4330,7 @@ msgid "Next Page"
 msgstr ""
 
 #: data/ui/duplicates_page.blp:7 data/ui/quick_access.blp:430
-#: data/ui/quick_access.blp:1686
+#: data/ui/quick_access.blp:1728
 msgid "Duplicates"
 msgstr ""
 
@@ -4361,7 +4369,7 @@ msgstr ""
 #: data/ui/fullscreen_proton_downloads.blp:16 data/ui/game_dialog.blp:116
 #: data/ui/game_page.blp:340 data/ui/preferences.blp:188
 #: data/ui/preferences.blp:266 data/ui/quick_access.blp:717
-#: data/ui/quick_access.blp:1885
+#: data/ui/quick_access.blp:1927
 msgid "Proton"
 msgstr ""
 
@@ -4391,14 +4399,14 @@ msgstr "Bibliotheek geëxporteerd"
 
 #: data/ui/fullscreen_health.blp:35 data/ui/health_page.blp:20
 #: data/ui/preferences.blp:131 data/ui/preferences.blp:135
-#: data/ui/quick_access.blp:406 data/ui/quick_access.blp:1622
+#: data/ui/quick_access.blp:406 data/ui/quick_access.blp:1664
 #: data/ui/window.blp:114
 msgid "Sources"
 msgstr ""
 
 #: data/ui/fullscreen_health.blp:74 data/ui/game_dialog.blp:217
 #: data/ui/health_page.blp:28 data/ui/preferences.blp:155
-#: data/ui/quick_access.blp:1554
+#: data/ui/quick_access.blp:1596
 msgid "Artwork"
 msgstr ""
 
@@ -4444,7 +4452,7 @@ msgid "An overlay with the frame rate and how busy the computer is"
 msgstr ""
 
 #: data/ui/fullscreen_proton_downloads.blp:76 data/ui/game_page.blp:377
-#: data/ui/preferences.blp:230 data/ui/quick_access.blp:1877
+#: data/ui/preferences.blp:230 data/ui/quick_access.blp:1919
 #: data/ui/window.blp:708
 msgid "Asks the system to favour the game while it runs"
 msgstr ""
@@ -4468,7 +4476,7 @@ msgstr ""
 msgid "Diagnostics Report"
 msgstr ""
 
-#: data/ui/fullscreen_report.blp:140 data/ui/quick_access.blp:1960
+#: data/ui/fullscreen_report.blp:140 data/ui/quick_access.blp:2002
 msgid "Add a Game's Log"
 msgstr ""
 
@@ -4643,7 +4651,7 @@ msgstr ""
 msgid "Ask Steam which of the game’s launch options to use"
 msgstr ""
 
-#: data/ui/game_page.blp:336 data/ui/quick_access.blp:1906
+#: data/ui/game_page.blp:336 data/ui/quick_access.blp:1948
 msgid "Changes apply the next time the game starts."
 msgstr ""
 
@@ -4659,13 +4667,13 @@ msgstr ""
 msgid "Needs Attention"
 msgstr ""
 
-#: data/ui/home_page.blp:235
+#: data/ui/home_page.blp:234
 msgid "Big Picture"
 msgstr ""
 
 #: data/ui/menu_drawer.blp:143 data/ui/menu_drawer.blp:280
 #: data/ui/menu_drawer.blp:292 data/ui/quick_access.blp:358
-#: data/ui/quick_access.blp:1347
+#: data/ui/quick_access.blp:1389
 msgid "Controls"
 msgstr ""
 
@@ -4702,7 +4710,7 @@ msgstr ""
 msgid "Cover Size"
 msgstr ""
 
-#: data/ui/preferences.blp:17 data/ui/quick_access.blp:1284
+#: data/ui/preferences.blp:17 data/ui/quick_access.blp:1326
 msgid "Small"
 msgstr ""
 
@@ -4711,7 +4719,7 @@ msgid "Medium"
 msgstr ""
 
 #: data/ui/preferences.blp:19 data/ui/preferences.blp:348
-#: data/ui/quick_access.blp:1310
+#: data/ui/quick_access.blp:1352
 msgid "Large"
 msgstr ""
 
@@ -4731,7 +4739,7 @@ msgstr ""
 msgid "The launcher and state badges on covers"
 msgstr ""
 
-#: data/ui/preferences.blp:36 data/ui/quick_access.blp:1585
+#: data/ui/preferences.blp:36 data/ui/quick_access.blp:1627
 msgid "Metadata"
 msgstr ""
 
@@ -4742,15 +4750,15 @@ msgid ""
 "you enter yourself always come first."
 msgstr ""
 
-#: data/ui/preferences.blp:40 data/ui/quick_access.blp:1603
+#: data/ui/preferences.blp:40 data/ui/quick_access.blp:1645
 msgid "Get Metadata From Wikidata"
 msgstr ""
 
-#: data/ui/preferences.blp:41 data/ui/quick_access.blp:1604
+#: data/ui/preferences.blp:41 data/ui/quick_access.blp:1646
 msgid "Nothing is fetched until you ask, and never during an import"
 msgstr ""
 
-#: data/ui/preferences.blp:49 data/ui/quick_access.blp:1466
+#: data/ui/preferences.blp:49 data/ui/quick_access.blp:1508
 msgid "Exit After Launching"
 msgstr ""
 
@@ -4770,7 +4778,7 @@ msgid ""
 "this is on, a Steam Deck's own controls work only as a controller."
 msgstr ""
 
-#: data/ui/preferences.blp:64 data/ui/quick_access.blp:1026
+#: data/ui/preferences.blp:64 data/ui/quick_access.blp:1068
 msgid "Button Prompts"
 msgstr ""
 
@@ -4781,7 +4789,7 @@ msgid ""
 msgstr ""
 
 #: data/ui/preferences.blp:69 data/ui/preferences.blp:83
-#: data/ui/quick_access.blp:1044 data/ui/quick_access.blp:1111
+#: data/ui/quick_access.blp:1086 data/ui/quick_access.blp:1153
 msgid "Automatic"
 msgstr ""
 
@@ -4797,7 +4805,7 @@ msgstr ""
 msgid "Letters (Nintendo)"
 msgstr ""
 
-#: data/ui/preferences.blp:78 data/ui/quick_access.blp:1094
+#: data/ui/preferences.blp:78 data/ui/quick_access.blp:1136
 msgid "Swap Confirm and Back"
 msgstr ""
 
@@ -4807,7 +4815,7 @@ msgid ""
 "them for Nintendo letters."
 msgstr ""
 
-#: data/ui/preferences.blp:85 data/ui/quick_access.blp:1137
+#: data/ui/preferences.blp:85 data/ui/quick_access.blp:1179
 msgid "On"
 msgstr ""
 
@@ -4832,11 +4840,11 @@ msgid ""
 "out of the sidebar still is."
 msgstr ""
 
-#: data/ui/preferences.blp:141 data/ui/quick_access.blp:1642
+#: data/ui/preferences.blp:141 data/ui/quick_access.blp:1684
 msgid "Copy Order"
 msgstr ""
 
-#: data/ui/preferences.blp:142 data/ui/quick_access.blp:1652
+#: data/ui/preferences.blp:142 data/ui/quick_access.blp:1694
 msgid ""
 "When a game has copies from several sources and you chose none, Play starts "
 "the installed copy from the source highest here. Native copies still come "
@@ -4857,11 +4865,11 @@ msgstr ""
 msgid "Stored Key"
 msgstr ""
 
-#: data/ui/preferences.blp:173 data/ui/quick_access.blp:1579
+#: data/ui/preferences.blp:173 data/ui/quick_access.blp:1621
 msgid "Prefer SteamGridDB Art"
 msgstr ""
 
-#: data/ui/preferences.blp:174 data/ui/quick_access.blp:1580
+#: data/ui/preferences.blp:174 data/ui/quick_access.blp:1622
 msgid "Show it before the launcher's own art; art you pick always comes first"
 msgstr ""
 
@@ -4926,7 +4934,7 @@ msgstr ""
 msgid "Start in Fullscreen Mode"
 msgstr ""
 
-#: data/ui/preferences.blp:304 data/ui/quick_access.blp:1436
+#: data/ui/preferences.blp:304 data/ui/quick_access.blp:1478
 msgid "Navigation Sounds"
 msgstr ""
 
@@ -4934,19 +4942,19 @@ msgstr ""
 msgid "A soft sound when the controller moves, selects or goes back"
 msgstr ""
 
-#: data/ui/preferences.blp:309 data/ui/quick_access.blp:1442
+#: data/ui/preferences.blp:309 data/ui/quick_access.blp:1484
 msgid "Volume"
 msgstr ""
 
-#: data/ui/preferences.blp:327 data/ui/quick_access.blp:1460
+#: data/ui/preferences.blp:327 data/ui/quick_access.blp:1502
 msgid "Navigation Sound Volume"
 msgstr ""
 
-#: data/ui/preferences.blp:334 data/ui/quick_access.blp:1471
+#: data/ui/preferences.blp:334 data/ui/quick_access.blp:1513
 msgid "Accessibility"
 msgstr ""
 
-#: data/ui/preferences.blp:337 data/ui/quick_access.blp:1488
+#: data/ui/preferences.blp:337 data/ui/quick_access.blp:1530
 msgid "Reduce Motion"
 msgstr ""
 
@@ -4979,7 +4987,7 @@ msgid ""
 "held down, with the progress shown"
 msgstr ""
 
-#: data/ui/preferences.blp:364 data/ui/quick_access.blp:988
+#: data/ui/preferences.blp:364 data/ui/quick_access.blp:1030
 msgid "My Stylesheet"
 msgstr ""
 
@@ -5034,7 +5042,7 @@ msgstr ""
 msgid "Surprise Me"
 msgstr ""
 
-#: data/ui/quick_access.blp:259 data/ui/quick_access.blp:1731
+#: data/ui/quick_access.blp:259 data/ui/quick_access.blp:1773
 msgid "Filters"
 msgstr ""
 
@@ -5046,11 +5054,11 @@ msgstr ""
 msgid "Design"
 msgstr ""
 
-#: data/ui/quick_access.blp:334 data/ui/quick_access.blp:1006
+#: data/ui/quick_access.blp:334 data/ui/quick_access.blp:1048
 msgid "Controllers"
 msgstr ""
 
-#: data/ui/quick_access.blp:382 data/ui/quick_access.blp:1377
+#: data/ui/quick_access.blp:382 data/ui/quick_access.blp:1419
 msgid "Settings"
 msgstr ""
 
@@ -5063,183 +5071,195 @@ msgid "Variant"
 msgstr ""
 
 #: data/ui/quick_access.blp:870
+msgid "Background"
+msgstr ""
+
+#: data/ui/quick_access.blp:887
+msgid "Red Ribbons"
+msgstr ""
+
+#: data/ui/quick_access.blp:899
+msgid "Blue Station"
+msgstr ""
+
+#: data/ui/quick_access.blp:912
 msgid "Background Blur"
 msgstr ""
 
-#: data/ui/quick_access.blp:899 data/ui/quick_access.blp:953
+#: data/ui/quick_access.blp:941 data/ui/quick_access.blp:995
 msgid "Low"
 msgstr ""
 
-#: data/ui/quick_access.blp:911 data/ui/quick_access.blp:965
+#: data/ui/quick_access.blp:953 data/ui/quick_access.blp:1007
 msgid "High"
 msgstr ""
 
-#: data/ui/quick_access.blp:924
+#: data/ui/quick_access.blp:966
 msgid "Background Dim"
 msgstr ""
 
-#: data/ui/quick_access.blp:1045
+#: data/ui/quick_access.blp:1087
 msgid "As the controller shows them"
 msgstr ""
 
-#: data/ui/quick_access.blp:1112
+#: data/ui/quick_access.blp:1154
 msgid "Swapped when A is on the right"
 msgstr ""
 
-#: data/ui/quick_access.blp:1125
+#: data/ui/quick_access.blp:1167
 msgid "The bottom button confirms"
 msgstr ""
 
-#: data/ui/quick_access.blp:1138
+#: data/ui/quick_access.blp:1180
 msgid "The right button confirms"
 msgstr ""
 
-#: data/ui/quick_access.blp:1151
+#: data/ui/quick_access.blp:1193
 msgid "Repeat Delay"
 msgstr ""
 
-#: data/ui/quick_access.blp:1170
+#: data/ui/quick_access.blp:1212
 msgid "Short"
 msgstr ""
 
-#: data/ui/quick_access.blp:1171
+#: data/ui/quick_access.blp:1213
 msgid "After 0.2 seconds"
 msgstr ""
 
-#: data/ui/quick_access.blp:1183 data/ui/quick_access.blp:1240
-#: data/ui/quick_access.blp:1297
+#: data/ui/quick_access.blp:1225 data/ui/quick_access.blp:1282
+#: data/ui/quick_access.blp:1339
 msgid "Normal"
 msgstr ""
 
-#: data/ui/quick_access.blp:1184
+#: data/ui/quick_access.blp:1226
 msgid "After 0.3 seconds"
 msgstr ""
 
-#: data/ui/quick_access.blp:1196
+#: data/ui/quick_access.blp:1238
 msgid "Long"
 msgstr ""
 
-#: data/ui/quick_access.blp:1197
+#: data/ui/quick_access.blp:1239
 msgid "After 0.6 seconds"
 msgstr ""
 
-#: data/ui/quick_access.blp:1210
+#: data/ui/quick_access.blp:1252
 msgid "Repeat Rate"
 msgstr ""
 
-#: data/ui/quick_access.blp:1227
+#: data/ui/quick_access.blp:1269
 msgid "Slow"
 msgstr ""
 
-#: data/ui/quick_access.blp:1228
+#: data/ui/quick_access.blp:1270
 msgid "10 moves a second"
 msgstr ""
 
-#: data/ui/quick_access.blp:1241
+#: data/ui/quick_access.blp:1283
 msgid "20 moves a second"
 msgstr ""
 
-#: data/ui/quick_access.blp:1253
+#: data/ui/quick_access.blp:1295
 msgid "Fast"
 msgstr ""
 
-#: data/ui/quick_access.blp:1254
+#: data/ui/quick_access.blp:1296
 msgid "About 33 moves a second"
 msgstr ""
 
-#: data/ui/quick_access.blp:1267
+#: data/ui/quick_access.blp:1309
 msgid "Stick Dead Zone"
 msgstr ""
 
-#: data/ui/quick_access.blp:1285
+#: data/ui/quick_access.blp:1327
 msgid "A light push moves focus"
 msgstr ""
 
-#: data/ui/quick_access.blp:1298
+#: data/ui/quick_access.blp:1340
 msgid "A push halfway"
 msgstr ""
 
-#: data/ui/quick_access.blp:1311
+#: data/ui/quick_access.blp:1353
 msgid "A firm push, for a stick that drifts"
 msgstr ""
 
-#: data/ui/quick_access.blp:1324
+#: data/ui/quick_access.blp:1366
 msgid ""
 "These change only how focus moves here. Games receive the controller "
 "unchanged."
 msgstr ""
 
-#: data/ui/quick_access.blp:1396
+#: data/ui/quick_access.blp:1438
 msgid "Small Covers"
 msgstr ""
 
-#: data/ui/quick_access.blp:1406
+#: data/ui/quick_access.blp:1448
 msgid "Medium Covers"
 msgstr ""
 
-#: data/ui/quick_access.blp:1417
+#: data/ui/quick_access.blp:1459
 msgid "Large Covers"
 msgstr ""
 
-#: data/ui/quick_access.blp:1505
+#: data/ui/quick_access.blp:1547
 msgid "Default Text"
 msgstr ""
 
-#: data/ui/quick_access.blp:1517
+#: data/ui/quick_access.blp:1559
 msgid "Large Text"
 msgstr ""
 
-#: data/ui/quick_access.blp:1529
+#: data/ui/quick_access.blp:1571
 msgid "Larger Text"
 msgstr ""
 
-#: data/ui/quick_access.blp:1541
+#: data/ui/quick_access.blp:1583
 msgid "Largest Text"
 msgstr ""
 
-#: data/ui/quick_access.blp:1696
+#: data/ui/quick_access.blp:1738
 msgid "No copies of one game to review"
 msgstr ""
 
-#: data/ui/quick_access.blp:1769 data/ui/shortcuts-dialog.blp:43
+#: data/ui/quick_access.blp:1811 data/ui/shortcuts-dialog.blp:43
 msgid "Show Hidden Games"
 msgstr ""
 
-#: data/ui/quick_access.blp:1774 data/ui/window.blp:352
+#: data/ui/quick_access.blp:1816 data/ui/window.blp:352
 msgid "Genre"
 msgstr ""
 
-#: data/ui/quick_access.blp:1800
+#: data/ui/quick_access.blp:1842
 msgid "Clear Filters"
 msgstr ""
 
-#: data/ui/quick_access.blp:1815 data/ui/window.blp:369
+#: data/ui/quick_access.blp:1857 data/ui/window.blp:369
 msgid "Save Filter…"
 msgstr ""
 
-#: data/ui/quick_access.blp:1820
+#: data/ui/quick_access.blp:1862
 msgid "Save Native Games"
 msgstr ""
 
-#: data/ui/quick_access.blp:1826
+#: data/ui/quick_access.blp:1868
 msgid "Save Windows Games"
 msgstr ""
 
-#: data/ui/quick_access.blp:1832
+#: data/ui/quick_access.blp:1874
 msgid "Save Installed and Never Played"
 msgstr ""
 
-#: data/ui/quick_access.blp:1871 data/ui/window.blp:702
+#: data/ui/quick_access.blp:1913 data/ui/window.blp:702
 msgid "Performance Overlay"
 msgstr ""
 
-#: data/ui/quick_access.blp:1969
+#: data/ui/quick_access.blp:2011
 msgid ""
 "The game's newest log is added to the report. The report keeps that game's "
 "title; other titles and your home folder stay out."
 msgstr ""
 
-#: data/ui/quick_access.blp:1990
+#: data/ui/quick_access.blp:2032
 msgid "No game has a log yet: start one with Play with Logs"
 msgstr ""
 
