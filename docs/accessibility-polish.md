@@ -50,6 +50,7 @@ its own focus, so a game, in a gamescope session or on a desktop, receives the c
 | #627 Name each Play button after its game | Play and Stop on tiles and Jump Back In cards are named "Play {game}" for screen readers | #544 |
 | #628 Let Tab leave the library grid in one step | Tab enters the grid and the list once and leaves on the next press; the arrow keys move between games | #544 |
 | #629 Expose the game title and Jump Back In as headings | The game page's title is a level 1 heading and "Jump Back In" a level 2 heading for screen readers | #544 |
+| #630 Announce the number of matching games after a search or filter change | Once search or filter changes pause, screen readers hear how many games match, unless the count is unchanged | #544 |
 
 The issues #543 and #544 file join this table when they exist.
 
