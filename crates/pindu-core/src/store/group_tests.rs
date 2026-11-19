@@ -124,6 +124,76 @@ fn a_copy_can_join_and_leave_a_group() {
 }
 
 #[test]
+fn merging_games_in_no_group_groups_them_by_hand() {
+    let (_dir, store) = temp_store();
+    let [steam, gog, _] = three(&store);
+    store.remember_split(&steam, &gog).unwrap();
+
+    let id = store.merge_games(&[steam.clone(), gog.clone()]).unwrap();
+
+    let group = store.game_group(id).unwrap().unwrap();
+    assert_eq!(group.members, vec![gog, steam]);
+    assert!(!group.automatic);
+}
+
+#[test]
+fn merging_a_game_into_a_group_keeps_the_group_and_its_preferred_copy() {
+    let (_dir, store) = temp_store();
+    let [steam, gog, lutris] = three(&store);
+    let group = store.create_group(&[steam.clone(), gog.clone()]).unwrap();
+    store.set_preferred_copy(group, Some(&gog)).unwrap();
+
+    let id = store.merge_games(&[lutris.clone(), steam.clone()]).unwrap();
+
+    assert_eq!(id, group);
+    let merged = store.game_group(group).unwrap().unwrap();
+    assert_eq!(merged.members, vec![gog.clone(), lutris, steam]);
+    assert_eq!(merged.preferred, Some(gog));
+    assert_eq!(store.game_groups().unwrap().len(), 1);
+}
+
+#[test]
+fn merging_two_groups_makes_one_with_every_copy() {
+    let (_dir, store) = temp_store();
+    let [steam, gog, lutris] = three(&store);
+    let faugus = stored(&store, Source::Faugus, "dota");
+    let first = store.create_automatic_group(&steam, &gog).unwrap().unwrap();
+    let second = store
+        .create_group(&[lutris.clone(), faugus.clone()])
+        .unwrap();
+    store.set_preferred_copy(second, Some(&faugus)).unwrap();
+
+    // The first game's group stays, with its preferred copy (none chosen here).
+    let id = store.merge_games(&[gog.clone(), lutris.clone()]).unwrap();
+
+    assert_eq!(id, first);
+    let groups = store.game_groups().unwrap();
+    assert_eq!(
+        groups,
+        vec![GameGroup {
+            id: first,
+            members: vec![faugus, gog, lutris, steam],
+            preferred: None,
+            automatic: false,
+        }]
+    );
+}
+
+#[test]
+fn merging_copies_of_one_group_changes_nothing() {
+    let (_dir, store) = temp_store();
+    let [steam, gog, _] = three(&store);
+    let group = store.create_automatic_group(&steam, &gog).unwrap().unwrap();
+
+    assert_eq!(store.merge_games(&[steam.clone(), gog]).unwrap(), group);
+    assert!(store.game_group(group).unwrap().unwrap().automatic);
+    assert!(matches!(
+        store.merge_games(std::slice::from_ref(&steam)),
+        Err(StoreError::TooFewCopies)
+    ));
+}
+
+#[test]
 fn a_group_left_with_one_copy_is_removed() {
     let (_dir, store) = temp_store();
     let [steam, gog, _] = three(&store);

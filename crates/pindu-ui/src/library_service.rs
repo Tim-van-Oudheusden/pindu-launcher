@@ -71,22 +71,26 @@ impl LibraryService {
     /// that cannot be read leaves the model as it was.
     pub fn reload(&self) {
         let service = self.clone();
+        glib::spawn_future_local(async move { service.load().await });
+    }
+
+    /// Reads every game from the store on a worker thread and updates the model; done
+    /// once the model shows them.
+    async fn load(&self) {
         let prefer_steamgriddb = gtk::gio::prelude::SettingsExt::boolean(
             &gtk::gio::Settings::new(APP_ID),
             "prefer-steamgriddb",
         );
-        glib::spawn_future_local(async move {
-            match gtk::gio::spawn_blocking(move || read_games(prefer_steamgriddb)).await {
-                Ok(Ok((games, collections, saved_filters))) => {
-                    let model = &service.imp().model;
-                    model.set_collections(collections, saved_filters);
-                    model.set_games(games);
-                    service.imp().loaded.set(true);
-                }
-                Ok(Err(error)) => glib::g_warning!("pindu", "Could not read the library: {error}"),
-                Err(_) => glib::g_warning!("pindu", "Reading the library stopped unexpectedly"),
+        match gtk::gio::spawn_blocking(move || read_games(prefer_steamgriddb)).await {
+            Ok(Ok((games, collections, saved_filters))) => {
+                let model = &self.imp().model;
+                model.set_collections(collections, saved_filters);
+                model.set_games(games);
+                self.imp().loaded.set(true);
             }
-        });
+            Ok(Err(error)) => glib::g_warning!("pindu", "Could not read the library: {error}"),
+            Err(_) => glib::g_warning!("pindu", "Reading the library stopped unexpectedly"),
+        }
     }
 
     /// Hides or shows a game, and every copy of its group, in the library views.
@@ -266,6 +270,45 @@ impl LibraryService {
     pub async fn apply_bulk(&self, games: Vec<GameId>, action: BulkAction) -> Option<Vec<GameId>> {
         self.write(move |store| bulk::apply(store, &games, action))
             .await
+    }
+
+    /// Merges games, with every copy of their groups, into one group; done once the model
+    /// shows it. `false` if it could not be stored.
+    pub async fn merge_games(&self, games: Vec<GameId>) -> bool {
+        self.write(move |store| store.merge_games(&games))
+            .await
+            .is_some()
+    }
+
+    /// Splits the group holding `game` into its games and remembers that they are not the
+    /// same game; done once the model shows it. The number of games it held, or `None` when
+    /// the game is in no group or the change could not be stored.
+    pub async fn split_group(&self, game: &GameId) -> Option<usize> {
+        let game = game.clone();
+        self.write(move |store| {
+            let Some(group) = store.game_group_of(&game)? else {
+                return Ok(None);
+            };
+            store.split_group(group.id)?;
+            Ok(Some(group.members.len()))
+        })
+        .await
+        .flatten()
+    }
+
+    /// Makes `copy` the one its group shows and Play starts; done once the model shows it.
+    /// `false` if it is in no group or the change could not be stored.
+    pub async fn set_preferred_copy(&self, copy: &GameId) -> bool {
+        let copy = copy.clone();
+        self.write(move |store| {
+            let Some(group) = store.game_group_of(&copy)? else {
+                return Ok(false);
+            };
+            store.set_preferred_copy(group.id, Some(&copy))?;
+            Ok(true)
+        })
+        .await
+        .unwrap_or(false)
     }
 
     /// The game's launch config, read on a worker thread; `None` when there is none or
@@ -548,7 +591,8 @@ impl LibraryService {
         glib::spawn_future_local(async move { service.change(work).await });
     }
 
-    /// Runs a store write on a worker thread and reloads the model; `None` if it failed.
+    /// Runs a store write on a worker thread and reloads the model, done once the model
+    /// shows the change; `None` if it failed.
     async fn write<T: Send + 'static>(
         &self,
         work: impl FnOnce(&Store) -> store::Result<T> + Send + 'static,
@@ -560,7 +604,7 @@ impl LibraryService {
         .await;
         match written {
             Ok(Ok(value)) => {
-                self.reload();
+                self.load().await;
                 Some(value)
             }
             Ok(Err(error)) => {
