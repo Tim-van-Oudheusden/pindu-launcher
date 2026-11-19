@@ -21,7 +21,6 @@ use pindu_core::manual;
 use pindu_core::model::{Collection, Game, GameId, LaunchConfig, LaunchKind, Source, Timestamp};
 use pindu_core::panels::Playing;
 use pindu_core::reading;
-use pindu_core::saves;
 
 use crate::collection_actions::collection_menu;
 use crate::group_actions::group_menu;
@@ -651,9 +650,6 @@ fn more_menu(
             gettext("_Debugging Information with Log"),
             "app.about-with-log",
         ));
-        if saves::offers_snapshots(&game) {
-            logs.append_item(&item(gettext("Save S_napshots…"), "win.save-snapshots"));
-        }
         menu.append_section(None, &logs);
     }
     menu.append_section(None, &collection_menu(object, collections));
@@ -663,6 +659,8 @@ fn more_menu(
     let manage = gio::Menu::new();
     manage.append_item(&item(gettext("_Edit…"), "app.edit-game"));
     manage.append_item(&item(gettext("Change _Artwork…"), "win.change-artwork"));
+    // Any game's saves: a Windows game's prefix and the save folders the user adds.
+    manage.append_item(&item(gettext("Save S_napshots…"), "win.save-snapshots"));
     if hidden {
         manage.append_item(&item(gettext("_Unhide"), "win.unhide-game"));
     } else {

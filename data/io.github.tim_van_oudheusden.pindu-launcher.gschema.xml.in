@@ -132,6 +132,11 @@
       <summary>Folder for copies of save snapshots</summary>
       <description>The folder, picked through the file chooser, that every new save snapshot is also copied to, as the sandbox reaches it. Empty to keep snapshots only in ~/Games/pindu-launcher/save-snapshots.</description>
     </key>
+    <key name="save-folders" type="a{sas}">
+      <default>{}</default>
+      <summary>Save folders added by hand</summary>
+      <description>The folders, picked through the file chooser, that a game's save snapshots hold besides its prefix, by game ID, as the sandbox reaches them.</description>
+    </key>
     <key name="default-mangohud" type="b">
       <default>false</default>
       <summary>MangoHud for new Windows games</summary>

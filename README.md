@@ -90,13 +90,15 @@ widgets so it looks and behaves like the rest of GNOME.
   format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 - **Save snapshots.** When a Windows game you added by hand quits normally, Pindu launcher copies its saves out of the
   prefix it made for the game into `~/Games/pindu-launcher/save-snapshots`, leaving out caches, runtimes, screenshots
-  and stored logins, and keeps the last five. **Save Snapshots…** in the game page's menu, or Save Snapshots in
-  fullscreen mode's options sheet, lists them with their time, size and every file they hold, and restores one after
-  keeping the current saves in a snapshot of their own; never while the game runs
-  ([Save snapshots](docs/save-snapshots.md)).
-  and stored logins, and keeps the last five ([Save snapshots](docs/save-snapshots.md)). Pick a folder under
-  Preferences → Windows → Save Snapshots, such as one Syncthing, Nextcloud or a drive keeps, and each new snapshot is
-  copied there too; a folder that is gone is reported, and the game is not affected.
+  and stored logins, and keeps the last five. Any game can have save folders too: add them through the file chooser
+  under **Save Snapshots…** in the game page's menu, and its snapshots hold them, taken when a game Pindu launcher
+  starts quits normally or with **Take Snapshot Now**; a folder the app cannot reach says why in the list. **Save
+  Snapshots…**, or Save Snapshots in fullscreen mode's options sheet, lists the snapshots with their time, size and
+  every file they hold, and restores one after keeping the current saves in a snapshot of their own, never while the
+  game runs and only into the prefix's user folders and the game's save folders
+  ([Save snapshots](docs/save-snapshots.md)). Pick a folder under Preferences → Windows → Save Snapshots, such as one
+  Syncthing, Nextcloud or a drive keeps, and each new snapshot is copied there too; a folder that is gone is reported,
+  and the game is not affected.
 
 ## Game sources
 
@@ -719,7 +721,7 @@ so the fullscreen mode is a second presentation of the same library.
 | [`docs/controller-parity.md`](docs/controller-parity.md) | Controller parity: what a console needs that only the desktop window can do today |
 | [`docs/shelves-and-metadata.md`](docs/shelves-and-metadata.md) | Shelves and metadata: saved filters, offline metadata, values with their origin, an online provider |
 | [`docs/launch-outcomes.md`](docs/launch-outcomes.md) | Launch outcomes and safe start: how each launch ended, failed-launch help, Start Safely |
-| [`docs/save-snapshots.md`](docs/save-snapshots.md) | Save snapshots of Windows games in managed prefixes, and restoring them |
+| [`docs/save-snapshots.md`](docs/save-snapshots.md) | Save snapshots of Windows games in managed prefixes and of save folders added by hand, and restoring them |
 | [`docs/accessibility-polish.md`](docs/accessibility-polish.md) | Accessibility polish: text sizes, held buttons, high contrast, screen reader, navigation settings |
 | [`docs/emulation.md`](docs/emulation.md) | Emulation: what a first version would be and cost, and a recommendation; the decision is the maintainer's |
 | [`docs/external-importers.md`](docs/external-importers.md) | External importers: a versioned JSON protocol for sources kept outside the core, and a recommendation; the decision is the maintainer's |

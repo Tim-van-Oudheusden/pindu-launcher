@@ -22,12 +22,14 @@ use pindu_core::launch;
 use pindu_core::library::View;
 use pindu_core::panels::{
     DrawerLevel, GameOption, OptionsLevel, Panel, Panels, Under, page_entries, sheet_options,
+    with_save_snapshots,
 };
 
 use crate::application::PinduApplication;
 use crate::launch_service::launcher_name;
 use crate::merge_dialog::candidate_rows;
 use crate::models::GameObject;
+use crate::save_service;
 use crate::window::PinduWindow;
 
 impl PinduWindow {
@@ -553,7 +555,10 @@ impl PinduWindow {
         imp.options_game.replace(Some(game.clone()));
         imp.options_title.set_label(&game.game().title);
         let copies = game.entry().copies.len();
-        let options = sheet_options(&game.game(), game.playing(), copies);
+        let mut options = sheet_options(&game.game(), game.playing(), copies);
+        if !save_service::save_folders(&game.id()).is_empty() {
+            options = with_save_snapshots(options);
+        }
         imp.options_list.remove_all();
         for option in &options {
             let (icon, label) = option_label(*option, game);

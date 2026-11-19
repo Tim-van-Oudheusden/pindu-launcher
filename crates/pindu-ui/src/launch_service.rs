@@ -5,6 +5,7 @@
 //! Windows games and native games in the Steam Linux Runtime run through umu in the
 //! sandbox (see `proton_launch`).
 
+use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use adw::prelude::*;
@@ -21,6 +22,7 @@ use crate::log_service::{self, GameLog};
 use crate::models::GameObject;
 use crate::permission_service;
 use crate::proton_launch;
+use crate::save_service;
 use crate::session_service::{self, SessionService};
 use crate::window::PinduWindow;
 
@@ -127,8 +129,11 @@ pub fn play(
                         }
                     }
                 }
+                let toast = Rc::new(toast);
                 let started = if launch::tracks_sessions(&game) {
-                    sessions.start(app.upcast_ref(), &game.id, &command, output)
+                    sessions
+                        .start(app.upcast_ref(), &game.id, &command, output)
+                        .map(|child| snapshot_after_exit(&game, &child, toast.clone()))
                 } else {
                     session_service::spawn(&command, output).map(drop)
                 };
@@ -161,6 +166,22 @@ pub fn play(
             None => toast(adw::Toast::new(&gettext("This game cannot be started yet"))),
         }
         drop(hold);
+    });
+}
+
+/// Once `child`, the game `game` we started on the host, exits cleanly, takes a snapshot
+/// of the save folders the user added for it, if any (see `save_service`), said with
+/// `toast` when it fails.
+fn snapshot_after_exit(
+    game: &Game,
+    child: &gio::Subprocess,
+    toast: Rc<impl Fn(adw::Toast) + 'static>,
+) {
+    let (game, child) = (game.clone(), child.clone());
+    glib::spawn_future_local(async move {
+        if child.wait_future().await.is_ok() && child.is_successful() {
+            save_service::snapshot_after_exit(&game, None, move |message| toast(message));
+        }
     });
 }
 

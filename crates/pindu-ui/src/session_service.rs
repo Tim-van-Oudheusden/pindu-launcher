@@ -143,18 +143,18 @@ impl SessionService {
     }
 
     /// Starts a game on the host as our child, its output written to `output` when
-    /// given, and tracks its session until it exits.
+    /// given, and tracks its session until it exits. Returns the child, to wait for it.
     pub fn start(
         &self,
         app: &gio::Application,
         id: &GameId,
         command: &Command,
         output: Option<File>,
-    ) -> Result<(), glib::Error> {
+    ) -> Result<gio::Subprocess, glib::Error> {
         let child = spawn(command, output)?;
         let signalled = child.clone();
         self.track(app, id, &child, move || signalled.send_signal(SIGTERM));
-        Ok(())
+        Ok(child)
     }
 
     /// Tracks the session of a game that runs as our child, from now until the child
