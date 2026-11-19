@@ -84,6 +84,8 @@ string_enum! {
         Bottles => "bottles",
         /// Faugus Launcher.
         Faugus => "faugus",
+        /// The itch app.
+        Itch => "itch",
         /// A desktop entry.
         Desktop => "desktop",
         /// A game the user added in Pindu.

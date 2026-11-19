@@ -328,11 +328,12 @@ fn store_uri(game: &Game) -> Option<String> {
     }
 }
 
-/// A URI that brings up the game's launcher: Steam's page for the game, or Heroic
-/// itself, which has no URI for a game's page.
+/// A URI that brings up the game's launcher: Steam's or the itch app's page for the game,
+/// or Heroic itself, which has no URI for a game's page.
 pub fn launcher_uri(game: &Game) -> Option<String> {
     match game.source() {
         Source::Steam => Some(format!("steam://nav/games/details/{}", game.id.native_id())),
+        Source::Itch => Some(format!("itch://games/{}", game.id.native_id())),
         source if heroic_runner(source).is_some() => Some("heroic://ping".to_owned()),
         _ => None,
     }
@@ -930,6 +931,14 @@ mod tests {
                 0
             )),
             None
+        );
+    }
+
+    #[test]
+    fn open_in_launcher_shows_an_itch_game_in_the_itch_app() {
+        assert_eq!(
+            launcher_uri(&store_game(Source::Itch, "1001")).as_deref(),
+            Some("itch://games/1001")
         );
     }
 

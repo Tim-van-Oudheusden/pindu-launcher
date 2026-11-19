@@ -44,8 +44,8 @@ widgets so it looks and behaves like the rest of GNOME.
 
 ## Features
 
-- **Every launcher, one library.** Steam, Heroic, Lutris, Bottles, Faugus, games installed as apps (Flatpaks included)
-  and games you add yourself, side by side. The library resyncs when a launcher's files change.
+- **Every launcher, one library.** Steam, Heroic, Lutris, Bottles, Faugus, itch, games installed as apps (Flatpaks
+  included) and games you add yourself, side by side. The library resyncs when a launcher's files change.
 - **Launchers stay in charge.** Store games start through their own launcher, which keeps their settings, updates and
   playtime. Pindu launcher only reads the launchers' files and never writes to them.
 - **Windows games too.** Add a Windows game, or its installer, by hand and it runs with Proton through
@@ -75,10 +75,16 @@ widgets so it looks and behaves like the rest of GNOME.
 | Lutris, native or Flatpak | Lutris games | Through Lutris |
 | Bottles, native or Flatpak | Programs in your bottles | Through Bottles |
 | Faugus Launcher, native or Flatpak | Faugus games | On the host ([needs host access](#starting-games-on-the-host)) |
+| itch, native or Flatpak | Games installed through the itch app, with their playtime | Through the itch app |
 | Desktop entries and Flatpaks | Games installed as apps | On the host ([needs host access](#starting-games-on-the-host)) |
 | Added by hand | Native programs, and Windows games or installers | Native ones on the host; Windows ones with Proton in the sandbox |
 
-The importers read each launcher's data read-only and never its credentials.
+The importers read each launcher's data read-only and never its credentials: from the itch app's database they read
+its installs and games, never the profiles that hold your itch.io key.
+
+The Flatpak cannot see the itch app's folder (`~/.config/itch`, or `~/.var/app/io.itch.itch/config/itch` for the itch
+Flatpak) on its own, and Pindu launcher does not ask for access to it. **Preferences → Sources → itch** says so; choose
+the folder there with **Choose…** and the file chooser shares it with the sandbox. Native packages find it themselves.
 
 ## Installing
 
@@ -381,9 +387,9 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   Flatpak cannot reach `/tmp/mangohud.*` or `$XDG_RUNTIME_DIR/gamescope-mangoapp-*`; point the variable at a file under
   `$XDG_RUNTIME_DIR/app/io.github.tim_van_oudheusden.pindu-launcher/` that holds `no_display` before gamescope starts.
   Otherwise games keep their own MangoHud.
-- A game the app hands to its store's launcher (Steam, Heroic, Lutris, Bottles, Faugus) is expected in front from the
-  moment the store opens: its windows, and any untagged window another app opens meanwhile, such as Steam's update or
-  sign-in window, get the game's app ID and come to the front. When the last of those windows closes, the game has
+- A game the app hands to its store's launcher (Steam, Heroic, Lutris, Bottles, Faugus, itch) is expected in front from
+  the moment the store opens: its windows, and any untagged window another app opens meanwhile, such as Steam's update
+  or sign-in window, get the game's app ID and come to the front. When the last of those windows closes, the game has
   exited 2 seconds later unless another opens: the app is back in front, and stops expecting the game 10 seconds after
   that window closed. A window of the game that opens before then brings the game back to the front. While none has
   opened the app stays in front, and after a minute it stops waiting. Guide over it opens the menu drawer as with other
@@ -550,7 +556,7 @@ add-ons) and how to start a translation by hand.
 
 ```mermaid
 flowchart LR
-  launchers["Steam, Heroic, Lutris,<br/>Bottles, Faugus,<br/>desktop entries, Flatpaks"]
+  launchers["Steam, Heroic, Lutris,<br/>Bottles, Faugus, itch,<br/>desktop entries, Flatpaks"]
 
   subgraph core["pindu-core: no GTK"]
     importers["Importers<br/>sources/"] --> store[("Library<br/>SQLite")]
@@ -618,8 +624,9 @@ to build, pick an issue, work test-first and open a pull request that passes the
 - [Cartridges](https://codeberg.org/kramo/cartridges) by kramo, the GNOME game launcher that showed how a libadwaita
   game library can look.
 - [Heroic Games Launcher](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher),
-  [Lutris](https://github.com/lutris/lutris), [Bottles](https://github.com/bottlesdevs/Bottles) and
-  [Faugus Launcher](https://github.com/Faugus/faugus-launcher), whose libraries Pindu launcher reads.
+  [Lutris](https://github.com/lutris/lutris), [Bottles](https://github.com/bottlesdevs/Bottles),
+  [Faugus Launcher](https://github.com/Faugus/faugus-launcher) and [itch](https://github.com/itchio/itch), whose
+  libraries Pindu launcher reads.
 - [OpenGamepadUI](https://github.com/ShadowBlip/OpenGamepadUI), for how a couch-first game library behaves.
 - [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher),
   [GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom) and

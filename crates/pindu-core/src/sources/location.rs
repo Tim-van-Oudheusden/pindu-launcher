@@ -145,6 +145,13 @@ impl Location {
                 ],
                 &["games.json"],
             ),
+            Source::Itch => (
+                vec![
+                    dirs.config_home.join("itch"),
+                    flatpak("io.itch.itch", "config/itch"),
+                ],
+                &["db/butler.db"],
+            ),
             Source::Desktop | Source::Manual => return None,
         };
         Some(Self {
@@ -182,6 +189,13 @@ impl Location {
             .copied()
             .find(|sub_path| !root.join(sub_path).exists())
     }
+}
+
+/// Whether the Flatpak sandbox can read a source's usual folders, which its manifest grants
+/// read-only. It cannot read the itch app's: the user chooses that folder, which the
+/// portal then shares with the sandbox.
+pub fn sandbox_can_read(source: Source) -> bool {
+    source != Source::Itch
 }
 
 /// Resolves a source's folder, honouring and keeping the user override stored in its
@@ -441,5 +455,42 @@ mod tests {
 
         let resolved = resolve_and_record(&store, Source::Lutris, &dirs(home.path())).unwrap();
         assert_eq!(resolved, Ok(root));
+    }
+
+    #[test]
+    fn the_sandbox_reads_exactly_the_sources_the_release_manifest_grants() {
+        let dirs = dirs(Path::new("/home/me"));
+        let manifest = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml"
+        ))
+        .unwrap();
+        let granted: Vec<PathBuf> = manifest
+            .lines()
+            .filter_map(|line| line.trim().strip_prefix("- --filesystem="))
+            .map(|grant| grant.split_once(':').map_or(grant, |(path, _)| path))
+            .map(|grant| {
+                if let Some(rest) = grant.strip_prefix("xdg-data/") {
+                    dirs.data_home.join(rest)
+                } else if let Some(rest) = grant.strip_prefix("xdg-config/") {
+                    dirs.config_home.join(rest)
+                } else if let Some(rest) = grant.strip_prefix("~/") {
+                    dirs.home.join(rest)
+                } else {
+                    PathBuf::from(grant)
+                }
+            })
+            .collect();
+
+        for &source in Source::ALL {
+            let Some(location) = Location::of(source, &dirs) else {
+                continue;
+            };
+            let readable = location
+                .candidates()
+                .iter()
+                .all(|candidate| granted.iter().any(|grant| candidate.starts_with(grant)));
+            assert_eq!(sandbox_can_read(source), readable, "{source}");
+        }
     }
 }

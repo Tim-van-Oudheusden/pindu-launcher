@@ -18,6 +18,7 @@ use pindu_core::custom_style::ProblemSummary;
 use pindu_core::gamepad::{PROMPTS_KEY, Prompts, SWAP_KEY, Swap};
 use pindu_core::model::{Source, SourceState};
 use pindu_core::paths;
+use pindu_core::sources::location;
 use pindu_core::sources::sync::IMPORTED_SOURCES;
 
 use crate::application::PinduApplication;
@@ -395,10 +396,21 @@ impl PreferencesDialog {
 
     fn source_row(&self, state: &SourceState) -> adw::ExpanderRow {
         let source = state.source;
-        let found = state.resolved_location.as_ref().map_or_else(
-            || gettext("Not found on this computer"),
-            |path| path.display().to_string(),
-        );
+        // The sandbox cannot see some launchers' folders until the user chooses them.
+        let outside_sandbox =
+            permission_service::in_flatpak() && !location::sandbox_can_read(source);
+        let found = match &state.resolved_location {
+            Some(path) => path.display().to_string(),
+            None if outside_sandbox => {
+                gettext("Outside the sandbox: choose its folder to import it")
+            }
+            None => gettext("Not found on this computer"),
+        };
+        let automatic = if outside_sandbox {
+            gettext("The sandbox cannot see it until you choose it")
+        } else {
+            gettext("Found automatically")
+        };
         let row = adw::ExpanderRow::builder()
             .title(source_name(source))
             .subtitle(&found)
@@ -420,10 +432,12 @@ impl PreferencesDialog {
         if source != Source::Desktop {
             let folder = adw::ActionRow::builder()
                 .title(gettext("Folder"))
-                .subtitle(state.user_override.as_ref().map_or_else(
-                    || gettext("Found automatically"),
-                    |path| path.display().to_string(),
-                ))
+                .subtitle(
+                    state
+                        .user_override
+                        .as_ref()
+                        .map_or_else(|| automatic.clone(), |path| path.display().to_string()),
+                )
                 .build();
             let choose = gtk::Button::builder()
                 .label(gettext("_Choose…"))
@@ -455,7 +469,7 @@ impl PreferencesDialog {
                 folder,
                 move |button| {
                     sync.set_source_override(source, None);
-                    folder.set_subtitle(&gettext("Found automatically"));
+                    folder.set_subtitle(&automatic);
                     button.set_visible(false);
                 }
             ));

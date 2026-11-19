@@ -43,6 +43,8 @@ pub fn key_paths(source: Source, root: &Path) -> Vec<PathBuf> {
         Source::Lutris => vec![root.join("pga.db")],
         Source::Bottles => vec![root.join("library.yml")],
         Source::Faugus => vec![root.join("games.json")],
+        // butler keeps the database in WAL mode, so new rows land in the log first.
+        Source::Itch => vec![root.join("db/butler.db"), root.join("db/butler.db-wal")],
         Source::Desktop | Source::Manual => Vec::new(),
     }
 }
@@ -107,6 +109,16 @@ mod tests {
         assert_eq!(key_paths(Source::Lutris, root), [root.join("pga.db")]);
         assert_eq!(key_paths(Source::Bottles, root), [root.join("library.yml")]);
         assert_eq!(key_paths(Source::Faugus, root), [root.join("games.json")]);
+    }
+
+    #[test]
+    fn itch_watches_its_database_and_its_write_ahead_log() {
+        let root = Path::new("/itch");
+
+        assert_eq!(
+            key_paths(Source::Itch, root),
+            [root.join("db/butler.db"), root.join("db/butler.db-wal")]
+        );
     }
 
     #[test]

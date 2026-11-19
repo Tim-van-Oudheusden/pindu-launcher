@@ -4,7 +4,9 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use super::location::{self, HostDirs, ResolveError};
-use super::{ImportError, ImportedGame, Snapshot, bottles, desktop, faugus, heroic, lutris, steam};
+use super::{
+    ImportError, ImportedGame, Snapshot, bottles, desktop, faugus, heroic, itch, lutris, steam,
+};
 use crate::model::{
     ArtOrigin, Artwork, Game, GameId, ImportedPlaytime, Source, SourceState, Timestamp,
 };
@@ -20,6 +22,7 @@ pub const IMPORTED_SOURCES: &[Source] = &[
     Source::Lutris,
     Source::Bottles,
     Source::Faugus,
+    Source::Itch,
     Source::Desktop,
 ];
 
@@ -146,6 +149,7 @@ fn import(source: Source, root: &Path, utc_offset: i64) -> Result<Snapshot, Impo
         Source::Lutris => lutris::import(root),
         Source::Bottles => bottles::import(root),
         Source::Faugus => faugus::import(root, utc_offset),
+        Source::Itch => itch::import(root),
         _ => heroic::import(root, source),
     }
 }
