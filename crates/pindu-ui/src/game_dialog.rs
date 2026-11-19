@@ -20,7 +20,7 @@ use pindu_core::model::{ArtLayout, ArtOrigin, GameId, Source};
 use pindu_core::paths::{default_library_db_path, default_user_art_dir};
 use pindu_core::pe::{self, Icon};
 use pindu_core::proton::Defaults;
-use pindu_core::store::Store;
+use pindu_core::store::{Store, StoreError};
 
 use crate::artwork_dialog::{ArtworkDialog, PickerGame};
 use crate::file_service::{self, PickedImage};
@@ -323,10 +323,8 @@ impl GameDialog {
                     .filter(|art| art.origin == ArtOrigin::User)
                     .map(|art| art.layout)
                     .collect::<Vec<_>>();
-                let details = store
-                    .game(&id)
-                    .map_err(|e| e.to_string())?
-                    .map(|game| (Metadata::of(&game), game.title));
+                let game = require_game(store.game(&id).map_err(|e| e.to_string())?)?;
+                let details = (Metadata::of(&game), game.title);
                 Ok::<_, String>((form, user_art, details))
             })
             .await;
@@ -340,11 +338,10 @@ impl GameDialog {
                         dialog.fill(&form);
                         dialog.imp().original_form.replace(Some(form));
                     }
-                    if let Some((details, source_title)) = details {
-                        dialog.imp().game_title.replace(source_title);
-                        dialog.fill_details(&details);
-                        dialog.imp().details_group.set_sensitive(true);
-                    }
+                    let (details, source_title) = details;
+                    dialog.imp().game_title.replace(source_title);
+                    dialog.fill_details(&details);
+                    dialog.imp().details_group.set_sensitive(true);
                     dialog.show_art_state();
                     dialog.update_save_button();
                 }
@@ -1091,4 +1088,28 @@ pub(crate) fn save_to_store(
             .map_err(|error| error.to_string())?;
     }
     Ok(added)
+}
+
+/// The game the editor loads, or the error to show when it was removed after the dialog
+/// opened and before this read, which leaves the details nothing to show.
+fn require_game<T>(game: Option<T>) -> Result<T, String> {
+    game.ok_or_else(|| StoreError::NotFound.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_game_removed_before_the_editor_loads_it_is_an_error() {
+        assert_eq!(
+            require_game::<u8>(None),
+            Err("no such entry in the library".to_owned())
+        );
+    }
+
+    #[test]
+    fn a_stored_game_loads() {
+        assert_eq!(require_game(Some(7)), Ok(7));
+    }
 }
