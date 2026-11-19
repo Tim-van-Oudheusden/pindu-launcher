@@ -150,6 +150,13 @@ impl Location {
                 vec![dirs.config_home.join("legendary")],
                 &["installed.json"],
             ),
+            Source::Itch => (
+                vec![
+                    dirs.config_home.join("itch"),
+                    flatpak("io.itch.itch", "config/itch"),
+                ],
+                &["db/butler.db"],
+            ),
             Source::Desktop | Source::Manual => return None,
         };
         Some(Self {
@@ -219,9 +226,9 @@ pub fn set_user_override(store: &Store, source: Source, path: Option<&Path>) -> 
 
 /// Whether the Flatpak's permissions leave a source's folder out of view, so inside the
 /// sandbox it is only read from a folder the user chooses: standalone Legendary's
-/// `~/.config/legendary`, which the manifest does not ask for.
+/// `~/.config/legendary` and the itch app's folders, which the manifest does not ask for.
 pub fn sandbox_hides(source: Source) -> bool {
-    source == Source::Legendary
+    matches!(source, Source::Legendary | Source::Itch)
 }
 
 #[cfg(test)]
@@ -453,5 +460,42 @@ mod tests {
 
         let resolved = resolve_and_record(&store, Source::Lutris, &dirs(home.path())).unwrap();
         assert_eq!(resolved, Ok(root));
+    }
+
+    #[test]
+    fn the_sandbox_hides_exactly_the_sources_the_release_manifest_does_not_grant() {
+        let dirs = dirs(Path::new("/home/me"));
+        let manifest = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml"
+        ))
+        .unwrap();
+        let granted: Vec<PathBuf> = manifest
+            .lines()
+            .filter_map(|line| line.trim().strip_prefix("- --filesystem="))
+            .map(|grant| grant.split_once(':').map_or(grant, |(path, _)| path))
+            .map(|grant| {
+                if let Some(rest) = grant.strip_prefix("xdg-data/") {
+                    dirs.data_home.join(rest)
+                } else if let Some(rest) = grant.strip_prefix("xdg-config/") {
+                    dirs.config_home.join(rest)
+                } else if let Some(rest) = grant.strip_prefix("~/") {
+                    dirs.home.join(rest)
+                } else {
+                    PathBuf::from(grant)
+                }
+            })
+            .collect();
+
+        for &source in Source::ALL {
+            let Some(location) = Location::of(source, &dirs) else {
+                continue;
+            };
+            let readable = location
+                .candidates()
+                .iter()
+                .all(|candidate| granted.iter().any(|grant| candidate.starts_with(grant)));
+            assert_eq!(sandbox_hides(source), !readable, "{source}");
+        }
     }
 }
