@@ -342,6 +342,18 @@ template $PinduWindow: Adw.ApplicationWindow {
                             label: _("Native");
                           }
 
+                          ToggleButton never_played_filter {
+                            label: _("Never Played");
+                          }
+
+                          // Its menu lists the library's genres, filled as the games
+                          // change; the label names the genre chosen.
+                          MenuButton genre_filter {
+                            label: _("Genre");
+                            tooltip-text: _("Filter by Genre");
+                            always-show-arrow: true;
+                          }
+
                           Button clear_filters {
                             label: _("Clear");
                             visible: false;
@@ -804,6 +816,12 @@ menu save_filter_menu {
       label: _("Windows Games");
       action: "win.save-suggestion";
       target: "windows";
+    }
+
+    item {
+      label: _("Installed and Never Played");
+      action: "win.save-suggestion";
+      target: "installed-never-played";
     }
   }
 }

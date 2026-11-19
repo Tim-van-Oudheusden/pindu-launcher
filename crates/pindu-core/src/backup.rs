@@ -398,12 +398,14 @@ fn saved_filter_json(filter: &SavedFilter, names: &HashMap<i64, &str>) -> Option
         View::Collection(id) => json!({ "view": "collection", "collection": names.get(&id)? }),
         view => json!({ "view": saved_filters::view_text(view) }),
     };
-    let toggles = filter.filters;
+    let toggles = &filter.filters;
     value["installed"] = toggles.installed.into();
     value["not_installed"] = toggles.not_installed.into();
     value["favourites"] = toggles.favourites.into();
     value["windows"] = toggles.windows.into();
     value["native"] = toggles.native.into();
+    value["never_played"] = toggles.never_played.into();
+    value["genre"] = toggles.genre.as_deref().into();
     value["search"] = filter.search.as_str().into();
     Some(value)
 }
@@ -416,7 +418,7 @@ enum BackupView<'a> {
     Collection(&'a str),
 }
 
-/// A saved filter's view, toggles and normalised search as a backup holds them (see
+/// A saved filter's view, toggles, genre and normalised search as a backup holds them (see
 /// [`saved_filter_json`]); `None` for none, or a view this version does not know.
 fn saved_filter_from(value: &Value) -> Option<(BackupView<'_>, Filters, String)> {
     let view = match value["view"].as_str()? {
@@ -437,6 +439,11 @@ fn saved_filter_from(value: &Value) -> Option<(BackupView<'_>, Filters, String)>
         favourites: toggle("favourites"),
         windows: toggle("windows"),
         native: toggle("native"),
+        never_played: toggle("never_played"),
+        genre: value["genre"]
+            .as_str()
+            .filter(|genre| !genre.trim().is_empty())
+            .map(str::to_owned),
         hidden: false,
     };
     let search = search::normalize(value["search"].as_str().unwrap_or_default());
@@ -938,7 +945,7 @@ mod tests {
         store
             .create_saved_filter(
                 "Steam Windows",
-                &saved(View::Source(Source::Steam), windows, "portal"),
+                &saved(View::Source(Source::Steam), windows.clone(), "portal"),
             )
             .unwrap();
         let installed = Filters {
@@ -948,7 +955,7 @@ mod tests {
         store
             .create_saved_filter(
                 "Installed Puzzles",
-                &saved(View::Collection(puzzles.id), installed, ""),
+                &saved(View::Collection(puzzles.id), installed.clone(), ""),
             )
             .unwrap();
 
@@ -988,6 +995,28 @@ mod tests {
                 .collection_members(collections[2].id)
                 .unwrap()
                 .is_empty()
+        );
+    }
+
+    #[test]
+    fn a_saved_filters_genre_and_never_played_survive_a_backup() {
+        let (_dir, store) = synced_store();
+        let backlog = Filters {
+            never_played: true,
+            genre: Some("Puzzle".to_owned()),
+            ..Filters::default()
+        };
+        store
+            .create_saved_filter("Puzzle Backlog", &saved(View::All, backlog.clone(), ""))
+            .unwrap();
+
+        let backup = export(&store, 300).unwrap();
+        let (_fresh_dir, fresh) = synced_store();
+        import(&fresh, &backup).unwrap();
+
+        assert_eq!(
+            saved_by_name(&fresh),
+            BTreeMap::from([("Puzzle Backlog".to_owned(), saved(View::All, backlog, ""))])
         );
     }
 
@@ -1061,7 +1090,7 @@ mod tests {
             ..Filters::default()
         };
         let mine = store
-            .create_saved_filter("Mine", &saved(View::All, native, ""))
+            .create_saved_filter("Mine", &saved(View::All, native.clone(), ""))
             .unwrap();
         let theirs = store.create_collection("Theirs").unwrap();
         let backup = r#"{

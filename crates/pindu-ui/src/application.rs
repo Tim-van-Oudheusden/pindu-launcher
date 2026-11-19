@@ -115,7 +115,7 @@ mod imp {
         pub task_service: TaskService,
         /// Fullscreen mode's library filters, apart from the desktop window's filter row;
         /// they last until the app quits, through windows closed and opened again.
-        pub fullscreen_filters: std::cell::Cell<Filters>,
+        pub fullscreen_filters: std::cell::RefCell<Filters>,
     }
 
     #[glib::object_subclass]
@@ -534,12 +534,12 @@ impl PinduApplication {
 
     /// Fullscreen mode's library filters, as Quick Access set them this run.
     pub fn fullscreen_filters(&self) -> Filters {
-        self.imp().fullscreen_filters.get()
+        self.imp().fullscreen_filters.borrow().clone()
     }
 
     /// Keeps fullscreen mode's library filters until the app quits.
     pub fn set_fullscreen_filters(&self, filters: Filters) {
-        self.imp().fullscreen_filters.set(filters);
+        self.imp().fullscreen_filters.replace(filters);
     }
 
     fn setup_actions(&self) {
