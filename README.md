@@ -69,7 +69,11 @@ widgets so it looks and behaves like the rest of GNOME.
   a collection or take out of one in one go, with a toast to undo it, or to merge them into one game.
 - **One game, several copies.** When the same game comes from two launchers, **Merge With…** in its menu (or in its
   options sheet in fullscreen mode) makes them one game with several copies; you choose the copy Play starts in its
-  **Preferred Copy** menu or on its page, and **Split Into Separate Games** takes them apart again for good.
+  **Preferred Copy** menu or on its page, and **Split Into Separate Games** takes them apart again for good. A Lutris
+  entry that links to a Steam, GOG or Epic game in the library is grouped with it as the library syncs; copies that
+  only share a title are suggested under **Duplicates**, in the main menu and in fullscreen mode's Quick Access, where
+  you group them or say they are not the same game, and groups made automatically can be undone
+  ([Game identity](docs/game-identity.md)).
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
 - **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
   [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu
@@ -80,19 +84,15 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
-- **Backups.** Export your collections, saved filters, favourites, hidden games, games added by
-  hand and tracked playtime to a file, and import them again. Before an update changes the library's format, Pindu
-  launcher keeps a copy of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps
-  the two newest copies.
-- **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
-  and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
-  beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
+- **Backups.** Export your collections, saved filters, favourites, hidden games, games added by hand, tracked
+  playtime, groups of copies and the developer, genres and descriptions you set to a file, and import them again.
+  Before an update changes the library's format, Pindu launcher keeps a copy of the library beside it, named for the
+  format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 - **Save snapshots.** When a Windows game you added by hand quits normally, Pindu launcher copies its saves out of the
   prefix it made for the game into `~/Games/pindu-launcher/save-snapshots`, leaving out caches, runtimes, screenshots
-  and stored logins, and keeps the last five ([Save snapshots](docs/save-snapshots.md)).
-- **Backups.** Export your collections, favourites, hidden games, games added by hand, tracked playtime and groups of
-  copies to a file, and import them again. Before an update changes the library's format, Pindu launcher keeps a copy
-  of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
+  and stored logins, and keeps the last five ([Save snapshots](docs/save-snapshots.md)). Pick a folder under
+  Preferences → Windows → Save Snapshots, such as one Syncthing, Nextcloud or a drive keeps, and each new snapshot is
+  copied there too; a folder that is gone is reported, and the game is not affected.
 
 ## Game sources
 
@@ -267,6 +267,10 @@ Guide + A never also opens the menu drawer.
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
   - **Larger Text:** fullscreen text about a quarter larger.
+- **Duplicates** lists the copies that look like one game, with why and how sure that is. A on one opens to **Group**
+  and **Not the Same Game**; a pair said not to be the same game is never suggested again. Groups the sync made from a
+  Lutris store link show there too, with **Undo Grouping**. The desktop window has the same list under **Duplicates**
+  in the main menu.
 - **Sources** lists every source Pindu imports from, says whether each was found on this computer, and has its
   **Import** switch, the same setting as Preferences, Sources: a source turned off is no longer read, and changing a
   switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences.
@@ -401,7 +405,8 @@ Quick Access's **Proton** does what Preferences' Windows and Proton pages do for
 
 - **Defaults:** the Proton build Windows games run with unless their page names one (**Newest** follows the newest
   build on the machine), and whether games added from now on start with **MangoHud** and **GameMode**. These are the
-  same settings as in Preferences. The default prefix folder needs a folder chooser, so it stays in Preferences.
+  same settings as in Preferences. The default prefix folder and the folder save snapshots are copied to need a folder
+  chooser, so they stay in Preferences.
 - **Downloaded Builds** lists the builds in the launcher's tools folder; select one to remove it, after a question.
 - **Check for Releases** lists the newest GE-Proton and Proton-CachyOS releases from GitHub, the only time the level
   goes online. Select one to download and install it: its row shows how far it is, and it is a task in Activity, where

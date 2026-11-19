@@ -63,7 +63,13 @@ In this order, local data first:
    of a value that did not change and drops a field left empty. A sync calls it for the source only; `insert_game`
    records a new game's values as its source's; `update_game` never touches metadata, so saving a game read with a
    user's value cannot turn it into the source's. Release year and controller support joined the table with #527.
-   Backups do not carry user or provider values yet.
+
+   Backups (#619) carry the user's and providers' values in a `metadata` list, each with the game's per-source ID, its
+   field, origin, value (genres as a list, a release year as a number) and time; a source's values are left out, as the
+   next sync writes them. A restore adds a value only where that origin has none for the field in this library, keeps
+   the time it was set and counts it, so it never overwrites a value already there; a value for a game the library
+   lacks is skipped and the game counted as missing. This extends backup format 2 (#509), unreleased until then, so
+   format 1 and 2 backups still import.
 4. **An online provider, opt-in, after a spike.** The spike compares SteamGridDB, IGDB, PCGamingWiki, Wikidata and
    others on licence and terms, whether a key is needed, which store IDs it maps (which helps
    [game identity](game-identity.md)), the fields it has and its rate limits, and recommends one or none. If one is

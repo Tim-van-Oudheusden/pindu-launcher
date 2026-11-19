@@ -1,13 +1,15 @@
 //! A JSON backup of what the user made here and exists nowhere else: collections,
 //! favourites, hidden games, games added by hand, the playtime tracked here and, from
 //! format 2, game groups with their preferred copies, the pairs remembered as not the
-//! same game and the filter of each saved filter.
+//! same game, the filter of each saved filter and the metadata values the user set or a
+//! provider fetched, each with its time.
 //!
 //! Games are named by ID, so a backup restores into a library where the launchers have
 //! been synced again; a game the library does not have is skipped and counted, and so is
 //! a group left with fewer than two of its games. A saved filter's view of a collection
-//! names that collection, as its ID differs between libraries. Format 1 backups still
-//! import.
+//! names that collection, as its ID differs between libraries. A metadata value is
+//! restored only where its origin has no value for that field here. Format 1 backups
+//! still import.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
@@ -16,7 +18,10 @@ use std::path::PathBuf;
 use serde_json::{Map, Value, json};
 
 use crate::library::{Filters, View};
-use crate::model::{Game, GameId, LaunchConfig, LaunchKind, Source, Timestamp};
+use crate::metadata::{self, FieldValue, MetadataValue};
+use crate::model::{
+    Game, GameId, LaunchConfig, LaunchKind, MetadataField, MetadataOrigin, Source, Timestamp,
+};
 use crate::saved_filters::{self, SavedFilter};
 use crate::search;
 use crate::store::{Store, StoreError};
@@ -24,8 +29,8 @@ use crate::store::{Store, StoreError};
 /// What the `format` field of a backup says.
 const FORMAT: &str = "pindu-launcher-backup";
 /// The backup version this build writes and the newest it reads. Version 2 added
-/// `groups`, `not_the_same` and a collection's `filter`; version 1 backups have none of
-/// them and still import.
+/// `groups`, `not_the_same`, a collection's `filter` and `metadata`; version 1 backups
+/// have none of them and still import.
 const VERSION: u64 = 2;
 
 /// Why a backup could not be written or restored.
@@ -84,6 +89,9 @@ pub struct ImportSummary {
     pub skipped_groups: usize,
     /// Pairs newly remembered as not the same game.
     pub splits: usize,
+    /// Metadata values the user set or a provider fetched, for a field that origin had
+    /// no value for here.
+    pub metadata: usize,
 }
 
 /// The library's backup as JSON text.
@@ -121,6 +129,7 @@ pub fn export(store: &Store, now: Timestamp) -> Result<String, BackupError> {
     }
     let mut manual_games = Vec::new();
     let mut sessions = Vec::new();
+    let mut metadata = Vec::new();
     for game in &games {
         if game.id.source() == Source::Manual {
             let launch = store.launch_config(&game.id)?;
@@ -132,6 +141,11 @@ pub fn export(store: &Store, now: Timestamp) -> Result<String, BackupError> {
                 "started_at": session.started_at,
                 "ended_at": session.ended_at,
             }));
+        }
+        for value in store.metadata_values(&game.id)? {
+            if value.origin != MetadataOrigin::Source {
+                metadata.push(metadata_value_json(&game.id, &value));
+            }
         }
     }
     let groups: Vec<Value> = store
@@ -162,6 +176,7 @@ pub fn export(store: &Store, now: Timestamp) -> Result<String, BackupError> {
         "play_sessions": sessions,
         "groups": groups,
         "not_the_same": not_the_same,
+        "metadata": metadata,
     });
     Ok(serde_json::to_string_pretty(&backup).expect("JSON values always serialize"))
 }
@@ -174,8 +189,9 @@ pub fn last_backup(stored: Timestamp) -> Option<Timestamp> {
 
 /// Restores a backup into the library, in one transaction. It adds and never removes:
 /// favourites and hidden games stay as they are unless the backup marks them, existing
-/// collections gain members, sessions or games already here are not added twice, and a
-/// group is made again only from games that are in no group here.
+/// collections gain members, sessions or games already here are not added twice, a
+/// group is made again only from games that are in no group here, and a metadata value
+/// is added only where its origin has none for that field, keeping the time it was set.
 pub fn import(store: &Store, text: &str) -> Result<ImportSummary, BackupError> {
     let backup: Value = serde_json::from_str(text).map_err(|_| BackupError::NotABackup)?;
     if backup["format"] != FORMAT {
@@ -349,6 +365,28 @@ pub fn import(store: &Store, text: &str) -> Result<ImportSummary, BackupError> {
                 store.remember_split(&first, &second)?;
                 summary.splits += 1;
             }
+        }
+        for entry in list(&backup["metadata"]) {
+            let (Some(game), Some(restored)) = (
+                known(&entry["game"], &mut missing),
+                metadata_value_from(entry),
+            ) else {
+                continue;
+            };
+            let mut own: Vec<MetadataValue> = store
+                .metadata_values(&game)?
+                .into_iter()
+                .filter(|value| value.origin == restored.origin)
+                .collect();
+            let field = restored.value.field();
+            if own.iter().any(|value| value.value.field() == field) {
+                continue;
+            }
+            let (origin, updated_at) = (restored.origin, restored.updated_at);
+            own.push(restored);
+            // Values already here are unchanged, so they keep their time.
+            store.set_metadata(&game, origin, &metadata::resolve(&own), updated_at)?;
+            summary.metadata += 1;
         }
         summary.missing_games = missing.len();
         Ok(())
@@ -524,11 +562,68 @@ fn path(value: &Value) -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
+/// A metadata value the user set or a provider fetched, with its game, field, origin and
+/// time. Genres are a list, a release year a number, other fields text.
+fn metadata_value_json(id: &GameId, value: &MetadataValue) -> Value {
+    let text = match &value.value {
+        FieldValue::Developer(text) | FieldValue::Description(text) => json!(text),
+        FieldValue::Genres(genres) => json!(genres),
+        FieldValue::ReleaseYear(year) => json!(year),
+        FieldValue::ControllerSupport(support) => json!(support.as_str()),
+    };
+    json!({
+        "game": id.as_str(),
+        "field": value.value.field().as_str(),
+        "origin": value.origin.as_str(),
+        "value": text,
+        "updated_at": value.updated_at,
+    })
+}
+
+/// A metadata value from a backup (see [`metadata_value_json`]), without its game; `None`
+/// for an empty value, a source's (a sync writes those) or a field or origin this version
+/// does not know.
+fn metadata_value_from(entry: &Value) -> Option<MetadataValue> {
+    let origin: MetadataOrigin = entry["origin"].as_str()?.parse().ok()?;
+    if origin == MetadataOrigin::Source {
+        return None;
+    }
+    let text = || {
+        entry["value"]
+            .as_str()
+            .filter(|text| !text.is_empty())
+            .map(str::to_owned)
+    };
+    let value = match entry["field"].as_str()?.parse().ok()? {
+        MetadataField::Developer => FieldValue::Developer(text()?),
+        MetadataField::Description => FieldValue::Description(text()?),
+        MetadataField::Genres => {
+            let genres: Vec<String> = list(&entry["value"])
+                .filter_map(|genre| genre.as_str().map(str::to_owned))
+                .collect();
+            if genres.is_empty() {
+                return None;
+            }
+            FieldValue::Genres(genres)
+        }
+        MetadataField::ReleaseYear => {
+            FieldValue::ReleaseYear(i32::try_from(entry["value"].as_i64()?).ok()?)
+        }
+        MetadataField::ControllerSupport => FieldValue::ControllerSupport(text()?.parse().ok()?),
+    };
+    Some(MetadataValue {
+        value,
+        origin,
+        updated_at: entry["updated_at"].as_i64()?,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
 
     use super::*;
+    use crate::metadata::Metadata;
     use crate::model::{Game, GameId, LaunchConfig, LaunchKind, Source};
     use crate::store::Store;
 
@@ -1083,5 +1178,144 @@ mod tests {
             HashMap::from([(mine.id, saved(View::All, native, ""))])
         );
         assert!(store.collection_members(theirs.id).unwrap().is_empty());
+    }
+
+    fn developer_and_genres(developer: &str, genres: &[&str]) -> Metadata {
+        Metadata {
+            developer: Some(developer.to_owned()),
+            genres: genres.iter().map(|genre| (*genre).to_owned()).collect(),
+            description: None,
+            ..Metadata::default()
+        }
+    }
+
+    #[test]
+    fn user_and_provider_metadata_is_restored_with_its_time() {
+        let (_dir, store) = synced_store();
+        let portal = GameId::new(Source::Steam, "400");
+        store
+            .set_metadata(
+                &portal,
+                MetadataOrigin::Source,
+                &developer_and_genres("Valve", &["Puzzle"]),
+                1_700_000_100,
+            )
+            .unwrap();
+        store
+            .set_metadata(
+                &portal,
+                MetadataOrigin::User,
+                &developer_and_genres("Valve Software", &["Puzzle", "Classic"]),
+                1_700_000_500,
+            )
+            .unwrap();
+        let described = Metadata {
+            description: Some("Think with portals.".to_owned()),
+            ..Metadata::default()
+        };
+        store
+            .set_metadata(&portal, MetadataOrigin::Provider, &described, 1_700_000_400)
+            .unwrap();
+        let backup = export(&store, 1_700_009_000).unwrap();
+        let (_fresh_dir, fresh) = synced_store();
+
+        import(&fresh, &backup).unwrap();
+
+        let carried: Vec<MetadataValue> = store
+            .metadata_values(&portal)
+            .unwrap()
+            .into_iter()
+            .filter(|value| value.origin != MetadataOrigin::Source)
+            .collect();
+        assert_eq!(carried.len(), 3);
+        assert_eq!(fresh.metadata_values(&portal).unwrap(), carried);
+    }
+
+    #[test]
+    fn a_users_release_year_and_controller_support_are_restored() {
+        use crate::model::ControllerSupport;
+        let (_dir, store) = synced_store();
+        let portal = GameId::new(Source::Steam, "400");
+        let mine = Metadata {
+            release_year: Some(2007),
+            controller_support: Some(ControllerSupport::Full),
+            ..Metadata::default()
+        };
+        store
+            .set_metadata(&portal, MetadataOrigin::User, &mine, 1_700_000_500)
+            .unwrap();
+        let backup = export(&store, 1_700_009_000).unwrap();
+        let (_fresh_dir, fresh) = synced_store();
+
+        import(&fresh, &backup).unwrap();
+
+        let mine_only = |store: &Store| -> Vec<MetadataValue> {
+            store
+                .metadata_values(&portal)
+                .unwrap()
+                .into_iter()
+                .filter(|value| value.origin == MetadataOrigin::User)
+                .collect()
+        };
+        assert_eq!(mine_only(&fresh).len(), 2);
+        assert_eq!(mine_only(&fresh), mine_only(&store));
+        let game = fresh.game(&portal).unwrap().unwrap();
+        assert_eq!(game.release_year, Some(2007));
+        assert_eq!(game.controller_support, Some(ControllerSupport::Full));
+    }
+
+    #[test]
+    fn restoring_metadata_never_overwrites_a_value_already_here() {
+        let (_dir, store) = synced_store();
+        let portal = GameId::new(Source::Steam, "400");
+        let backup = r#"{
+            "format": "pindu-launcher-backup",
+            "version": 2,
+            "metadata": [
+                {"game": "steam:400", "field": "developer", "origin": "user",
+                 "value": "Theirs", "updated_at": 900},
+                {"game": "steam:400", "field": "genres", "origin": "user",
+                 "value": ["Puzzle"], "updated_at": 900},
+                {"game": "steam:400", "field": "description", "origin": "source",
+                 "value": "Not a sync", "updated_at": 900},
+                {"game": "steam:999", "field": "developer", "origin": "user",
+                 "value": "Gone", "updated_at": 900}
+            ]
+        }"#;
+        let mine = Metadata {
+            developer: Some("Mine".to_owned()),
+            ..Metadata::default()
+        };
+        store
+            .set_metadata(&portal, MetadataOrigin::User, &mine, 500)
+            .unwrap();
+
+        let first = import(&store, backup).unwrap();
+        let second = import(&store, backup).unwrap();
+
+        assert_eq!(
+            first,
+            ImportSummary {
+                metadata: 1,
+                missing_games: 1,
+                ..ImportSummary::default()
+            }
+        );
+        assert_eq!(second.metadata, 0);
+        assert_eq!(
+            store.metadata_values(&portal).unwrap(),
+            [
+                MetadataValue {
+                    value: FieldValue::Developer("Mine".to_owned()),
+                    origin: MetadataOrigin::User,
+                    updated_at: 500,
+                },
+                MetadataValue {
+                    value: FieldValue::Genres(vec!["Puzzle".to_owned()]),
+                    origin: MetadataOrigin::User,
+                    updated_at: 900,
+                },
+            ]
+        );
     }
 }
