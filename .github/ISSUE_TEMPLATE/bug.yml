@@ -53,19 +53,23 @@ body:
     validations:
       required: true
   - type: textarea
-    id: environment
+    id: debug-info
     attributes:
-      label: Version and desktop
+      label: Debugging information
       description: >-
-        For the Flatpak, paste the output of `flatpak info io.github.tim_van_oudheusden.pindu-launcher`;
-        otherwise give the version from the About dialogue. Name your distribution and desktop, and the game
-        launchers involved (Steam, Heroic, ...) and how they are installed (native or Flatpak).
+        Paste the app's debugging information report. It has the version, how the app was installed, your distribution
+        and session, each game source's state and game count, and the tools it found, with no game titles and no home
+        paths. On the desktop, open the main menu, choose About Pindu launcher, then Troubleshooting, then Debugging
+        Information, and use Copy (or Save and attach the file). In fullscreen mode, open Quick Access (R3 or the
+        Deck's … button) and open the diagnostics report: it shows the report in pages to photograph and saves a copy
+        in `~/.local/share/pindu-launcher/reports/` (in the Flatpak,
+        `~/.var/app/io.github.tim_van_oudheusden.pindu-launcher/data/pindu-launcher/reports/`). If the app does not
+        start at all, give its version, your distribution and desktop instead.
       placeholder: |
-        Version: 0.1.0
-        Runtime: org.gnome.Platform/x86_64/51
-        Distribution: Fedora 45
-        Desktop: GNOME 51 (Wayland)
-        Launchers: Steam (Flatpak)
+        Pindu launcher 0.1.0
+        App ID: io.github.tim_van_oudheusden.pindu-launcher
+        Installed as: ...
+        ...
       render: text
     validations:
       required: true

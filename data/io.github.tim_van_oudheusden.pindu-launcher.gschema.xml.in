@@ -203,5 +203,10 @@
       <summary>SteamGridDB prompt shown</summary>
       <description>Whether the window has offered, once, to set up a SteamGridDB API key for game art.</description>
     </key>
+    <key name="last-backup" type="x">
+      <default>0</default>
+      <summary>Last library backup</summary>
+      <description>When the library was last exported, in seconds since the Unix epoch; 0 means never. Library Health shows it.</description>
+    </key>
   </schema>
 </schemalist>

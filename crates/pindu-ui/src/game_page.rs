@@ -15,7 +15,7 @@ use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
 use pindu_core::gamepad::Direction;
-use pindu_core::launch::{self, LaunchSettings};
+use pindu_core::launch::{self, LaunchSettings, WebPage};
 use pindu_core::library::PlaytimeOrigin;
 use pindu_core::manual;
 use pindu_core::model::{Collection, Game, GameId, LaunchConfig, LaunchKind, Source, Timestamp};
@@ -642,6 +642,20 @@ fn more_menu(object: &GameObject, collections: &[Collection]) -> gio::Menu {
         ));
     }
     menu.append_section(None, &manage);
+    // Steam games: pages other players keep, which the browser opens.
+    let web = gio::Menu::new();
+    if launch::web_page_uri(&game, WebPage::ProtonDb).is_some() {
+        web.append_item(&item(gettext("View on _ProtonDB"), "app.open-protondb"));
+    }
+    if launch::web_page_uri(&game, WebPage::PcGamingWiki).is_some() {
+        web.append_item(&item(
+            gettext("View on PC_GamingWiki"),
+            "app.open-pcgamingwiki",
+        ));
+    }
+    if web.n_items() > 0 {
+        menu.append_section(None, &web);
+    }
     menu
 }
 
