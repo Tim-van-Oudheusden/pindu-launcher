@@ -12,6 +12,7 @@ use pindu_core::gamepad::Layout;
 use pindu_core::hints::{self, Action, Context, Focus, GlyphName, Hint};
 
 use crate::application::PinduApplication;
+use crate::artwork_dialog::ArtworkDialog;
 use crate::window::PinduWindow;
 
 /// How large glyphs draw, to read from across the room.
@@ -98,6 +99,10 @@ impl PinduWindow {
             page_below,
             search: library || home,
             tabs: library && self.is_fullscreen(),
+            dialog_tabs: self
+                .visible_dialog()
+                .and_downcast::<ArtworkDialog>()
+                .is_some_and(|dialog| dialog.has_tabs()),
             options: self.focused_game().is_some(),
             menu: self.is_fullscreen(),
             panel: self.open_panel(),

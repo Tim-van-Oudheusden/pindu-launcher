@@ -47,6 +47,9 @@ pub struct Context {
     /// The page has tabs, which the shoulder buttons switch, and a sort order, which the
     /// triggers cycle (fullscreen mode's library).
     pub tabs: bool,
+    /// The open dialog has tabs, which the shoulder buttons switch (Change Artwork's kinds
+    /// of art).
+    pub dialog_tabs: bool,
     /// A game has focus (a cover or card) or the page is a game's: View opens its options.
     pub options: bool,
     /// Start opens the menu drawer (fullscreen mode).
@@ -246,13 +249,14 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
         }
     });
     let tabs = context.tabs && page;
-    let pair = |back, forward, action| {
-        tabs.then(|| Hint {
+    let pair = |shown: bool, back, forward, action| {
+        shown.then(|| Hint {
             button: layout.button(back),
             pair: Some(layout.button(forward)),
             action,
         })
     };
+    let dialog_tabs = context.dialog_tabs && context.dialog;
     [
         adjust,
         single(Intent::Activate, activate),
@@ -261,8 +265,13 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
         single(Intent::Options, options),
         single(Intent::Menu, menu),
         quick_access,
-        pair(Intent::PreviousTab, Intent::NextTab, Action::Tabs),
-        pair(Intent::PreviousSort, Intent::NextSort, Action::Sort),
+        pair(
+            tabs || dialog_tabs,
+            Intent::PreviousTab,
+            Intent::NextTab,
+            Action::Tabs,
+        ),
+        pair(tabs, Intent::PreviousSort, Intent::NextSort, Action::Sort),
     ]
     .into_iter()
     .flatten()
@@ -417,6 +426,7 @@ mod tests {
             page_below: false,
             search: false,
             tabs: false,
+            dialog_tabs: false,
             keyboard: None,
             options: false,
             menu: false,
@@ -450,6 +460,23 @@ mod tests {
         assert_eq!(
             actions(dialog_over_home, DeviceKind::Xbox),
             [(Button::South, Action::Open), (Button::East, Action::Close)]
+        );
+    }
+
+    #[test]
+    fn a_dialog_with_tabs_switches_them_with_the_shoulders() {
+        let change_artwork = Context {
+            dialog: true,
+            dialog_tabs: true,
+            ..context(Focus::Other)
+        };
+        assert_eq!(
+            actions(change_artwork, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Close),
+                (Button::LeftShoulder, Action::Tabs)
+            ]
         );
     }
 

@@ -58,7 +58,8 @@ widgets so it looks and behaves like the rest of GNOME.
   collections, jump back into recent games and hide the ones you never play.
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
 - **Your artwork.** Covers, banners and logos from your launchers, from your own files, or from
-  [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring.
+  [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring. **Change
+  Artwork** on a game's page, in both modes, pages through every SteamGridDB image of each kind.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.

@@ -7,12 +7,15 @@ use gtk::glib;
 use gtk::subclass::prelude::*;
 use pindu_core::backup::{self, BackupError, ImportSummary};
 use pindu_core::library::{self, LibraryEntry};
+use pindu_core::manual;
 use pindu_core::model::{
-    Collection, Game, GameId, LaunchConfig, PerformanceTool, Source, Timestamp,
+    ArtLayout, ArtOrigin, Collection, Game, GameId, LaunchConfig, PerformanceTool, Source,
+    Timestamp,
 };
-use pindu_core::paths::default_library_db_path;
+use pindu_core::paths::{default_library_db_path, default_user_art_dir};
 use pindu_core::store::{self, Store};
 
+use crate::file_service::PickedImage;
 use crate::models::LibraryModel;
 
 mod imp {
@@ -310,6 +313,103 @@ impl LibraryService {
                 }
             }
         });
+    }
+
+    /// Makes `image` the game's own art in `layout` at once, then reloads the model.
+    pub async fn set_user_art(
+        &self,
+        id: &GameId,
+        layout: ArtLayout,
+        image: PickedImage,
+    ) -> Result<(), String> {
+        let id = id.clone();
+        self.change_art(move |store| {
+            manual::set_user_art(
+                store,
+                &default_user_art_dir(),
+                &id,
+                layout,
+                &image.extension,
+                &image.bytes,
+            )
+            .map(drop)
+        })
+        .await
+    }
+
+    /// Removes the game's own art in `layout`, so the launcher's or SteamGridDB's shows,
+    /// then reloads the model.
+    pub async fn remove_user_art(&self, id: &GameId, layout: ArtLayout) -> Result<(), String> {
+        let id = id.clone();
+        self.change_art(move |store| manual::remove_user_art(store, &id, layout))
+            .await
+    }
+
+    /// The layouts the user gave a game its own art in.
+    pub async fn user_art_layouts(&self, id: &GameId) -> Vec<ArtLayout> {
+        let id = id.clone();
+        self.read(move |store| {
+            Ok(store
+                .artwork(&id)?
+                .into_iter()
+                .filter(|art| art.origin == ArtOrigin::User)
+                .map(|art| art.layout)
+                .collect())
+        })
+        .await
+        .unwrap_or_default()
+    }
+
+    /// The SteamGridDB game the user chose for a game, if they chose one.
+    pub async fn steamgriddb_match(&self, id: &GameId) -> Option<u64> {
+        let id = id.clone();
+        self.read(move |store| store.steamgriddb_match(&id))
+            .await
+            .flatten()
+    }
+
+    /// Remembers the SteamGridDB game the user chose for a game.
+    pub async fn set_steamgriddb_match(&self, id: &GameId, grid_id: u64) {
+        let id = id.clone();
+        self.change(move |store| store.set_steamgriddb_match(&id, grid_id))
+            .await;
+    }
+
+    /// Changes a game's art on a worker thread, then reloads the model.
+    async fn change_art(
+        &self,
+        work: impl FnOnce(&Store) -> Result<(), manual::ManualError> + Send + 'static,
+    ) -> Result<(), String> {
+        let written = gtk::gio::spawn_blocking(move || {
+            let store = Store::open(&default_library_db_path()).map_err(|e| e.to_string())?;
+            work(&store).map_err(|error| error.to_string())
+        })
+        .await
+        .unwrap_or_else(|_| Err("changing the art stopped unexpectedly".into()));
+        if written.is_ok() {
+            self.reload();
+        }
+        written
+    }
+
+    /// Reads from the store on a worker thread; `None` when it cannot be read.
+    async fn read<T: Send + 'static>(
+        &self,
+        work: impl FnOnce(&Store) -> store::Result<T> + Send + 'static,
+    ) -> Option<T> {
+        let read = gtk::gio::spawn_blocking(move || {
+            let store = Store::open(&default_library_db_path())?;
+            work(&store)
+        })
+        .await;
+        match read {
+            Ok(Ok(value)) => Some(value),
+            Ok(Err(error)) => {
+                glib::g_warning!("pindu", "Could not read the library: {error}");
+                None
+            }
+            Err(_) => None,
+        }
     }
 
     /// Changes one stored game in the background.

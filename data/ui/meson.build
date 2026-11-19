@@ -1,6 +1,7 @@
 # Every Blueprint file, without extension; each compiles to <name>.ui next to it.
 blueprint_names = [
   'add_store',
+  'artwork_dialog',
   'cover_tile',
   'fullscreen_bluetooth',
   'fullscreen_network',

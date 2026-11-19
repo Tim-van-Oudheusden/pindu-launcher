@@ -8,6 +8,7 @@ pub mod add_store;
 pub mod arch;
 pub mod art;
 pub mod art_cache;
+pub mod art_picker;
 pub mod backup;
 pub mod clock;
 pub mod controllers;

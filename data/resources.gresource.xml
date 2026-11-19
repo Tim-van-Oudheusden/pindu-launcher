@@ -2,6 +2,7 @@
 <gresources>
   <gresource prefix="/io/github/tim_van_oudheusden/pindu-launcher">
     <file preprocess="xml-stripblanks">ui/add_store.ui</file>
+    <file preprocess="xml-stripblanks">ui/artwork_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/cover_tile.ui</file>
     <file preprocess="xml-stripblanks">ui/fullscreen_bluetooth.ui</file>
     <file preprocess="xml-stripblanks">ui/fullscreen_network.ui</file>

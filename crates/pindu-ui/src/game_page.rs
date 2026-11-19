@@ -589,6 +589,7 @@ fn more_menu(object: &GameObject, collections: &[Collection]) -> gio::Menu {
     menu.append_section(None, &collection_menu(object, collections));
     let manage = gio::Menu::new();
     manage.append_item(&item(gettext("_Edit…"), "app.edit-game"));
+    manage.append_item(&item(gettext("Change _Artwork…"), "win.change-artwork"));
     if hidden {
         manage.append_item(&item(gettext("_Unhide"), "win.unhide-game"));
     } else {

@@ -73,6 +73,14 @@ pub fn images_url(layout: ArtLayout, game: &GameRef) -> String {
     format!("{API}/{kind}/{by}{query}")
 }
 
+/// One page of a game's images in one layout, counting from 0, as [`images_url`] asks
+/// for them; [`parse_images_page`] reads the answer.
+pub fn images_page_url(layout: ArtLayout, game: &GameRef, page: u32) -> String {
+    let url = images_url(layout, game);
+    let separator = if url.contains('?') { '&' } else { '?' };
+    format!("{url}{separator}page={page}")
+}
+
 /// The layouts to fetch for a game: those with no art yet, and, when SteamGridDB art is
 /// preferred, those with only the source's. Art the user picked or fetched before stays.
 pub fn layouts_to_fetch(artwork: &[Artwork], prefer_steamgriddb: bool) -> Vec<ArtLayout> {
@@ -109,7 +117,7 @@ pub fn search_url(title: &str) -> String {
 
 /// The games of a search answer.
 pub fn parse_search(answer: &str) -> Result<Vec<SearchHit>, String> {
-    Ok(data(answer)?
+    Ok(data(&successful(answer)?)
         .iter()
         .filter_map(|hit| {
             Some(SearchHit {
@@ -122,7 +130,48 @@ pub fn parse_search(answer: &str) -> Result<Vec<SearchHit>, String> {
 
 /// The images of an images answer, leaving out ones marked not safe for work.
 pub fn parse_images(answer: &str) -> Result<Vec<Image>, String> {
-    Ok(data(answer)?
+    Ok(images_of(&successful(answer)?))
+}
+
+/// One page of a game's images: the images, which page it is, counting from 0, and how
+/// many pages there are, at least one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImagesPage {
+    /// The page's images, without ones marked not safe for work.
+    pub images: Vec<Image>,
+    /// Which page this is, counting from 0.
+    pub page: u32,
+    /// How many pages there are, at least one.
+    pub pages: u32,
+}
+
+impl ImagesPage {
+    /// The page after this one, when there is one.
+    pub fn next_page(&self) -> Option<u32> {
+        (self.page + 1 < self.pages).then_some(self.page + 1)
+    }
+}
+
+/// A page of images from an images answer, which gives its page, the total number of
+/// images and how many a page holds; an answer without them is the only page.
+pub fn parse_images_page(answer: &str) -> Result<ImagesPage, String> {
+    let json = successful(answer)?;
+    let number = |key: &str| json.get(key).and_then(Json::as_u64);
+    let page = number("page").unwrap_or(0) as u32;
+    let pages = match (number("total"), number("limit")) {
+        (Some(total), Some(limit)) if limit > 0 => total.div_ceil(limit).max(1) as u32,
+        _ => 1,
+    };
+    Ok(ImagesPage {
+        images: images_of(&json),
+        page,
+        pages,
+    })
+}
+
+/// The images of a successful images answer, leaving out ones marked not safe for work.
+fn images_of(json: &Json) -> Vec<Image> {
+    data(json)
         .iter()
         .filter(|image| image.get("nsfw").and_then(Json::as_bool) != Some(true))
         .filter_map(|image| {
@@ -135,11 +184,11 @@ pub fn parse_images(answer: &str) -> Result<Vec<Image>, String> {
                 height: size("height").unwrap_or_default(),
             })
         })
-        .collect())
+        .collect()
 }
 
-/// The `data` array of a successful answer, or the answer's error message.
-fn data(answer: &str) -> Result<Vec<Json>, String> {
+/// A successful answer, or the answer's error message.
+fn successful(answer: &str) -> Result<Json, String> {
     let json: Json = serde_json::from_str(answer).map_err(|error| error.to_string())?;
     if json.get("success").and_then(Json::as_bool) != Some(true) {
         let message = json
@@ -148,11 +197,15 @@ fn data(answer: &str) -> Result<Vec<Json>, String> {
             .unwrap_or("SteamGridDB refused the request");
         return Err(message.to_owned());
     }
-    Ok(json
-        .get("data")
+    Ok(json)
+}
+
+/// The `data` array of a successful answer.
+fn data(json: &Json) -> Vec<Json> {
+    json.get("data")
         .and_then(Json::as_array)
         .cloned()
-        .unwrap_or_default())
+        .unwrap_or_default()
 }
 
 /// How long to wait after a rate-limited try (`attempt` counts from 0): the server's
@@ -389,6 +442,51 @@ mod tests {
             images_url(ArtLayout::Square, &GameRef::Grid(42)),
             "https://www.steamgriddb.com/api/v2/grids/game/42?dimensions=512x512,1024x1024"
         );
+    }
+
+    #[test]
+    fn a_page_of_images_is_asked_for_after_the_layouts_own_query() {
+        assert_eq!(
+            images_page_url(ArtLayout::Cover, &GameRef::Steam(570), 2),
+            "https://www.steamgriddb.com/api/v2/grids/steam/570?dimensions=600x900&page=2"
+        );
+        assert_eq!(
+            images_page_url(ArtLayout::Hero, &GameRef::Grid(42), 0),
+            "https://www.steamgriddb.com/api/v2/heroes/game/42?page=0"
+        );
+    }
+
+    #[test]
+    fn a_page_of_images_says_how_many_pages_there_are() {
+        let answer = |page: u32, total: u32| {
+            format!(
+                r#"{{"success":true,"page":{page},"total":{total},"limit":50,"data":[
+                {{"id":7,"width":600,"height":900,"nsfw":false,
+                 "url":"https://cdn2.steamgriddb.com/grid/a.png",
+                 "thumb":"https://cdn2.steamgriddb.com/thumb/a.jpg"}}]}}"#
+            )
+        };
+
+        let first = parse_images_page(&answer(0, 120)).unwrap();
+        assert_eq!(first.images.len(), 1);
+        assert_eq!(first.images[0].id, 7);
+        assert_eq!((first.page, first.pages), (0, 3));
+        assert_eq!(first.next_page(), Some(1));
+        let last = parse_images_page(&answer(2, 120)).unwrap();
+        assert_eq!(last.next_page(), None);
+        // Exactly one page, and an empty answer, are one page with no next.
+        assert_eq!(parse_images_page(&answer(0, 50)).unwrap().pages, 1);
+        assert_eq!(parse_images_page(&answer(0, 0)).unwrap().pages, 1);
+        assert_eq!(parse_images_page(&answer(0, 0)).unwrap().next_page(), None);
+    }
+
+    #[test]
+    fn a_page_without_paging_fields_is_the_only_page() {
+        let answer = r#"{"success":true,"data":[]}"#;
+
+        let page = parse_images_page(answer).unwrap();
+        assert_eq!((page.page, page.pages), (0, 1));
+        assert_eq!(page.next_page(), None);
     }
 
     #[test]

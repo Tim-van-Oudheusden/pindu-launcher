@@ -428,6 +428,20 @@ fn artwork_is_kept_when_the_store_learns_square_art() {
 }
 
 #[test]
+fn a_games_steamgriddb_match_is_remembered_replaced_and_dropped_with_the_game() {
+    let (_dir, store) = temp_store();
+    let id = stored_game(&store, "witcher");
+
+    assert_eq!(store.steamgriddb_match(&id).unwrap(), None);
+    store.set_steamgriddb_match(&id, 5248).unwrap();
+    store.set_steamgriddb_match(&id, 38015).unwrap();
+    assert_eq!(store.steamgriddb_match(&id).unwrap(), Some(38015));
+
+    store.delete_game(&id).unwrap();
+    assert_eq!(store.steamgriddb_match(&id).unwrap(), None);
+}
+
+#[test]
 fn collections_are_listed_by_position() {
     let (_dir, store) = temp_store();
     let rpgs = store.create_collection("RPGs").unwrap();

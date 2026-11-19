@@ -20,11 +20,12 @@ use pindu_core::pe::{self, Icon};
 use pindu_core::proton::Defaults;
 use pindu_core::store::Store;
 
+use crate::artwork_dialog::{ArtworkDialog, PickerGame};
 use crate::file_service::{self, PickedImage};
 use crate::library_service::LibraryService;
 use crate::proton_choice::{FirstChoice, ProtonChoice};
 use crate::proton_launch;
-use crate::steamgriddb_picker::{self, PickerGame};
+use crate::steamgriddb_service::steam_app_id;
 use crate::window::PinduWindow;
 
 /// The Windows row of the Type list; the native one comes first.
@@ -764,24 +765,25 @@ impl GameDialog {
         });
     }
 
-    /// Opens the SteamGridDB picker for the game: by Steam app ID for Steam games, else
-    /// by the title.
+    /// Opens Change Artwork for one kind of the game's art: by Steam app ID for Steam
+    /// games, else by the title, or the match the user chose before.
     fn pick_from_steamgriddb(&self, layout: ArtLayout) {
         let imp = self.imp();
-        let steam_app_id = match &*imp.mode.borrow() {
-            Mode::Edit { id, .. } if id.source() == Source::Steam => id.native_id().parse().ok(),
-            _ => None,
+        let id = match &*imp.mode.borrow() {
+            Mode::Edit { id, .. } => Some(id.clone()),
+            Mode::Add => None,
         };
         let title = match imp.title_row.text().trim() {
             "" => imp.game_title.borrow().clone(),
             title => title.to_owned(),
         };
         let game = PickerGame {
-            steam_app_id,
+            steam_app_id: id.as_ref().and_then(steam_app_id),
+            id,
             title,
         };
         let dialog = self.downgrade();
-        steamgriddb_picker::pick(self, layout, game, move |image| {
+        ArtworkDialog::pick(self, self.library().clone(), layout, game, move |image| {
             if let Some(dialog) = dialog.upgrade() {
                 dialog.set_art(layout, ArtChange::Set(image));
             }
