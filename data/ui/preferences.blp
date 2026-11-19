@@ -33,6 +33,16 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
     }
 
     Adw.PreferencesGroup {
+      title: _("Metadata");
+      description: _("Refresh Metadata, in the main menu and in Quick Access, looks your games up on Wikidata by their Steam app ID for their developer and genres. Details you enter yourself always come first.");
+
+      Adw.SwitchRow wikidata_row {
+        title: _("Get Metadata From Wikidata");
+        subtitle: _("Nothing is fetched until you ask, and never during an import");
+      }
+    }
+
+    Adw.PreferencesGroup {
       title: _("Launching");
 
       Adw.SwitchRow exit_row {

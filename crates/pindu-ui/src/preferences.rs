@@ -39,6 +39,7 @@ use crate::sources::{source_icon, source_name, sync_age_text};
 use crate::steamgriddb_service;
 use crate::style_service::StyleService;
 use crate::sync_service::SyncService;
+use crate::wikidata_service;
 
 /// Tile sizes in the order of the cover size row (and the menu drawer's toggles).
 pub(crate) const TILE_SIZES: [&str; 3] = ["small", "medium", "large"];
@@ -110,6 +111,8 @@ mod imp {
         pub key_status_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub prefer_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub wikidata_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub default_proton_row: TemplateChild<adw::ComboRow>,
         #[template_child]
@@ -274,6 +277,13 @@ mod imp {
                 .build();
             settings
                 .bind("prefer-steamgriddb", &*self.prefer_row, "active")
+                .build();
+            settings
+                .bind(
+                    wikidata_service::SETTINGS_KEY,
+                    &*self.wikidata_row,
+                    "active",
+                )
                 .build();
             settings
                 .bind("default-mangohud", &*self.default_mangohud_row, "active")

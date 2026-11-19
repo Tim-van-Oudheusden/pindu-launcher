@@ -200,6 +200,27 @@ template $PinduQuickAccess: Box {
               };
             }
 
+            // A Wikidata refresh, shown only while Wikidata metadata is on.
+            ListBoxRow refresh_metadata_row {
+              action-name: "app.refresh-metadata";
+              visible: false;
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "text-x-generic-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Refresh Metadata");
+                  xalign: 0;
+                  hexpand: true;
+                }
+              };
+            }
+
             // Opens a random installed game's page; unavailable while none is
             // installed.
             ListBoxRow surprise_row {
@@ -1557,6 +1578,30 @@ template $PinduQuickAccess: Box {
             Adw.SwitchRow prefer_steamgriddb_row {
               title: _("Prefer SteamGridDB Art");
               subtitle: _("Show it before the launcher's own art; art you pick always comes first");
+            }
+          }
+
+          Label {
+            label: _("Metadata");
+            xalign: 0;
+            margin-top: 6;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          // On, Refresh Metadata shows in the main list.
+          ListBox metadata {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.SwitchRow wikidata_row {
+              title: _("Get Metadata From Wikidata");
+              subtitle: _("Nothing is fetched until you ask, and never during an import");
             }
           }
         };

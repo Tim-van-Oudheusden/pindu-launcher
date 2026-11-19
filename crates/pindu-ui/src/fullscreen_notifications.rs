@@ -177,6 +177,8 @@ fn kind_icon(kind: Kind) -> &'static str {
         Kind::Library => "applications-games-symbolic",
         Kind::Artwork => "image-x-generic-symbolic",
         Kind::ArtworkFailed => "image-missing-symbolic",
+        Kind::Metadata => "text-x-generic-symbolic",
+        Kind::MetadataFailed => "dialog-warning-symbolic",
         Kind::Download => "folder-download-symbolic",
         Kind::DownloadFailed => "dialog-warning-symbolic",
         Kind::Permission => "system-lock-screen-symbolic",
