@@ -98,6 +98,10 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
             let tile = self.obj();
+            // GTK names a button after its label through a relation, which would win over
+            // the name `show_state` gives it.
+            self.play_button
+                .reset_relation(gtk::AccessibleRelation::LabelledBy);
             let right_click = gtk::GestureClick::builder()
                 .button(gdk::BUTTON_SECONDARY)
                 .build();
@@ -258,6 +262,20 @@ impl CoverTile {
         };
         imp.play_button.set_label(&label);
         imp.play_button.set_action_name(Some(action));
+        let name = Self::play_button_name(&game.game().title, playing);
+        imp.play_button
+            .update_property(&[gtk::accessible::Property::Label(&name)]);
+    }
+
+    /// What a screen reader says for a game's Play or Stop button: the visible word alone
+    /// does not say which game it starts or stops.
+    pub fn play_button_name(title: &str, playing: bool) -> String {
+        if playing {
+            gettext("Stop {title}")
+        } else {
+            gettext("Play {title}")
+        }
+        .replace("{title}", title)
     }
 
     /// Stops showing the bound game and clears the art.

@@ -1684,9 +1684,19 @@ pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::
         .action_target(&game.id().as_str().to_variant())
         .css_classes(["play-button", "pill", "suggested-action"])
         .build();
-    // The bindings go with the button, so a rebuilt row leaves nothing on the game.
+    // The bindings go with the button, so a rebuilt row leaves nothing on the game. The
+    // label binding also names the button after the game, as the visible "Play" alone
+    // does not say which game it starts.
+    let title = game.game().title.clone();
+    // Bindings transform on the main thread, where the button lives.
+    let button = glib::SendWeakRef::from(play.downgrade());
     game.bind_property("playing", &play, "label")
-        .transform_to(|_, playing: bool| {
+        .transform_to(move |_, playing: bool| {
+            if let Some(button) = button.upgrade() {
+                button.update_property(&[gtk::accessible::Property::Label(
+                    &CoverTile::play_button_name(&title, playing),
+                )]);
+            }
             Some(if playing {
                 gettext("Stop")
             } else {
@@ -1699,6 +1709,9 @@ pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::
         .transform_to(|_, playing: bool| Some(if playing { "app.stop" } else { "app.play" }))
         .sync_create()
         .build();
+    // GTK names a button after its label through a relation, which would win over the
+    // name the binding gives it.
+    play.reset_relation(gtk::AccessibleRelation::LabelledBy);
     let tile = gtk::Overlay::builder()
         .child(&card)
         .css_classes(["jump-tile"])

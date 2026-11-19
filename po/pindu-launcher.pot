@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 21:10+0100\n"
+"POT-Creation-Date: 2026-11-19 21:12+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -102,7 +102,7 @@ msgstr ""
 #: crates/pindu-ui/src/game_page.rs:789 crates/pindu-ui/src/group_actions.rs:69
 #: crates/pindu-ui/src/health_page.rs:186 crates/pindu-ui/src/home_page.rs:91
 #: crates/pindu-ui/src/proton_downloads_page.rs:336
-#: crates/pindu-ui/src/widgets/cover_tile.rs:340 data/ui/quick_access.blp:1749
+#: crates/pindu-ui/src/widgets/cover_tile.rs:358 data/ui/quick_access.blp:1749
 #: data/ui/window.blp:77 data/ui/window.blp:326
 msgid "Installed"
 msgstr ""
@@ -609,7 +609,7 @@ msgid "Its games stay in the library."
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:376
-#: crates/pindu-ui/src/collection_actions.rs:447
+#: crates/pindu-ui/src/collection_actions.rs:451
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:485
 #: crates/pindu-ui/src/fullscreen_bluetooth.rs:635
 #: crates/pindu-ui/src/fullscreen_network.rs:414
@@ -642,7 +642,7 @@ msgstr ""
 msgid "Name the collection."
 msgstr ""
 
-#: crates/pindu-ui/src/collection_actions.rs:438
+#: crates/pindu-ui/src/collection_actions.rs:435
 msgid "Name"
 msgstr ""
 
@@ -1269,7 +1269,7 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_health.rs:272
 #: crates/pindu-ui/src/game_page.rs:791 crates/pindu-ui/src/group_actions.rs:71
 #: crates/pindu-ui/src/health_page.rs:188
-#: crates/pindu-ui/src/widgets/cover_tile.rs:339
+#: crates/pindu-ui/src/widgets/cover_tile.rs:357
 msgid "Not installed"
 msgstr ""
 
@@ -1538,8 +1538,8 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:698
 #: crates/pindu-ui/src/hint_bar.rs:225
-#: crates/pindu-ui/src/widgets/cover_tile.rs:257
-#: crates/pindu-ui/src/window.rs:1693 data/ui/cover_tile.blp:65
+#: crates/pindu-ui/src/widgets/cover_tile.rs:261
+#: crates/pindu-ui/src/window.rs:1703 data/ui/cover_tile.blp:65
 msgid "Play"
 msgstr ""
 
@@ -1549,8 +1549,8 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:700
 #: crates/pindu-ui/src/hint_bar.rs:226
-#: crates/pindu-ui/src/widgets/cover_tile.rs:255
-#: crates/pindu-ui/src/window.rs:1691
+#: crates/pindu-ui/src/widgets/cover_tile.rs:259
+#: crates/pindu-ui/src/window.rs:1701
 msgid "Stop"
 msgstr ""
 
@@ -1767,7 +1767,7 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_proton_downloads.rs:369
 #: crates/pindu-ui/src/game_page.rs:686
 #: crates/pindu-ui/src/proton_downloads_page.rs:226
-#: crates/pindu-ui/src/widgets/cover_tile.rs:406
+#: crates/pindu-ui/src/widgets/cover_tile.rs:424
 msgid "_Remove"
 msgstr ""
 
@@ -1974,7 +1974,7 @@ msgid "{launcher} starts the game, keeps its settings and tracks its playtime"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:500
-#: crates/pindu-ui/src/widgets/cover_tile.rs:363 data/ui/game_page.blp:100
+#: crates/pindu-ui/src/widgets/cover_tile.rs:381 data/ui/game_page.blp:100
 msgid "_Play"
 msgstr ""
 
@@ -1999,7 +1999,7 @@ msgid "Save S_napshots…"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:679
-#: crates/pindu-ui/src/widgets/cover_tile.rs:400
+#: crates/pindu-ui/src/widgets/cover_tile.rs:418
 msgid "_Edit…"
 msgstr ""
 
@@ -2009,18 +2009,18 @@ msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:682
 #: crates/pindu-ui/src/selection_mode.rs:173
-#: crates/pindu-ui/src/widgets/cover_tile.rs:402
+#: crates/pindu-ui/src/widgets/cover_tile.rs:420
 msgid "_Unhide"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:684
 #: crates/pindu-ui/src/selection_mode.rs:175
-#: crates/pindu-ui/src/widgets/cover_tile.rs:404
+#: crates/pindu-ui/src/widgets/cover_tile.rs:422
 msgid "_Hide"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:688
-#: crates/pindu-ui/src/widgets/cover_tile.rs:366
+#: crates/pindu-ui/src/widgets/cover_tile.rs:384
 msgid "_Open in Launcher"
 msgstr ""
 
@@ -3203,31 +3203,41 @@ msgstr ""
 msgid "Could not roll back"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:337
+#: crates/pindu-ui/src/widgets/cover_tile.rs:274
+#, rust-format
+msgid "Stop {title}"
+msgstr ""
+
+#: crates/pindu-ui/src/widgets/cover_tile.rs:276
+#, rust-format
+msgid "Play {title}"
+msgstr ""
+
+#: crates/pindu-ui/src/widgets/cover_tile.rs:355
 msgid "Playing"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:338
+#: crates/pindu-ui/src/widgets/cover_tile.rs:356
 msgid "Needs permission"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:364
+#: crates/pindu-ui/src/widgets/cover_tile.rs:382
 msgid "_Details"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:384
+#: crates/pindu-ui/src/widgets/cover_tile.rs:402
 msgid "Remove from _Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:386
+#: crates/pindu-ui/src/widgets/cover_tile.rs:404
 msgid "Add to _Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:392
+#: crates/pindu-ui/src/widgets/cover_tile.rs:410
 msgid "Un_pin from Jump Back In"
 msgstr ""
 
-#: crates/pindu-ui/src/widgets/cover_tile.rs:394
+#: crates/pindu-ui/src/widgets/cover_tile.rs:412
 msgid "_Pin to Jump Back In"
 msgstr ""
 
@@ -3276,11 +3286,11 @@ msgstr ""
 msgid "Some Games Could Not Be Imported"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1736
+#: crates/pindu-ui/src/window.rs:1749
 msgid "Pinned"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1756
+#: crates/pindu-ui/src/window.rs:1769
 #, rust-format
 msgid "{title}, pinned"
 msgstr ""

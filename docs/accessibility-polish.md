@@ -46,6 +46,7 @@ its own focus, so a game, in a gamescope session or on a desktop, receives the c
 | #544 Review the desktop window with a screen reader | Spike: what breaks, per page, and an issue per defect | |
 | #545 Add navigation repeat and dead-zone settings | Repeat delay and rate, stick dead zone, for navigation only | |
 | #626 Label the collection name entry in the New and Rename Collection dialogs | The name entry is named "Name" for screen readers, not only by its placeholder | #544 |
+| #627 Name each Play button after its game | Play and Stop on tiles and Jump Back In cards are named "Play {game}" for screen readers | #544 |
 
 The issues #543 and #544 file join this table when they exist.
 
