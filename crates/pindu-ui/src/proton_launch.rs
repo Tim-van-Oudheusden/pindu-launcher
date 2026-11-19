@@ -12,7 +12,8 @@
 //! pressure-vessel's launch client passes the signal on to the game in it.
 //!
 //! "Play with Logs" and "Start Safely" keep umu's output, and a Windows game's Proton log,
-//! in the game's log (see `log_service`).
+//! in the game's log (see `log_service`). After a Windows game in a prefix Pindu manages
+//! exits cleanly, its saves are snapshotted (see `save_service`).
 
 use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
@@ -29,12 +30,14 @@ use pindu_core::launch::{self, Command, Start};
 use pindu_core::model::{Game, LaunchConfig};
 use pindu_core::paths::{default_prefixes_dir, default_tools_dir};
 use pindu_core::proton::{self, ProtonError};
+use pindu_core::saves;
 use pindu_core::sources::location::HostDirs;
 use pindu_core::umu::{self, RuntimeSetup};
 
 use crate::config::APP_ID;
 use crate::launch_service::{now, starting};
 use crate::log_service::{self, GameLog};
+use crate::save_service;
 use crate::session_service::{SIGTERM, SessionService};
 
 /// How often the setup dialog's progress moves.
@@ -67,13 +70,14 @@ pub fn play(
                 let builds = builds();
                 proton::command(&game, &config, &builds, &defaults).map(|command| {
                     let end_prefix = proton::stop_command(&command, &builds);
-                    (command, end_prefix)
+                    let managed_prefix = saves::managed_prefix(&game, &config, &defaults);
+                    (command, end_prefix, managed_prefix)
                 })
             })
             .await
         };
         let title = game.title.clone();
-        let (command, end_prefix) = match found {
+        let (command, end_prefix, managed_prefix) = match found {
             Ok(Ok(found)) => found,
             Ok(Err(error)) => {
                 toast(adw::Toast::new(&cannot_start_message(&title, &error)));
@@ -84,7 +88,10 @@ pub fn play(
                 return;
             }
         };
-        let program = Program::Windows { end_prefix };
+        let program = Program::Windows {
+            end_prefix,
+            managed_prefix,
+        };
         play_command(&app, window, game, command, program, sessions, start, toast).await;
         drop(hold);
     });
@@ -119,10 +126,25 @@ pub fn play_native(
 }
 
 /// What umu runs for a game: a Windows program, ended with its build's `wineserver -k`
-/// when there is one, or a native one, run with `launch`.
+/// when there is one, whose saves are snapshotted on exit when Pindu manages its prefix,
+/// or a native one, run with `launch`.
 enum Program {
-    Windows { end_prefix: Option<Command> },
-    Native { launch: Command },
+    Windows {
+        end_prefix: Option<Command>,
+        managed_prefix: Option<PathBuf>,
+    },
+    Native {
+        launch: Command,
+    },
+}
+
+/// How a program run through umu ended.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Ran {
+    /// It never started.
+    NotStarted,
+    /// It started, then umu exited: cleanly when it exited by itself with status 0.
+    Exited { clean: bool },
 }
 
 /// Runs a game's umu `command` and tracks its session from the moment umu starts it. With
@@ -166,6 +188,11 @@ async fn play_command(
         }
     }
     let toast = Rc::new(toast);
+    let snapshot = match &program {
+        Program::Windows { managed_prefix, .. } => managed_prefix.clone(),
+        Program::Native { .. } => None,
+    }
+    .map(|prefix| (game.clone(), prefix));
     let started = {
         let (app, toast, title) = (app.clone(), toast.clone(), title.clone());
         move |umu: &gio::Subprocess| {
@@ -178,7 +205,7 @@ async fn play_command(
             toast(adw::Toast::new(&starting(&title, start)));
         }
     };
-    run(
+    let ran = run(
         app,
         window,
         &title,
@@ -188,6 +215,9 @@ async fn play_command(
         started,
     )
     .await;
+    if let (Ran::Exited { clean: true }, Some((game, prefix))) = (ran, snapshot) {
+        save_service::snapshot_after_exit(&game, prefix, move |message| toast(message));
+    }
     if let Some(log) = log {
         match gio::spawn_blocking(move || log.finish()).await {
             Ok(Ok(())) => {}
@@ -207,8 +237,11 @@ fn stopper(umu: gio::Subprocess, program: Program) -> impl Fn() {
     move || match &program {
         Program::Windows {
             end_prefix: Some(end_prefix),
+            ..
         } => end_prefix_then_umu(end_prefix, umu.clone()),
-        Program::Windows { end_prefix: None } => umu.send_signal(SIGTERM),
+        Program::Windows {
+            end_prefix: None, ..
+        } => umu.send_signal(SIGTERM),
         Program::Native { launch } => {
             umu.send_signal(SIGTERM);
             let launch = launch.clone();
@@ -305,7 +338,10 @@ pub async fn run_installer(
     })
     .await;
     match found {
-        Ok(Ok(command)) => run(app, window, &title, &command, None, &toast, |_| {}).await,
+        Ok(Ok(command)) => {
+            let ran = run(app, window, &title, &command, None, &toast, |_| {}).await;
+            ran != Ran::NotStarted
+        }
         Ok(Err(error)) => {
             toast(adw::Toast::new(&cannot_start_message(&title, &error)));
             false
@@ -398,8 +434,8 @@ fn explain_missing_umu(app: &gtk::Application, window: Option<&gtk::Window>, tit
 
 /// Runs a program through umu as our child and follows its log until umu exits, keeping
 /// umu's output in `log` when there is one. The Steam Linux Runtime setup shows in a
-/// dialog; `started` gets umu once it reports the program starting. Returns whether it
-/// started; when it did not, the dialog or a toast says so.
+/// dialog; `started` gets umu once it reports the program starting. Returns how it ended;
+/// when it did not start, the dialog or a toast says so.
 async fn run(
     app: &gtk::Application,
     window: Option<gtk::Window>,
@@ -408,7 +444,7 @@ async fn run(
     mut game_log: Option<&mut GameLog>,
     toast: &dyn Fn(adw::Toast),
     started: impl FnOnce(&gio::Subprocess),
-) -> bool {
+) -> Ran {
     let output = match game_log.as_deref().map(GameLog::output).transpose() {
         Ok(output) => output,
         Err(error) => {
@@ -421,7 +457,7 @@ async fn run(
         Err(error) => {
             glib::g_warning!("pindu", "Could not start {:?}: {error}", command.argv);
             toast(adw::Toast::new(&could_not_start(title)));
-            return false;
+            return Ran::NotStarted;
         }
     };
     let setup = Setup::new(app.clone(), window, title.to_owned(), child.clone());
@@ -453,18 +489,23 @@ async fn run(
             None => {}
         }
     }
-    if let Err(error) = child.wait_future().await {
+    let exited = child.wait_future().await;
+    if let Err(error) = &exited {
         glib::g_warning!("pindu", "Lost track of “{title}”: {error}");
     }
-    let ran = started.is_none();
-    if !ran && !setup.failed_offline() {
+    if started.is_none() {
+        return Ran::Exited {
+            clean: exited.is_ok() && child.is_successful(),
+        };
+    }
+    if !setup.failed_offline() {
         if setup.is_shown() {
             setup.show_failed();
         } else {
             toast(adw::Toast::new(&could_not_start(title)));
         }
     }
-    ran
+    Ran::NotStarted
 }
 
 /// Runs the command inside the sandbox, with its log piped to us, and its output written
