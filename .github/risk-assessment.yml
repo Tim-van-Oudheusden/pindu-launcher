@@ -6,7 +6,8 @@
 # `rules` is an ordered list of `<tier> <glob>` items, where tier is low, medium or high. A
 # changed path takes the tier of the FIRST rule whose glob matches it, so high-risk rules
 # come before the broad ones (AGENTS.md is high even though *.md is low; the MetaInfo is
-# high even though data/** is medium). `*` matches across `/`. A path matching no rule is
+# high even though data/** is medium; schema migrations and the backup format are high
+# even though crates/** is medium). `*` matches across `/`. A path matching no rule is
 # medium.
 #
 # The classifier reads a strict line subset of YAML: the `rules:` line, one
@@ -32,6 +33,10 @@ rules:
   - high .claude/*
   - high .cursor/*
   - high prompts/*
+  # stored data contracts in code: a released migration or backup format is read by every
+  # install that has it, so these are high even though crates/** is medium
+  - high crates/pindu-core/src/store/migrations/*
+  - high crates/pindu-core/src/backup.rs
   # medium: application code, UI, data files and translations
   - medium crates/*
   - medium data/*

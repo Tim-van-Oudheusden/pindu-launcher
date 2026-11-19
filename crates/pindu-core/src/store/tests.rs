@@ -138,6 +138,160 @@ fn games_survive_reopening_the_database() {
     assert_eq!(reopened.games().unwrap(), vec![game]);
 }
 
+/// Writes a database at schema version 1 holding one game.
+fn first_release_database(path: &Path) {
+    let conn = rusqlite::Connection::open(path).unwrap();
+    conn.execute_batch(include_str!("migrations/0001_initial.sql"))
+        .unwrap();
+    conn.pragma_update(None, "user_version", 1).unwrap();
+    conn.execute(
+        "INSERT INTO games (id, source, native_id, title, sort_title, added_at, launch_kind)
+         VALUES ('steam:570', 'steam', '570', 'Dota 2', 'Dota 2', 1, 'store-uri')",
+        [],
+    )
+    .unwrap();
+}
+
+/// The names of the files in `dir`, sorted.
+fn file_names(dir: &Path) -> Vec<String> {
+    let mut names: Vec<_> = std::fs::read_dir(dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .collect();
+    names.sort();
+    names
+}
+
+#[test]
+fn migrating_a_database_first_keeps_a_copy_at_its_old_version() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("library.db");
+    first_release_database(&path);
+
+    Store::open(&path).unwrap();
+
+    // Only the copy is left beside the database: no partial copy or journal of it.
+    let beside: Vec<_> = file_names(dir.path())
+        .into_iter()
+        .filter(|name| name != "library.db" && !name.starts_with("library.db-"))
+        .collect();
+    assert_eq!(beside, ["library.db.v1.bak"]);
+
+    let copy = rusqlite::Connection::open(dir.path().join("library.db.v1.bak")).unwrap();
+    let version: u32 = copy
+        .pragma_query_value(None, "user_version", |row| row.get(0))
+        .unwrap();
+    assert_eq!(version, 1);
+    let title: String = copy
+        .query_row(
+            "SELECT title FROM games WHERE id = 'steam:570'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(title, "Dota 2");
+    // Version 2 added the column; the copy still has the first release's schema.
+    assert!(
+        copy.prepare("SELECT steam_launch_dialog FROM games")
+            .is_err()
+    );
+}
+
+#[test]
+fn a_copy_includes_writes_still_in_the_write_ahead_log() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("library.db");
+    first_release_database(&path);
+    let conn = rusqlite::Connection::open(&path).unwrap();
+    conn.pragma_update(None, "journal_mode", "wal").unwrap();
+    conn.pragma_update(None, "wal_autocheckpoint", 0).unwrap();
+    conn.execute(
+        "INSERT INTO games (id, source, native_id, title, sort_title, added_at, launch_kind)
+         VALUES ('steam:730', 'steam', '730', 'Counter-Strike 2', 'Counter-Strike 2', 1, 'store-uri')",
+        [],
+    )
+    .unwrap();
+
+    // `conn` stays open, so its write is still only in the log.
+    Store::open(&path).unwrap();
+
+    let copy = rusqlite::Connection::open(dir.path().join("library.db.v1.bak")).unwrap();
+    let count: u32 = copy
+        .query_row("SELECT count(*) FROM games", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(count, 2);
+    drop(conn);
+}
+
+#[test]
+fn a_new_or_current_database_gets_no_copy() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("library.db");
+
+    Store::open(&path).unwrap();
+    Store::open(&path).unwrap();
+
+    assert!(
+        file_names(dir.path())
+            .iter()
+            .all(|name| !name.contains(".bak")),
+        "{:?}",
+        file_names(dir.path())
+    );
+}
+
+#[test]
+fn only_the_newest_two_copies_are_kept() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("library.db");
+    for old in [
+        "library.db.v1.bak",
+        "library.db.v2.bak",
+        "library.db.v3.bak",
+    ] {
+        std::fs::write(dir.path().join(old), "old copy").unwrap();
+    }
+    // Another database's copies in the same folder are not ours to remove.
+    std::fs::write(dir.path().join("other.db.v1.bak"), "other").unwrap();
+    first_release_database(&path);
+    let conn = rusqlite::Connection::open(&path).unwrap();
+    conn.pragma_update(None, "user_version", 4).unwrap();
+    drop(conn);
+
+    Store::open(&path).unwrap();
+
+    let copies: Vec<_> = file_names(dir.path())
+        .into_iter()
+        .filter(|name| name.ends_with(".bak"))
+        .collect();
+    assert_eq!(
+        copies,
+        ["library.db.v3.bak", "library.db.v4.bak", "other.db.v1.bak"]
+    );
+}
+
+#[test]
+fn a_failed_copy_stops_the_migration() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("library.db");
+    first_release_database(&path);
+    // A folder in the copy's place makes the copy fail.
+    std::fs::create_dir(dir.path().join("library.db.v1.bak")).unwrap();
+
+    let result = Store::open(&path);
+
+    assert!(
+        matches!(&result, Err(StoreError::Backup { path: copy, .. }) if copy.ends_with("library.db.v1.bak")),
+        "{:?}",
+        result.err()
+    );
+    let conn = rusqlite::Connection::open(&path).unwrap();
+    let version: u32 = conn
+        .pragma_query_value(None, "user_version", |row| row.get(0))
+        .unwrap();
+    assert_eq!(version, 1);
+}
+
 #[test]
 fn inserting_a_game_twice_fails() {
     let (_dir, store) = temp_store();

@@ -64,7 +64,8 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
 - **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
-  and import them again.
+  and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
+  beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 
 ## Game sources
 
@@ -78,7 +79,8 @@ widgets so it looks and behaves like the rest of GNOME.
 | Desktop entries and Flatpaks | Games installed as apps | On the host ([needs host access](#starting-games-on-the-host)) |
 | Added by hand | Native programs, and Windows games or installers | Native ones on the host; Windows ones with Proton in the sandbox |
 
-The importers read each launcher's data read-only and never its credentials.
+The importers read each launcher's data read-only and never its credentials. Preferences, Sources shows for each source
+the folder it was found in, when it last synced and the problems that sync ran into.
 
 ## Installing
 
@@ -582,6 +584,15 @@ so the fullscreen mode is a second presentation of the same library.
 | --- | --- |
 | [`docs/Adwaita Game Library — Main Spec.pdf`](docs/) | The product spec: scope, design and the issue plan |
 | [`docs/Research — *.pdf`](docs/) | Research behind the spec: Cartridges, Heroic, Faugus, OpenGamepadUI, Flatpak and Flathub, the GNOME platform |
+| [`docs/product-analysis.md`](docs/product-analysis.md) | The product and feature analysis behind milestones M6 to M9: workstreams, milestones and the decisions taken |
+| [`docs/game-identity.md`](docs/game-identity.md) | Game identity: grouping one game's copies across sources, with a preferred copy |
+| [`docs/library-health.md`](docs/library-health.md) | Library Health: one report on sources, launching, artwork and library data, and the first-run summary |
+| [`docs/diagnostics.md`](docs/diagnostics.md) | Diagnostics: the debugging report in About, the bug form and fullscreen mode |
+| [`docs/controller-parity.md`](docs/controller-parity.md) | Controller parity: what a console needs that only the desktop window can do today |
+| [`docs/shelves-and-metadata.md`](docs/shelves-and-metadata.md) | Shelves and metadata: saved filters, offline metadata, values with their origin, an online provider |
+| [`docs/launch-outcomes.md`](docs/launch-outcomes.md) | Launch outcomes and safe start: how each launch ended, failed-launch help, Start Safely |
+| [`docs/save-snapshots.md`](docs/save-snapshots.md) | Save snapshots of Windows games in managed prefixes, and restoring them |
+| [`docs/accessibility-polish.md`](docs/accessibility-polish.md) | Accessibility polish: text sizes, held buttons, high contrast, screen reader, navigation settings |
 | [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
 | [`docs/releasing.md`](docs/releasing.md) | How to cut a release: versions, notes, the tag and the Release workflow |
 | [`docs/ai-ops-runbook.md`](docs/ai-ops-runbook.md) | Watching, pausing and reverting agent work; CI and Release failures; the `main` ruleset |

@@ -4,7 +4,7 @@ GitHub Releases are the release channel. A `v*` tag runs `.github/workflows/rele
 Flatpak from `build-aux/flatpak/io.github.tim_van_oudheusden.pindu-launcher.yml`, a source tarball with the crates
 vendored (`meson dist`), and from that tarball an RPM for Fedora 45 and `.deb`s for Debian testing and Ubuntu 26.10.
 The bundle and the packages are built for x86_64 and aarch64, each natively on a GitHub runner of that architecture.
-It publishes them with checksums and notes. Nothing is uploaded by hand.
+It publishes them with checksums and notes, and signs build provenance for the RPMs. Nothing is uploaded by hand.
 
 ```mermaid
 flowchart LR
@@ -13,9 +13,10 @@ flowchart LR
   version --> sources[meson dist: vendor crates, build and test offline]
   sources --> packages[RPM and DEBs, built offline]
   packages --> smoke[install in clean containers, UI smoke test, cover decoded through glycin]
+  smoke --> provenance[RPM build provenance, signed through Sigstore]
   flatpak --> publish[GitHub release: bundle, tarball, packages, SHA256SUMS, notes]
   sources --> publish
-  smoke --> publish
+  provenance --> publish
 ```
 
 ## Cut a release
@@ -47,10 +48,10 @@ flowchart LR
    architecture, `pindu-launcher-X.Y.Z-<x86_64|aarch64>.flatpak`, `pindu-launcher-X.Y.Z-1.fc45.<x86_64|aarch64>.rpm`,
    `pindu-launcher-X.Y.Z-debian-testing-<amd64|arm64>.deb` and `pindu-launcher-X.Y.Z-ubuntu-26.10-<amd64|arm64>.deb`,
    plus `pindu-launcher-X.Y.Z.tar.xz` and `SHA256SUMS`. Install the bundle (the notes say how), start it, and check
-   that it opens and imports a library.
+   that it opens and imports a library. Check an RPM's [build provenance](#verify-an-rpms-build-provenance).
 9. **Run the [hardware checklist](#hardware-checklist)** on the release's files, on one real machine, and record the
    result on the "Release X.Y.Z" issue. Run it on a pre-release, then tag the final version, so a failed check never
-   reaches a final release.
+   reaches a final release; a [fast final release](#fast-final-release) runs it on the final's files instead.
 
 The native packages target the distros that ship GTK 4.24 and libadwaita 1.10 (#232). When a new Fedora, Debian or
 Ubuntu release qualifies, add it to the `packages` and `packages-smoke` matrices in `packaging.yml` and `release.yml`
@@ -85,11 +86,39 @@ reaches its users before the soak ends.
    merge commit `vX.Y.Z`. The final must ship the code that soaked: if anything but that version bump has landed on
    `main` since the pre-release, cut another pre-release instead and soak that.
 
+## Fast final release
+
+The maintainer may cut a final release straight away, without the pre-release and soak above, when waiting buys
+little: a small patch, or fixes the maintainer has already run from a development build of `main`. Only the maintainer
+makes that call, and the "Release X.Y.Z" issue says so in its **Notes**, with what the release ships. 0.5.1 went out
+this way (#497): no `rc` tag, only `v0.5.1`. 0.5.0 (#417) soaked as `rc.1` to `rc.4`, then the maintainer waived the
+extra pre-release that step 4 above asks for when more than the version bump has landed since the last one.
+
+A fast release may skip:
+
+- **The pre-release**: no `vX.Y.Z-rc.N` tag; steps 1 to 8 of [Cut a release](#cut-a-release) run once, for `X.Y.Z`.
+- **The soak**: the days on real machines before the final tag, and so the rule that the final ships exactly the code
+  that soaked.
+
+It never skips:
+
+- **The hardware checklist and its recorded pass.** It runs on the final release's own files instead, and the
+  maintainer adds `hardware-check:passed` to the issue only when every check passes on them. Pindu OS follows final
+  releases but promotes a launcher from `:testing` to `:stable` only on that label, so until it is added, `:stable`
+  keeps the previous launcher. A failed check leaves the label off and the fix ships as a new patch version, whose
+  checklist runs again; the broken version never reaches `:stable`.
+- **The release pull request and the tag**: the version bump, the MetaInfo notes, the refreshed translation template
+  and `meson test`'s `versions` check land through a pull request, and a `vX.Y.Z` tag on its merge commit publishes.
+- **The Release workflow**: the version check, the Flatpak build with `meson test` and `flatpak-builder-lint`, the
+  offline builds from the source tarball, and the install and UI smoke tests in clean containers. Nothing is
+  published unless all of them pass, and nothing is uploaded by hand.
+- **The [distribution recipes](#distribution-recipes)**, bumped after the final is published, as for any final.
+
 ## Distribution recipes
 
 COPR, the AUR and nixpkgs build the release tarball, `pindu-launcher-X.Y.Z.tar.xz`, whose crates are vendored, so
 each builds offline (#382). They follow final releases only, as Pindu OS does: a `vX.Y.Z-rc.N` pre-release is never
-built or bumped there, so their users only get a version once its soak has passed. The tarball's checksum exists only
+built or bumped there, so their users only get a version once it is final. The tarball's checksum exists only
 once the final release is published, so the AUR and nixpkgs recipes are bumped after step 8 of the final release,
 through a pull request of their own; `meson test`'s `versions` check leaves them out. Take the checksum from the
 release's `SHA256SUMS`.
@@ -110,6 +139,25 @@ release's `SHA256SUMS`.
   vendored crates. Try it in a `nixos/nix` container with
   `nix-build -E 'with import <nixpkgs> { }; callPackage ./build-aux/nix/package.nix { }'`.
 
+## Verify an RPM's build provenance
+
+The Release workflow's `provenance` job signs a [build provenance
+attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations) for each RPM
+with `actions/attest-build-provenance`, before the release is published. It records which workflow run built the file,
+from which commit, and is signed through Sigstore with the run's identity, so no one can forge it without this
+repository's workflow. Pindu OS asks for it, so it can check a release RPM before it installs one. Check one with the
+GitHub CLI:
+
+```sh
+gh release download vX.Y.Z -R Tim-van-Oudheusden/pindu-launcher -p 'pindu-launcher-*.fc45.x86_64.rpm'
+gh attestation verify pindu-launcher-X.Y.Z-1.fc45.x86_64.rpm -R Tim-van-Oudheusden/pindu-launcher \
+  --signer-workflow Tim-van-Oudheusden/pindu-launcher/.github/workflows/release.yml
+```
+
+It prints `Verification succeeded!` and the workflow run that built the file; a changed file, or one built anywhere
+else, fails. A rerun of the workflow by hand signs the rebuilt files again; that attestation names the branch the run
+was started from as its source, and the tag is the run's input.
+
 ## When something goes wrong
 
 - **The version check fails:** the tag does not match the tree. Delete the tag (`git push origin :vX.Y.Z` and
@@ -124,9 +172,9 @@ release's `SHA256SUMS`.
 ## Hardware checklist
 
 Fullscreen mode's system panel, controllers, gamescope and Proton only fail on real hardware, so every release runs
-this checklist once, by hand, on one real machine. Run it on the pre-release before the final tag; Pindu OS waits for a
-recorded pass before it promotes the new launcher from `:testing` to `:stable`
-([pindu-os#30](https://github.com/Tim-van-Oudheusden/pindu-os/issues/30)).
+this checklist once, by hand, on one real machine. Run it on the pre-release before the final tag, or on the final's
+files for a [fast final release](#fast-final-release); Pindu OS waits for a recorded pass before it promotes the new
+launcher from `:testing` to `:stable` ([pindu-os#30](https://github.com/Tim-van-Oudheusden/pindu-os/issues/30)).
 
 **The machine** runs Pindu OS with the build under test installed, because the system panel's Network, Bluetooth,
 Power and System Update sections only show there (see [System panel](system-panel.md)). It needs a Bluetooth adapter,

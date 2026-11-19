@@ -20,6 +20,8 @@ hand-off notes (`session-summary.md`).
 - `docs/Adwaita Game Library — Main Spec.pdf` is the product spec; `docs/Research — *.pdf` hold the evidence behind it.
   Read them with `pdftotext -layout`. Read the spec section an issue links to before you start it.
 - GitHub issues #1–#63 match the spec's issue tables, so `#N` in the spec is issue `#N` here.
+- `docs/spec-amendments.md` records what has changed since the PDF was exported: the revised non-goals, emulation's
+  status and the backlog mapped to issues. Read it with the spec; where they disagree, the amendments win.
 - If an issue and the spec disagree, the issue wins; say so in the PR.
 - The spec plans a Flathub release in M5. Since #226 M5 is the first GitHub release and Flathub is Nice to have; the
   milestone descriptions on GitHub hold the current gates.
@@ -48,7 +50,9 @@ gh pr create --title "type(scope): summary (#<number>)" --body-file <file>   # L
 
 - Titles are imperative ("Import Steam libraries"); every issue has one milestone.
 - GitHub milestones are the epics: M1 Library MVP, M2 Everyday library, M3 Windows games, M4 Fullscreen mode, M5
-  Release. Each description holds a gate that must pass before the next milestone starts.
+  Release, then M6 One library, M7 Launch confidence, M8 Resilience and M9 Breadth (the roadmap in
+  `docs/product-analysis.md`, section 9), plus Nice to have, which has no gate. Each other description holds a gate
+  that must pass before the next milestone starts.
 - Bodies have: context with a link to the spec section, scope, acceptance criteria as a checklist, out of scope, and a
   research link, plus depends-on when there is one.
 - Labels: `area:core`, `area:import`, `area:ui`, `area:launch`, `area:art`, `area:gamepad`, `area:packaging`;
@@ -189,10 +193,11 @@ The workspace enforces the Rust for Linux lint set (`[workspace.lints]` in `Carg
   their own PR
 - **Approved CI tools** (not crates; the maintainer's call like dependencies): cargo-llvm-cov 0.9.1, cargo-deny
   0.20.2, cargo-audit 0.22.2, actionlint 1.7.12, `anthropics/claude-code-action@v1`, `yq` 4 as preinstalled on
-  GitHub's Ubuntu runners (used, not installed, by the permissions policy check and the merge queue tests), and
+  GitHub's Ubuntu runners (used, not installed, by the permissions policy check and the merge queue tests),
   python-dbusmock 0.38.1 with the dbus-python 1.5.1 it needs (approved 2026-11-17; installed with pip in CI's Rust
-  and Meson checks for the system panel's tests in `crates/pindu-ui/tests/system_panel`, which skip without it). Any
-  other tool needs approval first
+  and Meson checks for the system panel's tests in `crates/pindu-ui/tests/system_panel`, which skip without it), and
+  `actions/attest-build-provenance` v4.2.2, pinned by its commit SHA (approved 2026-11-19, #553; the release
+  workflow's build provenance for the RPMs). Any other tool needs approval first
 - **`deny.toml` is the dependency policy**: CI's `Dependency policy (cargo-deny)` job fails a crate whose licence it
   does not allow, a source other than crates.io, or a RustSec advisory. Accepting an advisory or a licence is the
   maintainer's call, recorded in `deny.toml` with the reason

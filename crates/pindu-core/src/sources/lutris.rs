@@ -2,8 +2,9 @@
 //!
 //! The database is copied to a temporary file and the copy is queried, so a running
 //! Lutris never sees our reads or locks. Covers come from `coverart/<slug>.jpg` and icons
-//! from the `lutris_<slug>.png` Lutris installs next to its data folder. Nothing is
-//! written.
+//! from the `lutris_<slug>.png` Lutris installs next to its data folder. Each game also
+//! carries the store record Lutris links it to (`service`, `service_id`), its runner and
+//! its year, for matching copies of one game across sources. Nothing is written.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -11,7 +12,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use rusqlite::{Connection, OpenFlags};
 
-use super::{ImportError, ImportedGame, Snapshot};
+use super::{ImportError, ImportedGame, ServiceRef, Snapshot};
 use crate::model::{ArtLayout, LaunchKind, Platform, Source};
 
 /// Lutris's category for hidden games.
@@ -46,7 +47,8 @@ fn read(db: &Connection, root: &Path) -> rusqlite::Result<Snapshot> {
 
     let mut snapshot = Snapshot::new(Source::Lutris);
     let mut statement = db.prepare(
-        "SELECT id, name, slug, platform, directory, lastplayed, installed, playtime
+        "SELECT id, name, slug, platform, directory, lastplayed, installed, playtime,
+         service, service_id, runner, year
          FROM games ORDER BY id",
     )?;
     let mut rows = statement.query([])?;
@@ -80,6 +82,16 @@ fn read(db: &Connection, root: &Path) -> rusqlite::Result<Snapshot> {
             .get::<_, Option<f64>>("playtime")?
             .map(|hours| (hours * 3600.0).round() as i64)
             .filter(|secs| *secs > 0);
+        game.service = match (text(row, "service")?, text(row, "service_id")?) {
+            (Some(service), Some(service_id)) => Some(ServiceRef {
+                service,
+                service_id,
+            }),
+            _ => None,
+        };
+        game.runner = text(row, "runner")?;
+        // Lutris writes 0 or nothing when it does not know the year.
+        game.year = row.get::<_, Option<i32>>("year")?.filter(|year| *year > 0);
         if let Some(slug) = row.get::<_, Option<String>>("slug")? {
             game.artwork = artwork(root, &slug);
         }
@@ -95,6 +107,13 @@ fn read(db: &Connection, root: &Path) -> rusqlite::Result<Snapshot> {
         snapshot.games.push(game);
     }
     Ok(snapshot)
+}
+
+/// A text column, treating an empty string, which Lutris writes for "none", as missing.
+fn text(row: &rusqlite::Row<'_>, column: &str) -> rusqlite::Result<Option<String>> {
+    Ok(row
+        .get::<_, Option<String>>(column)?
+        .filter(|value| !value.is_empty()))
 }
 
 fn artwork(root: &Path, slug: &str) -> Vec<(ArtLayout, PathBuf)> {
