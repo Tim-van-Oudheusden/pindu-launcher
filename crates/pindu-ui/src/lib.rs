@@ -43,6 +43,7 @@ pub mod gamescope_service;
 pub mod health_page;
 pub mod health_service;
 pub mod hint_bar;
+pub mod hold_progress;
 pub mod home_page;
 pub mod host_logind_backend;
 pub mod launch_service;
