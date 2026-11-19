@@ -1,6 +1,7 @@
-//! Fullscreen mode's game page: its presentation, the starting screen over the page while
-//! Play starts the game, and the return to the page, with focus on Play or Stop, once the
-//! game ends or the window has focus again. What the screen shows and when to return is
+//! Fullscreen mode's game page: its presentation, a controller scrolling through its
+//! description, the starting screen over the page while Play starts the game, and the
+//! return to the page, with focus on Play or Stop, once the game ends or the window has
+//! focus again. What the screen shows and when to return is
 //! `pindu_core::launch_overlay`; this feeds it the window's focus (or in a `--steam`
 //! gamescope, who gamescope shows and the store launch), dialogs, the game's Playing state,
 //! the launch's report (its toast) and Cancel, and does what it says.
@@ -9,6 +10,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use pindu_core::gamepad::Direction;
 use pindu_core::gamescope::{self, Front};
 use pindu_core::hints::Launching;
 use pindu_core::launch_overlay::{CANCEL_AFTER, Effect, Event, Launch, LaunchOverlay};
@@ -138,6 +140,16 @@ impl PinduWindow {
             .navigation_view
             .visible_page()
             .and_downcast::<GamePage>()
+    }
+
+    /// Up or Down while the shown game page's description has focus, in fullscreen mode:
+    /// scrolls through it rather than move focus, while more of it lies that way; says
+    /// whether it did.
+    pub(crate) fn scroll_description(&self, direction: Direction) -> bool {
+        self.is_fullscreen()
+            && self
+                .visible_game_page()
+                .is_some_and(|page| page.scroll_description(direction))
     }
 
     fn follow_launch(&self, event: Event) {
