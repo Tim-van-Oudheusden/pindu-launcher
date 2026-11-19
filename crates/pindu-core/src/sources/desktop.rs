@@ -27,6 +27,8 @@ const KNOWN_LAUNCHERS: &[&str] = &[
     "com.usebottles.bottles",
     "faugus-launcher",
     "io.github.Faugus.faugus-launcher",
+    "itch",
+    "io.itch.itch",
     "pindu-launcher",
     "io.github.tim_van_oudheusden.pindu-launcher",
 ];

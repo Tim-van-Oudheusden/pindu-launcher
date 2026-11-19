@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 19:43+0100\n"
+"POT-Creation-Date: 2026-11-19 19:45+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1463,7 +1463,7 @@ msgid "Launcher"
 msgstr ""
 
 #. Translators: when a source last synced; it never has.
-#: crates/pindu-ui/src/game_page.rs:698 crates/pindu-ui/src/sources.rs:56
+#: crates/pindu-ui/src/game_page.rs:698 crates/pindu-ui/src/sources.rs:57
 #: crates/pindu-ui/src/widgets/game_list_cell.rs:187
 msgid "Never"
 msgstr ""
@@ -1580,7 +1580,7 @@ msgid "None installed; umu downloads one the first time a game needs it"
 msgstr ""
 
 #. Translators: the separator between the first items of a list.
-#: crates/pindu-ui/src/health_page.rs:195 crates/pindu-ui/src/sources.rs:33
+#: crates/pindu-ui/src/health_page.rs:195 crates/pindu-ui/src/sources.rs:34
 msgid ", "
 msgstr ""
 
@@ -1847,62 +1847,62 @@ msgstr ""
 msgid "Steam Big Picture"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:141
+#: crates/pindu-ui/src/launch_service.rs:142
 #: crates/pindu-ui/src/proton_launch.rs:504
 #, rust-format
 msgid "Could not start “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:160
+#: crates/pindu-ui/src/launch_service.rs:161
 msgid "This game cannot be started yet"
-msgstr ""
-
-#: crates/pindu-ui/src/launch_service.rs:170
-#, rust-format
-msgid "Starting “{title}” safely"
 msgstr ""
 
 #: crates/pindu-ui/src/launch_service.rs:171
 #, rust-format
+msgid "Starting “{title}” safely"
+msgstr ""
+
+#: crates/pindu-ui/src/launch_service.rs:172
+#, rust-format
 msgid "Starting “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:257
+#: crates/pindu-ui/src/launch_service.rs:258
 #, rust-format
 msgid "Starting “{title}” in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:261
-#: crates/pindu-ui/src/launch_service.rs:336
-#: crates/pindu-ui/src/launch_service.rs:397
+#: crates/pindu-ui/src/launch_service.rs:262
+#: crates/pindu-ui/src/launch_service.rs:337
+#: crates/pindu-ui/src/launch_service.rs:398
 #, rust-format
 msgid "Could not open {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:291
+#: crates/pindu-ui/src/launch_service.rs:292
 #: crates/pindu-ui/src/proton_launch.rs:374
 #: crates/pindu-ui/src/proton_launch.rs:603 crates/pindu-ui/src/window.rs:1396
 msgid "_Close"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:292
+#: crates/pindu-ui/src/launch_service.rs:293
 msgid "_How to Enable"
 msgstr ""
 
 #. / The heading of the explanation that a game needs a permission.
 
-#: crates/pindu-ui/src/launch_service.rs:306
+#: crates/pindu-ui/src/launch_service.rs:307
 msgid "Permission Needed"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:312
+#: crates/pindu-ui/src/launch_service.rs:313
 #, rust-format
 msgid ""
 "“{title}” starts on this computer, outside the sandbox. Allow that in "
 "Preferences, then restart Pindu launcher."
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:356
+#: crates/pindu-ui/src/launch_service.rs:357
 msgid "Could not open the web page"
 msgstr ""
 
@@ -2348,40 +2348,40 @@ msgstr ""
 msgid "Heroic: Sideloaded"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:19
+#: crates/pindu-ui/src/sources.rs:20
 msgid "Desktop"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:20
+#: crates/pindu-ui/src/sources.rs:21
 msgid "Added by Hand"
 msgstr ""
 
 #. Translators: a list's first items and its last, as in "Steam, Lutris and Bottles".
-#: crates/pindu-ui/src/sources.rs:35
+#: crates/pindu-ui/src/sources.rs:36
 #, rust-format
 msgid "{items} and {last}"
 msgstr ""
 
 #. Translators: when a source last synced; under a minute ago.
-#: crates/pindu-ui/src/sources.rs:58
+#: crates/pindu-ui/src/sources.rs:59
 msgid "Just now"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:59
+#: crates/pindu-ui/src/sources.rs:60
 #, rust-format
 msgid "{count} minute ago"
 msgid_plural "{count} minutes ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/sources.rs:60
+#: crates/pindu-ui/src/sources.rs:61
 #, rust-format
 msgid "{count} hour ago"
 msgid_plural "{count} hours ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/sources.rs:61
+#: crates/pindu-ui/src/sources.rs:62
 #, rust-format
 msgid "{count} day ago"
 msgid_plural "{count} days ago"
@@ -2878,7 +2878,7 @@ msgid "Heroic: Epic Games, GOG, Amazon and sideloaded games"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:19
-msgid "Lutris, Bottles, Faugus and Legendary"
+msgid "Lutris, Bottles, Faugus, Legendary and itch"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:20

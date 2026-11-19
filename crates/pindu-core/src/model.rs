@@ -86,6 +86,8 @@ string_enum! {
         Faugus => "faugus",
         /// The standalone Legendary command-line client for the Epic Games Store.
         Legendary => "legendary",
+        /// The itch app.
+        Itch => "itch",
         /// A desktop entry.
         Desktop => "desktop",
         /// A game the user added in Pindu.
