@@ -45,6 +45,7 @@ its own focus, so a game, in a gamescope session or on a desktop, receives the c
 | #543 Check the fullscreen designs under high contrast and reduced transparency | Spike: what breaks, per design, and an issue per defect | |
 | #544 Review the desktop window with a screen reader | Spike: what breaks, per page, and an issue per defect | |
 | #545 Add navigation repeat and dead-zone settings | Repeat delay and rate, stick dead zone, for navigation only | |
+| #625 Name the selection check boxes and expose a tile's selected state | Selection mode's check boxes are named "Select {game}", and selected tiles and rows report themselves selected | #544 |
 | #626 Label the collection name entry in the New and Rename Collection dialogs | The name entry is named "Name" for screen readers, not only by its placeholder | #544 |
 | #627 Name each Play button after its game | Play and Stop on tiles and Jump Back In cards are named "Play {game}" for screen readers | #544 |
 

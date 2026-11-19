@@ -206,6 +206,10 @@ impl CoverTile {
         let source = entry.game.source();
         imp.title.set_text(Some(&entry.game.title));
         imp.cover.set_alternative_text(&entry.game.title);
+        imp.selected_check
+            .update_property(&[gtk::accessible::Property::Label(&select_name(
+                &entry.game.title,
+            ))]);
         imp.source_badge.set_icon_name(Some(source_icon(source)));
         imp.source_badge
             .set_tooltip_text(Some(&source_name(source)));
@@ -347,6 +351,11 @@ pub(crate) fn game_state(game: &GameObject) -> GameState {
         permission_service::needs_permission(&game),
         game.installed,
     )
+}
+
+/// What a screen reader says for selection mode's check of a game.
+pub(crate) fn select_name(title: &str) -> String {
+    gettext("Select {title}").replace("{title}", title)
 }
 
 /// The words for a game's state.

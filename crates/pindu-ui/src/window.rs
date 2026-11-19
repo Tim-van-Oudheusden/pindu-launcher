@@ -35,7 +35,7 @@ use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
 use crate::log_service;
 use crate::menu_drawer::PinduMenuDrawer;
-use crate::models::{GameObject, LibraryModel, LibrarySelection};
+use crate::models::{GameObject, LibraryModel, LibrarySelection, LibrarySelectionModel};
 use crate::quick_access::PinduQuickAccess;
 use crate::save_snapshots_dialog::SaveSnapshotsDialog;
 use crate::sources::{source_icon, source_name};
@@ -1142,8 +1142,12 @@ impl PinduWindow {
 
     /// The cover grid; tiles follow the `tile-size` and `show-titles` settings.
     fn setup_grid(&self) {
-        let grid = &self.imp().grid;
-        grid.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
+        let imp = self.imp();
+        let grid = &imp.grid;
+        grid.set_model(Some(&LibrarySelectionModel::new(
+            &self.library().model(),
+            &imp.selection,
+        )));
         self.update_tile_factory();
         if let Some(width) = grid.hadjustment() {
             // The page size changes while the grid allocates its size, when a new column
@@ -1265,7 +1269,10 @@ impl PinduWindow {
     fn setup_list(&self) {
         let imp = self.imp();
         let list = &imp.game_list;
-        list.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
+        list.set_model(Some(&LibrarySelectionModel::new(
+            &self.library().model(),
+            &imp.selection,
+        )));
         let selection = imp.selection.clone();
         let columns = list.columns();
         let kinds = [
