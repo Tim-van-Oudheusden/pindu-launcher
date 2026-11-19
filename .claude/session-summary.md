@@ -14,3 +14,5 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   Blue Station after restart, and back to Red Ribbons via a virtual controller. The private D-Bus session and
   `XDG_RUNTIME_DIR` kept the smoke run separate from the desktop.
 - Updated PR #662 with the three supplied 60 fps Red Ribbons WebMs, byte-for-byte. Blue Station is unchanged.
+- Fixed the Background focus trap by registering the list with the existing arrow-key handoff. Fixed the
+  first-frame freeze after switching by replacing the GTK media stream rather than reassigning its file.

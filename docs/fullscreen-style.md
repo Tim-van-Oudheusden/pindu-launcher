@@ -197,9 +197,10 @@ B goes back to the first. Both screens use the same widgets and layout options, 
 class styles both.
 
 Choose **Quick Access → Design → Background** to switch between **Red Ribbons** (the default) and
-**Blue Station**. The choice applies as soon as you select it, is saved across restarts, and is
-independent of the fullscreen design. Both animations ship at 720p, 1080p and 1440p, with Red Ribbons
-at 60 fps. Home uses the smallest video that fills the display, or the largest if none does.
+**Blue Station**. Use Up and Down to move between Background and the other Design settings. The choice
+applies immediately, is saved across restarts, and is independent of the fullscreen design. Both
+animations ship at 720p, 1080p and 1440p, with Red Ribbons at 60 fps. Home uses the smallest video that
+fills the display, or the largest if none does.
 
 The background plays muted and looped behind the first screen. It pauses on the second screen, while a
 game we started runs and while the window is hidden, and holds its first frame outside fullscreen mode and

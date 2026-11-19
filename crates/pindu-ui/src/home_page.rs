@@ -408,10 +408,15 @@ impl HomePage {
         if imp.background_choice.replace(choice) == choice {
             return;
         }
-        let media = imp.background_media.borrow().clone();
-        // If the first map has not opened a file yet, it will open the new choice.
-        if let Some(media) = media.filter(|media| media.file().is_some()) {
-            self.open_background(&media);
+        let opened = imp
+            .background_media
+            .borrow()
+            .as_ref()
+            .is_some_and(|media| media.file().is_some());
+        // A pending first map will open the latest choice. For an opened video, use a
+        // fresh stream: reassigning the file can leave GTK stuck on the new first frame.
+        if opened {
+            self.load_background();
             self.show_background_playback();
         }
     }
@@ -462,8 +467,10 @@ impl HomePage {
             move |_| page.show_background_playback()
         ));
         let imp = self.imp();
+        if let Some(previous) = imp.background_media.replace(Some(media.clone())) {
+            previous.pause();
+        }
         imp.background.set_paintable(Some(&media));
-        imp.background_media.replace(Some(media.clone()));
         if self.is_mapped() {
             self.open_background(&media);
         } else {

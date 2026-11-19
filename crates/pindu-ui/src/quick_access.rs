@@ -119,6 +119,8 @@ mod imp {
         #[template_child]
         pub variants: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub backgrounds: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub blur: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub dim: TemplateChild<gtk::ListBox>,
@@ -852,6 +854,7 @@ impl PinduQuickAccess {
         for list in [
             imp.designs.get(),
             imp.variants.get(),
+            imp.backgrounds.get(),
             imp.blur.get(),
             imp.dim.get(),
             imp.custom_style.get(),
