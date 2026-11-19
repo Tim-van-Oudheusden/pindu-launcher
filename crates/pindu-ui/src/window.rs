@@ -1342,8 +1342,9 @@ const SORT_MODES: [(SortMode, &str); 5] = [
 ];
 
 /// A landscape card for "Jump back in": the game's banner (or cover), cropped to fill the
-/// card, with its title, `width`×`height` pixels.
-pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::Button {
+/// card, with its title, `width`×`height` pixels, and a Play button (Stop while the game
+/// runs) over it on hover and keyboard focus, as on the cover tiles.
+pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::Overlay {
     let (art, icon) = {
         let entry = game.entry();
         let art = entry.art.hero.clone().or_else(|| entry.art.cover.clone());
@@ -1359,7 +1360,36 @@ pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::
         ((width * scale) as u32, (height * scale) as u32),
         |_| {},
     );
-    card
+    // A sibling of the card rather than inside it: a button within a button would
+    // also open the game page.
+    let play = gtk::Button::builder()
+        .halign(gtk::Align::Center)
+        .valign(gtk::Align::Center)
+        .can_focus(false)
+        .action_target(&game.id().as_str().to_variant())
+        .css_classes(["play-button", "pill", "suggested-action"])
+        .build();
+    // The bindings go with the button, so a rebuilt row leaves nothing on the game.
+    game.bind_property("playing", &play, "label")
+        .transform_to(|_, playing: bool| {
+            Some(if playing {
+                gettext("Stop")
+            } else {
+                gettext("Play")
+            })
+        })
+        .sync_create()
+        .build();
+    game.bind_property("playing", &play, "action-name")
+        .transform_to(|_, playing: bool| Some(if playing { "app.stop" } else { "app.play" }))
+        .sync_create()
+        .build();
+    let tile = gtk::Overlay::builder()
+        .child(&card)
+        .css_classes(["jump-tile"])
+        .build();
+    tile.add_overlay(&play);
+    tile
 }
 
 /// A card for "Jump back in" and fullscreen Home, `width`×`height` pixels, with the game's
