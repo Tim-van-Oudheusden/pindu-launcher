@@ -1,17 +1,17 @@
 //! A game's metadata kept by origin.
 //!
-//! Developer, genres and description can each come from the game's source, an online
-//! provider or the user. The store keeps every origin's value with when it was set, and a
-//! sync writes only the source's; what a game shows is [`resolve`]d from them, the user's
-//! value first, then a provider's, then the source's. The user's values are written by
-//! [`edit_by_user`] from what they type over the details a game shows.
+//! Developer, genres, description and Steam Deck rating can each come from the game's
+//! source, an online provider or the user. The store keeps every origin's value with when
+//! it was set, and a sync writes only the source's; what a game shows is [`resolve`]d from
+//! them, the user's value first, then a provider's, then the source's. The user's values
+//! are written by [`edit_by_user`] from what they type over the details a game shows.
 
 use crate::game_groups;
-use crate::model::{Game, GameId, MetadataField, MetadataOrigin, Timestamp};
+use crate::model::{DeckCompatibility, Game, GameId, MetadataField, MetadataOrigin, Timestamp};
 use crate::store::{self, Store};
 
-/// A game's developer, genres and description: the values one origin gives, or, resolved,
-/// the ones the game shows. An empty field has no value.
+/// A game's developer, genres, description and Steam Deck rating: the values one origin
+/// gives, or, resolved, the ones the game shows. An empty field has no value.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Metadata {
     /// Who made the game.
@@ -20,6 +20,8 @@ pub struct Metadata {
     pub genres: Vec<String>,
     /// A description of the game.
     pub description: Option<String>,
+    /// Steam's Steam Deck rating.
+    pub deck_compatibility: Option<DeckCompatibility>,
 }
 
 impl Metadata {
@@ -29,6 +31,7 @@ impl Metadata {
             developer: game.developer.clone(),
             genres: game.genres.clone(),
             description: game.description.clone(),
+            deck_compatibility: game.deck_compatibility,
         }
     }
 
@@ -37,6 +40,7 @@ impl Metadata {
         game.developer = self.developer;
         game.genres = self.genres;
         game.description = self.description;
+        game.deck_compatibility = self.deck_compatibility;
     }
 
     /// The details as the user typed them: each trimmed, an empty one without a value,
@@ -53,6 +57,7 @@ impl Metadata {
             developer: text(developer),
             genres: split,
             description: text(description),
+            ..Self::default()
         }
     }
 
@@ -64,6 +69,7 @@ impl Metadata {
             values.push(FieldValue::Genres(self.genres.clone()));
         }
         values.extend(self.description.clone().map(FieldValue::Description));
+        values.extend(self.deck_compatibility.map(FieldValue::DeckCompatibility));
         values
     }
 
@@ -79,6 +85,7 @@ impl Metadata {
             FieldValue::Developer(developer) => self.developer = Some(developer),
             FieldValue::Genres(genres) => self.genres = genres,
             FieldValue::Description(description) => self.description = Some(description),
+            FieldValue::DeckCompatibility(deck) => self.deck_compatibility = Some(deck),
         }
     }
 }
@@ -92,6 +99,8 @@ pub enum FieldValue {
     Genres(Vec<String>),
     /// A description of the game.
     Description(String),
+    /// Steam's Steam Deck rating.
+    DeckCompatibility(DeckCompatibility),
 }
 
 impl FieldValue {
@@ -101,8 +110,27 @@ impl FieldValue {
             Self::Developer(_) => MetadataField::Developer,
             Self::Genres(_) => MetadataField::Genres,
             Self::Description(_) => MetadataField::Description,
+            Self::DeckCompatibility(_) => MetadataField::DeckCompatibility,
         }
     }
+}
+
+/// A Steam Deck rating as the store and backups keep it:
+/// `{"rating": "verified", "tested_at": 1700000000}`.
+pub(crate) fn deck_json(deck: &DeckCompatibility) -> serde_json::Value {
+    serde_json::json!({
+        "rating": deck.rating.as_str(),
+        "tested_at": deck.tested_at,
+    })
+}
+
+/// A Steam Deck rating from [`deck_json`]'s form; `None` when it names no rating this
+/// version knows.
+pub(crate) fn deck_from_json(json: &serde_json::Value) -> Option<DeckCompatibility> {
+    Some(DeckCompatibility {
+        rating: json["rating"].as_str()?.parse().ok()?,
+        tested_at: json["tested_at"].as_i64(),
+    })
 }
 
 /// A stored value: one field of a game from one origin, and when that origin set it.
@@ -137,10 +165,11 @@ pub fn resolve(values: &[MetadataValue]) -> Metadata {
 }
 
 /// Saves what the user wrote over the details `game` showed (`shown`) as the user's
-/// values, for every copy of its group. A field left as shown keeps each copy's own user
-/// value, if any; a field left empty drops the user's value, so the game falls back to a
-/// provider's, then the source's; and a value the game would fall back to anyway is not
-/// kept as the user's, so a sync that changes it still shows.
+/// values, for every copy of its group. A field left as shown, such as one the user cannot
+/// edit there, keeps each copy's own user value, if any; a field cleared drops the user's
+/// value, so the game falls back to a provider's, then the source's; and a value the game
+/// would fall back to anyway is not kept as the user's, so a sync that changes it still
+/// shows.
 pub fn edit_by_user(
     store: &Store,
     game: &GameId,
@@ -168,10 +197,13 @@ fn user_values(values: &[MetadataValue], shown: &Metadata, edited: &Metadata) ->
     let (user, fallback) = (resolve(&user), resolve(&others));
     let mut kept = Metadata::default();
     for &field in MetadataField::ALL {
-        let value = match edited.value(field) {
-            Some(value) if Some(&value) == shown.value(field).as_ref() => user.value(field),
-            Some(value) if Some(&value) == fallback.value(field).as_ref() => None,
-            value => value,
+        let edited = edited.value(field);
+        let value = if edited == shown.value(field) {
+            user.value(field)
+        } else if edited == fallback.value(field) {
+            None
+        } else {
+            edited
         };
         if let Some(value) = value {
             kept.set(value);
@@ -218,6 +250,11 @@ mod tests {
             MetadataField::Developer => FieldValue::Developer(text),
             MetadataField::Genres => FieldValue::Genres(vec![text]),
             MetadataField::Description => FieldValue::Description(text),
+            // The text's bytes summed tell the values apart well enough.
+            MetadataField::DeckCompatibility => FieldValue::DeckCompatibility(DeckCompatibility {
+                rating: crate::model::DeckRating::Verified,
+                tested_at: Some(text.bytes().map(Timestamp::from).sum()),
+            }),
         }
     }
 
@@ -317,6 +354,7 @@ mod tests {
             developer: Some("Valve".into()),
             genres: Vec::new(),
             description: None,
+            deck_compatibility: None,
         };
 
         assert_eq!(
@@ -333,6 +371,7 @@ mod tests {
                 developer: Some("Valve".into()),
                 genres: vec!["Strategy".into(), "MOBA".into()],
                 description: Some("Every day.".into()),
+                ..Default::default()
             }
         );
         assert_eq!(Metadata::typed(" ", " , ", "\n"), Metadata::default());
@@ -413,7 +452,7 @@ mod edit_tests {
             &Metadata {
                 developer: Some("Valve".into()),
                 genres: vec!["Strategy".into()],
-                description: None,
+                ..Default::default()
             },
             20,
         );
@@ -422,6 +461,7 @@ mod edit_tests {
             developer: Some("Valve Corporation".into()),
             genres: vec!["Action".into()],
             description: Some("Every day".into()),
+            ..Default::default()
         };
         sync(&store, id, &synced, 30);
 
@@ -470,6 +510,35 @@ mod edit_tests {
         sync(&store, id, &developer("Valve Corporation"), 40);
 
         assert_eq!(shown_metadata(&store, id), developer("Valve Corporation"));
+    }
+
+    #[test]
+    fn a_field_the_edit_leaves_out_keeps_the_users_value() {
+        let (_dir, store, ids) = store_with(&["570"]);
+        let id = &ids[0];
+        let deck = Metadata {
+            deck_compatibility: Some(DeckCompatibility {
+                rating: crate::model::DeckRating::Verified,
+                tested_at: None,
+            }),
+            ..Default::default()
+        };
+        store
+            .set_metadata(id, MetadataOrigin::User, &deck, 10)
+            .unwrap();
+
+        // The desktop dialog edits the text fields only.
+        let shown = Metadata::typed("", "", "");
+        let edited = Metadata::typed("Valve", "", "");
+        edit_by_user(&store, id, &shown, &edited, 20).unwrap();
+
+        assert_eq!(
+            shown_metadata(&store, id),
+            Metadata {
+                developer: Some("Valve".into()),
+                ..deck
+            }
+        );
     }
 
     #[test]
