@@ -17,6 +17,7 @@ use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
 use pindu_core::custom_style::ProblemSummary;
 use pindu_core::gamepad::{PROMPTS_KEY, Prompts, SWAP_KEY, Swap};
+use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
 use pindu_core::model::{Source, SourceState};
 use pindu_core::paths;
 use pindu_core::sources::location::sandbox_hides;
@@ -79,6 +80,8 @@ mod imp {
         pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub large_text_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub hold_to_confirm_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub custom_style_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
@@ -219,6 +222,9 @@ mod imp {
                 .build();
             settings
                 .bind("fullscreen-large-text", &*self.large_text_row, "active")
+                .build();
+            settings
+                .bind(HOLD_TO_CONFIRM_KEY, &*self.hold_to_confirm_row, "active")
                 .build();
             settings
                 .bind(CUSTOM_STYLE_KEY, &*self.custom_style_row, "active")

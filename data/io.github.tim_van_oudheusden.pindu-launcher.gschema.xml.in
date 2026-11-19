@@ -163,6 +163,11 @@
       <summary>Larger text in fullscreen mode</summary>
       <description>Show fullscreen mode's text about a quarter larger, for reading from across the room. The desktop window is not affected.</description>
     </key>
+    <key name="fullscreen-hold-to-confirm" type="b">
+      <default>false</default>
+      <summary>Hold to confirm in fullscreen mode</summary>
+      <description>Make Power Off, Restart, Forget and Stop need the controller's confirm button held down for a second in fullscreen mode, with the hold's progress shown. The keyboard and the pointer act at once.</description>
+    </key>
     <key name="fullscreen-custom-style" type="b">
       <default>false</default>
       <summary>Custom fullscreen style</summary>
