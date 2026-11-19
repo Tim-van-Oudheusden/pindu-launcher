@@ -211,6 +211,30 @@ window.fullscreen-mode .game-actions button:focus-visible {
   outline-offset: 3px;
 }
 
+/* The About group and the description: soft glass, rows that light up and a white ring,
+   like the panels' lists. */
+window.fullscreen-mode .game-about .boxed-list {
+  background-color: rgb(255 255 255 / 6%);
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+window.fullscreen-mode .game-about .boxed-list > row,
+window.fullscreen-mode .game-description {
+  border-radius: 16px;
+}
+
+window.fullscreen-mode .game-about .boxed-list > row:focus-visible {
+  background-color: rgb(255 255 255 / 14%);
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+window.fullscreen-mode .game-description:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 8px;
+}
+
 /* Panels: frosted dark glass over the page, rows that light up when focused. */
 window.fullscreen-mode .menu-drawer,
 window.fullscreen-mode .quick-access,

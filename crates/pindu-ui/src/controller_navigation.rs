@@ -254,9 +254,9 @@ impl PinduWindow {
         true
     }
 
-    /// Moves through the open menu, steps through the cover grid when it has focus, and
-    /// moves focus as the arrow keys would everywhere else, including out of the grid at
-    /// its edges.
+    /// Moves through the open menu, scrolls through a game's focused description, steps
+    /// through the cover grid when it has focus, and moves focus as the arrow keys would
+    /// everywhere else, including out of the grid at its edges.
     fn navigate(&self, direction: Direction) {
         let focus_direction = match direction {
             Direction::Up => gtk::DirectionType::Up,
@@ -268,6 +268,9 @@ impl PinduWindow {
             // The window's `move-focus` would leave the menu at its ends for the page
             // behind it. Right opens a submenu, Left goes back from its title.
             menu.child_focus(focus_direction);
+            return;
+        }
+        if self.scroll_description(direction) {
             return;
         }
         let grid = &self.imp().grid;
