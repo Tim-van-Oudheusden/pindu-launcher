@@ -122,13 +122,15 @@ pub fn latest(id: &GameId) -> Option<PathBuf> {
     logs::latest_log(&names).map(|name| dir.join(name))
 }
 
-fn file_names(dir: &Path) -> io::Result<Vec<String>> {
+/// The names of the files in `dir`.
+pub(crate) fn file_names(dir: &Path) -> io::Result<Vec<String>> {
     fs::read_dir(dir)?
         .map(|entry| Ok(entry?.file_name().to_string_lossy().into_owned()))
         .collect()
 }
 
-fn data_home() -> PathBuf {
+/// `$XDG_DATA_HOME`, or its default under the home folder.
+pub(crate) fn data_home() -> PathBuf {
     let xdg_data_home = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from);
     paths::data_home(
         xdg_data_home.as_deref(),

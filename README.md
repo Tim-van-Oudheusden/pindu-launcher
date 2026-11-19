@@ -669,6 +669,7 @@ so the fullscreen mode is a second presentation of the same library.
 | [`docs/launch-outcomes.md`](docs/launch-outcomes.md) | Launch outcomes and safe start: how each launch ended, failed-launch help, Start Safely |
 | [`docs/save-snapshots.md`](docs/save-snapshots.md) | Save snapshots of Windows games in managed prefixes, and restoring them |
 | [`docs/accessibility-polish.md`](docs/accessibility-polish.md) | Accessibility polish: text sizes, held buttons, high contrast, screen reader, navigation settings |
+| [`docs/emulation.md`](docs/emulation.md) | Emulation: what a first version would be and cost, and a recommendation; the decision is the maintainer's |
 | [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
 | [`docs/releasing.md`](docs/releasing.md) | How to cut a release: versions, notes, the tag and the Release workflow |
 | [`docs/ai-ops-runbook.md`](docs/ai-ops-runbook.md) | Watching, pausing and reverting agent work; CI and Release failures; the `main` ruleset |
@@ -698,6 +699,13 @@ Information**, and copy or save the report into the issue. It names the version,
 distribution and session, each source's state and game count, the sandbox permissions, the tools found, the library's
 schema version and the last sync's problems. It holds no game titles and writes your home folder as `~`; nothing is
 sent anywhere.
+
+In fullscreen mode, where nothing can be copied, open Quick Access and choose **Diagnostics Report**. It shows the
+same report in large text, a page at a time ("Page 1 of 3"), for a phone to photograph: LB and RB, or **Previous
+Page** and **Next Page**, turn the pages, and Up and Down scroll a page the screen cannot fit. Each time it opens, a
+copy is saved to `~/.local/share/pindu-launcher/reports/` (in the Flatpak,
+`~/.var/app/io.github.tim_van_oudheusden.pindu-launcher/data/pindu-launcher/reports/`), named after the date and time;
+the newest ten are kept, and the screen says where the copy went.
 
 ## Acknowledgments
 

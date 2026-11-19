@@ -116,6 +116,8 @@ pub enum Action {
     Search,
     /// Switch to the tab before or after.
     Tabs,
+    /// Turn to the page before or after, in the diagnostics report.
+    Pages,
     /// Cycle the sort order back or forward.
     Sort,
     /// Turn a slider down or up.
@@ -268,6 +270,8 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
         })
     };
     let dialog_tabs = context.dialog_tabs && context.dialog;
+    let report_pages = !context.dialog
+        && context.panel == Some(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport));
     [
         adjust,
         single(Intent::Activate, activate),
@@ -281,6 +285,12 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
             Intent::PreviousTab,
             Intent::NextTab,
             Action::Tabs,
+        ),
+        pair(
+            report_pages,
+            Intent::PreviousTab,
+            Intent::NextTab,
+            Action::Pages,
         ),
         pair(tabs, Intent::PreviousSort, Intent::NextSort, Action::Sort),
     ]
@@ -811,6 +821,32 @@ mod tests {
                     Button::LeftTrigger,
                     Some(Button::RightTrigger),
                     Action::Sort
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn the_diagnostics_report_turns_its_pages_with_the_shoulders() {
+        let report = Context {
+            menu: true,
+            tabs: true,
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport)),
+            ..context(Focus::Other)
+        };
+        let shown: Vec<_> = hints(report, Layout::detected(DeviceKind::Xbox))
+            .into_iter()
+            .map(|hint| (hint.button, hint.pair, hint.action))
+            .collect();
+        assert_eq!(
+            shown,
+            [
+                (Button::South, None, Action::Select),
+                (Button::East, None, Action::Back),
+                (
+                    Button::LeftShoulder,
+                    Some(Button::RightShoulder),
+                    Action::Pages
                 ),
             ]
         );
