@@ -59,6 +59,22 @@ Schema migration 6 (#504) adds the grouping layer; the rules follow spike #501.
   10 h with Lutris (runner `steam`) 2 h is 10 h; Steam 10 h with Heroic GOG 5 h is 15 h. A group was last played when
   any copy was.
 
+## How groups are backed up
+
+Backup format 2 (#509) adds two lists to the backup file, both naming games by their per-source IDs:
+`groups`, each with its games, the preferred copy when the user chose one and whether it was made automatically, and
+`not_the_same`, the remembered pairs. Importing adds and never removes:
+
+- **A group is made again** from those of its games that are in the library, when at least two are and none of them
+  is in a group here already. A preferred copy that is not in the library falls back to the default order. A group
+  this library already has is left as it is and not counted.
+- **Skipped and counted** is every other group: fewer than two of its games are in the library, one of them is in
+  another group here, or an automatic group's pair is remembered here as not the same game. The import result says
+  how many groups were skipped, beside how many games the library lacks.
+- **Remembered pairs** are added when both games are in the library.
+- **Format 1** backups, which have neither list, still import and change no group. An older build refuses a format 2
+  backup rather than drop its groups.
+
 ## Flatpak, native and Pindu OS
 
 The same everywhere: grouping needs no permission and no network. The Lutris fields are read from `pga.db` in its
