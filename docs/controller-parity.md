@@ -26,6 +26,9 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **The SteamGridDB key.** It is typed hidden with the on-screen keyboard's hidden-text dialog (the one Wi-Fi
   passphrases and Bluetooth PINs use) and stored in the keyring through oo7, never in GSettings, files or logs.
   Without a working keyring the entry says so in place.
+- **Collections.** View or X on a collection in the menu drawer's Collections leads to Rename…, Move Up, Move Down
+  and Delete…, the desktop sidebar's collection menu. A name, new or changed, is typed with the on-screen keyboard
+  in the passphrase dialog, showing its text; Delete asks first, with Cancel chosen.
 
 ## Flatpak, native and Pindu OS
 
@@ -47,6 +50,7 @@ permission is added.
 | #520 List what fullscreen mode cannot do that a console needs | Spike: every desktop-only flow, the issues to file, #518's destination | This page |
 | #521 Show a game's details on the fullscreen game page | Developer, genres and description in every shipped design | |
 | #522 Enter the SteamGridDB key in fullscreen mode | The hidden-text dialog and the keyring | #520 |
+| #566 Rename, reorder and delete collections in fullscreen mode | The drawer's level for one collection; names typed with the on-screen keyboard | #520 |
 
 The issues #520 files join this table when they exist.
 
