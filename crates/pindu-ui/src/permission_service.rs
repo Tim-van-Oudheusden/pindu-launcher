@@ -3,7 +3,7 @@
 use std::sync::{LazyLock, OnceLock};
 
 use pindu_core::model::Game;
-use pindu_core::permissions;
+use pindu_core::{paths, permissions, umu};
 
 use crate::config::APP_ID;
 
@@ -58,6 +58,28 @@ pub fn mangohud_works(game: &Game) -> bool {
         in_flatpak,
         in_flatpak && mangohud_layer_installed(),
     )
+}
+
+/// Whether MangoHud can run at all: in Flatpak its Vulkan-layer extension is installed,
+/// natively the system's `mangohud` is on `PATH`.
+pub fn mangohud_available() -> bool {
+    if in_flatpak() {
+        mangohud_layer_installed()
+    } else {
+        on_path("mangohud")
+    }
+}
+
+/// Whether GameMode can be asked to favour a game: `gamemoderun`, which the Flatpak
+/// bundles and a native install needs from the system, is on `PATH`.
+pub fn gamemode_available() -> bool {
+    on_path("gamemoderun")
+}
+
+/// Whether `program` is on `PATH`.
+fn on_path(program: &str) -> bool {
+    std::env::var_os("PATH")
+        .is_some_and(|path| paths::find_program(&path, program, umu::is_executable).is_some())
 }
 
 /// The command that grants host spawn to this app.

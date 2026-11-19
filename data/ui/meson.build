@@ -12,6 +12,7 @@ blueprint_names = [
   'game_dialog',
   'game_overlay',
   'game_page',
+  'health_page',
   'home_page',
   'menu_drawer',
   'preferences',
