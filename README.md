@@ -44,7 +44,7 @@ widgets so it looks and behaves like the rest of GNOME.
 
 ## Features
 
-- **Every launcher, one library.** Steam, Heroic, Lutris, Bottles, Faugus, Legendary, games installed as apps
+- **Every launcher, one library.** Steam, Heroic, Lutris, Bottles, Faugus, Legendary, itch, games installed as apps
   (Flatpaks included) and games you add yourself, side by side. The library resyncs when a launcher's files change.
 - **Launchers stay in charge.** Store games start through their own launcher, which keeps their settings, updates and
   playtime. Pindu launcher only reads the launchers' files and never writes to them.
@@ -85,14 +85,18 @@ widgets so it looks and behaves like the rest of GNOME.
 | Bottles, native or Flatpak | Programs in your bottles | Through Bottles |
 | Faugus Launcher, native or Flatpak | Faugus games | On the host ([needs host access](#starting-games-on-the-host)) |
 | Legendary, the standalone client, native only | Installed Epic Games Store games that Heroic does not already list | On the host with `legendary launch` ([needs host access](#starting-games-on-the-host)) |
+| itch, native or Flatpak | Games installed through the itch app, with their playtime | Through the itch app |
 | Desktop entries and Flatpaks | Games installed as apps | On the host ([needs host access](#starting-games-on-the-host)) |
 | Added by hand | Native programs, and Windows games or installers | Native ones on the host; Windows ones with Proton in the sandbox |
 
-The importers read each launcher's data read-only and never its credentials. The Flatpak has no permission for
-Legendary's `~/.config/legendary`: Preferences → Sources says so, and **Choose…** in its row imports the folder you
-pick.
-The importers read each launcher's data read-only and never its credentials. Preferences, Sources shows for each source
-the folder it was found in, when it last synced and the problems that sync ran into.
+The importers read each launcher's data read-only and never its credentials: from the itch app's database they read
+its installs and games, never the profiles that hold your itch.io key. Preferences, Sources shows for each source the
+folder it was found in, when it last synced and the problems that sync ran into.
+
+The Flatpak has no permission for Legendary's `~/.config/legendary` or the itch app's folder (`~/.config/itch`, or
+`~/.var/app/io.itch.itch/config/itch` for the itch Flatpak), and does not ask for one: Preferences → Sources says so,
+and **Choose…** in the source's row imports the folder you pick through the file chooser. Native packages find them
+themselves.
 
 ## Installing
 
@@ -195,6 +199,8 @@ controller. B steps back to the drawer's entries.
 - An action the system does not allow is greyed out and says so; one the machine cannot do at all is not listed.
 - While a game Pindu started is running, Restart and Power Off ask first, since its unsaved progress would be lost.
   Suspend does not ask: the game carries on when the machine wakes.
+- With **Hold to Confirm** on in Quick Access's Accessibility or Preferences, Restart and Power Off act only once the
+  confirm button has been held down for a second.
 - When a program holds the machine on (an update installing, for example), a notification names it.
 
 The Flatpak has no access to the system bus, so it asks the host's logind through
@@ -230,6 +236,9 @@ Guide + A never also opens the menu drawer.
 - **Sources** lists every source Pindu imports from, says whether each was found on this computer, and has its
   **Import** switch, the same setting as Preferences, Sources: a source turned off is no longer read, and changing a
   switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences.
+  - **Hold to Confirm** (off by default): Power Off, Restart, Forget and Stop then need the controller's confirm button
+    held down for a second. A popover over the entry fills as you hold, and letting go early or pressing another
+    button does nothing; the hint bar says **Hold to Confirm** on them. The keyboard and the pointer still act at once.
 - **Artwork:** your SteamGridDB key, typed hidden with the on-screen keyboard (Show reveals it) and kept in the system
   keyring, never in settings or files; the row says whether a key is stored, or that the keyring cannot be used and
   why. Missing art is fetched once a key is saved. **Prefer SteamGridDB Art** is here too.
@@ -407,9 +416,9 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   Flatpak cannot reach `/tmp/mangohud.*` or `$XDG_RUNTIME_DIR/gamescope-mangoapp-*`; point the variable at a file under
   `$XDG_RUNTIME_DIR/app/io.github.tim_van_oudheusden.pindu-launcher/` that holds `no_display` before gamescope starts.
   Otherwise games keep their own MangoHud.
-- A game the app hands to its store's launcher (Steam, Heroic, Lutris, Bottles, Faugus) is expected in front from the
-  moment the store opens: its windows, and any untagged window another app opens meanwhile, such as Steam's update or
-  sign-in window, get the game's app ID and come to the front. When the last of those windows closes, the game has
+- A game the app hands to its store's launcher (Steam, Heroic, Lutris, Bottles, Faugus, itch) is expected in front from
+  the moment the store opens: its windows, and any untagged window another app opens meanwhile, such as Steam's update
+  or sign-in window, get the game's app ID and come to the front. When the last of those windows closes, the game has
   exited 2 seconds later unless another opens: the app is back in front, and stops expecting the game 10 seconds after
   that window closed. A window of the game that opens before then brings the game back to the front. While none has
   opened the app stays in front, and after a minute it stops waiting. Guide over it opens the menu drawer as with other
@@ -576,7 +585,7 @@ add-ons) and how to start a translation by hand.
 
 ```mermaid
 flowchart LR
-  launchers["Steam, Heroic, Lutris,<br/>Bottles, Faugus, Legendary,<br/>desktop entries, Flatpaks"]
+  launchers["Steam, Heroic, Lutris,<br/>Bottles, Faugus, Legendary,<br/>itch, desktop entries, Flatpaks"]
 
   subgraph core["pindu-core: no GTK"]
     importers["Importers<br/>sources/"] --> store[("Library<br/>SQLite")]
@@ -651,8 +660,8 @@ sent anywhere.
   game library can look.
 - [Heroic Games Launcher](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher),
   [Lutris](https://github.com/lutris/lutris), [Bottles](https://github.com/bottlesdevs/Bottles),
-  [Faugus Launcher](https://github.com/Faugus/faugus-launcher) and [Legendary](https://github.com/legendary-gl/legendary),
-  whose libraries Pindu launcher reads.
+  [Faugus Launcher](https://github.com/Faugus/faugus-launcher), [Legendary](https://github.com/legendary-gl/legendary)
+  and [itch](https://github.com/itchio/itch), whose libraries Pindu launcher reads.
 - [OpenGamepadUI](https://github.com/ShadowBlip/OpenGamepadUI), for how a couch-first game library behaves.
 - [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher),
   [GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom) and

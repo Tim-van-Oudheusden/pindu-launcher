@@ -16,6 +16,7 @@ pub fn source_name(source: Source) -> String {
         Source::Bottles => "Bottles".to_owned(),
         Source::Faugus => "Faugus".to_owned(),
         Source::Legendary => "Legendary".to_owned(),
+        Source::Itch => "itch".to_owned(),
         Source::Desktop => gettext("Desktop"),
         Source::Manual => gettext("Added by Hand"),
     }

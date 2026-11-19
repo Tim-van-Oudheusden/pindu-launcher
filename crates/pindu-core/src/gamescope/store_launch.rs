@@ -1,6 +1,6 @@
 //! A store launch that is expected in front: a game the launcher handed to its store
-//! launcher (Steam, Heroic, Lutris, Bottles, Faugus) through a URI. The launcher does not
-//! track such a game, so in a `--steam` gamescope it follows the game's app ID in the
+//! launcher (Steam, Heroic, Lutris, Bottles, Faugus, itch) through a URI. The launcher does
+//! not track such a game, so in a `--steam` gamescope it follows the game's app ID in the
 //! root's `GAMESCOPE_FOCUSABLE_APPS` instead, from the moment the URI opens until a window
 //! with the ID has come and gone, or until a time-out passes without any.
 
