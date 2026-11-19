@@ -6,6 +6,7 @@ crates/pindu-ui/src/audio_output_service.rs
 crates/pindu-ui/src/bluetooth_service.rs
 crates/pindu-ui/src/collection_actions.rs
 crates/pindu-ui/src/file_service.rs
+crates/pindu-ui/src/first_sync_summary.rs
 crates/pindu-ui/src/fullscreen.rs
 crates/pindu-ui/src/fullscreen_activity.rs
 crates/pindu-ui/src/fullscreen_bindings.rs

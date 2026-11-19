@@ -15,6 +15,7 @@ pub mod config;
 pub mod controller_navigation;
 pub mod diagnostics_service;
 pub mod file_service;
+pub mod first_sync_summary;
 pub mod fullscreen;
 pub mod fullscreen_activity;
 pub mod fullscreen_bindings;

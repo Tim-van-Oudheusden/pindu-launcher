@@ -358,6 +358,13 @@ Access: Preferences at Sources, Preferences at the host access command, or umu-l
 - In a gamescope session, which has no browser, umu-launcher's row shows the address to read on another device.
 - Rows the session cannot have, such as host access outside the Flatpak, are left out, never shown as errors.
 
+### After the First Sync
+
+When the library's first sync finishes, **Your Library Is Ready** sums up what it found: the launchers found, the
+games imported and what needs attention. **Open Library Health** opens the Library Health page on the desktop, or
+Quick Access at Library Health in fullscreen mode, where the summary reads and closes with a controller alone. It shows
+once: after it is closed it never shows again.
+
 ### Add a Store
 
 A library with no games, such as a fresh Pindu OS, offers **Add a Store** on its empty page, in fullscreen mode and on
