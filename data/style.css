@@ -16,14 +16,20 @@
   border-radius: 999px;
 }
 
-.cover-tile .play-button {
-  margin-bottom: 12px;
+.cover-tile .play-button,
+.jump-tile .play-button {
   opacity: 0;
   transition: opacity 150ms ease-out;
 }
 
+.cover-tile .play-button {
+  margin-bottom: 12px;
+}
+
 gridview > child:hover .cover-tile .play-button,
-gridview > child:focus-within .cover-tile .play-button {
+gridview > child:focus-within .cover-tile .play-button,
+.jump-tile:hover .play-button,
+.jump-tile:focus-within .play-button {
   opacity: 1;
 }
 
@@ -71,6 +77,15 @@ gridview.library > child {
   padding: 6px 10px;
   color: white;
   background-image: linear-gradient(to bottom, rgb(0 0 0 / 55%), rgb(0 0 0 / 80%));
+}
+
+/* The desktop row's cards brighten a little under the pointer, and show Play (above). */
+.jump-tile > .jump-card {
+  transition: filter 150ms ease-out;
+}
+
+.jump-tile:hover > .jump-card {
+  filter: brightness(1.12);
 }
 
 /* Fullscreen mode: type a step larger for a screen across the room, and the focused cover
@@ -330,6 +345,8 @@ window.game-overlay {
 /* Reduced motion (the window's reduced-motion class): no fades or lifts; focus keeps its
    ring. */
 window.reduced-motion .cover-tile .play-button,
+window.reduced-motion .jump-tile .play-button,
+window.reduced-motion .jump-tile > .jump-card,
 window.reduced-motion.fullscreen-mode gridview.library > child,
 window.reduced-motion .home-carousel > button {
   transition: none;
