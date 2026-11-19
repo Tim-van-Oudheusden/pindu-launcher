@@ -126,6 +126,12 @@ mod imp {
         #[template_child]
         pub swap: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub repeat_delay: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub repeat_rate: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub dead_zone: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub controls_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub controls: TemplateChild<gtk::Box>,
@@ -722,6 +728,9 @@ impl PinduQuickAccess {
             imp.controllers.get(),
             imp.prompts.get(),
             imp.swap.get(),
+            imp.repeat_delay.get(),
+            imp.repeat_rate.get(),
+            imp.dead_zone.get(),
             imp.sizes.get(),
             imp.switches.get(),
             imp.accessibility.get(),
