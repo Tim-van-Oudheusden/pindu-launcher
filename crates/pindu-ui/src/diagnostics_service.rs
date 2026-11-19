@@ -1,10 +1,12 @@
 //! Gathers the debugging information About carries ([`pindu_core::diagnostics`]): reads
 //! the sandbox's and the system's files, the library and the tools on a worker thread,
-//! and asks the gamescope the app runs in for its version.
+//! and asks the gamescope the app runs in for its version. Fullscreen mode's report also
+//! saves a copy to the reports folder ([`pindu_core::report_screen`]).
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Duration;
+use std::{fs, io};
 
 use gtk::{gio, glib};
 use pindu_core::diagnostics::{
@@ -12,11 +14,13 @@ use pindu_core::diagnostics::{
 };
 use pindu_core::launch::Command;
 use pindu_core::paths::default_library_db_path;
+use pindu_core::report_screen::{self, KEEP};
 use pindu_core::store::Store;
 use pindu_core::system::update::{OS_RELEASE_FILES, OsRelease};
 use pindu_core::umu;
 
 use crate::config::{APP_ID, VERSION};
+use crate::log_service::{data_home, file_names};
 use crate::{permission_service, proton_launch, session_service};
 
 /// How long `gamescope --version` may take before the report goes without it.
@@ -44,6 +48,32 @@ pub async fn debug_info(steam_gamescope: bool, own_session: bool) -> String {
     gio::spawn_blocking(move || report(session))
         .await
         .unwrap_or_else(|_| "The debugging information could not be gathered.".to_owned())
+}
+
+/// Saves `report` to the reports folder, named after the local time, and drops the saved
+/// reports beyond the newest [`KEEP`]; gives the file's path, or why it could not be saved.
+pub async fn save_report(report: String) -> Result<PathBuf, String> {
+    gio::spawn_blocking(move || write_report(&report).map_err(|error| error.to_string()))
+        .await
+        .unwrap_or_else(|_| Err("the report could not be saved".to_owned()))
+}
+
+fn write_report(report: &str) -> io::Result<PathBuf> {
+    let dir = report_screen::reports_dir(&data_home());
+    fs::create_dir_all(&dir)?;
+    let now = glib::DateTime::now_local().map_err(io::Error::other)?;
+    let stamp = now.format("%Y-%m-%dT%H-%M-%S").map_err(io::Error::other)?;
+    let mut names = file_names(&dir)?;
+    let name = report_screen::new_report_name(&stamp, &names);
+    let path = dir.join(&name);
+    fs::write(&path, report)?;
+    names.push(name);
+    for stale in report_screen::stale_reports(&names, KEEP) {
+        if let Err(error) = fs::remove_file(dir.join(&stale)) {
+            glib::g_warning!("pindu", "Could not remove the old report {stale}: {error}");
+        }
+    }
+    Ok(path)
 }
 
 /// Asks the host's gamescope for its version; `None` when it cannot be run, as inside a

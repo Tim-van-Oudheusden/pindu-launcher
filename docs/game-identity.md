@@ -23,8 +23,8 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **Conservative, staged matching.**
   1. Exact cross-references, such as a Lutris record's store ID (`service`, `service_id`) against the Steam, Heroic
      GOG or Heroic Epic record with that ID, are grouped automatically, with an undo.
-  2. Normalised title (`search::normalize`) together with developer or year, where both records have one, is a
-     suggestion only, with its reason and a confidence.
+  2. Equal normalised titles (`search::normalize`) of records from different sources are a suggestion only, with its
+     reason and a confidence: high when the developer or the year agrees on both records, low otherwise.
   3. Merge and split by hand, from the desktop game menu and from fullscreen mode's options sheet. A split is
      remembered ("not the same game"), so the suggestion does not come back.
 
@@ -58,6 +58,43 @@ Schema migration 6 (#504) adds the grouping layer; the rules follow spike #501.
   together, so they count once, by the largest figure among them; every other copy was played apart and adds up. Steam
   10 h with Lutris (runner `steam`) 2 h is 10 h; Steam 10 h with Heroic GOG 5 h is 15 h. A group was last played when
   any copy was.
+
+## How a group shows
+
+- **One tile, one list row, one search result.** Both shells, the desktop list layout and GNOME Shell search show a
+  group once: under its preferred copy's title and art (a kind of art the preferred copy lacks comes from the next
+  copy that has it), standing for the copy Play starts. A `--launch` or search result naming any copy starts the
+  group's Play copy.
+- **The game page lists the copies**, the preferred one first, each with its source, whether it is installed and its
+  own playtime with where that comes from; the copy Play starts says so.
+- **Changes on a group reach every copy.** Favourite, hide, remove and collection changes made on a group's tile or
+  page are written to each copy. A group is a favourite, or in a collection, when any copy is; it is hidden or removed
+  only when every copy is. A "Jump back in" place holds one game, so pinning a group pins the copy Play starts, and
+  unpinning it unpins every copy.
+- **Playtime and last played** are the group's (above): sorting by playtime or last played, Play history, "Jump back
+  in" and the game page use them. When two or more copies played apart have playtime, the total reads "across N
+  copies"; otherwise it names where the one figure comes from.
+- A group sits in the source view of the copy Play starts.
+
+## How duplicates are found
+
+`duplicates::suggestions` (#505) lists the pairs of library records that look like copies of one game, each with a
+reason and a confidence, and writes nothing. It follows spike #501:
+
+- **Exact cross-references come first.** Only a Lutris record's store link counts, compared after trimming
+  whitespace, against a record in the library (installed or not): `steam` and `steamwindows` name `steam:<id>`, `gog`
+  names `heroic-gog:<id>`, `egs` names `heroic-epic:<id>`. Amazon does not count, because Lutris stores the
+  entitlement ID and Heroic the product ID; other services have no Pindu source to match.
+- **Then equal normalised titles**, only between records of different sources, never on a prefix or substring. The
+  confidence is high when both records name a developer and the names agree (ignoring `inc`, `ltd`, `llc`, `gmbh`,
+  `corp`, `co`) or both know the year and the years are at most one apart; otherwise it is low. A disagreement only
+  lowers the confidence.
+- **Left out:** records gone from their source or removed by the user, pairs already in one group, and pairs
+  remembered as not the same game, so a dismissed or split pair never returns.
+
+After every sync, `duplicates::group_exact_matches` groups each exact pair automatically, unless either copy is in a
+group already; the sync reports the new groups. Undoing one is `Store::split_group`, which remembers the pair, so the
+next sync leaves it apart. Title matches are never grouped without the user.
 
 ## How groups are backed up
 

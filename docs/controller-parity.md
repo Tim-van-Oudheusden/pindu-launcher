@@ -33,6 +33,14 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **A game's Proton build.** For a game Pindu runs through Proton, Quick Access's Performance level lists the
   default and the builds on this machine, newest first, as check rows a controller moves through. It is the same
   setting as the desktop game page's Proton row and applies the next time the game starts. Other games have no list.
+- **Proton builds.** Quick Access's **Proton** level picks the default Proton build and the default MangoHud and
+  GameMode for new Windows games (the same settings as Preferences' Windows page), lists the downloaded builds, which
+  A asks to remove, and, once the player checks, the GE-Proton and Proton-CachyOS releases, which A downloads. A
+  download is a task in Activity that can be cancelled there or with A on its row. The default prefix folder stays
+  desktop-only: it needs a folder chooser.
+- **Collections.** View or X on a collection in the menu drawer's Collections leads to Rename…, Move Up, Move Down
+  and Delete…, the desktop sidebar's collection menu. A name, new or changed, is typed with the on-screen keyboard
+  in the passphrase dialog, showing its text; Delete asks first, with Cancel chosen.
 
 ## Flatpak, native and Pindu OS
 
@@ -56,6 +64,8 @@ permission is added.
 | #522 Enter the SteamGridDB key in fullscreen mode | The hidden-text dialog and the keyring | #520 |
 | #565 Turn sources on and off in fullscreen mode | Quick Access's Sources level with each source's Import switch | |
 | #568 Choose a game's Proton build in fullscreen mode | Quick Access, Performance: the default or a build on this machine, the desktop page's setting | #520 |
+| #567 Download and remove Proton builds in fullscreen mode | Proton downloads and removal, the defaults for new Windows games | |
+| #566 Rename, reorder and delete collections in fullscreen mode | The drawer's level for one collection; names typed with the on-screen keyboard | #520 |
 
 The issues #520 files join this table when they exist.
 

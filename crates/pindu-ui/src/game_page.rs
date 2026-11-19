@@ -16,7 +16,7 @@ use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
 use pindu_core::gamepad::Direction;
 use pindu_core::launch::{self, LaunchSettings, WebPage};
-use pindu_core::library::PlaytimeOrigin;
+use pindu_core::library::{GameCopy, PlaytimeOrigin};
 use pindu_core::manual;
 use pindu_core::model::{Collection, Game, GameId, LaunchConfig, LaunchKind, Source, Timestamp};
 use pindu_core::panels::Playing;
@@ -71,6 +71,8 @@ mod imp {
         pub favourite_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub facts: TemplateChild<adw::WrapBox>,
+        #[template_child]
+        pub copies_group: TemplateChild<adw::PreferencesGroup>,
         #[template_child]
         pub about_group: TemplateChild<adw::PreferencesGroup>,
         #[template_child]
@@ -266,6 +268,11 @@ impl GamePage {
         for (caption, value) in facts(game, entry.playtime_secs, entry.playtime_origin) {
             imp.facts.append(&fact(&caption, &value));
         }
+        for copy in &entry.copies {
+            imp.copies_group
+                .add(&copy_row(copy, copy.game.id == game.id));
+        }
+        imp.copies_group.set_visible(!entry.copies.is_empty());
 
         imp.developer_row.set_visible(game.developer.is_some());
         imp.developer_row
@@ -728,13 +735,73 @@ fn fact(caption: &str, value: &str) -> gtk::Box {
     fact
 }
 
-/// "Playtime", with where it comes from: the launcher, or our own sessions.
+/// One copy of a grouped game: its source, whether it is installed, its own playtime and,
+/// on the copy Play starts, a note saying so.
+fn copy_row(copy: &GameCopy, plays: bool) -> adw::ActionRow {
+    let installed = if copy.game.installed && copy.game.in_library() {
+        gettext("Installed")
+    } else {
+        gettext("Not installed")
+    };
+    let subtitle = if copy.playtime_secs > 0 {
+        format!(
+            "{installed} · {}",
+            played(copy.playtime_secs, copy.playtime_origin)
+        )
+    } else {
+        installed
+    };
+    let row = adw::ActionRow::builder()
+        .title(source_name(copy.game.source()))
+        .subtitle(subtitle)
+        .use_markup(false)
+        .build();
+    if plays {
+        row.add_suffix(
+            &gtk::Label::builder()
+                .label(gettext("Play starts this copy"))
+                .css_classes(["dimmed"])
+                .build(),
+        );
+    }
+    row
+}
+
+/// A playtime with where it comes from, as a list row's subtitle shows it.
+pub(crate) fn played(secs: i64, origin: Option<PlaytimeOrigin>) -> String {
+    let played = playtime(secs);
+    match origin {
+        Some(PlaytimeOrigin::Source(source)) => gettext("{time} in {source}")
+            .replace("{time}", &played)
+            .replace("{source}", &source_name(source)),
+        Some(PlaytimeOrigin::Sessions) => {
+            gettext("{time}, tracked here").replace("{time}", &played)
+        }
+        Some(PlaytimeOrigin::Copies(copies)) => ngettext(
+            "{time} across {n} copy",
+            "{time} across {n} copies",
+            copies as u32,
+        )
+        .replace("{time}", &played)
+        .replace("{n}", &copies.to_string()),
+        None => played,
+    }
+}
+
+/// "Playtime", with where it comes from: the launcher, our own sessions, or a group's
+/// copies played apart.
 pub(crate) fn playtime_caption(origin: Option<PlaytimeOrigin>) -> String {
     match origin {
         Some(PlaytimeOrigin::Source(source)) => {
             gettext("Playtime · {source}").replace("{source}", &source_name(source))
         }
         Some(PlaytimeOrigin::Sessions) => gettext("Playtime · Tracked Here"),
+        Some(PlaytimeOrigin::Copies(copies)) => ngettext(
+            "Playtime · Across {n} Copy",
+            "Playtime · Across {n} Copies",
+            copies as u32,
+        )
+        .replace("{n}", &copies.to_string()),
         None => gettext("Playtime"),
     }
 }

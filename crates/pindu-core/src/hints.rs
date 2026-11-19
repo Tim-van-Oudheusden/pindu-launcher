@@ -54,6 +54,8 @@ pub struct Context {
     /// of art).
     pub dialog_tabs: bool,
     /// A game has focus (a cover or card) or the page is a game's: View opens its options.
+    /// In the drawer's Collections level, a collection has focus: View leads to its
+    /// actions.
     pub options: bool,
     /// Start opens the menu drawer (fullscreen mode).
     pub menu: bool,
@@ -114,6 +116,8 @@ pub enum Action {
     Search,
     /// Switch to the tab before or after.
     Tabs,
+    /// Turn to the page before or after, in the diagnostics report.
+    Pages,
     /// Cycle the sort order back or forward.
     Sort,
     /// Turn a slider down or up.
@@ -243,7 +247,10 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
     // Y searches the page under a dialog, so it waits for the dialog to close; so do the
     // page's tabs, sort, options, menu and Quick Access.
     let search = (context.search && page).then_some(Action::Search);
-    let options = (context.options && page).then_some(Action::Options);
+    // The drawer's collections take View too, for one collection's actions.
+    let collections =
+        !context.dialog && context.panel == Some(Panel::Drawer(DrawerLevel::Collections));
+    let options = (context.options && (page || collections)).then_some(Action::Options);
     let menu = (context.menu && page).then_some(Action::Menu);
     // Quick Access shows the chord every pad has, rather than R3, which games use too.
     let quick_access = (context.menu && page).then(|| {
@@ -263,6 +270,8 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
         })
     };
     let dialog_tabs = context.dialog_tabs && context.dialog;
+    let report_pages = !context.dialog
+        && context.panel == Some(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport));
     [
         adjust,
         single(Intent::Activate, activate),
@@ -276,6 +285,12 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
             Intent::PreviousTab,
             Intent::NextTab,
             Action::Tabs,
+        ),
+        pair(
+            report_pages,
+            Intent::PreviousTab,
+            Intent::NextTab,
+            Action::Pages,
         ),
         pair(tabs, Intent::PreviousSort, Intent::NextSort, Action::Sort),
     ]
@@ -685,6 +700,58 @@ mod tests {
     }
 
     #[test]
+    fn a_collection_in_the_drawer_shows_view_for_its_actions() {
+        let collections = Context {
+            options: true,
+            menu: true,
+            panel: Some(Panel::Drawer(DrawerLevel::Collections)),
+            ..context(Focus::Other)
+        };
+        assert_eq!(
+            actions(collections, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Back),
+                (Button::Select, Action::Options)
+            ]
+        );
+        let none_focused = Context {
+            options: false,
+            ..collections
+        };
+        assert_eq!(
+            actions(none_focused, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Back)
+            ]
+        );
+        let dialog = Context {
+            dialog: true,
+            ..collections
+        };
+        assert_eq!(
+            actions(dialog, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Close)
+            ],
+            "the dialog asking to delete one takes the buttons"
+        );
+        let actions_level = Context {
+            panel: Some(Panel::Drawer(DrawerLevel::Collection)),
+            ..collections
+        };
+        assert_eq!(
+            actions(actions_level, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Back)
+            ]
+        );
+    }
+
+    #[test]
     fn a_focused_slider_adjusts_with_left_and_right_and_a_does_nothing() {
         let settings = Context {
             menu: true,
@@ -754,6 +821,32 @@ mod tests {
                     Button::LeftTrigger,
                     Some(Button::RightTrigger),
                     Action::Sort
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn the_diagnostics_report_turns_its_pages_with_the_shoulders() {
+        let report = Context {
+            menu: true,
+            tabs: true,
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport)),
+            ..context(Focus::Other)
+        };
+        let shown: Vec<_> = hints(report, Layout::detected(DeviceKind::Xbox))
+            .into_iter()
+            .map(|hint| (hint.button, hint.pair, hint.action))
+            .collect();
+        assert_eq!(
+            shown,
+            [
+                (Button::South, None, Action::Select),
+                (Button::East, None, Action::Back),
+                (
+                    Button::LeftShoulder,
+                    Some(Button::RightShoulder),
+                    Action::Pages
                 ),
             ]
         );

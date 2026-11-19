@@ -6,6 +6,8 @@ blueprint_names = [
   'fullscreen_bluetooth',
   'fullscreen_network',
   'fullscreen_power',
+  'fullscreen_proton_downloads',
+  'fullscreen_report',
   'fullscreen_sound_output',
   'fullscreen_system_update',
   'game_dialog',

@@ -586,6 +586,58 @@ template $PinduQuickAccess: Box {
                 }
               };
             }
+
+            // The diagnostics report, to photograph a page at a time; a copy is
+            // saved as it opens.
+            ListBoxRow report_row {
+              action-name: "win.quick-access-diagnostics-report";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "dialog-information-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Diagnostics Report");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            // The Proton builds to download and remove, and the defaults for
+            // new Windows games.
+            ListBoxRow proton_row {
+              action-name: "win.quick-access-proton";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "folder-download-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Proton");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
           }
         };
       };
@@ -1617,6 +1669,18 @@ template $PinduQuickAccess: Box {
       name: "add-store";
 
       child: $PinduAddStoreLevel add_store_level {};
+    }
+
+    StackPage {
+      name: "diagnostics-report";
+
+      child: $PinduReportLevel report_level {};
+    }
+
+    StackPage {
+      name: "proton";
+
+      child: $PinduProtonLevel proton_level {};
     }
 
     StackPage {

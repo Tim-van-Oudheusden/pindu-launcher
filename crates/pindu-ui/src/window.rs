@@ -15,7 +15,7 @@ use pindu_core::grid;
 use pindu_core::hints::Hint;
 use pindu_core::launch_overlay::LaunchOverlay;
 use pindu_core::library::{
-    Counts, Filters, HistoryGroup, LibraryLayout, PlaytimeOrigin, SortMode, View, history_group,
+    Counts, Filters, HistoryGroup, LibraryLayout, SortMode, View, history_group,
 };
 use pindu_core::model::{GameId, Source};
 use pindu_core::osk::Keyboard;
@@ -678,16 +678,7 @@ impl PinduWindow {
                 imp.history_groups.append(&widget);
                 groups.push((group, widget));
             }
-            let played = crate::game_page::playtime(playtime);
-            let played = match origin {
-                Some(PlaytimeOrigin::Source(source)) => gettext("{time} in {source}")
-                    .replace("{time}", &played)
-                    .replace("{source}", &source_name(source)),
-                Some(PlaytimeOrigin::Sessions) => {
-                    gettext("{time}, tracked here").replace("{time}", &played)
-                }
-                None => played,
-            };
+            let played = crate::game_page::played(playtime, origin);
             let subtitle = format!("{} · {played}", crate::game_page::date(last_played));
             let row = adw::ActionRow::builder()
                 .title(&title)

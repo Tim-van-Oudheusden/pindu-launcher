@@ -1,0 +1,218 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Quick Access's Proton level, the "proton" page of Quick Access's stack: the
+// defaults for new Windows games, the downloaded builds and the releases to
+// download. Its entry row stays in Quick Access's shared list.
+template $PinduProtonLevel: Adw.Bin {
+  child: ScrolledWindow {
+    hscrollbar-policy: never;
+
+    child: Box {
+      orientation: vertical;
+      spacing: 12;
+
+      Label {
+        label: _("Proton");
+        xalign: 0;
+
+        styles [
+          "title-3",
+        ]
+      }
+
+      Label {
+        label: _("Defaults");
+        xalign: 0;
+
+        styles [
+          "heading",
+        ]
+      }
+
+      Label {
+        label: _("Windows games run with these unless their page says otherwise.");
+        xalign: 0;
+        wrap: true;
+
+        styles [
+          "dim-label",
+        ]
+      }
+
+      // The default build, with a check on it; filled in code.
+      ListBox quick_access_proton_default {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+
+      Label {
+        label: _("Games added from now on start with these switched on; each game's page can change them.");
+        xalign: 0;
+        wrap: true;
+
+        styles [
+          "dim-label",
+        ]
+      }
+
+      ListBox quick_access_proton_tools {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+
+        Adw.SwitchRow quick_access_default_mangohud {
+          title: _("MangoHud");
+          subtitle: _("An overlay with the frame rate and how busy the computer is");
+        }
+
+        Adw.SwitchRow quick_access_default_gamemode {
+          title: _("GameMode");
+          subtitle: _("Asks the system to favour the game while it runs");
+        }
+      }
+
+      Label {
+        label: _("Downloaded Builds");
+        xalign: 0;
+        margin-top: 6;
+
+        styles [
+          "heading",
+        ]
+      }
+
+      // The builds in our tools folder; choosing one asks to remove it.
+      // Filled in code.
+      ListBox quick_access_proton_downloaded {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+
+      // Why the last removal failed.
+      Label quick_access_proton_remove_error {
+        xalign: 0;
+        wrap: true;
+        visible: false;
+
+        styles [
+          "error",
+        ]
+      }
+
+      Label {
+        label: _("Releases");
+        xalign: 0;
+        margin-top: 6;
+
+        styles [
+          "heading",
+        ]
+      }
+
+      Label {
+        label: _("GE-Proton and Proton-CachyOS builds published on GitHub. Pindu launcher only goes online when you check for releases or install one; games never download Proton when they start.");
+        xalign: 0;
+        wrap: true;
+
+        styles [
+          "dim-label",
+        ]
+      }
+
+      ListBox quick_access_proton_check {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+
+        Adw.ButtonRow quick_access_proton_check_row {
+          title: _("Check for Releases");
+          start-icon-name: "view-refresh-symbolic";
+          action-name: "win.check-proton-releases";
+        }
+      }
+
+      // Shown when the check found the launcher offline.
+      Label quick_access_proton_status {
+        xalign: 0;
+        wrap: true;
+        visible: false;
+
+        styles [
+          "dim-label",
+        ]
+      }
+
+      // One heading, note and list per fork, in `Fork::ALL`'s order, shown
+      // once checked; choosing a release downloads it, and choosing one that
+      // downloads stops it.
+      Label quick_access_proton_fork_1 {
+        xalign: 0;
+        margin-top: 6;
+        visible: false;
+
+        styles [
+          "heading",
+        ]
+      }
+
+      Label quick_access_proton_fork_note_1 {
+        xalign: 0;
+        wrap: true;
+        visible: false;
+
+        styles [
+          "dim-label",
+        ]
+      }
+
+      ListBox quick_access_proton_releases_1 {
+        selection-mode: none;
+        visible: false;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+
+      Label quick_access_proton_fork_2 {
+        xalign: 0;
+        margin-top: 6;
+        visible: false;
+
+        styles [
+          "heading",
+        ]
+      }
+
+      Label quick_access_proton_fork_note_2 {
+        xalign: 0;
+        wrap: true;
+        visible: false;
+
+        styles [
+          "dim-label",
+        ]
+      }
+
+      ListBox quick_access_proton_releases_2 {
+        selection-mode: none;
+        visible: false;
+
+        styles [
+          "boxed-list",
+        ]
+      }
+    };
+  };
+}
