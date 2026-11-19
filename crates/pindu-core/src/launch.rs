@@ -171,6 +171,41 @@ pub fn offers_performance(game: &Game) -> bool {
     launch_settings(game).is_some()
 }
 
+/// How a game we run starts this once: as its launch settings say, with a log of it, or
+/// safely, to tell a broken overlay or wrapper from a broken game.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Start {
+    /// Play: as its launch settings say.
+    Play,
+    /// "Play with Logs": as its launch settings say, keeping its output in a new log.
+    WithLogs,
+    /// "Start Safely": without its wrappers, MangoHud, GameMode or its own environment
+    /// variables, keeping its output in a new log. Its saved settings stay as they are.
+    Safely,
+}
+
+impl Start {
+    /// Whether this start keeps the game's output in a new log.
+    pub fn keeps_log(self) -> bool {
+        self != Self::Play
+    }
+
+    /// The launch config the game starts with this once: `config` itself, or for a safe
+    /// start only its program, arguments, folder, Proton build and prefix.
+    pub fn config(self, config: LaunchConfig) -> LaunchConfig {
+        match self {
+            Self::Play | Self::WithLogs => config,
+            Self::Safely => LaunchConfig {
+                environment: BTreeMap::new(),
+                mangohud: false,
+                gamemode: false,
+                wrappers: Vec::new(),
+                ..config
+            },
+        }
+    }
+}
+
 /// A game ID and window class of the game's own, so umu, the compositor and the shell
 /// tell our games apart: `pindu-<hash>` from the game's ID.
 pub(crate) fn session_environment(game: &Game) -> BTreeMap<String, String> {
@@ -649,6 +684,84 @@ mod tests {
                 "--fullscreen"
             ]
         );
+    }
+
+    #[test]
+    fn a_safe_start_runs_the_bare_game_with_only_our_variables() {
+        let game = host_game(LaunchKind::HostCommand);
+        let config = Start::Safely.config(LaunchConfig {
+            wrappers: vec!["gamescope".into(), "obs-gamecapture".into()],
+            gamemode: true,
+            mangohud: true,
+            ..config()
+        });
+
+        let Some(Route::HostSpawn(command)) = route(&game, Some(&config)) else {
+            panic!("no host route");
+        };
+
+        assert_eq!(command.argv, ["/opt/Celeste Game/Celeste", "--fullscreen"]);
+        assert_eq!(command.environment, session_environment(&game));
+        assert_eq!(command.working_dir, Some("/opt/Celeste Game".into()));
+    }
+
+    #[test]
+    fn a_safe_start_keeps_the_game_s_program_build_and_prefix() {
+        let config = LaunchConfig {
+            proton_version: Some("GE-Proton10-34".into()),
+            prefix_path: Some("/prefixes/celeste".into()),
+            wrappers: vec!["gamescope".into()],
+            gamemode: true,
+            mangohud: true,
+            ..config()
+        };
+
+        assert_eq!(
+            Start::Safely.config(config.clone()),
+            LaunchConfig {
+                environment: BTreeMap::new(),
+                mangohud: false,
+                gamemode: false,
+                wrappers: Vec::new(),
+                ..config
+            }
+        );
+    }
+
+    #[test]
+    fn play_keeps_the_settings_and_only_play_leaves_no_log() {
+        let config = LaunchConfig {
+            wrappers: vec!["gamescope".into()],
+            gamemode: true,
+            mangohud: true,
+            ..config()
+        };
+
+        assert_eq!(Start::Play.config(config.clone()), config);
+        assert_eq!(Start::WithLogs.config(config.clone()), config);
+        assert!(!Start::Play.keeps_log());
+        assert!(Start::WithLogs.keeps_log());
+        assert!(Start::Safely.keeps_log());
+    }
+
+    #[test]
+    fn a_safe_start_leaves_the_saved_settings_as_they_are() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = crate::store::Store::open(&dir.path().join("library.db")).unwrap();
+        let game = host_game(LaunchKind::HostCommand);
+        let saved = LaunchConfig {
+            wrappers: vec!["gamescope".into()],
+            gamemode: true,
+            mangohud: true,
+            ..config()
+        };
+        store.insert_game(&game).unwrap();
+        store.set_launch_config(&game.id, &saved).unwrap();
+
+        let loaded = store.launch_config(&game.id).unwrap().unwrap();
+        route(&game, Some(&Start::Safely.config(loaded)));
+
+        assert_eq!(store.launch_config(&game.id).unwrap(), Some(saved));
     }
 
     #[test]

@@ -190,6 +190,24 @@ window.fullscreen-mode .game-actions button:focus-visible {
   outline-offset: 3px;
 }
 
+/* The About group and the description: small corners and the accent ring, like the
+   buttons above them. */
+window.fullscreen-mode .game-about .boxed-list,
+window.fullscreen-mode .game-about .boxed-list > row,
+window.fullscreen-mode .game-description {
+  border-radius: 4px;
+}
+
+window.fullscreen-mode .game-about .boxed-list > row:focus-visible {
+  outline: 3px solid var(--accent-color);
+  outline-offset: -3px;
+}
+
+window.fullscreen-mode .game-description:focus-visible {
+  outline: 3px solid var(--accent-color);
+  outline-offset: 8px;
+}
+
 /* Panels: solid dark sheets with full-width rows; the focused row takes the accent
    outline. */
 window.fullscreen-mode .menu-drawer,

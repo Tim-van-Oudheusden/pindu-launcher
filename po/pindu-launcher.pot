@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 19:29+0100\n"
+"POT-Creation-Date: 2026-11-19 19:33+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -147,11 +147,11 @@ msgstr ""
 msgid "Run as the client of a gamescope-session-plus session"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:700
+#: crates/pindu-ui/src/application.rs:707
 msgid "Getting artwork from SteamGridDB…"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:743
+#: crates/pindu-ui/src/application.rs:750
 #, rust-format
 msgid "Added one game"
 msgid_plural "Added {count} games"
@@ -159,12 +159,12 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
-#: crates/pindu-ui/src/application.rs:746
+#: crates/pindu-ui/src/application.rs:753
 #, rust-format
 msgid "From {sources}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:757
+#: crates/pindu-ui/src/application.rs:764
 #, rust-format
 msgid "One game is missing"
 msgid_plural "{count} games are missing"
@@ -172,65 +172,65 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
-#: crates/pindu-ui/src/application.rs:763
+#: crates/pindu-ui/src/application.rs:770
 #, rust-format
 msgid "No longer listed by {sources}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:800
+#: crates/pindu-ui/src/application.rs:807
 msgid "Game Art From SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:802
+#: crates/pindu-ui/src/application.rs:809
 msgid ""
 "SteamGridDB has covers, banners and logos for games that come without them. "
 "To use it, make a free account on steamgriddb.com and add your own API key "
 "in Preferences; it is kept in your keyring."
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:808
+#: crates/pindu-ui/src/application.rs:815
 msgid "_Not Now"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:809
+#: crates/pindu-ui/src/application.rs:816
 msgid "_Open Settings"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:833
+#: crates/pindu-ui/src/application.rs:840
 msgid "Export Library"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:848
+#: crates/pindu-ui/src/application.rs:855
 msgid "Library exported"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:850
+#: crates/pindu-ui/src/application.rs:857
 #, rust-format
 msgid "Could not export the library: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:864
+#: crates/pindu-ui/src/application.rs:871
 msgid "Library Backups"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:869
+#: crates/pindu-ui/src/application.rs:876
 msgid "Import Backup"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:882
+#: crates/pindu-ui/src/application.rs:889
 msgid "This file is not a library backup"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:884
+#: crates/pindu-ui/src/application.rs:891
 msgid "This backup is from a newer version of Pindu launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:887
+#: crates/pindu-ui/src/application.rs:894
 #, rust-format
 msgid "Could not import the backup: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:960
+#: crates/pindu-ui/src/application.rs:968
 #: data/gamescope-session/gamescope-session-pindu.desktop.in:2
 #: data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in:2
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:7
@@ -239,45 +239,45 @@ msgid "Pindu launcher"
 msgstr ""
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-#: crates/pindu-ui/src/application.rs:968
+#: crates/pindu-ui/src/application.rs:976
 msgid "translator-credits"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:985
+#: crates/pindu-ui/src/application.rs:993
 #, rust-format
 msgid "Added artwork for one game"
 msgid_plural "Added artwork for {count} games"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:990
+#: crates/pindu-ui/src/application.rs:998
 msgid "No new artwork found"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:991
+#: crates/pindu-ui/src/application.rs:999
 msgid "SteamGridDB did not accept the key"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:992
+#: crates/pindu-ui/src/application.rs:1000
 msgid "Could not reach SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1004
+#: crates/pindu-ui/src/application.rs:1012
 msgid "Nothing new to restore"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1006
+#: crates/pindu-ui/src/application.rs:1014
 msgid "Backup restored"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1012
+#: crates/pindu-ui/src/application.rs:1020
 #, rust-format
 msgid "one game in it is not in this library"
 msgid_plural "{count} games in it are not in this library"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:1017
+#: crates/pindu-ui/src/application.rs:1025
 #, rust-format
 msgid "{result}; {note}"
 msgstr ""
@@ -516,7 +516,7 @@ msgstr ""
 #: crates/pindu-ui/src/game_dialog.rs:809
 #: crates/pindu-ui/src/proton_downloads_page.rs:227
 #: crates/pindu-ui/src/proton_launch.rs:629 data/ui/game_dialog.blp:16
-#: data/ui/game_page.blp:385 data/ui/secret_dialog.blp:19
+#: data/ui/game_page.blp:405 data/ui/secret_dialog.blp:19
 msgid "_Cancel"
 msgstr ""
 
@@ -850,16 +850,16 @@ msgstr ""
 msgid "Quick Access"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_game.rs:238
+#: crates/pindu-ui/src/fullscreen_game.rs:250
 msgid "Opening the launcher…"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_game.rs:240
+#: crates/pindu-ui/src/fullscreen_game.rs:252
 #, rust-format
 msgid "Opening {launcher}…"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_game.rs:244
+#: crates/pindu-ui/src/fullscreen_game.rs:256
 msgid "Starting…"
 msgstr ""
 
@@ -874,7 +874,7 @@ msgid "Favourites"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:273
-#: crates/pindu-ui/src/game_page.rs:661 crates/pindu-ui/src/home_page.rs:54
+#: crates/pindu-ui/src/game_page.rs:697 crates/pindu-ui/src/home_page.rs:54
 msgid "Last Played"
 msgstr ""
 
@@ -891,7 +891,7 @@ msgid "Recently Added"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:277
-#: crates/pindu-ui/src/game_page.rs:698 crates/pindu-ui/src/home_page.rs:43
+#: crates/pindu-ui/src/game_page.rs:734 crates/pindu-ui/src/home_page.rs:43
 msgid "Playtime"
 msgstr ""
 
@@ -996,78 +996,82 @@ msgstr ""
 msgid "Unread"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:556
+#: crates/pindu-ui/src/fullscreen_panels.rs:557
 #: crates/pindu-ui/src/hint_bar.rs:201
 #: crates/pindu-ui/src/widgets/cover_tile.rs:232
 #: crates/pindu-ui/src/window.rs:1387 data/ui/cover_tile.blp:65
 msgid "Play"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:557
+#: crates/pindu-ui/src/fullscreen_panels.rs:558
+msgid "Start Safely"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_panels.rs:559
 #: crates/pindu-ui/src/hint_bar.rs:202
 #: crates/pindu-ui/src/widgets/cover_tile.rs:230
 #: crates/pindu-ui/src/window.rs:1385
 msgid "Stop"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:558
+#: crates/pindu-ui/src/fullscreen_panels.rs:560
 msgid "Return"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:559
-#: crates/pindu-ui/src/game_page.rs:417 data/ui/game_page.blp:113
+#: crates/pindu-ui/src/fullscreen_panels.rs:561
+#: crates/pindu-ui/src/game_page.rs:451 data/ui/game_page.blp:113
 msgid "Add to Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:560
-#: crates/pindu-ui/src/game_page.rs:415
+#: crates/pindu-ui/src/fullscreen_panels.rs:562
+#: crates/pindu-ui/src/game_page.rs:449
 msgid "Remove from Favourites"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:561 data/ui/menu_drawer.blp:118
+#: crates/pindu-ui/src/fullscreen_panels.rs:563 data/ui/menu_drawer.blp:118
 #: data/ui/menu_drawer.blp:216 data/ui/window.blp:118
 msgid "Collections"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:562 data/ui/artwork_dialog.blp:10
+#: crates/pindu-ui/src/fullscreen_panels.rs:564 data/ui/artwork_dialog.blp:10
 msgid "Change Artwork"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:563
+#: crates/pindu-ui/src/fullscreen_panels.rs:565
 #: crates/pindu-ui/src/search_keyboard.rs:174
 msgid "Hide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:564
+#: crates/pindu-ui/src/fullscreen_panels.rs:566
 msgid "Unhide"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:568
+#: crates/pindu-ui/src/fullscreen_panels.rs:570
 msgid "Open in Launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:569
-#: crates/pindu-ui/src/game_page.rs:281
+#: crates/pindu-ui/src/fullscreen_panels.rs:571
+#: crates/pindu-ui/src/game_page.rs:290
 #, rust-format
 msgid "Open in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:572
+#: crates/pindu-ui/src/fullscreen_panels.rs:574
 msgid "View on ProtonDB"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_panels.rs:575
+#: crates/pindu-ui/src/fullscreen_panels.rs:577
 msgid "View on PCGamingWiki"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_performance.rs:197 data/ui/game_page.blp:306
+#: crates/pindu-ui/src/fullscreen_performance.rs:197 data/ui/game_page.blp:326
 #: data/ui/preferences.blp:200 data/ui/quick_access.blp:1229
 #: data/ui/window.blp:550
 msgid "MangoHud"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_performance.rs:199
-#: crates/pindu-ui/src/game_page.rs:302
+#: crates/pindu-ui/src/game_page.rs:311
 msgid "MangoHud is not installed"
 msgstr ""
 
@@ -1096,12 +1100,12 @@ msgid "Playing Now"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_playing.rs:312
-#: crates/pindu-ui/src/game_page.rs:429
+#: crates/pindu-ui/src/game_page.rs:463
 msgid "_Return"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_playing.rs:313
-#: crates/pindu-ui/src/game_page.rs:428
+#: crates/pindu-ui/src/game_page.rs:462
 msgid "_Stop"
 msgstr ""
 
@@ -1281,7 +1285,7 @@ msgstr ""
 msgid "A new folder in {folder}"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:519 crates/pindu-ui/src/game_page.rs:535
+#: crates/pindu-ui/src/game_dialog.rs:519 crates/pindu-ui/src/game_page.rs:569
 msgid "Choose the Game's Prefix"
 msgstr ""
 
@@ -1366,123 +1370,128 @@ msgstr ""
 msgid "Choose a folder and a program first"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:277 crates/pindu-ui/src/game_page.rs:636
+#: crates/pindu-ui/src/game_page.rs:286 crates/pindu-ui/src/game_page.rs:672
 #, rust-format
 msgid "{launcher} starts the game, keeps its settings and tracks its playtime"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:430
+#: crates/pindu-ui/src/game_page.rs:464
 #: crates/pindu-ui/src/widgets/cover_tile.rs:271 data/ui/game_page.blp:100
 msgid "_Play"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:584
+#: crates/pindu-ui/src/game_page.rs:619
 msgid "Play with _Logs"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:586
+#: crates/pindu-ui/src/game_page.rs:620
+msgid "Start _Safely"
+msgstr ""
+
+#: crates/pindu-ui/src/game_page.rs:622
 msgid "Open Latest L_og"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:591
+#: crates/pindu-ui/src/game_page.rs:627
 #: crates/pindu-ui/src/widgets/cover_tile.rs:307
 msgid "_Edit…"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:592
+#: crates/pindu-ui/src/game_page.rs:628
 msgid "Change _Artwork…"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:594
+#: crates/pindu-ui/src/game_page.rs:630
 #: crates/pindu-ui/src/widgets/cover_tile.rs:309
 msgid "_Unhide"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:596
+#: crates/pindu-ui/src/game_page.rs:632
 #: crates/pindu-ui/src/widgets/cover_tile.rs:311
 msgid "_Hide"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:598
+#: crates/pindu-ui/src/game_page.rs:634
 #: crates/pindu-ui/src/proton_downloads_page.rs:228
 #: crates/pindu-ui/src/widgets/cover_tile.rs:313
 msgid "_Remove"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:600
+#: crates/pindu-ui/src/game_page.rs:636
 #: crates/pindu-ui/src/widgets/cover_tile.rs:274
 msgid "_Open in Launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:604
+#: crates/pindu-ui/src/game_page.rs:640
 msgid "Open _Install Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:612
+#: crates/pindu-ui/src/game_page.rs:648
 msgid "View on _ProtonDB"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:616
+#: crates/pindu-ui/src/game_page.rs:652
 msgid "View on PC_GamingWiki"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:639
+#: crates/pindu-ui/src/game_page.rs:675
 msgid "Its launcher starts the game"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:643
+#: crates/pindu-ui/src/game_page.rs:679
 msgid "Starts on this computer; its playtime is recorded here"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:646
+#: crates/pindu-ui/src/game_page.rs:682
 msgid "Starts on this computer"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:648
+#: crates/pindu-ui/src/game_page.rs:684
 msgid "Starts on this computer with Proton"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:650
+#: crates/pindu-ui/src/game_page.rs:686
 msgid "Starts on this computer in the Steam Linux Runtime"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:658 crates/pindu-ui/src/home_page.rs:60
+#: crates/pindu-ui/src/game_page.rs:694 crates/pindu-ui/src/home_page.rs:60
 msgid "Launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:662
+#. Translators: when a source last synced; it never has.
+#: crates/pindu-ui/src/game_page.rs:698 crates/pindu-ui/src/sources.rs:55
 msgid "Never"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:664
+#: crates/pindu-ui/src/game_page.rs:700
 msgid "Added"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:667
+#: crates/pindu-ui/src/game_page.rs:703
 msgid "Size"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:695
+#: crates/pindu-ui/src/game_page.rs:731
 #, rust-format
 msgid "Playtime · {source}"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:697
+#: crates/pindu-ui/src/game_page.rs:733
 msgid "Playtime · Tracked Here"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:706 crates/pindu-ui/src/preferences.rs:570
+#: crates/pindu-ui/src/game_page.rs:742 crates/pindu-ui/src/preferences.rs:614
 msgid "None yet"
 msgstr ""
 
-#: crates/pindu-ui/src/game_page.rs:707
+#: crates/pindu-ui/src/game_page.rs:743
 #, rust-format
 msgid "{n} minute"
 msgid_plural "{n} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/game_page.rs:710
+#: crates/pindu-ui/src/game_page.rs:746
 #, rust-format
 msgid "{n} hour"
 msgid_plural "{n} hours"
@@ -1625,64 +1634,68 @@ msgstr ""
 msgid "Steam Big Picture"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:133
-#: crates/pindu-ui/src/proton_launch.rs:177
-#, rust-format
-msgid "Starting “{title}”"
-msgstr ""
-
-#: crates/pindu-ui/src/launch_service.rs:137
+#: crates/pindu-ui/src/launch_service.rs:141
 #: crates/pindu-ui/src/proton_launch.rs:504
 #, rust-format
 msgid "Could not start “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:156
+#: crates/pindu-ui/src/launch_service.rs:160
 msgid "This game cannot be started yet"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:243
+#: crates/pindu-ui/src/launch_service.rs:170
+#, rust-format
+msgid "Starting “{title}” safely"
+msgstr ""
+
+#: crates/pindu-ui/src/launch_service.rs:171
+#, rust-format
+msgid "Starting “{title}”"
+msgstr ""
+
+#: crates/pindu-ui/src/launch_service.rs:257
 #, rust-format
 msgid "Starting “{title}” in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:247
-#: crates/pindu-ui/src/launch_service.rs:322
-#: crates/pindu-ui/src/launch_service.rs:383
+#: crates/pindu-ui/src/launch_service.rs:261
+#: crates/pindu-ui/src/launch_service.rs:336
+#: crates/pindu-ui/src/launch_service.rs:397
 #, rust-format
 msgid "Could not open {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:277
+#: crates/pindu-ui/src/launch_service.rs:291
 #: crates/pindu-ui/src/proton_launch.rs:374
 #: crates/pindu-ui/src/proton_launch.rs:603 crates/pindu-ui/src/window.rs:1227
 msgid "_Close"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:278
+#: crates/pindu-ui/src/launch_service.rs:292
 msgid "_How to Enable"
 msgstr ""
 
 #. / The heading of the explanation that a game needs a permission.
 
-#: crates/pindu-ui/src/launch_service.rs:292
+#: crates/pindu-ui/src/launch_service.rs:306
 msgid "Permission Needed"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:298
+#: crates/pindu-ui/src/launch_service.rs:312
 #, rust-format
 msgid ""
 "“{title}” starts on this computer, outside the sandbox. Allow that in "
 "Preferences, then restart Pindu launcher."
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:342
+#: crates/pindu-ui/src/launch_service.rs:356
 msgid "Could not open the web page"
 msgstr ""
 
 #. / What a toast says when "Play with Logs" starts a game without its log.
 
-#: crates/pindu-ui/src/log_service.rs:109
+#: crates/pindu-ui/src/log_service.rs:115
 #, rust-format
 msgid "Could not keep a log of “{title}”"
 msgstr ""
@@ -1725,119 +1738,130 @@ msgstr ""
 msgid "The connection failed (reason {reason})."
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:150
+#: crates/pindu-ui/src/preferences.rs:153
 msgid "Command copied"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:315
+#: crates/pindu-ui/src/preferences.rs:318
 msgid "Allowed"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:317
+#: crates/pindu-ui/src/preferences.rs:320
 msgid "Not allowed"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:399
+#: crates/pindu-ui/src/preferences.rs:403
 msgid "Not found on this computer"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:410
+#: crates/pindu-ui/src/preferences.rs:414
 msgid "Import"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:422
+#: crates/pindu-ui/src/preferences.rs:426
 msgid "Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:424
+#: crates/pindu-ui/src/preferences.rs:428
 msgid "Found automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:429 data/ui/game_dialog.blp:62
+#: crates/pindu-ui/src/preferences.rs:433 data/ui/game_dialog.blp:62
 #: data/ui/preferences.blp:187
 msgid "_Choose…"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:435
+#: crates/pindu-ui/src/preferences.rs:439
 msgid "Find Automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:466
+#: crates/pindu-ui/src/preferences.rs:470
 msgid "Show in Sidebar"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:483
+#: crates/pindu-ui/src/preferences.rs:481
+msgid "Last Synced"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:495
+#, rust-format
+msgid "The last sync ran into {count} problem"
+msgid_plural "The last sync ran into {count} problems"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/pindu-ui/src/preferences.rs:527
 #, rust-format
 msgid "Choose the Folder of {source}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:525
+#: crates/pindu-ui/src/preferences.rs:569
 msgid "Choose the Prefix Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:569
+#: crates/pindu-ui/src/preferences.rs:613
 msgid "A key is stored in your keyring"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:572
+#: crates/pindu-ui/src/preferences.rs:616
 #, rust-format
 msgid "The keyring cannot be used: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:600
+#: crates/pindu-ui/src/preferences.rs:644
 #, rust-format
 msgid "The key was not saved: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:618
+#: crates/pindu-ui/src/preferences.rs:662
 #: crates/pindu-ui/src/quick_access.rs:953
 msgid "Your fullscreen.css, over the design"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:620
+#: crates/pindu-ui/src/preferences.rs:664
 msgid "Create the style file or import one to turn it on"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:645
+#: crates/pindu-ui/src/preferences.rs:689
 #, rust-format
 msgid "The style folder cannot be created: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:664
+#: crates/pindu-ui/src/preferences.rs:708
 msgid "Stylesheets"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:670
+#: crates/pindu-ui/src/preferences.rs:714
 msgid "Import Style"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:688
+#: crates/pindu-ui/src/preferences.rs:732
 msgid "Style imported"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:690
+#: crates/pindu-ui/src/preferences.rs:734
 #, rust-format
 msgid "The style was not imported: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:705
+#: crates/pindu-ui/src/preferences.rs:749
 msgid "Style moved to fullscreen.css.bak"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:706
+#: crates/pindu-ui/src/preferences.rs:750
 msgid "My Stylesheet is off"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:708
+#: crates/pindu-ui/src/preferences.rs:752
 #, rust-format
 msgid "The style was not reset: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:726 data/ui/preferences.blp:325
+#: crates/pindu-ui/src/preferences.rs:770 data/ui/preferences.blp:325
 msgid "No Problems"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:729
+#: crates/pindu-ui/src/preferences.rs:773
 #, rust-format
 msgid "{count} Problem"
 msgid_plural "{count} Problems"
@@ -2115,40 +2139,66 @@ msgstr ""
 msgid "A game you started is running"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:10
+#: crates/pindu-ui/src/sources.rs:11
 msgid "Heroic: Epic"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:11
+#: crates/pindu-ui/src/sources.rs:12
 msgid "Heroic: GOG"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:12
+#: crates/pindu-ui/src/sources.rs:13
 msgid "Heroic: Amazon"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:13
+#: crates/pindu-ui/src/sources.rs:14
 msgid "Heroic: Sideloaded"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:17
+#: crates/pindu-ui/src/sources.rs:18
 msgid "Desktop"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:18
+#: crates/pindu-ui/src/sources.rs:19
 msgid "Added by Hand"
 msgstr ""
 
 #. Translators: the separator between the first items of a list.
-#: crates/pindu-ui/src/sources.rs:31
+#: crates/pindu-ui/src/sources.rs:32
 msgid ", "
 msgstr ""
 
 #. Translators: a list's first items and its last, as in "Steam, Lutris and Bottles".
-#: crates/pindu-ui/src/sources.rs:33
+#: crates/pindu-ui/src/sources.rs:34
 #, rust-format
 msgid "{items} and {last}"
 msgstr ""
+
+#. Translators: when a source last synced; under a minute ago.
+#: crates/pindu-ui/src/sources.rs:57
+msgid "Just now"
+msgstr ""
+
+#: crates/pindu-ui/src/sources.rs:58
+#, rust-format
+msgid "{count} minute ago"
+msgid_plural "{count} minutes ago"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/pindu-ui/src/sources.rs:59
+#, rust-format
+msgid "{count} hour ago"
+msgid_plural "{count} hours ago"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/pindu-ui/src/sources.rs:60
+#, rust-format
+msgid "{count} day ago"
+msgid_plural "{count} days ago"
+msgstr[0] ""
+msgstr[1] ""
 
 #: crates/pindu-ui/src/steamgriddb_service.rs:115
 msgid "Artwork From SteamGridDB"
@@ -3083,7 +3133,7 @@ msgstr ""
 msgid "Title"
 msgstr ""
 
-#: data/ui/game_dialog.blp:82 data/ui/game_page.blp:294
+#: data/ui/game_dialog.blp:82 data/ui/game_page.blp:314
 msgid "Arguments"
 msgstr ""
 
@@ -3109,12 +3159,12 @@ msgstr ""
 msgid "How to Install"
 msgstr ""
 
-#: data/ui/game_dialog.blp:116 data/ui/game_page.blp:275
+#: data/ui/game_dialog.blp:116 data/ui/game_page.blp:295
 #: data/ui/preferences.blp:164 data/ui/preferences.blp:212
 msgid "Proton"
 msgstr ""
 
-#: data/ui/game_dialog.blp:122 data/ui/game_page.blp:281
+#: data/ui/game_dialog.blp:122 data/ui/game_page.blp:301
 msgid "Prefix"
 msgstr ""
 
@@ -3122,7 +3172,7 @@ msgstr ""
 msgid "Use a New Prefix"
 msgstr ""
 
-#: data/ui/game_dialog.blp:139 data/ui/game_page.blp:286
+#: data/ui/game_dialog.blp:139 data/ui/game_page.blp:306
 msgid "C_hoose…"
 msgstr ""
 
@@ -3168,53 +3218,57 @@ msgstr ""
 msgid "About"
 msgstr ""
 
-#: data/ui/game_page.blp:226
+#: data/ui/game_page.blp:230
 msgid "Developer"
 msgstr ""
 
-#: data/ui/game_page.blp:235
+#: data/ui/game_page.blp:239
 msgid "Genres"
 msgstr ""
 
-#: data/ui/game_page.blp:250 data/ui/game_page.blp:270
+#: data/ui/game_page.blp:257
+msgid "Description"
+msgstr ""
+
+#: data/ui/game_page.blp:270 data/ui/game_page.blp:290
 msgid "Launch"
 msgstr ""
 
-#: data/ui/game_page.blp:253
+#: data/ui/game_page.blp:273
 msgid "Started by the launcher"
 msgstr ""
 
-#: data/ui/game_page.blp:263
+#: data/ui/game_page.blp:283
 msgid "Choose Launch Options"
 msgstr ""
 
-#: data/ui/game_page.blp:264
+#: data/ui/game_page.blp:284
 msgid "Ask Steam which of the game’s launch options to use"
 msgstr ""
 
-#: data/ui/game_page.blp:271 data/ui/quick_access.blp:1240
+#: data/ui/game_page.blp:291 data/ui/quick_access.blp:1240
 msgid "Changes apply the next time the game starts."
 msgstr ""
 
-#: data/ui/game_page.blp:300
+#: data/ui/game_page.blp:320
 msgid "Environment, Such as NAME=value"
 msgstr ""
 
-#: data/ui/game_page.blp:307 data/ui/preferences.blp:201
+#: data/ui/game_page.blp:327 data/ui/preferences.blp:201
 msgid "An overlay with the frame rate and how busy the computer is"
 msgstr ""
 
-#: data/ui/game_page.blp:311 data/ui/preferences.blp:205
+#: data/ui/game_page.blp:331 data/ui/preferences.blp:205
 #: data/ui/quick_access.blp:1233 data/ui/window.blp:554
 msgid "GameMode"
 msgstr ""
 
-#: data/ui/game_page.blp:312 data/ui/preferences.blp:206
+#: data/ui/game_page.blp:332 data/ui/preferences.blp:206
 #: data/ui/quick_access.blp:1234 data/ui/window.blp:555
 msgid "Asks the system to favour the game while it runs"
 msgstr ""
 
-#: data/ui/game_page.blp:316
+#: data/ui/game_page.blp:336
 msgid "Wrapper Command, Such as taskset -c 0-3"
 msgstr ""
 

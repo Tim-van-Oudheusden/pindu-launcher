@@ -522,6 +522,7 @@ impl PinduWindow {
         let target = game.id().as_str().to_variant();
         let (group, action) = match option {
             GameOption::Play => ("app", "play"),
+            GameOption::StartSafely => ("app", "start-safely"),
             GameOption::Stop => ("app", "stop"),
             GameOption::Return => ("win", "playing-return"),
             GameOption::AddToFavourites | GameOption::RemoveFromFavourites => {
@@ -554,6 +555,7 @@ fn own_game(game: &GameObject) -> bool {
 fn option_label(option: GameOption, game: &GameObject) -> (&'static str, String) {
     match option {
         GameOption::Play => ("media-playback-start-symbolic", gettext("Play")),
+        GameOption::StartSafely => ("security-high-symbolic", gettext("Start Safely")),
         GameOption::Stop => ("media-playback-stop-symbolic", gettext("Stop")),
         GameOption::Return => ("media-playback-start-symbolic", gettext("Return")),
         GameOption::AddToFavourites => ("non-starred-symbolic", gettext("Add to Favourites")),

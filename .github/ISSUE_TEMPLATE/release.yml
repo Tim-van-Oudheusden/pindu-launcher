@@ -10,8 +10,9 @@ body:
         milestone. Pindu OS finds the hardware check by this title, so one issue covers the pre-releases and the final
         release. The runbook is [docs/releasing.md](https://github.com/Tim-van-Oudheusden/pindu-launcher/blob/main/docs/releasing.md).
 
-        **Hardware check:** run the checklist below on one real machine, on the pre-release's files, before the final
-        tag ([Hardware checklist](https://github.com/Tim-van-Oudheusden/pindu-launcher/blob/main/docs/releasing.md#hardware-checklist)
+        **Hardware check:** run the checklist below on one real machine, on the pre-release's files before the final
+        tag, or on the final's files when the maintainer cuts a fast final release without a pre-release
+        ([Hardware checklist](https://github.com/Tim-van-Oudheusden/pindu-launcher/blob/main/docs/releasing.md#hardware-checklist)
         says what each check means). Fill in the hardware and the build, tick each check that passes, and comment on
         anything that fails. When every box is ticked, the maintainer adds the `hardware-check:passed` label; that label
         on this issue is the recorded pass Pindu OS waits for before it promotes this launcher to `:stable`.
@@ -41,8 +42,8 @@ body:
     attributes:
       label: Build tested
       description: >-
-        The tag and the file the checklist ran on, from the pre-release's GitHub release. Fill it in when you run the
-        checklist; a new pre-release starts the checklist again.
+        The tag and the file the checklist ran on, from the pre-release's GitHub release (the final's, for a fast final
+        release). Fill it in when you run the checklist; a new pre-release or patch version starts the checklist again.
       placeholder: |
         Tag: v0.5.0-rc.1
         File: pindu-launcher-0.5.0-rc.1-1.fc45.x86_64.rpm
