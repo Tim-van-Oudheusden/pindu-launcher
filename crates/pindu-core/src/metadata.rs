@@ -73,6 +73,24 @@ impl Metadata {
         }
     }
 
+    /// A release year as the user typed it: four digits, trimmed, not starting with 0;
+    /// `None` when empty.
+    ///
+    /// # Errors
+    ///
+    /// [`NotAYear`] for other text, which the user has to correct rather than lose.
+    pub fn typed_year(text: &str) -> Result<Option<i32>, NotAYear> {
+        let text = text.trim();
+        if text.is_empty() {
+            return Ok(None);
+        }
+        let digits = text.len() == 4 && text.bytes().all(|byte| byte.is_ascii_digit());
+        match text.parse() {
+            Ok(year @ 1000..) if digits => Ok(Some(year)),
+            _ => Err(NotAYear),
+        }
+    }
+
     /// The fields that have a value, each with it.
     pub fn values(&self) -> Vec<FieldValue> {
         let mut values = Vec::new();
@@ -105,6 +123,10 @@ impl Metadata {
         }
     }
 }
+
+/// Text the user typed as a release year that is not one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NotAYear;
 
 /// One field's value.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -407,6 +429,17 @@ mod tests {
         );
         assert_eq!(Metadata::typed(" ", " , ", "\n"), Metadata::default());
     }
+
+    #[test]
+    fn a_typed_year_is_four_digits_or_nothing() {
+        assert_eq!(Metadata::typed_year(" 2004\n"), Ok(Some(2004)));
+        assert_eq!(Metadata::typed_year(" "), Ok(None));
+        for text in [
+            "04", "20040", "+2004", "-2004", "2004.0", "MMIV", "2004 AD", "0000",
+        ] {
+            assert_eq!(Metadata::typed_year(text), Err(NotAYear), "{text:?}");
+        }
+    }
 }
 
 #[cfg(test)]
@@ -470,6 +503,23 @@ mod edit_tests {
             .set_metadata(id, MetadataOrigin::Provider, &Metadata::default(), 40)
             .unwrap();
         assert_eq!(shown_metadata(&store, id), developer("Valve"));
+    }
+
+    #[test]
+    fn a_users_release_year_survives_a_sync_until_cleared() {
+        let (_dir, store, ids) = store_with(&["570"]);
+        let id = &ids[0];
+        let year = |year| Metadata {
+            release_year: Some(year),
+            ..Default::default()
+        };
+        sync(&store, id, &year(2013), 10);
+        edit(&store, id, &year(2011), 20);
+        sync(&store, id, &year(2014), 30);
+        assert_eq!(shown_metadata(&store, id), year(2011));
+
+        edit(&store, id, &Metadata::default(), 40);
+        assert_eq!(shown_metadata(&store, id), year(2014));
     }
 
     #[test]

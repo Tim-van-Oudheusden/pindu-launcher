@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 21:25+0100\n"
+"POT-Creation-Date: 2026-11-19 21:26+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -324,7 +324,7 @@ msgid "Choose {kind}"
 msgstr ""
 
 #: crates/pindu-ui/src/artwork_dialog.rs:458
-#: crates/pindu-ui/src/game_dialog.rs:918
+#: crates/pindu-ui/src/game_dialog.rs:962
 msgid "Your image"
 msgstr ""
 
@@ -383,12 +383,12 @@ msgid "{kind} changed"
 msgstr ""
 
 #: crates/pindu-ui/src/artwork_dialog.rs:830
-#: crates/pindu-ui/src/game_dialog.rs:806
+#: crates/pindu-ui/src/game_dialog.rs:850
 msgid "Images"
 msgstr ""
 
 #: crates/pindu-ui/src/artwork_dialog.rs:835
-#: crates/pindu-ui/src/game_dialog.rs:811
+#: crates/pindu-ui/src/game_dialog.rs:855
 msgid "Choose an Image"
 msgstr ""
 
@@ -424,15 +424,15 @@ msgstr ""
 msgid "The Key Was Not Saved"
 msgstr ""
 
-#: crates/pindu-ui/src/artwork_dialog.rs:1033 data/ui/game_dialog.blp:210
+#: crates/pindu-ui/src/artwork_dialog.rs:1033 data/ui/game_dialog.blp:216
 msgid "Cover"
 msgstr ""
 
-#: crates/pindu-ui/src/artwork_dialog.rs:1034 data/ui/game_dialog.blp:214
+#: crates/pindu-ui/src/artwork_dialog.rs:1034 data/ui/game_dialog.blp:220
 msgid "Banner"
 msgstr ""
 
-#: crates/pindu-ui/src/artwork_dialog.rs:1035 data/ui/game_dialog.blp:218
+#: crates/pindu-ui/src/artwork_dialog.rs:1035 data/ui/game_dialog.blp:224
 msgid "Logo"
 msgstr ""
 
@@ -504,7 +504,7 @@ msgid "Save Filter"
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:206
-#: crates/pindu-ui/src/game_dialog.rs:277
+#: crates/pindu-ui/src/game_dialog.rs:284
 msgid "_Save"
 msgstr ""
 
@@ -616,7 +616,7 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_power.rs:214
 #: crates/pindu-ui/src/fullscreen_proton_downloads.rs:368
 #: crates/pindu-ui/src/fullscreen_system_update.rs:164
-#: crates/pindu-ui/src/game_dialog.rs:873
+#: crates/pindu-ui/src/game_dialog.rs:917
 #: crates/pindu-ui/src/proton_downloads_page.rs:225
 #: crates/pindu-ui/src/proton_launch.rs:721
 #: crates/pindu-ui/src/save_snapshots_dialog.rs:475 data/ui/game_dialog.blp:16
@@ -854,12 +854,12 @@ msgid "What Do You Want to Add?"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:264
-#: crates/pindu-ui/src/game_dialog.rs:410
+#: crates/pindu-ui/src/game_dialog.rs:451
 msgid "Choose the Game's Folder"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:265
-#: crates/pindu-ui/src/game_dialog.rs:607
+#: crates/pindu-ui/src/game_dialog.rs:648
 msgid "Choose the Game's Installer"
 msgstr ""
 
@@ -877,7 +877,7 @@ msgid "Choose the Game's Program"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:290
-#: crates/pindu-ui/src/game_dialog.rs:488
+#: crates/pindu-ui/src/game_dialog.rs:529
 msgid "No programs found in this folder"
 msgstr ""
 
@@ -917,17 +917,17 @@ msgid "The game's name, as the library shows it."
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:558
-#: crates/pindu-ui/src/game_dialog.rs:676
+#: crates/pindu-ui/src/game_dialog.rs:717
 msgid "Installed. Pick the game's program."
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:563
-#: crates/pindu-ui/src/game_dialog.rs:680
+#: crates/pindu-ui/src/game_dialog.rs:721
 msgid "The installer added no programs. Choose the game's folder instead."
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:619
-#: crates/pindu-ui/src/game_dialog.rs:958
+#: crates/pindu-ui/src/game_dialog.rs:1002
 #, rust-format
 msgid "Added “{title}”"
 msgstr ""
@@ -1946,94 +1946,94 @@ msgstr ""
 msgid "Restarting…"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:258 data/ui/fullscreen_add_game.blp:9
+#: crates/pindu-ui/src/game_dialog.rs:265 data/ui/fullscreen_add_game.blp:9
 #: data/ui/fullscreen_add_game.blp:116 data/ui/shortcuts-dialog.blp:14
 msgid "Add Game"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:259
+#: crates/pindu-ui/src/game_dialog.rs:266
 msgid "_Add"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:275
+#: crates/pindu-ui/src/game_dialog.rs:282
 #, rust-format
 msgid "Edit “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:423
+#: crates/pindu-ui/src/game_dialog.rs:464
 msgid "This folder cannot be used"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:570
+#: crates/pindu-ui/src/game_dialog.rs:611
 #, rust-format
 msgid "A new folder in {folder}"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:581 crates/pindu-ui/src/game_page.rs:727
+#: crates/pindu-ui/src/game_dialog.rs:622 crates/pindu-ui/src/game_page.rs:727
 msgid "Choose the Game's Prefix"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:602
+#: crates/pindu-ui/src/game_dialog.rs:643
 msgid "Windows Programs"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:697 data/ui/fullscreen_add_game.blp:59
+#: crates/pindu-ui/src/game_dialog.rs:738 data/ui/fullscreen_add_game.blp:59
 msgid "Installing… Finish the installer to go on."
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:699 data/ui/game_dialog.blp:148
+#: crates/pindu-ui/src/game_dialog.rs:740 data/ui/game_dialog.blp:148
 msgid ""
 "Run the game's installer in its prefix, then pick the program it installed"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:774
+#: crates/pindu-ui/src/game_dialog.rs:818
 msgid "Choose an Image File"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:775
-#: crates/pindu-ui/src/game_dialog.rs:864
+#: crates/pindu-ui/src/game_dialog.rs:819
+#: crates/pindu-ui/src/game_dialog.rs:908
 msgid "Use a Web Address"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:776
+#: crates/pindu-ui/src/game_dialog.rs:820
 msgid "Choose From SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:777
+#: crates/pindu-ui/src/game_dialog.rs:821
 msgid "Remove Your Image"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:866
+#: crates/pindu-ui/src/game_dialog.rs:910
 msgid "The image is downloaded once and kept with your library."
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:873
+#: crates/pindu-ui/src/game_dialog.rs:917
 msgid "_Use"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:887
+#: crates/pindu-ui/src/game_dialog.rs:931
 #, rust-format
 msgid "Could not use the address: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:914
+#: crates/pindu-ui/src/game_dialog.rs:958
 #, rust-format
 msgid "New image ({extension})"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:917
+#: crates/pindu-ui/src/game_dialog.rs:961
 msgid "Your image will be removed"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:919
+#: crates/pindu-ui/src/game_dialog.rs:963
 msgid "None"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:920
+#: crates/pindu-ui/src/game_dialog.rs:964
 msgid "From the launcher, if it has one"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:999
+#: crates/pindu-ui/src/game_dialog.rs:1043
 msgid "Choose a folder and a program first"
 msgstr ""
 
@@ -4436,7 +4436,7 @@ msgstr ""
 msgid "Sources"
 msgstr ""
 
-#: data/ui/fullscreen_health.blp:74 data/ui/game_dialog.blp:206
+#: data/ui/fullscreen_health.blp:74 data/ui/game_dialog.blp:212
 #: data/ui/health_page.blp:28 data/ui/preferences.blp:155
 #: data/ui/quick_access.blp:1554
 msgid "Artwork"
@@ -4604,12 +4604,16 @@ msgstr ""
 msgid "Genres, Separated by Commas"
 msgstr ""
 
-#: data/ui/game_dialog.blp:183 data/ui/game_dialog.blp:196
+#: data/ui/game_dialog.blp:182
+msgid "Release Year"
+msgstr ""
+
+#: data/ui/game_dialog.blp:189 data/ui/game_dialog.blp:202
 #: data/ui/game_page.blp:302
 msgid "Description"
 msgstr ""
 
-#: data/ui/game_dialog.blp:207
+#: data/ui/game_dialog.blp:213
 msgid ""
 "Pick an image file or paste a web address. Art you pick is used instead of "
 "the launcher's."
