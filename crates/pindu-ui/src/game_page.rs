@@ -257,7 +257,7 @@ impl GamePage {
             #[weak]
             library,
             move |button| {
-                let collections = library.model().collections();
+                let collections = library.model().manual_collections();
                 button.set_menu_model(Some(&more_menu(&object, &collections)));
             }
         ));
