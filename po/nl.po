@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 20:41+0100\n"
+"POT-Creation-Date: 2026-11-19 20:44+0100\n"
 "PO-Revision-Date: 2026-11-07 18:15+0000\n"
 "Last-Translator: Tim <tim-van-oudheusden@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/pindu-launcher/"
@@ -140,49 +140,49 @@ msgid ""
 "library."
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:141
+#: crates/pindu-ui/src/application.rs:146
 msgid "Start a game by its ID, without opening the window"
 msgstr "Begin een game op basis van zijn ID, zonder het scherm te openen"
 
-#: crates/pindu-ui/src/application.rs:149
+#: crates/pindu-ui/src/application.rs:154
 msgid "Open the window in fullscreen mode"
 msgstr "Openen in Volledig Scherm modus"
 
-#: crates/pindu-ui/src/application.rs:157
+#: crates/pindu-ui/src/application.rs:162
 msgid "Run as the client of a gamescope-session-plus session"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:761
+#: crates/pindu-ui/src/application.rs:775
 msgid "Getting artwork from SteamGridDB…"
 msgstr "SteamGridDB kunstwerken aan het ophalen…"
 
-#: crates/pindu-ui/src/application.rs:804
+#: crates/pindu-ui/src/application.rs:818
 msgid "Added one game"
 msgid_plural "Added {count} games"
 msgstr[0] "Een game toegevoegd"
 msgstr[1] "{count} games toegevoegd"
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
-#: crates/pindu-ui/src/application.rs:807
+#: crates/pindu-ui/src/application.rs:821
 msgid "From {sources}"
 msgstr "Van {sources}"
 
-#: crates/pindu-ui/src/application.rs:818
+#: crates/pindu-ui/src/application.rs:832
 msgid "One game is missing"
 msgid_plural "{count} games are missing"
 msgstr[0] "Eén game ontbreekt"
 msgstr[1] "{count} games ontbreken"
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
-#: crates/pindu-ui/src/application.rs:824
+#: crates/pindu-ui/src/application.rs:838
 msgid "No longer listed by {sources}"
 msgstr "Niet meer bekend bij {sources}"
 
-#: crates/pindu-ui/src/application.rs:861
+#: crates/pindu-ui/src/application.rs:891
 msgid "Game Art From SteamGridDB"
 msgstr "Game Kunst Van SteamGridDB"
 
-#: crates/pindu-ui/src/application.rs:863
+#: crates/pindu-ui/src/application.rs:893
 msgid ""
 "SteamGridDB has covers, banners and logos for games that come without them. "
 "To use it, make a free account on steamgriddb.com and add your own API key "
@@ -193,47 +193,47 @@ msgstr ""
 "steamgriddb.com en je eigen API sleutel in Voorkeuren toevoegen. Dit wordt "
 "opgeslagen in je de keyring."
 
-#: crates/pindu-ui/src/application.rs:869
+#: crates/pindu-ui/src/application.rs:899
 msgid "_Not Now"
 msgstr "_Niet Nu"
 
-#: crates/pindu-ui/src/application.rs:870
+#: crates/pindu-ui/src/application.rs:900
 msgid "_Open Settings"
 msgstr "_Instellingen Openen"
 
-#: crates/pindu-ui/src/application.rs:894
+#: crates/pindu-ui/src/application.rs:924
 msgid "Export Library"
 msgstr "Bibliotheek Exporteren"
 
-#: crates/pindu-ui/src/application.rs:913
+#: crates/pindu-ui/src/application.rs:943
 msgid "Library exported"
 msgstr "Bibliotheek geëxporteerd"
 
-#: crates/pindu-ui/src/application.rs:916
+#: crates/pindu-ui/src/application.rs:946
 msgid "Could not export the library: {error}"
 msgstr "Kon de bibliotheek niet exporteren: {error}"
 
-#: crates/pindu-ui/src/application.rs:930
+#: crates/pindu-ui/src/application.rs:960
 msgid "Library Backups"
 msgstr "Bibliotheek Backups"
 
-#: crates/pindu-ui/src/application.rs:935
+#: crates/pindu-ui/src/application.rs:965
 msgid "Import Backup"
 msgstr "Backup Importeren"
 
-#: crates/pindu-ui/src/application.rs:948
+#: crates/pindu-ui/src/application.rs:978
 msgid "This file is not a library backup"
 msgstr "Dit bestand is geen bibliotheek backup"
 
-#: crates/pindu-ui/src/application.rs:950
+#: crates/pindu-ui/src/application.rs:980
 msgid "This backup is from a newer version of Pindu launcher"
 msgstr "Deze backup is van een nieuwere versie van Pindu launcher"
 
-#: crates/pindu-ui/src/application.rs:953
+#: crates/pindu-ui/src/application.rs:983
 msgid "Could not import the backup: {error}"
 msgstr "Kon de backup niet importeren: {error}"
 
-#: crates/pindu-ui/src/application.rs:1038
+#: crates/pindu-ui/src/application.rs:1068
 #: data/gamescope-session/gamescope-session-pindu.desktop.in:2
 #: data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in:2
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:7
@@ -242,49 +242,49 @@ msgid "Pindu launcher"
 msgstr "Pindu launcher"
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-#: crates/pindu-ui/src/application.rs:1046
+#: crates/pindu-ui/src/application.rs:1076
 msgid "translator-credits"
 msgstr "vertaler-credits"
 
-#: crates/pindu-ui/src/application.rs:1080
+#: crates/pindu-ui/src/application.rs:1110
 msgid "Added artwork for one game"
 msgid_plural "Added artwork for {count} games"
 msgstr[0] "Kunstwerk voor een game toegevoegd"
 msgstr[1] "Kunstwerk voor {count} games toegevoegd"
 
-#: crates/pindu-ui/src/application.rs:1085
+#: crates/pindu-ui/src/application.rs:1115
 msgid "No new artwork found"
 msgstr "Geen nieuw kunstwerk kunnen vinden"
 
-#: crates/pindu-ui/src/application.rs:1086
+#: crates/pindu-ui/src/application.rs:1116
 msgid "SteamGridDB did not accept the key"
 msgstr "SteamGridDB heeft de sleutel niet geaccepteerd"
 
-#: crates/pindu-ui/src/application.rs:1087
+#: crates/pindu-ui/src/application.rs:1117
 msgid "Could not reach SteamGridDB"
 msgstr "Kon SteamGridDB niet bereiken"
 
-#: crates/pindu-ui/src/application.rs:1102
+#: crates/pindu-ui/src/application.rs:1132
 msgid "Nothing new to restore"
 msgstr "Niks om te herstellen op dit moment"
 
-#: crates/pindu-ui/src/application.rs:1104
+#: crates/pindu-ui/src/application.rs:1134
 msgid "Backup restored"
 msgstr "Backup hersteld"
 
-#: crates/pindu-ui/src/application.rs:1110
+#: crates/pindu-ui/src/application.rs:1140
 msgid "one game in it is not in this library"
 msgid_plural "{count} games in it are not in this library"
 msgstr[0] "een game hierin is niet in deze bibliotheek"
 msgstr[1] "{count} games hierin zijn niet in deze bibliotheek"
 
-#: crates/pindu-ui/src/application.rs:1120
+#: crates/pindu-ui/src/application.rs:1150
 msgid "one group of copies in it was skipped"
 msgid_plural "{count} groups of copies in it were skipped"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:1128
+#: crates/pindu-ui/src/application.rs:1158
 msgid "{result}; {note}"
 msgstr "{result}; {note}"
 
@@ -598,6 +598,61 @@ msgstr "Nieuwe Collectie"
 #: crates/pindu-ui/src/collection_actions.rs:435
 msgid "Name"
 msgstr "Naam"
+
+#: crates/pindu-ui/src/first_sync_summary.rs:27
+msgid "Your Library Is Ready"
+msgstr ""
+
+#: crates/pindu-ui/src/first_sync_summary.rs:33
+#: crates/pindu-ui/src/launch_service.rs:292
+#: crates/pindu-ui/src/proton_launch.rs:410
+#: crates/pindu-ui/src/proton_launch.rs:644 crates/pindu-ui/src/window.rs:1419
+msgid "_Close"
+msgstr ""
+
+#: crates/pindu-ui/src/first_sync_summary.rs:34
+#, fuzzy
+#| msgid "Library exported"
+msgid "_Open Library Health"
+msgstr "Bibliotheek geëxporteerd"
+
+#: crates/pindu-ui/src/first_sync_summary.rs:73
+msgid "No launchers were found on this computer."
+msgstr ""
+
+#. Translators: {launchers} names launchers, such as "Steam and Lutris".
+#: crates/pindu-ui/src/first_sync_summary.rs:76
+#, fuzzy
+#| msgid "Pindu launcher"
+msgid "Found {launchers}."
+msgstr "Pindu launcher"
+
+#: crates/pindu-ui/src/first_sync_summary.rs:79
+msgid "No games were imported."
+msgstr ""
+
+#: crates/pindu-ui/src/first_sync_summary.rs:81
+#, fuzzy
+#| msgid "Added one game"
+#| msgid_plural "Added {count} games"
+msgid "Imported one game."
+msgid_plural "Imported {count} games."
+msgstr[0] "Een game toegevoegd"
+msgstr[1] "{count} games toegevoegd"
+
+#: crates/pindu-ui/src/first_sync_summary.rs:88
+#, fuzzy
+#| msgid "Nothing new to restore"
+msgid "Nothing needs attention."
+msgstr "Niks om te herstellen op dit moment"
+
+#: crates/pindu-ui/src/first_sync_summary.rs:91
+#, fuzzy
+#| msgid "Nothing new to restore"
+msgid "One thing needs attention:"
+msgid_plural "{count} things need attention:"
+msgstr[0] "Niks om te herstellen op dit moment"
+msgstr[1] "Niks om te herstellen op dit moment"
 
 #: crates/pindu-ui/src/fullscreen.rs:610
 msgid "Your fullscreen style has a problem"
@@ -2276,12 +2331,6 @@ msgstr ""
 msgid "Could not open {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:292
-#: crates/pindu-ui/src/proton_launch.rs:410
-#: crates/pindu-ui/src/proton_launch.rs:644 crates/pindu-ui/src/window.rs:1419
-msgid "_Close"
-msgstr ""
-
 #: crates/pindu-ui/src/launch_service.rs:293
 msgid "_How to Enable"
 msgstr ""
@@ -2833,11 +2882,11 @@ msgstr ""
 msgid "Artwork From SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/sync_service.rs:138
+#: crates/pindu-ui/src/sync_service.rs:146
 msgid "Refreshing Library"
 msgstr ""
 
-#: crates/pindu-ui/src/sync_service.rs:144
+#: crates/pindu-ui/src/sync_service.rs:152
 msgid "The import stopped unexpectedly"
 msgstr ""
 
@@ -3289,12 +3338,22 @@ msgid ""
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:224
+msgid "First sync summary shown"
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:225
+msgid ""
+"Whether the summary of what the library's first sync found has been "
+"dismissed, after which it never shows again."
+msgstr ""
+
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:229
 #, fuzzy
 #| msgid "Library Backups"
 msgid "Last library backup"
 msgstr "Bibliotheek Backups"
 
-#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:225
+#: data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in:230
 msgid ""
 "When the library was last exported, in seconds since the Unix epoch; 0 means "
 "never. Library Health shows it."
