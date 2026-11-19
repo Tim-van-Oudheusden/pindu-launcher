@@ -288,6 +288,17 @@ window.fullscreen-mode .game-actions button:focus-visible {
   background-color: alpha(var(--window-bg-color), 0.92);
 }
 
+/* The game's description takes focus in fullscreen mode, so a controller can scroll
+   through it: a ring around it while it has it. */
+window.fullscreen-mode .game-description {
+  border-radius: 12px;
+}
+
+window.fullscreen-mode .game-description:focus-visible {
+  outline: 3px solid var(--window-fg-color);
+  outline-offset: 8px;
+}
+
 /* The menu drawer and Quick Access over a running game: the game shows through beside
    the panel. */
 window.game-overlay {
