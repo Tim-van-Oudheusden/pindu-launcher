@@ -65,6 +65,7 @@ pub mod models;
 pub mod network_service;
 pub mod networkmanager_backend;
 pub mod notification_service;
+pub mod outcome_service;
 pub mod permission_service;
 pub mod pindu_os_backend;
 pub mod power_service;

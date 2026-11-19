@@ -178,16 +178,26 @@ pub fn command(
     builds: &[ProtonBuild],
     defaults: &Defaults,
 ) -> Result<Command, ProtonError> {
-    let chosen = config
-        .proton_version
-        .as_deref()
-        .or(defaults.proton_version.as_deref());
-    let build = pick_build(chosen, builds)?;
+    let build = chosen_build(config, builds, defaults)?;
     let prefix = prefix(game, config, defaults);
     let mut environment = launch::session_environment(game);
     environment.insert("PROTONPATH".to_owned(), path_text(&build.path));
     environment.insert("WINEPREFIX".to_owned(), path_text(&prefix));
     Ok(umu_command(environment, config, Program::Windows))
+}
+
+/// The Proton build a Windows game runs with: the one its launch config names, else the
+/// default from Preferences, else the newest of `builds`.
+pub fn chosen_build<'a>(
+    config: &LaunchConfig,
+    builds: &'a [ProtonBuild],
+    defaults: &Defaults,
+) -> Result<&'a ProtonBuild, ProtonError> {
+    let chosen = config
+        .proton_version
+        .as_deref()
+        .or(defaults.proton_version.as_deref());
+    pick_build(chosen, builds)
 }
 
 /// The prefix a Windows game runs in: the one its launch config names, or its own folder
@@ -435,6 +445,31 @@ mod tests {
             mangohud: false,
             gamemode: false,
         }
+    }
+
+    #[test]
+    fn a_game_runs_with_its_own_build_else_the_default_else_the_newest() {
+        let builds = [build("GE-Proton11-3"), build("GE-Proton10-34")];
+        let pinned = LaunchConfig {
+            proton_version: Some("GE-Proton10-34".into()),
+            ..config()
+        };
+        let defaulted = Defaults {
+            proton_version: Some("GE-Proton10-34".into()),
+            ..defaults()
+        };
+
+        let name = |config: &LaunchConfig, defaults: &Defaults| {
+            chosen_build(config, &builds, defaults).map(|build| build.name.clone())
+        };
+
+        assert_eq!(name(&config(), &defaults()), Ok("GE-Proton11-3".into()));
+        assert_eq!(name(&pinned, &defaults()), Ok("GE-Proton10-34".into()));
+        assert_eq!(name(&config(), &defaulted), Ok("GE-Proton10-34".into()));
+        assert_eq!(
+            chosen_build(&pinned, &[], &defaults()).map(|build| build.name.clone()),
+            Err(ProtonError::Missing("GE-Proton10-34".into()))
+        );
     }
 
     #[test]

@@ -15,8 +15,27 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **Record the outcome** of each launch of a game Pindu runs: the route, the Proton build, start and end, the exit
   status, and whether a window appeared where the session can tell. For a hand-off to a launcher, whether the launcher
   answered. The store keeps the last few outcomes per game.
+
+  As built (#531): `launch_outcomes` (migration 0009) holds a row per launch, written as `pending` when it begins
+  and finished when it ends; `pindu_core::launch_outcome` has the types and `Store::begin_launch`, `end_launch` and
+  `launch_outcomes` read and write them. The route is `host`, `proton` (with the build's internal name), `runtime` or
+  `hand-off`. A game Pindu runs ends `exited` with its status, `signalled` with the signal (Stop's `SIGTERM` is not a
+  failure), `lost` when Pindu lost track of it, or `not-started` when it never started, including a missing umu or
+  Proton build. A hand-off ends `handed-off` when the launcher answered, `hand-off-failed` when it could not be
+  opened, or `no-answer` after the launch overlay's hand-off timeout (10 seconds); a launcher that answers later still
+  counts as answering. A launch Pindu stopped following because it quit first stays `pending`. Whether a window
+  appeared is recorded only in a `--steam` gamescope, from the game's app ID among gamescope's focusable or focused
+  apps; elsewhere it is unknown. The newest five per game are kept, and a game's outcomes go with it; backups do not
+  include them.
 - **A small log for every launch.** Every launch of a game Pindu runs keeps a small, bounded log beside Play with
   Logs' full logs, so a failure has output to show even when Play with Logs was not chosen.
+
+  As built (#531): a launch without Play with Logs or Start Safely keeps a short log in the game's logs folder,
+  `<start time>.short.log`: the usual header, then the last 64 KiB of the game's (or umu's) output and errors, read
+  through a pipe and written when it exits, with a line saying how many earlier lines were left out. The newest five
+  short logs per game are kept, apart from the newest ten full logs, which Open Log and the diagnostics report still
+  use. The outcome names its log, short or full. A host game whose launcher tracks its playtime itself (Faugus) keeps
+  no short log, since its output would have nowhere to go once Pindu quits.
 - **Explain the last failure** on the game page and in fullscreen mode's options sheet, offering only the next steps
   that exist for that game: How to Enable, How to Install, another Proton build, Start Safely, Open Log.
 - **Link out** for Steam games: the desktop game page and fullscreen mode's options sheet open the ProtonDB and
