@@ -231,9 +231,32 @@ jobs:
       - name: Install and start
         run: build-aux/package-smoke.sh packages/*
 
+  # Signs build provenance (SLSA, through Sigstore) for the RPMs, the files Pindu OS installs:
+  # `gh attestation verify` then proves that this workflow built them from the tag
+  # (docs/releasing.md). It runs before publish, so no release ships an RPM without it.
+  provenance:
+    name: Build provenance for the RPMs
+    needs: packages-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: package-fedora-*
+          merge-multiple: true
+          path: packages
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: packages/*.rpm
+
   publish:
     name: Publish the GitHub release
-    needs: [version, flatpak, sources, packages-smoke]
+    needs: [version, flatpak, sources, packages-smoke, provenance]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
