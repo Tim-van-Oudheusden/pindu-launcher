@@ -88,9 +88,9 @@ install_data(
   'home' / 'background-720p.webm',
   'home' / 'background-1080p.webm',
   'home' / 'background-1440p.webm',
-  'home' / 'red-ribbons-720p24.webm',
-  'home' / 'red-ribbons-1080p24.webm',
-  'home' / 'red-ribbons-1440p24.webm',
+  'home' / 'red-ribbons-720p60.webm',
+  'home' / 'red-ribbons-1080p60.webm',
+  'home' / 'red-ribbons-1440p60.webm',
   install_dir: pkgdatadir / 'home',
 )
 

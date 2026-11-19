@@ -13,3 +13,4 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 - Verified the installed native build under headless Gamescope: Red Ribbons on first run, Blue Station via keyboard,
   Blue Station after restart, and back to Red Ribbons via a virtual controller. The private D-Bus session and
   `XDG_RUNTIME_DIR` kept the smoke run separate from the desktop.
+- Updated PR #662 with the three supplied 60 fps Red Ribbons WebMs, byte-for-byte. Blue Station is unchanged.

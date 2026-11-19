@@ -172,17 +172,17 @@ pub enum Background {
 const BACKGROUND_VIDEOS: [((i32, i32), &str, &str); 3] = [
     (
         (1280, 720),
-        "red-ribbons-720p24.webm",
+        "red-ribbons-720p60.webm",
         "background-720p.webm",
     ),
     (
         (1920, 1080),
-        "red-ribbons-1080p24.webm",
+        "red-ribbons-1080p60.webm",
         "background-1080p.webm",
     ),
     (
         (2560, 1440),
-        "red-ribbons-1440p24.webm",
+        "red-ribbons-1440p60.webm",
         "background-1440p.webm",
     ),
 ];
@@ -293,14 +293,14 @@ mod tests {
     fn the_background_choice_selects_the_right_video_for_the_display() {
         assert_eq!(
             Background::default().video(None),
-            "red-ribbons-1080p24.webm"
+            "red-ribbons-1080p60.webm"
         );
         for (setting, screen, expected) in [
-            ("red-ribbons", (1280, 720), "red-ribbons-720p24.webm"),
-            ("red-ribbons", (1920, 1080), "red-ribbons-1080p24.webm"),
-            ("red-ribbons", (3840, 2160), "red-ribbons-1440p24.webm"),
+            ("red-ribbons", (1280, 720), "red-ribbons-720p60.webm"),
+            ("red-ribbons", (1920, 1080), "red-ribbons-1080p60.webm"),
+            ("red-ribbons", (3840, 2160), "red-ribbons-1440p60.webm"),
             ("blue-station", (1280, 720), "background-720p.webm"),
-            ("unknown", (1280, 800), "red-ribbons-1080p24.webm"),
+            ("unknown", (1280, 800), "red-ribbons-1080p60.webm"),
         ] {
             assert_eq!(
                 Background::from_setting(setting).video(Some(screen)),
