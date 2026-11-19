@@ -130,6 +130,8 @@ mod imp {
         #[template_child]
         pub hide_button: TemplateChild<gtk::Button>,
         #[template_child]
+        pub merge_selection_button: TemplateChild<gtk::Button>,
+        #[template_child]
         pub collection_button: TemplateChild<gtk::MenuButton>,
         #[template_child]
         pub content_stack: TemplateChild<gtk::Stack>,
@@ -173,6 +175,10 @@ mod imp {
         pub options_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub options_collections: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub options_merge: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub options_copies: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub options_performance: TemplateChild<gtk::ListBox>,
         #[template_child]
@@ -234,6 +240,8 @@ mod imp {
         pub options_game: RefCell<Option<GameObject>>,
         /// The options the sheet lists for that game, in its rows' order.
         pub game_options: RefCell<Vec<GameOption>>,
+        /// The games the sheet's Merge With level lists, in its rows' order.
+        pub merge_candidates: RefCell<Vec<GameId>>,
         /// The widget that had focus before a panel opened, to give it back after.
         pub focus_before_panel: glib::WeakRef<gtk::Widget>,
         /// The top bar's clock.
@@ -410,6 +418,7 @@ impl PinduWindow {
         self.add_game_action("save-snapshots", Self::show_save_snapshots);
 
         self.setup_collection_actions();
+        self.setup_group_actions();
 
         let search = gio::ActionEntry::builder("search")
             .activate(|window: &Self, _, _| {

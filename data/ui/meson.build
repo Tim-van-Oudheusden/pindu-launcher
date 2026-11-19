@@ -18,6 +18,7 @@ blueprint_names = [
   'health_page',
   'home_page',
   'menu_drawer',
+  'merge_dialog',
   'preferences',
   'quick_access',
   'save_snapshots_dialog',

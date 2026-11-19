@@ -1,6 +1,7 @@
 //! Selection mode in the desktop library: the header bar's Select button turns it on,
 //! activating a game in the grid or the list then selects it, and the action bar below
-//! favourites, hides or files every selected game at once, with a toast to undo it.
+//! favourites, hides or files every selected game at once, with a toast to undo it, or
+//! merges two or more into one game with several copies (`group_actions`).
 //! Escape, an action or fullscreen mode turns it off again.
 
 use adw::prelude::*;
@@ -58,6 +59,11 @@ impl PinduWindow {
             #[weak(rename_to = window)]
             self,
             move |_| window.apply_bulk(window.offers().hide)
+        ));
+        imp.merge_selection_button.connect_clicked(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.merge_selected()
         ));
         let add = gio::ActionEntry::builder("bulk-add-to-collection")
             .parameter_type(Some(glib::VariantTy::INT64))
@@ -170,6 +176,7 @@ impl PinduWindow {
             });
         imp.favourite_button.set_sensitive(some);
         imp.hide_button.set_sensitive(some);
+        imp.merge_selection_button.set_sensitive(count > 1);
 
         let collections = self.library().manual_collections();
         let name = |id: &i64| {
@@ -247,6 +254,24 @@ impl PinduWindow {
                 });
             });
             window.add_toast(toast);
+        });
+    }
+
+    /// Merges the selected games into one game with several copies and leaves selection
+    /// mode; a split from the game's menu undoes it.
+    fn merge_selected(&self) {
+        let games: Vec<GameId> = self.selected_games().iter().map(GameObject::id).collect();
+        if games.len() < 2 {
+            return;
+        }
+        self.imp().selection.set_active(false);
+        self.merge_selection(games, |count| {
+            ngettext(
+                "{count} game merged into one",
+                "{count} games merged into one",
+                count_u32(count),
+            )
+            .replace("{count}", &count.to_string())
         });
     }
 }
