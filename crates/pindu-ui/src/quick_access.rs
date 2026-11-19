@@ -20,11 +20,12 @@
 //! `fullscreen_controllers`, Controls `fullscreen_controls`, Filters (offered on the
 //! library page) `fullscreen_library`, Performance (offered for a game we run ourselves)
 //! `fullscreen_performance`, Network `fullscreen_network`, Bluetooth `fullscreen_bluetooth`,
-//! Sound Output `fullscreen_sound_output`, System Update `fullscreen_system_update`,
-//! Diagnostics Report `fullscreen_report`, Add a Store `add_store`, Proton
-//! `fullscreen_proton_downloads` and Sources `fullscreen_sources`. Design and Settings are
-//! this module's: the design, its variant, Home's background blur and dim and the user's
-//! own stylesheet, then cover size, navigation sounds and their volume, exiting after a
+//! Sound Output `fullscreen_sound_output`, System Update `fullscreen_system_update`, Library
+//! Health `fullscreen_health`, Diagnostics Report `fullscreen_report`, Add a Store
+//! `add_store`, Proton `fullscreen_proton_downloads` and Sources `fullscreen_sources`.
+//! Design and Settings are this module's: the design, its variant, Home's background blur
+//! and dim and the user's own stylesheet, then cover size, navigation sounds and their
+//! volume, exiting after a
 //! launch, Reduce Motion and Larger Text, the SteamGridDB key (typed hidden with the
 //! on-screen keyboard of `secret_dialog` and kept in the keyring) and Prefer SteamGridDB
 //! Art, the same settings Preferences changes.
@@ -55,6 +56,7 @@ use crate::config::APP_ID;
 use crate::fullscreen::bind_volume_slider;
 use crate::fullscreen_bluetooth::PinduBluetoothLevel;
 use crate::fullscreen_clock::Clock;
+use crate::fullscreen_health::PinduHealthLevel;
 use crate::fullscreen_network::PinduNetworkLevel;
 use crate::fullscreen_panels::step_out_of_list;
 use crate::fullscreen_performance::{GameProton, PerformanceSwitches};
@@ -221,6 +223,14 @@ mod imp {
         #[template_child]
         pub system_update_level: TemplateChild<PinduSystemUpdateLevel>,
         #[template_child]
+        pub health_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub health_icon: TemplateChild<gtk::Image>,
+        #[template_child]
+        pub health_subtitle: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub health_level: TemplateChild<PinduHealthLevel>,
+        #[template_child]
         pub add_store_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub add_store_level: TemplateChild<PinduAddStoreLevel>,
@@ -290,6 +300,7 @@ mod imp {
             PinduNetworkLevel::ensure_type();
             PinduBluetoothLevel::ensure_type();
             PinduSystemUpdateLevel::ensure_type();
+            PinduHealthLevel::ensure_type();
             PinduAddStoreLevel::ensure_type();
             PinduReportLevel::ensure_type();
             PinduProtonLevel::ensure_type();
@@ -394,6 +405,7 @@ impl PinduQuickAccess {
         self.setup_bluetooth(application, actions);
         self.setup_sound_output(application, actions);
         self.setup_system_update(application, actions);
+        self.setup_health(application, actions);
         self.setup_add_store(application);
         self.setup_diagnostics_report(actions);
         self.setup_proton(actions);
@@ -454,6 +466,7 @@ impl PinduQuickAccess {
             Some(QuickAccessLevel::Bluetooth) => self.show_bluetooth(),
             Some(QuickAccessLevel::SoundOutput) => self.show_sound_output(),
             Some(QuickAccessLevel::SystemUpdate) => self.show_system_update(),
+            Some(QuickAccessLevel::LibraryHealth) => self.show_health(),
             Some(QuickAccessLevel::AddStore) => self.show_add_store(),
             // Back from the games with a log, the report stays as it was.
             Some(QuickAccessLevel::DiagnosticsReport)
@@ -526,6 +539,7 @@ impl PinduQuickAccess {
             // The output in use.
             (Some(QuickAccessLevel::SoundOutput), _) => self.sound_output_focus(),
             (Some(QuickAccessLevel::SystemUpdate), _) => imp.system_update_level.focus_target(),
+            (Some(QuickAccessLevel::LibraryHealth), _) => imp.health_level.focus_target(),
             (Some(QuickAccessLevel::AddStore), _) => imp.add_store_level.focus_target(),
             (Some(QuickAccessLevel::DiagnosticsReport), Some(QuickAccessLevel::ReportLog)) => {
                 Some(imp.report_level.add_log_row())
@@ -754,6 +768,7 @@ impl PinduQuickAccess {
             QuickAccessLevel::Bluetooth => &imp.bluetooth_row,
             QuickAccessLevel::SoundOutput => &imp.sound_output_row,
             QuickAccessLevel::SystemUpdate => &imp.system_update_row,
+            QuickAccessLevel::LibraryHealth => &imp.health_row,
             QuickAccessLevel::AddStore => &imp.add_store_row,
             QuickAccessLevel::DiagnosticsReport | QuickAccessLevel::ReportLog => &imp.report_row,
             QuickAccessLevel::Proton => &imp.proton_row,
@@ -785,6 +800,12 @@ impl PinduQuickAccess {
         let [system_versions, system_actions] = imp.system_update_level.lists();
         let [add_store_stores, add_store_actions] = imp.add_store_level.lists();
         let [report_actions] = imp.report_level.lists();
+        let [
+            health_sources,
+            health_launching,
+            health_artwork,
+            health_library,
+        ] = imp.health_level.lists();
         let [
             proton_default,
             proton_tools,
@@ -820,6 +841,10 @@ impl PinduQuickAccess {
             bluetooth_found,
             system_versions,
             system_actions,
+            health_sources,
+            health_launching,
+            health_artwork,
+            health_library,
             add_store_stores,
             add_store_actions,
             report_actions,

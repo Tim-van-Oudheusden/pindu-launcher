@@ -562,6 +562,48 @@ template $PinduQuickAccess: Box {
               };
             }
 
+            // The Library Health report, subtitled with how many problems need
+            // attention.
+            ListBoxRow health_row {
+              action-name: "win.quick-access-library-health";
+
+              child: Box {
+                spacing: 16;
+
+                Image health_icon {
+                  icon-name: "emblem-ok-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Box {
+                  orientation: vertical;
+                  valign: center;
+                  hexpand: true;
+
+                  Label {
+                    label: _("Library Health");
+                    xalign: 0;
+                  }
+
+                  Label health_subtitle {
+                    xalign: 0;
+                    ellipsize: end;
+                    visible: false;
+
+                    styles [
+                      "caption",
+                      "dim-label",
+                    ]
+                  }
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
             // The "add a store" flow, which installs Steam, Heroic or Lutris.
             ListBoxRow add_store_row {
               action-name: "win.quick-access-add-store";
@@ -1663,6 +1705,12 @@ template $PinduQuickAccess: Box {
       name: "system-update";
 
       child: $PinduSystemUpdateLevel system_update_level {};
+    }
+
+    StackPage {
+      name: "library-health";
+
+      child: $PinduHealthLevel health_level {};
     }
 
     StackPage {
