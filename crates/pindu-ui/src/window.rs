@@ -35,7 +35,7 @@ use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
 use crate::log_service;
 use crate::menu_drawer::PinduMenuDrawer;
-use crate::models::{GameObject, LibraryModel};
+use crate::models::{GameObject, LibraryModel, LibrarySelection};
 use crate::quick_access::PinduQuickAccess;
 use crate::sources::{source_icon, source_name};
 use crate::sync_service::SyncService;
@@ -118,6 +118,22 @@ mod imp {
         #[template_child]
         pub layout_switch: TemplateChild<adw::ToggleGroup>,
         #[template_child]
+        pub select_button: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
+        pub selection_bar: TemplateChild<gtk::ActionBar>,
+        #[template_child]
+        pub select_all_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub selection_count: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub favourite_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub hide_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub merge_selection_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub collection_button: TemplateChild<gtk::MenuButton>,
+        #[template_child]
         pub content_stack: TemplateChild<gtk::Stack>,
         #[template_child]
         pub library_tabs: TemplateChild<gtk::Box>,
@@ -160,6 +176,10 @@ mod imp {
         #[template_child]
         pub options_collections: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub options_merge: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub options_copies: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub options_performance: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub options_overlay_row: TemplateChild<adw::SwitchRow>,
@@ -171,6 +191,8 @@ mod imp {
         pub quick_access_panel: TemplateChild<PinduQuickAccess>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
+        /// The desktop library's selection mode and the games it selected.
+        pub selection: LibrarySelection,
         /// Every sidebar row with the view it selects and, for sources, its count label.
         pub views: RefCell<Vec<(adw::SidebarItem, View, gtk::Label)>>,
         /// The collection whose sidebar menu is open.
@@ -218,6 +240,8 @@ mod imp {
         pub options_game: RefCell<Option<GameObject>>,
         /// The options the sheet lists for that game, in its rows' order.
         pub game_options: RefCell<Vec<GameOption>>,
+        /// The games the sheet's Merge With level lists, in its rows' order.
+        pub merge_candidates: RefCell<Vec<GameId>>,
         /// The widget that had focus before a panel opened, to give it back after.
         pub focus_before_panel: glib::WeakRef<gtk::Widget>,
         /// The top bar's clock.
@@ -298,6 +322,7 @@ impl PinduWindow {
         window.setup_sidebar();
         window.setup_grid();
         window.setup_list();
+        window.setup_selection_mode();
         window.setup_search_and_filters();
         window.observe_sync(sync_service);
         window.setup_home();
@@ -396,6 +421,7 @@ impl PinduWindow {
         self.add_game_action("open-log", Self::open_log);
 
         self.setup_collection_actions();
+        self.setup_group_actions();
 
         let search = gio::ActionEntry::builder("search")
             .activate(|window: &Self, _, _| {
@@ -633,7 +659,7 @@ impl PinduWindow {
             }
         } else if library.counts().get(View::All) == 0 {
             "empty"
-        } else if matches!(library.view(), View::Collection(id) if library.counts().get(View::Collection(id)) == 0)
+        } else if matches!(library.view(), View::Collection(id) if library.counts().get(View::Collection(id)) == 0 && library.saved_filter(id).is_none())
         {
             "empty-collection"
         } else if library.view() == View::Hidden && library.counts().get(View::Hidden) == 0 {
@@ -959,7 +985,8 @@ impl PinduWindow {
         self.select_tab();
     }
 
-    /// One sidebar row per collection, in the user's order, keeping the shown view.
+    /// One sidebar row per collection, in the user's order, keeping the shown view; a
+    /// saved filter has its own icon.
     fn show_collections(&self) {
         let imp = self.imp();
         let collections = self.library().collections();
@@ -973,7 +1000,9 @@ impl PinduWindow {
                 .build();
             let item = adw::SidebarItem::builder()
                 .title(&collection.name)
-                .icon_name("folder-symbolic")
+                .icon_name(crate::collection_actions::collection_icon(
+                    self.library().saved_filter(collection.id).is_some(),
+                ))
                 .suffix(&count)
                 .build();
             imp.collections_section.append(item.clone());
@@ -1098,7 +1127,7 @@ impl PinduWindow {
                     .and_then(|model| model.item(position))
                     .and_downcast::<GameObject>();
                 if let Some(game) = game {
-                    window.show_details(&game.id());
+                    window.activate_game(&game.id());
                 }
             }
         ));
@@ -1143,6 +1172,7 @@ impl PinduWindow {
         let imp = self.imp();
         let list = &imp.game_list;
         list.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
+        let selection = imp.selection.clone();
         let columns = list.columns();
         let kinds = [
             ListColumn::Title,
@@ -1159,11 +1189,12 @@ impl PinduWindow {
                 continue;
             };
             let factory = gtk::SignalListItemFactory::new();
+            let selection = selection.clone();
             factory.connect_setup(move |_, item| {
                 let item = item
                     .downcast_ref::<gtk::ColumnViewCell>()
                     .expect("a column view cell");
-                item.set_child(Some(&GameListCell::new(kind)));
+                item.set_child(Some(&GameListCell::new(kind, &selection)));
             });
             factory.connect_bind(|_, item| {
                 let item = item
@@ -1195,7 +1226,7 @@ impl PinduWindow {
                     .and_then(|model| model.item(position))
                     .and_downcast::<GameObject>();
                 if let Some(game) = game {
-                    window.show_details(&game.id());
+                    window.activate_game(&game.id());
                 }
             }
         ));
@@ -1276,6 +1307,7 @@ impl PinduWindow {
                 let item = item.downcast_ref::<gtk::ListItem>().expect("a list item");
                 item.set_child(Some(&CoverTile::new(
                     &window,
+                    &window.imp().selection,
                     size,
                     show_titles,
                     show_badges,

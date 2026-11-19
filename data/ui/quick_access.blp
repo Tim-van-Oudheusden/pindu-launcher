@@ -586,6 +586,48 @@ template $PinduQuickAccess: Box {
               };
             }
 
+            // The Library Health report, subtitled with how many problems need
+            // attention.
+            ListBoxRow health_row {
+              action-name: "win.quick-access-library-health";
+
+              child: Box {
+                spacing: 16;
+
+                Image health_icon {
+                  icon-name: "emblem-ok-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Box {
+                  orientation: vertical;
+                  valign: center;
+                  hexpand: true;
+
+                  Label {
+                    label: _("Library Health");
+                    xalign: 0;
+                  }
+
+                  Label health_subtitle {
+                    xalign: 0;
+                    ellipsize: end;
+                    visible: false;
+
+                    styles [
+                      "caption",
+                      "dim-label",
+                    ]
+                  }
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
             // The "add a store" flow, which installs Steam, Heroic or Lutris.
             ListBoxRow add_store_row {
               action-name: "win.quick-access-add-store";
@@ -600,6 +642,32 @@ template $PinduQuickAccess: Box {
 
                 Label {
                   label: _("Add a Store");
+                  xalign: 0;
+                  hexpand: true;
+                }
+
+                Image {
+                  icon-name: "go-next-symbolic";
+                  accessible-role: presentation;
+                }
+              };
+            }
+
+            // The diagnostics report, to photograph a page at a time; a copy is
+            // saved as it opens.
+            ListBoxRow report_row {
+              action-name: "win.quick-access-diagnostics-report";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "dialog-information-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Diagnostics Report");
                   xalign: 0;
                   hexpand: true;
                 }
@@ -633,6 +701,26 @@ template $PinduQuickAccess: Box {
                 Image {
                   icon-name: "go-next-symbolic";
                   accessible-role: presentation;
+                }
+              };
+            }
+
+            // Fullscreen mode's Add Game, a dialog over the main window.
+            ListBoxRow add_game_row {
+              action-name: "win.add-game-fullscreen";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "applications-games-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Add a Game");
+                  xalign: 0;
+                  hexpand: true;
                 }
               };
             }
@@ -1614,6 +1702,33 @@ template $PinduQuickAccess: Box {
               action-name: "win.clear-fullscreen-filters";
             }
           }
+
+          // Saves the shown tab with these filters and the search as a collection whose
+          // games are computed, or saves a suggested one.
+          ListBox save_filters {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.ButtonRow {
+              title: _("Save Filter…");
+              action-name: "win.save-filter";
+            }
+
+            Adw.ButtonRow {
+              title: _("Save Native Games");
+              action-name: "win.save-suggestion";
+              action-target: "'native'";
+            }
+
+            Adw.ButtonRow {
+              title: _("Save Windows Games");
+              action-name: "win.save-suggestion";
+              action-target: "'windows'";
+            }
+          }
         };
       };
     }
@@ -1709,9 +1824,71 @@ template $PinduQuickAccess: Box {
     }
 
     StackPage {
+      name: "library-health";
+
+      child: $PinduHealthLevel health_level {};
+    }
+
+    StackPage {
       name: "add-store";
 
       child: $PinduAddStoreLevel add_store_level {};
+    }
+
+    StackPage {
+      name: "diagnostics-report";
+
+      child: $PinduReportLevel report_level {};
+    }
+
+    StackPage {
+      name: "report-log";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Add a Game's Log");
+            xalign: 0;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          Label {
+            label: _("The game's newest log is added to the report. The report keeps that game's title; other titles and your home folder stay out.");
+            xalign: 0;
+            wrap: true;
+
+            styles [
+              "dim-label",
+            ]
+          }
+
+          // The games with a log, the game played with logs last first, each with
+          // its newest log's name; filled in code as the level opens.
+          ListBox report_logs {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+          }
+
+          // Shown when no game has a log.
+          Label report_logs_empty {
+            label: _("No game has a log yet: start one with Play with Logs");
+            xalign: 0;
+            wrap: true;
+            visible: false;
+          }
+        };
+      };
     }
 
     StackPage {

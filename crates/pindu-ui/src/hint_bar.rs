@@ -15,6 +15,7 @@ use pindu_core::panels::{DrawerLevel, Panel};
 
 use crate::application::PinduApplication;
 use crate::artwork_dialog::ArtworkDialog;
+use crate::fullscreen_add_game::PinduFullscreenAddGame;
 use crate::window::PinduWindow;
 
 /// How large glyphs draw, to read from across the room.
@@ -113,6 +114,10 @@ impl PinduWindow {
                 .visible_dialog()
                 .and_downcast::<ArtworkDialog>()
                 .is_some_and(|dialog| dialog.has_tabs()),
+            dialog_back: self
+                .visible_dialog()
+                .and_downcast::<PinduFullscreenAddGame>()
+                .is_some_and(|dialog| dialog.goes_back()),
             // In the drawer's collections, View is for the focused collection.
             options: match self.open_panel() {
                 Some(Panel::Drawer(DrawerLevel::Collections)) => {
@@ -226,6 +231,7 @@ fn action_label(action: Action) -> String {
         Action::Close => gettext("Close"),
         Action::Search => gettext("Search"),
         Action::Tabs => gettext("Tabs"),
+        Action::Pages => gettext("Pages"),
         Action::Sort => gettext("Sort"),
         Action::Adjust => gettext("Adjust"),
         Action::Options => gettext("Options"),

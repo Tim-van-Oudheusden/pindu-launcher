@@ -1,5 +1,6 @@
 //! One cell of the library list: a game's title, source, state, last played date or
-//! playtime, with the game's context menu on right-click or a long press.
+//! playtime, with the game's context menu on right-click or a long press, and in the Title
+//! column selection mode's check.
 
 use std::cell::{Cell, OnceCell, RefCell};
 
@@ -9,7 +10,7 @@ use gtk::subclass::prelude::*;
 use gtk::{gdk, glib};
 
 use super::cover_tile::{game_state, popup_game_menu, state_name};
-use crate::models::GameObject;
+use crate::models::{GameObject, LibrarySelection};
 use crate::sources::{source_icon, source_name};
 
 /// The library list's columns, in their order.
@@ -43,6 +44,10 @@ mod imp {
         pub bound: RefCell<Option<(GameObject, Vec<glib::SignalHandlerId>)>>,
         /// The context menu, made on first use.
         pub menu: OnceCell<gtk::PopoverMenu>,
+        /// Selection mode's check, in the Title column.
+        pub check: gtk::CheckButton,
+        /// Selection mode's selection and the handler that follows it, in the Title column.
+        pub selection: RefCell<Option<(LibrarySelection, glib::SignalHandlerId)>>,
     }
 
     #[glib::object_subclass]
@@ -62,6 +67,12 @@ mod imp {
                 .set_accessible_role(gtk::AccessibleRole::Presentation);
             self.label.set_xalign(0.0);
             self.label.set_hexpand(true);
+            // Activating the row toggles the check, so it takes no clicks.
+            self.check.set_visible(false);
+            self.check.set_can_focus(false);
+            self.check.set_can_target(false);
+            self.check.add_css_class("selection-mode");
+            cell.append(&self.check);
             cell.append(&self.icon);
             cell.append(&self.label);
 
@@ -95,6 +106,9 @@ mod imp {
             if let Some(menu) = self.menu.get() {
                 menu.unparent();
             }
+            if let Some((selection, handler)) = self.selection.take() {
+                selection.disconnect(handler);
+            }
         }
     }
 
@@ -110,14 +124,20 @@ glib::wrapper! {
 }
 
 impl GameListCell {
-    /// A cell of `column`.
-    pub fn new(column: ListColumn) -> Self {
+    /// A cell of `column`; a Title cell shows a check while `selection` is in selection
+    /// mode.
+    pub fn new(column: ListColumn, selection: &LibrarySelection) -> Self {
         let cell: Self = glib::Object::new();
-        cell.imp().column.set(column);
+        let imp = cell.imp();
+        imp.column.set(column);
         if column == ListColumn::Title {
-            cell.imp()
-                .label
-                .set_ellipsize(gtk::pango::EllipsizeMode::End);
+            imp.label.set_ellipsize(gtk::pango::EllipsizeMode::End);
+            let handler = selection.connect_changed(glib::clone!(
+                #[weak]
+                cell,
+                move |_| cell.show_selection()
+            ));
+            imp.selection.replace(Some((selection.clone(), handler)));
         }
         cell
     }
@@ -142,6 +162,7 @@ impl GameListCell {
         ];
         self.imp().bound.replace(Some((game.clone(), handlers)));
         self.show(game);
+        self.show_selection();
     }
 
     /// Stops showing the bound game.
@@ -188,5 +209,18 @@ impl GameListCell {
             ListColumn::Playtime => crate::game_page::playtime(game.entry().playtime_secs),
         };
         imp.label.set_label(&text);
+    }
+
+    /// Ticks selection mode's check when the game is selected.
+    fn show_selection(&self) {
+        let imp = self.imp();
+        let (active, selected) = match (&*imp.selection.borrow(), self.game()) {
+            (Some((selection, _)), Some(game)) => {
+                (selection.is_active(), selection.contains(&game.id()))
+            }
+            _ => (false, false),
+        };
+        imp.check.set_visible(active);
+        imp.check.set_active(selected);
     }
 }

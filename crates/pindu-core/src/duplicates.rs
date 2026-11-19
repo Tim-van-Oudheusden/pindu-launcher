@@ -308,27 +308,5 @@ pub fn review(store: &Store) -> store::Result<Review> {
     })
 }
 
-/// Accepts a suggestion: the user says `first` and `second` are copies of one game, so
-/// they are grouped by hand. A copy beside a group joins that group, and copies in two
-/// groups make one: `first`'s, with its preferred copy. A pair in one group already
-/// changes nothing. Returns the group's ID.
-pub fn accept(store: &Store, first: &GameId, second: &GameId) -> store::Result<i64> {
-    store.in_transaction(|store| {
-        match (store.game_group_of(first)?, store.game_group_of(second)?) {
-            (Some(group), None) => store.add_to_group(group.id, second).map(|()| group.id),
-            (None, Some(group)) => store.add_to_group(group.id, first).map(|()| group.id),
-            (Some(kept), Some(joining)) if kept.id == joining.id => Ok(kept.id),
-            (Some(kept), Some(joining)) => {
-                store.ungroup(joining.id)?;
-                for game in &joining.members {
-                    store.add_to_group(kept.id, game)?;
-                }
-                Ok(kept.id)
-            }
-            (None, None) => store.create_group(&[first.clone(), second.clone()]),
-        }
-    })
-}
-
 #[cfg(test)]
 mod tests;

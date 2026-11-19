@@ -516,14 +516,14 @@ fn an_exact_match_is_not_grouped_when_a_copy_is_in_a_group_already() {
 }
 
 #[test]
-fn accepting_a_suggestion_groups_the_pair_by_hand() {
+fn an_accepted_suggestion_is_a_group_by_hand_and_is_not_suggested_again() {
     let (_dir, store) = temp_store();
     let mut library = Library::default();
     let steam = library.add(Source::Steam, "504230", "Celeste");
     let desktop = library.add(Source::Desktop, "celeste", "Celeste");
     store_library(&store, &library);
 
-    let group = accept(&store, &steam, &desktop).unwrap();
+    let group = store.merge_games(&[steam.clone(), desktop.clone()]).unwrap();
 
     let (first, second) = pair(&steam, &desktop);
     assert_eq!(
@@ -536,73 +536,6 @@ fn accepting_a_suggestion_groups_the_pair_by_hand() {
         }]
     );
     assert_eq!(load(&store).unwrap(), vec![]);
-}
-
-#[test]
-fn accepting_a_copy_beside_a_group_adds_it_to_that_group() {
-    let (_dir, store) = temp_store();
-    let mut library = Library::default();
-    let steam = library.add(Source::Steam, "504230", "Celeste");
-    let gog = library.add(Source::HeroicGog, "1207", "Celeste");
-    let desktop = library.add(Source::Desktop, "celeste", "Celeste");
-    store_library(&store, &library);
-    let group = store.create_group(&[steam.clone(), gog]).unwrap();
-    store.set_preferred_copy(group, Some(&steam)).unwrap();
-
-    assert_eq!(accept(&store, &desktop, &steam).unwrap(), group);
-
-    let groups = store.game_groups().unwrap();
-    assert_eq!(groups.len(), 1);
-    assert!(groups[0].members.contains(&desktop));
-    assert_eq!(groups[0].preferred, Some(steam));
-    assert_eq!(load(&store).unwrap(), vec![]);
-}
-
-#[test]
-fn accepting_copies_of_two_groups_makes_them_one_group() {
-    let (_dir, store) = temp_store();
-    let mut library = Library::default();
-    let steam = library.add(Source::Steam, "504230", "Celeste");
-    let lutris = library.add(Source::Lutris, "1", "Celeste");
-    let gog = library.add(Source::HeroicGog, "1207", "Celeste");
-    let desktop = library.add(Source::Desktop, "celeste", "Celeste");
-    store_library(&store, &library);
-    let kept = store
-        .create_group(&[steam.clone(), lutris.clone()])
-        .unwrap();
-    store.set_preferred_copy(kept, Some(&lutris)).unwrap();
-    store.create_group(&[gog.clone(), desktop.clone()]).unwrap();
-
-    assert_eq!(accept(&store, &steam, &gog).unwrap(), kept);
-
-    let mut members = vec![steam, lutris.clone(), gog, desktop];
-    members.sort_unstable();
-    assert_eq!(
-        store.game_groups().unwrap(),
-        vec![GameGroup {
-            id: kept,
-            members,
-            preferred: Some(lutris),
-            automatic: false,
-        }]
-    );
-    assert_eq!(load(&store).unwrap(), vec![]);
-}
-
-#[test]
-fn accepting_a_pair_already_in_one_group_changes_nothing() {
-    let (_dir, store) = temp_store();
-    let mut library = Library::default();
-    let steam = library.add(Source::Steam, "504230", "Celeste");
-    let desktop = library.add(Source::Desktop, "celeste", "Celeste");
-    store_library(&store, &library);
-    let group = store
-        .create_group(&[steam.clone(), desktop.clone()])
-        .unwrap();
-    let before = store.game_groups().unwrap();
-
-    assert_eq!(accept(&store, &steam, &desktop).unwrap(), group);
-    assert_eq!(store.game_groups().unwrap(), before);
 }
 
 #[test]

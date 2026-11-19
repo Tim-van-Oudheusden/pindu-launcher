@@ -3,7 +3,8 @@
 //! cover grid steps through its covers with `scroll_to`, A activates the focused widget, B
 //! closes a menu or dialog or goes back, Y searches from Home or the library (with the
 //! search keyboard in fullscreen mode, which takes the buttons while it is open), LB/RB and
-//! LT/RT switch the fullscreen library's tabs and sort order, and Guide, let go without
+//! LT/RT switch the fullscreen library's tabs and sort order (LB/RB turn the diagnostics
+//! report's pages while Quick Access shows it), and Guide, let go without
 //! another button pressed while it was held, enters fullscreen mode. The panels come next:
 //! in fullscreen mode Start or Guide toggles the menu drawer, R3, Guide + A or the Steam
 //! Deck's "…" toggles Quick Access, View or X opens the options sheet for the focused game,
@@ -33,6 +34,7 @@ use pindu_core::panels::GameOption;
 use crate::application::PinduApplication;
 use crate::artwork_dialog::ArtworkDialog;
 use crate::fullscreen::Sound;
+use crate::fullscreen_add_game::PinduFullscreenAddGame;
 use crate::hold_progress::destructive_action;
 use crate::models::GameObject;
 use crate::window::PinduWindow;
@@ -165,6 +167,9 @@ impl PinduWindow {
         if self.secret_dialog_intent(intent) || self.search_keyboard_intent(intent) {
             return;
         }
+        if self.report_page_intent(intent) {
+            return;
+        }
         if self.handle_panel_intent(intent) {
             match intent {
                 Intent::Back => self.play_sound(Sound::Back),
@@ -270,7 +275,9 @@ impl PinduWindow {
             menu.child_focus(focus_direction);
             return;
         }
-        if self.scroll_description(direction) {
+        if self.scroll_description(direction)
+            || self.imp().quick_access_panel.scroll_report(direction)
+        {
             return;
         }
         let grid = &self.imp().grid;
@@ -412,7 +419,13 @@ impl PinduWindow {
                 _ => menu.popdown(),
             }
         } else if let Some(dialog) = self.visible_dialog() {
-            dialog.close();
+            // Fullscreen mode's Add Game goes back a step or up a folder before it closes.
+            if !dialog
+                .downcast_ref::<PinduFullscreenAddGame>()
+                .is_some_and(PinduFullscreenAddGame::step_back)
+            {
+                dialog.close();
+            }
         } else if self.shows_home_section() {
             self.imp().home_page.show_sections();
         } else {

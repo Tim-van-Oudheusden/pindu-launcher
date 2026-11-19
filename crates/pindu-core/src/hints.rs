@@ -53,6 +53,9 @@ pub struct Context {
     /// The open dialog has tabs, which the shoulder buttons switch (Change Artwork's kinds
     /// of art).
     pub dialog_tabs: bool,
+    /// The open dialog has a step before the shown one, which B goes back to (fullscreen
+    /// mode's Add Game).
+    pub dialog_back: bool,
     /// A game has focus (a cover or card) or the page is a game's: View opens its options.
     /// In the drawer's Collections level, a collection has focus: View leads to its
     /// actions.
@@ -116,6 +119,8 @@ pub enum Action {
     Search,
     /// Switch to the tab before or after.
     Tabs,
+    /// Turn to the page before or after, in the diagnostics report.
+    Pages,
     /// Cycle the sort order back or forward.
     Sort,
     /// Turn a slider down or up.
@@ -230,8 +235,9 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
         action: Action::Adjust,
     });
     // A panel over the page closes on B, or steps back from one of its lists; the page's
-    // own buttons wait for it, as they wait for a dialog.
+    // own buttons wait for it, as they wait for a dialog, which B closes or steps back in.
     let back = match context.panel {
+        _ if context.dialog && context.dialog_back => Some(Action::Back),
         _ if context.dialog => Some(Action::Close),
         Some(
             Panel::Drawer(DrawerLevel::Main)
@@ -268,6 +274,8 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
         })
     };
     let dialog_tabs = context.dialog_tabs && context.dialog;
+    let report_pages = !context.dialog
+        && context.panel == Some(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport));
     [
         adjust,
         single(Intent::Activate, activate),
@@ -281,6 +289,12 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
             Intent::PreviousTab,
             Intent::NextTab,
             Action::Tabs,
+        ),
+        pair(
+            report_pages,
+            Intent::PreviousTab,
+            Intent::NextTab,
+            Action::Pages,
         ),
         pair(tabs, Intent::PreviousSort, Intent::NextSort, Action::Sort),
     ]
@@ -437,6 +451,7 @@ mod tests {
             page_below: false,
             search: false,
             tabs: false,
+            dialog_back: false,
             dialog_tabs: false,
             keyboard: None,
             options: false,
@@ -471,6 +486,22 @@ mod tests {
         assert_eq!(
             actions(dialog_over_home, DeviceKind::Xbox),
             [(Button::South, Action::Open), (Button::East, Action::Close)]
+        );
+    }
+
+    #[test]
+    fn a_dialog_with_a_step_before_goes_back_to_it_with_b() {
+        let add_game = Context {
+            dialog: true,
+            dialog_back: true,
+            ..context(Focus::Other)
+        };
+        assert_eq!(
+            actions(add_game, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Back)
+            ]
         );
     }
 
@@ -811,6 +842,32 @@ mod tests {
                     Button::LeftTrigger,
                     Some(Button::RightTrigger),
                     Action::Sort
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn the_diagnostics_report_turns_its_pages_with_the_shoulders() {
+        let report = Context {
+            menu: true,
+            tabs: true,
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport)),
+            ..context(Focus::Other)
+        };
+        let shown: Vec<_> = hints(report, Layout::detected(DeviceKind::Xbox))
+            .into_iter()
+            .map(|hint| (hint.button, hint.pair, hint.action))
+            .collect();
+        assert_eq!(
+            shown,
+            [
+                (Button::South, None, Action::Select),
+                (Button::East, None, Action::Back),
+                (
+                    Button::LeftShoulder,
+                    Some(Button::RightShoulder),
+                    Action::Pages
                 ),
             ]
         );

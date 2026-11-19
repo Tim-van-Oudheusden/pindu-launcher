@@ -11,7 +11,7 @@ use gtk::{gdk, gio, glib};
 use pindu_core::library::{self, GameState};
 
 use super::CoverArt;
-use crate::models::GameObject;
+use crate::models::{GameObject, LibrarySelection};
 use crate::permission_service;
 use crate::sources::{source_icon, source_name};
 
@@ -64,6 +64,8 @@ mod imp {
         #[template_child]
         pub play_button: TemplateChild<gtk::Button>,
         #[template_child]
+        pub selected_check: TemplateChild<gtk::CheckButton>,
+        #[template_child]
         pub title: TemplateChild<gtk::Inscription>,
         /// The shown game and the handler that follows its art.
         pub bound: RefCell<Option<(GameObject, Vec<glib::SignalHandlerId>)>>,
@@ -72,6 +74,8 @@ mod imp {
         /// The context menu, made on first use: a grid makes and drops tiles by the
         /// hundred while searching, and most never open their menu.
         pub menu: OnceCell<gtk::PopoverMenu>,
+        /// Selection mode's selection and the handler that follows it.
+        pub selection: RefCell<Option<(LibrarySelection, glib::SignalHandlerId)>>,
     }
 
     #[glib::object_subclass]
@@ -123,6 +127,9 @@ mod imp {
             if let Some(menu) = self.menu.get() {
                 menu.unparent();
             }
+            if let Some((selection, handler)) = self.selection.take() {
+                selection.disconnect(handler);
+            }
         }
     }
     impl WidgetImpl for CoverTile {}
@@ -138,9 +145,11 @@ glib::wrapper! {
 
 impl CoverTile {
     /// A tile in `window`'s grid; it shows its title as `show_titles` asks, except while
-    /// the window is in fullscreen mode, where the title takes no space.
+    /// the window is in fullscreen mode, where the title takes no space, and a check while
+    /// `selection` is in selection mode.
     pub fn new(
         window: &impl IsA<gtk::Window>,
+        selection: &LibrarySelection,
         size: TileSize,
         show_titles: bool,
         show_badges: bool,
@@ -160,6 +169,12 @@ impl CoverTile {
             .build();
         imp.show_badges.set(show_badges);
         imp.source_badge.set_visible(show_badges);
+        let handler = selection.connect_changed(glib::clone!(
+            #[weak]
+            tile,
+            move |_| tile.show_selection()
+        ));
+        imp.selection.replace(Some((selection.clone(), handler)));
         tile
     }
 
@@ -200,6 +215,22 @@ impl CoverTile {
         drop(entry);
         self.show_state(game);
         self.show_art(game);
+        self.show_selection();
+    }
+
+    /// The check of selection mode, ticked when the game is selected; the Play button
+    /// gives way to it.
+    fn show_selection(&self) {
+        let imp = self.imp();
+        let (active, selected) = match (&*imp.selection.borrow(), self.game()) {
+            (Some((selection, _)), Some(game)) => {
+                (selection.is_active(), selection.contains(&game.id()))
+            }
+            _ => (false, false),
+        };
+        imp.selected_check.set_visible(active);
+        imp.selected_check.set_active(selected);
+        imp.play_button.set_visible(!active);
     }
 
     /// The state badge and the Play or Stop button: playing first, then needing
@@ -336,11 +367,12 @@ pub(crate) fn popup_game_menu(
     }
     menu.append_section(None, &actions);
     if let Some(window) = anchor.root().and_downcast::<crate::window::PinduWindow>() {
-        let collections = window.library().collections();
+        let collections = window.library().manual_collections();
         menu.append_section(
             None,
             &crate::collection_actions::collection_menu(game, &collections),
         );
+        menu.append_section(None, &crate::group_actions::group_menu(&window, game));
     }
     let (favourite, pinned, hidden) = {
         let game = game.game();

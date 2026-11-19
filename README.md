@@ -61,12 +61,19 @@ widgets so it looks and behaves like the rest of GNOME.
   ([Fullscreen mode](#fullscreen-mode)).
 - **A tidy library.** Browse covers in a grid, or switch the desktop window to a list with each game's source, install
   state, last played date and playtime. Search, sort and filter by installed, favourite, Windows or native, in either
-  layout. Group games into your own collections, jump back into recent games and hide the ones you never play.
-- **One game, many copies.** A game that arrives from several launchers can show as one game whose page lists every
-  copy, and Play starts the preferred one. A Lutris entry that links to a Steam, GOG or Epic game in the library is
-  grouped with it as the library syncs; copies that only share a title are suggested under **Duplicates**, in the
-  main menu and in fullscreen mode's Quick Access, where you group them or say they are not the same game. Groups
-  made automatically can be undone there ([Game identity](docs/game-identity.md)).
+  layout. Group games into your own collections, or save a filter and search as a collection that keeps itself up to
+  date (**Save Filter…** beside the filters, with suggested ones under its arrow), jump back into recent games and hide
+  the ones you never play.
+  layout. Group games into your own collections, jump back into recent games and hide the ones you never play. The
+  **Select** button in the header bar picks several games in the grid or the list at once, to favourite, hide, add to
+  a collection or take out of one in one go, with a toast to undo it, or to merge them into one game.
+- **One game, several copies.** When the same game comes from two launchers, **Merge With…** in its menu (or in its
+  options sheet in fullscreen mode) makes them one game with several copies; you choose the copy Play starts in its
+  **Preferred Copy** menu or on its page, and **Split Into Separate Games** takes them apart again for good. A Lutris
+  entry that links to a Steam, GOG or Epic game in the library is grouped with it as the library syncs; copies that
+  only share a title are suggested under **Duplicates**, in the main menu and in fullscreen mode's Quick Access, where
+  you group them or say they are not the same game, and groups made automatically can be undone
+  ([Game identity](docs/game-identity.md)).
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
 - **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
   [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu
@@ -77,6 +84,10 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
 - **Offline and private.** The library works without a network. Pindu launcher goes online only for the artwork and
   Proton builds you ask for.
+- **Backups.** Export your collections, saved filters, favourites, hidden games, games added by
+  hand and tracked playtime to a file, and import them again. Before an update changes the library's format, Pindu
+  launcher keeps a copy of the library beside it, named for the format it had (such as `library.db.v5.bak`), and keeps
+  the two newest copies.
 - **Backups.** Export your collections, favourites, hidden games, games added by hand and tracked playtime to a file,
   and import them again. Before an update changes the library's format, Pindu launcher keeps a copy of the library
   beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
@@ -282,6 +293,8 @@ Guide + A never also opens the menu drawer.
 On the library page, **Filters** narrows every tab to installed or not installed games, or to Windows or native ones,
 and can show hidden games too. A **Filtered** chip beside the tabs says a filter is on, and **Clear Filters** brings the
 whole tab back. These filters are separate from the desktop window's filter row and last until the app quits.
+**Save Filter…** keeps the shown tab with these filters and the search as a collection of its own, which gets a tab,
+a Home section and a drawer entry; **Save Native Games** and **Save Windows Games** save those shelves in one press.
 
 ### Performance
 
@@ -353,6 +366,25 @@ console restarts, so the entry never restarts it by itself.
 
 Elsewhere, another distribution or the Flatpak, the entry does not show.
 
+### Library Health in Quick Access
+
+Quick Access has a **Library Health** entry, subtitled with how many problems need attention. Its level shows the
+same report as the desktop's Library Health page: **Sources**, **Launching**, **Artwork** and **Library Data**, read
+with a controller alone. Each row takes focus; a problem's row names its next step and takes it on A, closing Quick
+Access: Preferences at Sources, Preferences at the host access command, or umu-launcher's install instructions.
+
+- Over a running game the rows say the step is taken once the game has ended, since Preferences and web pages open
+  over the launcher.
+- In a gamescope session, which has no browser, umu-launcher's row shows the address to read on another device.
+- Rows the session cannot have, such as host access outside the Flatpak, are left out, never shown as errors.
+
+### After the First Sync
+
+When the library's first sync finishes, **Your Library Is Ready** sums up what it found: the launchers found, the
+games imported and what needs attention. **Open Library Health** opens the Library Health page on the desktop, or
+Quick Access at Library Health in fullscreen mode, where the summary reads and closes with a controller alone. It shows
+once: after it is closed it never shows again.
+
 ### Add a Store
 
 A library with no games, such as a fresh Pindu OS, offers **Add a Store** on its empty page, in fullscreen mode and on
@@ -377,6 +409,24 @@ Quick Access's **Proton** does what Preferences' Windows and Proton pages do for
 - **Check for Releases** lists the newest GE-Proton and Proton-CachyOS releases from GitHub, the only time the level
   goes online. Select one to download and install it: its row shows how far it is, and it is a task in Activity, where
   it can be cancelled; selecting its row again stops it too. A notification says how it ended.
+### Add a Game
+
+**Add a Game** in Quick Access adds a game by hand without leaving fullscreen mode, with a controller alone. Choose a
+native game, an installed Windows game, or a Windows installer, then:
+
+- Pick the game's folder, or the installer, in a picker fullscreen mode draws itself. It starts at the Games folder,
+  your home folder and the drives the system has mounted under `/run/media/<user>`, and lists only folders and, for an
+  installer, Windows programs. It shows only what the launcher can already read, and says so: the Flatpak gets no new
+  permission, so there it reaches `~/Games` and the folders it already reads, not a drive. Mounting drives is the
+  system's job.
+- An installer runs through umu with the default Proton build in a new prefix; once it ends, pick the program it
+  installed.
+- Pick the game's program from the ones found in its folder. The title is filled in from the program's name and can
+  be changed with the on-screen keyboard.
+
+A Windows game's Proton build is picked on the last step from the same list as Performance's: the default first, then
+the builds on this machine, newest first. It runs through umu, as on the desktop. Arguments, the working folder, host
+spawn, a prefix of your choice and art are set in the desktop's Add Game and Edit dialogs.
 
 ### Controllers
 
@@ -670,6 +720,8 @@ so the fullscreen mode is a second presentation of the same library.
 | [`docs/launch-outcomes.md`](docs/launch-outcomes.md) | Launch outcomes and safe start: how each launch ended, failed-launch help, Start Safely |
 | [`docs/save-snapshots.md`](docs/save-snapshots.md) | Save snapshots of Windows games in managed prefixes, and restoring them |
 | [`docs/accessibility-polish.md`](docs/accessibility-polish.md) | Accessibility polish: text sizes, held buttons, high contrast, screen reader, navigation settings |
+| [`docs/emulation.md`](docs/emulation.md) | Emulation: what a first version would be and cost, and a recommendation; the decision is the maintainer's |
+| [`docs/external-importers.md`](docs/external-importers.md) | External importers: a versioned JSON protocol for sources kept outside the core, and a recommendation; the decision is the maintainer's |
 | [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
 | [`docs/releasing.md`](docs/releasing.md) | How to cut a release: versions, notes, the tag and the Release workflow |
 | [`docs/ai-ops-runbook.md`](docs/ai-ops-runbook.md) | Watching, pausing and reverting agent work; CI and Release failures; the `main` ruleset |
@@ -699,6 +751,17 @@ Information**, and copy or save the report into the issue. It names the version,
 distribution and session, each source's state and game count, the sandbox permissions, the tools found, the library's
 schema version and the last sync's problems. It holds no game titles and writes your home folder as `~`; nothing is
 sent anywhere.
+
+In fullscreen mode, where nothing can be copied, open Quick Access and choose **Diagnostics Report**. It shows the
+same report in large text, a page at a time ("Page 1 of 3"), for a phone to photograph: LB and RB, or **Previous
+Page** and **Next Page**, turn the pages, and Up and Down scroll a page the screen cannot fit. Each time it opens, a
+copy is saved to `~/.local/share/pindu-launcher/reports/` (in the Flatpak,
+`~/.var/app/io.github.tim_van_oudheusden.pindu-launcher/data/pindu-launcher/reports/`), named after the date and time;
+the newest ten are kept, and the screen says where the copy went.
+
+When a game misbehaves, add its newest log from **Play with Logs**: on the desktop, the game's **More Actions** menu has
+**Debugging Information with Log**; in fullscreen mode, the Diagnostics Report has **Add a Game's Log**. The report then
+keeps that game's title, and still no other title and no home folder.
 
 ## Acknowledgments
 

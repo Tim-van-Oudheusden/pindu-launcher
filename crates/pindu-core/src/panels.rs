@@ -1,9 +1,10 @@
 //! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
 //! leaving, and the machine's power), the Quick Access panel on the right (notifications,
 //! what runs in the background, the design, the controllers and what each button does, a
-//! few settings, the network, Bluetooth, the sound output, OS updates on Pindu OS, and
-//! entries for the page under it such as the library's filters and a focused game's
-//! performance switches) and the options sheet at the bottom (what to do with one game).
+//! few settings, the network, Bluetooth, the sound output, OS updates on Pindu OS, Library
+//! Health, the diagnostics report, and entries for the page under it such as the library's
+//! filters and a focused game's performance switches) and the options sheet at the bottom
+//! (what to do with one game).
 //! This decides which one is open and at which level, what Start, Guide, R3, View or X and
 //! B do to them, and what each lists.
 
@@ -42,14 +43,19 @@ pub enum DrawerLevel {
     Controls,
 }
 
-/// What the options sheet shows: the game's actions, or its collections to add it to or
-/// take it out of.
+/// What the options sheet shows: the game's actions, or one of the lists an action leads
+/// to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptionsLevel {
     /// The game's actions.
     Main,
     /// The collections to add the game to or take it out of.
     Collections,
+    /// The other games to merge the game with, likely copies first (see
+    /// [`crate::game_groups::merge_candidates`]).
+    Merge,
+    /// A group's copies, to choose the one Play starts.
+    Copies,
 }
 
 /// What the Quick Access panel shows: its entries, or the list one of them leads to.
@@ -89,6 +95,16 @@ pub enum QuickAccessLevel {
     /// The stores to install from Flathub, and the install that runs (see
     /// [`crate::add_store`]).
     AddStore,
+    /// The Library Health report (see [`crate::health`]): the sources, starting games,
+    /// artwork and the library file, each problem with its next step.
+    LibraryHealth,
+    /// The diagnostics report in pages to photograph, a copy of which is saved as it opens
+    /// (see [`crate::report_screen`]).
+    DiagnosticsReport,
+    /// The games with a log from Play with Logs, the game played with logs last first, to
+    /// add one's newest log to the diagnostics report (see
+    /// [`crate::diagnostics::log_choices`]); B leads back to the report.
+    ReportLog,
     /// The Proton builds downloaded into our tools folder, the GE-Proton and
     /// Proton-CachyOS releases to download (see [`crate::proton_downloads`]), and the
     /// defaults for new Windows games: the Proton build, MangoHud and GameMode, the same
@@ -104,7 +120,7 @@ pub enum QuickAccessLevel {
 
 impl QuickAccessLevel {
     /// Every level, the entries first.
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 20] = [
         Self::Main,
         Self::Notifications,
         Self::Activity,
@@ -119,6 +135,9 @@ impl QuickAccessLevel {
         Self::SoundOutput,
         Self::SystemUpdate,
         Self::AddStore,
+        Self::LibraryHealth,
+        Self::DiagnosticsReport,
+        Self::ReportLog,
         Self::Proton,
         Self::Sources,
         Self::Duplicates,
@@ -142,6 +161,9 @@ impl QuickAccessLevel {
             Self::SoundOutput => "sound-output",
             Self::SystemUpdate => "system-update",
             Self::AddStore => "add-store",
+            Self::LibraryHealth => "library-health",
+            Self::DiagnosticsReport => "diagnostics-report",
+            Self::ReportLog => "report-log",
             Self::Proton => "proton",
             Self::Sources => "sources",
             Self::Duplicates => "duplicates",
@@ -241,6 +263,9 @@ impl Panels {
             }
             (Intent::Back, Some(Panel::Options(_))) => {
                 self.open = Some(Panel::Options(OptionsLevel::Main));
+            }
+            (Intent::Back, Some(Panel::QuickAccess(QuickAccessLevel::ReportLog))) => {
+                self.open = Some(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport));
             }
             (Intent::Back, Some(Panel::QuickAccess(_))) => {
                 self.open = Some(Panel::QuickAccess(QuickAccessLevel::Main));
@@ -398,6 +423,13 @@ pub enum GameOption {
     Collections,
     /// Change the game's artwork, from SteamGridDB or a file.
     ChangeArtwork,
+    /// Lead to the other games, to merge the game with one as copies of one game
+    /// ([`OptionsLevel::Merge`]).
+    MergeWith,
+    /// Lead to a group's copies, to choose the one Play starts ([`OptionsLevel::Copies`]).
+    PreferredCopy,
+    /// Split a group into its games again, remembering that they are not the same game.
+    Split,
     /// Hide the game.
     Hide,
     /// Show the hidden game again.
@@ -436,6 +468,25 @@ pub fn game_options(game: &Game, playing: Playing) -> Vec<GameOption> {
     .into_iter()
     .flatten()
     .collect()
+}
+
+/// The options sheet's actions for `game`, as [`game_options`] lists them with Merge With
+/// after Change Artwork, and, for a group of `copies` copies (0 for a game in no group),
+/// Preferred Copy and Split after it.
+pub fn sheet_options(game: &Game, playing: Playing, copies: usize) -> Vec<GameOption> {
+    let mut options = game_options(game, playing);
+    let at = options
+        .iter()
+        .position(|option| *option == GameOption::ChangeArtwork)
+        .map_or(options.len(), |index| index + 1);
+    let grouped = copies > 1;
+    let grouping = [
+        Some(GameOption::MergeWith),
+        grouped.then_some(GameOption::PreferredCopy),
+        grouped.then_some(GameOption::Split),
+    ];
+    options.splice(at..at, grouping.into_iter().flatten());
+    options
 }
 
 /// A design the Quick Access panel offers, or Adwaita (no design, `id` empty).
@@ -562,6 +613,11 @@ mod tests {
         assert_eq!(QuickAccessLevel::SoundOutput.name(), "sound-output");
         assert_eq!(QuickAccessLevel::SystemUpdate.name(), "system-update");
         assert_eq!(QuickAccessLevel::AddStore.name(), "add-store");
+        assert_eq!(QuickAccessLevel::LibraryHealth.name(), "library-health");
+        assert_eq!(
+            QuickAccessLevel::DiagnosticsReport.name(),
+            "diagnostics-report"
+        );
     }
 
     #[test]
@@ -662,6 +718,8 @@ mod tests {
             QuickAccessLevel::Bluetooth,
             QuickAccessLevel::SoundOutput,
             QuickAccessLevel::SystemUpdate,
+            QuickAccessLevel::LibraryHealth,
+            QuickAccessLevel::DiagnosticsReport,
         ] {
             let mut panels = Panels::new();
             panels.handle(Intent::QuickAccess, PAGE);
@@ -671,6 +729,18 @@ mod tests {
             assert!(panels.handle(Intent::Back, PAGE), "{level:?}");
             assert_eq!(panels.open(), None, "{level:?}");
         }
+    }
+
+    #[test]
+    fn b_steps_back_from_the_report_log_picker_to_the_report() {
+        let mut panels = Panels::new();
+        panels.show(Panel::QuickAccess(QuickAccessLevel::ReportLog));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(
+            panels.open(),
+            Some(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport))
+        );
+        assert_eq!(QuickAccessLevel::ReportLog.name(), "report-log");
     }
 
     #[test]
@@ -1102,6 +1172,31 @@ mod tests {
         assert_eq!(game_options(&lutris, Playing::No)[..2], [Play, StartSafely]);
         assert!(!game_options(&lutris, Playing::Started).contains(&StartSafely));
         assert!(!game_options(&steam, Playing::No).contains(&StartSafely));
+    }
+
+    #[test]
+    fn every_game_offers_merging_after_its_artwork_and_a_group_its_copies_and_a_split() {
+        use GameOption::*;
+        let steam = game(Source::Steam, LaunchKind::StoreUri);
+
+        assert_eq!(
+            sheet_options(&steam, Playing::No, 0),
+            [
+                Play,
+                AddToFavourites,
+                Collections,
+                ChangeArtwork,
+                MergeWith,
+                Hide,
+                OpenInLauncher,
+                ProtonDb,
+                PcGamingWiki
+            ]
+        );
+        assert_eq!(
+            sheet_options(&steam, Playing::No, 2)[3..7],
+            [ChangeArtwork, MergeWith, PreferredCopy, Split]
+        );
     }
 
     fn theme(id: &str, name: &str, contract: u64) -> Theme {

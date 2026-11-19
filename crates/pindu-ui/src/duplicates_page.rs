@@ -142,10 +142,13 @@ impl DuplicatesPage {
                     }
                 }),
             );
+            let games = vec![first, second];
             row.add_suffix(
                 &self.choice_button(&gettext("Group"), true, library, move |library| {
-                    let (first, second) = (first.clone(), second.clone());
-                    async move { library.accept_duplicate(&first, &second).await }
+                    let games = games.clone();
+                    async move {
+                        library.merge_games(games).await;
+                    }
                 }),
             );
             imp.suggestions_group.add(&row);
@@ -153,12 +156,19 @@ impl DuplicatesPage {
         }
         for group in &review.automatic {
             let row = review_row(&group_title(review, group), &group_subtitle(group));
-            let id = group.id;
+            let Some(member) = group.members.first().cloned() else {
+                continue;
+            };
             row.add_suffix(&self.choice_button(
                 &gettext("Undo"),
                 false,
                 library,
-                move |library| async move { library.undo_automatic_group(id).await },
+                move |library| {
+                    let member = member.clone();
+                    async move {
+                        library.split_group(&member).await;
+                    }
+                },
             ));
             imp.automatic_group.add(&row);
             rows.push((imp.automatic_group.get(), row));

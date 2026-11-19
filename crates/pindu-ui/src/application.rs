@@ -11,6 +11,7 @@ use crate::audio_output_service::AudioOutputService;
 use crate::bluetooth_service::BluetoothService;
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
 use crate::diagnostics_service;
+use crate::first_sync_summary;
 use crate::game_dialog::GameDialog;
 use crate::game_overlay::PinduGameOverlay;
 use crate::gamepad_service::GamepadService;
@@ -40,9 +41,11 @@ use crate::window::PinduWindow;
 use pindu_core::accessibility::{LEGACY_LARGE_TEXT_KEY, TEXT_SIZE_KEY, migrated_text_size};
 use pindu_core::backup::ImportSummary;
 use pindu_core::gamescope::session::{Session, has_os_session_select, runs_as_own_session};
+use pindu_core::health;
 use pindu_core::keys;
 use pindu_core::launch::{Start, WebPage};
 use pindu_core::library::Filters;
+use pindu_core::model::GameId;
 use pindu_core::notifications::{Kind, Target};
 use pindu_core::panels::Playing;
 use pindu_core::sources::location::HostDirs;
@@ -87,6 +90,9 @@ mod imp {
         pub gamescope_service: OnceCell<GamescopeService>,
         /// The Library Health report, for both shells.
         pub health_service: OnceCell<HealthService>,
+        /// Whether the library's first sync finished and its summary waits for the report
+        /// gathered after it.
+        pub first_sync_pending: std::cell::Cell<bool>,
         /// The user's own stylesheet for fullscreen mode.
         pub style_service: OnceCell<StyleService>,
         /// The batteries, for Quick Access's header.
@@ -183,6 +189,10 @@ mod imp {
                     library.reload();
                     app.notify_sync(sync);
                     app.fetch_missing_art(false);
+                    // Before Library Health gathers again, which it connected after this.
+                    if sync.was_first() {
+                        app.imp().first_sync_pending.set(true);
+                    }
                 }
             ));
             self.session_service
@@ -207,6 +217,11 @@ mod imp {
                     self.gamescope_service.get().expect("set above").is_active(),
                 ))
                 .expect("start-up runs once");
+            self.obj().health_service().connect_changed(glib::clone!(
+                #[weak(rename_to = app)]
+                self.obj(),
+                move |health| app.show_first_sync_summary(health)
+            ));
             self.style_service
                 .set(StyleService::new())
                 .expect("start-up runs once");
@@ -532,7 +547,16 @@ impl PinduApplication {
             .activate(move |app: &Self, _, _| app.quit())
             .build();
         let about_action = gio::ActionEntry::builder("about")
-            .activate(move |app: &Self, _, _| app.show_about())
+            .activate(move |app: &Self, _, _| app.show_about(None))
+            .build();
+        // About, with the game's newest log after its debugging information.
+        let about_with_log_action = gio::ActionEntry::builder("about-with-log")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(move |app: &Self, _, id| {
+                if let Some(id) = id.and_then(|id| id.str()).and_then(|id| id.parse().ok()) {
+                    app.show_about(Some(id));
+                }
+            })
             .build();
         let preferences_action = gio::ActionEntry::builder("preferences")
             .activate(move |app: &Self, _, _| {
@@ -698,6 +722,7 @@ impl PinduApplication {
         self.add_action_entries([
             quit_action,
             about_action,
+            about_with_log_action,
             preferences_action,
             permissions_action,
             source_preferences_action,
@@ -825,6 +850,22 @@ impl PinduApplication {
         match window.visible_dialog().and_downcast::<PreferencesDialog>() {
             Some(preferences) => preferences.add_toast(toast.clone()),
             None => window.add_toast(toast.clone()),
+        }
+    }
+
+    /// Once the report gathered after the library's first sync is in, shows what that
+    /// sync found in the active window, unless the summary was dismissed before.
+    fn show_first_sync_summary(&self, service: &HealthService) {
+        let first_sync = self.imp().first_sync_pending.replace(false);
+        let (Some(report), Some(window)) = (
+            service.report(),
+            self.active_window().and_downcast::<PinduWindow>(),
+        ) else {
+            return;
+        };
+        let shown = window.settings().boolean(first_sync_summary::SHOWN_KEY);
+        if let Some(summary) = health::first_sync_summary(&report, first_sync, shown) {
+            window.show_first_sync_summary(&summary);
         }
     }
 
@@ -1011,13 +1052,15 @@ impl PinduApplication {
         work(&window, &game, library, toast);
     }
 
-    /// Opens About once its debugging information is gathered, which takes a moment.
-    fn show_about(&self) {
+    /// Opens About once its debugging information is gathered, which takes a moment. With
+    /// `game`, the game's newest log follows the debugging information.
+    fn show_about(&self, game: Option<GameId>) {
         let steam_gamescope = self.gamescope_service().is_active();
         let own_session = self.runs_as_own_session();
         let app = self.downgrade();
         glib::spawn_future_local(async move {
-            let debug_info = diagnostics_service::debug_info(steam_gamescope, own_session).await;
+            let debug_info =
+                diagnostics_service::debug_info(steam_gamescope, own_session, game).await;
             let Some(app) = app.upgrade() else {
                 return;
             };

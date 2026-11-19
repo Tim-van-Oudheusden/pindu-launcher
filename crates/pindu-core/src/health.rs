@@ -132,6 +132,42 @@ pub enum NextStep {
     HowToInstall(Tool),
 }
 
+/// Where fullscreen mode's Quick Access shows the report, which decides whether a next step
+/// can be taken from it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct FullscreenSession {
+    /// Quick Access is open over a running game, where nothing opens over the launcher.
+    pub over_game: bool,
+    /// This is a gamescope session, which has no desktop for a web browser to open on.
+    pub gamescope_session: bool,
+}
+
+/// Whether fullscreen mode can take a next step, or where else it is taken. As in the
+/// system panel (`docs/system-panel.md`), a step the session cannot take stays in the
+/// report and says why, never as an error.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StepReach {
+    /// From the row itself.
+    Here,
+    /// Once the game has ended, from the library: Preferences and web pages open over the
+    /// launcher, not over a game.
+    AfterTheGame,
+    /// On another device: a gamescope session has no browser to open the page in, so the
+    /// row shows its address.
+    OnAnotherDevice,
+}
+
+impl NextStep {
+    /// Whether fullscreen mode can take the step in `session`.
+    pub fn reach_in_fullscreen(&self, session: FullscreenSession) -> StepReach {
+        match self {
+            Self::HowToInstall(_) if session.gamescope_session => StepReach::OnAnotherDevice,
+            _ if session.over_game => StepReach::AfterTheGame,
+            _ => StepReach::Here,
+        }
+    }
+}
+
 /// Something that keeps the library from finding or starting games.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Problem {
@@ -382,6 +418,46 @@ fn source_health(facts: &SourceFacts) -> SourceHealth {
         sync_problems: state.errors.clone(),
         problems,
     }
+}
+
+/// Whether the sync about to run is the library's first: no source has synced before.
+pub fn is_first_sync(states: &[SourceState]) -> bool {
+    states.iter().all(|state| state.last_sync.is_none())
+}
+
+/// What the library's first sync found, summarised once in both shells, which point at
+/// Library Health from it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FirstSyncSummary {
+    /// The launchers whose data was found, in sync order.
+    pub launchers: Vec<Source>,
+    /// How many games the library has from them.
+    pub games: usize,
+    /// What needs attention, as the report lists it.
+    pub problems: Vec<Problem>,
+}
+
+/// The summary to show after a sync with `report`: only after the library's first sync
+/// (`first_sync`, from [`is_first_sync`] before it ran), and only when it was not `shown`
+/// before.
+pub fn first_sync_summary(
+    report: &HealthReport,
+    first_sync: bool,
+    shown: bool,
+) -> Option<FirstSyncSummary> {
+    if !first_sync || shown {
+        return None;
+    }
+    Some(FirstSyncSummary {
+        launchers: report
+            .sources
+            .iter()
+            .filter(|source| source.folder.is_some())
+            .map(|source| source.source)
+            .collect(),
+        games: report.sources.iter().map(|source| source.games).sum(),
+        problems: report.problems().cloned().collect(),
+    })
 }
 
 #[cfg(test)]
@@ -726,5 +802,114 @@ mod tests {
 
         assert_eq!(folder_bytes(folder.path()), 60);
         assert_eq!(folder_bytes(&folder.path().join("missing")), 0);
+    }
+
+    #[test]
+    fn fullscreen_takes_every_next_step_in_the_library() {
+        let session = FullscreenSession::default();
+        for step in [
+            NextStep::Preferences(PreferencesPage::Sources),
+            NextStep::HostOverride {
+                command: permissions::host_override_command(APP_ID),
+            },
+            NextStep::HowToInstall(Tool::Umu),
+        ] {
+            assert_eq!(
+                step.reach_in_fullscreen(session),
+                StepReach::Here,
+                "{step:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn over_a_game_fullscreen_leaves_the_next_steps_for_after_it() {
+        let session = FullscreenSession {
+            over_game: true,
+            gamescope_session: false,
+        };
+        for step in [
+            NextStep::Preferences(PreferencesPage::Sources),
+            NextStep::HostOverride {
+                command: permissions::host_override_command(APP_ID),
+            },
+            NextStep::HowToInstall(Tool::Umu),
+        ] {
+            assert_eq!(
+                step.reach_in_fullscreen(session),
+                StepReach::AfterTheGame,
+                "{step:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_gamescope_session_reads_install_instructions_on_another_device() {
+        for over_game in [false, true] {
+            let session = FullscreenSession {
+                over_game,
+                gamescope_session: true,
+            };
+            assert_eq!(
+                NextStep::HowToInstall(Tool::Umu).reach_in_fullscreen(session),
+                StepReach::OnAnotherDevice
+            );
+        }
+        let session = FullscreenSession {
+            over_game: false,
+            gamescope_session: true,
+        };
+        assert_eq!(
+            NextStep::Preferences(PreferencesPage::Sources).reach_in_fullscreen(session),
+            StepReach::Here
+        );
+    }
+
+    #[test]
+    fn a_sync_is_the_first_when_no_source_has_synced_before() {
+        let never = [
+            SourceState::new(Source::Steam),
+            SourceState::new(Source::Lutris),
+        ];
+        assert!(is_first_sync(&never));
+        assert!(is_first_sync(&[]));
+
+        let synced = [
+            SourceState::new(Source::Steam),
+            SourceState {
+                last_sync: Some(1_700_000_000),
+                ..SourceState::new(Source::Lutris)
+            },
+        ];
+        assert!(!is_first_sync(&synced));
+    }
+
+    #[test]
+    fn the_first_sync_s_summary_names_launchers_found_games_and_problems() {
+        let report = report(&flatpak_without_host_access());
+
+        let summary =
+            first_sync_summary(&report, true, false).expect("the first sync, not shown yet");
+
+        assert_eq!(summary.launchers, [Source::Steam], "Lutris was not found");
+        assert_eq!(summary.games, 40);
+        assert_eq!(summary.problems, [Problem::NoHostAccess { games: 3 }]);
+    }
+
+    #[test]
+    fn the_summary_shows_only_after_the_first_sync_and_only_once() {
+        let report = report(&native_install());
+
+        assert_eq!(
+            first_sync_summary(&report, false, false),
+            None,
+            "a later sync"
+        );
+        assert_eq!(
+            first_sync_summary(&report, true, true),
+            None,
+            "dismissed before"
+        );
+        assert_eq!(first_sync_summary(&report, false, true), None);
     }
 }

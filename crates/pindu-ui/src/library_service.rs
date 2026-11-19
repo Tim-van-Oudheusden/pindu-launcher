@@ -1,11 +1,13 @@
 //! Loads the library from the store into the shared [`LibraryModel`], off the main thread.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::config::APP_ID;
 use gtk::glib;
 use gtk::subclass::prelude::*;
 use pindu_core::backup::{self, BackupError, ImportSummary};
+use pindu_core::bulk::{self, BulkAction};
 use pindu_core::duplicates::{self, Review};
 use pindu_core::game_groups;
 use pindu_core::library::{self, LibraryEntry};
@@ -15,6 +17,7 @@ use pindu_core::model::{
     Timestamp,
 };
 use pindu_core::paths::{default_library_db_path, default_user_art_dir};
+use pindu_core::saved_filters::SavedFilter;
 use pindu_core::store::{self, Store};
 
 use crate::file_service::PickedImage;
@@ -69,22 +72,26 @@ impl LibraryService {
     /// that cannot be read leaves the model as it was.
     pub fn reload(&self) {
         let service = self.clone();
+        glib::spawn_future_local(async move { service.load().await });
+    }
+
+    /// Reads every game from the store on a worker thread and updates the model; done
+    /// once the model shows them.
+    async fn load(&self) {
         let prefer_steamgriddb = gtk::gio::prelude::SettingsExt::boolean(
             &gtk::gio::Settings::new(APP_ID),
             "prefer-steamgriddb",
         );
-        glib::spawn_future_local(async move {
-            match gtk::gio::spawn_blocking(move || read_games(prefer_steamgriddb)).await {
-                Ok(Ok((games, collections))) => {
-                    let model = &service.imp().model;
-                    model.set_collections(collections);
-                    model.set_games(games);
-                    service.imp().loaded.set(true);
-                }
-                Ok(Err(error)) => glib::g_warning!("pindu", "Could not read the library: {error}"),
-                Err(_) => glib::g_warning!("pindu", "Reading the library stopped unexpectedly"),
+        match gtk::gio::spawn_blocking(move || read_games(prefer_steamgriddb)).await {
+            Ok(Ok((games, collections, saved_filters))) => {
+                let model = &self.imp().model;
+                model.set_collections(collections, saved_filters);
+                model.set_games(games);
+                self.imp().loaded.set(true);
             }
-        });
+            Ok(Err(error)) => glib::g_warning!("pindu", "Could not read the library: {error}"),
+            Err(_) => glib::g_warning!("pindu", "Reading the library stopped unexpectedly"),
+        }
     }
 
     /// Hides or shows a game, and every copy of its group, in the library views.
@@ -158,6 +165,13 @@ impl LibraryService {
         .await
     }
 
+    /// Saves `filter` as a collection after the others, and returns it once stored.
+    pub async fn create_saved_filter(&self, name: &str, filter: SavedFilter) -> Option<Collection> {
+        let name = name.to_owned();
+        self.write(move |store| store.create_saved_filter(&name, &filter))
+            .await
+    }
+
     /// Renames a collection.
     pub fn rename_collection(&self, id: i64, name: &str) {
         let name = name.to_owned();
@@ -183,8 +197,8 @@ impl LibraryService {
         });
     }
 
-    /// Deletes a collection and returns what undoing needs: the collection and its games.
-    pub async fn delete_collection(&self, id: i64) -> Option<(Collection, Vec<GameId>)> {
+    /// Deletes a collection and returns what undoing needs.
+    pub async fn delete_collection(&self, id: i64) -> Option<DeletedCollection> {
         self.write(move |store| {
             store.in_transaction(|store| {
                 let collection = store
@@ -193,19 +207,33 @@ impl LibraryService {
                     .find(|c| c.id == id)
                     .ok_or(store::StoreError::NotFound)?;
                 let members = store.collection_members(id)?;
+                let filter = store.saved_filters()?.remove(&id);
                 store.delete_collection(id)?;
-                Ok((collection, members))
+                Ok(DeletedCollection {
+                    collection,
+                    members,
+                    filter,
+                })
             })
         })
         .await
     }
 
-    /// Brings back a deleted collection at its old place, with its games.
-    pub fn restore_collection(&self, collection: Collection, members: Vec<GameId>) {
+    /// Brings back a deleted collection at its old place, with its games, or its filter
+    /// when it was a saved filter.
+    pub fn restore_collection(&self, deleted: DeletedCollection) {
         self.spawn_write(move |store| {
             store.in_transaction(|store| {
-                let restored = store.create_collection(&collection.name)?;
-                for game in &members {
+                let DeletedCollection {
+                    collection,
+                    members,
+                    filter,
+                } = &deleted;
+                let restored = match filter {
+                    Some(filter) => store.create_saved_filter(&collection.name, filter)?,
+                    None => store.create_collection(&collection.name)?,
+                };
+                for game in members {
                     store.add_to_collection(restored.id, game)?;
                 }
                 let mut ids: Vec<i64> = store
@@ -236,6 +264,52 @@ impl LibraryService {
                 Ok(())
             })
         });
+    }
+
+    /// Applies `action` to `games` in one go and returns the games it changed, which
+    /// undoing applies the opposite action to; `None` if the store could not be changed.
+    pub async fn apply_bulk(&self, games: Vec<GameId>, action: BulkAction) -> Option<Vec<GameId>> {
+        self.write(move |store| bulk::apply(store, &games, action))
+            .await
+    }
+
+    /// Merges games, with every copy of their groups, into one group; done once the model
+    /// shows it. `false` if it could not be stored.
+    pub async fn merge_games(&self, games: Vec<GameId>) -> bool {
+        self.write(move |store| store.merge_games(&games))
+            .await
+            .is_some()
+    }
+
+    /// Splits the group holding `game` into its games and remembers that they are not the
+    /// same game; done once the model shows it. The number of games it held, or `None` when
+    /// the game is in no group or the change could not be stored.
+    pub async fn split_group(&self, game: &GameId) -> Option<usize> {
+        let game = game.clone();
+        self.write(move |store| {
+            let Some(group) = store.game_group_of(&game)? else {
+                return Ok(None);
+            };
+            store.split_group(group.id)?;
+            Ok(Some(group.members.len()))
+        })
+        .await
+        .flatten()
+    }
+
+    /// Makes `copy` the one its group shows and Play starts; done once the model shows it.
+    /// `false` if it is in no group or the change could not be stored.
+    pub async fn set_preferred_copy(&self, copy: &GameId) -> bool {
+        let copy = copy.clone();
+        self.write(move |store| {
+            let Some(group) = store.game_group_of(&copy)? else {
+                return Ok(false);
+            };
+            store.set_preferred_copy(group.id, Some(&copy))?;
+            Ok(true)
+        })
+        .await
+        .unwrap_or(false)
     }
 
     /// The game's launch config, read on a worker thread; `None` when there is none or
@@ -390,24 +464,11 @@ impl LibraryService {
         self.read(duplicates::review).await
     }
 
-    /// Groups two copies the user says are one game, then reloads the model.
-    pub async fn accept_duplicate(&self, first: &GameId, second: &GameId) {
-        let (first, second) = (first.clone(), second.clone());
-        self.change(move |store| duplicates::accept(store, &first, &second).map(|_| ()))
-            .await;
-    }
-
     /// Remembers that two copies are not the same game, so they are never suggested again.
     pub async fn dismiss_duplicate(&self, first: &GameId, second: &GameId) {
         let (first, second) = (first.clone(), second.clone());
         self.change(move |store| store.remember_split(&first, &second))
             .await;
-    }
-
-    /// Undoes a group the sync made: its copies show on their own again and are not
-    /// grouped or suggested again.
-    pub async fn undo_automatic_group(&self, group_id: i64) {
-        self.change(move |store| store.split_group(group_id)).await;
     }
 
     /// Changes a game's art on a worker thread, then reloads the model.
@@ -544,7 +605,8 @@ impl LibraryService {
         glib::spawn_future_local(async move { service.change(work).await });
     }
 
-    /// Runs a store write on a worker thread and reloads the model; `None` if it failed.
+    /// Runs a store write on a worker thread and reloads the model, done once the model
+    /// shows the change; `None` if it failed.
     async fn write<T: Send + 'static>(
         &self,
         work: impl FnOnce(&Store) -> store::Result<T> + Send + 'static,
@@ -556,7 +618,7 @@ impl LibraryService {
         .await;
         match written {
             Ok(Ok(value)) => {
-                self.reload();
+                self.load().await;
                 Some(value)
             }
             Ok(Err(error)) => {
@@ -589,11 +651,29 @@ impl Default for LibraryService {
     }
 }
 
-fn read_games(prefer_steamgriddb: bool) -> Result<(Vec<LibraryEntry>, Vec<Collection>), String> {
+/// What reloading reads: the games, the collections and the saved filters' filters.
+type Library = (
+    Vec<LibraryEntry>,
+    Vec<Collection>,
+    HashMap<i64, SavedFilter>,
+);
+
+fn read_games(prefer_steamgriddb: bool) -> Result<Library, String> {
     let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
     let games = library::load(&store, prefer_steamgriddb).map_err(|error| error.to_string())?;
     let collections = store.collections().map_err(|error| error.to_string())?;
-    Ok((games, collections))
+    let saved_filters = store.saved_filters().map_err(|error| error.to_string())?;
+    Ok((games, collections, saved_filters))
+}
+
+/// A deleted collection, with what bringing it back needs.
+pub struct DeletedCollection {
+    /// The collection as it was.
+    pub collection: Collection,
+    /// Its games kept by hand.
+    pub members: Vec<GameId>,
+    /// Its filter, when it was a saved filter.
+    pub filter: Option<SavedFilter>,
 }
 
 /// Why a backup could not be imported.

@@ -32,24 +32,39 @@ pub fn game_logs_dir(data_home: &Path, id: &GameId) -> PathBuf {
 /// The name of a new log started at `stamp` (local time, e.g. `2026-11-05T14-03-22`),
 /// unique among the folder's `existing` names.
 pub fn new_log_name(stamp: &str, existing: &[String]) -> String {
-    let taken = |name: &String| existing.contains(name);
-    std::iter::once(format!("{stamp}.log"))
-        .chain((2..).map(|n| format!("{stamp}_{n}.log")))
-        .find(|name| !taken(name))
-        .expect("some name is free")
+    new_stamped_name(stamp, LOG, existing)
 }
 
 /// The logs among a folder's `names` beyond the newest `keep`, oldest first; a file the
 /// launcher did not name, such as a `backup.log` kept by hand, is left alone.
 pub fn stale_logs(names: &[String], keep: usize) -> Vec<String> {
-    let logs = oldest_first(names);
-    let stale = logs.len().saturating_sub(keep);
-    logs.into_iter().take(stale).cloned().collect()
+    stale_stamped(names, LOG, keep)
 }
 
 /// The newest log among a folder's `names`, ignoring files the launcher did not name.
 pub fn latest_log(names: &[String]) -> Option<&String> {
-    oldest_first(names).pop()
+    oldest_first(names, LOG).pop()
+}
+
+/// The extension of a log's name.
+const LOG: &str = ".log";
+
+/// The name of a new file made at `stamp` and ending in `extension`, unique among the
+/// folder's `existing` names: a second one in the same second gets `_2`, and so on.
+pub(crate) fn new_stamped_name(stamp: &str, extension: &str, existing: &[String]) -> String {
+    let taken = |name: &String| existing.contains(name);
+    std::iter::once(format!("{stamp}{extension}"))
+        .chain((2..).map(|n| format!("{stamp}_{n}{extension}")))
+        .find(|name| !taken(name))
+        .expect("some name is free")
+}
+
+/// The files [`new_stamped_name`] named with `extension` among `names` beyond the newest
+/// `keep`, oldest first; any other file is left alone.
+pub(crate) fn stale_stamped(names: &[String], extension: &str, keep: usize) -> Vec<String> {
+    let files = oldest_first(names, extension);
+    let stale = files.len().saturating_sub(keep);
+    files.into_iter().take(stale).cloned().collect()
 }
 
 /// Has Proton write its log, and Wine's output, to a file in `dir`. "Play with Logs" wins
@@ -79,21 +94,21 @@ pub fn safe_header(title: &str, started: &str, argv: &[String]) -> String {
     )
 }
 
-/// The logs among `names`, oldest first: by start, then by the number that keeps logs
-/// started in the same second apart.
-fn oldest_first(names: &[String]) -> Vec<&String> {
-    let mut logs: Vec<_> = names
+/// The files [`new_stamped_name`] named with `extension` among `names`, oldest first: by
+/// stamp, then by the number that keeps files made in the same second apart.
+fn oldest_first<'a>(names: &'a [String], extension: &str) -> Vec<&'a String> {
+    let mut files: Vec<_> = names
         .iter()
-        .filter_map(|name| Some((log_order(name)?, name)))
+        .filter_map(|name| Some((stamped_order(name, extension)?, name)))
         .collect();
-    logs.sort();
-    logs.into_iter().map(|(_, name)| name).collect()
+    files.sort();
+    files.into_iter().map(|(_, name)| name).collect()
 }
 
-/// Where a log named `name` sorts: its start and its number in that second. `None` for a
-/// name `new_log_name` never gives.
-fn log_order(name: &str) -> Option<(&str, u32)> {
-    let stem = name.strip_suffix(".log")?;
+/// Where a file named `name` sorts: its stamp and its number in that second. `None` for a
+/// name [`new_stamped_name`] never gives with `extension`.
+fn stamped_order<'a>(name: &'a str, extension: &str) -> Option<(&'a str, u32)> {
+    let stem = name.strip_suffix(extension)?;
     let (stamp, n) = match stem.split_once('_') {
         Some((stamp, n)) => (stamp, launch_number(n)?),
         None => (stem, 1),

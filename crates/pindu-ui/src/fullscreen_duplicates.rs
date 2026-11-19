@@ -76,10 +76,12 @@ impl PinduQuickAccess {
                     .build();
                 let (first, second) = (suggestion.first.clone(), suggestion.second.clone());
                 row.add_row(&self.choice_row(&gettext("Group"), false, library, {
-                    let (first, second) = (first.clone(), second.clone());
+                    let games = vec![first.clone(), second.clone()];
                     move |library| {
-                        let (first, second) = (first.clone(), second.clone());
-                        async move { library.accept_duplicate(&first, &second).await }
+                        let games = games.clone();
+                        async move {
+                            library.merge_games(games).await;
+                        }
                     }
                 }));
                 row.add_row(&self.choice_row(
@@ -99,12 +101,19 @@ impl PinduQuickAccess {
                     .subtitle(group_subtitle(group))
                     .use_markup(false)
                     .build();
-                let id = group.id;
+                let Some(member) = group.members.first().cloned() else {
+                    continue;
+                };
                 row.add_row(&self.choice_row(
                     &gettext("Undo Grouping"),
                     true,
                     library,
-                    move |library| async move { library.undo_automatic_group(id).await },
+                    move |library| {
+                        let member = member.clone();
+                        async move {
+                            library.split_group(&member).await;
+                        }
+                    },
                 ));
                 list.append(&row);
             }

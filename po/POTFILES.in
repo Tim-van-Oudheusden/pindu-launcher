@@ -8,7 +8,9 @@ crates/pindu-ui/src/collection_actions.rs
 crates/pindu-ui/src/duplicate_review.rs
 crates/pindu-ui/src/duplicates_page.rs
 crates/pindu-ui/src/file_service.rs
+crates/pindu-ui/src/first_sync_summary.rs
 crates/pindu-ui/src/fullscreen.rs
+crates/pindu-ui/src/fullscreen_add_game.rs
 crates/pindu-ui/src/fullscreen_activity.rs
 crates/pindu-ui/src/fullscreen_bindings.rs
 crates/pindu-ui/src/fullscreen_bluetooth.rs
@@ -16,6 +18,7 @@ crates/pindu-ui/src/fullscreen_controllers.rs
 crates/pindu-ui/src/fullscreen_controls.rs
 crates/pindu-ui/src/fullscreen_duplicates.rs
 crates/pindu-ui/src/fullscreen_game.rs
+crates/pindu-ui/src/fullscreen_health.rs
 crates/pindu-ui/src/fullscreen_library.rs
 crates/pindu-ui/src/fullscreen_network.rs
 crates/pindu-ui/src/fullscreen_notifications.rs
@@ -24,11 +27,13 @@ crates/pindu-ui/src/fullscreen_performance.rs
 crates/pindu-ui/src/fullscreen_playing.rs
 crates/pindu-ui/src/fullscreen_power.rs
 crates/pindu-ui/src/fullscreen_proton_downloads.rs
+crates/pindu-ui/src/fullscreen_report.rs
 crates/pindu-ui/src/fullscreen_sources.rs
 crates/pindu-ui/src/fullscreen_status.rs
 crates/pindu-ui/src/fullscreen_system_update.rs
 crates/pindu-ui/src/game_dialog.rs
 crates/pindu-ui/src/game_page.rs
+crates/pindu-ui/src/group_actions.rs
 crates/pindu-ui/src/health_page.rs
 crates/pindu-ui/src/health_service.rs
 crates/pindu-ui/src/hint_bar.rs
@@ -37,6 +42,7 @@ crates/pindu-ui/src/home_page.rs
 crates/pindu-ui/src/launch_service.rs
 crates/pindu-ui/src/log_service.rs
 crates/pindu-ui/src/menu_drawer.rs
+crates/pindu-ui/src/merge_dialog.rs
 crates/pindu-ui/src/network_service.rs
 crates/pindu-ui/src/preferences.rs
 crates/pindu-ui/src/proton_choice.rs
@@ -47,6 +53,7 @@ crates/pindu-ui/src/quick_access.rs
 crates/pindu-ui/src/save_service.rs
 crates/pindu-ui/src/search_keyboard.rs
 crates/pindu-ui/src/search_provider.rs
+crates/pindu-ui/src/selection_mode.rs
 crates/pindu-ui/src/session_service.rs
 crates/pindu-ui/src/sources.rs
 crates/pindu-ui/src/steamgriddb_service.rs
@@ -64,10 +71,13 @@ data/ui/add_store.blp
 data/ui/artwork_dialog.blp
 data/ui/cover_tile.blp
 data/ui/duplicates_page.blp
+data/ui/fullscreen_add_game.blp
 data/ui/fullscreen_bluetooth.blp
+data/ui/fullscreen_health.blp
 data/ui/fullscreen_network.blp
 data/ui/fullscreen_power.blp
 data/ui/fullscreen_proton_downloads.blp
+data/ui/fullscreen_report.blp
 data/ui/fullscreen_sound_output.blp
 data/ui/fullscreen_system_update.blp
 data/ui/game_dialog.blp
@@ -76,6 +86,7 @@ data/ui/game_page.blp
 data/ui/health_page.blp
 data/ui/home_page.blp
 data/ui/menu_drawer.blp
+data/ui/merge_dialog.blp
 data/ui/preferences.blp
 data/ui/quick_access.blp
 data/ui/secret_dialog.blp

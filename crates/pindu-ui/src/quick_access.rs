@@ -20,12 +20,13 @@
 //! `fullscreen_controllers`, Controls `fullscreen_controls`, Filters (offered on the
 //! library page) `fullscreen_library`, Performance (offered for a game we run ourselves)
 //! `fullscreen_performance`, Network `fullscreen_network`, Bluetooth `fullscreen_bluetooth`,
-//! Sound Output `fullscreen_sound_output`, System Update `fullscreen_system_update`, Add
-//! a Store `add_store`, Proton `fullscreen_proton_downloads`, Sources
-//! `fullscreen_sources` and Duplicates `fullscreen_duplicates`. Design and Settings are
-//! this module's: the design, its variant,
-//! Home's background blur and dim and the user's own stylesheet, then cover size,
-//! navigation sounds and their volume, exiting after a
+//! Sound Output `fullscreen_sound_output`, System Update `fullscreen_system_update`, Library
+//! Health `fullscreen_health`, Diagnostics Report `fullscreen_report`, Add a Store
+//! `add_store`, Proton `fullscreen_proton_downloads`, Sources `fullscreen_sources` and
+//! Duplicates `fullscreen_duplicates`; Add a Game opens the window's `fullscreen_add_game`.
+//! Design and Settings are this module's: the design, its variant, Home's background blur
+//! and dim and the user's own stylesheet, then cover size, navigation sounds and their
+//! volume, exiting after a
 //! launch, Reduce Motion and Larger Text, the SteamGridDB key (typed hidden with the
 //! on-screen keyboard of `secret_dialog` and kept in the keyring) and Prefer SteamGridDB
 //! Art, the same settings Preferences changes.
@@ -56,11 +57,13 @@ use crate::config::APP_ID;
 use crate::fullscreen::bind_volume_slider;
 use crate::fullscreen_bluetooth::PinduBluetoothLevel;
 use crate::fullscreen_clock::Clock;
+use crate::fullscreen_health::PinduHealthLevel;
 use crate::fullscreen_network::PinduNetworkLevel;
 use crate::fullscreen_panels::step_out_of_list;
 use crate::fullscreen_performance::{GameProton, PerformanceSwitches};
 use crate::fullscreen_playing::{PlayingCards, card_return};
 use crate::fullscreen_proton_downloads::PinduProtonLevel;
+use crate::fullscreen_report::PinduReportLevel;
 use crate::fullscreen_sound_output::PinduSoundOutputLevel;
 use crate::fullscreen_system_update::PinduSystemUpdateLevel;
 use crate::models::GameObject;
@@ -199,6 +202,8 @@ mod imp {
         #[template_child]
         pub clear_filters: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub save_filters: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub performance_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub performance_title: TemplateChild<gtk::Label>,
@@ -227,13 +232,31 @@ mod imp {
         #[template_child]
         pub system_update_level: TemplateChild<PinduSystemUpdateLevel>,
         #[template_child]
+        pub health_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub health_icon: TemplateChild<gtk::Image>,
+        #[template_child]
+        pub health_subtitle: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub health_level: TemplateChild<PinduHealthLevel>,
+        #[template_child]
         pub add_store_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub add_store_level: TemplateChild<PinduAddStoreLevel>,
         #[template_child]
+        pub report_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
+        pub report_level: TemplateChild<PinduReportLevel>,
+        #[template_child]
+        pub report_logs: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub report_logs_empty: TemplateChild<gtk::Label>,
+        #[template_child]
         pub proton_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub proton_level: TemplateChild<PinduProtonLevel>,
+        #[template_child]
+        pub add_game_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub network_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
@@ -288,7 +311,9 @@ mod imp {
             PinduNetworkLevel::ensure_type();
             PinduBluetoothLevel::ensure_type();
             PinduSystemUpdateLevel::ensure_type();
+            PinduHealthLevel::ensure_type();
             PinduAddStoreLevel::ensure_type();
+            PinduReportLevel::ensure_type();
             PinduProtonLevel::ensure_type();
             PinduSoundOutputLevel::ensure_type();
             klass.bind_template();
@@ -391,20 +416,25 @@ impl PinduQuickAccess {
         self.setup_bluetooth(application, actions);
         self.setup_sound_output(application, actions);
         self.setup_system_update(application, actions);
+        self.setup_health(application, actions);
         self.setup_add_store(application);
+        self.setup_diagnostics_report(actions);
         self.setup_proton(actions);
         self.setup_sources(application);
         self.setup_duplicates(application);
     }
 
     /// Hosts the panel over a running game, before [`Self::setup`]: it leaves out the
-    /// entries that need the main window, Surprise Me (it leads to a library page) and Add
-    /// a Store (its flow is the main window's).
+    /// entries that need the main window, Surprise Me (it leads to a library page), Add a
+    /// Store and Add a Game (their flows are the main window's) and Diagnostics Report (it
+    /// needs the main window's room, and its page turns are the main window's).
     pub fn set_over_game(&self) {
         let imp = self.imp();
         imp.over_game.set(true);
         imp.surprise_row.set_visible(false);
         imp.add_store_row.set_visible(false);
+        imp.add_game_row.set_visible(false);
+        imp.report_row.set_visible(false);
     }
 
     /// Shows what Quick Access adds for the page under it, as it opens: `entries` from
@@ -449,7 +479,15 @@ impl PinduQuickAccess {
             Some(QuickAccessLevel::Bluetooth) => self.show_bluetooth(),
             Some(QuickAccessLevel::SoundOutput) => self.show_sound_output(),
             Some(QuickAccessLevel::SystemUpdate) => self.show_system_update(),
+            Some(QuickAccessLevel::LibraryHealth) => self.show_health(),
             Some(QuickAccessLevel::AddStore) => self.show_add_store(),
+            // Back from the games with a log, the report stays as it was.
+            Some(QuickAccessLevel::DiagnosticsReport)
+                if before != Some(QuickAccessLevel::ReportLog) =>
+            {
+                self.show_diagnostics_report(None);
+            }
+            Some(QuickAccessLevel::ReportLog) => self.show_report_logs(),
             Some(QuickAccessLevel::Proton) => imp.proton_level.show(),
             Some(QuickAccessLevel::Network) => self.show_network(),
             Some(QuickAccessLevel::Sources) => self.show_sources(),
@@ -515,7 +553,13 @@ impl PinduQuickAccess {
             // The output in use.
             (Some(QuickAccessLevel::SoundOutput), _) => self.sound_output_focus(),
             (Some(QuickAccessLevel::SystemUpdate), _) => imp.system_update_level.focus_target(),
+            (Some(QuickAccessLevel::LibraryHealth), _) => imp.health_level.focus_target(),
             (Some(QuickAccessLevel::AddStore), _) => imp.add_store_level.focus_target(),
+            (Some(QuickAccessLevel::DiagnosticsReport), Some(QuickAccessLevel::ReportLog)) => {
+                Some(imp.report_level.add_log_row())
+            }
+            (Some(QuickAccessLevel::DiagnosticsReport), _) => imp.report_level.focus_target(),
+            (Some(QuickAccessLevel::ReportLog), _) => first_row(&imp.report_logs),
             (Some(QuickAccessLevel::Proton), _) => imp.proton_level.focus_target(),
             (Some(QuickAccessLevel::Network), _) => imp.network_level.focus_target(),
             // Filled once the sources are read, which then focuses the first.
@@ -741,7 +785,9 @@ impl PinduQuickAccess {
             QuickAccessLevel::Bluetooth => &imp.bluetooth_row,
             QuickAccessLevel::SoundOutput => &imp.sound_output_row,
             QuickAccessLevel::SystemUpdate => &imp.system_update_row,
+            QuickAccessLevel::LibraryHealth => &imp.health_row,
             QuickAccessLevel::AddStore => &imp.add_store_row,
+            QuickAccessLevel::DiagnosticsReport | QuickAccessLevel::ReportLog => &imp.report_row,
             QuickAccessLevel::Proton => &imp.proton_row,
             QuickAccessLevel::Network => &imp.network_row,
         };
@@ -770,6 +816,13 @@ impl PinduQuickAccess {
         let [bluetooth_adapter, bluetooth_paired, bluetooth_found] = imp.bluetooth_level.lists();
         let [system_versions, system_actions] = imp.system_update_level.lists();
         let [add_store_stores, add_store_actions] = imp.add_store_level.lists();
+        let [report_actions] = imp.report_level.lists();
+        let [
+            health_sources,
+            health_launching,
+            health_artwork,
+            health_library,
+        ] = imp.health_level.lists();
         let [
             proton_default,
             proton_tools,
@@ -799,6 +852,7 @@ impl PinduQuickAccess {
             imp.artwork.get(),
             imp.filters.get(),
             imp.clear_filters.get(),
+            imp.save_filters.get(),
             imp.performance.get(),
             imp.proton_builds.get(),
             bluetooth_adapter,
@@ -806,8 +860,14 @@ impl PinduQuickAccess {
             bluetooth_found,
             system_versions,
             system_actions,
+            health_sources,
+            health_launching,
+            health_artwork,
+            health_library,
             add_store_stores,
             add_store_actions,
+            report_actions,
+            imp.report_logs.get(),
             proton_default,
             proton_tools,
             proton_downloaded,
