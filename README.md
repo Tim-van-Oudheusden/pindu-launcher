@@ -77,7 +77,8 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
 - **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
   [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu
-  launcher only hands the address over and fetches nothing from either site.
+  launcher only hands the address over and fetches nothing from either site. Their page, in both modes, also shows
+  the game's Steam Deck rating (Verified, Playable, Unsupported or Unknown) as Steam's own files record it.
 - **Your artwork.** Covers, banners and logos from your launchers, from your own files, or from
   [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring. **Change
   Artwork** on a game's page, in both modes, pages through every SteamGridDB image of each kind.
@@ -102,7 +103,7 @@ widgets so it looks and behaves like the rest of GNOME.
 
 | Source | Games | How they start |
 | --- | --- | --- |
-| Steam, native or Flatpak | Installed games, with their playtime | Through Steam |
+| Steam, native or Flatpak | Installed games, with their playtime and Steam Deck rating | Through Steam |
 | Heroic, native or Flatpak | Epic Games, GOG, Amazon and sideloaded games, installed or not | Through Heroic |
 | Lutris, native or Flatpak | Lutris games | Through Lutris |
 | Bottles, native or Flatpak | Programs in your bottles | Through Bottles |
@@ -207,8 +208,8 @@ Preferences.
 ### Getting around
 
 - **Move** with the D-pad or left stick, **open** with A and **go back** with B.
-- A **game page** shows the game's developer, genres and description below its buttons. Once a long description has
-  focus, Down scrolls through it and Up scrolls back to its start before moving on.
+- A **game page** shows the game's developer, genres, Steam Deck rating and description below its buttons. Once a long
+  description has focus, Down scrolls through it and Up scrolls back to its start before moving on.
 - The **hint bar** at the bottom names the buttons that work on each screen, drawn with the app's own glyphs for the
   controller you hold.
 - **Controls** in Quick Access lists everything the buttons do, grouped into moving, the library, the panels and

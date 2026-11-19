@@ -25,6 +25,14 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   ID.
 - **Steam Deck compatibility.** Steam's rating is read offline from Steam's own files, where #523 found it, into the
   metadata table's source values (#526), and shown on both game pages.
+
+  As built (#534): the Steam importer reads `common.steam_deck_compatibility` from `appinfo.vdf` on every sync:
+  `category` 0 to 3 becomes `DeckRating` Unknown, Unsupported, Playable or Verified (any other number, or no map,
+  means no rating), and a non-zero `test_timestamp` becomes when Valve tested the game. It is the game's
+  `deck-compatibility` source value in `game_metadata`, stored as `{"rating": "verified", "tested_at": …}`, and the
+  About group of the game page, desktop and fullscreen alike, shows it in a Steam Deck row in words ("Verified,
+  tested" and the day in the locale's format), with no Valve artwork. The Deck `tests` list and the SteamOS and
+  Steam Machine ratings next to it are not read.
 - **Start Safely.** A one-off start of a game Pindu runs that ignores its wrappers, MangoHud, GameMode and its own
   environment variables, and writes a log. Its saved settings are unchanged. The launch argv is built and tested in
   the core. It is offered from the desktop menu, from fullscreen mode's options sheet, and as a next step after a
