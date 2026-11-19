@@ -20,6 +20,7 @@ use pindu_core::library::{
 use pindu_core::model::{GameId, Source};
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{GameOption, Panels};
+use pindu_core::search::ResultCount;
 
 use crate::add_store::PinduAddStoreLevel;
 use crate::application::PinduApplication;
@@ -35,7 +36,7 @@ use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
 use crate::log_service;
 use crate::menu_drawer::PinduMenuDrawer;
-use crate::models::{GameObject, LibraryModel, LibrarySelection};
+use crate::models::{GameObject, LibraryModel, LibrarySelection, LibrarySelectionModel};
 use crate::quick_access::PinduQuickAccess;
 use crate::save_snapshots_dialog::SaveSnapshotsDialog;
 use crate::sources::{source_icon, source_name};
@@ -190,6 +191,10 @@ mod imp {
         #[template_child]
         pub options_stack: TemplateChild<gtk::Stack>,
         #[template_child]
+        pub options_failure: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub options_steps: TemplateChild<gtk::ListBox>,
+        #[template_child]
         pub options_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub options_collections: TemplateChild<gtk::ListBox>,
@@ -211,6 +216,9 @@ mod imp {
         pub library: OnceCell<LibraryModel>,
         /// The desktop library's selection mode and the games it selected.
         pub selection: LibrarySelection,
+        /// The number of matching games, told to screen readers once search or filter
+        /// changes pause, and the timer that waits for the pause.
+        pub result_count: RefCell<(ResultCount, Option<glib::SourceId>)>,
         /// Every sidebar row with the view it selects and, for sources, its count label.
         pub views: RefCell<Vec<(adw::SidebarItem, View, gtk::Label)>>,
         /// The collection whose sidebar menu is open.
@@ -258,6 +266,9 @@ mod imp {
         pub options_game: RefCell<Option<GameObject>>,
         /// The options the sheet lists for that game, in its rows' order.
         pub game_options: RefCell<Vec<GameOption>>,
+        /// Why the sheet's game last failed to launch, whose steps its failure list shows
+        /// in its rows' order.
+        pub options_failure_explanation: RefCell<Option<pindu_core::failed_launch::Explanation>>,
         /// The games the sheet's Merge With level lists, in its rows' order.
         pub merge_candidates: RefCell<Vec<GameId>>,
         /// The widget that had focus before a panel opened, to give it back after.
@@ -451,7 +462,19 @@ impl PinduWindow {
                 }
             })
             .build();
-        self.add_action_entries([search]);
+        // A launch's log, `(game ID, log name)`: the next step after a failed launch.
+        let open_launch_log = gio::ActionEntry::builder("open-launch-log")
+            .parameter_type(Some(glib::VariantTy::new("(ss)").expect("a valid type")))
+            .activate(|window: &Self, _, target| {
+                let Some((id, name)) = target.and_then(<(String, String)>::from_variant) else {
+                    return;
+                };
+                if let Ok(id) = id.parse() {
+                    window.open_launch_log(id, name);
+                }
+            })
+            .build();
+        self.add_action_entries([search, open_launch_log]);
     }
 
     /// Adds a `win.<name>` action that takes a game ID.
@@ -557,18 +580,41 @@ impl PinduWindow {
             let Some(window) = window.upgrade() else {
                 return;
             };
-            let Some(path) = latest else {
-                window.add_toast(adw::Toast::new(&gettext(
+            match latest {
+                Some(path) => window.open_log_file(path),
+                None => window.add_toast(adw::Toast::new(&gettext(
                     "No logs yet: start the game with Play with Logs",
-                )));
+                ))),
+            }
+        });
+    }
+
+    /// Opens the log named `name` of one launch of the game with `id`, the next step after
+    /// a failed launch, in the user's text editor.
+    fn open_launch_log(&self, id: GameId, name: String) {
+        let window = self.downgrade();
+        glib::spawn_future_local(async move {
+            let path = gio::spawn_blocking(move || log_service::launch_log(&id, &name))
+                .await
+                .ok()
+                .flatten();
+            let Some(window) = window.upgrade() else {
                 return;
             };
-            let launcher = gtk::FileLauncher::new(Some(&gio::File::for_path(path)));
-            launcher.launch(Some(&window), gio::Cancellable::NONE, |result| {
-                if let Err(error) = result {
-                    glib::g_warning!("pindu", "Could not open the log: {error}");
-                }
-            });
+            match path {
+                Some(path) => window.open_log_file(path),
+                None => window.add_toast(adw::Toast::new(&gettext("The log is gone"))),
+            }
+        });
+    }
+
+    /// Opens the log at `path` in the user's text editor.
+    fn open_log_file(&self, path: std::path::PathBuf) {
+        let launcher = gtk::FileLauncher::new(Some(&gio::File::for_path(path)));
+        launcher.launch(Some(self), gio::Cancellable::NONE, |result| {
+            if let Err(error) = result {
+                glib::g_warning!("pindu", "Could not open the log: {error}");
+            }
         });
     }
 
@@ -583,6 +629,7 @@ impl PinduWindow {
             self,
             move |entry| {
                 window.scroll_grid_to_top();
+                window.results_changing();
                 window.library().set_search(&entry.text());
                 window.update_jump_back_in();
             }
@@ -600,7 +647,10 @@ impl PinduWindow {
             toggle.connect_toggled(glib::clone!(
                 #[weak(rename_to = window)]
                 self,
-                move |_| window.apply_filters()
+                move |_| {
+                    window.results_changing();
+                    window.apply_filters();
+                }
             ));
         }
         imp.clear_filters.connect_clicked(glib::clone!(
@@ -662,6 +712,7 @@ impl PinduWindow {
                     Some(genre) => genre.clone(),
                     None => gettext("Genre"),
                 });
+                window.results_changing();
                 window.apply_filters();
             }
         ));
@@ -689,6 +740,44 @@ impl PinduWindow {
         }
         menu.append_section(None, &genres);
         self.imp().genre_filter.set_menu_model(Some(&menu));
+    }
+
+    /// The search or a filter is about to change the shown games: once the changes pause
+    /// for [`RESULT_COUNT_DELAY`], screen readers hear how many games now match, unless
+    /// that is as many as before. Fullscreen mode's search keyboard speaks for itself.
+    fn results_changing(&self) {
+        if self.is_fullscreen() {
+            return;
+        }
+        let count = self.library().model().n_items();
+        let mut result_count = self.imp().result_count.borrow_mut();
+        result_count.0.change(count);
+        if let Some(source) = result_count.1.take() {
+            source.remove();
+        }
+        let source = glib::timeout_add_local_once(
+            RESULT_COUNT_DELAY,
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move || {
+                    let count = window.library().model().n_items();
+                    let settled = {
+                        let mut result_count = window.imp().result_count.borrow_mut();
+                        // This timer has fired.
+                        result_count.1.take();
+                        result_count.0.settle(count)
+                    };
+                    if let Some(count) = settled {
+                        window.announce(
+                            &result_count_text(count),
+                            gtk::AccessibleAnnouncementPriority::Medium,
+                        );
+                    }
+                }
+            ),
+        );
+        result_count.1.replace(source);
     }
 
     /// Applies the filters: the desktop window's filter row, or fullscreen mode's own from
@@ -912,7 +1001,8 @@ impl PinduWindow {
         }
     }
 
-    /// Opens the game's save snapshots, to see what each holds and restore one.
+    /// Opens the game's save snapshots, to see what each holds and restore one, and, on
+    /// the desktop, to add save folders.
     fn show_save_snapshots(&self, id: &GameId) {
         let (Some(game), Some(application)) = (
             self.library().game_object(id),
@@ -925,6 +1015,7 @@ impl PinduWindow {
             &game,
             application.library_service().clone(),
             application.session_service().clone(),
+            !self.is_fullscreen(),
         );
     }
 
@@ -1142,8 +1233,12 @@ impl PinduWindow {
 
     /// The cover grid; tiles follow the `tile-size` and `show-titles` settings.
     fn setup_grid(&self) {
-        let grid = &self.imp().grid;
-        grid.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
+        let imp = self.imp();
+        let grid = &imp.grid;
+        grid.set_model(Some(&LibrarySelectionModel::new(
+            &self.library().model(),
+            &imp.selection,
+        )));
         self.update_tile_factory();
         if let Some(width) = grid.hadjustment() {
             // The page size changes while the grid allocates its size, when a new column
@@ -1265,7 +1360,10 @@ impl PinduWindow {
     fn setup_list(&self) {
         let imp = self.imp();
         let list = &imp.game_list;
-        list.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
+        list.set_model(Some(&LibrarySelectionModel::new(
+            &self.library().model(),
+            &imp.selection,
+        )));
         let selection = imp.selection.clone();
         let columns = list.columns();
         let kinds = [
@@ -1647,6 +1745,19 @@ const GRID_CHILD_PADDING: i32 = 12;
 /// tile's padding there, as in `style.css`. Wider than the lifted, ringed cover reaches
 /// past its edge (about 15 pixels for a large cover), so it never overlaps a neighbour.
 const FULLSCREEN_GRID_GAP: i32 = 32;
+
+/// How long search and filter changes pause before screen readers hear the number of
+/// matching games: long enough that typing a word gives one announcement.
+const RESULT_COUNT_DELAY: std::time::Duration = std::time::Duration::from_millis(1000);
+
+/// What a screen reader hears for `count` matching games.
+fn result_count_text(count: u32) -> String {
+    if count == 0 {
+        gettext("No games found")
+    } else {
+        ngettext("{count} game", "{count} games", count).replace("{count}", &count.to_string())
+    }
+}
 
 const SORT_MODES: [(SortMode, &str); 5] = [
     (SortMode::LastPlayed, "last-played"),

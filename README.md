@@ -55,7 +55,8 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Start Safely.** When a game Pindu runs itself breaks, **Start Safely** in its page's menu, or in fullscreen's
   options, starts it once without its wrappers, MangoHud, GameMode or its own environment variables, and keeps a log
   as **Play with Logs** does, so a broken overlay or wrapper tells itself apart from a broken game. Its saved settings
-  stay as they are.
+  stay as they are. When the last launch failed, the game's page says why and offers it with the other next steps
+  that exist for the game.
 - **A fullscreen mode for the couch.** A controller-first Home, library and game pages, a Quick Access panel, an
   on-screen keyboard for search and navigation sounds, with switchable designs and your own CSS
   ([Fullscreen mode](#fullscreen-mode)).
@@ -81,8 +82,8 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Your artwork.** Covers, banners and logos from your launchers, from your own files, or from
   [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring. **Change
   Artwork** on a game's page, in both modes, pages through every SteamGridDB image of each kind.
-- **Your details.** **Edit…** in a game's page menu sets its developer, genres and description; what you change is
-  kept when the library is imported again, and clearing a field goes back to the launcher's.
+- **Your details.** **Edit…** in a game's page menu sets its developer, genres, release year and description; what
+  you change is kept when the library is imported again, and clearing a field goes back to the launcher's.
 - **Metadata from Wikidata, if you want it.** Turn on **Get Metadata From Wikidata** in Preferences (or in Quick
   Access's settings), then **Refresh Metadata** in the main menu or in Quick Access looks your games up on
   [Wikidata](https://www.wikidata.org) by their Steam app ID and keeps their developer and genres, labelled in your
@@ -108,13 +109,15 @@ widgets so it looks and behaves like the rest of GNOME.
   beside it, named for the format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 - **Save snapshots.** When a Windows game you added by hand quits normally, Pindu launcher copies its saves out of the
   prefix it made for the game into `~/Games/pindu-launcher/save-snapshots`, leaving out caches, runtimes, screenshots
-  and stored logins, and keeps the last five. **Save Snapshots…** in the game page's menu, or Save Snapshots in
-  fullscreen mode's options sheet, lists them with their time, size and every file they hold, and restores one after
-  keeping the current saves in a snapshot of their own; never while the game runs
-  ([Save snapshots](docs/save-snapshots.md)).
-  and stored logins, and keeps the last five ([Save snapshots](docs/save-snapshots.md)). Pick a folder under
-  Preferences → Windows → Save Snapshots, such as one Syncthing, Nextcloud or a drive keeps, and each new snapshot is
-  copied there too; a folder that is gone is reported, and the game is not affected.
+  and stored logins, and keeps the last five. Any game can have save folders too: add them through the file chooser
+  under **Save Snapshots…** in the game page's menu, and its snapshots hold them, taken when a game Pindu launcher
+  starts quits normally or with **Take Snapshot Now**; a folder the app cannot reach says why in the list. **Save
+  Snapshots…**, or Save Snapshots in fullscreen mode's options sheet, lists the snapshots with their time, size and
+  every file they hold, and restores one after keeping the current saves in a snapshot of their own, never while the
+  game runs and only into the prefix's user folders and the game's save folders
+  ([Save snapshots](docs/save-snapshots.md)). Pick a folder under Preferences → Windows → Save Snapshots, such as one
+  Syncthing, Nextcloud or a drive keeps, and each new snapshot is copied there too; a folder that is gone is reported,
+  and the game is not affected.
 
 ## Game sources
 
@@ -757,7 +760,7 @@ so the fullscreen mode is a second presentation of the same library.
 | [`docs/controller-parity.md`](docs/controller-parity.md) | Controller parity: what a console needs that only the desktop window can do today |
 | [`docs/shelves-and-metadata.md`](docs/shelves-and-metadata.md) | Shelves and metadata: saved filters, offline metadata, values with their origin, an online provider |
 | [`docs/launch-outcomes.md`](docs/launch-outcomes.md) | Launch outcomes and safe start: how each launch ended, failed-launch help, Start Safely |
-| [`docs/save-snapshots.md`](docs/save-snapshots.md) | Save snapshots of Windows games in managed prefixes, and restoring them |
+| [`docs/save-snapshots.md`](docs/save-snapshots.md) | Save snapshots of Windows games in managed prefixes and of save folders added by hand, and restoring them |
 | [`docs/accessibility-polish.md`](docs/accessibility-polish.md) | Accessibility polish: text sizes, held buttons, high contrast, screen reader, navigation settings |
 | [`docs/emulation.md`](docs/emulation.md) | Emulation: what a first version would be and cost, and a recommendation; the decision is the maintainer's |
 | [`docs/external-importers.md`](docs/external-importers.md) | External importers: a versioned JSON protocol for sources kept outside the core, and a recommendation; the decision is the maintainer's |
@@ -804,7 +807,10 @@ keeps that game's title, and still no other title and no home folder.
 
 Every other start of a game Pindu runs itself keeps a short log beside those: the last 64 KiB of its output, in
 `~/.local/share/pindu-launcher/logs/<game>/` as `<date and time>.short.log`, the newest five per game. Pindu also
-records how each of a game's last five launches ended ([Launch outcomes](docs/launch-outcomes.md)).
+records how each of a game's last five launches ended ([Launch outcomes](docs/launch-outcomes.md)), and when the
+last one failed, the game's page says why, with the next steps that exist for it: **How to Enable**, **How to Install
+umu-launcher**, **Choose Another Proton Build**, **Start Safely** and **Open Log**, which opens that launch's log. In
+fullscreen mode the game's options list them.
 
 ## Acknowledgments
 

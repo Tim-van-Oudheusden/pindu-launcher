@@ -53,6 +53,9 @@ use pindu_core::sources::location::HostDirs;
 use pindu_core::steamgriddb::{self, RunNotice};
 use pindu_core::wikidata::{self, RunNotice as WikidataNotice};
 
+/// The signal saying that a launch of a game was recorded, with the game's ID.
+const LAUNCH_RECORDED: &str = "launch-recorded";
+
 mod imp {
     use std::cell::{OnceCell, RefCell};
     use std::ops::ControlFlow;
@@ -175,6 +178,18 @@ mod imp {
                     "not allowed"
                 }
             );
+        }
+
+        fn signals() -> &'static [glib::subclass::Signal] {
+            static SIGNALS: std::sync::LazyLock<Vec<glib::subclass::Signal>> =
+                std::sync::LazyLock::new(|| {
+                    vec![
+                        glib::subclass::Signal::builder(LAUNCH_RECORDED)
+                            .param_types([String::static_type()])
+                            .build(),
+                    ]
+                });
+            SIGNALS.as_ref()
         }
     }
 
@@ -447,6 +462,29 @@ impl PinduApplication {
             .gamescope_service
             .get()
             .expect("the application has started")
+    }
+
+    /// Says that a launch of the game with `id` was recorded, as it began or ended (see
+    /// `outcome_service`).
+    pub fn emit_launch_recorded(&self, id: &GameId) {
+        self.emit_by_name::<()>(LAUNCH_RECORDED, &[&id.as_str()]);
+    }
+
+    /// Calls `callback` with the game whose launch was recorded, as it began or ended.
+    pub fn connect_launch_recorded<F: Fn(&GameId) + 'static>(
+        &self,
+        callback: F,
+    ) -> glib::SignalHandlerId {
+        self.connect_local(LAUNCH_RECORDED, false, move |values| {
+            let id = values
+                .get(1)
+                .and_then(|value| value.get::<String>().ok())
+                .and_then(|id| id.parse().ok());
+            if let Some(id) = id {
+                callback(&id);
+            }
+            None
+        })
     }
 
     /// The Library Health report, gathered again after every sync.

@@ -388,6 +388,11 @@ template $PinduWindow: Adw.ApplicationWindow {
                             label: _("Jump Back In");
                             xalign: 0;
                             margin-start: 6;
+                            accessible-role: heading;
+
+                            accessibility {
+                              level: 2;
+                            }
 
                             styles [
                               "heading",
@@ -420,6 +425,9 @@ template $PinduWindow: Adw.ApplicationWindow {
 
                               child: GridView grid {
                                 single-click-activate: true;
+                                // Tab enters the grid once and leaves it on the next
+                                // press; the arrow keys move between the games.
+                                tab-behavior: item;
 
                                 styles [
                                   "library",
@@ -436,6 +444,8 @@ template $PinduWindow: Adw.ApplicationWindow {
                             child: ScrolledWindow {
                               child: ColumnView game_list {
                                 single-click-activate: true;
+                                // As in the grid: one Tab in, the next one out.
+                                tab-behavior: item;
                                 show-row-separators: true;
                                 reorderable: false;
 
@@ -652,6 +662,23 @@ template $PinduWindow: Adw.ApplicationWindow {
                 child: Box {
                   orientation: vertical;
                   spacing: 12;
+
+                  // Why the game's last launch failed, and the next steps that exist
+                  // for it; Up from the first action reaches them.
+                  Label options_failure {
+                    visible: false;
+                    wrap: true;
+                    xalign: 0;
+                  }
+
+                  ListBox options_steps {
+                    selection-mode: none;
+                    visible: false;
+
+                    styles [
+                      "navigation-sidebar",
+                    ]
+                  }
 
                   ListBox options_list {
                     selection-mode: none;

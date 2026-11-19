@@ -71,6 +71,12 @@ template $PinduGamePage: Adw.NavigationPage {
               Label title {
                 wrap: true;
                 xalign: 0;
+                // The page's heading, for a screen reader's jump from heading to heading.
+                accessible-role: heading;
+
+                accessibility {
+                  level: 1;
+                }
 
                 styles [
                   "title-1",
@@ -217,6 +223,13 @@ template $PinduGamePage: Adw.NavigationPage {
               Adw.WrapBox facts {
                 child-spacing: 32;
                 line-spacing: 12;
+              }
+
+              // Why the game's last launch failed, with a button for each next step that
+              // exists for it. Fullscreen mode's options sheet lists the steps instead.
+              Adw.PreferencesGroup failure_group {
+                title: _("Last Launch Failed");
+                visible: false;
               }
 
               // A grouped game's copies: where each comes from, whether it is installed

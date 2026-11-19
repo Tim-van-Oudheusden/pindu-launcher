@@ -85,8 +85,13 @@ In this order, local data first:
    edit. Saving goes through `pindu_core::metadata::edit_by_user(store, game, shown, edited, now)`, which writes user
    values for every copy of the game's group: a field the user left as shown keeps each copy's own user value, a
    field cleared drops the user's value so the game falls back to a provider's and then the source's, and a value the
-   game would fall back to anyway is not kept as the user's, so later syncs of it still show. Release year is in this
-   table since #527; editing it in the dialog is #641.
+   game would fall back to anyway is not kept as the user's, so later syncs of it still show.
+
+   As built (#641): the Details group also has a Release Year row, filled with the year the game shows and edited
+   the same way; clearing it drops the user's year so the game falls back to a provider's and then the source's.
+   `Metadata::typed_year` reads the row: four digits not starting with 0, trimmed, or nothing. Other text marks the
+   row as an error (and invalid for assistive technologies) and keeps **Save** insensitive, so a typo is corrected
+   rather than saved as a cleared year.
 4. **An online provider, opt-in, after a spike.** The spike compares SteamGridDB, IGDB, PCGamingWiki, Wikidata and
    others on licence and terms, whether a key is needed, which store IDs it maps (which helps
    [game identity](game-identity.md)), the fields it has and its rate limits, and recommends one or none. If one is

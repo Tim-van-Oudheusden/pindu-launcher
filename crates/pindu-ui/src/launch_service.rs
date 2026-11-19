@@ -5,6 +5,7 @@
 //! Windows games and native games in the Steam Linux Runtime run through umu in the
 //! sandbox (see `proton_launch`).
 
+use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use adw::prelude::*;
@@ -23,6 +24,7 @@ use crate::models::GameObject;
 use crate::outcome_service::{self, Recording};
 use crate::permission_service;
 use crate::proton_launch;
+use crate::save_service;
 use crate::session_service::{self, SessionService};
 use crate::window::PinduWindow;
 
@@ -159,6 +161,7 @@ pub fn play(
                         .flatten();
                     session_service::spawn(&command, output)
                 };
+                let toast = Rc::new(toast);
                 let message = match spawned {
                     Ok(child) => {
                         if tracks {
@@ -166,6 +169,7 @@ pub fn play(
                             sessions.track(app.upcast_ref(), &game.id, &child, move || {
                                 signalled.send_signal(SIGTERM);
                             });
+                            snapshot_after_exit(&game, &child, toast.clone());
                         }
                         // A game whose session keeps the app up keeps it up until its
                         // outcome and log are written too.
@@ -198,6 +202,22 @@ pub fn play(
             None => toast(adw::Toast::new(&gettext("This game cannot be started yet"))),
         }
         drop(hold);
+    });
+}
+
+/// Once `child`, the game `game` we started on the host, exits cleanly, takes a snapshot
+/// of the save folders the user added for it, if any (see `save_service`), said with
+/// `toast` when it fails.
+fn snapshot_after_exit(
+    game: &Game,
+    child: &gio::Subprocess,
+    toast: Rc<impl Fn(adw::Toast) + 'static>,
+) {
+    let (game, child) = (game.clone(), child.clone());
+    glib::spawn_future_local(async move {
+        if child.wait_future().await.is_ok() && child.is_successful() {
+            save_service::snapshot_after_exit(&game, None, move |message| toast(message));
+        }
     });
 }
 

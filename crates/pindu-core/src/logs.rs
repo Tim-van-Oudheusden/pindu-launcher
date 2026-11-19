@@ -49,6 +49,14 @@ pub fn latest_log(names: &[String]) -> Option<&String> {
     oldest_first(names, LOG).pop()
 }
 
+/// Where the log of one launch named `name` (see `LaunchOutcome::log`) is kept, in the
+/// game's logs folder under `data_home`; `None` for a name the launcher never gives a
+/// full or short log.
+pub fn launch_log(data_home: &Path, id: &GameId, name: &str) -> Option<PathBuf> {
+    let named = stamped_order(name, LOG).is_some() || stamped_order(name, SHORT_LOG).is_some();
+    named.then(|| game_logs_dir(data_home, id).join(name))
+}
+
 /// The most a short log keeps of a launch's output: its last lines up to this many bytes.
 pub const SHORT_LOG_BYTES: usize = 64 * 1024;
 
@@ -232,6 +240,23 @@ mod tests {
             dir,
             Path::new("/data/pindu-launcher/logs/manual_Note_pad_2")
         );
+    }
+
+    #[test]
+    fn a_launch_s_log_is_found_by_its_name_only_when_the_launcher_named_it() {
+        let (home, id) = (Path::new("/data"), GameId::new(Source::Manual, "1"));
+        let dir = game_logs_dir(home, &id);
+        for name in ["2026-11-05T14-03-22.log", "2026-11-05T14-03-22_2.short.log"] {
+            assert_eq!(launch_log(home, &id, name), Some(dir.join(name)), "{name}");
+        }
+        for name in [
+            "../../secret.log",
+            "backup.log",
+            "2026-11-05T14-03-22.txt",
+            "",
+        ] {
+            assert_eq!(launch_log(home, &id, name), None, "{name}");
+        }
     }
 
     fn names(names: &[&str]) -> Vec<String> {

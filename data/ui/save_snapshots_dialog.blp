@@ -1,8 +1,10 @@
 using Gtk 4.0;
 using Adw 1;
 
-// Save Snapshots: a Windows game's save snapshots, newest first, with their time, size and
-// why they were taken. One leads to its page, which lists the exact paths it holds and what
+// Save Snapshots: a game's save snapshots, newest first, with their time, size and why they
+// were taken, Take Snapshot Now, and the save folders the user added, each with why the app
+// cannot reach it when it cannot; on the desktop Add Folder picks one through the file
+// chooser. A snapshot leads to its page, which lists the exact paths it holds and what
 // snapshots leave out, and restores it after a confirmation. Both shells open it, fullscreen
 // mode from the game's options sheet; a controller moves through it as through any dialog.
 // save_snapshots_dialog.rs fills it.
@@ -39,25 +41,64 @@ template $PinduSaveSnapshotsDialog: Adw.Dialog {
             }
 
             StackPage {
-              name: "empty";
-
-              child: Adw.StatusPage empty_status {
-                icon-name: "document-save-symbolic";
-                title: _("No Snapshots Yet");
-                description: _("The saves are copied each time the game exits");
-              };
-            }
-
-            StackPage {
               name: "list";
 
               child: Adw.PreferencesPage {
                 Adw.PreferencesGroup {
-                  description: _("The newest five taken when the game exited and the newest two taken before a restore are kept");
+                  Adw.ButtonRow snapshot_now_row {
+                    title: _("_Take Snapshot Now");
+                    use-underline: true;
+                    start-icon-name: "document-save-symbolic";
+                    activated => $snapshot_now_activated() swapped;
+                  }
+                }
+
+                Adw.PreferencesGroup {
+                  title: _("Snapshots");
+                  description: _("The newest five taken when the game exited or by hand and the newest two taken before a restore are kept");
+
+                  Label empty_label {
+                    label: _("No snapshots yet. One is taken each time the game exits after Pindu starts it, and with Take Snapshot Now.");
+                    wrap: true;
+                    xalign: 0;
+
+                    styles [
+                      "dim-label",
+                    ]
+                  }
 
                   ListBox snapshot_list {
                     selection-mode: none;
                     row-activated => $snapshot_activated() swapped;
+
+                    styles [
+                      "boxed-list",
+                    ]
+                  }
+                }
+
+                Adw.PreferencesGroup folders_group {
+                  title: _("Save Folders");
+                  description: _("Folders that snapshots hold besides a Windows game’s prefix, such as a native game’s saves or saves in the game’s install folder. A restore writes into them.");
+
+                  [header-suffix]
+                  Button add_folder_button {
+                    valign: center;
+                    tooltip-text: _("Add Folder");
+                    icon-name: "list-add-symbolic";
+                    clicked => $add_folder_clicked() swapped;
+
+                    accessibility {
+                      label: _("Add Folder");
+                    }
+
+                    styles [
+                      "flat",
+                    ]
+                  }
+
+                  ListBox folder_list {
+                    selection-mode: none;
 
                     styles [
                       "boxed-list",
@@ -93,7 +134,7 @@ template $PinduSaveSnapshotsDialog: Adw.Dialog {
 
             Adw.PreferencesGroup {
               title: _("Included");
-              description: _("Every file the snapshot holds, below the prefix’s drive_c/users folder");
+              description: _("Every file the snapshot holds: below the prefix’s drive_c/users folder, then in each save folder");
 
               ListBox included_list {
                 selection-mode: none;
@@ -106,7 +147,7 @@ template $PinduSaveSnapshotsDialog: Adw.Dialog {
 
             Adw.PreferencesGroup {
               title: _("Left Out");
-              description: _("Caches, runtimes, media and credential stores in the user folders are never copied. Neither are the registry, drive_c/ProgramData or saves in the game’s install folder.");
+              description: _("Caches, runtimes, media and credential stores in the prefix’s user folders are never copied, nor caches, crash dumps, browser storage and cookies in save folders. Neither are the registry, drive_c/ProgramData or saves in the game’s install folder unless it is a save folder.");
 
               ListBox excluded_list {
                 selection-mode: none;

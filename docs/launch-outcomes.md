@@ -38,6 +38,24 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   no short log, since its output would have nowhere to go once Pindu quits.
 - **Explain the last failure** on the game page and in fullscreen mode's options sheet, offering only the next steps
   that exist for that game: How to Enable, How to Install, another Proton build, Start Safely, Open Log.
+
+  As built (#532): `pindu_core::failed_launch::explain` reads the game's newest outcome with what is known now
+  (whether the game needs a permission the sandbox lacks, whether umu-launcher is installed, the Proton builds on
+  the machine, and whether the launch's log is still kept). A launch that ended well, was stopped, lost track of,
+  is still running or was handed to a launcher that answered is not explained. Otherwise the reason is one of: did
+  not start; umu-launcher is not installed; the Proton build it was to run with is gone; no Proton build is
+  installed; quit with an error code, or quit straight after it started (within 10 seconds); crashed (`SIGILL`,
+  `SIGABRT`, `SIGBUS`, `SIGFPE` or `SIGSEGV`); something else ended it by a signal; the launcher could not be
+  opened; or the launcher did not answer. The steps, in this order: **How to Enable** (Preferences at its
+  Permissions group) for a host game that needs the permission; **How to Install umu-launcher** for a game run
+  through umu without it; **Choose Another Proton Build** for a Windows game when a build other than the one it
+  ran with is installed; **Start Safely** for a game Pindu runs, unless a missing permission, umu-launcher or
+  Proton build would stop it too; **Open Log** while the launch's log, full or short, is kept. A failed hand-off
+  offers none. The desktop game page shows a Last Launch Failed group with the reason and a button per step;
+  Choose Another Proton Build moves focus to the page's Proton row. In fullscreen mode the game page shows the
+  reason and points to Options, whose sheet shows the reason and the steps above its actions (Up from the first
+  action), and Choose Another Proton Build opens Quick Access's Performance level. Both read the outcome again
+  whenever a launch of the game begins or ends.
 - **Link out** for Steam games: the desktop game page and fullscreen mode's options sheet open the ProtonDB and
   PCGamingWiki pages for the Steam app ID in the browser, through the portal. The app makes no request itself. Other
   games get the links once [game identity](game-identity.md) or [metadata](shelves-and-metadata.md) gives them a Steam

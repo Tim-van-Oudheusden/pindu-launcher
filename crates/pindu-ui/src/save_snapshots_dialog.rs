@@ -1,12 +1,16 @@
-//! Save Snapshots: a Windows game's save snapshots (`pindu_core::saves`), newest first,
-//! each with its time, size and why it was taken. One leads to its page with the exact
-//! paths it holds and the rules that left the rest out, and Restore puts it back after a
-//! confirmation (`save_service::restore`). While the game runs a banner says to quit it
-//! and Restore is off. The desktop game page's menu and fullscreen mode's options sheet
-//! open it; a controller moves through it as through any dialog, A activates and B goes
-//! back or closes.
+//! Save Snapshots: a game's save snapshots (`pindu_core::saves`), newest first, each with
+//! its time, size and why it was taken, Take Snapshot Now, and the save folders the user
+//! added, each with why the app cannot reach it, in place, when it cannot. One snapshot
+//! leads to its page with the exact paths it holds and the rules that left the rest out,
+//! and Restore puts it back after a confirmation (`save_service::restore`). While the
+//! game runs a banner says to quit it and Restore is off. The desktop game page's menu
+//! and fullscreen mode's options sheet open it; on the desktop Add Folder picks a save
+//! folder through the file chooser, which a controller cannot drive, so fullscreen mode
+//! only lists and removes them. A controller moves through it as through any dialog, A
+//! activates and B goes back or closes.
 
 use std::cell::{Cell, RefCell};
+use std::path::{Path, PathBuf};
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -16,7 +20,7 @@ use pindu_core::saves::{Reason, Snapshot};
 
 use crate::library_service::LibraryService;
 use crate::models::GameObject;
-use crate::save_service;
+use crate::save_service::{self, SaveFolder};
 use crate::session_service::SessionService;
 
 mod imp {
@@ -36,9 +40,17 @@ mod imp {
         #[template_child]
         pub stack: TemplateChild<gtk::Stack>,
         #[template_child]
-        pub empty_status: TemplateChild<adw::StatusPage>,
+        pub snapshot_now_row: TemplateChild<adw::ButtonRow>,
+        #[template_child]
+        pub empty_label: TemplateChild<gtk::Label>,
         #[template_child]
         pub snapshot_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub folders_group: TemplateChild<adw::PreferencesGroup>,
+        #[template_child]
+        pub add_folder_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub folder_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub snapshot_page: TemplateChild<adw::NavigationPage>,
         #[template_child]
@@ -52,8 +64,12 @@ mod imp {
         pub game: RefCell<Option<GameObject>>,
         pub library: RefCell<Option<LibraryService>>,
         pub sessions: RefCell<Option<SessionService>>,
+        /// Whether Add Folder shows: on the desktop, where the file chooser works.
+        pub pick_folders: Cell<bool>,
         /// The snapshots listed, in the list's order.
         pub snapshots: RefCell<Vec<Snapshot>>,
+        /// The save folders listed, in the list's order.
+        pub folders: RefCell<Vec<SaveFolder>>,
         /// The snapshot whose page shows.
         pub shown: RefCell<Option<Snapshot>>,
         pub restoring: Cell<bool>,
@@ -105,29 +121,44 @@ mod imp {
         fn restore_activated(&self) {
             self.obj().confirm_restore();
         }
+
+        #[template_callback]
+        fn snapshot_now_activated(&self) {
+            self.obj().snapshot_now();
+        }
+
+        #[template_callback]
+        fn add_folder_clicked(&self) {
+            self.obj().add_folder();
+        }
     }
 }
 
 glib::wrapper! {
-    /// A Windows game's save snapshots, to see what each holds and restore one.
+    /// A game's save snapshots and save folders, to see what each snapshot holds, take
+    /// one and restore one.
     pub struct SaveSnapshotsDialog(ObjectSubclass<imp::SaveSnapshotsDialog>)
         @extends adw::Dialog, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::ShortcutManager;
 }
 
 impl SaveSnapshotsDialog {
-    /// Opens the dialog for `game` over `parent` and lists its snapshots.
+    /// Opens the dialog for `game` over `parent` and lists its snapshots and save
+    /// folders; `pick_folders` offers Add Folder, which needs the file chooser.
     pub fn show(
         parent: &impl IsA<gtk::Widget>,
         game: &GameObject,
         library: LibraryService,
         sessions: SessionService,
+        pick_folders: bool,
     ) {
         let dialog: Self = glib::Object::new();
         let imp = dialog.imp();
         imp.game.replace(Some(game.clone()));
         imp.library.replace(Some(library));
         imp.sessions.replace(Some(sessions));
+        imp.pick_folders.set(pick_folders);
+        imp.add_folder_button.set_visible(pick_folders);
         let handler = game.connect_notify_local(
             Some("playing"),
             glib::clone!(
@@ -146,6 +177,7 @@ impl SaveSnapshotsDialog {
         dialog.show_playing();
         dialog.present(Some(parent));
         dialog.load();
+        dialog.load_folders();
     }
 
     /// Goes back from a snapshot's page to the list; `false` on the list, where Back
@@ -168,9 +200,14 @@ impl SaveSnapshotsDialog {
         }
     }
 
+    /// The game the dialog is for.
+    fn game(&self) -> Option<GameObject> {
+        self.imp().game.borrow().clone()
+    }
+
     /// Reads the game's snapshots and lists them.
     fn load(&self) {
-        let Some(id) = self.imp().game.borrow().as_ref().map(GameObject::id) else {
+        let Some(id) = self.game().map(|game| game.id()) else {
             return;
         };
         self.imp().stack.set_visible_child_name("loading");
@@ -182,11 +219,11 @@ impl SaveSnapshotsDialog {
                     Ok(snapshots) => dialog.fill(snapshots),
                     Err(error) => {
                         glib::g_warning!("pindu", "Could not list the snapshots of {id}: {error}");
-                        let imp = dialog.imp();
-                        imp.empty_status
-                            .set_title(&gettext("Could Not Read the Snapshots"));
-                        imp.empty_status.set_description(None);
-                        imp.stack.set_visible_child_name("empty");
+                        dialog.fill(Vec::new());
+                        dialog
+                            .imp()
+                            .empty_label
+                            .set_label(&gettext("Could not read the snapshots."));
                     }
                 }
             }
@@ -213,11 +250,144 @@ impl SaveSnapshotsDialog {
         }
         let empty = snapshots.is_empty();
         imp.snapshots.replace(snapshots);
-        imp.stack
-            .set_visible_child_name(if empty { "empty" } else { "list" });
-        if let Some(first) = imp.snapshot_list.row_at_index(0) {
-            first.grab_focus();
+        imp.snapshot_list.set_visible(!empty);
+        imp.empty_label.set_visible(empty);
+        imp.stack.set_visible_child_name("list");
+        match imp.snapshot_list.row_at_index(0) {
+            Some(first) => first.grab_focus(),
+            None => imp.snapshot_now_row.grab_focus(),
+        };
+    }
+
+    /// Reads the game's save folders, whether each can be reached, and lists them.
+    fn load_folders(&self) {
+        let Some(id) = self.game().map(|game| game.id()) else {
+            return;
+        };
+        glib::spawn_future_local(glib::clone!(
+            #[weak(rename_to = dialog)]
+            self,
+            async move {
+                let folders = save_service::folders(&id).await;
+                dialog.fill_folders(folders);
+            }
+        ));
+    }
+
+    /// Lists `folders`, each as the host names it, with why the app cannot reach it, if
+    /// it cannot, and Remove. Without folders, fullscreen mode, which cannot add one,
+    /// hides them.
+    fn fill_folders(&self, folders: Vec<SaveFolder>) {
+        let imp = self.imp();
+        imp.folder_list.remove_all();
+        for folder in &folders {
+            let shown = folder.shown.display().to_string();
+            let row = adw::ActionRow::builder()
+                .title(&shown)
+                .use_markup(false)
+                .build();
+            if let Some(why) = save_service::unreachable_text(folder.reach) {
+                row.set_subtitle(&why);
+                row.add_prefix(
+                    &gtk::Image::builder()
+                        .icon_name("dialog-warning-symbolic")
+                        .accessible_role(gtk::AccessibleRole::Presentation)
+                        .build(),
+                );
+            }
+            let remove = gtk::Button::builder()
+                .icon_name("user-trash-symbolic")
+                .valign(gtk::Align::Center)
+                .tooltip_text(gettext("Remove"))
+                .css_classes(["flat"])
+                .build();
+            // Translators: {folder} is a save folder.
+            let label = gettext("Remove {folder}").replace("{folder}", &shown);
+            remove.update_property(&[gtk::accessible::Property::Label(&label)]);
+            let path = folder.path.clone();
+            remove.connect_clicked(glib::clone!(
+                #[weak(rename_to = dialog)]
+                self,
+                move |_| dialog.remove_folder(&path)
+            ));
+            row.add_suffix(&remove);
+            imp.folder_list.append(&row);
         }
+        let empty = folders.is_empty();
+        imp.folders.replace(folders);
+        imp.folder_list.set_visible(!empty);
+        imp.folders_group
+            .set_visible(!empty || imp.pick_folders.get());
+    }
+
+    /// Picks a folder through the file chooser and adds it to the game's save folders.
+    /// The path the sandbox reaches is the one kept, as snapshots read it from inside.
+    fn add_folder(&self) {
+        let Some(id) = self.game().map(|game| game.id()) else {
+            return;
+        };
+        let chooser = gtk::FileDialog::builder()
+            .title(gettext("Choose a Save Folder"))
+            .modal(true)
+            .build();
+        let root = self.root().and_downcast::<gtk::Window>();
+        glib::spawn_future_local(glib::clone!(
+            #[weak(rename_to = dialog)]
+            self,
+            async move {
+                let Ok(folder) = chooser.select_folder_future(root.as_ref()).await else {
+                    return;
+                };
+                let Some(path) = folder.path() else {
+                    return;
+                };
+                if let Err(message) = save_service::add_folder(&id, path) {
+                    dialog.imp().toasts.add_toast(adw::Toast::new(&message));
+                }
+                dialog.load_folders();
+            }
+        ));
+    }
+
+    /// Removes `folder` from the game's save folders. Snapshots keep their copies of it.
+    fn remove_folder(&self, folder: &Path) {
+        let Some(id) = self.game().map(|game| game.id()) else {
+            return;
+        };
+        save_service::remove_folder(&id, folder);
+        self.load_folders();
+        let imp = self.imp();
+        if imp.pick_folders.get() {
+            imp.add_folder_button.grab_focus();
+        } else {
+            imp.snapshot_now_row.grab_focus();
+        }
+    }
+
+    /// Takes a snapshot of the game's saves now, then lists the snapshots again and says
+    /// how it went.
+    fn snapshot_now(&self) {
+        let imp = self.imp();
+        let (Some(game), Some(library)) = (self.game(), imp.library.borrow().clone()) else {
+            return;
+        };
+        imp.snapshot_now_row.set_sensitive(false);
+        glib::spawn_future_local(glib::clone!(
+            #[weak(rename_to = dialog)]
+            self,
+            async move {
+                let (toasts, game) = (dialog.imp().toasts.clone(), game.game().clone());
+                let message = save_service::snapshot_now(&game, &library, |toast| {
+                    toasts.add_toast(toast);
+                })
+                .await;
+                let imp = dialog.imp();
+                imp.snapshot_now_row.set_sensitive(true);
+                imp.toasts.add_toast(adw::Toast::new(&message));
+                dialog.load();
+                dialog.load_folders();
+            }
+        ));
     }
 
     /// Shows `snapshot`'s page: its time and size, Restore, the paths it holds and the
@@ -227,17 +397,29 @@ impl SaveSnapshotsDialog {
         imp.snapshot_page.set_title(&taken_at(&snapshot));
         imp.summary_group.set_description(Some(&summary(&snapshot)));
         imp.included_list.remove_all();
-        for file in &snapshot.manifest.files {
+        let manifest = &snapshot.manifest;
+        let folder_files = manifest.folders.iter().flat_map(|folder| {
+            let shown = self.shown_folder(&folder.path);
+            folder
+                .files
+                .iter()
+                .map(move |file| (shown.join(&file.path).display().to_string(), file.size))
+        });
+        let prefix_files = manifest
+            .files
+            .iter()
+            .map(|file| (file.path.clone(), file.size));
+        for (path, size) in prefix_files.chain(folder_files) {
             let row = adw::ActionRow::builder()
-                .title(&file.path)
-                .subtitle(glib::format_size(file.size))
+                .title(&path)
+                .subtitle(glib::format_size(size))
                 .use_markup(false)
                 .build();
             row.add_css_class("property");
             imp.included_list.append(&row);
         }
         imp.excluded_list.remove_all();
-        for rule in &snapshot.manifest.exclude {
+        for rule in &manifest.exclude {
             let row = adw::ActionRow::builder()
                 .title(rule)
                 .use_markup(false)
@@ -250,14 +432,21 @@ impl SaveSnapshotsDialog {
         imp.restore_row.grab_focus();
     }
 
+    /// The save folder at `path`, as the sandbox reaches it, as the host names it when it
+    /// is one of the game's save folders.
+    fn shown_folder(&self, path: &Path) -> PathBuf {
+        self.imp()
+            .folders
+            .borrow()
+            .iter()
+            .find(|folder| folder.path == path)
+            .map_or_else(|| path.to_owned(), |folder| folder.shown.clone())
+    }
+
     /// Says whether the game runs, which turns Restore off.
     fn show_playing(&self) {
         let imp = self.imp();
-        let playing = imp
-            .game
-            .borrow()
-            .as_ref()
-            .is_some_and(GameObject::is_playing);
+        let playing = self.game().is_some_and(|game| game.is_playing());
         imp.running_banner.set_revealed(playing);
         imp.restore_row
             .set_sensitive(!playing && !imp.restoring.get());
@@ -266,8 +455,7 @@ impl SaveSnapshotsDialog {
     /// Asks before restoring the snapshot shown.
     fn confirm_restore(&self) {
         let imp = self.imp();
-        let (Some(game), Some(snapshot)) = (imp.game.borrow().clone(), imp.shown.borrow().clone())
-        else {
+        let (Some(game), Some(snapshot)) = (self.game(), imp.shown.borrow().clone()) else {
             return;
         };
         let dialog = adw::AlertDialog::builder()
@@ -304,7 +492,7 @@ impl SaveSnapshotsDialog {
     fn restore(&self, snapshot: Snapshot) {
         let imp = self.imp();
         let (Some(game), Some(library), Some(sessions)) = (
-            imp.game.borrow().clone(),
+            self.game(),
             imp.library.borrow().clone(),
             imp.sessions.borrow().clone(),
         ) else {
@@ -347,7 +535,7 @@ fn taken_at(snapshot: &Snapshot) -> String {
 
 /// `snapshot`'s size, how many files it holds and why it was taken.
 fn summary(snapshot: &Snapshot) -> String {
-    let files = snapshot.manifest.files.len();
+    let files = snapshot.manifest.file_count();
     let count = gettextrs::ngettext(
         "{count} file",
         "{count} files",
@@ -356,6 +544,7 @@ fn summary(snapshot: &Snapshot) -> String {
     .replace("{count}", &files.to_string());
     let reason = match snapshot.manifest.reason {
         Reason::Exit => gettext("Taken when the game exited"),
+        Reason::Manual => gettext("Taken by hand"),
         Reason::BeforeRestore => gettext("Taken before a restore"),
     };
     format!(

@@ -135,7 +135,8 @@ folder through the document portal, which these numbers do not cover.
 - Reading ROM headers, hashing files, or matching against No-Intro or Redump databases.
 - Per-system artwork shapes (box art that is not 2:3) and per-system metadata.
 - Controller mapping inside emulators, which stays the emulator's own.
-- Save states and emulator save files (save snapshots cover Windows games in managed prefixes only).
+- Save states and emulator save files (save snapshots cover Windows games in managed prefixes, and save folders the
+  user adds by hand; the emulator's own save files are not found for them).
 - Suggesting regional and revision variants as one game.
 
 ## Issues
