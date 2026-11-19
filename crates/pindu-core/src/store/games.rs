@@ -35,9 +35,8 @@ impl Store {
         })
     }
 
-    /// Replaces every stored field of an existing game except its metadata (developer,
-    /// genres, description, Steam Deck rating), which a game carries resolved from every
-    /// origin: those change through [`Store::set_metadata`] only.
+    /// Replaces every stored field of an existing game except its resolved metadata,
+    /// including its custom title: those change through [`Store::set_metadata`] only.
     pub fn update_game(&self, game: &Game) -> Result<()> {
         let changed = self.write_game(
             game,
@@ -145,6 +144,7 @@ fn game_from_row(row: &Row<'_>) -> rusqlite::Result<Game> {
         id: row.get("id")?,
         title: row.get("title")?,
         sort_title: row.get("sort_title")?,
+        custom_title: None,
         developer: None,
         platform: row.get("platform")?,
         installed: row.get("installed")?,

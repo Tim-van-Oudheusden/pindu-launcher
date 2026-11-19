@@ -165,8 +165,13 @@ template $PinduGameDialog: Adw.Dialog {
         // Editing a game: the details the game page shows, kept as the user's own.
         Adw.PreferencesGroup details_group {
           title: _("Details");
-          description: _("Details you change are kept when the library is imported again. Clear one to go back to the launcher's.");
+          description: _("Changes are kept when the library is imported again. Clear a field to restore its original value.");
           visible: false;
+
+          Adw.EntryRow display_title_row {
+            title: _("Title");
+            changed => $form_changed() swapped;
+          }
 
           Adw.EntryRow developer_row {
             title: _("Developer");

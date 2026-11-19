@@ -574,7 +574,9 @@ fn path(value: &Value) -> Option<PathBuf> {
 /// fields text.
 fn metadata_value_json(id: &GameId, value: &MetadataValue) -> Value {
     let text = match &value.value {
-        FieldValue::Developer(text) | FieldValue::Description(text) => json!(text),
+        FieldValue::Title(text) | FieldValue::Developer(text) | FieldValue::Description(text) => {
+            json!(text)
+        }
         FieldValue::Genres(genres) => json!(genres),
         FieldValue::ReleaseYear(year) => json!(year),
         FieldValue::ControllerSupport(support) => json!(support.as_str()),
@@ -604,6 +606,7 @@ fn metadata_value_from(entry: &Value) -> Option<MetadataValue> {
             .map(str::to_owned)
     };
     let value = match entry["field"].as_str()?.parse().ok()? {
+        MetadataField::Title => FieldValue::Title(text()?),
         MetadataField::Developer => FieldValue::Developer(text()?),
         MetadataField::Description => FieldValue::Description(text()?),
         MetadataField::Genres => {

@@ -247,16 +247,22 @@ impl GamePage {
         page
     }
 
+    fn show_title(&self, title: &str) {
+        let imp = self.imp();
+        self.set_title(title);
+        imp.title.set_label(title);
+        imp.launch_title.set_label(title);
+        // The logo stands in for the title once it loads.
+        imp.logo
+            .update_property(&[gtk::accessible::Property::Label(title)]);
+    }
+
     fn show(&self, object: &GameObject, library: &LibraryService) {
         let imp = self.imp();
         let entry = object.entry();
         let game = &entry.game;
         let target = game.id.as_str().to_variant();
-        self.set_title(&game.title);
-        imp.title.set_label(&game.title);
-        // The logo stands in for the title once it loads.
-        imp.logo
-            .update_property(&[gtk::accessible::Property::Label(&game.title)]);
+        self.show_title(&game.title);
         imp.play_button.set_action_target_value(Some(&target));
         let mut handlers: Vec<_> = ["playing", "playing-in-store"]
             .into_iter()
@@ -280,6 +286,14 @@ impl GamePage {
             ),
         );
         handlers.push(favourite_handler);
+        handlers.push(object.connect_notify_local(
+            Some("title"),
+            glib::clone!(
+                #[weak(rename_to = page)]
+                self,
+                move |object, _| page.show_title(&object.game().title)
+            ),
+        ));
         imp.playing_handler
             .replace(Some((object.clone(), handlers)));
         self.show_playing(object.playing());
@@ -301,7 +315,6 @@ impl GamePage {
             }
         ));
         imp.launch_summary.set_label(&launch_summary(game));
-        imp.launch_title.set_label(&game.title);
 
         for (caption, value) in facts(game, entry.playtime_secs, entry.playtime_origin) {
             imp.facts.append(&fact(&caption, &value));

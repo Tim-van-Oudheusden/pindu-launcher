@@ -166,6 +166,8 @@ string_enum! {
         ReleaseYear => "release-year",
         /// How well the game supports a controller, as its developer declares it.
         ControllerSupport => "controller-support",
+        /// A custom title for the library, separate from the source's title.
+        Title => "title",
     }
 }
 
@@ -310,6 +312,9 @@ pub struct Game {
     pub title: String,
     /// Title used for sorting, for example without a leading article.
     pub sort_title: String,
+    /// A custom title for display, resolved like `developer`; the library applies it
+    /// to `title` and `sort_title` without changing the stored source title.
+    pub custom_title: Option<String>,
     /// The developer, when one is known. Read from the store this is the value the game
     /// shows, resolved from every origin ([`crate::metadata`]).
     pub developer: Option<String>,
@@ -368,6 +373,7 @@ impl Game {
             id,
             sort_title: title.clone(),
             title,
+            custom_title: None,
             developer: None,
             platform: None,
             installed: false,

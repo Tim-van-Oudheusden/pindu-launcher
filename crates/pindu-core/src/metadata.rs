@@ -1,7 +1,7 @@
 //! A game's metadata kept by origin.
 //!
-//! Developer, genres, description, release year, controller support and Steam Deck
-//! rating can each come from the game's source, an online provider or the user. The store
+//! A custom title, developer, genres, description, release year, controller support and
+//! Steam Deck rating are kept separately from the game's source record. The store
 //! keeps every origin's value with when it was set, and a sync writes only the source's;
 //! what a game shows is [`resolve`]d from them, the user's value first, then a provider's,
 //! then the source's. The user's values are written by [`edit_by_user`] from what they type
@@ -13,11 +13,13 @@ use crate::model::{
 };
 use crate::store::{self, Store};
 
-/// A game's developer, genres, description, release year, controller support and Steam
-/// Deck rating: the values one origin gives, or, resolved, the ones the game shows. An
-/// empty field has no value.
+/// A game's custom title, developer, genres, description, release year, controller
+/// support and Steam Deck rating: the values one origin gives, or, resolved, the ones
+/// the game shows. An empty field has no value.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Metadata {
+    /// A title to display instead of the one in the source record.
+    pub title: Option<String>,
     /// Who made the game.
     pub developer: Option<String>,
     /// The game's genres.
@@ -36,6 +38,7 @@ impl Metadata {
     /// The metadata a game carries.
     pub fn of(game: &Game) -> Self {
         Self {
+            title: game.custom_title.clone(),
             developer: game.developer.clone(),
             genres: game.genres.clone(),
             description: game.description.clone(),
@@ -47,6 +50,7 @@ impl Metadata {
 
     /// Puts this metadata on a game, replacing what it carried.
     pub fn apply_to(self, game: &mut Game) {
+        game.custom_title = self.title;
         game.developer = self.developer;
         game.genres = self.genres;
         game.description = self.description;
@@ -94,6 +98,7 @@ impl Metadata {
     /// The fields that have a value, each with it.
     pub fn values(&self) -> Vec<FieldValue> {
         let mut values = Vec::new();
+        values.extend(self.title.clone().map(FieldValue::Title));
         values.extend(self.developer.clone().map(FieldValue::Developer));
         if !self.genres.is_empty() {
             values.push(FieldValue::Genres(self.genres.clone()));
@@ -114,6 +119,7 @@ impl Metadata {
 
     fn set(&mut self, value: FieldValue) {
         match value {
+            FieldValue::Title(title) => self.title = Some(title),
             FieldValue::Developer(developer) => self.developer = Some(developer),
             FieldValue::Genres(genres) => self.genres = genres,
             FieldValue::Description(description) => self.description = Some(description),
@@ -131,6 +137,8 @@ pub struct NotAYear;
 /// One field's value.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FieldValue {
+    /// A custom title for display.
+    Title(String),
     /// Who made the game.
     Developer(String),
     /// The game's genres.
@@ -149,6 +157,7 @@ impl FieldValue {
     /// The field this is a value of.
     pub fn field(&self) -> MetadataField {
         match self {
+            Self::Title(_) => MetadataField::Title,
             Self::Developer(_) => MetadataField::Developer,
             Self::Genres(_) => MetadataField::Genres,
             Self::Description(_) => MetadataField::Description,
@@ -294,6 +303,7 @@ mod tests {
         // equal value.
         let number = text.bytes().map(i32::from).sum::<i32>();
         match field {
+            MetadataField::Title => FieldValue::Title(text),
             MetadataField::Developer => FieldValue::Developer(text),
             MetadataField::Genres => FieldValue::Genres(vec![text]),
             MetadataField::Description => FieldValue::Description(text),

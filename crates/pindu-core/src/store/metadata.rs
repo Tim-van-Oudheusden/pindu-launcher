@@ -77,7 +77,9 @@ impl Store {
 /// [`metadata::deck_json`]'s object, other fields as they are.
 fn value_text(value: &FieldValue) -> String {
     match value {
-        FieldValue::Developer(text) | FieldValue::Description(text) => text.clone(),
+        FieldValue::Title(text) | FieldValue::Developer(text) | FieldValue::Description(text) => {
+            text.clone()
+        }
         FieldValue::Genres(genres) => to_json(genres),
         FieldValue::ReleaseYear(year) => year.to_string(),
         FieldValue::ControllerSupport(support) => support.as_str().to_owned(),
@@ -88,6 +90,7 @@ fn value_text(value: &FieldValue) -> String {
 fn metadata_value_from_row(row: &Row<'_>) -> rusqlite::Result<MetadataValue> {
     let text: String = row.get("value")?;
     let value = match row.get("field")? {
+        MetadataField::Title => FieldValue::Title(text),
         MetadataField::Developer => FieldValue::Developer(text),
         MetadataField::Description => FieldValue::Description(text),
         MetadataField::Genres => {

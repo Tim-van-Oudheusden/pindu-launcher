@@ -265,6 +265,7 @@ pub fn apply_snapshot(
                 &id,
                 MetadataOrigin::Source,
                 &Metadata {
+                    title: None,
                     developer: imported.developer.clone(),
                     genres: imported.genres.clone(),
                     description: imported.description.clone(),
@@ -555,6 +556,41 @@ mod tests {
             game.launch_uri.as_deref(),
             Some("heroic://launch?appName=UT2004")
         );
+    }
+
+    #[test]
+    fn a_custom_game_title_survives_sync_and_reopen_until_cleared() {
+        use crate::{library, metadata};
+
+        let (dir, store) = temp_store();
+        let mut imported = flagged(false, false, &[]);
+        imported.launch_uri = Some("heroic://launch?appName=UT2004".into());
+        apply_snapshot(&store, &snapshot(vec![imported.clone()]), 100).unwrap();
+        let shown = Metadata::default();
+        let edited = Metadata {
+            title: Some("Arena Night".into()),
+            ..shown.clone()
+        };
+        metadata::edit_by_user(&store, &id(), &shown, &edited, 150).unwrap();
+
+        imported.title = "UT2004".into();
+        apply_snapshot(&store, &snapshot(vec![imported]), 200).unwrap();
+        drop(store);
+        let store = Store::open(&dir.path().join("library.db")).unwrap();
+        let entries = library::load(&store, false, &[]).unwrap();
+        let game = &entries[0].game;
+        assert_eq!(game.id, id());
+        assert_eq!(game.title, "Arena Night");
+        assert_eq!(game.sort_title, "Arena Night");
+        assert_eq!(
+            game.launch_uri.as_deref(),
+            Some("heroic://launch?appName=UT2004")
+        );
+
+        metadata::edit_by_user(&store, &id(), &edited, &shown, 250).unwrap();
+        let entries = library::load(&store, false, &[]).unwrap();
+        assert_eq!(entries[0].game.title, "UT2004");
+        assert_eq!(entries[0].game.sort_title, "UT2004");
     }
 
     #[test]
