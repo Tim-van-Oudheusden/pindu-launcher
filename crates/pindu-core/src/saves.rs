@@ -8,8 +8,10 @@
 //! `drive_c/users/`, and `snapshot.json` (a [`Manifest`]) says what it holds. A snapshot
 //! is written into a hidden `.partial` folder and renamed into place once complete, so a
 //! failed write never touches the earlier ones. Symbolic links are never followed or
-//! copied. [`restore`] puts a snapshot back after a safety snapshot, never while the
-//! game runs, and writes only inside the user folders of the prefix's `drive_c/users/`.
+//! copied. Each new snapshot can also be copied, the same way, to a folder the user picked
+//! (see [`copy_to`]). [`restore`] puts a snapshot back after a safety snapshot, never
+//! while the game runs, and writes only inside the user folders of the prefix's
+//! `drive_c/users/`.
 
 use std::collections::HashSet;
 use std::fs;
@@ -361,26 +363,69 @@ pub fn take(
         exclude: EXCLUDED.iter().map(|rule| rule.pattern()).collect(),
         files,
     };
+    let dir = place(game_dir, &name, &manifest, &users_dir(prefix))?;
+    Ok(Taken::Written(Snapshot {
+        name,
+        dir,
+        manifest,
+    }))
+}
+
+/// What copying a snapshot to the folder the user picked did.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Copied {
+    /// It wrote this copy.
+    Written(Snapshot),
+    /// The folder already holds a snapshot of that name, so it wrote none.
+    AlreadyThere,
+    /// The folder is gone, as when the drive it is on is not plugged in, so it wrote none.
+    FolderMissing,
+}
+
+/// Copies `snapshot` into `folder`, the folder the user picked for copies, laid out as
+/// the snapshots folder is: `<folder>/<native ID>/<snapshot name>/`. Like a new snapshot,
+/// the copy is written into a hidden `.partial` folder and renamed into place once
+/// complete; a failed write removes its partial folder, and one left by a crash is
+/// removed first. A folder that is gone is not made again: the copy waits for it.
+pub fn copy_to(snapshot: &Snapshot, folder: &Path) -> io::Result<Copied> {
+    if !folder.is_dir() {
+        return Ok(Copied::FolderMissing);
+    }
+    let game_dir = game_snapshots_dir(folder, &snapshot.manifest.game);
+    if game_dir.join(&snapshot.name).exists() {
+        return Ok(Copied::AlreadyThere);
+    }
+    remove_partials(&game_dir)?;
+    let dir = place(
+        &game_dir,
+        &snapshot.name,
+        &snapshot.manifest,
+        &snapshot.files_dir(),
+    )?;
+    Ok(Copied::Written(Snapshot {
+        name: snapshot.name.clone(),
+        dir,
+        manifest: snapshot.manifest.clone(),
+    }))
+}
+
+/// Writes the snapshot `name` in `game_dir`, holding the files `manifest` lists copied
+/// from `from`: into a hidden `.partial` folder, renamed into place once complete.
+/// Returns its folder. A failed write removes its partial folder.
+fn place(game_dir: &Path, name: &str, manifest: &Manifest, from: &Path) -> io::Result<PathBuf> {
     let partial = game_dir.join(format!(".{name}{PARTIAL}"));
-    let written = write(&partial, &manifest).and_then(|()| {
-        let dir = game_dir.join(&name);
+    let written = write(&partial, manifest, from).and_then(|()| {
+        let dir = game_dir.join(name);
         fs::rename(&partial, &dir)?;
         fs::File::open(game_dir)?.sync_all()?;
         Ok(dir)
     });
-    match written {
-        Ok(dir) => Ok(Taken::Written(Snapshot {
-            name,
-            dir,
-            manifest,
-        })),
-        Err(error) => {
-            // The partial folder is no snapshot whether or not it goes now; the next
-            // snapshot clears it if it stays.
-            let _ = fs::remove_dir_all(&partial);
-            Err(error)
-        }
+    if written.is_err() {
+        // The partial folder is no snapshot whether or not it goes now; the next
+        // snapshot clears it if it stays.
+        let _ = fs::remove_dir_all(&partial);
     }
+    written
 }
 
 /// The end of a partial snapshot's folder name.
@@ -392,16 +437,15 @@ const MANIFEST: &str = "snapshot.json";
 /// The format of `snapshot.json`; a newer one is not read.
 const FORMAT: u64 = 1;
 
-/// Copies the files `manifest` lists into `partial`'s `files/`, keeping their times, then
-/// writes its `snapshot.json`, everything flushed to disk.
-fn write(partial: &Path, manifest: &Manifest) -> io::Result<()> {
-    let users = users_dir(&manifest.prefix);
+/// Copies the files `manifest` lists from `from` into `partial`'s `files/`, keeping their
+/// times, then writes its `snapshot.json`, everything flushed to disk.
+fn write(partial: &Path, manifest: &Manifest, from: &Path) -> io::Result<()> {
     let files = partial.join(FILES);
     for file in &manifest.files {
         let target = files.join(&file.path);
         fs::create_dir_all(target.parent().expect("a file is in a folder"))?;
         // On btrfs and XFS the copy shares the file's blocks until either changes.
-        fs::copy(users.join(&file.path), &target)?;
+        fs::copy(from.join(&file.path), &target)?;
         let copy = fs::OpenOptions::new().write(true).open(&target)?;
         copy.set_modified(modified(file.mtime_ns))?;
         copy.sync_all()?;
@@ -1261,6 +1305,141 @@ mod tests {
             "{refused:?}"
         );
         assert!(!prefix.path().join("drive_c").exists());
+    }
+
+    #[test]
+    fn a_snapshot_is_copied_to_the_folder_the_user_picked() {
+        let (prefix, snapshots, copies) = (
+            prefix(),
+            tempfile::tempdir().unwrap(),
+            tempfile::tempdir().unwrap(),
+        );
+        let game_dir = snapshots.path().join("celeste-1a2b");
+        let snapshot =
+            written(take(prefix.path(), &game_dir, &celeste(), Reason::Exit, NOW).unwrap());
+        let copy = match copy_to(&snapshot, copies.path()).unwrap() {
+            Copied::Written(copy) => copy,
+            other => panic!("expected a new copy, got {other:?}"),
+        };
+        let copy_dir = copies.path().join("celeste-1a2b");
+        assert_eq!(copy.dir, copy_dir.join("2026-11-19T18-42-07Z"));
+        assert_eq!(copy.manifest, snapshot.manifest);
+        assert_eq!(list(&copy_dir).unwrap(), std::slice::from_ref(&copy));
+        assert_eq!(entries(&copy_dir), ["2026-11-19T18-42-07Z"]);
+        let save = "steamuser/Saved Games/CD Projekt Red/save.dat";
+        assert_eq!(
+            fs::read_to_string(copy.files_dir().join(save)).unwrap(),
+            "cp77"
+        );
+        assert_eq!(
+            fs::metadata(copy.files_dir().join(save))
+                .unwrap()
+                .modified()
+                .unwrap(),
+            fs::metadata(snapshot.files_dir().join(save))
+                .unwrap()
+                .modified()
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn a_folder_that_is_gone_is_reported_and_not_made_again() {
+        let (prefix, snapshots, copies) = (
+            prefix(),
+            tempfile::tempdir().unwrap(),
+            tempfile::tempdir().unwrap(),
+        );
+        let snapshot = written(
+            take(
+                prefix.path(),
+                &snapshots.path().join("celeste-1a2b"),
+                &celeste(),
+                Reason::Exit,
+                NOW,
+            )
+            .unwrap(),
+        );
+        let gone = copies.path().join("Unplugged drive");
+        assert_eq!(copy_to(&snapshot, &gone).unwrap(), Copied::FolderMissing);
+        assert!(!gone.exists());
+    }
+
+    #[test]
+    fn a_snapshot_already_in_the_folder_is_not_copied_again() {
+        let (prefix, snapshots, copies) = (
+            prefix(),
+            tempfile::tempdir().unwrap(),
+            tempfile::tempdir().unwrap(),
+        );
+        let game_dir = snapshots.path().join("celeste-1a2b");
+        let snapshot =
+            written(take(prefix.path(), &game_dir, &celeste(), Reason::Exit, NOW).unwrap());
+        assert!(matches!(
+            copy_to(&snapshot, copies.path()).unwrap(),
+            Copied::Written(_)
+        ));
+        assert_eq!(
+            copy_to(&snapshot, copies.path()).unwrap(),
+            Copied::AlreadyThere
+        );
+        // The snapshots folder itself already holds every snapshot.
+        assert_eq!(
+            copy_to(&snapshot, snapshots.path()).unwrap(),
+            Copied::AlreadyThere
+        );
+    }
+
+    #[test]
+    fn a_failed_copy_leaves_no_partial_folder_and_the_earlier_copies_intact() {
+        let (prefix, snapshots, copies) = (
+            prefix(),
+            tempfile::tempdir().unwrap(),
+            tempfile::tempdir().unwrap(),
+        );
+        let game_dir = snapshots.path().join("celeste-1a2b");
+        let first = written(take(prefix.path(), &game_dir, &celeste(), Reason::Exit, NOW).unwrap());
+        copy_to(&first, copies.path()).unwrap();
+        put(
+            &users_dir(prefix.path()),
+            "steamuser/Saved Games/new.sav",
+            "new",
+        );
+        let second =
+            written(take(prefix.path(), &game_dir, &celeste(), Reason::Exit, NOW + 60).unwrap());
+        let unreadable = second.files_dir().join("steamuser/Saved Games/new.sav");
+        fs::set_permissions(&unreadable, fs::Permissions::from_mode(0o000)).unwrap();
+        assert!(copy_to(&second, copies.path()).is_err());
+        let copy_dir = copies.path().join("celeste-1a2b");
+        assert_eq!(entries(&copy_dir), ["2026-11-19T18-42-07Z"]);
+        assert_eq!(list(&copy_dir).unwrap()[0].manifest, first.manifest);
+    }
+
+    #[test]
+    fn a_copy_cut_short_is_cleared_before_the_next_copy() {
+        let (prefix, snapshots, copies) = (
+            prefix(),
+            tempfile::tempdir().unwrap(),
+            tempfile::tempdir().unwrap(),
+        );
+        let snapshot = written(
+            take(
+                prefix.path(),
+                &snapshots.path().join("celeste-1a2b"),
+                &celeste(),
+                Reason::Exit,
+                NOW,
+            )
+            .unwrap(),
+        );
+        let copy_dir = copies.path().join("celeste-1a2b");
+        put(
+            &copy_dir,
+            ".2026-11-19T18-00-00Z.partial/files/steamuser/half.sav",
+            "x",
+        );
+        copy_to(&snapshot, copies.path()).unwrap();
+        assert_eq!(entries(&copy_dir), ["2026-11-19T18-42-07Z"]);
     }
 
     /// Writes `contents` to `path` below `root`, making its folders.
