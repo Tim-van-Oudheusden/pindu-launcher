@@ -90,6 +90,10 @@ widgets so it looks and behaves like the rest of GNOME.
   format it had (such as `library.db.v5.bak`), and keeps the two newest copies.
 - **Save snapshots.** When a Windows game you added by hand quits normally, Pindu launcher copies its saves out of the
   prefix it made for the game into `~/Games/pindu-launcher/save-snapshots`, leaving out caches, runtimes, screenshots
+  and stored logins, and keeps the last five. **Save Snapshots…** in the game page's menu, or Save Snapshots in
+  fullscreen mode's options sheet, lists them with their time, size and every file they hold, and restores one after
+  keeping the current saves in a snapshot of their own; never while the game runs
+  ([Save snapshots](docs/save-snapshots.md)).
   and stored logins, and keeps the last five ([Save snapshots](docs/save-snapshots.md)). Pick a folder under
   Preferences → Windows → Save Snapshots, such as one Syncthing, Nextcloud or a drive keeps, and each new snapshot is
   copied there too; a folder that is gone is reported, and the game is not affected.
@@ -110,7 +114,9 @@ widgets so it looks and behaves like the rest of GNOME.
 
 The importers read each launcher's data read-only and never its credentials: from the itch app's database they read
 its installs and games, never the profiles that hold your itch.io key. Preferences, Sources shows for each source the
-folder it was found in, when it last synced and the problems that sync ran into.
+folder it was found in, when it last synced and the problems that sync ran into. Its **Copy Order** decides which copy
+Play starts for a game with copies from several sources when you chose none: the installed copy from the source
+highest in the list, native copies still before Windows ones. **Move Up** and **Move Down** change it.
 
 A game's page shows the details its launcher keeps offline: its developer, genres and description from Heroic; its
 developer, release year, genres and whether it has full or partial controller support from Steam's own app cache; and
@@ -255,8 +261,8 @@ Guide + A never also opens the menu drawer.
   games that need a permission, a Bluetooth device that did not pair, connect, disconnect or go, a rollback or restart
   the system refused, a network that could not be joined, and a program that kept the machine from suspending,
   restarting or powering off. Quick Access opens on them while one is unread.
-- **Activity:** a running library sync, SteamGridDB artwork fetch, Proton download or save snapshot, with its progress.
-  Artwork fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
+- **Activity:** a running library sync, SteamGridDB artwork fetch, Proton download, or save snapshot or restore, with
+  its progress. Artwork fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
 - **Refresh Library** reads your launchers again, offline like every sync.
 - **Surprise Me** opens the page of an installed game picked at random, never the same one twice in a row, so you
   still choose whether to play.
@@ -273,7 +279,9 @@ Guide + A never also opens the menu drawer.
   in the main menu.
 - **Sources** lists every source Pindu imports from, says whether each was found on this computer, and has its
   **Import** switch, the same setting as Preferences, Sources: a source turned off is no longer read, and changing a
-  switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences.
+  switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences. Below them,
+  **Copy Order** lists the sources in the order a game's copies follow: Right on a source reaches its **Move Up** and
+  **Move Down**.
   - **Text Size:** fullscreen text at its default size or Large, Larger or Largest, each step about a quarter of
     the default larger. Preferences has the same choice; an install that had the former Larger Text on starts at
     Large.

@@ -23,6 +23,7 @@ use pindu_core::model::{
 };
 use pindu_core::panels::Playing;
 use pindu_core::reading;
+use pindu_core::saves;
 
 use crate::collection_actions::collection_menu;
 use crate::group_actions::group_menu;
@@ -677,6 +678,9 @@ fn more_menu(
             gettext("_Debugging Information with Log"),
             "app.about-with-log",
         ));
+        if saves::offers_snapshots(&game) {
+            logs.append_item(&item(gettext("Save S_napshots…"), "win.save-snapshots"));
+        }
         menu.append_section(None, &logs);
     }
     menu.append_section(None, &collection_menu(object, collections));
