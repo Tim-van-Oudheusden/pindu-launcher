@@ -9,6 +9,7 @@ mod collections;
 mod games;
 mod groups;
 mod launch_configs;
+mod metadata;
 mod playtime;
 mod saved_filters;
 mod sources;
@@ -19,7 +20,9 @@ use std::path::{Path, PathBuf};
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
 use rusqlite::{Connection, Row, TransactionBehavior};
 
-use crate::model::{ArtLayout, ArtOrigin, GameId, LaunchKind, Platform, Source};
+use crate::model::{
+    ArtLayout, ArtOrigin, GameId, LaunchKind, MetadataField, MetadataOrigin, Platform, Source,
+};
 
 /// Schema migrations in order; entry `n` takes the database from version `n` to `n + 1`.
 const MIGRATIONS: &[&str] = &[
@@ -30,6 +33,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("store/migrations/0005_steamgriddb_matches.sql"),
     include_str!("store/migrations/0006_game_groups.sql"),
     include_str!("store/migrations/0007_saved_filters.sql"),
+    include_str!("store/migrations/0008_game_metadata.sql"),
 ];
 
 /// The schema version a freshly opened store is at.
@@ -367,7 +371,16 @@ macro_rules! sql_text {
     )+};
 }
 
-sql_text!(GameId, Source, Platform, LaunchKind, ArtLayout, ArtOrigin);
+sql_text!(
+    GameId,
+    Source,
+    Platform,
+    LaunchKind,
+    ArtLayout,
+    ArtOrigin,
+    MetadataField,
+    MetadataOrigin
+);
 
 fn path_to_sql(path: &Path) -> Result<&str> {
     path.to_str()
