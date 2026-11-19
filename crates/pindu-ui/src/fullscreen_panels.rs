@@ -16,19 +16,22 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use pindu_core::failed_launch::Step;
 use pindu_core::gamepad::Intent;
 use pindu_core::keys;
 use pindu_core::launch;
 use pindu_core::library::View;
 use pindu_core::panels::{
-    DrawerLevel, GameOption, OptionsLevel, Panel, Panels, Under, page_entries, sheet_options,
-    with_save_snapshots,
+    DrawerLevel, GameOption, OptionsLevel, Panel, Panels, QuickAccessLevel, Under, page_entries,
+    sheet_options, with_save_snapshots,
 };
 
 use crate::application::PinduApplication;
+use crate::failed_launch;
 use crate::launch_service::launcher_name;
 use crate::merge_dialog::candidate_rows;
 use crate::models::GameObject;
+use crate::outcome_service;
 use crate::save_service;
 use crate::window::PinduWindow;
 
@@ -90,7 +93,11 @@ impl PinduWindow {
         // Up and Down stop at a list's ends; in the options sheet they go on to the next
         // list (`fullscreen_playing` takes the drawer's own list up to its Playing Now
         // cards, and Quick Access does its own).
-        for list in [imp.options_list.get(), imp.options_performance.get()] {
+        for list in [
+            imp.options_steps.get(),
+            imp.options_list.get(),
+            imp.options_performance.get(),
+        ] {
             list.connect_keynav_failed(|list, direction| {
                 step_out_of_list(list, direction);
                 glib::Propagation::Stop
@@ -148,6 +155,19 @@ impl PinduWindow {
                     .and_then(|index| window.imp().game_options.borrow().get(index).copied());
                 if let Some(option) = option {
                     window.choose_option(option);
+                }
+            }
+        ));
+        imp.options_steps.connect_row_activated(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, row| {
+                let step = usize::try_from(row.index()).ok().and_then(|index| {
+                    let failure = window.imp().options_failure_explanation.borrow();
+                    failure.as_ref()?.steps.get(index).copied()
+                });
+                if let Some(step) = step {
+                    window.choose_step(step);
                 }
             }
         ));
@@ -579,6 +599,7 @@ impl PinduWindow {
         }
         self.fill_options_collections(game);
         self.fill_options_copies(game);
+        self.fill_options_failure(game);
     }
 
     /// The games to merge `game` with, likely copies first, each with where it comes from
@@ -688,6 +709,71 @@ impl PinduWindow {
             }
         } else {
             ActionGroupExt::activate_action(self, action, Some(&target));
+        }
+    }
+
+    /// Shows why `game` last failed to launch, and the next steps that exist for it, above
+    /// the sheet's actions once read; or nothing when it did not fail.
+    fn fill_options_failure(&self, game: &GameObject) {
+        let imp = self.imp();
+        imp.options_failure.set_visible(false);
+        imp.options_steps.set_visible(false);
+        imp.options_steps.remove_all();
+        imp.options_failure_explanation.take();
+        let (window, id, game) = (self.downgrade(), game.id(), game.game().clone());
+        glib::spawn_future_local(async move {
+            let failure = outcome_service::last_failure(&game).await;
+            let Some(window) = window.upgrade() else {
+                return;
+            };
+            let imp = window.imp();
+            let still_open = imp.options_game.borrow().as_ref().map(GameObject::id) == Some(id);
+            let Some(failure) = failure.filter(|_| still_open) else {
+                return;
+            };
+            imp.options_failure
+                .set_label(&failed_launch::reason_text(&failure.reason, &game));
+            imp.options_failure.set_visible(true);
+            for &step in &failure.steps {
+                imp.options_steps.append(&drawer_row(
+                    failed_launch::step_icon(step),
+                    &failed_launch::step_label(step),
+                ));
+            }
+            imp.options_steps.set_visible(!failure.steps.is_empty());
+            imp.options_failure_explanation.replace(Some(failure));
+        });
+    }
+
+    /// Takes the next step `step` after the sheet's game failed to launch, closing the
+    /// sheet first: another Proton build is chosen in Quick Access's Performance level.
+    fn choose_step(&self, step: Step) {
+        let Some(game) = self
+            .imp()
+            .options_game
+            .borrow()
+            .as_ref()
+            .map(GameObject::id)
+        else {
+            return;
+        };
+        let log = self
+            .imp()
+            .options_failure_explanation
+            .borrow()
+            .as_ref()
+            .and_then(|failure| failure.log.clone());
+        self.close_panel();
+        match failed_launch::step_action(step, &game, log.as_deref()) {
+            Some((action, target)) => {
+                if let Err(error) = WidgetExt::activate_action(self, action, target.as_ref()) {
+                    glib::g_warning!(
+                        "pindu",
+                        "Could not take a step after a failed launch: {error}"
+                    );
+                }
+            }
+            None => self.show_panel(Panel::QuickAccess(QuickAccessLevel::Performance)),
         }
     }
 }

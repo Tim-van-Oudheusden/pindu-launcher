@@ -3,22 +3,27 @@
 //! exits, and in a `--steam` gamescope its outcome says whether a window of it appeared. A
 //! store game handed to its launcher ends when the launcher answers, or as having no
 //! answer after the launch overlay's hand-off timeout ([`HAND_OFF_TIMEOUT`]); a launcher
-//! that answers later still counts as answering.
+//! that answers later still counts as answering. [`last_failure`] reads the last outcome
+//! back to explain a failed launch, and the application's `launch-recorded` signal says
+//! when there is a new one.
 
 use std::cell::Cell;
 use std::rc::Rc;
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
+use pindu_core::failed_launch::{self, Explanation, Facts};
 use pindu_core::launch_outcome::{Ending, NewLaunch};
 use pindu_core::launch_overlay::HAND_OFF_TIMEOUT;
-use pindu_core::model::{GameId, LaunchRoute};
+use pindu_core::model::{Game, GameId, LaunchRoute};
 use pindu_core::paths::default_library_db_path;
 use pindu_core::store::Store;
 
 use crate::application::PinduApplication;
 use crate::gamescope_service::GamescopeService;
-use crate::log_service::LaunchLog;
+use crate::log_service::{self, LaunchLog};
+use crate::permission_service;
+use crate::proton_launch;
 use crate::session_service;
 
 /// One launch as it is recorded.
@@ -79,6 +84,7 @@ pub async fn begin(
         )
     })
     .await;
+    recorded(id);
     let recording = Recording {
         inner: Rc::new(Inner {
             game: id.clone(),
@@ -141,6 +147,7 @@ impl Recording {
             store.end_launch(row, ending, ended_at, window_seen)
         })
         .await;
+        recorded(&inner.game);
     }
 
     /// Follows a game Pindu runs as `child` until it exits, then records how it ended and
@@ -199,6 +206,55 @@ pub async fn finish(log: LaunchLog, id: &GameId) {
         Ok(Ok(())) => {}
         Ok(Err(error)) => glib::g_warning!("pindu", "Could not end the log of {id}: {error}"),
         Err(_) => glib::g_warning!("pindu", "Could not end the log of {id}"),
+    }
+}
+
+/// Tells the shells that a launch of the game with `id` was recorded, as it began or
+/// ended, so a page explaining its last failure reads it again.
+fn recorded(id: &GameId) {
+    if let Some(application) = gio::Application::default().and_downcast::<PinduApplication>() {
+        application.emit_launch_recorded(id);
+    }
+}
+
+/// Why the last launch of `game` failed and the next steps that exist for it (see
+/// `pindu_core::failed_launch`), read on a worker thread with what is known now; `None`
+/// when it did not fail, has no outcome, or the outcome could not be read.
+pub async fn last_failure(game: &Game) -> Option<Explanation> {
+    let game = game.clone();
+    let read = gio::spawn_blocking(move || -> pindu_core::store::Result<Option<Explanation>> {
+        let store = Store::open(&default_library_db_path())?;
+        let Some(last) = store.launch_outcomes(&game.id)?.into_iter().next() else {
+            return Ok(None);
+        };
+        let builds: Vec<String> = if last.route == LaunchRoute::Proton {
+            proton_launch::builds()
+                .into_iter()
+                .map(|build| build.name)
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let log_kept = last
+            .log
+            .as_deref()
+            .is_some_and(|name| log_service::launch_log(&game.id, name).is_some());
+        let facts = Facts {
+            needs_permission: permission_service::needs_permission(&game),
+            umu_installed: proton_launch::umu_installed(),
+            proton_builds: &builds,
+            log_kept,
+        };
+        Ok(failed_launch::explain(&game, &last, &facts))
+    })
+    .await;
+    match read {
+        Ok(Ok(explanation)) => explanation,
+        Ok(Err(error)) => {
+            glib::g_warning!("pindu", "Could not read how a launch ended: {error}");
+            None
+        }
+        Err(_) => None,
     }
 }
 
