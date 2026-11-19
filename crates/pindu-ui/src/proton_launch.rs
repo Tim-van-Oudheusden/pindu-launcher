@@ -12,9 +12,10 @@
 //! pressure-vessel's launch client passes the signal on to the game in it.
 //!
 //! "Play with Logs" and "Start Safely" keep umu's output, and a Windows game's Proton log,
-//! in the game's log (see `log_service`). After a Windows game in a prefix Pindu manages
-//! exits cleanly, its saves are snapshotted, and it does not start while a snapshot is
-//! being restored (see `save_service`).
+//! in the game's log (see `log_service`). After a game run through umu exits cleanly, its
+//! saves are snapshotted, a Windows game's in a prefix Pindu manages and any game's save
+//! folders, and it does not start while a snapshot is being restored (see
+//! `save_service`).
 
 use std::cell::{Cell, RefCell};
 use std::ffi::OsStr;
@@ -221,11 +222,13 @@ async fn play_command(
     let log_name = log.as_ref().and_then(LaunchLog::name);
     let recording = outcome_service::begin(app, &id, route, build, log_name).await;
     let toast = Rc::new(toast);
-    let snapshot = match &program {
-        Program::Windows { managed_prefix, .. } => managed_prefix.clone(),
-        Program::Native { .. } => None,
-    }
-    .map(|prefix| (game.clone(), prefix));
+    let snapshot = (
+        game.clone(),
+        match &program {
+            Program::Windows { managed_prefix, .. } => managed_prefix.clone(),
+            Program::Native { .. } => None,
+        },
+    );
     let started = {
         let (app, toast, title) = (app.clone(), toast.clone(), title.clone());
         move |umu: &gio::Subprocess| {
@@ -253,7 +256,8 @@ async fn play_command(
         Ran::Exited(ending) => ending,
     };
     recording.end(ending).await;
-    if let (Ending::Exited(0), Some((game, prefix))) = (ending, snapshot) {
+    if let Ending::Exited(0) = ending {
+        let (game, prefix) = snapshot;
         save_service::snapshot_after_exit(&game, prefix, move |message| toast(message));
     }
     if let Some(log) = log {

@@ -443,7 +443,8 @@ pub enum GameOption {
     ProtonDb,
     /// Open the game's PCGamingWiki page in the browser, for a Steam game.
     PcGamingWiki,
-    /// List the save snapshots of a Windows game we run, to restore one.
+    /// List the save snapshots of a Windows game we run, or of a game the user added save
+    /// folders for, to restore one.
     SaveSnapshots,
 }
 
@@ -492,6 +493,20 @@ pub fn sheet_options(game: &Game, playing: Playing, copies: usize) -> Vec<GameOp
         grouped.then_some(GameOption::Split),
     ];
     options.splice(at..at, grouping.into_iter().flatten());
+    options
+}
+
+/// The options sheet's actions `options` with Save Snapshots, for a game the user added
+/// save folders for, where a Windows game we run has it: before Hide or Unhide. Options
+/// that hold it already stay as they are.
+pub fn with_save_snapshots(mut options: Vec<GameOption>) -> Vec<GameOption> {
+    if !options.contains(&GameOption::SaveSnapshots) {
+        let at = options
+            .iter()
+            .position(|option| matches!(option, GameOption::Hide | GameOption::Unhide))
+            .unwrap_or(options.len());
+        options.insert(at, GameOption::SaveSnapshots);
+    }
     options
 }
 
@@ -1195,6 +1210,23 @@ mod tests {
         ] {
             assert!(!game_options(&game(source, kind), Playing::No).contains(&SaveSnapshots));
         }
+    }
+
+    #[test]
+    fn any_game_with_save_folders_offers_its_save_snapshots_where_a_windows_game_does() {
+        use GameOption::*;
+        let windows = sheet_options(&game(Source::Manual, LaunchKind::Proton), Playing::No, 0);
+        assert_eq!(with_save_snapshots(windows.clone()), windows);
+        let before_hide = |options: &[GameOption]| {
+            let hide = options.iter().position(|o| *o == Hide).unwrap();
+            options[hide - 1]
+        };
+        assert_eq!(before_hide(&windows), SaveSnapshots);
+        let steam = sheet_options(&game(Source::Steam, LaunchKind::StoreUri), Playing::No, 2);
+        let offered = with_save_snapshots(steam.clone());
+        assert_eq!(offered.len(), steam.len() + 1);
+        assert_eq!(before_hide(&offered), SaveSnapshots);
+        assert_eq!(with_save_snapshots(offered.clone()), offered);
     }
 
     #[test]

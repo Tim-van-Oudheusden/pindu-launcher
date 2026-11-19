@@ -1001,7 +1001,8 @@ impl PinduWindow {
         }
     }
 
-    /// Opens the game's save snapshots, to see what each holds and restore one.
+    /// Opens the game's save snapshots, to see what each holds and restore one, and, on
+    /// the desktop, to add save folders.
     fn show_save_snapshots(&self, id: &GameId) {
         let (Some(game), Some(application)) = (
             self.library().game_object(id),
@@ -1014,6 +1015,7 @@ impl PinduWindow {
             &game,
             application.library_service().clone(),
             application.session_service().clone(),
+            !self.is_fullscreen(),
         );
     }
 
