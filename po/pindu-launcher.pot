@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 20:06+0100\n"
+"POT-Creation-Date: 2026-11-19 20:09+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -524,7 +524,7 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_system_update.rs:164
 #: crates/pindu-ui/src/game_dialog.rs:809
 #: crates/pindu-ui/src/proton_downloads_page.rs:225
-#: crates/pindu-ui/src/proton_launch.rs:629 data/ui/game_dialog.blp:16
+#: crates/pindu-ui/src/proton_launch.rs:670 data/ui/game_dialog.blp:16
 #: data/ui/game_page.blp:405 data/ui/secret_dialog.blp:19
 msgid "_Cancel"
 msgstr ""
@@ -550,6 +550,10 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_activity.rs:297
 msgid "From Flathub"
+msgstr ""
+
+#: crates/pindu-ui/src/fullscreen_activity.rs:298
+msgid "Backing up saves"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_bindings.rs:149
@@ -1911,7 +1915,7 @@ msgid "Steam Big Picture"
 msgstr ""
 
 #: crates/pindu-ui/src/launch_service.rs:142
-#: crates/pindu-ui/src/proton_launch.rs:504
+#: crates/pindu-ui/src/proton_launch.rs:545
 #, rust-format
 msgid "Could not start “{title}”"
 msgstr ""
@@ -1943,8 +1947,8 @@ msgid "Could not open {launcher}"
 msgstr ""
 
 #: crates/pindu-ui/src/launch_service.rs:292
-#: crates/pindu-ui/src/proton_launch.rs:374
-#: crates/pindu-ui/src/proton_launch.rs:603 crates/pindu-ui/src/window.rs:1396
+#: crates/pindu-ui/src/proton_launch.rs:410
+#: crates/pindu-ui/src/proton_launch.rs:644 crates/pindu-ui/src/window.rs:1396
 msgid "_Close"
 msgstr ""
 
@@ -2236,7 +2240,7 @@ msgid "Downloading {received} of {total}"
 msgstr ""
 
 #: crates/pindu-ui/src/proton_downloads_page.rs:397
-#: crates/pindu-ui/src/proton_launch.rs:673
+#: crates/pindu-ui/src/proton_launch.rs:714
 msgid "Unpacking…"
 msgstr ""
 
@@ -2250,74 +2254,74 @@ msgstr ""
 msgid "{count} newest releases from {repository}"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:364
+#: crates/pindu-ui/src/proton_launch.rs:400
 msgid "umu-launcher Needed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:367
+#: crates/pindu-ui/src/proton_launch.rs:403
 #, rust-format
 msgid ""
 "“{title}” runs through umu-launcher, which is not installed on this "
 "computer. Install it, then try again."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:375
+#: crates/pindu-ui/src/proton_launch.rs:411
 msgid "_How to Install"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:494
+#: crates/pindu-ui/src/proton_launch.rs:535
 #, rust-format
 msgid "Could not start “{title}”: no Proton found"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:496
+#: crates/pindu-ui/src/proton_launch.rs:537
 #, rust-format
 msgid "Could not start “{title}”: {proton} is not installed"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:563
+#: crates/pindu-ui/src/proton_launch.rs:604
 msgid "No Internet Connection"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:565
+#: crates/pindu-ui/src/proton_launch.rs:606
 msgid ""
 "Windows games need the Steam Linux Runtime, a one-time download. Connect to "
 "the internet, then try again."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:574
+#: crates/pindu-ui/src/proton_launch.rs:615
 msgid "Could Not Set Up Windows Games"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:575
+#: crates/pindu-ui/src/proton_launch.rs:616
 msgid "The Steam Linux Runtime could not be installed. Try again later."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:618
+#: crates/pindu-ui/src/proton_launch.rs:659
 msgid "Setting Up Windows Games"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:621
+#: crates/pindu-ui/src/proton_launch.rs:662
 #, rust-format
 msgid ""
 "Windows games need the Steam Linux Runtime, a one-time download. “{title}” "
 "starts when it is ready."
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:669
+#: crates/pindu-ui/src/proton_launch.rs:710
 #, rust-format
 msgid "Downloading… {size}"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:671
+#: crates/pindu-ui/src/proton_launch.rs:712
 msgid "Downloading…"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:674
+#: crates/pindu-ui/src/proton_launch.rs:715
 msgid "Checking…"
 msgstr ""
 
-#: crates/pindu-ui/src/proton_launch.rs:676
+#: crates/pindu-ui/src/proton_launch.rs:717
 msgid "Preparing…"
 msgstr ""
 
@@ -2340,6 +2344,17 @@ msgstr ""
 
 #: crates/pindu-ui/src/quick_access.rs:1192
 msgid "Needs a newer Pindu launcher"
+msgstr ""
+
+#. Translators: {title} is a game's title.
+#: crates/pindu-ui/src/save_service.rs:37
+#, rust-format
+msgid "Saves of “{title}”"
+msgstr ""
+
+#: crates/pindu-ui/src/save_service.rs:82
+#, rust-format
+msgid "Could not back up the saves of “{title}”"
 msgstr ""
 
 #: crates/pindu-ui/src/search_keyboard.rs:167
