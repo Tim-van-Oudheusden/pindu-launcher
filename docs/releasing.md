@@ -17,6 +17,7 @@ flowchart LR
   flatpak --> publish[GitHub release: bundle, tarball, packages, SHA256SUMS, notes]
   sources --> publish
   provenance --> publish
+  publish -->|final release only| recipes[pull request: AUR and nixpkgs recipe bump]
 ```
 
 ## Cut a release
@@ -92,8 +93,16 @@ COPR, the AUR and nixpkgs build the release tarball, `pindu-launcher-X.Y.Z.tar.x
 each builds offline (#382). They follow final releases only, as Pindu OS does: a `vX.Y.Z-rc.N` pre-release is never
 built or bumped there, so their users only get a version once its soak has passed. The tarball's checksum exists only
 once the final release is published, so the AUR and nixpkgs recipes are bumped after step 8 of the final release,
-through a pull request of their own; `meson test`'s `versions` check leaves them out. Take the checksum from the
-release's `SHA256SUMS`.
+through a pull request of their own; `meson test`'s `versions` check leaves them out.
+
+**The Release workflow opens that pull request by itself.** Once a final release is published, its `recipes` job runs
+`scripts/recipe-bump.py`, which takes the tarball's checksum from the release's `SHA256SUMS` and sets the AUR and
+nixpkgs lines below, then pushes `chore/recipes-X.Y.Z` and opens the pull request, which refers to the "Release X.Y.Z"
+issue. A pre-release skips the job, and a rerun does nothing once the pull request is open or `main`'s recipes build
+the version. A pull request opened with the workflow's token starts no workflow: **close and reopen it** to run the
+checks, try the recipes as below, and merge it (it is high risk, `build-aux/**`). Then copy the PKGBUILD and a fresh
+`.SRCINFO` to the AUR repository. When the job fails, run the script by hand:
+`python3 scripts/recipe-bump.py X.Y.Z SHA256SUMS`, with the release's `SHA256SUMS` downloaded.
 
 - **COPR** (`.copr/Makefile`, the make_srpm method): nothing to bump. It builds `build-aux/rpm/pindu-launcher.spec`,
   already bumped in step 2, downloads the spec's `Source0` and checks it against the release's `SHA256SUMS`, so start
