@@ -111,12 +111,60 @@ fn fold(c: char) -> Option<&'static str> {
     })
 }
 
+/// The number of matching games a screen reader hears once a burst of search or filter
+/// changes settles: the count before the first change of the burst, against the count
+/// once typing pauses.
+#[derive(Debug, Clone, Default)]
+pub struct ResultCount {
+    /// The count before the burst's first change, while a burst is under way.
+    before: Option<u32>,
+}
+
+impl ResultCount {
+    /// A change to the search or the filters, made while `count` games matched.
+    pub fn change(&mut self, count: u32) {
+        self.before.get_or_insert(count);
+    }
+
+    /// The burst settled with `count` games matching: the count to announce, if a burst
+    /// was under way and the count differs from the one it started from.
+    pub fn settle(&mut self, count: u32) -> Option<u32> {
+        let before = self.before.take()?;
+        (before != count).then_some(count)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn matches(query: &str, title: &str) -> bool {
         Query::new(query).matches(&normalize(title))
+    }
+
+    #[test]
+    fn a_settled_change_tells_the_new_count() {
+        let mut count = ResultCount::default();
+        count.change(7);
+        assert_eq!(count.settle(2), Some(2));
+    }
+
+    #[test]
+    fn a_burst_that_ends_on_the_count_it_started_from_tells_nothing() {
+        let mut count = ResultCount::default();
+        count.change(7);
+        count.change(3);
+        assert_eq!(count.settle(7), None);
+    }
+
+    #[test]
+    fn each_burst_starts_from_the_count_before_it() {
+        let mut count = ResultCount::default();
+        count.change(7);
+        assert_eq!(count.settle(2), Some(2));
+        count.change(2);
+        assert_eq!(count.settle(2), None);
+        assert_eq!(count.settle(5), None, "no change, no burst");
     }
 
     #[test]
