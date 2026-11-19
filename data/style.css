@@ -79,6 +79,13 @@ gridview.library > child {
   background-image: linear-gradient(to bottom, rgb(0 0 0 / 55%), rgb(0 0 0 / 80%));
 }
 
+/* Under high contrast the band is darker, so white text over white art reaches 7:1. */
+@media (prefers-contrast: more) {
+  .jump-card .jump-title {
+    background-image: linear-gradient(to bottom, rgb(0 0 0 / 80%), rgb(0 0 0 / 90%));
+  }
+}
+
 /* The desktop row's cards brighten a little under the pointer, and show Play (above). */
 .jump-tile > .jump-card {
   transition: filter 150ms ease-out;
@@ -202,6 +209,14 @@ window.fullscreen-mode gridview.library > child:focus-within .cover-frame {
    `.home-hero` a `transition: opacity` to crossfade them. */
 .home .hero-gradient {
   background-image: linear-gradient(to bottom, alpha(var(--window-bg-color), 0.05) 30%, alpha(var(--window-bg-color), 0.85) 70%, var(--window-bg-color));
+}
+
+/* Under high contrast the fade starts higher and is near solid by the title, so the title
+   reaches 7:1 over white art. */
+@media (prefers-contrast: more) {
+  .home .hero-gradient {
+    background-image: linear-gradient(to bottom, alpha(var(--window-bg-color), 0.05) 20%, alpha(var(--window-bg-color), 0.9) 50%, var(--window-bg-color) 60%);
+  }
 }
 
 .home-hero:not(.shown) {
