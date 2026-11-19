@@ -116,6 +116,12 @@ pub fn export(store: &Store, now: Timestamp) -> Result<String, BackupError> {
     Ok(serde_json::to_string_pretty(&backup).expect("JSON values always serialize"))
 }
 
+/// When the library was last backed up, from the time the app stored after its last
+/// export: zero (the setting's default) or less means it never was.
+pub fn last_backup(stored: Timestamp) -> Option<Timestamp> {
+    (stored > 0).then_some(stored)
+}
+
 /// Restores a backup into the library, in one transaction. It adds and never removes:
 /// favourites and hidden games stay as they are unless the backup marks them, existing
 /// collections gain members, and sessions or games already here are not added twice.
@@ -518,5 +524,12 @@ mod tests {
         assert_eq!(summary.manual_games, 1);
         assert_eq!(fresh.game(&manual.id).unwrap().unwrap().title, "My Game");
         assert_eq!(fresh.launch_config(&manual.id).unwrap(), None);
+    }
+
+    #[test]
+    fn a_stored_backup_time_of_zero_means_never_backed_up() {
+        assert_eq!(last_backup(0), None);
+        assert_eq!(last_backup(-5), None);
+        assert_eq!(last_backup(1_700_000_000), Some(1_700_000_000));
     }
 }
