@@ -20,6 +20,8 @@ hand-off notes (`session-summary.md`).
 - `docs/Adwaita Game Library — Main Spec.pdf` is the product spec; `docs/Research — *.pdf` hold the evidence behind it.
   Read them with `pdftotext -layout`. Read the spec section an issue links to before you start it.
 - GitHub issues #1–#63 match the spec's issue tables, so `#N` in the spec is issue `#N` here.
+- `docs/spec-amendments.md` records what has changed since the PDF was exported: the revised non-goals, emulation's
+  status and the backlog mapped to issues. Read it with the spec; where they disagree, the amendments win.
 - If an issue and the spec disagree, the issue wins; say so in the PR.
 - The spec plans a Flathub release in M5. Since #226 M5 is the first GitHub release and Flathub is Nice to have; the
   milestone descriptions on GitHub hold the current gates.
