@@ -19,6 +19,7 @@
     <file preprocess="xml-stripblanks">ui/health_page.ui</file>
     <file preprocess="xml-stripblanks">ui/home_page.ui</file>
     <file preprocess="xml-stripblanks">ui/menu_drawer.ui</file>
+    <file preprocess="xml-stripblanks">ui/merge_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences.ui</file>
     <file preprocess="xml-stripblanks">ui/quick_access.ui</file>
     <file preprocess="xml-stripblanks">ui/secret_dialog.ui</file>
