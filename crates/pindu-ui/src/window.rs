@@ -34,7 +34,7 @@ use crate::home_page::HomePage;
 use crate::library_service::LibraryService;
 use crate::log_service;
 use crate::menu_drawer::PinduMenuDrawer;
-use crate::models::{GameObject, LibraryModel};
+use crate::models::{GameObject, LibraryModel, LibrarySelection};
 use crate::quick_access::PinduQuickAccess;
 use crate::sources::{source_icon, source_name};
 use crate::sync_service::SyncService;
@@ -117,6 +117,20 @@ mod imp {
         #[template_child]
         pub layout_switch: TemplateChild<adw::ToggleGroup>,
         #[template_child]
+        pub select_button: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
+        pub selection_bar: TemplateChild<gtk::ActionBar>,
+        #[template_child]
+        pub select_all_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub selection_count: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub favourite_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub hide_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub collection_button: TemplateChild<gtk::MenuButton>,
+        #[template_child]
         pub content_stack: TemplateChild<gtk::Stack>,
         #[template_child]
         pub library_tabs: TemplateChild<gtk::Box>,
@@ -170,6 +184,8 @@ mod imp {
         pub quick_access_panel: TemplateChild<PinduQuickAccess>,
         pub settings: OnceCell<gio::Settings>,
         pub library: OnceCell<LibraryModel>,
+        /// The desktop library's selection mode and the games it selected.
+        pub selection: LibrarySelection,
         /// Every sidebar row with the view it selects and, for sources, its count label.
         pub views: RefCell<Vec<(adw::SidebarItem, View, gtk::Label)>>,
         /// The collection whose sidebar menu is open.
@@ -297,6 +313,7 @@ impl PinduWindow {
         window.setup_sidebar();
         window.setup_grid();
         window.setup_list();
+        window.setup_selection_mode();
         window.setup_search_and_filters();
         window.observe_sync(sync_service);
         window.setup_home();
@@ -1086,7 +1103,7 @@ impl PinduWindow {
                     .and_then(|model| model.item(position))
                     .and_downcast::<GameObject>();
                 if let Some(game) = game {
-                    window.show_details(&game.id());
+                    window.activate_game(&game.id());
                 }
             }
         ));
@@ -1131,6 +1148,7 @@ impl PinduWindow {
         let imp = self.imp();
         let list = &imp.game_list;
         list.set_model(Some(&gtk::NoSelection::new(Some(self.library().model()))));
+        let selection = imp.selection.clone();
         let columns = list.columns();
         let kinds = [
             ListColumn::Title,
@@ -1147,11 +1165,12 @@ impl PinduWindow {
                 continue;
             };
             let factory = gtk::SignalListItemFactory::new();
+            let selection = selection.clone();
             factory.connect_setup(move |_, item| {
                 let item = item
                     .downcast_ref::<gtk::ColumnViewCell>()
                     .expect("a column view cell");
-                item.set_child(Some(&GameListCell::new(kind)));
+                item.set_child(Some(&GameListCell::new(kind, &selection)));
             });
             factory.connect_bind(|_, item| {
                 let item = item
@@ -1183,7 +1202,7 @@ impl PinduWindow {
                     .and_then(|model| model.item(position))
                     .and_downcast::<GameObject>();
                 if let Some(game) = game {
-                    window.show_details(&game.id());
+                    window.activate_game(&game.id());
                 }
             }
         ));
@@ -1264,6 +1283,7 @@ impl PinduWindow {
                 let item = item.downcast_ref::<gtk::ListItem>().expect("a list item");
                 item.set_child(Some(&CoverTile::new(
                     &window,
+                    &window.imp().selection,
                     size,
                     show_titles,
                     show_badges,

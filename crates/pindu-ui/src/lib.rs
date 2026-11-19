@@ -72,6 +72,7 @@ pub mod save_service;
 pub mod search_keyboard;
 pub mod search_provider;
 pub mod secret_dialog;
+pub mod selection_mode;
 pub mod session_service;
 pub mod sources;
 pub mod steamgriddb_service;

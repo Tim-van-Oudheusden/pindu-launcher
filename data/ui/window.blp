@@ -243,6 +243,14 @@ template $PinduWindow: Adw.ApplicationWindow {
                             tooltip: _("List");
                           }
                         }
+
+                        // Selection mode: activating a game selects it, and the action bar
+                        // below acts on every selected game. Escape leaves it.
+                        [end]
+                        ToggleButton select_button {
+                          icon-name: "selection-mode-symbolic";
+                          tooltip-text: _("Select");
+                        }
                       }
 
                       content: Box {
@@ -527,6 +535,41 @@ template $PinduWindow: Adw.ApplicationWindow {
                           }
                         }
                       };
+
+                      [bottom]
+                      ActionBar selection_bar {
+                        revealed: false;
+
+                        [start]
+                        Button select_all_button {
+                          label: _("Select _All");
+                          use-underline: true;
+                        }
+
+                        [center]
+                        Label selection_count {
+                          styles [
+                            "numeric",
+                          ]
+                        }
+
+                        [end]
+                        MenuButton collection_button {
+                          label: _("_Collections");
+                          use-underline: true;
+                          direction: up;
+                        }
+
+                        [end]
+                        Button hide_button {
+                          use-underline: true;
+                        }
+
+                        [end]
+                        Button favourite_button {
+                          use-underline: true;
+                        }
+                      }
                     };
                   }
 

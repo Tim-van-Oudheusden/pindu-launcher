@@ -61,7 +61,9 @@ widgets so it looks and behaves like the rest of GNOME.
   ([Fullscreen mode](#fullscreen-mode)).
 - **A tidy library.** Browse covers in a grid, or switch the desktop window to a list with each game's source, install
   state, last played date and playtime. Search, sort and filter by installed, favourite, Windows or native, in either
-  layout. Group games into your own collections, jump back into recent games and hide the ones you never play.
+  layout. Group games into your own collections, jump back into recent games and hide the ones you never play. The
+  **Select** button in the header bar picks several games in the grid or the list at once, to favourite, hide, add to
+  a collection or take out of one in one go, with a toast to undo it.
 - **Play history.** When you played and for how long, including the playtime your launchers recorded.
 - **Help for Steam games.** A Steam game's page menu, and its options sheet in fullscreen mode, open the game's
   [ProtonDB](https://www.protondb.com) and [PCGamingWiki](https://www.pcgamingwiki.com) pages in your browser. Pindu

@@ -6,6 +6,7 @@ use crate::config::APP_ID;
 use gtk::glib;
 use gtk::subclass::prelude::*;
 use pindu_core::backup::{self, BackupError, ImportSummary};
+use pindu_core::bulk::{self, BulkAction};
 use pindu_core::library::{self, LibraryEntry};
 use pindu_core::manual;
 use pindu_core::model::{
@@ -227,6 +228,13 @@ impl LibraryService {
                 store.remove_from_collection(collection, &game)
             }
         });
+    }
+
+    /// Applies `action` to `games` in one go and returns the games it changed, which
+    /// undoing applies the opposite action to; `None` if the store could not be changed.
+    pub async fn apply_bulk(&self, games: Vec<GameId>, action: BulkAction) -> Option<Vec<GameId>> {
+        self.write(move |store| bulk::apply(store, &games, action))
+            .await
     }
 
     /// The game's launch config, read on a worker thread; `None` when there is none or
