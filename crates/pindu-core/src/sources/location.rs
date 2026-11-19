@@ -145,6 +145,11 @@ impl Location {
                 ],
                 &["games.json"],
             ),
+            // Legendary has no Flatpak; Heroic keeps its own copy under its folder.
+            Source::Legendary => (
+                vec![dirs.config_home.join("legendary")],
+                &["installed.json"],
+            ),
             Source::Desktop | Source::Manual => return None,
         };
         Some(Self {
@@ -210,6 +215,13 @@ pub fn set_user_override(store: &Store, source: Source, path: Option<&Path>) -> 
         .unwrap_or_else(|| SourceState::new(source));
     state.user_override = path.map(Path::to_owned);
     store.set_source_state(&state)
+}
+
+/// Whether the Flatpak's permissions leave a source's folder out of view, so inside the
+/// sandbox it is only read from a folder the user chooses: standalone Legendary's
+/// `~/.config/legendary`, which the manifest does not ask for.
+pub fn sandbox_hides(source: Source) -> bool {
+    source == Source::Legendary
 }
 
 #[cfg(test)]
