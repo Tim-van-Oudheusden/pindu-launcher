@@ -18,6 +18,7 @@ use pindu_core::custom_style::ProblemSummary;
 use pindu_core::gamepad::{PROMPTS_KEY, Prompts, SWAP_KEY, Swap};
 use pindu_core::model::{Source, SourceState};
 use pindu_core::paths;
+use pindu_core::sources::location::sandbox_hides;
 use pindu_core::sources::sync::IMPORTED_SOURCES;
 
 use crate::application::PinduApplication;
@@ -395,13 +396,24 @@ impl PreferencesDialog {
 
     fn source_row(&self, state: &SourceState) -> adw::ExpanderRow {
         let source = state.source;
+        let hidden = state.resolved_location.is_none()
+            && state.user_override.is_none()
+            && permission_service::in_flatpak()
+            && sandbox_hides(source);
         let found = state.resolved_location.as_ref().map_or_else(
-            || gettext("Not found on this computer"),
+            || {
+                if hidden {
+                    gettext("The sandbox cannot see this folder: choose it to import its games")
+                } else {
+                    gettext("Not found on this computer")
+                }
+            },
             |path| path.display().to_string(),
         );
         let row = adw::ExpanderRow::builder()
             .title(source_name(source))
             .subtitle(&found)
+            .expanded(hidden && state.enabled)
             .build();
         row.add_prefix(&gtk::Image::from_icon_name(source_icon(source)));
         let sync = self.imp().sync.get().expect("set").clone();

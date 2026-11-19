@@ -33,7 +33,7 @@ pub fn launcher_name(source: Source) -> Option<&'static str> {
         }
         Source::Lutris => Some("Lutris"),
         Source::Bottles => Some("Bottles"),
-        Source::Faugus | Source::Desktop | Source::Manual => None,
+        Source::Faugus | Source::Legendary | Source::Desktop | Source::Manual => None,
     }
 }
 
