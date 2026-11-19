@@ -123,8 +123,8 @@ Backup format 2 (#509) adds two lists to the backup file, both naming games by t
   how many groups were skipped, beside how many games the library lacks.
 - **Remembered pairs** are added when both games are in the library.
 - **Format 1** backups, which have neither list, still import and change no group. An older build refuses a format 2
-  backup rather than drop its groups. Format 2 also carries each saved filter's filter (#600; see
-  `docs/shelves-and-metadata.md`).
+  backup rather than drop its groups. Format 2 also carries each saved filter's filter (#600) and the metadata the user
+  set or a provider fetched (#619; both in `docs/shelves-and-metadata.md`).
 
 ## Flatpak, native and Pindu OS
 
