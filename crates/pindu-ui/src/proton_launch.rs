@@ -28,7 +28,8 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::arch::Arch;
 use pindu_core::launch::{self, Command, Start};
-use pindu_core::model::{Game, LaunchConfig};
+use pindu_core::launch_outcome::{Ending, SIGTERM};
+use pindu_core::model::{Game, LaunchConfig, LaunchRoute};
 use pindu_core::paths::{default_prefixes_dir, default_tools_dir};
 use pindu_core::proton::{self, ProtonError};
 use pindu_core::saves;
@@ -37,9 +38,10 @@ use pindu_core::umu::{self, RuntimeSetup};
 
 use crate::config::APP_ID;
 use crate::launch_service::{now, starting};
-use crate::log_service::{self, GameLog};
+use crate::log_service::{self, LaunchLog};
+use crate::outcome_service;
 use crate::save_service;
-use crate::session_service::{SIGTERM, SessionService};
+use crate::session_service::SessionService;
 
 /// How often the setup dialog's progress moves.
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(250);
@@ -47,8 +49,9 @@ const PROGRESS_INTERVAL: Duration = Duration::from_millis(250);
 /// Starts a Windows game with the Proton build and prefix its launch config names, or the
 /// defaults from Preferences, and tracks its session from the moment umu starts it. The
 /// app stays up while the game runs, since the game writes its log to us. With `start`
-/// keeping a log, umu's output and Proton's log are kept in a new log of the game. Without
-/// `umu-run`, a dialog explains what is missing instead.
+/// keeping a log, umu's output and Proton's log are kept in a new log of the game, else
+/// the end of umu's output in a short one. Without `umu-run`, a dialog explains what is
+/// missing instead. Either way, how the launch ended is recorded.
 pub fn play(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
@@ -66,6 +69,7 @@ pub fn play(
         return;
     }
     if explain_missing_umu(app, window, &game.title) {
+        outcome_service::not_started(app, &game.id, LaunchRoute::Proton, None);
         return;
     }
     let (app, window) = (app.clone(), window.cloned());
@@ -76,27 +80,37 @@ pub fn play(
             let game = game.clone();
             gio::spawn_blocking(move || {
                 let builds = builds();
+                let build = proton::chosen_build(&config, &builds, &defaults)?
+                    .name
+                    .clone();
                 proton::command(&game, &config, &builds, &defaults).map(|command| {
                     let end_prefix = proton::stop_command(&command, &builds);
                     let managed_prefix = saves::managed_prefix(&game, &config, &defaults);
-                    (command, end_prefix, managed_prefix)
+                    (command, build, end_prefix, managed_prefix)
                 })
             })
             .await
         };
         let title = game.title.clone();
-        let (command, end_prefix, managed_prefix) = match found {
+        let (command, build, end_prefix, managed_prefix) = match found {
             Ok(Ok(found)) => found,
             Ok(Err(error)) => {
+                let build = match &error {
+                    ProtonError::Missing(build) => Some(build.clone()),
+                    ProtonError::NoBuilds => None,
+                };
+                outcome_service::not_started(&app, &game.id, LaunchRoute::Proton, build);
                 toast(adw::Toast::new(&cannot_start_message(&title, &error)));
                 return;
             }
             Err(_) => {
+                outcome_service::not_started(&app, &game.id, LaunchRoute::Proton, None);
                 toast(adw::Toast::new(&could_not_start(&title)));
                 return;
             }
         };
         let program = Program::Windows {
+            build,
             end_prefix,
             managed_prefix,
         };
@@ -108,8 +122,9 @@ pub fn play(
 /// Starts a native game in the Steam Linux Runtime with umu's `command` (see
 /// [`proton::runtime_command`]), and tracks its session from the moment umu starts it, as
 /// [`play`] does a Windows game's. With `start` keeping a log, umu's output, the game's
-/// included, is kept in a new log of the game. Without `umu-run`, a dialog explains what
-/// is missing instead.
+/// included, is kept in a new log of the game, else its end in a short one. Without
+/// `umu-run`, a dialog explains what is missing instead. Either way, how the launch ended
+/// is recorded.
 pub fn play_native(
     app: &gtk::Application,
     window: Option<&gtk::Window>,
@@ -120,6 +135,7 @@ pub fn play_native(
     toast: impl Fn(adw::Toast) + 'static,
 ) {
     if explain_missing_umu(app, window, &game.title) {
+        outcome_service::not_started(app, &game.id, LaunchRoute::Runtime, None);
         return;
     }
     let (app, window) = (app.clone(), window.cloned());
@@ -133,11 +149,12 @@ pub fn play_native(
     });
 }
 
-/// What umu runs for a game: a Windows program, ended with its build's `wineserver -k`
-/// when there is one, whose saves are snapshotted on exit when Pindu manages its prefix,
-/// or a native one, run with `launch`.
+/// What umu runs for a game: a Windows program run with the Proton `build` of that name,
+/// ended with its build's `wineserver -k` when there is one, whose saves are snapshotted
+/// on exit when Pindu manages its prefix, or a native one, run with `launch`.
 enum Program {
     Windows {
+        build: String,
         end_prefix: Option<Command>,
         managed_prefix: Option<PathBuf>,
     },
@@ -151,13 +168,14 @@ enum Program {
 enum Ran {
     /// It never started.
     NotStarted,
-    /// It started, then umu exited: cleanly when it exited by itself with status 0.
-    Exited { clean: bool },
+    /// It started, then umu exited, as this says.
+    Exited(Ending),
 }
 
-/// Runs a game's umu `command` and tracks its session from the moment umu starts it. With
-/// `start` keeping a log, umu's output, and a Windows game's Proton log, are kept in a new
-/// log of the game.
+/// Runs a game's umu `command` and tracks its session from the moment umu starts it, then
+/// records how it ended. With `start` keeping a log, umu's output, and a Windows game's
+/// Proton log, are kept in a new log of the game; else the end of umu's output is kept in
+/// a short one.
 #[expect(
     clippy::too_many_arguments,
     reason = "each argument is a separate input of one launch; a struct would only rename them"
@@ -172,29 +190,36 @@ async fn play_command(
     start: Start,
     toast: impl Fn(adw::Toast) + 'static,
 ) {
-    let title = game.title.clone();
-    let proton_log = matches!(program, Program::Windows { .. });
+    let (id, title) = (game.id.clone(), game.title.clone());
+    let (route, build) = match &program {
+        Program::Windows { build, .. } => (LaunchRoute::Proton, Some(build.clone())),
+        Program::Native { .. } => (LaunchRoute::Runtime, None),
+    };
+    let proton_log = route == LaunchRoute::Proton;
     let mut log = None;
-    if start.keeps_log() {
-        let (id, log_title) = (game.id.clone(), title.clone());
-        let created = gio::spawn_blocking(move || {
-            let log = GameLog::create(&id, &log_title, &mut command, proton_log, start);
-            (log, command)
-        })
-        .await;
-        let Ok((created, logged)) = created else {
-            toast(adw::Toast::new(&could_not_start(&title)));
-            return;
-        };
-        command = logged;
-        match created {
-            Ok(created) => log = Some(created),
-            Err(error) => {
-                glib::g_warning!("pindu", "Could not start a log of “{title}”: {error}");
+    let (log_id, log_title) = (id.clone(), title.clone());
+    let created = gio::spawn_blocking(move || {
+        let log = LaunchLog::create(&log_id, &log_title, &mut command, proton_log, start);
+        (log, command)
+    })
+    .await;
+    let Ok((created, logged)) = created else {
+        outcome_service::not_started(app, &id, route, build);
+        toast(adw::Toast::new(&could_not_start(&title)));
+        return;
+    };
+    command = logged;
+    match created {
+        Ok(created) => log = Some(created),
+        Err(error) => {
+            glib::g_warning!("pindu", "Could not start a log of “{title}”: {error}");
+            if start.keeps_log() {
                 toast(adw::Toast::new(&log_service::could_not_keep(&title)));
             }
         }
     }
+    let log_name = log.as_ref().and_then(LaunchLog::name);
+    let recording = outcome_service::begin(app, &id, route, build, log_name).await;
     let toast = Rc::new(toast);
     let snapshot = match &program {
         Program::Windows { managed_prefix, .. } => managed_prefix.clone(),
@@ -223,17 +248,16 @@ async fn play_command(
         started,
     )
     .await;
-    if let (Ran::Exited { clean: true }, Some((game, prefix))) = (ran, snapshot) {
+    let ending = match ran {
+        Ran::NotStarted => Ending::NotStarted,
+        Ran::Exited(ending) => ending,
+    };
+    recording.end(ending).await;
+    if let (Ending::Exited(0), Some((game, prefix))) = (ending, snapshot) {
         save_service::snapshot_after_exit(&game, prefix, move |message| toast(message));
     }
     if let Some(log) = log {
-        match gio::spawn_blocking(move || log.finish()).await {
-            Ok(Ok(())) => {}
-            Ok(Err(error)) => {
-                glib::g_warning!("pindu", "Could not add Proton's log of “{title}”: {error}");
-            }
-            Err(_) => glib::g_warning!("pindu", "Could not add Proton's log of “{title}”"),
-        }
+        outcome_service::finish(log, &id).await;
     }
 }
 
@@ -441,26 +465,28 @@ fn explain_missing_umu(app: &gtk::Application, window: Option<&gtk::Window>, tit
 }
 
 /// Runs a program through umu as our child and follows its log until umu exits, keeping
-/// umu's output in `log` when there is one. The Steam Linux Runtime setup shows in a
-/// dialog; `started` gets umu once it reports the program starting. Returns how it ended;
-/// when it did not start, the dialog or a toast says so.
+/// umu's output in `log` when there is one: a short log reads umu's output and errors
+/// together, a full one has umu write its output there and reads its errors. The Steam
+/// Linux Runtime setup shows in a dialog; `started` gets umu once it reports the program
+/// starting. Returns how it ended; when it did not start, the dialog or a toast says so.
 async fn run(
     app: &gtk::Application,
     window: Option<gtk::Window>,
     title: &str,
     command: &Command,
-    mut game_log: Option<&mut GameLog>,
+    mut game_log: Option<&mut LaunchLog>,
     toast: &dyn Fn(adw::Toast),
     started: impl FnOnce(&gio::Subprocess),
 ) -> Ran {
-    let output = match game_log.as_deref().map(GameLog::output).transpose() {
-        Ok(output) => output,
+    let merged = game_log.as_deref().is_some_and(LaunchLog::reads_pipe);
+    let output = match game_log.as_deref().map(LaunchLog::output).transpose() {
+        Ok(output) => output.flatten(),
         Err(error) => {
             glib::g_warning!("pindu", "Could not open the log of “{title}”: {error}");
             None
         }
     };
-    let child = match spawn(command, output) {
+    let child = match spawn(command, output, merged) {
         Ok(child) => child,
         Err(error) => {
             glib::g_warning!("pindu", "Could not start {:?}: {error}", command.argv);
@@ -470,7 +496,12 @@ async fn run(
     };
     let setup = Setup::new(app.clone(), window, title.to_owned(), child.clone());
     let mut started = Some(started);
-    let log = gio::DataInputStream::new(&child.stderr_pipe().expect("stderr is piped"));
+    let pipe = if merged {
+        child.stdout_pipe()
+    } else {
+        child.stderr_pipe()
+    };
+    let log = gio::DataInputStream::new(&pipe.expect("umu's log is piped"));
     loop {
         let line = match log.read_line_future(glib::Priority::DEFAULT).await {
             Ok(Some(line)) => String::from_utf8_lossy(&line).into_owned(),
@@ -502,9 +533,7 @@ async fn run(
         glib::g_warning!("pindu", "Lost track of “{title}”: {error}");
     }
     if started.is_none() {
-        return Ran::Exited {
-            clean: exited.is_ok() && child.is_successful(),
-        };
+        return Ran::Exited(outcome_service::ending(&child, exited));
     }
     if !setup.failed_offline() {
         if setup.is_shown() {
@@ -516,10 +545,20 @@ async fn run(
     Ran::NotStarted
 }
 
-/// Runs the command inside the sandbox, with its log piped to us, and its output written
-/// to `output` when given.
-fn spawn(command: &Command, output: Option<File>) -> Result<gio::Subprocess, glib::Error> {
-    let launcher = gio::SubprocessLauncher::new(gio::SubprocessFlags::STDERR_PIPE);
+/// Runs the command inside the sandbox, with its log piped to us: its errors, and its
+/// output too when `merged`, else written to `output` when given.
+fn spawn(
+    command: &Command,
+    output: Option<File>,
+    merged: bool,
+) -> Result<gio::Subprocess, glib::Error> {
+    let launcher = if merged {
+        gio::SubprocessLauncher::new(
+            gio::SubprocessFlags::STDOUT_PIPE | gio::SubprocessFlags::STDERR_MERGE,
+        )
+    } else {
+        gio::SubprocessLauncher::new(gio::SubprocessFlags::STDERR_PIPE)
+    };
     if let Some(output) = output {
         launcher.take_stdout_fd(Some(output.into()));
     }

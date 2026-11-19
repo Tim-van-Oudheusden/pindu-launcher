@@ -34,7 +34,7 @@ In this order, local data first:
    (Any Genre, then each genre of the library); fullscreen Quick Access's Filters has a **Never Played** switch and a
    **Genre** list with a check on the one chosen, reached with the D-pad like every row there. `pindu_core::library`
    matches them (`Filters::never_played`, `Filters::genre`) and lists the genres to offer (`genres`); saved filters
-   keep both in `saved_filters` (migration 0009), and backups carry them as `never_played` and `genre` beside the other
+   keep both in `saved_filters` (migration 0010), and backups carry them as `never_played` and `genre` beside the other
    toggles.
 
    Backups (#600) carry each saved filter as a collection entry with no games and a `filter` beside it: its view,
@@ -53,8 +53,9 @@ In this order, local data first:
    #520 says a console needs it), and that value survives syncs and refreshes.
 
    As built (#526): `game_metadata` (migration 0008) holds one row per game, field (`developer`, `genres`,
-   `description`) and origin (`source`, `provider`, `user`) with the value and when that origin last changed it. The
-   migration moved the `games` columns of those names into source rows and dropped the columns, so nothing reads a
+   `description`, and since #534 `deck-compatibility`, Steam's Steam Deck rating) and origin (`source`, `provider`,
+   `user`) with the value and when that origin last changed it. The migration moved the `games` columns of the first
+   three names into source rows and dropped the columns, so nothing reads a
    stale copy. `pindu_core::metadata` resolves the rows (`shown` picks one field's winning value with its origin and
    time, `resolve` all of them), and the store hands every `Game` out with resolved `developer`, `genres` and
    `description`, so both shells and the filters show the winning value without knowing about origins. Writes
@@ -65,7 +66,8 @@ In this order, local data first:
    whether it joins this table.
 
    Backups (#619) carry the user's and providers' values in a `metadata` list, each with the game's per-source ID, its
-   field, origin, value (genres as a list) and time; a source's values are left out, as the next sync writes them. A
+   field, origin, value (genres as a list, a Steam Deck rating as its object) and time; a source's values are left out,
+   as the next sync writes them. A
    restore adds a value only where that origin has none for the field in this library, keeps the time it was set and
    counts it, so it never overwrites a value already there; a value for a game the library lacks is skipped and the
    game counted as missing. This extends backup format 2 (#509), unreleased until then, so format 1 and 2 backups

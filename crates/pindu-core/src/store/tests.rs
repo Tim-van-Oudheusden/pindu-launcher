@@ -986,6 +986,7 @@ fn metadata_values_keep_their_origin_and_the_time_they_last_changed() {
         developer: Some("Valve".into()),
         genres: vec!["Strategy".into(), "MOBA".into()],
         description: Some("Every day".into()),
+        deck_compatibility: None,
     };
     store
         .set_metadata(&game.id, MetadataOrigin::Source, &first, 10)
