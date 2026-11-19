@@ -35,6 +35,7 @@ use crate::system_update_service::SystemUpdateService;
 use crate::task_service::TaskService;
 use crate::watch_service::WatchService;
 use crate::window::PinduWindow;
+use pindu_core::accessibility::{LEGACY_LARGE_TEXT_KEY, TEXT_SIZE_KEY, migrated_text_size};
 use pindu_core::backup::ImportSummary;
 use pindu_core::gamescope::session::{Session, has_os_session_select, runs_as_own_session};
 use pindu_core::keys;
@@ -166,6 +167,8 @@ mod imp {
     impl ApplicationImpl for PinduApplication {
         fn startup(&self) {
             self.parent_startup();
+            // Before any window reads the text size.
+            super::carry_over_large_text(&gio::Settings::new(APP_ID));
             let library = LibraryService::new();
             self.sync_service.connect_finished(glib::clone!(
                 #[weak(rename_to = app)]
@@ -996,6 +999,20 @@ impl PinduApplication {
 impl Default for PinduApplication {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Carries the former Larger Text setting over to Text Size once, so an install that had
+/// it on keeps the size it gave, and turns the former setting off.
+fn carry_over_large_text(settings: &gio::Settings) {
+    let large_text = settings.boolean(LEGACY_LARGE_TEXT_KEY);
+    let chosen = settings.user_value(TEXT_SIZE_KEY).is_some();
+    if let Some(size) = migrated_text_size(large_text, chosen) {
+        // Best effort: a read-only settings backend keeps the default size.
+        let _ = settings.set_string(TEXT_SIZE_KEY, size.setting());
+    }
+    if large_text {
+        settings.reset(LEGACY_LARGE_TEXT_KEY);
     }
 }
 

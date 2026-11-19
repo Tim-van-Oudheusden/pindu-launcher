@@ -232,7 +232,9 @@ Guide + A never also opens the menu drawer.
 - **Accessibility:**
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
-  - **Larger Text:** fullscreen text about a quarter larger.
+  - **Text Size:** fullscreen text at its default size or Large, Larger or Largest, each step about a quarter of
+    the default larger. Preferences has the same choice; an install that had the former Larger Text on starts at
+    Large.
   - **Hold to Confirm** (off by default): Power Off, Restart, Forget and Stop then need the controller's confirm button
     held down for a second. A popover over the entry fills as you hold, and letting go early or pressing another
     button does nothing; the hint bar says **Hold to Confirm** on them. The keyboard and the pointer still act at once.

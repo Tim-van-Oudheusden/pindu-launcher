@@ -36,6 +36,7 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib::subclass::Signal;
 use gtk::{gio, glib};
+use pindu_core::accessibility::TEXT_SIZE_KEY;
 use pindu_core::gamepad::Intent;
 use pindu_core::gamescope::prompts::{PromptHost, prompt_host};
 use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
@@ -159,7 +160,7 @@ mod imp {
         #[template_child]
         pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
-        pub large_text_row: TemplateChild<adw::SwitchRow>,
+        pub text_sizes: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub hold_to_confirm_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
@@ -358,6 +359,7 @@ impl PinduQuickAccess {
             &imp.proton_builds,
         ));
         self.add_level_actions(actions);
+        actions.add_action(&self.settings().create_action(TEXT_SIZE_KEY));
         self.setup_designs(application, actions);
         self.setup_status(application);
         self.setup_playing_cards(application);
@@ -751,6 +753,7 @@ impl PinduQuickAccess {
             imp.sizes.get(),
             imp.switches.get(),
             imp.accessibility.get(),
+            imp.text_sizes.get(),
             imp.artwork.get(),
             imp.filters.get(),
             imp.clear_filters.get(),
@@ -787,8 +790,9 @@ impl PinduQuickAccess {
     }
 
     /// Settings: cover size, navigation sounds and their volume, exiting after a launch,
-    /// Reduce Motion and Larger Text, the same settings Preferences changes, applied as
-    /// they change. Design's My Stylesheet is bound to its setting too.
+    /// Reduce Motion and Hold to Confirm, the same settings Preferences changes, applied as
+    /// they change. Text Size chooses through its setting's action. Design's My Stylesheet
+    /// is bound to its setting too.
     fn setup_settings(&self) {
         let imp = self.imp();
         let settings = self.settings();
@@ -805,9 +809,6 @@ impl PinduQuickAccess {
                 &*imp.reduce_motion_row,
                 "active",
             )
-            .build();
-        settings
-            .bind("fullscreen-large-text", &*imp.large_text_row, "active")
             .build();
         settings
             .bind(HOLD_TO_CONFIRM_KEY, &*imp.hold_to_confirm_row, "active")

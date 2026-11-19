@@ -222,7 +222,7 @@ impl PinduWindow {
         self.hide_sidebar_in_fullscreen();
         self.update_top_bars();
         self.update_fullscreen_top_bar();
-        // Reduce Motion and Larger Text are fullscreen mode's; this also updates Home's
+        // Reduce Motion and Text Size are fullscreen mode's; this also updates Home's
         // background.
         self.update_accessibility();
         if let Some(action) = self
