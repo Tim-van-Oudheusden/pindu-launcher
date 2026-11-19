@@ -680,6 +680,26 @@ template $PinduQuickAccess: Box {
                 }
               };
             }
+
+            // Fullscreen mode's Add Game, a dialog over the main window.
+            ListBoxRow add_game_row {
+              action-name: "win.add-game-fullscreen";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "applications-games-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Add a Game");
+                  xalign: 0;
+                  hexpand: true;
+                }
+              };
+            }
           }
         };
       };
