@@ -21,4 +21,9 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   `xdotool` on its `DISPLAY`, a uinput pad (python-evdev) and `gamescopectl screenshot`. Arrow keys are not intents
   in fullscreen mode (`keys::fullscreen_intent` leaves them to GTK): only a controller reaches `Window::navigate`.
   GTK measures an ellipsizing label with `letter-spacing` too narrow (`widgets/spaced_label.rs`), and a wrapping
-  label asked for its width at a fixed height answers with one long line (`widgets/tile_frame.rs`).
+  label asked for its width at a fixed height answers with one long line (`widgets/tile_frame.rs`). A scrolled
+  list's adjustment emits `changed` only when its size changes: rows rebuilt to the height they had say nothing,
+  so `HomePage::settle_shelves` is also called after a rebuild and on map, and waits a frame for the layout.
+- After review on #686: the Shelves layout's Jump Back In cards show the desktop row's art (`window::show_jump_art`:
+  banner or cover cropped to fill, icon when there is neither), and switching to Shelves a second time no longer
+  leaves the cards grey until a key press (the `changed` gotcha above).

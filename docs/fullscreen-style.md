@@ -212,10 +212,11 @@ logo or title and the details at the top, and under them `.home-shelves`, a list
 row, `.home-shelf`, for each section, of its first 20 games and then **See All**, which opens the library
 at that section, and a last row with the Library tile. Left and Right move along a row and stop at its
 ends; Up and Down change row, to the card that row last had focused, and the row with focus sits at the
-top of the list. Recently Played's row is named Jump Back In and holds wide cards 130 pixels tall; the
-other rows take `home-tile` and `home-tile-size`. Each row's cards sit in a `.home-carousel` of its own, so
-rules for `.home-carousel > button` style them too; scope a rule with `.home-shelf` or `.home-carousel`'s
-`.home-tile-*` class to tell the rows apart.
+top of the list. Recently Played's row is named Jump Back In and holds wide cards 130 pixels tall, with the
+art the desktop window's Jump Back In row shows: the banner, else the cover, cropped to fill the card, or
+the icon when the game has neither. The other rows take `home-tile` and `home-tile-size`. Each row's cards
+sit in a `.home-carousel` of its own, so rules for `.home-carousel > button` style them too; scope a rule
+with `.home-shelf` or `.home-carousel`'s `.home-tile-*` class to tell the rows apart.
 
 A design with `"home-background-choice": true` offers **Quick Access → Design → Background**, which
 switches between **Red Ribbons** (the default) and **Blue Station**; Lobby is the shipped one that does.

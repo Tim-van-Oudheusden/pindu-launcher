@@ -39,7 +39,7 @@ use crate::game_page::{date, playtime};
 use crate::models::GameObject;
 use crate::sources::{source_icon, source_name};
 use crate::widgets::{CoverArt, SpacedLabel, TileFrame, textures};
-use crate::window::jump_card_frame;
+use crate::window::{jump_card_frame, show_jump_art};
 
 /// A `.detail` item of Home's details row: an icon and the value, with what it is as its
 /// tooltip and description. The wording is the game page's.
@@ -561,6 +561,13 @@ mod imp {
             // The rows got their size, or the list a new one: the row with focus goes
             // back to the top, and the rows that came near load their art.
             shelves.connect_changed(glib::clone!(
+                #[weak]
+                page,
+                move |_| page.settle_shelves(true)
+            ));
+            // The list is shown again with rows built while it was not, which have no
+            // place until now. Its size may be what it was, and then it says nothing.
+            self.shelves_scroller.connect_map(glib::clone!(
                 #[weak]
                 page,
                 move |_| page.settle_shelves(true)
@@ -1408,6 +1415,9 @@ impl HomePage {
             imp.shelves.remove(&gone.row);
         }
         imp.shelf_rows.replace(rows);
+        // The new rows load their art once they have their place; the list itself says
+        // nothing when they come to the height the old ones had.
+        self.settle_shelves(true);
         if had_focus {
             // The focused card may have been rebuilt: focus what stands for it now.
             self.focus_remembered();
@@ -1546,8 +1556,10 @@ impl HomePage {
 
     /// Queues what the Shelves layout does once its rows have their place: the rows near
     /// the part of the list that shows load their art, and with `scroll` the row that
-    /// last had focus goes back to the top. Idle, as the list says it changed before its
-    /// rows are placed.
+    /// last had focus goes back to the top. It waits for the frame after the next
+    /// layout: rows that were only just built have no place before it, and the list
+    /// says it changed before placing them, or says nothing when rows are rebuilt to
+    /// the height they had.
     fn settle_shelves(&self, scroll: bool) {
         if !self.shelves() {
             return;
@@ -1558,14 +1570,31 @@ impl HomePage {
             imp.shelves_settle.set(Some(scroll || scroll_queued));
             return;
         }
-        glib::idle_add_local_once(glib::clone!(
+        let frames = Cell::new(0);
+        imp.shelves.add_tick_callback(glib::clone!(
             #[weak(rename_to = page)]
             self,
-            move || {
-                if page.imp().shelves_settle.take() == Some(true) {
+            #[upgrade_or]
+            glib::ControlFlow::Break,
+            move |_, _| {
+                let imp = page.imp();
+                frames.set(frames.get() + 1);
+                // A frame's tick comes before its layout: the first one sees the rows as
+                // they were.
+                let placed = frames.get() > 1
+                    && imp
+                        .shelf_rows
+                        .borrow()
+                        .iter()
+                        .all(|shelf| shelf.row.height() > 0);
+                if !placed && frames.get() < PLACE_FRAMES {
+                    return glib::ControlFlow::Continue;
+                }
+                if imp.shelves_settle.take() == Some(true) {
                     page.scroll_to_shelf();
                 }
                 page.load_shelf_art();
+                glib::ControlFlow::Break
             }
         ));
     }
@@ -1591,9 +1620,15 @@ impl HomePage {
             let top = f64::from(bounds.y());
             let bottom = top + f64::from(bounds.height());
             if bottom > top && top < near.end && bottom > near.start {
+                // Jump Back In's cards show what the desktop's Jump Back In row shows.
+                let jump = shelf.id == Some(SectionId::RecentlyPlayed);
                 for (picture, game) in shelf.pending.take() {
-                    let art = home::card_art(shelf.shape, &game.entry().art);
-                    show_card_art(&picture, art, shelf.size, scale);
+                    if jump {
+                        show_jump_art(&picture, &game, home::art_pixels(shelf.size, scale));
+                    } else {
+                        let art = home::card_art(shelf.shape, &game.entry().art);
+                        show_card_art(&picture, art, shelf.size, scale);
+                    }
                 }
             }
         }
