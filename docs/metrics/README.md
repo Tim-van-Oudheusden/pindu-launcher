@@ -25,6 +25,8 @@ opening a pull request.
 | [Manifest parity](#manifest-parity) | Release manifest grants exactly the development manifest's permissions and modules | `manifests` Meson test (`build-aux/check-manifests.sh`) | Every PR and push | `Rust and Meson checks` |
 | [Tooling tests](#tooling-tests) | The version, manifest and release-notes scripts catch what they are meant to catch | `tooling` Meson suite (`tests/tooling/`) | Every PR and push | `Rust and Meson checks`; inside both Flatpak builds |
 | [Minimum Rust version](#minimum-rust-version) | The workspace compiles with `Cargo.toml`'s `rust-version` | `cargo check` with that toolchain in `ci.yml` (`msrv`) | Every PR and push | `Minimum supported Rust version` |
+| [Coverage floors](#coverage-floors) | `pindu-core`'s line, region and function coverage stays at or above the floors in `.github/auto-qa-tuning.json` | `cargo llvm-cov` and `scripts/coverage-check.sh` in `coverage-gate.yml` (`coverage`) | Every PR and push to `main` | `Unit-test coverage floors`; `coverage-report` artifact |
+| [Mutants in changed core code](#mutants-in-changed-core-code) | The tests catch a mutation of each `pindu-core` line a pull request changes | `cargo mutants --in-diff` in `coverage-gate.yml` (`mutants`) | Every PR | `Mutants in changed pindu-core code`; `mutants-report` artifact |
 | [Library scale](#library-scale) | Time the core takes to load, sort, filter and search 10,000 games with artwork paths | `library_bench` example of `pindu-core` | By hand, when library loading, sorting, filtering or search changes | [`library-scale.md`](library-scale.md) |
 | [UI smoke test](#ui-smoke-test) | The installed app starts and stays up without a panic or GLib critical | `ui-smoke` Meson test (`tests/e2e/ui-smoke.sh`) | The development Flatpak on every PR; every Flatpak build and native package on every push to `main`, nightly and on every tag | `Flatpak build, …` and `Native package install and UI smoke test` checks |
 | [Flatpak build and lint](#flatpak-build-and-lint) | Both manifests build, test and pass `flatpak-builder-lint` | `ci.yml` (`flatpak`: development, x86_64), `packaging.yml` (`flatpak`: release, and both on aarch64), `release.yml` (`flatpak`) | Development on every PR (skipped when only docs or translations change); all on every push to `main`, nightly and every release tag | `Flatpak build, UI smoke test and lint (…)`; bundle artifacts |
@@ -143,6 +145,46 @@ or library feature newer than the floor: rewrite it, or have the maintainer rais
 msrv=$(sed -n 's/^rust-version = "\([^"]*\)"$/\1/p' Cargo.toml)
 rustup toolchain install "$msrv" --profile minimal
 cargo "+$msrv" check --workspace --all-targets --locked
+```
+
+## Coverage floors
+
+`cargo-llvm-cov` 0.9.1 measures the unit and fixture tests' line, region and function coverage of `pindu-core`, and
+`scripts/coverage-check.sh` compares it with the floors under `floors.core` in `.github/auto-qa-tuning.json`, in
+percent. Branch coverage would need a nightly compiler, so it is not measured. `pindu-ui` is GTK code and has no floor;
+the [UI smoke test](#ui-smoke-test) covers it. A failure means new or changed core code has no test that runs it: add
+one. The weekly `Quality report` workflow runs `scripts/auto-qa-tuner.sh`, which proposes floors raised to the observed
+coverage minus the config's `margin` and never lowers one; the maintainer commits the tuned file through a pull
+request. `sh scripts/coverage-check.test.sh` tests the floor check.
+
+CI runs this in the GNOME 51 SDK, whose Rust extension ships the LLVM tools. With rustup, add them first; the check
+needs `jq`:
+
+```sh
+rustup component add llvm-tools-preview
+cargo install --locked cargo-llvm-cov --version 0.9.1
+mkdir -p _build
+cargo llvm-cov --package pindu-core --json --summary-only --output-path _build/coverage.json
+scripts/coverage-check.sh _build/coverage.json .github/auto-qa-tuning.json
+```
+
+## Mutants in changed core code
+
+A coverage floor cannot fail on one new branch that no test asserts (#346, #450, #485). This check runs `cargo-mutants`
+27.1.0 on only the `pindu-core` lines the pull request changes: each mutant, such as a function body replaced by a
+default value or a changed operator, must make a test fail. A mutant that survives on one of those lines fails the
+check; survivors already on `main` block nothing, and a pull request that changes no `pindu-core` code passes at once.
+A failure means no test catches that change to the code: add a test that fails for the listed mutant
+([Testing](../../AGENTS.md#testing)). The `mutants-report` artifact holds `mutants.out/`, whose `missed.txt` lists the
+survivors. It runs on pull requests only; changes to test code alone produce no mutants.
+
+From the branch, against an up-to-date `origin/main`:
+
+```sh
+cargo install --locked cargo-mutants --version 27.1.0
+mkdir -p _build
+git diff origin/main...HEAD -- crates/pindu-core > _build/pr.diff
+cargo mutants --package pindu-core --in-diff _build/pr.diff --output _build
 ```
 
 ## Library scale
