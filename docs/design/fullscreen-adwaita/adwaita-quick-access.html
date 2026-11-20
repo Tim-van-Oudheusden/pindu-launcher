@@ -29,9 +29,9 @@ document.getElementById('window').innerHTML = quiet(home(false)) + hints([['A', 
   <div class="quick-access abs leftout" data-a=".quick-access (16 px from the edges, radius 24)">
     ${status}
     <div class="playing-card" data-a=".playing-card">
-      <img src="art/lanternkeep-sq.jpg" alt="">
-      <span class="text"><span class="name">Lanternkeep</span><span class="session-time">42 minutes</span></span>
-      <span class="pill">Return</span><span class="pill">Stop</span>
+      <span class="top"><span class="heading">Playing Now</span><span class="session-time">0:42</span></span>
+      <span class="name">Lanternkeep</span>
+      <span class="buttons"><span class="pill suggested-action">Return</span><span class="pill destructive-action">Stop</span></span>
     </div>
     <div class="panel-title">Quick Access</div>
     <div class="navigation-sidebar">${rows.map(row).join('')}</div>
