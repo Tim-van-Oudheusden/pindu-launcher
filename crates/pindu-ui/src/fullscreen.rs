@@ -13,12 +13,12 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::ngettext;
 use gtk::{gdk, gio, glib};
-use pindu_core::home::{
-    BACKGROUND_KEY, BLUR_KEY, Background, BackgroundContext, DIM_KEY, Strength,
-};
+use pindu_core::home::{self, BACKGROUND_KEY, BLUR_KEY, BackgroundContext, DIM_KEY, Strength};
 use pindu_core::keys::{self, Escape, Modifiers};
+use pindu_core::library::View;
+use pindu_core::sections::SectionId;
 use pindu_core::sound::{media_volume, tone_wav};
-use pindu_core::themes::ThemeLayout;
+use pindu_core::themes::{HomeLayout, ThemeLayout};
 
 use crate::application::PinduApplication;
 use crate::game_page::GamePage;
@@ -175,14 +175,29 @@ impl PinduWindow {
         self.show_fullscreen_mode();
     }
 
-    /// Follows the layout of the fullscreen design in force.
+    /// Follows the layout of the fullscreen design in force: Home's own, the top bar, and
+    /// the background, which only a design that offers the choice lets the user pick.
     fn apply_layout(&self, layout: ThemeLayout) {
         self.imp().home_page.set_layout(layout);
         self.update_fullscreen_top_bar();
+        self.update_background_choice();
+        self.update_home_background();
     }
 
+    /// The layout of the fullscreen design in force.
+    fn layout_in_force(&self) -> ThemeLayout {
+        self.application()
+            .and_downcast::<PinduApplication>()
+            .map(|application| application.style_service().layout())
+            .unwrap_or_default()
+    }
+
+    /// Shows the background in force on Home (`home::background_in_force`): the one the
+    /// setting holds where the design offers the choice, else the default. The setting
+    /// keeps its value either way.
     fn update_background_choice(&self) {
-        let choice = Background::from_setting(&self.settings().string(BACKGROUND_KEY));
+        let offered = self.layout_in_force().home_background_choice;
+        let choice = home::background_in_force(offered, &self.settings().string(BACKGROUND_KEY));
         self.imp().home_page.set_background(choice);
     }
 
@@ -267,8 +282,9 @@ impl PinduWindow {
 
     /// Home: its first screen follows the sections (`pindu_core::sections`), a section
     /// tile opens its games (`win.home-section` with the section's name), the Library
-    /// tile goes to the library (`win.show-library`) and the Steam Big Picture tile opens
-    /// Big Picture (`big_picture`).
+    /// tile goes to the library (`win.show-library`), the Steam Big Picture tile opens
+    /// Big Picture (`big_picture`), and See All in a row of the Shelves layout goes to the
+    /// library at that section's view (`win.home-section-library` with its name).
     pub(crate) fn setup_home(&self) {
         let show_library = gio::ActionEntry::builder("show-library")
             .activate(|window: &Self, _, _| window.show_library())
@@ -281,7 +297,18 @@ impl PinduWindow {
                 }
             })
             .build();
-        self.add_action_entries([show_library, show_section]);
+        let show_section_library = gio::ActionEntry::builder("home-section-library")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(|window: &Self, _, name| {
+                if let Some(section) = name
+                    .and_then(|name| name.str())
+                    .and_then(SectionId::from_name)
+                {
+                    window.show_section_library(section);
+                }
+            })
+            .build();
+        self.add_action_entries([show_library, show_section, show_section_library]);
         // In fullscreen mode the library opens on the cover the controller was last on,
         // rather than on the widget that had focus when the page was last left, unless
         // Y brought it up to search.
@@ -337,7 +364,8 @@ impl PinduWindow {
     /// Tells Home where the window is, for its background (`home::background_playback`):
     /// fullscreen, Home shown, a game we started running, the window hidden or suspended
     /// (minimized, or covered whole), Pindu moving less (`Accessibility::reduces_motion`),
-    /// the system asking for high contrast.
+    /// the system asking for high contrast, and the Shelves layout, which never shows
+    /// it. Home itself adds the art that covers it.
     pub(crate) fn update_home_background(&self) {
         let imp = self.imp();
         let game_running = self
@@ -352,13 +380,14 @@ impl PinduWindow {
             hidden: !self.is_visible() || self.is_suspended(),
             reduced_motion: self.has_css_class(REDUCED_MOTION_CLASS),
             high_contrast: adw::StyleManager::default().is_high_contrast(),
+            covered: self.layout_in_force().home == HomeLayout::Shelves,
         });
     }
 
     fn update_home(&self) {
-        self.imp()
-            .home_page
-            .set_sections(self.library().home_sections());
+        let home = &self.imp().home_page;
+        home.set_library_count(self.library().counts().get(View::All));
+        home.set_sections(self.library().home_sections());
     }
 
     /// Shows Home's first screen: back down to Home, from a section's games too.
@@ -379,6 +408,16 @@ impl PinduWindow {
         if !imp.home_page.show_section(name) {
             glib::g_debug!("pindu", "No Home section {name}");
         }
+    }
+
+    /// Shows the library at the view that holds all of Home's `section`, on the cover
+    /// the controller was last on there: See All in the Shelves layout.
+    fn show_section_library(&self, section: SectionId) {
+        if !self.is_fullscreen() {
+            return;
+        }
+        self.set_shown_view(section.view());
+        self.show_library();
     }
 
     /// Whether Home shows, on its second screen: a section's games, which B leaves.

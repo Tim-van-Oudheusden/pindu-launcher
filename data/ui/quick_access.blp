@@ -865,11 +865,14 @@ template $PinduQuickAccess: Box {
             ]
           }
 
-          // Radio rows on the settings' actions, as Settings has its sizes.
-          Label {
+          // Radio rows on the settings' actions, as Settings has its sizes. The
+          // Background heading and its list show only while the design in force
+          // offers the choice (`home-background-choice`).
+          Label background_title {
             label: _("Background");
             xalign: 0;
             margin-top: 6;
+            visible: false;
 
             styles [
               "heading",
@@ -878,6 +881,7 @@ template $PinduQuickAccess: Box {
 
           ListBox backgrounds {
             selection-mode: none;
+            visible: false;
 
             styles [
               "boxed-list",

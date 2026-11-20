@@ -60,6 +60,16 @@ pub struct ThemeLayout {
     /// `"home-tile-size"`: the shorter side of Home's cards in pixels, within
     /// `HOME_TILE_SIZES`; `None` keeps each shape's own size.
     pub home_tile_size: Option<i32>,
+    /// `"home-start"`: what the first screen's row starts with.
+    pub home_start: HomeStart,
+    /// `"home-section-tile"`: what a section's tile shows.
+    pub home_section_tile: SectionTile,
+    /// `"home-section-preview"`: a strip of the focused section's first covers under the
+    /// details row, on the first screen.
+    pub home_section_preview: bool,
+    /// `"home-background-choice"`: whether the design offers Quick Access's choice of
+    /// Home's animated background; without it Home shows the default one.
+    pub home_background_choice: bool,
 }
 
 /// The sizes, in pixels, a theme can give the shorter side of Home's cards.
@@ -82,6 +92,14 @@ impl ThemeLayout {
             home_tile_size: value("home-tile-size").and_then(Json::as_f64).map(|size| {
                 (size.round() as i32).clamp(*HOME_TILE_SIZES.start(), *HOME_TILE_SIZES.end())
             }),
+            home_start: text("home-start")
+                .and_then(HomeStart::from_name)
+                .unwrap_or_default(),
+            home_section_tile: text("home-section-tile")
+                .and_then(SectionTile::from_name)
+                .unwrap_or_default(),
+            home_section_preview: flag("home-section-preview"),
+            home_background_choice: flag("home-background-choice"),
         }
     }
 }
@@ -124,22 +142,80 @@ pub enum HomeLayout {
     HeroBottom,
     /// The carousel near the top, with the logo or title under it at the left.
     RowTop,
+    /// One screen: the logo or title at the top, and under it every section as a row of
+    /// its games.
+    Shelves,
 }
 
 impl HomeLayout {
     /// Every layout, the default first.
-    pub const ALL: [Self; 2] = [Self::HeroBottom, Self::RowTop];
+    pub const ALL: [Self; 3] = [Self::HeroBottom, Self::RowTop, Self::Shelves];
 
     /// The layout's name in `theme.json`, also its CSS class's suffix.
     pub fn name(self) -> &'static str {
         match self {
             Self::HeroBottom => "hero-bottom",
             Self::RowTop => "row-top",
+            Self::Shelves => "shelves",
         }
     }
 
     fn from_name(name: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|layout| layout.name() == name)
+    }
+}
+
+/// What the row of fullscreen Home's first screen starts with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum HomeStart {
+    /// The sections, a tile each.
+    #[default]
+    Sections,
+    /// The Recently Played games as cards, then the other sections as tiles.
+    Games,
+}
+
+impl HomeStart {
+    /// Every start, the default first.
+    pub const ALL: [Self; 2] = [Self::Sections, Self::Games];
+
+    /// The start's name in `theme.json`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Sections => "sections",
+            Self::Games => "games",
+        }
+    }
+
+    fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|start| start.name() == name)
+    }
+}
+
+/// What a section's tile on fullscreen Home's first screen shows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SectionTile {
+    /// The section's art, `data/home/<name>.svg`, filling the tile.
+    #[default]
+    Art,
+    /// A glyph, the section's name and its number of games.
+    Label,
+}
+
+impl SectionTile {
+    /// Every kind of tile, the default first.
+    pub const ALL: [Self; 2] = [Self::Art, Self::Label];
+
+    /// The kind's name in `theme.json`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Art => "art",
+            Self::Label => "label",
+        }
+    }
+
+    fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|tile| tile.name() == name)
     }
 }
 
@@ -540,6 +616,104 @@ mod tests {
 
         assert_eq!(found.themes[0].layout.home, HomeLayout::RowTop);
         assert_eq!(found.themes[0].layout.home_tile, TileShape::Landscape);
+    }
+
+    fn layout_of(layout: &str) -> ThemeLayout {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(
+            user.path(),
+            "design",
+            &format!(r#"{{"contract": 1, "name": "Design", "layout": {layout}}}"#),
+        );
+        let found = discover(&[user.path()]);
+        assert!(found.skipped.is_empty(), "{:?}", found.skipped);
+        found.themes[0].layout
+    }
+
+    #[test]
+    fn a_theme_can_make_home_one_screen_of_shelves() {
+        assert_eq!(
+            layout_of(r#"{"home": "shelves"}"#).home,
+            HomeLayout::Shelves
+        );
+        assert_eq!(HomeLayout::Shelves.name(), "shelves");
+        assert_eq!(
+            HomeLayout::ALL,
+            [
+                HomeLayout::HeroBottom,
+                HomeLayout::RowTop,
+                HomeLayout::Shelves
+            ]
+        );
+        assert_eq!(
+            layout_of(r#"{"home": "rows"}"#).home,
+            HomeLayout::HeroBottom
+        );
+        assert_eq!(CONTRACT, 1);
+    }
+
+    #[test]
+    fn a_theme_can_start_home_with_the_recent_games() {
+        assert_eq!(
+            layout_of(r#"{"home-start": "games"}"#).home_start,
+            HomeStart::Games
+        );
+        assert_eq!(
+            layout_of(r#"{"home-start": "sections"}"#).home_start,
+            HomeStart::Sections
+        );
+        for odd in [
+            r#"{"home-start": "library"}"#,
+            r#"{"home-start": true}"#,
+            "{}",
+        ] {
+            assert_eq!(layout_of(odd).home_start, HomeStart::Sections, "{odd}");
+        }
+    }
+
+    #[test]
+    fn a_theme_can_label_its_section_tiles() {
+        assert_eq!(
+            layout_of(r#"{"home-section-tile": "label"}"#).home_section_tile,
+            SectionTile::Label
+        );
+        assert_eq!(
+            layout_of(r#"{"home-section-tile": "art"}"#).home_section_tile,
+            SectionTile::Art
+        );
+        for odd in [
+            r#"{"home-section-tile": "icon"}"#,
+            r#"{"home-section-tile": 1}"#,
+            "{}",
+        ] {
+            assert_eq!(layout_of(odd).home_section_tile, SectionTile::Art, "{odd}");
+        }
+    }
+
+    #[test]
+    fn a_theme_can_preview_the_focused_section() {
+        assert!(layout_of(r#"{"home-section-preview": true}"#).home_section_preview);
+        for off in [
+            r#"{"home-section-preview": false}"#,
+            r#"{"home-section-preview": "true"}"#,
+            "{}",
+        ] {
+            assert!(!layout_of(off).home_section_preview, "{off}");
+        }
+    }
+
+    #[test]
+    fn a_theme_can_offer_the_background_choice() {
+        assert!(layout_of(r#"{"home-background-choice": true}"#).home_background_choice);
+        for off in [
+            r#"{"home-background-choice": false}"#,
+            r#"{"home-background-choice": 1}"#,
+            "{}",
+        ] {
+            assert!(!layout_of(off).home_background_choice, "{off}");
+        }
+        // No design at all, Adwaita, does not offer it either.
+        assert!(!ThemeLayout::default().home_background_choice);
     }
 
     #[test]

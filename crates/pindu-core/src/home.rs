@@ -1,12 +1,15 @@
-//! Fullscreen Home's cards: their size for each tile shape a design can choose, the art
-//! each shows, and the details row of the focused game or section.
+//! Fullscreen Home: its cards' size for each tile shape a design can choose and the art
+//! each shows, the details row of the focused game or section, the first screen's row as
+//! a design starts it, the rows of the Shelves layout and the moves between them, the
+//! preview of the focused section, and what Home's animated background does.
 
 use std::path::PathBuf;
 
+use crate::gamepad::Direction;
 use crate::library::{ArtSet, HistoryGroup, history_group};
-use crate::model::{Game, Source, Timestamp};
-use crate::sections::Section;
-use crate::themes::TileShape;
+use crate::model::{Game, GameId, Source, Timestamp};
+use crate::sections::{Section, SectionId};
+use crate::themes::{HomeStart, ThemeLayout, TileShape};
 
 /// How far a design may scale a focused card (`transform: scale()`) before its art blurs:
 /// cards keep their size in code, as CSS can grow a widget but not shrink it, and their
@@ -111,6 +114,142 @@ pub fn section_details(section: &Section) -> Vec<Detail> {
     vec![Detail::Games(count)]
 }
 
+/// An item of the row on Home's first screen, before the Library tile.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RowItem {
+    /// A game's card.
+    Game(GameId),
+    /// The line between the game cards and the section tiles.
+    Divider,
+    /// A section's tile.
+    Section(SectionId),
+}
+
+/// The row of Home's first screen as a design starts it. With the sections: a tile for
+/// each of `sections`, in order. With the games: a card for each Recently Played game, a
+/// divider, then a tile for every other section; Recently Played itself gets no tile.
+pub fn first_screen_row(start: HomeStart, sections: &[Section]) -> Vec<RowItem> {
+    let tiles = |sections: &[Section]| -> Vec<RowItem> {
+        sections
+            .iter()
+            .filter(|section| {
+                start == HomeStart::Sections || section.id != SectionId::RecentlyPlayed
+            })
+            .map(|section| RowItem::Section(section.id))
+            .collect()
+    };
+    if start == HomeStart::Sections {
+        return tiles(sections);
+    }
+    let mut row: Vec<RowItem> = sections
+        .iter()
+        .filter(|section| section.id == SectionId::RecentlyPlayed)
+        .flat_map(|section| section.games.iter().cloned().map(RowItem::Game))
+        .collect();
+    let tiles = tiles(sections);
+    if !row.is_empty() && !tiles.is_empty() {
+        row.push(RowItem::Divider);
+    }
+    row.extend(tiles);
+    row
+}
+
+/// A row of the Shelves layout: a section with the games it shows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Shelf {
+    /// The section the row stands for.
+    pub id: SectionId,
+    /// The collection's name; `None` for the other sections, which the shell names.
+    pub title: Option<String>,
+    /// The games the row shows, in order.
+    pub games: Vec<GameId>,
+    /// How many games the section holds in all.
+    pub total: usize,
+}
+
+/// How many game cards a row of the Shelves layout holds at most; a section with more
+/// ends in See All.
+pub const SHELF_LIMIT: usize = 20;
+
+/// The rows of the Shelves layout: one for each of `sections`, in order, with its first
+/// `SHELF_LIMIT` games.
+pub fn shelves(sections: &[Section]) -> Vec<Shelf> {
+    sections
+        .iter()
+        .map(|section| Shelf {
+            id: section.id,
+            title: section.title.clone(),
+            games: section.games.iter().take(SHELF_LIMIT).cloned().collect(),
+            total: section.games.len(),
+        })
+        .collect()
+}
+
+/// The shape and size of the cards in the Shelves row of `section` under `layout`: wide
+/// cards 130 pixels tall for Recently Played, the design's tiles for every other row.
+pub fn shelf_shape(section: SectionId, layout: ThemeLayout) -> (TileShape, (i32, i32)) {
+    match section {
+        SectionId::RecentlyPlayed => (
+            TileShape::Landscape,
+            card_size(TileShape::Landscape, Some(130)),
+        ),
+        _ => (
+            layout.home_tile,
+            card_size(layout.home_tile, layout.home_tile_size),
+        ),
+    }
+}
+
+/// Where a move lands in the Shelves layout.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShelfStep {
+    /// On the item at this place in the same row.
+    Item(usize),
+    /// In this row, on the item that last had focus there.
+    Row(usize),
+    /// Nowhere: focus stays where it is.
+    Stay,
+    /// Out of the rows, upwards, to the top bar.
+    Leave,
+}
+
+/// Where `direction` leads from the item at `(row, item)` in the Shelves layout, whose
+/// rows hold `rows` items each: left and right move along the row and stop at its ends,
+/// down and up change row, down stops at the last row and up leaves from the first.
+pub fn shelf_step((row, item): (usize, usize), direction: Direction, rows: &[usize]) -> ShelfStep {
+    let length = rows.get(row).copied().unwrap_or(0);
+    match direction {
+        Direction::Left if item > 0 => ShelfStep::Item(item - 1),
+        Direction::Right if item + 1 < length => ShelfStep::Item(item + 1),
+        Direction::Left | Direction::Right => ShelfStep::Stay,
+        Direction::Down if row + 1 < rows.len() => ShelfStep::Row(row + 1),
+        Direction::Down => ShelfStep::Stay,
+        Direction::Up if row > 0 => ShelfStep::Row(row - 1),
+        Direction::Up => ShelfStep::Leave,
+    }
+}
+
+/// How many covers the preview of the focused section shows at most.
+pub const PREVIEW_SIZE: usize = 6;
+
+/// The preview of the focused section a design can show on the first screen.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Preview {
+    /// The games whose covers show, in order.
+    pub games: Vec<GameId>,
+    /// How many games the section holds beyond them.
+    pub more: usize,
+}
+
+/// The preview of `section`: its first `PREVIEW_SIZE` games and the number of the rest.
+pub fn preview(section: &Section) -> Preview {
+    let games: Vec<GameId> = section.games.iter().take(PREVIEW_SIZE).cloned().collect();
+    Preview {
+        more: section.games.len() - games.len(),
+        games,
+    }
+}
+
 /// What Home's animated background, behind its first screen, does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Playback {
@@ -141,24 +280,29 @@ pub struct BackgroundContext {
     pub reduced_motion: bool,
     /// The system asks for high contrast (`adw::StyleManager:high-contrast`).
     pub high_contrast: bool,
+    /// Art covers the background on the screen shown (the focused game's, or a section's
+    /// first game's), or the layout is Shelves, which never shows it.
+    pub covered: bool,
 }
 
 /// What Home's background does in `context`: it shows nothing under high contrast, holds
 /// its first frame outside fullscreen mode and under reduced motion, pauses behind a
-/// section's games, a running game or a hidden window, and plays behind the first screen.
+/// section's games, art that covers it, a running game or a hidden window, and plays
+/// behind the first screen.
 pub fn background_playback(context: BackgroundContext) -> Playback {
     if context.high_contrast {
         Playback::Hidden
     } else if !context.fullscreen || context.reduced_motion {
         Playback::FirstFrame
-    } else if !context.first_screen || context.game_running || context.hidden {
+    } else if !context.first_screen || context.covered || context.game_running || context.hidden {
         Playback::Pause
     } else {
         Playback::Play
     }
 }
 
-/// Home's fullscreen background choice, independent of the fullscreen design.
+/// Home's fullscreen background, which a design that offers the choice
+/// (`ThemeLayout::home_background_choice`) lets the user pick in Quick Access.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Background {
     /// Red ribbons on a dark background.
@@ -209,6 +353,17 @@ impl Background {
             Self::RedRibbons => red,
             Self::BlueStation => blue,
         }
+    }
+}
+
+/// The background Home shows when the `fullscreen-background` setting holds `setting`:
+/// the chosen one where the design in force offers the choice (`offered`), else the
+/// default, whatever the setting holds.
+pub fn background_in_force(offered: bool, setting: &str) -> Background {
+    if offered {
+        Background::from_setting(setting)
+    } else {
+        Background::default()
     }
 }
 
@@ -277,8 +432,7 @@ pub fn background_classes(blur: Strength, dim: Strength) -> Vec<&'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{GameId, LaunchKind};
-    use crate::sections::SectionId;
+    use crate::model::LaunchKind;
 
     const ON_FIRST_SCREEN: BackgroundContext = BackgroundContext {
         fullscreen: true,
@@ -287,6 +441,7 @@ mod tests {
         hidden: false,
         reduced_motion: false,
         high_contrast: false,
+        covered: false,
     };
 
     #[test]
@@ -633,5 +788,262 @@ mod tests {
         };
 
         assert_eq!(section_details(&section), [Detail::Games(3)]);
+    }
+
+    /// A section of `count` games, named `<section>-<n>`.
+    fn section(id: SectionId, count: usize) -> Section {
+        Section {
+            id,
+            title: None,
+            games: (0..count)
+                .map(|n| GameId::new(Source::Steam, &format!("{}-{n}", id.name())))
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn the_first_screen_s_row_is_a_tile_for_each_section() {
+        let sections = [
+            section(SectionId::RecentlyPlayed, 2),
+            section(SectionId::Favourites, 1),
+            section(SectionId::Source(Source::Steam), 3),
+        ];
+
+        let row = first_screen_row(HomeStart::Sections, &sections);
+
+        assert_eq!(
+            row,
+            [
+                RowItem::Section(SectionId::RecentlyPlayed),
+                RowItem::Section(SectionId::Favourites),
+                RowItem::Section(SectionId::Source(Source::Steam)),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_row_that_starts_with_games_shows_the_recent_ones_then_the_other_sections() {
+        let recent = section(SectionId::RecentlyPlayed, 2);
+        let sections = [
+            recent.clone(),
+            section(SectionId::Favourites, 1),
+            section(SectionId::Source(Source::Steam), 3),
+        ];
+
+        let row = first_screen_row(HomeStart::Games, &sections);
+
+        assert_eq!(
+            row,
+            [
+                RowItem::Game(recent.games[0].clone()),
+                RowItem::Game(recent.games[1].clone()),
+                RowItem::Divider,
+                RowItem::Section(SectionId::Favourites),
+                RowItem::Section(SectionId::Source(Source::Steam)),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_row_that_starts_with_games_is_the_tiles_alone_without_recent_games() {
+        let sections = [
+            section(SectionId::Favourites, 1),
+            section(SectionId::Installed, 4),
+        ];
+
+        let row = first_screen_row(HomeStart::Games, &sections);
+
+        assert_eq!(
+            row,
+            [
+                RowItem::Section(SectionId::Favourites),
+                RowItem::Section(SectionId::Installed),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_row_of_recent_games_alone_has_no_divider() {
+        let recent = section(SectionId::RecentlyPlayed, 1);
+
+        let row = first_screen_row(HomeStart::Games, std::slice::from_ref(&recent));
+
+        assert_eq!(row, [RowItem::Game(recent.games[0].clone())]);
+    }
+
+    #[test]
+    fn there_is_a_shelf_for_each_section_in_order() {
+        let favourites = section(SectionId::Favourites, 3);
+        let collection = Section {
+            title: Some("Co-op".to_owned()),
+            ..section(SectionId::Collection(4), 1)
+        };
+
+        let shelves = shelves(&[favourites.clone(), collection.clone()]);
+
+        assert_eq!(
+            shelves,
+            [
+                Shelf {
+                    id: SectionId::Favourites,
+                    title: None,
+                    games: favourites.games,
+                    total: 3,
+                },
+                Shelf {
+                    id: SectionId::Collection(4),
+                    title: Some("Co-op".to_owned()),
+                    games: collection.games,
+                    total: 1,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn a_shelf_shows_its_first_games_and_counts_them_all() {
+        let full = section(SectionId::Installed, SHELF_LIMIT);
+        let large = section(SectionId::Source(Source::Steam), SHELF_LIMIT + 5);
+
+        let shelves = shelves(&[full.clone(), large.clone()]);
+
+        assert_eq!(SHELF_LIMIT, 20);
+        assert_eq!(shelves[0].games, full.games);
+        assert_eq!(shelves[0].total, 20);
+        assert_eq!(shelves[1].games, large.games[..20]);
+        assert_eq!(shelves[1].total, 25);
+    }
+
+    #[test]
+    fn the_recently_played_shelf_is_landscape_and_the_others_take_the_design_s_shape() {
+        let layout = ThemeLayout {
+            home_tile: TileShape::Portrait,
+            home_tile_size: Some(132),
+            ..ThemeLayout::default()
+        };
+
+        assert_eq!(
+            shelf_shape(SectionId::RecentlyPlayed, layout),
+            (TileShape::Landscape, (277, 130))
+        );
+        for other in [
+            SectionId::Favourites,
+            SectionId::Source(Source::Lutris),
+            SectionId::Collection(1),
+        ] {
+            assert_eq!(
+                shelf_shape(other, layout),
+                (TileShape::Portrait, (132, 198)),
+                "{other:?}"
+            );
+        }
+        assert_eq!(
+            shelf_shape(SectionId::Installed, ThemeLayout::default()),
+            (TileShape::Landscape, (320, 150))
+        );
+    }
+
+    #[test]
+    fn a_preview_holds_a_section_s_first_six_games_and_counts_the_rest() {
+        assert_eq!(PREVIEW_SIZE, 6);
+        for (count, shown, more) in [(0, 0, 0), (4, 4, 0), (6, 6, 0), (12, 6, 6)] {
+            let section = section(SectionId::Favourites, count);
+
+            let preview = preview(&section);
+
+            assert_eq!(preview.games, section.games[..shown], "{count} games");
+            assert_eq!(preview.more, more, "{count} games");
+        }
+    }
+
+    #[test]
+    fn the_background_is_the_chosen_one_only_where_the_design_offers_the_choice() {
+        for setting in ["red-ribbons", "blue-station", "unknown", ""] {
+            assert_eq!(
+                background_in_force(false, setting),
+                Background::RedRibbons,
+                "{setting}"
+            );
+        }
+        assert_eq!(
+            background_in_force(true, "blue-station"),
+            Background::BlueStation
+        );
+        assert_eq!(
+            background_in_force(true, "red-ribbons"),
+            Background::RedRibbons
+        );
+    }
+
+    #[test]
+    fn the_background_pauses_while_art_covers_it() {
+        let covered = BackgroundContext {
+            covered: true,
+            ..ON_FIRST_SCREEN
+        };
+
+        assert_eq!(background_playback(covered), Playback::Pause);
+        // The rules before it still hold.
+        for (context, expected) in [
+            (
+                BackgroundContext {
+                    reduced_motion: true,
+                    ..covered
+                },
+                Playback::FirstFrame,
+            ),
+            (
+                BackgroundContext {
+                    fullscreen: false,
+                    ..covered
+                },
+                Playback::FirstFrame,
+            ),
+            (
+                BackgroundContext {
+                    high_contrast: true,
+                    ..covered
+                },
+                Playback::Hidden,
+            ),
+        ] {
+            assert_eq!(background_playback(context), expected, "{context:?}");
+        }
+    }
+
+    #[test]
+    fn left_and_right_move_along_a_shelf_and_stay_at_its_ends() {
+        // Three rows of 3, 1 and 2 items.
+        let rows = [3, 1, 2];
+
+        assert_eq!(
+            shelf_step((0, 0), Direction::Right, &rows),
+            ShelfStep::Item(1)
+        );
+        assert_eq!(
+            shelf_step((0, 2), Direction::Left, &rows),
+            ShelfStep::Item(1)
+        );
+        assert_eq!(shelf_step((0, 0), Direction::Left, &rows), ShelfStep::Stay);
+        assert_eq!(shelf_step((0, 2), Direction::Right, &rows), ShelfStep::Stay);
+        assert_eq!(shelf_step((1, 0), Direction::Right, &rows), ShelfStep::Stay);
+    }
+
+    #[test]
+    fn up_and_down_change_shelf_and_up_from_the_first_leaves_for_the_top_bar() {
+        let rows = [3, 1, 2];
+
+        assert_eq!(
+            shelf_step((0, 2), Direction::Down, &rows),
+            ShelfStep::Row(1)
+        );
+        assert_eq!(
+            shelf_step((1, 0), Direction::Down, &rows),
+            ShelfStep::Row(2)
+        );
+        assert_eq!(shelf_step((2, 1), Direction::Down, &rows), ShelfStep::Stay);
+        assert_eq!(shelf_step((2, 1), Direction::Up, &rows), ShelfStep::Row(1));
+        assert_eq!(shelf_step((1, 0), Direction::Up, &rows), ShelfStep::Row(0));
+        assert_eq!(shelf_step((0, 1), Direction::Up, &rows), ShelfStep::Leave);
     }
 }

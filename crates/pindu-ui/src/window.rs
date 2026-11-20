@@ -1766,24 +1766,31 @@ const SORT_MODES: [(SortMode, &str); 5] = [
     (SortMode::Playtime, "playtime"),
 ];
 
-/// A landscape card for "Jump back in": the game's banner (or cover), cropped to fill the
-/// card, with its title, `width`×`height` pixels, and a Play button (Stop while the game
-/// runs) over it on hover and keyboard focus, as on the cover tiles.
-pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::Overlay {
+/// Shows the art of a "Jump back in" card in `picture`, decoded for `pixels` device
+/// pixels: the game's banner (or cover), cropped to fill the card rather than fitted on a
+/// blurred copy, so every card is the art alone, and its icon when it has neither. The
+/// desktop row and the Jump Back In row of fullscreen Home's Shelves layout show the
+/// same.
+pub(crate) fn show_jump_art(picture: &CoverArt, game: &GameObject, pixels: (u32, u32)) {
     let (art, icon) = {
         let entry = game.entry();
         let art = entry.art.hero.clone().or_else(|| entry.art.cover.clone());
         (art, entry.art.icon.clone())
     };
-    let (card, picture) = jump_card_frame(game, (width, height));
-    // Cropped rather than fitted on a blurred copy, so every card is the art alone.
     picture.set_crop(true);
+    picture.show(art, icon, pixels, |_| {});
+}
+
+/// A landscape card for "Jump back in": the game's banner (or cover), cropped to fill the
+/// card, with its title, `width`×`height` pixels, and a Play button (Stop while the game
+/// runs) over it on hover and keyboard focus, as on the cover tiles.
+pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::Overlay {
+    let (card, picture) = jump_card_frame(game, (width, height));
     let scale = card.scale_factor().max(1);
-    picture.show(
-        art,
-        icon,
+    show_jump_art(
+        &picture,
+        game,
         ((width * scale) as u32, (height * scale) as u32),
-        |_| {},
     );
     // A sibling of the card rather than inside it: a button within a button would
     // also open the game page.

@@ -1,0 +1,16 @@
+{
+  "contract": 1,
+  "name": "Marquee",
+  "description": "Your recent games over the focused game's art, with the sections at the end of the row",
+  "author": "Pindu launcher contributors",
+  "license": "GPL-3.0-or-later",
+  "layout": {
+    "home": "hero-bottom",
+    "home-start": "games",
+    "home-tile": "square",
+    "home-tile-size": 112,
+    "home-section-tile": "label",
+    "top-bar": true,
+    "home-details": true
+  }
+}

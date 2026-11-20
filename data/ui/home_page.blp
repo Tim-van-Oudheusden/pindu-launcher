@@ -78,6 +78,22 @@ template $PinduHomePage: Adw.NavigationPage {
         orientation: vertical;
         spacing: 12;
 
+        // Over the title while a Jump Back In card has focus on a first screen that
+        // starts with them (`home-start`).
+        Label eyebrow {
+          visible: false;
+          label: _("Jump Back In");
+          xalign: 0;
+          ellipsize: end;
+          margin-start: 48;
+          margin-end: 48;
+
+          styles [
+            "home-eyebrow",
+            "heading",
+          ]
+        }
+
         Box {
           margin-start: 48;
           margin-end: 48;
@@ -86,13 +102,14 @@ template $PinduHomePage: Adw.NavigationPage {
             "home-title",
           ]
 
-          // The logo stays within its 480×160 box whatever the image's size: the clamps
-          // cap its natural size, and a design's `min-width`/`min-height` enlarge it.
-          Adw.Clamp {
+          // The logo stays within its 480×160 box (360×96 in the Shelves layout)
+          // whatever the image's size: the clamps cap its natural size, and a design's
+          // `min-width`/`min-height` enlarge it.
+          Adw.Clamp logo_width {
             maximum-size: 480;
             tightening-threshold: 480;
 
-            child: Adw.Clamp {
+            child: Adw.Clamp logo_height {
               orientation: vertical;
               maximum-size: 160;
               tightening-threshold: 160;
@@ -112,13 +129,26 @@ template $PinduHomePage: Adw.NavigationPage {
             };
           }
 
-          Label title {
-            wrap: true;
-            xalign: 0;
+          // In the Shelves layout the box is as tall as the logo's, with the title at
+          // its foot, so the rows under it stay in place. The height sits on the box:
+          // on the label it would wrap the title to fill it. The box itself does not
+          // expand, so the room over the title is not the page's to grow.
+          Box title_box {
+            orientation: vertical;
+            vexpand: false;
 
-            styles [
-              "title-1",
-            ]
+            Box {
+              vexpand: true;
+            }
+
+            Label title {
+              wrap: true;
+              xalign: 0;
+
+              styles [
+                "title-1",
+              ]
+            }
           }
         }
 
@@ -132,6 +162,23 @@ template $PinduHomePage: Adw.NavigationPage {
 
           styles [
             "home-details",
+          ]
+        }
+
+        // The focused section's first covers, on the first screen when the design asks
+        // for them (`home-section-preview`); filled in code.
+        Box preview {
+          visible: false;
+          spacing: 12;
+          margin-start: 48;
+          margin-end: 48;
+          halign: start;
+          can-focus: false;
+          can-target: false;
+          accessible-role: presentation;
+
+          styles [
+            "home-preview",
           ]
         }
       }
@@ -152,8 +199,9 @@ template $PinduHomePage: Adw.NavigationPage {
             "home-carousel",
           ]
 
-          // The size sits on the tile's child, as on the other tiles, so the margin a
-          // design gives the focused tile adds to it rather than squeezing it.
+          // The size sits on the tile's frame (`TileFrame`), as on the other tiles, so
+          // the margin a design gives the focused tile adds to it rather than squeezing
+          // it; the frame is taller only when its text needs it, at a larger Text Size.
           Button library_tile {
             action-name: "win.show-library";
 
@@ -162,26 +210,23 @@ template $PinduHomePage: Adw.NavigationPage {
               "library-tile",
             ]
 
-            child: Overlay {
-              child: Box library_tile_frame {
-                width-request: 320;
-                height-request: 150;
-              };
-
-              [overlay]
-              Box {
+            child: $PinduTileFrame library_tile_frame {
+              // With labelled tiles (`home-section-tile`) the icon moves to the top left
+              // and the name to the bottom left, over the number of games.
+              Box library_tile_content {
                 orientation: vertical;
                 spacing: 12;
                 valign: center;
 
-                Image {
+                Image library_tile_icon {
                   icon-name: "view-grid-symbolic";
                   pixel-size: 48;
                   accessible-role: presentation;
                 }
 
-                Label {
+                Label library_tile_label {
                   label: _("Library");
+                  ellipsize: end;
 
                   styles [
                     "heading",
@@ -203,14 +248,8 @@ template $PinduHomePage: Adw.NavigationPage {
               "big-picture-tile",
             ]
 
-            child: Overlay {
-              child: Box big_picture_tile_frame {
-                width-request: 320;
-                height-request: 150;
-              };
-
-              [overlay]
-              Box {
+            child: $PinduTileFrame big_picture_tile_frame {
+              Box big_picture_tile_content {
                 orientation: vertical;
                 spacing: 12;
                 valign: center;
@@ -230,7 +269,7 @@ template $PinduHomePage: Adw.NavigationPage {
 
                 // Steam's own name for it; the full "Steam Big Picture" shows as the
                 // focused tile's title.
-                Label {
+                Label big_picture_label {
                   label: _("Big Picture");
                   ellipsize: end;
 
@@ -242,6 +281,7 @@ template $PinduHomePage: Adw.NavigationPage {
                 Label big_picture_status {
                   visible: false;
                   label: _("Opening…");
+                  ellipsize: end;
 
                   styles [
                     "dimmed",
@@ -250,6 +290,24 @@ template $PinduHomePage: Adw.NavigationPage {
               }
             };
           }
+        };
+      }
+
+      // The Shelves layout (`"home": "shelves"`): every section as a row of its games,
+      // then the Library row; the rows are built in code. The page scrolls it itself,
+      // to the row that has focus.
+      ScrolledWindow shelves_scroller {
+        visible: false;
+        hscrollbar-policy: never;
+        vscrollbar-policy: external;
+        vexpand: true;
+
+        styles [
+          "home-shelves",
+        ]
+
+        child: Box shelves {
+          orientation: vertical;
         };
       }
     }

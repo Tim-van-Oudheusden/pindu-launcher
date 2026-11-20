@@ -1,0 +1,13 @@
+Lobby, a fullscreen design for Pindu launcher
+Copyright (C) 2026 Pindu launcher contributors
+
+This design (theme.json and theme.css) is free software: you can redistribute it and/or
+modify it under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any later
+version. The full text of the licence is in the LICENSE file at the root of Pindu
+launcher's source, and at <https://www.gnu.org/licenses/gpl-3.0.html>.
+
+Lobby was written from scratch on top of Ribbon, Pindu launcher's own design, whose top
+bar, second screen, library and game page it keeps. The tints of its launcher tiles are
+its own colours, not the launchers' brand colours; it contains no console or store
+logos, button art or brand colours, and no tile carries a launcher's logo.

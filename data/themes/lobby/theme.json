@@ -1,0 +1,17 @@
+{
+  "contract": 1,
+  "name": "Lobby",
+  "description": "Labelled section tiles over the animated background, with a preview of the focused section",
+  "author": "Pindu launcher contributors",
+  "license": "GPL-3.0-or-later",
+  "layout": {
+    "home": "row-top",
+    "home-tile": "square",
+    "home-tile-size": 132,
+    "home-section-tile": "label",
+    "home-section-preview": true,
+    "home-background-choice": true,
+    "top-bar": true,
+    "home-details": true
+  }
+}
