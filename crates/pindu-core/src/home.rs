@@ -200,7 +200,7 @@ pub fn shelf_shape(section: SectionId, layout: ThemeLayout) -> (TileShape, (i32,
     }
 }
 
-/// Where a move lands in the Shelves layout.
+/// Where a move lands in the Shelves layout, or along Home's row in the other layouts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShelfStep {
     /// On the item at this place in the same row.
@@ -227,6 +227,14 @@ pub fn shelf_step((row, item): (usize, usize), direction: Direction, rows: &[usi
         Direction::Up if row > 0 => ShelfStep::Row(row - 1),
         Direction::Up => ShelfStep::Leave,
     }
+}
+
+/// Where `direction` leads from the item at `item` of Home's row of `length` items, in
+/// the layouts with two screens, on either screen: as a row of the Shelves layout that
+/// is the only one, left and right move along it and stop at its ends, down stays and
+/// up leaves for the top bar.
+pub fn row_step(item: usize, direction: Direction, length: usize) -> ShelfStep {
+    shelf_step((0, item), direction, &[length])
 }
 
 /// How many covers the preview of the focused section shows at most.
@@ -1045,5 +1053,16 @@ mod tests {
         assert_eq!(shelf_step((2, 1), Direction::Up, &rows), ShelfStep::Row(1));
         assert_eq!(shelf_step((1, 0), Direction::Up, &rows), ShelfStep::Row(0));
         assert_eq!(shelf_step((0, 1), Direction::Up, &rows), ShelfStep::Leave);
+    }
+
+    #[test]
+    fn home_row_stays_at_its_ends_and_up_leaves_for_the_top_bar() {
+        assert_eq!(row_step(0, Direction::Right, 3), ShelfStep::Item(1));
+        assert_eq!(row_step(2, Direction::Left, 3), ShelfStep::Item(1));
+        assert_eq!(row_step(2, Direction::Right, 3), ShelfStep::Stay);
+        assert_eq!(row_step(0, Direction::Left, 3), ShelfStep::Stay);
+        assert_eq!(row_step(0, Direction::Right, 1), ShelfStep::Stay);
+        assert_eq!(row_step(1, Direction::Up, 3), ShelfStep::Leave);
+        assert_eq!(row_step(1, Direction::Down, 3), ShelfStep::Stay);
     }
 }
