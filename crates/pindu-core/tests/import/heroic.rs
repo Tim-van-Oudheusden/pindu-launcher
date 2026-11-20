@@ -1,4 +1,3 @@
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 use pindu_core::model::{ArtLayout, LaunchKind, Platform, Source};
@@ -228,11 +227,11 @@ fn credential_files_are_never_opened() {
         "legendaryConfig/legendary/user.json",
         "nile_config/nile/user.json",
     ] {
-        std::fs::set_permissions(
-            root.join(credentials),
-            std::fs::Permissions::from_mode(0o000),
-        )
-        .unwrap();
+        // A folder in the file's place: it exists, but reading it fails even for root, which
+        // CI's test user is and which ignores a 0o000 mode.
+        let path = root.join(credentials);
+        std::fs::remove_file(&path).unwrap();
+        std::fs::create_dir(&path).unwrap();
     }
 
     for source in [
