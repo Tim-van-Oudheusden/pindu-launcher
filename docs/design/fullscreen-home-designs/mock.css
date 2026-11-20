@@ -1,0 +1,95 @@
+/* Shared styles for the three reference mockups. Web CSS, not GTK CSS: the pixel sizes,
+   colours, radii and opacities are the spec; the layout technique is not. Nothing here
+   uses backdrop-filter, which GTK CSS does not have. */
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family: "Adwaita Sans", Inter, system-ui, sans-serif;
+  font-size: 15px;
+}
+
+.home { position: relative; width: 1280px; height: 720px; overflow: hidden; }
+.home-background, .home-hero, .hero-gradient { position: absolute; inset: 0; width: 1280px; height: 720px; }
+.home-background, .home-hero { object-fit: cover; }
+
+/* Top bar (existing `.fullscreen-top-bar`): 28px from the top, 56px from the sides. */
+.fullscreen-top-bar { position: absolute; left: 56px; right: 56px; top: 28px; display: flex; align-items: center; gap: 24px; }
+.page-tab { font-size: 15px; color: rgb(255 255 255 / 80%); padding-bottom: 4px; border-bottom: 2px solid transparent; }
+.page-tab.checked { font-weight: 700; color: #fff; border-bottom-color: #fff; }
+.clock { margin-left: auto; font-size: 18.75px; font-weight: 300; font-variant-numeric: tabular-nums; }
+
+/* Details row (existing `.home-details` / `.detail`), as Ribbon draws it: grey pills. */
+.home-details { display: flex; gap: 10px; }
+.detail { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: rgb(20 20 26 / 78%); font-size: 14px; }
+.detail svg { width: 14px; height: 14px; }
+
+/* Hint bar (existing `.hint-bar`), unchanged by this work. */
+.hint-bar { position: absolute; left: 56px; right: 56px; bottom: 22px; display: flex; align-items: center; gap: 22px; font-size: 13px; color: rgb(255 255 255 / 90%); }
+.hint { display: flex; align-items: center; gap: 8px; }
+.hint-glyph { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid #fff; font-size: 12px; font-weight: 700; }
+
+/* A labelled section tile (new `.home-section-tile.labelled`). */
+.home-section-tile.labelled {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgb(14 14 18 / 62%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 14%);
+  text-align: left;
+}
+.section-glyph { height: 34px; display: flex; align-items: center; font-size: 30px; font-weight: 700; line-height: 1; letter-spacing: -1px; }
+.section-glyph svg { width: 32px; height: 32px; }
+.section-text { display: flex; flex-direction: column; gap: 2px; }
+.section-name { font-size: 14px; font-weight: 600; line-height: 1.2; }
+.section-count { font-size: 12px; color: rgb(255 255 255 / 86%); }
+
+/* Tints, by the class each tile carries. Not the launchers' brand colours or logos. */
+.home-section-tile.section-steam { background-color: rgb(24 44 84 / 78%); }
+.home-section-tile.section-heroic-epic { background-color: rgb(58 58 64 / 80%); }
+.home-section-tile.section-heroic-gog { background-color: rgb(74 44 112 / 80%); }
+.home-section-tile.section-heroic-amazon { background-color: rgb(18 76 92 / 80%); }
+.home-section-tile.section-heroic-sideload { background-color: rgb(64 52 44 / 80%); }
+.home-section-tile.section-lutris { background-color: rgb(112 68 18 / 82%); }
+.home-section-tile.section-bottles { background-color: rgb(96 30 44 / 80%); }
+.home-section-tile.section-faugus { background-color: rgb(30 72 48 / 80%); }
+.home-section-tile.section-legendary { background-color: rgb(44 48 96 / 80%); }
+.home-section-tile.section-itch { background-color: rgb(110 36 40 / 80%); }
+.library-tile.labelled { background: rgb(255 255 255 / 16%); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 30%); }
+
+/* Annotated copies: body.annot outlines the named parts and prints their CSS names. */
+body.annot [data-a] { outline: 2px dashed #5ee6ff; outline-offset: 2px; }
+body.annot [data-a]::after {
+  content: attr(data-a);
+  position: absolute;
+  z-index: 50;
+  transform: translate(0, -100%);
+  margin-top: -5px;
+  left: 0;
+  top: 0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #5ee6ff;
+  color: #00222b;
+  font: 600 11px/1.3 "DejaVu Sans Mono", monospace;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+body.annot [data-a] { position: relative; }
+body.annot [data-a].abs { position: absolute; }
+body.annot [data-a].below::after { transform: none; top: 100%; margin-top: 5px; }
+body.annot [data-a].inside::after { transform: none; top: 4px; left: 4px; margin-top: 0; }
+body.annot [data-a].right::after { left: auto; right: 4px; }
+body.annot [data-a].side::after { transform: none; top: 50%; left: 100%; margin: -9px 0 0 10px; }

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shelves — reference mockup, 1280×720</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+/* Shelves: Home is one screen. Every section is a row of its games; Up and Down change
+   row, Left and Right pick a game. The focused row sits at the top of the list. */
+.home { background: #0d0e12; }
+.home-hero { height: 460px; object-position: 50% 62%; }
+.hero-gradient {
+  background-image:
+    linear-gradient(to bottom, rgb(13 14 18 / 10%), rgb(13 14 18 / 55%) 36%, #0d0e12 64%),
+    linear-gradient(to right, rgb(8 9 12 / 80%), rgb(8 9 12 / 40%) 45%, transparent 80%);
+}
+
+.info { position: absolute; left: 48px; top: 96px; display: flex; flex-direction: column; gap: 14px; }
+.home-logo { font-family: Bitter, Georgia, serif; font-size: 52px; font-weight: 800; line-height: 1; color: #fbf6ea; }
+
+/* New: `.home-shelves`, the list of rows, and `.home-shelf`, one row with its header. */
+.home-shelves { position: absolute; left: 0; right: 0; top: 232px; bottom: 0; display: flex; flex-direction: column; gap: 28px; }
+.home-shelf { display: flex; flex-direction: column; gap: 12px; opacity: 0.72; }
+.home-shelf.focus-within { opacity: 1; }
+.shelf-header { display: flex; align-items: baseline; gap: 10px; padding-left: 48px; }
+.shelf-title { font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; }
+.shelf-count { font-size: 13px; color: rgb(255 255 255 / 66%); }
+.home-carousel { display: flex; align-items: flex-start; gap: 24px; padding-left: 48px; }
+
+.jump-card { flex: none; border-radius: 12px; background: #1c1d21; }
+.jump-card img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 12px; }
+.home-tile-landscape .jump-card { width: 277px; height: 130px; }   /* card_size(Landscape, 130) */
+.home-tile-portrait .jump-card { width: 132px; height: 198px; }    /* card_size(Portrait, 132) */
+.jump-card.focus { transform: scale(1.05); box-shadow: 0 0 0 2.9px #fff, 0 13px 28px rgb(0 0 0 / 60%); }
+
+.hint-bar { padding-top: 44px; left: 0; right: 0; bottom: 0; padding-left: 56px; padding-right: 56px; padding-bottom: 22px; background: linear-gradient(to top, #0d0e12 46%, rgb(13 14 18 / 0%)); }
+</style>
+</head>
+<body>
+<div class="home home-layout-shelves">
+  <img class="home-hero shown" src="art/tidewrights-hero.jpg" alt="">
+  <div class="hero-gradient"></div>
+
+  <div class="fullscreen-top-bar">
+    <span class="page-tab checked">Home</span>
+    <span class="page-tab">Library</span>
+    <span class="clock">20:20</span>
+  </div>
+
+  <div class="info">
+    <div class="home-logo" data-a=".home-title  (the focused game's logo or title)">Tidewrights</div>
+    <div class="home-details">
+      <span class="detail"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="#fff"/></svg>42 hours</span>
+      <span class="detail">This Week</span>
+      <span class="detail">Heroic: Epic</span>
+    </div>
+  </div>
+
+  <div class="home-shelves abs inside right" data-a=".home-shelves  (scrolls; the focused shelf sits at its top)">
+    <div class="home-shelf focus-within">
+      <div class="shelf-header"><span class="shelf-title side" data-a=".shelf-title">Jump Back In</span></div>
+      <div class="home-carousel home-tile-landscape" id="lead"></div>
+    </div>
+    <div class="home-shelf inside right" data-a=".home-shelf  (not focused: opacity 0.72; covers 132×198)">
+      <div class="shelf-header"><span class="shelf-title">Favourites</span><span class="shelf-count side" data-a=".shelf-count">12</span></div>
+      <div class="home-carousel home-tile-portrait" id="second"></div>
+    </div>
+  </div>
+
+  <div class="hint-bar">
+    <span class="hint"><span class="hint-glyph">A</span>Open</span>
+    <span class="hint"><span class="hint-glyph">Y</span>Search</span>
+  </div>
+</div>
+<script>
+const lead = [['tidewrights-hero', true], ['lanternkeep-hero'], ['hollow-hero'], ['paper-sq'], ['driftline-sq']];
+document.getElementById('lead').innerHTML = lead.map(([art, focus]) =>
+  `<div class="jump-card${focus ? ' focus below' : ''}"${focus ? ' data-a=".jump-card:focus-within  (277×130, first shelf)"' : ''}><img src="art/${art}.jpg" alt=""></div>`).join('');
+const covers = ['hollow', 'lanternkeep', 'driftline', 'moss', 'starling', 'cinder', 'paper', 'tidewrights'];
+document.getElementById('second').innerHTML = covers.map((game) =>
+  `<div class="jump-card"><img src="art/${game}-cover.jpg" alt=""></div>`).join('');
+if (location.search.includes('annot')) document.body.classList.add('annot');
+</script>
+</body>
+</html>

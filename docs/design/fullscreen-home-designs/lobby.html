@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lobby — reference mockup, 1280×720</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+/* Lobby: Home's first screen. The animated background stays the backdrop; the focused
+   section is previewed by its name, its count and a strip of its first covers. */
+.home-carousel { position: absolute; left: 0; top: 100px; display: flex; align-items: flex-start; gap: 24px; padding-left: 48px; }
+
+.home-section-tile.labelled { width: 132px; height: 132px; opacity: 0.92; transform-origin: 0 0; }
+.home-section-tile.labelled.focus {
+  transform: scale(1.25);
+  margin-right: 33px;            /* 132 × 0.25: the neighbours move aside */
+  opacity: 1;
+  background-color: rgb(14 14 18 / 80%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 14%), 0 0 0 2.4px #fff, 0 13px 29px rgb(0 0 0 / 50%);
+}
+
+.info { position: absolute; left: 48px; top: 324px; display: flex; flex-direction: column; }
+.home-title { font-size: 40px; font-weight: 300; line-height: 1.2; }
+.home-details { margin-top: 18px; }
+
+/* New: `.home-preview`, the strip of the focused section's first covers. */
+.home-preview { margin-top: 28px; display: flex; gap: 12px; }
+.home-preview img, .preview-more { width: 80px; height: 120px; border-radius: 8px; object-fit: cover; display: block; }
+.home-preview img { box-shadow: 0 6px 16px rgb(0 0 0 / 45%); }
+.preview-more { display: flex; align-items: center; justify-content: center; background: rgb(14 14 18 / 72%); font-size: 18px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="home home-sections home-layout-row-top no-art">
+  <img class="home-background abs" data-a=".home-background (Red Ribbons or Blue Station)" src="art/red-ribbons.jpg" alt="">
+
+  <div class="fullscreen-top-bar">
+    <span class="page-tab checked">Home</span>
+    <span class="page-tab">Library</span>
+    <span class="clock">20:20</span>
+  </div>
+
+  <div class="home-carousel abs below" data-a=".home-carousel.home-tile-square" id="row"></div>
+
+  <div class="info">
+    <div class="home-title" data-a=".home-title">Favourites</div>
+    <div class="home-details below" data-a=".home-details">
+      <span class="detail">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="4" y="4" width="6.5" height="6.5"/><rect x="13.5" y="4" width="6.5" height="6.5"/><rect x="4" y="13.5" width="6.5" height="6.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5"/></svg>
+        12 games
+      </span>
+    </div>
+    <div class="home-preview below" data-a=".home-preview  (80×120 covers, at most 6, then .preview-more)">
+      <img src="art/hollow-cover.jpg" alt="">
+      <img src="art/lanternkeep-cover.jpg" alt="">
+      <img src="art/driftline-cover.jpg" alt="">
+      <img src="art/moss-cover.jpg" alt="">
+      <img src="art/starling-cover.jpg" alt="">
+      <img src="art/cinder-cover.jpg" alt="">
+      <span class="preview-more">+6</span>
+    </div>
+  </div>
+
+  <div class="hint-bar">
+    <span class="hint"><span class="hint-glyph">A</span>Select</span>
+    <span class="hint"><span class="hint-glyph">Y</span>Search</span>
+  </div>
+</div>
+<script>
+const icon = {
+  recent: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>',
+  star: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.6 6.1.7-4.5 4.1 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.1 6.1-.7z"/></svg>',
+  installed: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m-4-4l4 4 4-4"/><path d="M5 16v3h14v-3"/></svg>',
+  folder: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"><path d="M4 7a1 1 0 0 1 1-1h4l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>',
+  grid: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><rect x="4" y="4" width="6.5" height="6.5"/><rect x="13.5" y="4" width="6.5" height="6.5"/><rect x="4" y="13.5" width="6.5" height="6.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5"/></svg>',
+};
+const tiles = [
+  ['section-recently-played', icon.recent, 'Recently Played', '6 games'],
+  ['section-favourites focus', icon.star, 'Favourites', '12 games', '.home-section-tile.labelled:focus-within'],
+  ['section-installed', icon.installed, 'Installed', '48 games'],
+  ['section-steam', 'St', 'Steam', '142 games', '.section-steam'],
+  ['section-heroic-epic', 'Ep', 'Heroic: Epic', '37 games'],
+  ['section-lutris', 'Lu', 'Lutris', '9 games'],
+  ['section-collection home-collection-tile', icon.folder, 'Co-op Nights', '14 games', '.home-collection-tile'],
+  ['library-tile', icon.grid, 'Library', '212 games', '.library-tile.labelled'],
+];
+document.getElementById('row').innerHTML = tiles.map(([cls, glyph, name, count, note]) =>
+  `<div class="home-section-tile labelled ${cls}"${note ? ` data-a="${note}"` : ''}>
+     <span class="section-glyph">${glyph}</span>
+     <span class="section-text"><span class="section-name">${name}</span><span class="section-count">${count}</span></span>
+   </div>`).join('');
+if (location.search.includes('annot')) document.body.classList.add('annot');
+</script>
+</body>
+</html>

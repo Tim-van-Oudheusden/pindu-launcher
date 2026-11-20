@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Marquee — reference mockup, 1280×720</title>
+<link rel="stylesheet" href="mock.css">
+<style>
+/* Marquee: Home opens on the Jump Back In games over the focused game's art; the section
+   tiles follow in the same row, then the Library tile. */
+.hero-gradient {
+  background-image:
+    linear-gradient(to bottom, rgb(0 0 0 / 55%), transparent 26%),
+    linear-gradient(to right, rgb(0 0 0 / 70%), rgb(0 0 0 / 30%) 44%, transparent 76%),
+    linear-gradient(to top, rgb(0 0 0 / 96%), rgb(0 0 0 / 88%) 18%, transparent 50%);
+}
+
+.info { position: absolute; left: 48px; bottom: 262px; display: flex; flex-direction: column; gap: 16px; }
+/* New: `.home-eyebrow`, shown while a Jump Back In card has focus on the first screen. */
+.home-eyebrow { font-size: 13px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: rgb(255 255 255 / 90%); }
+.home-logo { font-family: Cardo, Georgia, serif; font-size: 68px; font-weight: 700; line-height: 1; letter-spacing: 3px; color: #f6c765; }
+
+.home-carousel { position: absolute; left: 0; bottom: 88px; display: flex; align-items: flex-end; gap: 24px; padding-left: 48px; }
+.jump-card { flex: none; width: 112px; height: 112px; border-radius: 10px; overflow: hidden; transform-origin: 0 100%; opacity: 0.9; }
+.jump-card img { width: 112px; height: 112px; object-fit: cover; display: block; }
+.jump-card.focus {
+  transform: scale(1.4);
+  margin-right: 45px;            /* 112 × 0.4: the neighbours move aside */
+  opacity: 1;
+  box-shadow: 0 0 0 2.1px #fff, 0 10px 23px rgb(0 0 0 / 70%);
+}
+
+/* New: `.home-divider`, between the game cards and the section tiles. */
+.home-divider { flex: none; width: 1px; height: 112px; background: rgb(255 255 255 / 28%); }
+
+.home-section-tile.labelled { width: 112px; height: 112px; padding: 12px; border-radius: 10px; background-color: rgb(255 255 255 / 12%); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 20%); }
+.home-section-tile.labelled .section-glyph { height: 28px; font-size: 24px; }
+.home-section-tile.labelled .section-glyph svg { width: 26px; height: 26px; }
+.home-section-tile.labelled .section-name { font-size: 13px; }
+.home-section-tile.labelled .section-count { font-size: 11.5px; }
+</style>
+</head>
+<body>
+<div class="home home-sections home-start-games home-layout-hero-bottom">
+  <img class="home-hero shown abs inside" data-a=".home-hero.shown  (the focused game's art, on the first screen too)" src="art/lanternkeep-hero.jpg" alt="">
+  <div class="hero-gradient"></div>
+
+  <div class="fullscreen-top-bar">
+    <span class="page-tab checked">Home</span>
+    <span class="page-tab">Library</span>
+    <span class="clock">20:20</span>
+  </div>
+
+  <div class="info">
+    <div class="home-eyebrow" data-a=".home-eyebrow">Jump Back In</div>
+    <div class="home-logo">LANTERNKEEP</div>
+    <div class="home-details">
+      <span class="detail"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="#fff"/></svg>129 hours</span>
+      <span class="detail">Today</span>
+      <span class="detail">Steam</span>
+    </div>
+  </div>
+
+  <div class="home-carousel abs below" data-a=".home-carousel.home-tile-square  (games, .home-divider, sections, Library)" id="row"></div>
+
+  <div class="hint-bar">
+    <span class="hint"><span class="hint-glyph">A</span>Open</span>
+    <span class="hint"><span class="hint-glyph">Y</span>Search</span>
+  </div>
+</div>
+<script>
+const icon = {
+  star: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.6 6.1.7-4.5 4.1 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.1 6.1-.7z"/></svg>',
+  installed: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m-4-4l4 4 4-4"/><path d="M5 16v3h14v-3"/></svg>',
+};
+const games = ['lanternkeep', 'tidewrights', 'hollow', 'paper', 'driftline', 'moss'];
+const cards = games.map((game, index) =>
+  `<div class="jump-card${index ? '' : ' focus'}"${index ? '' : ' data-a=".jump-card:focus-within"'}><img src="art/${game}-sq.jpg" alt=""></div>`).join('');
+const tiles = [
+  ['section-favourites', icon.star, 'Favourites', '12 games', '.home-section-tile.labelled'],
+  ['section-installed', icon.installed, 'Installed', '48 games'],
+  ['section-steam', 'St', 'Steam', '142 games'],
+].map(([cls, glyph, name, count, note]) =>
+  `<div class="home-section-tile labelled ${cls}"${note ? ` data-a="${note}"` : ''}>
+     <span class="section-glyph">${glyph}</span>
+     <span class="section-text"><span class="section-name">${name}</span><span class="section-count">${count}</span></span>
+   </div>`).join('');
+document.getElementById('row').innerHTML = cards + '<span class="home-divider"></span>' + tiles;
+if (location.search.includes('annot')) document.body.classList.add('annot');
+</script>
+</body>
+</html>
