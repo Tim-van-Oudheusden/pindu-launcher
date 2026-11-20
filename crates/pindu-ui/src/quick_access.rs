@@ -119,6 +119,8 @@ mod imp {
         #[template_child]
         pub variants: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub background_title: TemplateChild<gtk::Label>,
+        #[template_child]
         pub backgrounds: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub blur: TemplateChild<gtk::ListBox>,
@@ -1054,7 +1056,8 @@ impl PinduQuickAccess {
         actions.add_action(&settings.create_action(BLUR_KEY));
         actions.add_action(&settings.create_action(DIM_KEY));
         let service = application.style_service();
-        // Another design has other variants: the list follows while it shows.
+        // Another design has other variants, and may or may not offer the choice of
+        // background: the lists follow while they show.
         service.connect_design_changed(glib::clone!(
             #[weak]
             design,
@@ -1077,6 +1080,7 @@ impl PinduQuickAccess {
                 );
                 if quick_access.level() == Some(QuickAccessLevel::Designs) {
                     quick_access.fill_variants();
+                    quick_access.show_background_choice();
                 }
             }
         ));
@@ -1094,6 +1098,12 @@ impl PinduQuickAccess {
                         .to_variant(),
                 );
             }
+        ));
+        // The layout in force also changes with high contrast, which switches designs off.
+        service.connect_layout_changed(glib::clone!(
+            #[weak(rename_to = quick_access)]
+            self,
+            move |_| quick_access.show_background_choice()
         ));
     }
 
@@ -1123,6 +1133,7 @@ impl PinduQuickAccess {
             imp.designs.append(&row);
         }
         self.fill_variants();
+        self.show_background_choice();
         self.show_custom_style();
     }
 
@@ -1142,6 +1153,18 @@ impl PinduQuickAccess {
         }
         imp.variant_title.set_visible(!choices.is_empty());
         imp.variants.set_visible(!choices.is_empty());
+    }
+
+    /// The Background heading and its list: shown only while the design in force offers
+    /// the choice (`ThemeLayout::home_background_choice`). Hidden, Up and Down pass them
+    /// by, and Home shows the default background whatever the setting holds.
+    fn show_background_choice(&self) {
+        let imp = self.imp();
+        let offered = self
+            .application()
+            .is_some_and(|application| application.style_service().layout().home_background_choice);
+        imp.background_title.set_visible(offered);
+        imp.backgrounds.set_visible(offered);
     }
 
     /// My Stylesheet: it can be turned on once there is a `fullscreen.css`, and its

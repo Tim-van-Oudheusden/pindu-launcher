@@ -260,9 +260,10 @@ impl PinduWindow {
         true
     }
 
-    /// Moves through the open menu, scrolls through a game's focused description, steps
-    /// through the cover grid when it has focus, and moves focus as the arrow keys would
-    /// everywhere else, including out of the grid at its edges.
+    /// Moves through the open menu, scrolls through a game's focused description, moves
+    /// along and between the rows of Home's Shelves layout, steps through the cover grid
+    /// when it has focus, and moves focus as the arrow keys would everywhere else,
+    /// including out of the grid at its edges.
     fn navigate(&self, direction: Direction) {
         let focus_direction = match direction {
             Direction::Up => gtk::DirectionType::Up,
@@ -279,6 +280,9 @@ impl PinduWindow {
         if self.scroll_description(direction)
             || self.imp().quick_access_panel.scroll_report(direction)
         {
+            return;
+        }
+        if self.imp().home_page.navigate(direction) {
             return;
         }
         let grid = &self.imp().grid;

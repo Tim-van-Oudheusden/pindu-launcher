@@ -45,12 +45,50 @@ impl SectionId {
             },
         }
     }
+
+    /// The class the section's tile carries for designs: `section-` and [`Self::name`],
+    /// or `section-collection` for every collection.
+    pub fn css_class(self) -> String {
+        match self {
+            Self::Collection(_) => "section-collection".to_owned(),
+            _ => format!("section-{}", self.name()),
+        }
+    }
+
+    /// The library view that shows all of the section's games, where its See All goes.
+    pub fn view(self) -> View {
+        match self {
+            Self::RecentlyPlayed => View::PlayHistory,
+            Self::Favourites => View::Favourites,
+            Self::Installed => View::Installed,
+            Self::Source(source) => View::Source(source),
+            Self::Collection(id) => View::Collection(id),
+        }
+    }
 }
 
 const RECENTLY_PLAYED: &str = "recently-played";
 const FAVOURITES: &str = "favourites";
 const INSTALLED: &str = "installed";
 const COLLECTION_PREFIX: &str = "collection-";
+
+/// The two letters a launcher's section tile shows where a design labels its tiles;
+/// `None` for a source that is not a launcher, which shows an icon. Not translated.
+pub fn monogram(source: Source) -> Option<&'static str> {
+    match source {
+        Source::Steam => Some("St"),
+        Source::HeroicEpic => Some("Ep"),
+        Source::HeroicGog => Some("Go"),
+        Source::HeroicAmazon => Some("Am"),
+        Source::HeroicSideload => Some("Sl"),
+        Source::Lutris => Some("Lu"),
+        Source::Bottles => Some("Bo"),
+        Source::Faugus => Some("Fa"),
+        Source::Legendary => Some("Le"),
+        Source::Itch => Some("It"),
+        Source::Desktop | Source::Manual => None,
+    }
+}
 
 /// A section of Home's first screen: what it holds, the user's name for it when it is
 /// a collection (the shell names the others), and its games in the order they show.
@@ -241,6 +279,60 @@ mod tests {
         }
         assert_eq!(SectionId::from_name("collection-x"), None);
         assert_eq!(SectionId::from_name("library"), None);
+    }
+
+    #[test]
+    fn a_section_has_a_css_class_for_designs_to_tint_its_tile() {
+        for (id, class) in [
+            (SectionId::RecentlyPlayed, "section-recently-played"),
+            (SectionId::Favourites, "section-favourites"),
+            (SectionId::Installed, "section-installed"),
+            (SectionId::Source(Source::Steam), "section-steam"),
+            (SectionId::Source(Source::HeroicEpic), "section-heroic-epic"),
+            (SectionId::Collection(7), "section-collection"),
+            (SectionId::Collection(12), "section-collection"),
+        ] {
+            assert_eq!(id.css_class(), class);
+        }
+    }
+
+    #[test]
+    fn each_launcher_has_its_monogram_and_the_others_none() {
+        let table = [
+            (Source::Steam, Some("St")),
+            (Source::HeroicEpic, Some("Ep")),
+            (Source::HeroicGog, Some("Go")),
+            (Source::HeroicAmazon, Some("Am")),
+            (Source::HeroicSideload, Some("Sl")),
+            (Source::Lutris, Some("Lu")),
+            (Source::Bottles, Some("Bo")),
+            (Source::Faugus, Some("Fa")),
+            (Source::Legendary, Some("Le")),
+            (Source::Itch, Some("It")),
+            (Source::Desktop, None),
+            (Source::Manual, None),
+        ];
+
+        assert_eq!(table.len(), Source::ALL.len());
+        for (source, expected) in table {
+            assert_eq!(monogram(source), expected, "{source:?}");
+        }
+    }
+
+    #[test]
+    fn a_section_opens_in_the_library_at_its_view() {
+        for (id, view) in [
+            (SectionId::RecentlyPlayed, View::PlayHistory),
+            (SectionId::Favourites, View::Favourites),
+            (SectionId::Installed, View::Installed),
+            (
+                SectionId::Source(Source::Lutris),
+                View::Source(Source::Lutris),
+            ),
+            (SectionId::Collection(7), View::Collection(7)),
+        ] {
+            assert_eq!(id.view(), view);
+        }
     }
 
     #[test]

@@ -5,3 +5,4 @@ what went wrong | correction + where it is encoded.
 
 Format: `YYYY-MM-DD\t<behaviour>\t<correction (file:rule)>`
 2026-11-18	subagents working in git worktrees edited the main checkout through relative paths (twice), caught and reverted	give each worktree agent its absolute path and tell it every edit path must be absolute (.claude/session-summary.md gotcha)
+2026-11-20	ran the app for UI checks under dbus-run-session with the real XDG_RUNTIME_DIR: the private bus started its own xdg-document-portal, which took over /run/user/UID/doc and left `flatpak run` failing for the real session once it exited (fixed by restarting xdg-document-portal.service)	give a private-bus harness its own XDG_RUNTIME_DIR, so its portals mount there (.claude/session-summary.md gotcha)

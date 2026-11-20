@@ -234,8 +234,10 @@ window.fullscreen-mode .home.home-sections .hero-gradient {
   background-image: none;
 }
 
+window.fullscreen-mode .home.home-sections .home-eyebrow,
 window.fullscreen-mode .home.home-sections .home-title,
-window.fullscreen-mode .home.home-sections .home-details {
+window.fullscreen-mode .home.home-sections .home-details,
+window.fullscreen-mode .home.home-sections .home-preview {
   color: white;
 }
 
@@ -284,10 +286,60 @@ window.fullscreen-mode .home.home-sections .home-details {
   border-radius: 12px;
 }
 
-/* A section's art fills its tile, which rounds it like the cards. */
-.home-carousel > .home-section-tile {
+/* A section's art fills its tile, which rounds it like the cards; so does See All, which
+   ends a row of the Shelves layout. */
+.home-carousel > .home-section-tile,
+.home-carousel > .shelf-more {
   padding: 0;
   border-radius: 12px;
+}
+
+/* Labelled tiles (`home-section-tile`): a glyph at the top left, the name over the number
+   of games at the bottom left. The padding sits on `.section-label` inside the tile, whose
+   own padding would add to its size. */
+.home-carousel > .library-tile.labelled {
+  padding: 0;
+}
+
+.home-carousel > button.labelled .section-label {
+  padding: 14px;
+}
+
+.section-label .section-glyph {
+  font-size: 1.6em;
+  font-weight: bold;
+}
+
+.section-label .section-name {
+  font-weight: bold;
+}
+
+.section-label .section-count {
+  font-size: 0.85em;
+}
+
+/* The strip of the focused section's first covers (`home-section-preview`), and the count
+   of the games beyond them. */
+.home-preview cover-art,
+.home-preview .preview-more {
+  border-radius: 8px;
+  background-color: var(--card-bg-color);
+}
+
+.home-preview .preview-more {
+  padding: 0 6px;
+  font-weight: bold;
+}
+
+/* The Shelves layout: each row's header over its cards, the number of games after the
+   title. */
+.home-shelf {
+  margin-bottom: 12px;
+}
+
+.home-shelf .shelf-count {
+  margin-left: 12px;
+  opacity: 0.7;
 }
 
 /* Fullscreen game page: a large Play, a ring around the focused button that shows on the

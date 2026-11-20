@@ -217,7 +217,7 @@ Preferences.
   <img src="docs/screenshots/fullscreen-3-library.webp" width="405" alt="Fullscreen Library with All, Installed and Favourites tabs and a grid of Steam games sorted by Last Played, with the Play button on Slay the Spire 2">
   <br>
   <img src="docs/screenshots/fullscreen-4-game-page.webp" width="405" alt="Drop Duchy's fullscreen game page with its logo and artwork, the Play button, Steam playtime, controller support and Steam Deck compatibility">
-  <img src="docs/screenshots/fullscreen-5-quick-access.webp" width="405" alt="Quick Access open to Design over fullscreen Home, with Red Ribbons selected under Background and Blue Station available">
+  <img src="docs/screenshots/fullscreen-5-quick-access.webp" width="405" alt="Quick Access open to Design over fullscreen Home in the Lobby design, its labelled section tiles behind the panel: Lobby is chosen among five designs, and under Background Red Ribbons is selected with Blue Station available">
 </p>
 
 ### Getting around
@@ -625,11 +625,14 @@ echo no_display >"$MANGOHUD_CONFIGFILE"
 
 ### Styling fullscreen mode
 
-Fullscreen mode has switchable designs (Quick Access → Design): Ribbon, the default, and Panorama ship with the app,
-and Adwaita shows the standard libadwaita look. A design can come in variants, such as Panorama's Monochrome, picked
-under the design. The same level blurs and dims Home's background (Off, Low or High each) and turns **My Stylesheet**,
-your own CSS, on and off. Where the files go, the `theme.json` fields and the CSS names designs can rely on are in
-[`docs/fullscreen-style.md`](docs/fullscreen-style.md).
+Fullscreen mode has switchable designs (Quick Access → Design). Five ship with the app: Ribbon, the default, and
+Panorama, which open Home on a row of sections; Marquee, which opens it on your recent games over the focused game's
+art, with the sections at the end of the same row; Shelves, one screen with every section as a row of its games; and
+Lobby, labelled section tiles over the animated background with a preview of the focused section. Adwaita shows the
+standard libadwaita look. A design can come in variants, such as Panorama's Monochrome, picked under the design. The
+same level blurs and dims Home's background (Off, Low or High each), chooses the animated background under a design
+that offers the choice (Lobby) and turns **My Stylesheet**, your own CSS, on and off. Where the files go, the
+`theme.json` fields and the CSS names designs can rely on are in [`docs/fullscreen-style.md`](docs/fullscreen-style.md).
 
 ## Building from source
 

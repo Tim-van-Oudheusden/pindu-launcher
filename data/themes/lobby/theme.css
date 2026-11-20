@@ -1,0 +1,433 @@
+/* Lobby — a fullscreen design for Pindu launcher.
+ *
+ * Home opens on the sections: a row of labelled tiles across the top, over the animated
+ * background, which stays the backdrop; each tile says its section's name and number of
+ * games, and a launcher's tile has its own tint. Under the row the focused section's name,
+ * its details and a strip of its first covers. A section's games, the library and the game
+ * page are Ribbon's. Always dark; colour comes from the background and the tints.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+/* Palette: libadwaita's colours, redefined for everything under the fullscreen window. */
+window.fullscreen-mode {
+  --window-bg-color: #0f1115;
+  --window-fg-color: #ffffff;
+  --view-bg-color: #0f1115;
+  --view-fg-color: #ffffff;
+  --headerbar-bg-color: transparent;
+  --headerbar-fg-color: #ffffff;
+  --card-bg-color: rgb(124 124 124 / 22%);
+  --card-fg-color: #ffffff;
+  --popover-bg-color: #1a1d23;
+  --popover-fg-color: #ffffff;
+  --dialog-bg-color: #1a1d23;
+  --dialog-fg-color: #ffffff;
+  --sidebar-bg-color: rgb(12 13 17 / 86%);
+  --sidebar-fg-color: #ffffff;
+  --sheet-bg-color: rgb(12 13 17 / 90%);
+  --sheet-fg-color: #ffffff;
+  --lobby-grey: #a3a3a3;
+  --lobby-pill: rgb(124 124 124 / 50%);
+  --lobby-divider: rgb(131 131 131 / 53%);
+  --lobby-tile: rgb(14 14 18 / 62%);
+  --lobby-tile-edge: rgb(255 255 255 / 14%);
+  background-color: var(--window-bg-color);
+  color: var(--window-fg-color);
+  font-family: "Adwaita Sans", sans-serif;
+  font-weight: 300;
+}
+
+/* Top bar: "Home  Library" in grey at the top left, the shown page in white, the clock at
+   the right. */
+window.fullscreen-mode .fullscreen-top-bar {
+  padding: 18px 36px 0;
+}
+
+window.fullscreen-mode .fullscreen-top-bar .page-tab {
+  background: none;
+  box-shadow: none;
+  padding: 4px 14px;
+  border-radius: 8px;
+  color: var(--lobby-grey);
+  font-weight: 300;
+  font-size: 1.25em;
+}
+
+window.fullscreen-mode .fullscreen-top-bar .page-tab:checked {
+  color: white;
+  font-weight: 500;
+}
+
+window.fullscreen-mode .fullscreen-top-bar .page-tab:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 0;
+}
+
+window.fullscreen-mode .fullscreen-top-bar .clock {
+  font-weight: 300;
+  font-size: 1.25em;
+  font-feature-settings: "tnum";
+}
+
+/* Home: a section's games show over the art, darkest at the left and the bottom; without
+   art, a quiet dark backdrop. The sections show over Home's background, unshaded: Quick
+   Access → Design → Background chooses it. */
+window.fullscreen-mode .home {
+  background-image: radial-gradient(circle at 70% 30%, #2a2e36, #0f1115 70%);
+}
+
+window.fullscreen-mode .home.home-games .hero-gradient {
+  background-image:
+    linear-gradient(to bottom, rgb(0 0 0 / 55%), transparent 30%),
+    linear-gradient(to right, rgb(0 0 0 / 78%), rgb(0 0 0 / 40%) 45%, rgb(0 0 0 / 15%) 80%),
+    linear-gradient(to top, rgb(0 0 0 / 75%), transparent 45%);
+}
+
+window.fullscreen-mode .home .home-hero {
+  transition: opacity 300ms ease-out;
+}
+
+/* The row: square tiles under the top bar. On the second screen, a section's games, the
+   focused card grows from its top-left corner and pushes the rest aside, and the others
+   dim a little; the padding is the room it grows into. */
+window.fullscreen-mode .home.home-layout-row-top .home-carousel {
+  margin-top: 64px;
+  padding: 0 0 96px;
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button {
+  border-radius: 14px;
+  opacity: 0.9;
+  transform-origin: 0 0;
+  transition: transform 160ms ease-out, margin 160ms ease-out, opacity 160ms ease-out, background-color 160ms ease-out;
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button:focus-within {
+  transform: scale(1.6);
+  margin-right: 79px;
+  opacity: 1;
+  outline: none;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button cover-art,
+window.fullscreen-mode .home-carousel.home-tile-square > button picture {
+  border-radius: 14px;
+}
+
+/* No titles on the cards: the game's name and logo sit below the row. */
+window.fullscreen-mode .home-carousel.home-tile-square .jump-title {
+  opacity: 0;
+}
+
+/* The first screen: labelled tiles of dark glass with a hairline edge. The focused one
+   grows a quarter from its top-left corner, darkens and takes a white ring; the row needs
+   less room under it than the second screen's, in em as a tile is taller at a larger
+   Text Size and grows further. */
+window.fullscreen-mode .home.home-sections.home-layout-row-top .home-carousel {
+  padding-bottom: 2.6em;
+}
+
+window.fullscreen-mode .home-carousel > .home-section-tile.labelled,
+window.fullscreen-mode .home-carousel > .library-tile.labelled {
+  border-radius: 18px;
+  opacity: 0.92;
+  background-color: var(--lobby-tile);
+  box-shadow: inset 0 0 0 1px var(--lobby-tile-edge);
+}
+
+/* The Library tile is lighter than the sections beside it. */
+window.fullscreen-mode .home-carousel > .library-tile.labelled {
+  background-color: rgb(255 255 255 / 16%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 30%);
+}
+
+/* A launcher's tile has a tint of its own. These are this design's colours, not the
+   launchers' brand colours; white text on each reaches 4.5:1 over either background. */
+window.fullscreen-mode .home-carousel > .home-section-tile.labelled.section-steam {
+  background-color: rgb(24 44 84 / 78%);
+}
+
+window.fullscreen-mode .home-carousel > .home-section-tile.labelled.section-heroic-epic {
+  background-color: rgb(58 58 64 / 80%);
+}
+
+window.fullscreen-mode .home-carousel > .home-section-tile.labelled.section-heroic-gog {
+  background-color: rgb(74 44 112 / 80%);
+}
+
+window.fullscreen-mode .home-carousel > .home-section-tile.labelled.section-heroic-amazon {
+  background-color: rgb(18 76 92 / 80%);
+}
+
+window.fullscreen-mode .home-carousel > .home-section-tile.labelled.section-heroic-sideload {
+  background-color: rgb(64 52 44 / 80%);
+}
+
+window.fullscreen-mode .home-carousel > .home-section-tile.labelled.section-lutris {
+  background-color: rgb(112 68 18 / 82%);
+}
+
+window.fullscreen-mode .home-carousel > .home-section-tile.labelled.section-bottles {
+  background-color: rgb(96 30 44 / 80%);
+}
+
+window.fullscreen-mode .home-carousel > .home-section-tile.labelled.section-faugus {
+  background-color: rgb(30 72 48 / 80%);
+}
+
+window.fullscreen-mode .home-carousel > .home-section-tile.labelled.section-legendary {
+  background-color: rgb(44 48 96 / 80%);
+}
+
+window.fullscreen-mode .home-carousel > .home-section-tile.labelled.section-itch {
+  background-color: rgb(110 36 40 / 80%);
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button.labelled:focus-within {
+  transform: scale(1.25);
+  margin-right: 33px;
+  opacity: 1;
+  outline: none;
+  background-color: rgb(14 14 18 / 80%);
+  box-shadow: inset 0 0 0 1px var(--lobby-tile-edge), 0 0 0 2.4px white, 0 13px 29px rgb(0 0 0 / 50%);
+}
+
+/* On a tile: a launcher's two letters, or a white icon, at the top left; the name over
+   the number of games at the bottom left. */
+window.fullscreen-mode .home-carousel > button.labelled label.section-glyph {
+  font-size: 2em;
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+
+window.fullscreen-mode .home-carousel > button.labelled image.section-glyph {
+  color: white;
+  -gtk-icon-size: 32px;
+}
+
+window.fullscreen-mode .home-carousel > button.labelled .section-name {
+  font-size: 0.93em;
+  font-weight: 600;
+}
+
+window.fullscreen-mode .home-carousel > button.labelled .section-count {
+  font-size: 0.8em;
+  color: rgb(255 255 255 / 86%);
+}
+
+/* The logo, or the title, at mid-left; the details below it in grey pills. On the first
+   screen the section's name sits closer under its row, the details 18px under the name
+   and the covers 28px under the details. */
+window.fullscreen-mode .home.home-layout-row-top .home-title {
+  margin-top: 96px;
+}
+
+window.fullscreen-mode .home.home-sections.home-layout-row-top .home-title {
+  margin-top: 8px;
+}
+
+window.fullscreen-mode .home .home-title .title-1 {
+  font-weight: 300;
+  font-size: 2.2em;
+}
+
+window.fullscreen-mode .home .home-details {
+  margin: 28px 48px 0;
+  padding: 0;
+  border-radius: 999px;
+  background-color: var(--lobby-pill);
+}
+
+window.fullscreen-mode .home.home-sections .home-details {
+  margin: 6px 0 0;
+}
+
+window.fullscreen-mode .home .home-details .detail {
+  padding: 10px 22px;
+  font-weight: 500;
+}
+
+window.fullscreen-mode .home .home-details .detail + .detail {
+  border-left: 1px solid var(--lobby-divider);
+}
+
+/* The strip of the focused section's first covers, and the count of the games beyond
+   them. */
+window.fullscreen-mode .home .home-preview {
+  margin-top: 16px;
+}
+
+window.fullscreen-mode .home .home-preview cover-art,
+window.fullscreen-mode .home .home-preview .preview-more {
+  border-radius: 8px;
+}
+
+window.fullscreen-mode .home .home-preview cover-art {
+  box-shadow: 0 6px 16px rgb(0 0 0 / 45%);
+}
+
+window.fullscreen-mode .home .home-preview .preview-more {
+  background-color: rgb(14 14 18 / 72%);
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+/* Library: text tabs, grey until shown; covers with a white ring when focused. */
+window.fullscreen-mode .library-tabs .library-tab {
+  background: none;
+  box-shadow: none;
+  color: var(--lobby-grey);
+  font-weight: 300;
+  padding: 4px 14px;
+}
+
+window.fullscreen-mode .library-tabs .library-tab:checked {
+  background: none;
+  color: white;
+  font-weight: 500;
+}
+
+/* Room above the first row for the lifted cover's ring and shadow. */
+window.fullscreen-mode gridview.library {
+  padding-top: 32px;
+}
+
+window.fullscreen-mode gridview.library > child {
+  opacity: 0.9;
+}
+
+window.fullscreen-mode gridview.library > child:focus-within {
+  opacity: 1;
+  transform: scale(1.06);
+}
+
+window.fullscreen-mode .cover-tile cover-art,
+window.fullscreen-mode .cover-tile .cover-frame {
+  border-radius: 14px;
+}
+
+window.fullscreen-mode gridview.library > child:focus-within .cover-frame {
+  outline: 3px solid white;
+  outline-offset: 3px;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 50%);
+}
+
+window.fullscreen-mode .cover-tile .play-button {
+  background-color: white;
+  color: black;
+}
+
+/* Game page: the art under a left and bottom shade, a white Play pill. */
+window.fullscreen-mode .game-hero .hero-gradient {
+  background-image:
+    linear-gradient(to right, rgb(0 0 0 / 70%), transparent 60%),
+    linear-gradient(to bottom, transparent 40%, var(--window-bg-color));
+}
+
+window.fullscreen-mode .game-play {
+  background-color: white;
+  color: black;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+window.fullscreen-mode .game-actions button:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+
+/* The About group and the description: soft glass, rows that light up and a white ring,
+   like the panels' lists. */
+window.fullscreen-mode .game-about .boxed-list {
+  background-color: rgb(255 255 255 / 6%);
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+window.fullscreen-mode .game-about .boxed-list > row,
+window.fullscreen-mode .game-description {
+  border-radius: 16px;
+}
+
+window.fullscreen-mode .game-about .boxed-list > row:focus-visible {
+  background-color: rgb(255 255 255 / 14%);
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+window.fullscreen-mode .game-description:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 8px;
+}
+
+/* Panels: frosted dark glass over the page, rows that light up when focused. */
+window.fullscreen-mode .menu-drawer,
+window.fullscreen-mode .quick-access,
+window.fullscreen-mode .options-sheet {
+  background-color: rgb(12 13 17 / 82%);
+  backdrop-filter: blur(24px);
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar,
+window.fullscreen-mode .quick-access .navigation-sidebar,
+window.fullscreen-mode .options-sheet .navigation-sidebar {
+  background: none;
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar > row,
+window.fullscreen-mode .quick-access .navigation-sidebar > row,
+window.fullscreen-mode .options-sheet .navigation-sidebar > row {
+  border-radius: 12px;
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar > row:focus-visible,
+window.fullscreen-mode .quick-access .navigation-sidebar > row:focus-visible,
+window.fullscreen-mode .options-sheet .navigation-sidebar > row:focus-visible,
+window.fullscreen-mode .quick-access .boxed-list > row:focus-visible {
+  background-color: rgb(255 255 255 / 14%);
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+/* The lists inside Quick Access (cover sizes, designs): one soft glass card. */
+window.fullscreen-mode .quick-access .boxed-list {
+  background-color: rgb(255 255 255 / 6%);
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+window.fullscreen-mode .quick-access .boxed-list > row {
+  border-radius: 16px;
+}
+
+/* Hint bar and search keyboard: light type, keys as grey pills, the cursor in white. */
+window.fullscreen-mode .hint-bar {
+  font-weight: 300;
+  color: rgb(255 255 255 / 85%);
+}
+
+window.fullscreen-mode .search-keyboard {
+  background-color: rgb(12 13 17 / 86%);
+  backdrop-filter: blur(24px);
+}
+
+window.fullscreen-mode .search-keyboard .osk-key {
+  background-color: var(--lobby-pill);
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+window.fullscreen-mode .search-keyboard .osk-key.cursor {
+  background-color: white;
+  color: black;
+}
+
+/* Less motion asked for: nothing grows or slides; focus still shows. */
+@media (prefers-reduced-motion: reduce) {
+  window.fullscreen-mode .home-carousel.home-tile-square > button,
+  window.fullscreen-mode .home .home-hero {
+    transition: none;
+  }
+}

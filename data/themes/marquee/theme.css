@@ -1,0 +1,336 @@
+/* Marquee — a fullscreen design for Pindu launcher.
+ *
+ * Home opens on your recent games: a row of small square cards along the bottom, over the
+ * focused game's art across the whole screen, with its logo and details above the row.
+ * After the cards come a thin divider and a labelled tile for each section, so the rest of
+ * the library is in the same row. The focused card or tile grows from its bottom edge and
+ * takes a white ring. Always dark; the only colour is the game art's.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+/* Palette: near-black surfaces, white type. */
+window.fullscreen-mode {
+  --window-bg-color: #0b0c0f;
+  --window-fg-color: #ffffff;
+  --view-bg-color: #0b0c0f;
+  --view-fg-color: #ffffff;
+  --headerbar-bg-color: transparent;
+  --headerbar-fg-color: #ffffff;
+  --card-bg-color: rgb(255 255 255 / 12%);
+  --card-fg-color: #ffffff;
+  --popover-bg-color: #1a1b1f;
+  --popover-fg-color: #ffffff;
+  --dialog-bg-color: #1a1b1f;
+  --dialog-fg-color: #ffffff;
+  --sidebar-bg-color: #131417;
+  --sidebar-fg-color: #ffffff;
+  --sheet-bg-color: #131417;
+  --sheet-fg-color: #ffffff;
+  --marquee-surface: #1a1b1f;
+  --marquee-muted: rgb(255 255 255 / 80%);
+  --marquee-pill: rgb(20 20 26 / 78%);
+  background-color: var(--window-bg-color);
+  color: var(--window-fg-color);
+  font-family: "Adwaita Sans", sans-serif;
+}
+
+/* Top bar: no surface, white type straight on the art; the shown page underlined. */
+window.fullscreen-mode .fullscreen-top-bar {
+  padding: 20px 44px 0;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 70%);
+}
+
+window.fullscreen-mode .fullscreen-top-bar .page-tab {
+  background: none;
+  border-radius: 0;
+  padding: 6px 0 4px;
+  margin: 0 12px;
+  color: var(--marquee-muted);
+  font-weight: 400;
+  box-shadow: none;
+}
+
+window.fullscreen-mode .fullscreen-top-bar .page-tab:checked {
+  color: white;
+  font-weight: 700;
+  box-shadow: inset 0 -2px white;
+}
+
+window.fullscreen-mode .fullscreen-top-bar .page-tab:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 4px;
+}
+
+window.fullscreen-mode .fullscreen-top-bar .clock {
+  font-weight: 300;
+  font-size: 1.25em;
+  font-feature-settings: "tnum";
+}
+
+/* Home: the art behind both screens, which crossfades, under a shade that is darkest at
+   the top, the left and the bottom, where the text and the row sit. Pindu's own style
+   takes the shade off the first screen, which in this design shows art too. Without art,
+   the animated background plays under the same shade. */
+window.fullscreen-mode .home {
+  background-image: linear-gradient(160deg, #1f2026, #0b0c0f 65%);
+}
+
+window.fullscreen-mode .home .home-hero {
+  transition: opacity 300ms ease-out;
+}
+
+window.fullscreen-mode .home.home-games .hero-gradient,
+window.fullscreen-mode .home.home-sections.home-start-games .hero-gradient {
+  background-image:
+    linear-gradient(to bottom, rgb(0 0 0 / 55%), transparent 26%),
+    linear-gradient(to right, rgb(0 0 0 / 70%), rgb(0 0 0 / 30%) 44%, transparent 76%),
+    linear-gradient(to top, rgb(0 0 0 / 96%), rgb(0 0 0 / 88%) 18%, transparent 50%);
+}
+
+/* Over the logo or title while one of your recent games has focus. */
+window.fullscreen-mode .home .home-eyebrow {
+  font-size: 0.87em;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 90%);
+}
+
+window.fullscreen-mode .home .home-title .title-1 {
+  font-weight: 700;
+  font-size: 2.2em;
+}
+
+/* The details: a dark pill each. */
+window.fullscreen-mode .home .home-details .detail {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background-color: var(--marquee-pill);
+  font-size: 0.93em;
+}
+
+/* The row: small square cards and tiles; the focused one grows from its bottom edge,
+   pushes the rest aside and takes a white ring, and the others dim a little. The padding
+   is the room the grown card and its shadow need; in em above the row, as a labelled tile
+   is taller at a larger Text Size and grows further. */
+window.fullscreen-mode .home-carousel.home-tile-square {
+  padding: 2em 0 22px;
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button {
+  border-radius: 10px;
+  opacity: 0.9;
+  transform-origin: 0 100%;
+  transition: transform 140ms ease-out, margin 140ms ease-out, opacity 140ms ease-out, box-shadow 140ms ease-out;
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button cover-art,
+window.fullscreen-mode .home-carousel.home-tile-square > button picture {
+  border-radius: 10px;
+}
+
+/* No titles on the cards: the game's logo or name is above the row. */
+window.fullscreen-mode .home-carousel.home-tile-square .jump-title {
+  opacity: 0;
+}
+
+/* The line between your recent games and the sections. */
+window.fullscreen-mode .home-carousel > .home-divider {
+  min-width: 1px;
+  margin: 0;
+  background-color: rgb(255 255 255 / 28%);
+}
+
+/* Section tiles and the Library tile: translucent white, the same for every launcher. */
+window.fullscreen-mode .home-carousel > .home-section-tile.labelled,
+window.fullscreen-mode .home-carousel > .library-tile.labelled {
+  background-color: rgb(255 255 255 / 12%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 20%);
+}
+
+window.fullscreen-mode .home-carousel > button.labelled .section-label {
+  padding: 12px;
+}
+
+window.fullscreen-mode .home-carousel > button.labelled .section-name {
+  font-size: 0.87em;
+  font-weight: 600;
+}
+
+window.fullscreen-mode .home-carousel > button.labelled .section-count {
+  font-size: 0.77em;
+}
+
+/* The Library tile of a design that shows art on its section tiles instead. */
+window.fullscreen-mode .home-carousel.home-tile-square > .library-tile {
+  border-radius: 10px;
+}
+
+window.fullscreen-mode .home-carousel.home-tile-square > button:focus-within {
+  transform: scale(1.4);
+  margin-right: 45px;
+  opacity: 1;
+  outline: none;
+  box-shadow: 0 0 0 2px white, 0 10px 24px rgb(0 0 0 / 70%);
+}
+
+/* Library: text tabs, the shown one underlined; covers with a white ring when focused. */
+window.fullscreen-mode .library-tabs .library-tab {
+  background: none;
+  border-radius: 0;
+  padding: 6px 0 4px;
+  margin-right: 24px;
+  color: var(--marquee-muted);
+  font-weight: 400;
+  box-shadow: none;
+}
+
+window.fullscreen-mode .library-tabs .library-tab:checked {
+  color: white;
+  font-weight: 700;
+  box-shadow: inset 0 -2px white;
+}
+
+window.fullscreen-mode .cover-tile cover-art,
+window.fullscreen-mode .cover-tile .cover-frame {
+  border-radius: 10px;
+}
+
+/* Room above the first row for the lifted cover's ring and shadow. */
+window.fullscreen-mode gridview.library {
+  padding-top: 32px;
+}
+
+window.fullscreen-mode gridview.library > child {
+  opacity: 0.9;
+}
+
+window.fullscreen-mode gridview.library > child:focus-within {
+  opacity: 1;
+  transform: scale(1.06);
+}
+
+window.fullscreen-mode gridview.library > child:focus-within .cover-frame {
+  outline: 2px solid white;
+  outline-offset: 2px;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 70%);
+}
+
+window.fullscreen-mode .cover-tile .play-button {
+  background-color: white;
+  color: black;
+}
+
+/* Game page: the art under a left and bottom shade, a white Play. */
+window.fullscreen-mode .game-hero .hero-gradient {
+  background-image:
+    linear-gradient(to right, rgb(0 0 0 / 70%), transparent 60%),
+    linear-gradient(to bottom, transparent 40%, var(--window-bg-color));
+}
+
+window.fullscreen-mode .game-play {
+  background-color: white;
+  color: black;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+window.fullscreen-mode .game-actions button {
+  border-radius: 10px;
+}
+
+window.fullscreen-mode .game-actions button:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 3px;
+}
+
+/* The About group and the description: one translucent card, rows that light up and a
+   white ring, like the panels' lists. */
+window.fullscreen-mode .game-about .boxed-list {
+  background-color: rgb(255 255 255 / 8%);
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+window.fullscreen-mode .game-about .boxed-list > row,
+window.fullscreen-mode .game-description {
+  border-radius: 10px;
+}
+
+window.fullscreen-mode .game-about .boxed-list > row:focus-visible {
+  background-color: rgb(255 255 255 / 14%);
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+window.fullscreen-mode .game-description:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 8px;
+}
+
+/* Panels: solid dark sheets; the focused row lights up under a white ring. */
+window.fullscreen-mode .menu-drawer,
+window.fullscreen-mode .quick-access,
+window.fullscreen-mode .options-sheet {
+  background-color: var(--sidebar-bg-color);
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar,
+window.fullscreen-mode .quick-access .navigation-sidebar,
+window.fullscreen-mode .options-sheet .navigation-sidebar {
+  background: none;
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar > row,
+window.fullscreen-mode .quick-access .navigation-sidebar > row,
+window.fullscreen-mode .options-sheet .navigation-sidebar > row {
+  border-radius: 10px;
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar > row:focus-visible,
+window.fullscreen-mode .quick-access .navigation-sidebar > row:focus-visible,
+window.fullscreen-mode .options-sheet .navigation-sidebar > row:focus-visible,
+window.fullscreen-mode .quick-access .boxed-list > row:focus-visible {
+  background-color: rgb(255 255 255 / 14%);
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+/* The lists inside Quick Access (cover sizes, designs): one translucent card. */
+window.fullscreen-mode .quick-access .boxed-list {
+  background-color: rgb(255 255 255 / 8%);
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+window.fullscreen-mode .quick-access .boxed-list > row {
+  border-radius: 10px;
+}
+
+/* Hint bar and search keyboard. */
+window.fullscreen-mode .hint-bar {
+  color: rgb(255 255 255 / 90%);
+}
+
+window.fullscreen-mode .search-keyboard {
+  background-color: var(--sidebar-bg-color);
+}
+
+window.fullscreen-mode .search-keyboard .osk-key {
+  border-radius: 10px;
+  background-color: var(--marquee-surface);
+}
+
+window.fullscreen-mode .search-keyboard .osk-key.cursor {
+  background-color: white;
+  color: black;
+}
+
+/* Less motion asked for: no growing, sliding or fading; focus keeps its ring. */
+@media (prefers-reduced-motion: reduce) {
+  window.fullscreen-mode .home .home-hero,
+  window.fullscreen-mode .home-carousel.home-tile-square > button {
+    transition: none;
+  }
+}

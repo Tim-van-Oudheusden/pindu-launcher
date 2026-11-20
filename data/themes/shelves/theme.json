@@ -1,0 +1,14 @@
+{
+  "contract": 1,
+  "name": "Shelves",
+  "description": "Every section as a row of its games; Up and Down change row",
+  "author": "Pindu launcher contributors",
+  "license": "GPL-3.0-or-later",
+  "layout": {
+    "home": "shelves",
+    "home-tile": "portrait",
+    "home-tile-size": 132,
+    "top-bar": true,
+    "home-details": true
+  }
+}

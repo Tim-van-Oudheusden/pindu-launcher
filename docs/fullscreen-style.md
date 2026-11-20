@@ -87,11 +87,15 @@ CSS restyles widgets but cannot move, add or remove them. These options change w
 
 | Option | Values (default first) | Effect |
 |---|---|---|
-| `home` | `"hero-bottom"`, `"row-top"` | Where Home's row of tiles sits, on both its screens: under the title at the bottom, or near the top with the title and details below it. |
+| `home` | `"hero-bottom"`, `"row-top"`, `"shelves"` | Where Home's row of tiles sits, on both its screens: under the title at the bottom, or near the top with the title and details below it. `"shelves"` makes Home one screen instead: the title and details at the top, and under them every section as a row of its games (below). |
+| `home-start` | `"sections"`, `"games"` | What the first screen's row starts with: a tile for every section, or the Recently Played games as cards, then a divider and a tile for every other section. Ignored with `"home": "shelves"`. |
 | `home-tile` | `"landscape"`, `"square"`, `"portrait"` | The shape of Home's tiles, on both its screens, and the art a game's card shows: the banner, else the cover; SteamGridDB square art, else the cover cropped to square; the cover, else the banner. Cards never show icons. |
 | `home-tile-size` | a number, 64–400 | The tiles' shorter side in pixels; art is decoded for 1.6× that size, so a focused card can grow that much and stay sharp. Without it the shape's own size applies. |
+| `home-section-tile` | `"art"`, `"label"` | What a section's tile shows: its art filling the tile, or a glyph (a launcher's two letters, or an icon), the section's name and its number of games. With `"label"` the Library and Steam Big Picture tiles take the same shape. |
+| `home-section-preview` | `false`, `true` | A strip under the details row, on the first screen, of the focused section's first six covers, then `+N` for the games beyond them. |
+| `home-background-choice` | `false`, `true` | Whether the design offers Quick Access → Design → **Background**. Without it Home shows Red Ribbons, whatever was chosen under a design that does. |
 | `top-bar` | `false`, `true` | A bar at the top of Home and the library with Home and Library tabs and a clock. |
-| `home-details` | `false`, `true` | A row under Home's title: on the first screen the focused section's number of games, on the second the focused game's playtime, when it was last played and its source. |
+| `home-details` | `false`, `true` | A row under Home's title: the focused section's number of games, or the focused game's playtime, when it was last played and its source. |
 
 ### Variants
 
@@ -196,16 +200,36 @@ Activating a section opens the second, `.home-games`: that section's games over 
 B goes back to the first. Both screens use the same widgets and layout options, so a rule without either
 class styles both.
 
-Choose **Quick Access → Design → Background** to switch between **Red Ribbons** (the default) and
-**Blue Station**. Use Up and Down to move between Background and the other Design settings. The choice
-applies immediately, is saved across restarts, and is independent of the fullscreen design. Both
+With `"home-start": "games"` the first screen's row starts with the Recently Played games as cards, as on
+the second screen, then a divider and the other sections' tiles; Recently Played has no tile. `.home` is
+also `.home-start-games`, on both screens. A focused game shows its art, logo or title and details, under
+a "Jump Back In" label; a focused section shows its first game's art, its name and its number of games.
+Pindu's own style has no shade on `.home-sections`, so give `.home.home-sections.home-start-games
+.hero-gradient` one.
+
+With `"home": "shelves"` Home is one screen, `.home-layout-shelves`, which is always `.home-games`: the
+logo or title and the details at the top, and under them `.home-shelves`, a list that scrolls. It has a
+row, `.home-shelf`, for each section, of its first 20 games and then **See All**, which opens the library
+at that section, and a last row with the Library tile. Left and Right move along a row and stop at its
+ends; Up and Down change row, to the card that row last had focused, and the row with focus sits at the
+top of the list. Recently Played's row is named Jump Back In and holds wide cards 130 pixels tall; the
+other rows take `home-tile` and `home-tile-size`. Each row's cards sit in a `.home-carousel` of its own, so
+rules for `.home-carousel > button` style them too; scope a rule with `.home-shelf` or `.home-carousel`'s
+`.home-tile-*` class to tell the rows apart.
+
+A design with `"home-background-choice": true` offers **Quick Access → Design → Background**, which
+switches between **Red Ribbons** (the default) and **Blue Station**; Lobby is the shipped one that does.
+Use Up and Down to move between Background and the other Design settings. The choice applies immediately
+and is saved across restarts. Under any other design, Adwaita included, the Background rows are hidden and
+Home shows Red Ribbons; the choice is kept, and applies again under a design that offers it. Both
 animations ship at 720p, 1080p and 1440p, with Red Ribbons at 60 fps. Home uses the smallest video that
 fills the display, or the largest if none does.
 
-The background plays muted and looped behind the first screen. It pauses on the second screen, while a
-game we started runs and while the window is hidden, and holds its first frame outside fullscreen mode and
-while the window is `reduced-motion`. While the system asks for high contrast it is not shown at all:
-`.home-background`'s plain black stands in for it.
+The background plays muted and looped behind the first screen. It pauses on the second screen, under art
+that covers it on the first, in the Shelves layout, while a game we started runs and while the window is
+hidden, and holds its first frame outside fullscreen mode and while the window is `reduced-motion`. While
+the system asks for high contrast it is not shown at all: `.home-background`'s plain black stands in for
+it.
 
 Quick Access's **Background Blur** and **Background Dim** (each Off, Low or High) put `blur-low` or
 `blur-high` and `dim-low` or `dim-high` on `.home`. Pindu blurs `.home-background` and `.home-hero` with
@@ -220,19 +244,27 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 
 | Name | What |
 |---|---|
-| `.home` | The page; also `.home-sections` on the first screen or `.home-games` on the second, `.home-layout-hero-bottom` or `.home-layout-row-top`, `.no-art` while no art is shown (always on the first screen), and `.blur-low` or `.blur-high` and `.dim-low` or `.dim-high` as Quick Access's Background Blur and Dim say |
+| `.home` | The page; also `.home-sections` on the first screen or `.home-games` on the second and in the Shelves layout, `.home-layout-hero-bottom`, `.home-layout-row-top` or `.home-layout-shelves`, `.home-start-games` while the first screen's row starts with games, `.no-art` while no art is shown, on either screen, and `.blur-low` or `.blur-high` and `.dim-low` or `.dim-high` as Quick Access's Background Blur and Dim say |
 | `.home-background` | Home's animated background, filling the page under the art; black where there is no video, hidden (`opacity: 0`) on the second screen. Blurred with `filter` under `.blur-*`; a `filter` of your own replaces Pindu's blur |
 | `.home-hero` | The focused game's art filling the page; the one showing the current art also has `.shown`, so `transition: opacity` crossfades. Blurred like `.home-background` |
 | `.home-dim` | A layer over the background and the art, under the shade and the text; transparent until `.dim-low` or `.dim-high` darkens it |
 | `.hero-gradient` | The shade over the art |
+| `.home-eyebrow` | "Jump Back In", over the title while one of the Recently Played games has focus on the first screen (with `"home-start": "games"`) |
 | `.home-title` | The row with the focused section's name, or the game's logo or title |
-| `.home-logo` | The logo, contained in 480×160 unless you grow it with `min-width`/`min-height` |
+| `.home-logo` | The logo, contained in 480×160, or 360×96 in the Shelves layout, unless you grow it with `min-width`/`min-height` |
 | `.title-1` | The title, when there is no logo |
 | `.home-details`, `.detail` | The details row and each detail (with `home-details`) |
+| `.home-preview` | The strip of the focused section's first covers (with `home-section-preview`): up to six `cover-art`, 80×120, then `.preview-more`, the `+N` for the games beyond them. It takes no focus |
 | `.home-carousel` | The row of tiles; also `.home-tile-landscape`, `.home-tile-square` or `.home-tile-portrait` |
 | `.home-section-tile` | A section's tile (a button) on the first screen, its art filling it; a collection's also has `.home-collection-tile`, an icon over its name |
-| `.jump-card` | A game's card (a button) on the second screen; `.jump-title` is its title on the art, `.badge` its pin |
-| `.library-tile` | The Library tile at the end of the first screen's row |
+| `.home-section-tile.labelled` | A section's tile with `"home-section-tile": "label"`. It also has the section's own class: `.section-recently-played`, `.section-favourites`, `.section-installed`, a launcher's (`.section-steam`, `.section-heroic-epic`, `.section-heroic-gog`, `.section-heroic-amazon`, `.section-heroic-sideload`, `.section-lutris`, `.section-bottles`, `.section-faugus`, `.section-legendary`, `.section-itch`, `.section-desktop`, `.section-manual`) or `.section-collection` for every collection. The Library and Steam Big Picture tiles are `.library-tile.labelled` |
+| `.section-label` | What a labelled tile holds: `.section-glyph` at the top left (a `label` with a launcher's two letters, or an `image`), `.section-name` at the bottom left, of two lines at most, and `.section-count`, the number of games, under it. Pad this, not the tile: a tile's own padding adds to its size |
+| `.home-divider` | The line between the game cards and the section tiles of a row that starts with games |
+| `.jump-card` | A game's card (a button); `.jump-title` is its title on the art, `.badge` its pin |
+| `.library-tile` | The Library tile at the end of the first screen's row, and the Steam Big Picture tile, which is also `.big-picture-tile` |
+| `.home-shelves` | The list of rows of the Shelves layout |
+| `.home-shelf` | A row of it: `.shelf-header`, with `.shelf-title` (the section's name) and `.shelf-count` (its number of games, which Jump Back In does not show), over its `.home-carousel`; `:focus-within` on the row with focus. The last row is also `.shelf-library` |
+| `.shelf-more` | **See All** (a button), the last tile of a row whose section holds more games than the row shows |
 
 **Library**
 
