@@ -53,6 +53,11 @@ flowchart LR
 9. **Run the [hardware checklist](#hardware-checklist)** on the release's files, on one real machine, and record the
    result on the "Release X.Y.Z" issue. Run it on a pre-release, then tag the final version, so a failed check never
    reaches a final release; a [fast final release](#fast-final-release) runs it on the final's files instead.
+10. **Close the milestones this release finished**, for a final release only. For each milestone with no open issues
+    left, check its gate, held in the milestone's description, against the release's files and record the result on
+    the "Release X.Y.Z" issue. Close the milestone once its gate passes; one whose gate does not pass yet stays open,
+    with an issue in it for what is missing. The README's Status section and `CONTRIBUTING.md` send readers to the
+    milestones page as the roadmap, so a finished milestone left open there reads as unfinished work (#676).
 
 The native packages target the distros that ship GTK 4.24 and libadwaita 1.10 (#232). When a new Fedora, Debian or
 Ubuntu release qualifies, add it to the `packages` and `packages-smoke` matrices in `packaging.yml` and `release.yml`
