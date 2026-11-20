@@ -15,6 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
+use pindu_core::gamescope::session::switch_to_desktop_command;
 use pindu_core::launch::{Command, LauncherDisplay};
 use pindu_core::model::{GameId, Timestamp};
 use pindu_core::paths::default_library_db_path;
@@ -275,6 +276,14 @@ pub fn spawn(command: &Command, output: Option<File>) -> Result<gio::Subprocess,
         None => gio::SubprocessLauncher::new(gio::SubprocessFlags::NONE),
     };
     spawn_with(&launcher, command)
+}
+
+/// Runs `os-session-select desktop` on the host and returns once it exits: `Ok` when it
+/// succeeded, the spawn or exit error otherwise.
+pub async fn switch_to_desktop() -> Result<(), glib::Error> {
+    spawn(&switch_to_desktop_command(), None)?
+        .wait_check_future()
+        .await
 }
 
 /// Spawns the command on the host as [`spawn`] does, with its output and errors piped
