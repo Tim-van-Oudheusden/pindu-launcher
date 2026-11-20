@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Adwaita — Quick Access, main level — reference mockup, 1280×720</title>
+<link rel="stylesheet" href="adwaita.css">
+<script src="mock.js"></script>
+</head>
+<body>
+<div class="window" id="window"></div>
+<script>
+// The rows are today's, in today's order (data/ui/quick_access.blp). Rows that are hidden
+// right now (Activity, Refresh Metadata, Filters, Performance) are left out, as in the app.
+const rows = [
+  ['bell', 'Notifications', '', '<span class="notification-count">2</span>', true, true, '.navigation-sidebar > row:focus-visible'],
+  ['refresh', 'Refresh Library'],
+  ['shuffle', 'Surprise Me'],
+  ['palette', 'Design', '', '', true],
+  ['gamepad', 'Controllers', '', '', true],
+  ['help', 'Controls', '', '', true],
+  ['gear', 'Settings', '', '', true],
+  ['folder', 'Sources', '', '', true],
+  ['copy', 'Duplicates', '', '', true],
+  ['network', 'Network', 'Home 5G', '', true, false, 'a row with a subtitle'],
+  ['bluetooth', 'Bluetooth', '1 device connected', '', true],
+];
+document.getElementById('window').innerHTML = quiet(home(false)) + hints([['A', 'Select'], ['B', 'Close']]) + `
+  <div class="dimming"></div>
+  <div class="quick-access abs leftout" data-a=".quick-access (16 px from the edges, radius 24)">
+    ${status}
+    <div class="playing-card" data-a=".playing-card">
+      <img src="art/lanternkeep-sq.jpg" alt="">
+      <span class="text"><span class="name">Lanternkeep</span><span class="session-time">42 minutes</span></span>
+      <span class="pill">Return</span><span class="pill">Stop</span>
+    </div>
+    <div class="panel-title">Quick Access</div>
+    <div class="navigation-sidebar">${rows.map(row).join('')}</div>
+    <div class="panel-fade"></div>
+  </div>`;
+</script>
+</body>
+</html>

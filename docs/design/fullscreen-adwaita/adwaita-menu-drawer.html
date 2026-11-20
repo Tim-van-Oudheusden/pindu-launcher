@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Adwaita — menu drawer — reference mockup, 1280×720</title>
+<link rel="stylesheet" href="adwaita.css">
+<script src="mock.js"></script>
+</head>
+<body>
+<div class="window" id="window"></div>
+<script>
+// The rows are today's, in today's order (data/ui/menu_drawer.blp).
+const rows = [
+  ['home', 'Home', '', '', false, true],
+  ['grid', 'Library'],
+  ['folder', 'Collections', '', '', true],
+  ['gamepad', 'Controls', '', '', true],
+  ['restore', 'Exit Fullscreen Mode'],
+  ['power', 'Power', '', '', true],
+];
+document.getElementById('window').innerHTML = quiet(home(false)) + hints([['A', 'Select'], ['B', 'Close']]) + `
+  <div class="dimming"></div>
+  <div class="menu-drawer abs inside right" data-a=".menu-drawer (440 px, full height, square)">
+    <div class="navigation-sidebar">${rows.map(row).join('')}</div>
+  </div>`;
+</script>
+</body>
+</html>

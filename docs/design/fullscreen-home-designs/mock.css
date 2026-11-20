@@ -1,6 +1,6 @@
 /* Shared styles for the three reference mockups. Web CSS, not GTK CSS: the pixel sizes,
    colours, radii and opacities are the spec; the layout technique is not. Nothing here
-   uses backdrop-filter, which GTK CSS does not have. */
+   uses backdrop-filter, though GTK 4.24 has it (Ribbon's panels use it). */
 
 * { box-sizing: border-box; }
 

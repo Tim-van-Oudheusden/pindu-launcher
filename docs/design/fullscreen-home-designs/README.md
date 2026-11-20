@@ -12,7 +12,7 @@ the `design/fullscreen-home-designs` branch only; it is not meant to be merged.
 - Every picture is a 1280×720 logical-pixel screen, rendered at 1.5×.
 - The mockups are web pages, not screenshots of the app. `mock.css` and each page's `<style>` hold the sizes,
   colours, radii and opacities; the layout technique (absolute positioning, flexbox) is the web's, not GTK's.
-  Nothing uses `backdrop-filter`, which GTK CSS does not have.
+  Nothing uses `backdrop-filter`, though GTK 4.24 has it (Ribbon's panels use it).
 - Add `?annot` to a page's address to outline the named parts, as in the `-annotated` pictures.
 - The game art in `art/` was drawn for these mockups; the games do not exist. `art/red-ribbons.jpg` is a frame
   of `data/home/red-ribbons-1080p60.webm`.

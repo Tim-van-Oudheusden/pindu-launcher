@@ -1,0 +1,122 @@
+/* Reference mockups for the Adwaita fullscreen design. Web CSS, not GTK CSS: the sizes,
+   radii and spacing are the spec, the layout technique is not. The colours are libadwaita's
+   dark palette written out; in the app use the variables named here, never the hex values,
+   so the light style, the accent colour and high contrast keep working. */
+:root {
+  --window-bg-color: #222226;
+  --window-fg-color: #ffffff;
+  --headerbar-bg-color: #2e2e32;
+  --sidebar-bg-color: #2e2e32;
+  --popover-bg-color: #36363a;
+  --card-bg-color: rgb(255 255 255 / 8%);
+  --accent-bg-color: #9141ac;   /* the system accent; purple in these pictures */
+  --accent-color: #dc8add;
+  --dim: rgb(255 255 255 / 70%);
+  --shade: rgb(0 0 6 / 36%);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { width: 1280px; height: 720px; overflow: hidden; background: var(--window-bg-color); color: var(--window-fg-color); font-family: "Adwaita Sans", Inter, system-ui, sans-serif; font-size: 15px; }
+.window { position: relative; width: 1280px; height: 720px; overflow: hidden; }
+
+/* Top bar (existing .fullscreen-top-bar): opaque, 56 px, tabs centred, clock at the end. */
+.fullscreen-top-bar { position: relative; display: flex; align-items: center; justify-content: center; gap: 6px; height: 56px; background: var(--headerbar-bg-color); box-shadow: 0 1px var(--shade); }
+.page-tab { display: flex; align-items: center; height: 40px; padding: 0 22px; border-radius: 9px; font-weight: 700; color: var(--dim); }
+.page-tab.checked { background: rgb(255 255 255 / 10%); color: #fff; }
+.clock { position: absolute; right: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Home, "explore" layout: a list of rows on the plain window background. */
+.home-shelves { display: flex; flex-direction: column; }
+
+/* Row 1 (new .home-featured): an AdwCarousel, one page per Jump Back In game. */
+.home-featured { position: relative; margin: 20px 48px 0; height: 244px; border-radius: 16px; overflow: hidden; background: #161a36; }
+.home-featured > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 38%; }
+.featured-scrim { position: absolute; inset: 0; background: linear-gradient(to right, rgb(0 0 6 / 88%), rgb(0 0 6 / 62%) 38%, transparent 70%); }
+.featured-text { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 10px; height: 100%; padding-left: 40px; }
+.home-eyebrow { font-size: 13px; font-weight: 700; color: rgb(255 255 255 / 86%); }
+.featured-title { font-size: 38px; font-weight: 800; line-height: 1.05; letter-spacing: -0.5px; }
+.home-details { display: flex; gap: 14px; font-size: 15px; color: rgb(255 255 255 / 86%); }
+.featured-actions { display: flex; gap: 12px; padding-top: 8px; }
+.pill { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 26px; border-radius: 999px; background: rgb(255 255 255 / 14%); font-size: 16px; font-weight: 700; }
+.pill.suggested-action { padding: 0 34px; background: var(--accent-bg-color); font-size: 19px; }
+.pill.focus { outline: 3px solid var(--accent-color); outline-offset: 3px; }
+.carousel-dots { display: flex; justify-content: center; align-items: center; gap: 8px; padding-top: 12px; height: 20px; }
+.carousel-dots span { width: 6px; height: 6px; border-radius: 99px; background: rgb(255 255 255 / 40%); }
+.carousel-dots span.on { width: 8px; height: 8px; background: #fff; }
+
+/* Row 2 (.home-carousel): the labelled section tiles, compact, then Library. */
+.section-row { display: flex; gap: 12px; padding: 16px 0 0 48px; }
+.home-section-tile.labelled.compact { flex: none; display: flex; align-items: center; gap: 12px; width: 176px; height: 64px; padding: 0 16px; border-radius: 12px; background: var(--card-bg-color); }
+.section-glyph { flex: none; display: flex; align-items: center; justify-content: center; width: 24px; font-size: 15px; font-weight: 800; }
+.section-glyph svg { width: 20px; height: 20px; }
+.section-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.section-name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.section-count { font-size: 13px; color: var(--dim); }
+
+/* Rows 3+ (.home-shelf): one per section, as in the Shelves design. */
+.shelf-header { display: flex; align-items: baseline; gap: 10px; padding: 22px 0 0 48px; }
+.shelf-title { font-size: 17px; font-weight: 800; }
+.shelf-count { font-size: 14px; color: var(--dim); }
+.shelf-row { display: flex; gap: 24px; padding: 12px 0 0 48px; }
+.jump-card { flex: none; width: 116px; height: 174px; border-radius: 12px; overflow: hidden; background: #303034; }
+.jump-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Hint bar (existing .hint-bar): unchanged, at the end. */
+.hint-bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: flex-end; align-items: center; gap: 20px; padding: 36px 40px 16px; background: linear-gradient(to top, var(--window-bg-color) 55%, transparent); font-size: 13px; color: rgb(255 255 255 / 86%); }
+.hint { display: flex; align-items: center; gap: 8px; }
+.hint-glyph { display: flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px; border: 1.5px solid #fff; font-size: 11px; font-weight: 700; }
+
+/* The page dims under an open panel, as AdwOverlaySplitView does. */
+.dimming { position: absolute; inset: 0; background: rgb(0 0 6 / 45%); }
+
+/* Quick Access (existing .quick-access): the same 440 px pane on the right, drawn as a
+   floating card. One column of rows, in today's order. */
+.quick-access { position: absolute; top: 16px; right: 16px; bottom: 16px; width: 424px; display: flex; flex-direction: column; padding: 24px 20px 0; border-radius: 24px; background: var(--popover-bg-color); box-shadow: 0 0 0 1px rgb(255 255 255 / 8%), 0 12px 40px rgb(0 0 0 / 50%); }
+.quick-access-status { display: flex; align-items: center; gap: 10px; padding: 0 4px 18px; font-weight: 700; }
+.quick-access-status .clock { position: static; flex: 1; font-size: 17px; }
+.quick-access-status .battery, .quick-access-status .offline { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; background: rgb(255 255 255 / 10%); font-size: 14px; }
+.playing-card { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; padding: 12px; border-radius: 16px; background: rgb(255 255 255 / 8%); }
+.playing-card img { flex: none; width: 52px; height: 52px; border-radius: 10px; object-fit: cover; }
+.playing-card .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.playing-card .name { font-weight: 700; }
+.playing-card .session-time { font-size: 13px; color: var(--dim); }
+.playing-card .pill { height: 38px; padding: 0 16px; font-size: 14px; background: rgb(255 255 255 / 12%); }
+.panel-title { padding: 0 4px 12px; font-size: 20px; font-weight: 800; }   /* existing .title-3 */
+.panel-heading { padding: 8px 4px 8px; font-size: 15px; font-weight: 700; } /* existing .heading */
+.navigation-sidebar { display: flex; flex-direction: column; gap: 8px; }
+.quick-access .navigation-sidebar > .row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 16px 0 10px; border-radius: 999px; background: rgb(255 255 255 / 8%); }
+.quick-access .navigation-sidebar > .row > .icon { flex: none; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgb(255 255 255 / 10%); }
+.row .icon svg { width: 16px; height: 16px; }
+.row .label { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.row .subtitle { font-size: 13px; color: var(--dim); }
+.row .next svg { width: 14px; height: 14px; display: block; }
+.row.focus { background: rgb(255 255 255 / 16%); outline: 3px solid var(--accent-color); outline-offset: -3px; }
+.notification-count { min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px; background: var(--accent-bg-color); font-size: 13px; font-weight: 700; line-height: 24px; text-align: center; }
+.quick-access > .navigation-sidebar, .quick-access > .levels { flex: 1; min-height: 0; overflow: hidden; }
+.panel-fade { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; border-radius: 0 0 24px 24px; background: linear-gradient(to top, var(--popover-bg-color), transparent); }
+
+/* A level's lists (existing .boxed-list): one card per list, radio rows as today. */
+.boxed-list { margin-bottom: 10px; border-radius: 16px; background: rgb(255 255 255 / 8%); overflow: hidden; }
+.boxed-list > .row { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 6px 16px; box-shadow: 0 1px rgb(255 255 255 / 8%); }
+.boxed-list > .row:last-child { box-shadow: none; }
+.boxed-list > .row.focus { border-radius: 16px; }
+.radio { flex: none; width: 20px; height: 20px; border-radius: 99px; box-shadow: inset 0 0 0 2px rgb(255 255 255 / 55%); }
+.radio.on { background: var(--accent-bg-color); box-shadow: inset 0 0 0 6px var(--accent-bg-color), inset 0 0 0 20px #fff; }
+.switch { flex: none; width: 46px; height: 26px; border-radius: 99px; background: rgb(255 255 255 / 20%); position: relative; }
+.switch::after { content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 99px; background: #fff; }
+
+/* Menu drawer (existing .menu-drawer): a full-height rectangle on the left, as today. */
+.menu-drawer { position: absolute; top: 0; left: 0; bottom: 0; width: 440px; display: flex; flex-direction: column; padding: 36px 24px; background: var(--sidebar-bg-color); box-shadow: 1px 0 var(--shade); }
+.menu-drawer .navigation-sidebar { gap: 2px; }
+.menu-drawer .navigation-sidebar > .row { display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 6px 12px; border-radius: 9px; }
+.menu-drawer .navigation-sidebar > .row > .icon { flex: none; display: flex; width: 16px; }
+.menu-drawer .row.focus { background: rgb(255 255 255 / 10%); }
+
+/* Annotated copies. */
+body.annot [data-a] { outline: 2px dashed #5ee6ff; outline-offset: 2px; }
+body.annot [data-a]:not(.abs) { position: relative; }
+body.annot [data-a]::after { content: attr(data-a); position: absolute; z-index: 50; left: 0; top: 0; transform: translate(0, -100%); margin-top: -5px; padding: 2px 6px; border-radius: 4px; background: #5ee6ff; color: #00222b; font: 600 11px/1.3 "DejaVu Sans Mono", monospace; letter-spacing: 0; white-space: nowrap; }
+body.annot [data-a].below::after { transform: none; top: 100%; margin-top: 5px; }
+body.annot [data-a].inside::after { transform: none; top: 4px; left: 4px; margin-top: 0; }
+body.annot [data-a].right::after { left: auto; right: 4px; }
+body.annot [data-a].leftout::after { left: auto; right: 100%; top: 4px; transform: none; margin: 0 8px 0 0; }

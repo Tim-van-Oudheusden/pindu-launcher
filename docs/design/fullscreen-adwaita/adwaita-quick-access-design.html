@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Adwaita — Quick Access, Design level — reference mockup, 1280×720</title>
+<link rel="stylesheet" href="adwaita.css">
+<script src="mock.js"></script>
+</head>
+<body>
+<div class="window" id="window"></div>
+<script>
+const radio = (on, title, subtitle, focus) => `<div class="row${focus ? ' focus' : ''}"><span class="radio${on ? ' on' : ''}"></span><span class="label"><span>${title}</span>${subtitle ? `<span class="subtitle">${subtitle}</span>` : ''}</span></div>`;
+document.getElementById('window').innerHTML = quiet(home(false)) + hints([['A', 'Select'], ['B', 'Back']]) + `
+  <div class="dimming"></div>
+  <div class="quick-access">
+    ${status}
+    <div class="panel-title">Design</div>
+    <div class="levels">
+    <div class="boxed-list inside right" data-a=".boxed-list (one card per list)">
+      ${radio(true, 'Adwaita', '', true)}
+      ${radio(false, 'Panorama', "The focused game's art across the screen, with a row of square tiles below")}
+      ${radio(false, 'Ribbon', "A row of square tiles across the top, over the focused game's art")}
+    </div>
+    <div class="panel-heading">Background Blur</div>
+    <div class="boxed-list">${radio(true, 'Off')}${radio(false, 'Low')}${radio(false, 'High')}</div>
+    <div class="panel-heading">Background Dim</div>
+    <div class="boxed-list">${radio(true, 'Off')}${radio(false, 'Low')}${radio(false, 'High')}</div>
+    </div>
+    <div class="panel-fade"></div>
+  </div>`;
+</script>
+</body>
+</html>
