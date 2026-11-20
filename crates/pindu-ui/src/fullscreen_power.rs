@@ -18,7 +18,7 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::gamescope::session::{
-    PowerLevelEntry, SwitchToDesktop, asks_before_switching, power_level, switch_to_desktop_command,
+    PowerLevelEntry, SwitchToDesktop, asks_before_switching, power_level,
 };
 use pindu_core::panels::{DrawerLevel, Panel};
 use pindu_core::system::power::{PowerAction, PowerEntry, PowerState, asks_first};
@@ -282,12 +282,8 @@ impl PinduWindow {
                 window.add_toast(adw::Toast::new(&message));
             }
         );
-        let child = match session_service::spawn(&switch_to_desktop_command(), None) {
-            Ok(child) => child,
-            Err(error) => return failed(error),
-        };
         glib::spawn_future_local(async move {
-            match child.wait_check_future().await {
+            match session_service::switch_to_desktop().await {
                 Ok(()) => application.quit(),
                 Err(error) => failed(error),
             }
