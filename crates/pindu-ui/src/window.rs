@@ -1778,7 +1778,20 @@ pub(crate) fn show_jump_art(picture: &CoverArt, game: &GameObject, pixels: (u32,
         (art, entry.art.icon.clone())
     };
     picture.set_crop(true);
-    picture.show(art, icon, pixels, |_| {});
+    picture.show(art, icon, pixels, show_art_class);
+}
+
+/// Names the card that holds `art` `.no-art` while it shows none, once its load ended: a
+/// design that hides a card's title shows it on such a card, where nothing else says which
+/// game it is.
+pub(crate) fn show_art_class(art: &CoverArt) {
+    if let Some(card) = art.ancestor(gtk::Button::static_type()) {
+        if art.has_art() {
+            card.remove_css_class("no-art");
+        } else {
+            card.add_css_class("no-art");
+        }
+    }
 }
 
 /// A landscape card for "Jump back in": the game's banner (or cover), cropped to fill the

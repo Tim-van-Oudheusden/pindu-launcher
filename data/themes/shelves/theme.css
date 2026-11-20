@@ -161,8 +161,9 @@ window.fullscreen-mode .home-shelf .home-carousel > button:focus-within {
   box-shadow: 0 0 0 3px white, 0 13px 28px rgb(0 0 0 / 60%);
 }
 
-/* A cover says its game's name itself; a wide card's art often does not. */
-window.fullscreen-mode .home-shelf .home-carousel.home-tile-portrait .jump-title {
+/* A cover says its game's name itself; a wide card's art often does not. A card without
+   art (`.no-art`) keeps its title, as nothing else on it says which game it is. */
+window.fullscreen-mode .home-shelf .home-carousel.home-tile-portrait > .jump-card:not(.no-art) .jump-title {
   opacity: 0;
 }
 

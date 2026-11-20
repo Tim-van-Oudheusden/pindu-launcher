@@ -130,8 +130,9 @@ window.fullscreen-mode .home-carousel.home-tile-square > button picture {
   border-radius: 10px;
 }
 
-/* No titles on the cards: the game's logo or name is above the row. */
-window.fullscreen-mode .home-carousel.home-tile-square .jump-title {
+/* No titles on the cards: the game's logo or name is above the row. A card without art
+   (`.no-art`) keeps its title, as nothing else on it says which game it is. */
+window.fullscreen-mode .home-carousel.home-tile-square > .jump-card:not(.no-art) .jump-title {
   opacity: 0;
 }
 

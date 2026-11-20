@@ -39,7 +39,7 @@ use crate::game_page::{date, playtime};
 use crate::models::GameObject;
 use crate::sources::{source_icon, source_name};
 use crate::widgets::{CoverArt, SpacedLabel, TileFrame, textures};
-use crate::window::{jump_card_frame, show_jump_art};
+use crate::window::{jump_card_frame, show_art_class, show_jump_art};
 
 /// A `.detail` item of Home's details row: an icon and the value, with what it is as its
 /// tooltip and description. The wording is the game page's.
@@ -2199,8 +2199,14 @@ fn carousel_padding(carousel: &gtk::Box) -> f64 {
     f64::from((width - gaps).max(0)) / 2.0
 }
 
-/// Shows a card's art at `size`, decoded for a design that scales the card up.
+/// Shows a card's art at `size`, decoded for a design that scales the card up, and names
+/// the card `.no-art` when it has none.
 fn show_card_art(picture: &CoverArt, art: CardArt, size: (i32, i32), scale_factor: i32) {
     picture.set_crop(art.crop);
-    picture.show(art.art, None, home::art_pixels(size, scale_factor), |_| {});
+    picture.show(
+        art.art,
+        None,
+        home::art_pixels(size, scale_factor),
+        show_art_class,
+    );
 }
