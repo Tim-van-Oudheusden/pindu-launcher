@@ -285,6 +285,9 @@ impl PinduWindow {
         if self.imp().home_page.navigate(direction) {
             return;
         }
+        if direction == Direction::Down && self.leave_top_bar_down() {
+            return;
+        }
         let grid = &self.imp().grid;
         let Some(model) = grid.model() else {
             return;

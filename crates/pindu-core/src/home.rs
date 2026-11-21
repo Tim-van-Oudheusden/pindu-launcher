@@ -185,6 +185,37 @@ pub fn shelves(sections: &[Section]) -> Vec<Shelf> {
         .collect()
 }
 
+/// A row of the Explore layout.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExploreRow {
+    /// The carousel of the Recently Played games, in order.
+    Featured(Vec<GameId>),
+    /// A tile for each of these sections, in order; the shell adds the Library tile.
+    Tiles(Vec<SectionId>),
+    /// A section as a row of its games.
+    Shelf(Shelf),
+}
+
+/// The rows of the Explore layout: the Recently Played games, when there are any; a row
+/// of tiles for every other section, there even without one; then a shelf for each of
+/// those sections (`shelves`), in order.
+pub fn explore_rows(sections: &[Section]) -> Vec<ExploreRow> {
+    let (recent, others): (Vec<Section>, Vec<Section>) = sections
+        .iter()
+        .cloned()
+        .partition(|section| section.id == SectionId::RecentlyPlayed);
+    let mut rows: Vec<ExploreRow> = recent
+        .into_iter()
+        .filter(|section| !section.games.is_empty())
+        .map(|section| ExploreRow::Featured(section.games))
+        .collect();
+    rows.push(ExploreRow::Tiles(
+        others.iter().map(|section| section.id).collect(),
+    ));
+    rows.extend(shelves(&others).into_iter().map(ExploreRow::Shelf));
+    rows
+}
+
 /// The shape and size of the cards in the Shelves row of `section` under `layout`: wide
 /// cards 130 pixels tall for Recently Played, the design's tiles for every other row.
 pub fn shelf_shape(section: SectionId, layout: ThemeLayout) -> (TileShape, (i32, i32)) {
@@ -235,6 +266,38 @@ pub fn shelf_step((row, item): (usize, usize), direction: Direction, rows: &[usi
 /// up leaves for the top bar.
 pub fn row_step(item: usize, direction: Direction, length: usize) -> ShelfStep {
     shelf_step((0, item), direction, &[length])
+}
+
+/// A button on a page of the Explore layout's featured row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FeaturedButton {
+    /// Play, or Stop while the game runs.
+    Play,
+    /// Details, which opens the game page.
+    Details,
+}
+
+/// Where Left or Right leads from `button` on page `page` of the featured row's `pages`:
+/// Right from Play to Details, then to the next page's Play; Left from Details to Play,
+/// then to the previous page's Play. `None` where focus stays: at either end, and for Up
+/// and Down, which change row (`shelf_step`).
+pub fn featured_step(
+    page: usize,
+    button: FeaturedButton,
+    direction: Direction,
+    pages: usize,
+) -> Option<(usize, FeaturedButton)> {
+    match (direction, button) {
+        (Direction::Right, FeaturedButton::Play) => Some((page, FeaturedButton::Details)),
+        (Direction::Right, FeaturedButton::Details) if page + 1 < pages => {
+            Some((page + 1, FeaturedButton::Play))
+        }
+        (Direction::Left, FeaturedButton::Details) => Some((page, FeaturedButton::Play)),
+        (Direction::Left, FeaturedButton::Play) if page > 0 => {
+            Some((page - 1, FeaturedButton::Play))
+        }
+        _ => None,
+    }
 }
 
 /// How many covers the preview of the focused section shows at most.
@@ -1064,5 +1127,62 @@ mod tests {
         assert_eq!(row_step(0, Direction::Right, 1), ShelfStep::Stay);
         assert_eq!(row_step(1, Direction::Up, 3), ShelfStep::Leave);
         assert_eq!(row_step(1, Direction::Down, 3), ShelfStep::Stay);
+    }
+
+    #[test]
+    fn explore_starts_with_the_recent_games_then_the_tiles_then_a_shelf_each() {
+        let recent = section(SectionId::RecentlyPlayed, 2);
+        let favourites = section(SectionId::Favourites, 3);
+        let installed = section(SectionId::Installed, 4);
+
+        let rows = explore_rows(&[recent.clone(), favourites.clone(), installed.clone()]);
+
+        assert_eq!(
+            rows,
+            [
+                ExploreRow::Featured(recent.games),
+                ExploreRow::Tiles(vec![SectionId::Favourites, SectionId::Installed]),
+                ExploreRow::Shelf(shelves(std::slice::from_ref(&favourites)).remove(0)),
+                ExploreRow::Shelf(shelves(std::slice::from_ref(&installed)).remove(0)),
+            ]
+        );
+    }
+
+    #[test]
+    fn explore_has_no_featured_row_without_recent_games() {
+        let favourites = section(SectionId::Favourites, 1);
+
+        for sections in [
+            vec![favourites.clone()],
+            vec![section(SectionId::RecentlyPlayed, 0), favourites.clone()],
+        ] {
+            assert_eq!(
+                explore_rows(&sections),
+                [
+                    ExploreRow::Tiles(vec![SectionId::Favourites]),
+                    ExploreRow::Shelf(shelves(std::slice::from_ref(&favourites)).remove(0)),
+                ]
+            );
+        }
+    }
+
+    #[test]
+    fn an_empty_library_explores_the_tiles_row_alone() {
+        assert_eq!(explore_rows(&[]), [ExploreRow::Tiles(Vec::new())]);
+    }
+
+    #[test]
+    fn the_featured_row_steps_through_play_and_details_and_turns_the_page() {
+        use FeaturedButton::{Details, Play};
+        let step = |page, button, direction| featured_step(page, button, direction, 3);
+
+        assert_eq!(step(0, Play, Direction::Right), Some((0, Details)));
+        assert_eq!(step(0, Details, Direction::Right), Some((1, Play)));
+        assert_eq!(step(1, Details, Direction::Left), Some((1, Play)));
+        assert_eq!(step(1, Play, Direction::Left), Some((0, Play)));
+        // Focus stays at either end.
+        assert_eq!(step(0, Play, Direction::Left), None);
+        assert_eq!(step(2, Details, Direction::Right), None);
+        assert_eq!(step(2, Play, Direction::Right), Some((2, Details)));
     }
 }

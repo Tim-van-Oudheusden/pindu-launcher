@@ -81,7 +81,9 @@ mod imp {
         #[template_child]
         pub top_bar_view: TemplateChild<adw::ToolbarView>,
         #[template_child]
-        pub top_bar: TemplateChild<gtk::Box>,
+        pub top_bar: TemplateChild<gtk::CenterBox>,
+        #[template_child]
+        pub top_bar_tabs: TemplateChild<gtk::Box>,
         #[template_child]
         pub clock: TemplateChild<gtk::Label>,
         #[template_child]
@@ -1811,16 +1813,28 @@ pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::
         .halign(gtk::Align::Center)
         .valign(gtk::Align::Center)
         .can_focus(false)
-        .action_target(&game.id().as_str().to_variant())
         .css_classes(["play-button", "pill", "suggested-action"])
         .build();
+    bind_play_button(&play, game);
+    let tile = gtk::Overlay::builder()
+        .child(&card)
+        .css_classes(["jump-tile"])
+        .build();
+    tile.add_overlay(&play);
+    tile
+}
+
+/// Makes `play` start `game` (`app.play`, "Play"), or stop it while it runs (`app.stop`,
+/// "Stop"), named after the game, as on the cover tiles and the "Jump back in" cards.
+pub(crate) fn bind_play_button(play: &gtk::Button, game: &GameObject) {
+    play.set_action_target_value(Some(&game.id().as_str().to_variant()));
     // The bindings go with the button, so a rebuilt row leaves nothing on the game. The
     // label binding also names the button after the game, as the visible "Play" alone
     // does not say which game it starts.
     let title = game.game().title.clone();
     // Bindings transform on the main thread, where the button lives.
     let button = glib::SendWeakRef::from(play.downgrade());
-    game.bind_property("playing", &play, "label")
+    game.bind_property("playing", play, "label")
         .transform_to(move |_, playing: bool| {
             if let Some(button) = button.upgrade() {
                 button.update_property(&[gtk::accessible::Property::Label(
@@ -1835,19 +1849,13 @@ pub(crate) fn jump_card(game: &GameObject, (width, height): (i32, i32)) -> gtk::
         })
         .sync_create()
         .build();
-    game.bind_property("playing", &play, "action-name")
+    game.bind_property("playing", play, "action-name")
         .transform_to(|_, playing: bool| Some(if playing { "app.stop" } else { "app.play" }))
         .sync_create()
         .build();
     // GTK names a button after its label through a relation, which would win over the
     // name the binding gives it.
     play.reset_relation(gtk::AccessibleRelation::LabelledBy);
-    let tile = gtk::Overlay::builder()
-        .child(&card)
-        .css_classes(["jump-tile"])
-        .build();
-    tile.add_overlay(&play);
-    tile
 }
 
 /// A card for "Jump back in" and fullscreen Home, `width`×`height` pixels, with the game's

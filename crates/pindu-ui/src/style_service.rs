@@ -6,8 +6,9 @@
 //! any of them can reach the desktop window. Saving a stylesheet, or another file directly
 //! in the design's or the variant's folder (one it imports, say), reloads it. The
 //! design's layout choices (`ThemeLayout`), which CSS cannot make, are in force with its
-//! stylesheet; choosing the design again rereads them. Preferences imports, resets and
-//! checks `fullscreen.css` here, and hears of its changes whether or not it is on.
+//! stylesheet, and Adwaita's (`ThemeLayout::adwaita`) while no design is; choosing the
+//! design again rereads them. Preferences imports, resets and checks `fullscreen.css`
+//! here, and hears of its changes whether or not it is on.
 
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
@@ -245,8 +246,10 @@ pub struct StyleService {
     on_problems: ProblemsHandlers,
     /// The chosen design's layout, in force while the design is.
     design_layout: Rc<Cell<ThemeLayout>>,
-    /// The layout last reported to the handlers.
-    layout: Rc<Cell<ThemeLayout>>,
+    /// Whether the chosen design is installed and this Pindu launcher can apply it.
+    design_installed: Rc<Cell<bool>>,
+    /// The layout and whether no design shows, as last reported to the handlers.
+    in_force: Rc<Cell<(ThemeLayout, bool)>>,
     on_layout: LayoutHandlers,
 }
 
@@ -290,7 +293,8 @@ impl StyleService {
             style: Rc::default(),
             on_problems,
             design_layout: Rc::default(),
-            layout: Rc::default(),
+            design_installed: Rc::default(),
+            in_force: Rc::default(),
             on_layout: LayoutHandlers::default(),
         };
         // Watched whether or not it is on, for Preferences to report its problems. In a
@@ -312,16 +316,26 @@ impl StyleService {
     }
 
     /// The layout of the design in force: the chosen design's while it applies (fullscreen
-    /// mode, no high contrast), `ThemeLayout::default()` otherwise.
+    /// mode, no high contrast), Adwaita's (`ThemeLayout::adwaita`) otherwise.
     pub fn layout(&self) -> ThemeLayout {
         if self.style.borrow().design_applies() {
             self.design_layout.get()
         } else {
-            ThemeLayout::default()
+            ThemeLayout::adwaita()
         }
     }
 
-    /// Calls `handler` with the new layout whenever `layout()` changes.
+    /// Whether fullscreen mode shows no design, Adwaita: none is chosen, the chosen one
+    /// is not installed or needs a newer contract, or the system asks for high contrast.
+    /// Never outside fullscreen mode.
+    pub fn shows_no_design(&self) -> bool {
+        self.style
+            .borrow()
+            .shows_no_design(self.design_installed.get())
+    }
+
+    /// Calls `handler` with the new layout whenever `layout()` or `shows_no_design()`
+    /// changes.
     pub fn connect_layout_changed(&self, handler: impl Fn(ThemeLayout) + 'static) {
         self.on_layout.borrow_mut().push(Box::new(handler));
     }
@@ -476,8 +490,9 @@ impl StyleService {
             .and_then(|theme| theme.variant(&self.settings.string(VARIANT)))
             .and_then(|variant| variant.stylesheet.clone());
         self.variant.set_file(variant);
+        self.design_installed.set(theme.is_some());
         self.design_layout
-            .set(theme.map(|theme| theme.layout).unwrap_or_default());
+            .set(theme.map_or_else(ThemeLayout::adwaita, |theme| theme.layout));
         self.update();
     }
 
@@ -544,14 +559,16 @@ impl StyleService {
         }
     }
 
-    /// Shows each stylesheet while it is in force, and reports a change of layout.
+    /// Shows each stylesheet while it is in force, and reports a change of layout or of
+    /// whether a design shows.
     fn update(&self) {
         let style = *self.style.borrow();
         self.design.show(style.design_applies());
         self.variant.show(style.design_applies());
         self.custom.show(style.applies());
         let layout = self.layout();
-        if self.layout.replace(layout) != layout {
+        let in_force = (layout, self.shows_no_design());
+        if self.in_force.replace(in_force) != in_force {
             for handler in self.on_layout.borrow().iter() {
                 handler(layout);
             }

@@ -129,12 +129,12 @@ template $PinduWindow: Adw.ApplicationWindow {
               };
 
               // Fullscreen mode's top bar, which a design turns on: tabs for Home and the
-              // library, and a clock. Home's backdrop runs on under it.
+              // library, and a clock. Home's backdrop runs on under it. The tabs sit at the
+              // start, or in the middle where the design asks (`top-bar-tabs`).
               content: Adw.ToolbarView top_bar_view {
                 [top]
-                Box top_bar {
+                CenterBox top_bar {
                   visible: false;
-                  spacing: 24;
                   margin-top: 18;
                   margin-start: 36;
                   margin-end: 36;
@@ -143,9 +143,8 @@ template $PinduWindow: Adw.ApplicationWindow {
                     "fullscreen-top-bar",
                   ]
 
-                  Box {
+                  start-widget: Box top_bar_tabs {
                     spacing: 6;
-                    hexpand: true;
 
                     ToggleButton {
                       label: _("Home");
@@ -166,14 +165,14 @@ template $PinduWindow: Adw.ApplicationWindow {
                         "page-tab",
                       ]
                     }
-                  }
+                  };
 
-                  Label clock {
+                  end-widget: Label clock {
                     styles [
                       "clock",
                       "numeric",
                     ]
-                  }
+                  };
                 }
 
                 content: Adw.NavigationView navigation_view {
