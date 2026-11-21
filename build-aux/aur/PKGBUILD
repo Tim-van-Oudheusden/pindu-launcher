@@ -7,7 +7,7 @@
 # with `makepkg --printsrcinfo > .SRCINFO`.
 
 pkgname=pindu-launcher
-pkgver=0.5.1
+pkgver=0.6.0
 pkgrel=1
 pkgdesc='Every PC game on your computer in one GNOME library'
 arch=(x86_64 aarch64)
@@ -66,7 +66,7 @@ optdepends=(
   'umu-launcher: run Windows games'
 )
 source=("$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.xz")
-sha256sums=('ab2bec476c6bb528a8ce54779b5e5c08bda244931cabe63cd924dfcfee55b831')
+sha256sums=('e958531f5646537ceb34e18c90b18b61b95ec13968c93db76171a1cc035e0e0a')
 
 build() {
   # -Dgamescope-session: the gamescope-session-plus client and its login entry
