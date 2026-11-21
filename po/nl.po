@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 00:33+0000\n"
+"POT-Creation-Date: 2026-11-21 01:54+0100\n"
 "PO-Revision-Date: 2026-11-07 18:15+0000\n"
 "Last-Translator: Tim <tim-van-oudheusden@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/pindu-launcher/"
@@ -252,25 +252,29 @@ msgstr "Pindu launcher"
 msgid "translator-credits"
 msgstr "vertaler-credits"
 
-#: crates/pindu-ui/src/application.rs:1223
+#: crates/pindu-ui/src/application.rs:1195
+msgid "Launcher Icons"
+msgstr ""
+
+#: crates/pindu-ui/src/application.rs:1239
 msgid "Added artwork for one game"
 msgid_plural "Added artwork for {count} games"
 msgstr[0] "Kunstwerk voor een game toegevoegd"
 msgstr[1] "Kunstwerk voor {count} games toegevoegd"
 
-#: crates/pindu-ui/src/application.rs:1228
+#: crates/pindu-ui/src/application.rs:1244
 msgid "No new artwork found"
 msgstr "Geen nieuw kunstwerk kunnen vinden"
 
-#: crates/pindu-ui/src/application.rs:1229
+#: crates/pindu-ui/src/application.rs:1245
 msgid "SteamGridDB did not accept the key"
 msgstr "SteamGridDB heeft de sleutel niet geaccepteerd"
 
-#: crates/pindu-ui/src/application.rs:1230
+#: crates/pindu-ui/src/application.rs:1246
 msgid "Could not reach SteamGridDB"
 msgstr "Kon SteamGridDB niet bereiken"
 
-#: crates/pindu-ui/src/application.rs:1238
+#: crates/pindu-ui/src/application.rs:1254
 #, fuzzy
 #| msgid "Added artwork for one game"
 #| msgid_plural "Added artwork for {count} games"
@@ -279,41 +283,41 @@ msgid_plural "Updated metadata for {count} games"
 msgstr[0] "Kunstwerk voor een game toegevoegd"
 msgstr[1] "Kunstwerk voor {count} games toegevoegd"
 
-#: crates/pindu-ui/src/application.rs:1243
+#: crates/pindu-ui/src/application.rs:1259
 msgid "Wikidata has no metadata for these games"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1245
+#: crates/pindu-ui/src/application.rs:1261
 msgid "No game has a Steam app ID to look up on Wikidata"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1247
+#: crates/pindu-ui/src/application.rs:1263
 #, fuzzy
 #| msgid "Could not reach SteamGridDB"
 msgid "Could not reach Wikidata"
 msgstr "Kon SteamGridDB niet bereiken"
 
-#: crates/pindu-ui/src/application.rs:1263
+#: crates/pindu-ui/src/application.rs:1279
 msgid "Nothing new to restore"
 msgstr "Niks om te herstellen op dit moment"
 
-#: crates/pindu-ui/src/application.rs:1265
+#: crates/pindu-ui/src/application.rs:1281
 msgid "Backup restored"
 msgstr "Backup hersteld"
 
-#: crates/pindu-ui/src/application.rs:1271
+#: crates/pindu-ui/src/application.rs:1287
 msgid "one game in it is not in this library"
 msgid_plural "{count} games in it are not in this library"
 msgstr[0] "een game hierin is niet in deze bibliotheek"
 msgstr[1] "{count} games hierin zijn niet in deze bibliotheek"
 
-#: crates/pindu-ui/src/application.rs:1281
+#: crates/pindu-ui/src/application.rs:1297
 msgid "one group of copies in it was skipped"
 msgid_plural "{count} groups of copies in it were skipped"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:1289
+#: crates/pindu-ui/src/application.rs:1305
 msgid "{result}; {note}"
 msgstr "{result}; {note}"
 
@@ -1213,7 +1217,7 @@ msgid "Moving"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controls.rs:217
-#: crates/pindu-ui/src/home_page.rs:1644 crates/pindu-ui/src/home_page.rs:2505
+#: crates/pindu-ui/src/home_page.rs:1648 crates/pindu-ui/src/home_page.rs:2509
 #: data/ui/home_page.blp:228 data/ui/menu_drawer.blp:100
 #: data/ui/preferences.blp:10 data/ui/shortcuts-dialog.blp:35
 #: data/ui/window.blp:62 data/ui/window.blp:160
@@ -1231,12 +1235,12 @@ msgid "Launching"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controls.rs:226
-#: crates/pindu-ui/src/menu_drawer.rs:270 crates/pindu-ui/src/sources.rs:69
+#: crates/pindu-ui/src/menu_drawer.rs:270 crates/pindu-ui/src/sources.rs:70
 msgid "Move Up"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controls.rs:227
-#: crates/pindu-ui/src/menu_drawer.rs:275 crates/pindu-ui/src/sources.rs:70
+#: crates/pindu-ui/src/menu_drawer.rs:275 crates/pindu-ui/src/sources.rs:71
 msgid "Move Down"
 msgstr ""
 
@@ -2121,7 +2125,7 @@ msgid "Launcher"
 msgstr ""
 
 #. Translators: when a source last synced; it never has.
-#: crates/pindu-ui/src/game_page.rs:932 crates/pindu-ui/src/sources.rs:158
+#: crates/pindu-ui/src/game_page.rs:932 crates/pindu-ui/src/sources.rs:157
 #: crates/pindu-ui/src/widgets/game_list_cell.rs:213
 msgid "Never"
 msgstr ""
@@ -2349,7 +2353,7 @@ msgid "None installed; umu downloads one the first time a game needs it"
 msgstr ""
 
 #. Translators: the separator between the first items of a list.
-#: crates/pindu-ui/src/health_page.rs:195 crates/pindu-ui/src/sources.rs:135
+#: crates/pindu-ui/src/health_page.rs:195 crates/pindu-ui/src/sources.rs:136
 msgid ", "
 msgstr ""
 
@@ -2578,34 +2582,34 @@ msgstr ""
 msgid "Recently Played"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:130 crates/pindu-ui/src/home_page.rs:1846
-#: crates/pindu-ui/src/home_page.rs:1933 data/ui/home_page.blp:85
+#: crates/pindu-ui/src/home_page.rs:130 crates/pindu-ui/src/home_page.rs:1850
+#: crates/pindu-ui/src/home_page.rs:1937 data/ui/home_page.blp:85
 #: data/ui/window.blp:387
 msgid "Jump Back In"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:350
+#: crates/pindu-ui/src/home_page.rs:354
 msgid "See All"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:1318 data/ui/home_page.blp:283
+#: crates/pindu-ui/src/home_page.rs:1322 data/ui/home_page.blp:283
 #, fuzzy
 #| msgid "Cancelling…"
 msgid "Opening…"
 msgstr "Aan het annuleren…"
 
-#: crates/pindu-ui/src/home_page.rs:1989 crates/pindu-ui/src/window.rs:1615
+#: crates/pindu-ui/src/home_page.rs:1993 crates/pindu-ui/src/window.rs:1615
 #: data/ui/game_dialog.blp:167
 msgid "Details"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:2496
+#: crates/pindu-ui/src/home_page.rs:2500
 msgid "Steam Big Picture"
 msgstr ""
 
 #. Translators: how many more games a section holds than the covers shown
 #. beside this, as in "+6".
-#: crates/pindu-ui/src/home_page.rs:2567
+#: crates/pindu-ui/src/home_page.rs:2571
 msgid "+{count}"
 msgstr ""
 
@@ -3286,53 +3290,53 @@ msgstr[1] "Verwijderd van “{collection}”"
 msgid "A game you started is running"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:112
+#: crates/pindu-ui/src/sources.rs:113
 msgid "Heroic: Epic"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:113
+#: crates/pindu-ui/src/sources.rs:114
 msgid "Heroic: GOG"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:114
+#: crates/pindu-ui/src/sources.rs:115
 msgid "Heroic: Amazon"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:115
+#: crates/pindu-ui/src/sources.rs:116
 msgid "Heroic: Sideloaded"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:121
+#: crates/pindu-ui/src/sources.rs:122
 msgid "Desktop"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:122
+#: crates/pindu-ui/src/sources.rs:123
 msgid "Added by Hand"
 msgstr ""
 
 #. Translators: a list's first items and its last, as in "Steam, Lutris and Bottles".
-#: crates/pindu-ui/src/sources.rs:137
+#: crates/pindu-ui/src/sources.rs:138
 msgid "{items} and {last}"
 msgstr ""
 
 #. Translators: when a source last synced; under a minute ago.
-#: crates/pindu-ui/src/sources.rs:160
+#: crates/pindu-ui/src/sources.rs:159
 msgid "Just now"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:161
+#: crates/pindu-ui/src/sources.rs:160
 msgid "{count} minute ago"
 msgid_plural "{count} minutes ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/sources.rs:162
+#: crates/pindu-ui/src/sources.rs:161
 msgid "{count} hour ago"
 msgid_plural "{count} hours ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/sources.rs:163
+#: crates/pindu-ui/src/sources.rs:162
 msgid "{count} day ago"
 msgid_plural "{count} days ago"
 msgstr[0] ""
