@@ -580,34 +580,39 @@ mod imp {
             ));
             // The arrow keys move through the rows as the controller does, before GTK
             // moves focus to whatever lies nearest that way.
-            let arrows = gtk::EventControllerKey::new();
-            arrows.set_propagation_phase(gtk::PropagationPhase::Capture);
-            arrows.connect_key_pressed(glib::clone!(
-                #[weak]
-                page,
-                #[upgrade_or]
-                glib::Propagation::Proceed,
-                move |_, key, _, state| {
-                    let direction = match key {
-                        gtk::gdk::Key::Up | gtk::gdk::Key::KP_Up => Direction::Up,
-                        gtk::gdk::Key::Down | gtk::gdk::Key::KP_Down => Direction::Down,
-                        gtk::gdk::Key::Left | gtk::gdk::Key::KP_Left => Direction::Left,
-                        gtk::gdk::Key::Right | gtk::gdk::Key::KP_Right => Direction::Right,
-                        _ => return glib::Propagation::Proceed,
-                    };
-                    let modified = state.intersects(
-                        gtk::gdk::ModifierType::CONTROL_MASK
-                            | gtk::gdk::ModifierType::SHIFT_MASK
-                            | gtk::gdk::ModifierType::ALT_MASK,
-                    );
-                    if !modified && page.navigate(direction) {
-                        glib::Propagation::Stop
-                    } else {
-                        glib::Propagation::Proceed
+            for rows in [
+                self.shelves_scroller.upcast_ref::<gtk::Widget>(),
+                self.carousel_row.upcast_ref(),
+            ] {
+                let arrows = gtk::EventControllerKey::new();
+                arrows.set_propagation_phase(gtk::PropagationPhase::Capture);
+                arrows.connect_key_pressed(glib::clone!(
+                    #[weak]
+                    page,
+                    #[upgrade_or]
+                    glib::Propagation::Proceed,
+                    move |_, key, _, state| {
+                        let direction = match key {
+                            gtk::gdk::Key::Up | gtk::gdk::Key::KP_Up => Direction::Up,
+                            gtk::gdk::Key::Down | gtk::gdk::Key::KP_Down => Direction::Down,
+                            gtk::gdk::Key::Left | gtk::gdk::Key::KP_Left => Direction::Left,
+                            gtk::gdk::Key::Right | gtk::gdk::Key::KP_Right => Direction::Right,
+                            _ => return glib::Propagation::Proceed,
+                        };
+                        let modified = state.intersects(
+                            gtk::gdk::ModifierType::CONTROL_MASK
+                                | gtk::gdk::ModifierType::SHIFT_MASK
+                                | gtk::gdk::ModifierType::ALT_MASK,
+                        );
+                        if !modified && page.navigate(direction) {
+                            glib::Propagation::Stop
+                        } else {
+                            glib::Propagation::Proceed
+                        }
                     }
-                }
-            ));
-            self.shelves_scroller.add_controller(arrows);
+                ));
+                rows.add_controller(arrows);
+            }
             page.show_home_layout(HomeLayout::default());
             page.show_tile_shape(TileShape::default(), None);
             page.show_screen_class();
@@ -1650,21 +1655,49 @@ impl HomePage {
         }
     }
 
-    /// Moves focus in the Shelves layout as the controller or the arrow keys ask
-    /// (`home::shelf_step`): left and right along the row, stopping at its ends; down and
-    /// up to the next row and the one before, on the card that last had focus there.
-    /// `false` when the move is not Home's to make: another layout, focus outside the
-    /// rows, or up from the first row, which leaves for the top bar.
+    /// Moves focus along and between Home's rows as the controller or the arrow keys ask:
+    /// in the Shelves layout, left and right along the row, stopping at its ends, and down
+    /// and up to the next row and the one before, on the card that last had focus there
+    /// (`home::shelf_step`); in the other layouts, along the one row of the screen shown,
+    /// stopping at its ends (`home::row_step`). `false` when the move is not Home's to
+    /// make: focus outside the rows, or up from the first row, which leaves for the top
+    /// bar.
     pub fn navigate(&self, direction: Direction) -> bool {
-        if !self.shelves() {
-            return false;
-        }
         // A row runs from the right where the text does.
         let direction = match direction {
             Direction::Left if self.direction() == gtk::TextDirection::Rtl => Direction::Right,
             Direction::Right if self.direction() == gtk::TextDirection::Rtl => Direction::Left,
             direction => direction,
         };
+        if self.shelves() {
+            self.navigate_shelves(direction)
+        } else {
+            self.navigate_row(direction)
+        }
+    }
+
+    /// Moves focus along the row of the screen shown, in the layouts with two screens.
+    fn navigate_row(&self, direction: Direction) -> bool {
+        let carousel = &self.imp().carousel;
+        let shown: Vec<gtk::Widget> =
+            std::iter::successors(carousel.first_child(), |child| child.next_sibling())
+                .filter(|child| child.is_visible() && child.is_focusable())
+                .collect();
+        let Some(item) = shown.iter().position(|child| child.has_focus()) else {
+            return false;
+        };
+        match home::row_step(item, direction, shown.len()) {
+            ShelfStep::Item(item) => {
+                shown[item].grab_focus();
+            }
+            ShelfStep::Row(_) | ShelfStep::Stay => {}
+            ShelfStep::Leave => return false,
+        }
+        true
+    }
+
+    /// Moves focus along and between the rows of the Shelves layout.
+    fn navigate_shelves(&self, direction: Direction) -> bool {
         let rows = self.imp().shelf_rows.borrow();
         let shown: Vec<Vec<&(gtk::Button, Focused)>> = rows
             .iter()
