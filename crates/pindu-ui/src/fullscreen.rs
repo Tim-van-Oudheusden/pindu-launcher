@@ -18,7 +18,7 @@ use pindu_core::keys::{self, Escape, Modifiers};
 use pindu_core::library::View;
 use pindu_core::sections::SectionId;
 use pindu_core::sound::{media_volume, tone_wav};
-use pindu_core::themes::{HomeLayout, ThemeLayout};
+use pindu_core::themes::ThemeLayout;
 
 use crate::application::PinduApplication;
 use crate::game_page::GamePage;
@@ -27,6 +27,8 @@ use crate::window::{PinduWindow, REDUCED_MOTION_CLASS};
 
 /// The window's style class in fullscreen mode, which `style.css` scales type up with.
 const STYLE_CLASS: &str = "fullscreen-mode";
+/// Beside `STYLE_CLASS` while fullscreen mode shows no design, Adwaita.
+const NO_DESIGN_CLASS: &str = "no-design";
 
 impl PinduWindow {
     pub(crate) fn setup_fullscreen(&self) {
@@ -176,8 +178,18 @@ impl PinduWindow {
     }
 
     /// Follows the layout of the fullscreen design in force: Home's own, the top bar, and
-    /// the background, which only a design that offers the choice lets the user pick.
+    /// the background, which only a design that offers the choice lets the user pick; and
+    /// names the window `no-design` while fullscreen mode shows none.
     fn apply_layout(&self, layout: ThemeLayout) {
+        let no_design = self
+            .application()
+            .and_downcast::<PinduApplication>()
+            .is_some_and(|application| application.style_service().shows_no_design());
+        if no_design {
+            self.add_css_class(NO_DESIGN_CLASS);
+        } else {
+            self.remove_css_class(NO_DESIGN_CLASS);
+        }
         self.imp().home_page.set_layout(layout);
         self.update_fullscreen_top_bar();
         self.update_background_choice();
@@ -364,8 +376,8 @@ impl PinduWindow {
     /// Tells Home where the window is, for its background (`home::background_playback`):
     /// fullscreen, Home shown, a game we started running, the window hidden or suspended
     /// (minimized, or covered whole), Pindu moving less (`Accessibility::reduces_motion`),
-    /// the system asking for high contrast, and the Shelves layout, which never shows
-    /// it. Home itself adds the art that covers it.
+    /// the system asking for high contrast, and the one-screen layouts, Shelves and
+    /// Explore, which never show it. Home itself adds the art that covers it.
     pub(crate) fn update_home_background(&self) {
         let imp = self.imp();
         let game_running = self
@@ -380,7 +392,7 @@ impl PinduWindow {
             hidden: !self.is_visible() || self.is_suspended(),
             reduced_motion: self.has_css_class(REDUCED_MOTION_CLASS),
             high_contrast: adw::StyleManager::default().is_high_contrast(),
-            covered: self.layout_in_force().home == HomeLayout::Shelves,
+            covered: self.layout_in_force().home.one_screen(),
         });
     }
 

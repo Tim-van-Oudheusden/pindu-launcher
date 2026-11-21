@@ -55,6 +55,8 @@ pub struct ThemeLayout {
     pub home: HomeLayout,
     /// `"top-bar"`: whether fullscreen mode shows a bar with page tabs and a clock.
     pub top_bar: bool,
+    /// `"top-bar-tabs"`: where the top bar's Home and Library tabs sit.
+    pub top_bar_tabs: TopBarTabs,
     /// `"home-details"`: show the focused game's details on Home.
     pub home_details: bool,
     /// `"home-tile-size"`: the shorter side of Home's cards in pixels, within
@@ -76,6 +78,24 @@ pub struct ThemeLayout {
 pub const HOME_TILE_SIZES: RangeInclusive<i32> = 64..=400;
 
 impl ThemeLayout {
+    /// Adwaita's layout, in force while fullscreen mode shows no design: Home as rows
+    /// that start with a carousel of the Jump Back In games (`HomeLayout::Explore`), 116
+    /// pixel wide covers, labelled section tiles, the games' details, and the top bar with
+    /// its tabs in the middle. `ThemeLayout::default()`, what a `theme.json` leaves out,
+    /// is not this.
+    pub fn adwaita() -> Self {
+        Self {
+            home: HomeLayout::Explore,
+            home_tile: TileShape::Portrait,
+            home_tile_size: Some(116),
+            top_bar: true,
+            top_bar_tabs: TopBarTabs::Center,
+            home_details: true,
+            home_section_tile: SectionTile::Label,
+            ..Self::default()
+        }
+    }
+
     fn from_json(layout: Option<&Json>) -> Self {
         let value = |key: &str| layout.and_then(|layout| layout.get(key));
         let text = |key: &str| value(key).and_then(Json::as_str);
@@ -88,6 +108,9 @@ impl ThemeLayout {
                 .and_then(HomeLayout::from_name)
                 .unwrap_or_default(),
             top_bar: flag("top-bar"),
+            top_bar_tabs: text("top-bar-tabs")
+                .and_then(TopBarTabs::from_name)
+                .unwrap_or_default(),
             home_details: flag("home-details"),
             home_tile_size: value("home-tile-size").and_then(Json::as_f64).map(|size| {
                 (size.round() as i32).clamp(*HOME_TILE_SIZES.start(), *HOME_TILE_SIZES.end())
@@ -145,11 +168,14 @@ pub enum HomeLayout {
     /// One screen: the logo or title at the top, and under it every section as a row of
     /// its games.
     Shelves,
+    /// One screen of rows under the top bar: a carousel of the Jump Back In games, a row
+    /// of section tiles, then every other section as a row of its games.
+    Explore,
 }
 
 impl HomeLayout {
     /// Every layout, the default first.
-    pub const ALL: [Self; 3] = [Self::HeroBottom, Self::RowTop, Self::Shelves];
+    pub const ALL: [Self; 4] = [Self::HeroBottom, Self::RowTop, Self::Shelves, Self::Explore];
 
     /// The layout's name in `theme.json`, also its CSS class's suffix.
     pub fn name(self) -> &'static str {
@@ -157,7 +183,14 @@ impl HomeLayout {
             Self::HeroBottom => "hero-bottom",
             Self::RowTop => "row-top",
             Self::Shelves => "shelves",
+            Self::Explore => "explore",
         }
+    }
+
+    /// Whether Home is one screen of rows that scroll, with no second screen and no
+    /// background behind them: Shelves and Explore.
+    pub fn one_screen(self) -> bool {
+        matches!(self, Self::Shelves | Self::Explore)
     }
 
     fn from_name(name: &str) -> Option<Self> {
@@ -189,6 +222,33 @@ impl HomeStart {
 
     fn from_name(name: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|start| start.name() == name)
+    }
+}
+
+/// Where the top bar's Home and Library tabs sit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TopBarTabs {
+    /// At the start of the bar.
+    #[default]
+    Start,
+    /// In the middle of the bar.
+    Center,
+}
+
+impl TopBarTabs {
+    /// Every place, the default first.
+    pub const ALL: [Self; 2] = [Self::Start, Self::Center];
+
+    /// The place's name in `theme.json`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Start => "start",
+            Self::Center => "center",
+        }
+    }
+
+    fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|tabs| tabs.name() == name)
     }
 }
 
@@ -642,7 +702,8 @@ mod tests {
             [
                 HomeLayout::HeroBottom,
                 HomeLayout::RowTop,
-                HomeLayout::Shelves
+                HomeLayout::Shelves,
+                HomeLayout::Explore
             ]
         );
         assert_eq!(
@@ -650,6 +711,68 @@ mod tests {
             HomeLayout::HeroBottom
         );
         assert_eq!(CONTRACT, 1);
+    }
+
+    #[test]
+    fn a_theme_can_make_home_explore_rows() {
+        assert_eq!(
+            layout_of(r#"{"home": "explore"}"#).home,
+            HomeLayout::Explore
+        );
+        assert_eq!(HomeLayout::Explore.name(), "explore");
+        assert_eq!(HomeLayout::ALL.last(), Some(&HomeLayout::Explore));
+        assert_eq!(
+            layout_of(r#"{"home": "Explore"}"#).home,
+            HomeLayout::HeroBottom
+        );
+    }
+
+    #[test]
+    fn shelves_and_explore_are_one_screen_of_rows() {
+        assert!(HomeLayout::Shelves.one_screen());
+        assert!(HomeLayout::Explore.one_screen());
+        assert!(!HomeLayout::HeroBottom.one_screen());
+        assert!(!HomeLayout::RowTop.one_screen());
+    }
+
+    #[test]
+    fn a_theme_can_centre_the_top_bar_tabs() {
+        assert_eq!(
+            layout_of(r#"{"top-bar-tabs": "center"}"#).top_bar_tabs,
+            TopBarTabs::Center
+        );
+        assert_eq!(
+            layout_of(r#"{"top-bar-tabs": "start"}"#).top_bar_tabs,
+            TopBarTabs::Start
+        );
+        for odd in [
+            r#"{"top-bar-tabs": "end"}"#,
+            r#"{"top-bar-tabs": true}"#,
+            "{}",
+        ] {
+            assert_eq!(layout_of(odd).top_bar_tabs, TopBarTabs::Start, "{odd}");
+        }
+        assert_eq!(TopBarTabs::Center.name(), "center");
+    }
+
+    #[test]
+    fn adwaita_has_a_layout_of_its_own() {
+        assert_eq!(
+            ThemeLayout::adwaita(),
+            ThemeLayout {
+                home: HomeLayout::Explore,
+                home_tile: TileShape::Portrait,
+                home_tile_size: Some(116),
+                top_bar: true,
+                top_bar_tabs: TopBarTabs::Center,
+                home_details: true,
+                home_section_tile: SectionTile::Label,
+                ..ThemeLayout::default()
+            }
+        );
+        // What a `theme.json` leaves out stays today's.
+        assert_eq!(ThemeLayout::default().home, HomeLayout::HeroBottom);
+        assert!(!ThemeLayout::default().top_bar);
     }
 
     #[test]

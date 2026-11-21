@@ -342,6 +342,104 @@ window.fullscreen-mode .home.home-sections .home-preview {
   opacity: 0.7;
 }
 
+/* The Explore layout (`"home": "explore"`), Adwaita's: rows on the window's own
+   background. First a carousel of the Jump Back In games (`.home-featured`), each page
+   the game's art under a scrim that keeps the text on it readable over any art, white in
+   the light style too; then a row of compact section tiles; then a row of covers for
+   each section. */
+.home.home-layout-explore {
+  background-color: var(--window-bg-color);
+}
+
+.home-featured .featured-page {
+  border-radius: 16px;
+  background-color: var(--card-bg-color);
+}
+
+.home-featured .featured-scrim {
+  background-image: linear-gradient(to right, rgb(0 0 6 / 88%), rgb(0 0 6 / 62%) 38%, transparent 70%);
+}
+
+/* Under high contrast the scrim is darker further across, so the text reaches 7:1. */
+@media (prefers-contrast: more) {
+  .home-featured .featured-scrim {
+    background-image: linear-gradient(to right, rgb(0 0 6 / 95%), rgb(0 0 6 / 88%) 50%, transparent 85%);
+  }
+}
+
+.home-featured .featured-text {
+  color: white;
+}
+
+.home-featured .title-1 {
+  font-size: 2.5em;
+  font-weight: 800;
+}
+
+.home-featured .home-eyebrow {
+  font-size: 0.87em;
+  font-weight: 700;
+}
+
+.home-featured .featured-play {
+  min-height: 48px;
+  padding: 0 34px;
+  font-size: 1.25em;
+}
+
+.home-featured .featured-details {
+  min-height: 48px;
+  padding: 0 26px;
+}
+
+.home-featured button:focus-visible {
+  outline: 3px solid var(--accent-color);
+  outline-offset: 3px;
+}
+
+/* Compact tiles (`.compact`): the glyph at the left, the name over the number of games
+   beside it. The padding sits on `.section-label`, as on the other labelled tiles. */
+.home-carousel > .home-section-tile.labelled.compact,
+.home-carousel > .library-tile.compact {
+  border-radius: 12px;
+  background-color: var(--card-bg-color);
+}
+
+.home-carousel > button.compact .section-label {
+  padding: 0 16px;
+}
+
+.home-carousel > button.compact .section-glyph {
+  font-size: 1.13em;
+}
+
+.home-carousel > button.compact .section-name {
+  font-weight: 700;
+}
+
+.home-carousel > button.compact .section-count {
+  font-size: 0.87em;
+  opacity: 0.7;
+}
+
+.home-layout-explore .shelf-header {
+  margin-top: 22px;
+}
+
+.home-layout-explore .shelf-title {
+  font-size: 1.13em;
+  font-weight: 800;
+}
+
+.home-layout-explore .shelf-count {
+  font-size: 0.93em;
+}
+
+/* A cover says its game's name itself; a card without art (`.no-art`) keeps its title. */
+.home-layout-explore .home-shelf .jump-card:not(.no-art) .jump-title {
+  opacity: 0;
+}
+
 /* Fullscreen game page: a large Play, a ring around the focused button that shows on the
    accent-coloured Play too, the Playing Now card, and the launch overlay that covers the
    page while Play starts the game. */
@@ -435,6 +533,160 @@ window.game-overlay {
   padding: 24px 24px 36px;
 }
 
+/* Fullscreen mode with no design (the window's no-design class, which high contrast also
+   brings): Quick Access as a floating card and the menu drawer as libadwaita's sidebar.
+   Quick Access is the overlay pane of the split view inside the drawer's split view (the
+   bottom sheet's content); its pane, shadow and border are cleared so the dimmed page
+   shows around the card. The drawer's pane and the desktop split view are not matched. */
+window.fullscreen-mode.no-design bottom-sheet > widget > overlay-split-view > widget > overlay-split-view > widget.overlay-pane {
+  background: none;
+  box-shadow: none;
+}
+
+window.fullscreen-mode.no-design bottom-sheet > widget > overlay-split-view > widget > overlay-split-view > shadow,
+window.fullscreen-mode.no-design bottom-sheet > widget > overlay-split-view > widget > overlay-split-view > border {
+  background: none;
+}
+
+/* The card: 16px from the window's top, end and bottom, over the dimmed page. */
+window.fullscreen-mode.no-design .quick-access {
+  margin: 16px 16px 16px 0;
+  padding: 24px 20px 0;
+  border-radius: 24px;
+  background-color: var(--popover-bg-color);
+  color: var(--popover-fg-color);
+  box-shadow: 0 0 0 1px alpha(currentColor, 0.08), 0 12px 40px rgb(0 0 0 / 50%);
+}
+
+window.fullscreen-mode.no-design .quick-access:dir(rtl) {
+  margin: 16px 0 16px 16px;
+}
+
+/* The clock a little larger, Offline and the battery as round chips. */
+window.fullscreen-mode.no-design .quick-access-status .clock {
+  font-size: 1.13em;
+  font-weight: bold;
+}
+
+window.fullscreen-mode.no-design .quick-access-status .battery,
+window.fullscreen-mode.no-design .quick-access-status .offline {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background-color: alpha(currentColor, 0.1);
+}
+
+/* The Playing Now cards of both panels: a soft rounded card. */
+window.fullscreen-mode.no-design .playing-card {
+  padding: 16px 18px;
+  border-radius: 16px;
+  background-color: alpha(currentColor, 0.08);
+}
+
+/* Quick Access's main list: pills 8px apart, each with its icon in a round chip; the arrow
+   at a row's end has none. */
+window.fullscreen-mode.no-design .quick-access .navigation-sidebar {
+  background: none;
+}
+
+window.fullscreen-mode.no-design .quick-access .navigation-sidebar > row {
+  min-height: 52px;
+  margin: 0 0 8px;
+  padding: 0 16px 0 10px;
+  border-radius: 999px;
+  background-color: alpha(currentColor, 0.08);
+}
+
+/* The chip is painted rather than given a background, since the icon is as tall as its row:
+   a 32px circle in the middle of the image, whatever the row's height. */
+window.fullscreen-mode.no-design .quick-access .navigation-sidebar > row > box > image:first-child {
+  min-width: 32px;
+  min-height: 32px;
+  background-image: radial-gradient(circle 16px at center, alpha(currentColor, 0.1) 15.5px, transparent 16px);
+  -gtk-icon-size: 16px;
+}
+
+/* A row's second line: Network's connection, Bluetooth's devices and the like. */
+window.fullscreen-mode.no-design .quick-access .navigation-sidebar > row label.caption {
+  font-size: 0.87em;
+}
+
+/* A level's lists: one rounded card each, rows as tall as the main list's. */
+window.fullscreen-mode.no-design .quick-access .boxed-list {
+  border-radius: 16px;
+  background-color: alpha(currentColor, 0.08);
+  box-shadow: none;
+}
+
+window.fullscreen-mode.no-design .quick-access .boxed-list > row {
+  min-height: 52px;
+}
+
+window.fullscreen-mode.no-design .quick-access .boxed-list > row:first-child {
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+
+window.fullscreen-mode.no-design .quick-access .boxed-list > row:last-child {
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+}
+
+/* The focused row of either list: lighter, with an accent ring drawn inside the row so a
+   scrolled list never cuts it. */
+window.fullscreen-mode.no-design .quick-access .navigation-sidebar > row:focus-visible,
+window.fullscreen-mode.no-design .quick-access .boxed-list > row:focus-visible {
+  background-color: alpha(currentColor, 0.16);
+  outline: 3px solid var(--accent-color);
+  outline-offset: -3px;
+}
+
+window.fullscreen-mode.no-design .quick-access .boxed-list > row:focus-visible {
+  border-radius: 16px;
+}
+
+/* The menu drawer: a full-height sidebar at the start edge, with a line at its inner edge;
+   its rows show only when focused, with the same ring as Quick Access's. */
+window.fullscreen-mode.no-design .menu-drawer {
+  background-color: var(--sidebar-bg-color);
+  color: var(--sidebar-fg-color);
+  box-shadow: inset -1px 0 var(--sidebar-shade-color);
+}
+
+window.fullscreen-mode.no-design .menu-drawer:dir(rtl) {
+  box-shadow: inset 1px 0 var(--sidebar-shade-color);
+}
+
+window.fullscreen-mode.no-design .menu-drawer .navigation-sidebar > row {
+  border-radius: 9px;
+}
+
+window.fullscreen-mode.no-design .menu-drawer .navigation-sidebar > row:focus-visible {
+  background-color: alpha(currentColor, 0.1);
+  outline: 3px solid var(--accent-color);
+  outline-offset: -3px;
+}
+
+/* Under high contrast the card's edge, the drawer's line and the lists' edges are drawn
+   stronger, as libadwaita draws its borders there. */
+@media (prefers-contrast: more) {
+  window.fullscreen-mode.no-design .quick-access {
+    box-shadow: 0 0 0 1px alpha(currentColor, 0.5), 0 12px 40px rgb(0 0 0 / 50%);
+  }
+
+  window.fullscreen-mode.no-design .quick-access .boxed-list {
+    box-shadow: 0 0 0 1px alpha(currentColor, 0.5);
+  }
+
+  window.fullscreen-mode.no-design .menu-drawer {
+    box-shadow: inset -1px 0 alpha(currentColor, 0.5);
+  }
+
+  window.fullscreen-mode.no-design .menu-drawer:dir(rtl) {
+    box-shadow: inset 1px 0 alpha(currentColor, 0.5);
+  }
+}
+
 /* Reduced motion (the window's reduced-motion class): no fades or lifts; focus keeps its
    ring. */
 window.reduced-motion .cover-tile .play-button,
@@ -448,4 +700,11 @@ window.reduced-motion .home-carousel > button {
 window.reduced-motion.fullscreen-mode gridview.library > child:focus-within,
 window.reduced-motion .home-carousel > button:focus-visible {
   transform: none;
+}
+
+/* With no design, both panels' rows take focus without a fade. */
+window.fullscreen-mode.no-design.reduced-motion .quick-access .navigation-sidebar > row,
+window.fullscreen-mode.no-design.reduced-motion .quick-access .boxed-list > row,
+window.fullscreen-mode.no-design.reduced-motion .menu-drawer .navigation-sidebar > row {
+  transition: none;
 }

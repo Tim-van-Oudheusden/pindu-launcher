@@ -90,6 +90,13 @@ impl StyleState {
     pub fn design_applies(self) -> bool {
         self.fullscreen && !self.high_contrast
     }
+
+    /// Whether fullscreen mode shows no design, Adwaita: in fullscreen mode, with no
+    /// design `installed` that this Pindu launcher can apply (none chosen, or the chosen
+    /// one missing or written for a newer contract), or under high contrast with any.
+    pub fn shows_no_design(self, installed: bool) -> bool {
+        self.fullscreen && (self.high_contrast || !installed)
+    }
 }
 
 /// Whether a change in the style's folder, to `file` and, for a rename, `other`, touches
@@ -208,6 +215,24 @@ mod tests {
         assert!(state(false, true, false).design_applies());
         assert!(!state(true, false, false).design_applies());
         assert!(!state(true, true, true).design_applies());
+    }
+
+    #[test]
+    fn fullscreen_mode_shows_no_design_without_one_in_force() {
+        let state = |fullscreen, high_contrast| StyleState {
+            enabled: false,
+            fullscreen,
+            high_contrast,
+        };
+
+        // None chosen, or one that is not installed or needs a newer contract.
+        assert!(state(true, false).shows_no_design(false));
+        // Any design under high contrast.
+        assert!(state(true, true).shows_no_design(true));
+        assert!(!state(true, false).shows_no_design(true));
+        // Never outside fullscreen mode.
+        assert!(!state(false, false).shows_no_design(false));
+        assert!(!state(false, true).shows_no_design(true));
     }
 
     #[test]

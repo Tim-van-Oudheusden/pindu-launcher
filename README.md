@@ -628,11 +628,15 @@ echo no_display >"$MANGOHUD_CONFIGFILE"
 Fullscreen mode has switchable designs (Quick Access → Design). Five ship with the app: Ribbon, the default, and
 Panorama, which open Home on a row of sections; Marquee, which opens it on your recent games over the focused game's
 art, with the sections at the end of the same row; Shelves, one screen with every section as a row of its games; and
-Lobby, labelled section tiles over the animated background with a preview of the focused section. Adwaita shows the
-standard libadwaita look. A design can come in variants, such as Panorama's Monochrome, picked under the design. The
-same level blurs and dims Home's background (Off, Low or High each), chooses the animated background under a design
-that offers the choice (Lobby) and turns **My Stylesheet**, your own CSS, on and off. Where the files go, the
-`theme.json` fields and the CSS names designs can rely on are in [`docs/fullscreen-style.md`](docs/fullscreen-style.md).
+Lobby, labelled section tiles over the animated background with a preview of the focused section. Adwaita, the look
+with no design and the one high contrast shows, follows GNOME Software's Explore page in libadwaita's own colours: a
+header bar with the Home and Library tabs in the middle, a carousel of your recent games with Play and Details on each
+page, a row of section tiles, then a row of covers for each section; Quick Access floats as a rounded card of
+pill-shaped rows, like GNOME Shell's quick settings, and the menu drawer is a plain sidebar. A design can come in
+variants, such as Panorama's Monochrome, picked under the design. The same level blurs and dims Home's background
+(Off, Low or High each), chooses the animated background under a design that offers the choice (Lobby) and turns
+**My Stylesheet**, your own CSS, on and off. Where the files go, the `theme.json` fields and the CSS names designs can
+rely on are in [`docs/fullscreen-style.md`](docs/fullscreen-style.md).
 
 ## Building from source
 

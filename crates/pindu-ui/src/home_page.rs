@@ -1,4 +1,4 @@
-//! Fullscreen mode's Home page, where the mode opens. A design chooses one of three
+//! Fullscreen mode's Home page, where the mode opens. A design chooses one of four
 //! layouts (`pindu_core::themes::HomeLayout`). Two of them have two screens. The first
 //! lists Home's sections (`pindu_core::sections`), a tile each, then the Library tile and,
 //! where Steam is present, the Steam Big Picture tile (`win.steam-big-picture`), over
@@ -7,12 +7,16 @@
 //! (`home-section-tile`) and preview the focused section's covers (`home-section-preview`).
 //! Activating a section (`win.home-section`) opens the second screen: its games, with the
 //! focused game's hero behind them. B goes back to the first screen, on the section it
-//! came from. The third layout, Shelves, is one screen: every section as a row of its
-//! games (`pindu_core::home::shelves`), then the Library row; Up and Down change row
-//! (`HomePage::navigate`). Each screen and row comes back to the tile or card that last
-//! had focus. The page carries `.home-sections` or `.home-games` for designs, which can
-//! choose the tiles' shape and size (`pindu_core::home`) and crossfade the hero (`.shown`,
-//! `.no-art`). Behind the first screen plays Home's background (`.home-background`), as
+//! came from. The other two are one screen of rows that scroll; Up and Down change row
+//! (`HomePage::navigate`). Shelves: every section as a row of its games
+//! (`pindu_core::home::shelves`), then the Library row. Explore (`home::explore_rows`),
+//! Adwaita's: a carousel of the Jump Back In games with Play and Details on each page
+//! (`.home-featured`), a row of compact section tiles with the Library and Big Picture
+//! tiles, then a row of games for each other section, all on the window's own background.
+//! Each screen and row comes back to the tile or card that last had focus. The page
+//! carries `.home-sections` or `.home-games` for designs, which can choose the tiles'
+//! shape and size (`pindu_core::home`) and crossfade the hero (`.shown`, `.no-art`).
+//! Behind the first screen plays Home's background (`.home-background`), as
 //! `home::background_playback` says for where the window is. Quick Access's Blur and Dim
 //! name their strength on the page (`blur-*`, `dim-*`, `home::background_classes`), which
 //! blurs the background and the hero and darkens them under `.home-dim`.
@@ -27,7 +31,8 @@ use gtk::glib;
 use pindu_core::focus::FocusMemory;
 use pindu_core::gamepad::Direction;
 use pindu_core::home::{
-    self, Background, BackgroundContext, CardArt, Detail, Playback, RowItem, ShelfStep, Strength,
+    self, Background, BackgroundContext, CardArt, Detail, ExploreRow, FeaturedButton, Playback,
+    RowItem, ShelfStep, Strength,
 };
 use pindu_core::library::{ArtSet, HistoryGroup};
 use pindu_core::model::GameId;
@@ -39,7 +44,18 @@ use crate::game_page::{date, playtime};
 use crate::models::GameObject;
 use crate::sources::{source_icon, source_name};
 use crate::widgets::{CoverArt, SpacedLabel, TileFrame, textures};
-use crate::window::{jump_card_frame, show_art_class, show_jump_art};
+use crate::window::{bind_play_button, jump_card_frame, show_art_class, show_jump_art};
+
+/// Fills `row`, a `.home-details` row, with `details` as `.detail` items, in place of
+/// those it held.
+fn put_details(row: &gtk::Box, details: &[Detail]) {
+    while let Some(item) = row.first_child() {
+        row.remove(&item);
+    }
+    for detail in details {
+        row.append(&detail_item(*detail));
+    }
+}
 
 /// A `.detail` item of Home's details row: an icon and the value, with what it is as its
 /// tooltip and description. The wording is the game page's.
@@ -119,6 +135,16 @@ fn shelf_title(section: &Section) -> String {
 /// The side of the icon at the top of a labelled tile, in pixels.
 const GLYPH_SIZE: i32 = 32;
 
+/// The side of the icon at the left of a compact tile, in pixels.
+const COMPACT_GLYPH_SIZE: i32 = 20;
+
+/// The size of a compact tile, in the Explore layout's row of tiles, in pixels.
+const COMPACT_TILE: (i32, i32) = (176, 64);
+
+/// The height of a page of the Explore layout's featured row, in pixels; it grows where
+/// its text needs more.
+const FEATURED_HEIGHT: i32 = 244;
+
 /// The side of the icon over the name of a tile that is not labelled, in pixels.
 const ICON_SIZE: i32 = 48;
 
@@ -134,9 +160,9 @@ fn set_class(widget: &impl IsA<gtk::Widget>, class: &str, on: bool) {
     }
 }
 
-/// The glyph at the top of a section's labelled tile (`.section-glyph`): a launcher's
-/// monogram, or else the icon the desktop sidebar shows for the section.
-fn section_glyph(id: SectionId) -> gtk::Widget {
+/// The glyph of a section's labelled tile (`.section-glyph`): a launcher's monogram, or
+/// else the icon the desktop sidebar shows for the section, `size` pixels.
+fn section_glyph(id: SectionId, size: i32) -> gtk::Widget {
     let icon = match id {
         SectionId::RecentlyPlayed => "document-open-recent-symbolic",
         SectionId::Favourites => "starred-symbolic",
@@ -156,7 +182,7 @@ fn section_glyph(id: SectionId) -> gtk::Widget {
     };
     gtk::Image::builder()
         .icon_name(icon)
-        .pixel_size(GLYPH_SIZE)
+        .pixel_size(size)
         .halign(gtk::Align::Start)
         .accessible_role(gtk::AccessibleRole::Presentation)
         .css_classes(["section-glyph"])
@@ -222,7 +248,7 @@ fn section_tile(
             .orientation(gtk::Orientation::Vertical)
             .css_classes(["section-label"])
             .build();
-        label.append(&section_glyph(section.id));
+        label.append(&section_glyph(section.id, GLYPH_SIZE));
         label.append(&section_name(title));
         label.append(&section_count(&count));
         tile.set_child(Some(&TileFrame::new(&label, size)));
@@ -270,6 +296,49 @@ fn section_tile(
         frame.add_overlay(&art);
     }
     tile.set_child(Some(&frame));
+    tile
+}
+
+/// A section's compact tile (`.home-section-tile.labelled.compact`), in the Explore
+/// layout's row of tiles: its glyph at the left and its name over its number of games
+/// beside it, `COMPACT_TILE` pixels. It moves focus to the section's row
+/// (`win.home-section`).
+fn compact_section_tile(section: &Section, title: &str) -> gtk::Button {
+    let count = game_count(games_in(section));
+    let tile = gtk::Button::builder()
+        .overflow(gtk::Overflow::Hidden)
+        .tooltip_text(title)
+        .action_name("win.home-section")
+        .action_target(&section.id.name().to_variant())
+        .css_classes(["card", "home-section-tile", "labelled", "compact"])
+        .build();
+    tile.add_css_class(&section.id.css_class());
+    tile.update_property(&[
+        gtk::accessible::Property::Label(title),
+        gtk::accessible::Property::Description(&count),
+    ]);
+    let glyph = section_glyph(section.id, COMPACT_GLYPH_SIZE);
+    glyph.set_valign(gtk::Align::Center);
+    let name = gtk::Label::builder()
+        .label(title)
+        .xalign(0.0)
+        .ellipsize(gtk::pango::EllipsizeMode::End)
+        .css_classes(["section-name"])
+        .build();
+    let text = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .valign(gtk::Align::Center)
+        .hexpand(true)
+        .build();
+    text.append(&name);
+    text.append(&section_count(&count));
+    let label = gtk::Box::builder()
+        .spacing(12)
+        .css_classes(["section-label"])
+        .build();
+    label.append(&glyph);
+    label.append(&text);
+    tile.set_child(Some(&TileFrame::new(&label, COMPACT_TILE)));
     tile
 }
 
@@ -325,9 +394,9 @@ enum RowKey {
     Tile(SectionId, String, Option<u32>),
 }
 
-/// What a row of the Shelves layout shows, to rebuild it only when that changes: its
-/// section (`None` for the Library row), its title, its number of games and its cards.
-type ShelfKey = (Option<SectionId>, String, usize, Vec<CardKey>);
+/// What a row of the one-screen layouts shows, to rebuild it only when that changes: the
+/// row, its title, its number of games and its cards and tiles.
+type ShelfKey = (RowId, String, usize, Vec<RowKey>);
 
 /// A tile or card of Home, as focus memory keeps it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -379,14 +448,28 @@ impl Sections {
     }
 }
 
-/// A row of the Shelves layout (`.home-shelf`).
+/// A row of Home's one-screen layouts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum RowId {
+    /// The Explore layout's carousel of the Jump Back In games.
+    Featured,
+    /// The Explore layout's row of section tiles, with the Library and Steam Big Picture
+    /// tiles.
+    Tiles,
+    /// A section's games.
+    Section(SectionId),
+    /// The Shelves layout's last row: the Library and Steam Big Picture tiles.
+    Library,
+}
+
+/// A row of the one-screen layouts (`.home-shelf`, or `.home-featured` for the carousel).
 #[derive(Debug)]
 struct Shelf {
-    /// The row's section; `None` for the Library row.
-    id: Option<SectionId>,
+    id: RowId,
     key: ShelfKey,
     row: gtk::Box,
-    /// The row's cards and tiles, in order, each with what it stands for.
+    /// The row's cards, tiles and buttons, in order, each with what it stands for. On the
+    /// featured row, each page's Play then its Details.
     items: Vec<(gtk::Button, Focused)>,
     /// The shape and size of the row's cards.
     shape: TileShape,
@@ -415,6 +498,10 @@ mod imp {
         pub hero_a: TemplateChild<gtk::Picture>,
         #[template_child]
         pub hero_b: TemplateChild<gtk::Picture>,
+        #[template_child]
+        pub dim: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub hero_gradient: TemplateChild<gtk::Box>,
         /// Whether `hero_b`, not `hero_a`, holds the latest art shown.
         pub hero_b_latest: Cell<bool>,
         /// Whether hero art shows, over Home's background: the page is not `.no-art`.
@@ -461,6 +548,9 @@ mod imp {
         pub library_tile_label: TemplateChild<gtk::Label>,
         /// The number of games under the Library tile's name, while the tiles are labelled.
         pub library_tile_count: RefCell<Option<gtk::Label>>,
+        /// The Library tile's name and number of games, beside its icon while the tile is
+        /// compact.
+        pub library_tile_text: RefCell<Option<gtk::Box>>,
         /// How many games the library holds.
         pub library_count: Cell<u32>,
         #[template_child]
@@ -479,6 +569,9 @@ mod imp {
         pub big_picture_status: TemplateChild<gtk::Label>,
         /// Whether Home offers Steam Big Picture: Steam is present.
         pub big_picture_offered: Cell<bool>,
+        /// The Steam Big Picture tile's name and status, beside its icon while the tile is
+        /// compact.
+        pub big_picture_text: RefCell<Option<gtk::Box>>,
         /// Home's sections, in order, each with its games.
         pub(super) sections: RefCell<Sections>,
         /// The section whose games the second screen shows; `None` on the first screen
@@ -498,11 +591,11 @@ mod imp {
         pub(super) shelf_rows: RefCell<Vec<Shelf>>,
         /// The card or tile that last had focus on the first screen.
         pub(super) first_focus: RefCell<FocusMemory<(), Item>>,
-        /// The card or tile that last had focus among each section's games: on the second
-        /// screen and in its row of the Shelves layout, whose Library row is `None`.
-        pub(super) game_focus: RefCell<FocusMemory<Option<SectionId>, Item>>,
-        /// The row that last had focus in the Shelves layout.
-        pub shelf_focus: RefCell<FocusMemory<(), Option<SectionId>>>,
+        /// The card or tile that last had focus in each row: a section's games on the
+        /// second screen, and each row of the one-screen layouts.
+        pub(super) game_focus: RefCell<FocusMemory<RowId, Item>>,
+        /// The row that last had focus in the one-screen layouts.
+        pub(super) shelf_focus: RefCell<FocusMemory<(), RowId>>,
         /// What the Shelves layout does once its rows have their place: `Some` while that
         /// is queued, `true` if the row with focus goes back to the top then.
         pub shelves_settle: Cell<Option<bool>>,
@@ -659,7 +752,7 @@ impl HomePage {
         self.clear_row();
         self.clear_cards();
         self.clear_shelves();
-        if layout.home == HomeLayout::Shelves {
+        if layout.home.one_screen() {
             // One screen: no section's games are open.
             imp.open.set(None);
             imp.library_tile.set_visible(true);
@@ -667,8 +760,11 @@ impl HomePage {
                 .set_visible(imp.big_picture_offered.get());
         }
         self.show_home_layout(layout.home);
+        // The tiles take the labelled shape before they lose or take the compact one.
+        self.show_tile_compact(false);
         self.show_tile_shape(layout.home_tile, layout.home_tile_size);
         self.show_tile_labels(layout.home_section_tile == SectionTile::Label);
+        self.show_tile_compact(layout.home == HomeLayout::Explore);
         self.show_screen_class();
         self.refresh();
         if had_focus {
@@ -690,9 +786,11 @@ impl HomePage {
     }
 
     /// Puts the carousel at the bottom under the logo or title, or near the top above
-    /// them, or shows the shelves under them in its place, and names the layout on the
-    /// page (`home-layout-hero-bottom`, `home-layout-row-top`, `home-layout-shelves`) for
-    /// designs. Moving the rows keeps focus where it is.
+    /// them, or shows the rows under them in its place, or the rows alone in the Explore
+    /// layout, which shows no title, art or background over the window's own; and names
+    /// the layout on the page (`home-layout-hero-bottom`, `home-layout-row-top`,
+    /// `home-layout-shelves`, `home-layout-explore`) for designs. Moving the rows keeps
+    /// focus where it is.
     fn show_home_layout(&self, layout: HomeLayout) {
         let imp = self.imp();
         for other in HomeLayout::ALL {
@@ -702,7 +800,7 @@ impl HomePage {
         imp.home
             .add_css_class(&format!("home-layout-{}", layout.name()));
         let content = &imp.content;
-        let shelves = layout == HomeLayout::Shelves;
+        let shelves = layout.one_screen();
         match layout {
             HomeLayout::HeroBottom => {
                 content.reorder_child_after(&*imp.carousel_row, Some(&*imp.info));
@@ -716,15 +814,26 @@ impl HomePage {
                 content.set_margin_top(24);
                 content.set_margin_bottom(0);
             }
-            HomeLayout::Shelves => {
+            HomeLayout::Shelves | HomeLayout::Explore => {
                 content.reorder_child_after(&*imp.shelves_scroller, Some(&*imp.info));
                 content.set_valign(gtk::Align::Fill);
-                content.set_margin_top(24);
+                content.set_margin_top(if layout == HomeLayout::Explore { 0 } else { 24 });
                 content.set_margin_bottom(0);
             }
         }
         imp.carousel_row.set_visible(!shelves);
         imp.shelves_scroller.set_visible(shelves);
+        let explore = layout == HomeLayout::Explore;
+        for backdrop in [
+            imp.info.upcast_ref::<gtk::Widget>(),
+            imp.background.upcast_ref(),
+            imp.hero_a.upcast_ref(),
+            imp.hero_b.upcast_ref(),
+            imp.dim.upcast_ref(),
+            imp.hero_gradient.upcast_ref(),
+        ] {
+            backdrop.set_visible(!explore);
+        }
         // A smaller logo in the Shelves layout, where the title's box is as tall as the
         // logo's with the title at its foot, over the details: the rows stay in place as
         // focus moves between games with and without a logo, and the first is on a 720
@@ -817,6 +926,97 @@ impl HomePage {
         self.show_library_count();
     }
 
+    /// Makes the Library and Steam Big Picture tiles compact, as the Explore layout's
+    /// section tiles are (`.compact`, `COMPACT_TILE`): the icon at the left, and the name
+    /// over the number of games or the status beside it. Or back to the labelled shape
+    /// `show_tile_labels` gave them, which it takes before it changes them again.
+    fn show_tile_compact(&self, compact: bool) {
+        let imp = self.imp();
+        let tiles = [
+            (
+                &*imp.library_tile,
+                &*imp.library_tile_content,
+                &imp.library_tile_text,
+                vec![imp.library_tile_label.clone().upcast::<gtk::Widget>()]
+                    .into_iter()
+                    .chain(
+                        imp.library_tile_count
+                            .borrow()
+                            .clone()
+                            .map(|count| count.upcast()),
+                    )
+                    .collect::<Vec<gtk::Widget>>(),
+            ),
+            (
+                &*imp.big_picture_tile,
+                &*imp.big_picture_tile_content,
+                &imp.big_picture_text,
+                vec![
+                    imp.big_picture_label.clone().upcast(),
+                    imp.big_picture_status.clone().upcast(),
+                ],
+            ),
+        ];
+        for (tile, content, text, labels) in tiles {
+            if compact == text.borrow().is_some() {
+                continue;
+            }
+            set_class(tile, "compact", compact);
+            content.set_orientation(if compact {
+                gtk::Orientation::Horizontal
+            } else {
+                gtk::Orientation::Vertical
+            });
+            if compact {
+                content.set_spacing(12);
+                content.set_valign(gtk::Align::Fill);
+                let column = gtk::Box::builder()
+                    .orientation(gtk::Orientation::Vertical)
+                    .valign(gtk::Align::Center)
+                    .hexpand(true)
+                    .build();
+                for label in &labels {
+                    content.remove(label);
+                    column.append(label);
+                    label.set_vexpand(false);
+                    label.set_valign(gtk::Align::Fill);
+                }
+                content.append(&column);
+                text.replace(Some(column));
+            } else if let Some(column) = text.take() {
+                for label in &labels {
+                    column.remove(label);
+                    content.append(label);
+                }
+                content.remove(&column);
+            }
+        }
+        let side = if compact {
+            COMPACT_GLYPH_SIZE
+        } else {
+            GLYPH_SIZE
+        };
+        let icons = [
+            imp.library_tile_icon.upcast_ref::<gtk::Widget>(),
+            imp.big_picture_icon.upcast_ref(),
+            imp.big_picture_spinner.upcast_ref(),
+        ];
+        for icon in icons {
+            icon.set_valign(if compact {
+                gtk::Align::Center
+            } else {
+                gtk::Align::Fill
+            });
+        }
+        if compact {
+            imp.library_tile_icon.set_pixel_size(side);
+            imp.big_picture_icon.set_pixel_size(side);
+            imp.big_picture_spinner.set_size_request(side, side);
+            imp.library_tile_frame.set_size(COMPACT_TILE);
+            imp.big_picture_tile_frame.set_size(COMPACT_TILE);
+        }
+    }
+
     /// Says how many games the library holds on the Library tile, while the tiles are
     /// labelled: under its name, and as its description.
     fn show_library_count(&self) {
@@ -841,9 +1041,9 @@ impl HomePage {
         }
     }
 
-    /// Whether the layout is Shelves: one screen of rows.
+    /// Whether the layout is one screen of rows: Shelves or Explore.
     fn shelves(&self) -> bool {
-        self.imp().layout.get().home == HomeLayout::Shelves
+        self.imp().layout.get().home.one_screen()
     }
 
     /// Whether the first screen shows: no section's games do, and the layout has screens.
@@ -852,15 +1052,20 @@ impl HomePage {
     }
 
     /// Names the screen shown on the page for designs: `.home-sections` for the first,
-    /// `.home-games` for a section's games and for the Shelves layout; and
-    /// `.home-start-games` on both screens while the first one's row starts with games.
+    /// `.home-games` for a section's games and for the Shelves layout, neither for the
+    /// Explore layout; and `.home-start-games` on both screens while the first one's row
+    /// starts with games.
     fn show_screen_class(&self) {
         let imp = self.imp();
         let home = &imp.home;
         let layout = imp.layout.get();
-        let games = !self.on_first_screen();
-        home.remove_css_class(if games { "home-sections" } else { "home-games" });
-        home.add_css_class(if games { "home-games" } else { "home-sections" });
+        home.remove_css_class("home-sections");
+        home.remove_css_class("home-games");
+        // Explore's one screen is neither the sections nor a section's games.
+        if layout.home != HomeLayout::Explore {
+            let games = !self.on_first_screen();
+            home.add_css_class(if games { "home-games" } else { "home-sections" });
+        }
         set_class(
             &**home,
             "home-start-games",
@@ -1032,14 +1237,29 @@ impl HomePage {
         }
     }
 
-    /// Focuses the first card or tile of the screen shown, the first row's in the Shelves
-    /// layout, or the one that last had focus in that row.
+    /// Focuses the first card or tile of the screen shown, or the first row's in the
+    /// one-screen layouts, on the one that last had focus in that row. The row that holds
+    /// the Library tile, which had focus only because Home had no sections, starts again
+    /// at its first tile.
     fn focus_first(&self) {
         let imp = self.imp();
         if self.shelves() {
-            let first = imp.shelf_rows.borrow().first().map(|shelf| shelf.id);
-            if let Some(first) = first {
-                imp.shelf_focus.borrow_mut().remember((), first);
+            let rows = imp.shelf_rows.borrow();
+            if let Some(first) = rows.first() {
+                imp.shelf_focus.borrow_mut().remember((), first.id);
+            }
+            let library = rows.iter().find(|shelf| {
+                shelf
+                    .items
+                    .iter()
+                    .any(|(tile, _)| *tile == *imp.library_tile)
+            });
+            if let Some(shelf) = library
+                && let Some((_, focused)) = shelf.items.first()
+            {
+                imp.game_focus
+                    .borrow_mut()
+                    .remember(shelf.id, focused.item());
             }
         } else if imp.open.get().is_none() {
             let first = imp.row.borrow().first().map(|(_, focused)| focused.item());
@@ -1172,12 +1392,12 @@ impl HomePage {
         imp.shown.replace(Vec::new());
     }
 
-    /// Takes the rows of the Shelves layout away, and puts the Library and Steam Big
+    /// Takes the rows of the one-screen layouts away, and puts the Library and Steam Big
     /// Picture tiles back at the end of the carousel.
     fn clear_shelves(&self) {
         let imp = self.imp();
         for shelf in imp.shelf_rows.take() {
-            if shelf.id.is_none() {
+            if matches!(shelf.id, RowId::Library | RowId::Tiles) {
                 for tile in [&*imp.library_tile, &*imp.big_picture_tile] {
                     if let Some(carousel) = tile.parent().and_downcast::<gtk::Box>() {
                         carousel.remove(tile);
@@ -1347,37 +1567,85 @@ impl HomePage {
         }
     }
 
-    /// Shows the rows of the Shelves layout (`home::shelves`): one per section, with its
-    /// first games as cards and See All where it holds more, then the Library row. A row
-    /// is rebuilt only when what it shows changed.
+    /// Shows the rows of the one-screen layouts. Shelves (`home::shelves`): one per
+    /// section, with its first games as cards and See All where it holds more, then the
+    /// Library row. Explore (`home::explore_rows`): the Jump Back In carousel, the row of
+    /// section tiles, then a row per other section. A row is rebuilt only when what it
+    /// shows changed.
     fn show_shelves(&self) {
-        /// What a section's row is built from: the row and the games on it.
-        type Parts<'a> = (home::Shelf, Vec<&'a GameObject>);
+        /// What a row is built from.
+        enum Parts<'a> {
+            Featured(Vec<&'a GameObject>),
+            Tiles(Vec<&'a Section>),
+            Section(home::Shelf, Vec<&'a GameObject>),
+            Library,
+        }
         let imp = self.imp();
         let layout = imp.layout.get();
         let sections = imp.sections.borrow();
-        let library = gettext("Library");
-        // What each row shows: its key, and for a section's row what it is built from.
-        let mut wanted: Vec<(ShelfKey, Option<Parts<'_>>)> = home::shelves(&sections.sections)
-            .into_iter()
-            .zip(&sections.sections)
-            .zip(&sections.games)
-            .map(|((shelf, section), games)| {
-                let games: Vec<&GameObject> = shelf
-                    .games
-                    .iter()
-                    .filter_map(|id| games.iter().find(|game| game.id() == *id))
-                    .collect();
-                let key = (
-                    Some(shelf.id),
-                    shelf_title(section),
-                    shelf.total,
-                    games.iter().map(|game| card_key(game)).collect(),
-                );
-                (key, Some((shelf, games)))
-            })
-            .collect();
-        wanted.push(((None, library, 0, Vec::new()), None));
+        let games_of = |id: SectionId, ids: &[GameId]| -> Vec<&GameObject> {
+            let games = sections.get(id).map_or(&[][..], |(_, games)| games);
+            ids.iter()
+                .filter_map(|id| games.iter().find(|game| game.id() == *id))
+                .collect()
+        };
+        let cards = |games: &[&GameObject]| -> Vec<RowKey> {
+            games
+                .iter()
+                .map(|game| RowKey::Card(card_key(game)))
+                .collect()
+        };
+        let section_row = |shelf: home::Shelf| -> Option<(ShelfKey, Parts<'_>)> {
+            let (section, _) = sections.get(shelf.id)?;
+            let games = games_of(shelf.id, &shelf.games);
+            let key = (
+                RowId::Section(shelf.id),
+                shelf_title(section),
+                shelf.total,
+                cards(&games),
+            );
+            Some((key, Parts::Section(shelf, games)))
+        };
+        // What each row shows: its key, and what it is built from.
+        let wanted: Vec<(ShelfKey, Parts<'_>)> = if layout.home == HomeLayout::Explore {
+            home::explore_rows(&sections.sections)
+                .into_iter()
+                .filter_map(|row| match row {
+                    ExploreRow::Featured(ids) => {
+                        let games = games_of(SectionId::RecentlyPlayed, &ids);
+                        let key = (RowId::Featured, String::new(), 0, cards(&games));
+                        Some((key, Parts::Featured(games)))
+                    }
+                    ExploreRow::Tiles(ids) => {
+                        let tiles: Vec<&Section> = ids
+                            .iter()
+                            .filter_map(|id| sections.get(*id).map(|(section, _)| section))
+                            .collect();
+                        let keys = tiles
+                            .iter()
+                            .map(|section| {
+                                RowKey::Tile(
+                                    section.id,
+                                    section_title(section),
+                                    Some(games_in(section)),
+                                )
+                            })
+                            .collect();
+                        Some(((RowId::Tiles, String::new(), 0, keys), Parts::Tiles(tiles)))
+                    }
+                    ExploreRow::Shelf(shelf) => section_row(shelf),
+                })
+                .collect()
+        } else {
+            home::shelves(&sections.sections)
+                .into_iter()
+                .filter_map(section_row)
+                .chain([(
+                    (RowId::Library, gettext("Library"), 0, Vec::new()),
+                    Parts::Library,
+                )])
+                .collect()
+        };
         let unchanged = imp
             .shelf_rows
             .borrow()
@@ -1396,16 +1664,20 @@ impl HomePage {
             let kept = old
                 .iter_mut()
                 .find_map(|shelf| shelf.take_if(|shelf| shelf.key == key));
-            let shelf = match (kept, parts) {
-                (Some(shelf), _) => {
+            let shelf = match kept {
+                Some(shelf) => {
                     imp.shelves
                         .reorder_child_after(&shelf.row, previous.as_ref());
                     shelf
                 }
-                (None, parts) => {
+                None => {
                     let shelf = match parts {
-                        Some((shelf, games)) => self.section_shelf(key, &shelf, &games, layout),
-                        None => self.library_shelf(key, layout),
+                        Parts::Featured(games) => self.featured_shelf(key, &games),
+                        Parts::Tiles(tiles) => self.tiles_shelf(key, &tiles),
+                        Parts::Section(shelf, games) => {
+                            self.section_shelf(key, &shelf, &games, layout)
+                        }
+                        Parts::Library => self.library_shelf(key, layout),
                     };
                     imp.shelves
                         .insert_child_after(&shelf.row, previous.as_ref());
@@ -1460,16 +1732,7 @@ impl HomePage {
             .margin_bottom(12)
             .css_classes(["home-carousel", &format!("home-tile-{}", shape.name())])
             .build();
-        let scroller = gtk::ScrolledWindow::builder()
-            .hscrollbar_policy(gtk::PolicyType::External)
-            .vscrollbar_policy(gtk::PolicyType::Never)
-            .propagate_natural_height(true)
-            .child(&carousel)
-            .build();
-        // The page scrolls the row itself, keeping the lifted card's ring in view.
-        if let Some(viewport) = carousel.parent().and_downcast::<gtk::Viewport>() {
-            viewport.set_scroll_to_focus(false);
-        }
+        let scroller = sideways(&carousel);
         let row = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .accessible_role(gtk::AccessibleRole::Group)
@@ -1522,7 +1785,7 @@ impl HomePage {
             items.push((more, Focused::SeeAll(id)));
         }
         Shelf {
-            id: Some(shelf.id),
+            id: RowId::Section(shelf.id),
             key,
             row,
             items,
@@ -1546,7 +1809,7 @@ impl HomePage {
             carousel.append(tile);
         }
         Shelf {
-            id: None,
+            id: RowId::Library,
             key,
             row,
             items: vec![
@@ -1555,6 +1818,296 @@ impl HomePage {
             ],
             shape,
             size: home::card_size(shape, layout.home_tile_size),
+            pending: RefCell::default(),
+        }
+    }
+
+    /// The Explore layout's first row: a carousel (`.home-featured`) with a page for each
+    /// of `games`, the Jump Back In games (`featured_page`), and its dots under it while
+    /// it has more than one page. The carousel shows the page that has focus, and focus
+    /// in the row follows a page turned by a swipe or the scroll wheel to its Play.
+    fn featured_shelf(&self, key: ShelfKey, games: &[&GameObject]) -> Shelf {
+        let carousel = adw::Carousel::builder()
+            .spacing(24)
+            .margin_start(48)
+            .margin_end(48)
+            .margin_top(20)
+            .css_classes(["home-featured"])
+            .build();
+        let dots = adw::CarouselIndicatorDots::builder()
+            .carousel(&carousel)
+            .margin_top(12)
+            .visible(games.len() > 1)
+            .build();
+        let row = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .accessible_role(gtk::AccessibleRole::Group)
+            .build();
+        row.update_property(&[gtk::accessible::Property::Label(&gettext("Jump Back In"))]);
+        row.append(&carousel);
+        row.append(&dots);
+        let mut items = Vec::with_capacity(games.len() * 2);
+        for &game in games {
+            let (page, play, details) = self.featured_page(game);
+            carousel.append(&page);
+            for button in [&play, &details] {
+                button.connect_has_focus_notify(glib::clone!(
+                    #[weak(rename_to = home)]
+                    self,
+                    #[weak]
+                    carousel,
+                    #[weak]
+                    page,
+                    #[weak]
+                    game,
+                    move |button| {
+                        if button.has_focus() {
+                            home.card_focused(button, &Focused::Game(game));
+                            home.show_page(&carousel, &page);
+                        }
+                    }
+                ));
+            }
+            items.push((play, Focused::Game(game.clone())));
+            items.push((details, Focused::Game(game.clone())));
+        }
+        carousel.connect_page_changed(glib::clone!(
+            #[weak(rename_to = home)]
+            self,
+            move |_, page| home.follow_page(page as usize)
+        ));
+        Shelf {
+            id: RowId::Featured,
+            key,
+            row,
+            items,
+            shape: TileShape::Landscape,
+            size: (0, FEATURED_HEIGHT),
+            pending: RefCell::default(),
+        }
+    }
+
+    /// A page of the featured row (`.featured-page`): the game's art filling it (its
+    /// hero, else its cover), `.featured-scrim` over the art, and at the left
+    /// (`.featured-text`) "Jump Back In" (`.home-eyebrow`), the game's logo or else its
+    /// title, its details (`.home-details`) where the design asks for them, then Play,
+    /// or Stop while it runs (`.featured-play`), and Details (`.featured-details`), which
+    /// opens the game page. The page is `FEATURED_HEIGHT` pixels tall, and taller where its
+    /// text needs it. Returns the page, Play and Details.
+    fn featured_page(&self, game: &GameObject) -> (gtk::Overlay, gtk::Button, gtk::Button) {
+        let (title, logo) = {
+            let entry = game.entry();
+            (entry.game.title.clone(), entry.art.logo.clone())
+        };
+        let page = gtk::Overlay::builder()
+            .overflow(gtk::Overflow::Hidden)
+            .hexpand(true)
+            .child(&gtk::Box::builder().height_request(FEATURED_HEIGHT).build())
+            .css_classes(["featured-page"])
+            .build();
+        let art = gtk::Picture::builder()
+            .content_fit(gtk::ContentFit::Cover)
+            .can_shrink(true)
+            .accessible_role(gtk::AccessibleRole::Presentation)
+            .build();
+        page.add_overlay(&art);
+        page.add_overlay(
+            &gtk::Box::builder()
+                .can_target(false)
+                .css_classes(["featured-scrim"])
+                .build(),
+        );
+        let text = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(10)
+            .halign(gtk::Align::Start)
+            .valign(gtk::Align::Center)
+            .margin_start(40)
+            .margin_end(40)
+            .margin_top(24)
+            .margin_bottom(24)
+            .css_classes(["featured-text"])
+            .build();
+        text.append(
+            &gtk::Label::builder()
+                .label(gettext("Jump Back In"))
+                .xalign(0.0)
+                .ellipsize(gtk::pango::EllipsizeMode::End)
+                .css_classes(["home-eyebrow"])
+                .build(),
+        );
+        // The logo stays within 360×96 whatever the image's size, as on Home's other
+        // layouts; the title stands in for it until it shows, and where there is none.
+        let logo_picture = gtk::Picture::builder()
+            .visible(false)
+            .content_fit(gtk::ContentFit::Contain)
+            .can_shrink(true)
+            .halign(gtk::Align::Start)
+            .width_request(360)
+            .height_request(96)
+            .css_classes(["home-logo"])
+            .build();
+        logo_picture.update_property(&[gtk::accessible::Property::Label(&title)]);
+        text.append(
+            &adw::Clamp::builder()
+                .maximum_size(360)
+                .tightening_threshold(360)
+                .child(
+                    &adw::Clamp::builder()
+                        .orientation(gtk::Orientation::Vertical)
+                        .maximum_size(96)
+                        .tightening_threshold(96)
+                        .child(&logo_picture)
+                        .build(),
+                )
+                .build(),
+        );
+        let name = gtk::Label::builder()
+            .label(&title)
+            .xalign(0.0)
+            .wrap(true)
+            .lines(2)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .css_classes(["title-1"])
+            .build();
+        text.append(&name);
+        let facts = self.imp().layout.get().home_details.then(|| {
+            let facts = gtk::Box::builder()
+                .spacing(12)
+                .halign(gtk::Align::Start)
+                .css_classes(["home-details"])
+                .build();
+            put_details(&facts, &game_details(game));
+            text.append(&facts);
+            facts
+        });
+        let play = gtk::Button::builder()
+            .css_classes(["pill", "suggested-action", "featured-play"])
+            .build();
+        bind_play_button(&play, game);
+        let details = gtk::Button::builder()
+            .label(gettext("Details"))
+            .action_name("win.show-details")
+            .action_target(&game.id().as_str().to_variant())
+            .css_classes(["pill", "featured-details"])
+            .build();
+        // "Details" alone does not say whose.
+        details.update_property(&[gtk::accessible::Property::Description(&title)]);
+        if let Some(facts) = facts {
+            // The playtime and the last time played as they are now.
+            for button in [&play, &details] {
+                button.connect_has_focus_notify(glib::clone!(
+                    #[weak]
+                    facts,
+                    #[weak]
+                    game,
+                    move |button| {
+                        if button.has_focus() {
+                            put_details(&facts, &game_details(&game));
+                        }
+                    }
+                ));
+            }
+        }
+        let buttons = gtk::Box::builder()
+            .spacing(12)
+            .halign(gtk::Align::Start)
+            .build();
+        buttons.append(&play);
+        buttons.append(&details);
+        text.append(&buttons);
+        page.add_overlay(&text);
+        page.set_measure_overlay(&text, true);
+        if let Some(path) = hero_art(game) {
+            load_picture(&art, path, |_| {});
+        }
+        if let Some(path) = logo {
+            load_picture(&logo_picture, path, move |logo| {
+                logo.set_visible(true);
+                name.set_visible(false);
+            });
+        }
+        (page, play, details)
+    }
+
+    /// Turns the featured row's `carousel` to `page`, at once while Pindu moves less.
+    fn show_page(&self, carousel: &adw::Carousel, page: &gtk::Overlay) {
+        let animate = !self.imp().background_context.get().reduced_motion;
+        carousel.scroll_to(page, animate);
+    }
+
+    /// Follows a page of the featured row turned by a swipe or the scroll wheel: focus in
+    /// the row goes to that page's Play.
+    fn follow_page(&self, page: usize) {
+        let rows = self.imp().shelf_rows.borrow();
+        let Some(featured) = rows.iter().find(|shelf| shelf.id == RowId::Featured) else {
+            return;
+        };
+        let focused = featured
+            .items
+            .iter()
+            .position(|(button, _)| button.has_focus());
+        let play = match focused {
+            Some(focused) if focused / 2 != page => featured.items.get(page * 2),
+            _ => None,
+        }
+        .map(|(play, _)| play.clone());
+        drop(rows);
+        if let Some(play) = play {
+            play.grab_focus();
+        }
+    }
+
+    /// The Explore layout's row of tiles (`.home-carousel`): a compact tile for each of
+    /// `sections` (`compact_section_tile`), which moves focus to its row, then the Library
+    /// tile and, where Steam is present, the Steam Big Picture tile, moved here from the
+    /// carousel.
+    fn tiles_shelf(&self, key: ShelfKey, sections: &[&Section]) -> Shelf {
+        let imp = self.imp();
+        let carousel = gtk::Box::builder()
+            .spacing(12)
+            .margin_start(48)
+            .margin_end(48)
+            .margin_top(12)
+            .margin_bottom(12)
+            .css_classes(["home-carousel"])
+            .build();
+        let row = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .margin_top(4)
+            .build();
+        row.append(&sideways(&carousel));
+        let mut items: Vec<(gtk::Button, Focused)> = Vec::with_capacity(sections.len() + 2);
+        for section in sections {
+            let tile = compact_section_tile(section, &section_title(section));
+            let id = section.id;
+            tile.connect_has_focus_notify(glib::clone!(
+                #[weak(rename_to = page)]
+                self,
+                move |tile| {
+                    if tile.has_focus() {
+                        page.card_focused(tile, &Focused::Section(id));
+                    }
+                }
+            ));
+            carousel.append(&tile);
+            items.push((tile, Focused::Section(id)));
+        }
+        for tile in [&*imp.library_tile, &*imp.big_picture_tile] {
+            if let Some(parent) = tile.parent().and_downcast::<gtk::Box>() {
+                parent.remove(tile);
+            }
+            carousel.append(tile);
+        }
+        items.push((imp.library_tile.get(), Focused::Library));
+        items.push((imp.big_picture_tile.get(), Focused::BigPicture));
+        Shelf {
+            id: RowId::Tiles,
+            key,
+            row,
+            items,
+            shape: TileShape::Landscape,
+            size: COMPACT_TILE,
             pending: RefCell::default(),
         }
     }
@@ -1626,7 +2179,7 @@ impl HomePage {
             let bottom = top + f64::from(bounds.height());
             if bottom > top && top < near.end && bottom > near.start {
                 // Jump Back In's cards show what the desktop's Jump Back In row shows.
-                let jump = shelf.id == Some(SectionId::RecentlyPlayed);
+                let jump = shelf.id == RowId::Section(SectionId::RecentlyPlayed);
                 for (picture, game) in shelf.pending.take() {
                     if jump {
                         show_jump_art(&picture, &game, home::art_pixels(shelf.size, scale));
@@ -1644,7 +2197,7 @@ impl HomePage {
     fn scroll_to_shelf(&self) {
         let imp = self.imp();
         let rows = imp.shelf_rows.borrow();
-        let ids: Vec<Option<SectionId>> = rows.iter().map(|shelf| shelf.id).collect();
+        let ids: Vec<RowId> = rows.iter().map(|shelf| shelf.id).collect();
         let position = imp.shelf_focus.borrow().position(&(), &ids);
         if let Some(shelf) = rows.get(position)
             && let Some(bounds) = shelf.row.compute_bounds(&*imp.shelves)
@@ -1696,7 +2249,9 @@ impl HomePage {
         true
     }
 
-    /// Moves focus along and between the rows of the Shelves layout.
+    /// Moves focus along and between the rows of the one-screen layouts. In the featured
+    /// row, Left and Right step through each page's Play and Details and turn the page
+    /// (`home::featured_step`).
     fn navigate_shelves(&self, direction: Direction) -> bool {
         let rows = self.imp().shelf_rows.borrow();
         let shown: Vec<Vec<&(gtk::Button, Focused)>> = rows
@@ -1717,14 +2272,30 @@ impl HomePage {
             return false;
         };
         let lengths: Vec<usize> = shown.iter().map(Vec::len).collect();
-        let target = match home::shelf_step((row, item), direction, &lengths) {
-            ShelfStep::Item(item) => shown[row].get(item).map(|(tile, _)| tile.clone()),
-            ShelfStep::Row(row) => rows
-                .get(row)
-                .and_then(|shelf| self.remembered_in(shelf))
-                .map(|(tile, _)| tile),
-            ShelfStep::Stay => None,
-            ShelfStep::Leave => return false,
+        let along = matches!(direction, Direction::Left | Direction::Right);
+        let target = if rows[row].id == RowId::Featured && along {
+            // Each page holds its Play, then its Details.
+            let button = if item % 2 == 0 {
+                FeaturedButton::Play
+            } else {
+                FeaturedButton::Details
+            };
+            home::featured_step(item / 2, button, direction, lengths[row] / 2).and_then(
+                |(page, button)| {
+                    let item = page * 2 + usize::from(button == FeaturedButton::Details);
+                    shown[row].get(item).map(|(tile, _)| tile.clone())
+                },
+            )
+        } else {
+            match home::shelf_step((row, item), direction, &lengths) {
+                ShelfStep::Item(item) => shown[row].get(item).map(|(tile, _)| tile.clone()),
+                ShelfStep::Row(row) => rows
+                    .get(row)
+                    .and_then(|shelf| self.remembered_in(shelf))
+                    .map(|(tile, _)| tile),
+                ShelfStep::Stay => None,
+                ShelfStep::Leave => return false,
+            }
         };
         drop(shown);
         drop(rows);
@@ -1742,17 +2313,31 @@ impl HomePage {
             .shelf_rows
             .borrow()
             .iter()
-            .find(|shelf| shelf.id == Some(id))
+            .find(|shelf| shelf.id == RowId::Section(id))
             .and_then(|shelf| self.remembered_in(shelf));
         let Some((card, focused)) = target else {
             return false;
         };
         // Remembered outright: a window that is not active does not say its focus moved.
-        imp.shelf_focus.borrow_mut().remember((), Some(id));
+        imp.shelf_focus
+            .borrow_mut()
+            .remember((), RowId::Section(id));
         card.grab_focus();
         self.scroll_to_shelf();
         self.show_focused(&focused);
         true
+    }
+
+    /// Coming down from the top bar's tabs into the one-screen layouts' rows, focuses the
+    /// row and the card that last had focus there; `false` in the layouts with screens,
+    /// where the nearest tile takes focus.
+    pub fn enter_from_top(&self) -> bool {
+        if !self.shelves() {
+            return false;
+        }
+        self.focus_remembered();
+        self.scroll_to_shelf();
+        self.has_focus_within()
     }
 
     /// Focuses the tile or card that last had focus on the screen shown, wherever it
@@ -1772,7 +2357,7 @@ impl HomePage {
         let imp = self.imp();
         if self.shelves() {
             let rows = imp.shelf_rows.borrow();
-            let ids: Vec<Option<SectionId>> = rows.iter().map(|shelf| shelf.id).collect();
+            let ids: Vec<RowId> = rows.iter().map(|shelf| shelf.id).collect();
             let position = imp.shelf_focus.borrow().position(&(), &ids);
             return rows
                 .get(position)
@@ -1798,7 +2383,10 @@ impl HomePage {
                     .iter()
                     .map(|(_, game)| Item::Game(game.id()))
                     .collect();
-                let position = imp.game_focus.borrow().position(&Some(open), &items);
+                let position = imp
+                    .game_focus
+                    .borrow()
+                    .position(&RowId::Section(open), &items);
                 cards
                     .get(position)
                     .map(|(card, game)| (card.clone(), Focused::Game(game.clone())))
@@ -1867,7 +2455,9 @@ impl HomePage {
             }
         } else if let Some(open) = imp.open.get() {
             if let Item::Game(_) = item {
-                imp.game_focus.borrow_mut().remember(Some(open), item);
+                imp.game_focus
+                    .borrow_mut()
+                    .remember(RowId::Section(open), item);
             }
         } else if item != Item::BigPicture {
             imp.first_focus.borrow_mut().remember((), item);
@@ -1880,10 +2470,14 @@ impl HomePage {
     /// In" (`.home-eyebrow`) on a first screen that starts with the games; a section's
     /// name and details, without art, or over its first game's on such a first screen,
     /// with its first covers (`.home-preview`) where the design asks for them; the title
-    /// alone for the Library and Steam Big Picture tiles.
+    /// alone for the Library and Steam Big Picture tiles. Nothing in the Explore layout,
+    /// whose rows say it all themselves.
     fn show_focused(&self, focused: &Focused) {
         let imp = self.imp();
         let layout = imp.layout.get();
+        if layout.home == HomeLayout::Explore {
+            return;
+        }
         let first_screen = self.on_first_screen();
         let starts_with_games = first_screen && layout.home_start == HomeStart::Games;
         imp.eyebrow
@@ -1987,17 +2581,12 @@ impl HomePage {
     /// asks for them; the row hides without any.
     fn fill_details(&self, details: &[Detail]) {
         let imp = self.imp();
-        while let Some(item) = imp.details.first_child() {
-            imp.details.remove(&item);
-        }
         let shown = if imp.layout.get().home_details {
             details
         } else {
             &[]
         };
-        for detail in shown {
-            imp.details.append(&detail_item(*detail));
-        }
+        put_details(&imp.details, shown);
         imp.details.set_visible(!shown.is_empty());
     }
 
@@ -2050,17 +2639,9 @@ impl HomePage {
         imp.logo.set_paintable(gtk::gdk::Paintable::NONE);
         imp.logo.set_visible(false);
         imp.title.set_visible(true);
+        self.fill_details(&game_details(game));
         let (title, logo) = {
-            let now = glib::DateTime::now_local().ok();
-            let (now, offset) =
-                now.map_or((0, 0), |now| (now.to_unix(), now.utc_offset().as_seconds()));
             let entry = game.entry();
-            self.fill_details(&home::details(
-                &entry.game,
-                entry.playtime_secs,
-                now,
-                offset,
-            ));
             (entry.game.title.clone(), entry.art.logo.clone())
         };
         imp.title.set_label(&title);
@@ -2131,6 +2712,52 @@ impl HomePage {
 fn hero_art(game: &GameObject) -> Option<PathBuf> {
     let entry = game.entry();
     entry.art.hero.clone().or_else(|| entry.art.cover.clone())
+}
+
+/// What Home's details row says of `game` (`home::details`), as of now.
+fn game_details(game: &GameObject) -> Vec<Detail> {
+    let now = glib::DateTime::now_local().ok();
+    let (now, offset) = now.map_or((0, 0), |now| (now.to_unix(), now.utc_offset().as_seconds()));
+    let entry = game.entry();
+    home::details(&entry.game, entry.playtime_secs, now, offset)
+}
+
+/// Shows the image at `path` in `picture`: at once when it is in memory, else once it has
+/// loaded, and then runs `loaded`. An image that does not load leaves the picture empty.
+fn load_picture(
+    picture: &gtk::Picture,
+    path: PathBuf,
+    loaded: impl FnOnce(&gtk::Picture) + 'static,
+) {
+    if let Some(texture) = textures::cached(&path) {
+        picture.set_paintable(Some(&texture));
+        loaded(picture);
+        return;
+    }
+    let picture = picture.downgrade();
+    glib::spawn_future_local(async move {
+        if let Ok(texture) = textures::load(&path).await
+            && let Some(picture) = picture.upgrade()
+        {
+            picture.set_paintable(Some(&texture));
+            loaded(&picture);
+        }
+    });
+}
+
+/// A row's frame that scrolls `carousel` sideways; the page scrolls it itself, keeping
+/// the lifted card's ring in view.
+fn sideways(carousel: &gtk::Box) -> gtk::ScrolledWindow {
+    let scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::External)
+        .vscrollbar_policy(gtk::PolicyType::Never)
+        .propagate_natural_height(true)
+        .child(carousel)
+        .build();
+    if let Some(viewport) = carousel.parent().and_downcast::<gtk::Viewport>() {
+        viewport.set_scroll_to_focus(false);
+    }
+    scroller
 }
 
 /// How many frames a card that was only just built is given to get its place in its

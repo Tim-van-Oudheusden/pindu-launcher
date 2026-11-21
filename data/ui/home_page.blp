@@ -49,7 +49,7 @@ template $PinduHomePage: Adw.NavigationPage {
 
     // Darkens the background and the art under the text while Dim is on (`dim-*`).
     [overlay]
-    Box {
+    Box dim {
       can-target: false;
 
       styles [
@@ -58,7 +58,7 @@ template $PinduHomePage: Adw.NavigationPage {
     }
 
     [overlay]
-    Box {
+    Box hero_gradient {
       can-target: false;
 
       styles [
@@ -293,9 +293,11 @@ template $PinduHomePage: Adw.NavigationPage {
         };
       }
 
-      // The Shelves layout (`"home": "shelves"`): every section as a row of its games,
-      // then the Library row; the rows are built in code. The page scrolls it itself,
-      // to the row that has focus.
+      // The one-screen layouts' rows, built in code. Shelves (`"home": "shelves"`): every
+      // section as a row of its games, then the Library row. Explore (`"home":
+      // "explore"`): the Jump Back In carousel, the row of section tiles, then a row of
+      // games for each other section. The page scrolls it itself, to the row that has
+      // focus.
       ScrolledWindow shelves_scroller {
         visible: false;
         hscrollbar-policy: never;
