@@ -87,11 +87,14 @@
   </supports>
 
   <releases>
-    <release version="0.6.0~rc1" type="development" date="2026-11-20">
+    <release version="0.6.0" date="2026-11-21">
       <description>
-        <p>Copies of one game shown as one, save snapshots, Library Health, richer game details, two new sources and much more of the launcher in fullscreen mode.</p>
+        <p>New fullscreen designs, copies of one game shown as one, save snapshots, Library Health, richer game details, two new sources and much more of the launcher in fullscreen mode.</p>
         <ul>
-          <li>Fullscreen mode's Quick Access lets you choose Home's background under Design: the new Red Ribbons, now the default, or Blue Station</li>
+          <li>Fullscreen mode has three new designs: Lobby, now the default, with labelled section tiles over the animated background; Marquee, which opens Home on your recent games; and Shelves, every section as a row of its games. Ribbon and Panorama are retired, and if you used either, fullscreen mode opens in Lobby</li>
+          <li>Adwaita, the look with no design, now follows GNOME Software's Explore page: your recent games in a carousel with Play and Details, a row of sections, then a row of covers for each; Quick Access is a floating card and the menu drawer a plain sidebar</li>
+          <li>Steam, Lutris, Bottles, Faugus, Legendary and itch show their own icons in the sidebar, on covers and on fullscreen Home's tiles</li>
+          <li>In Lobby, Quick Access lets you choose Home's background under Design: the new Red Ribbons or Blue Station</li>
           <li>Rename a game, or set its developer, genres, release year and description, in its Edit dialog; your changes survive every sync</li>
           <li>Steam games show their release year, genres, controller support and Steam Deck rating, and Lutris and Heroic Amazon games their release year</li>
           <li>Get Metadata From Wikidata, off by default, fills in Steam games' developers and genres on request, and the game page says which values came from Wikidata</li>
