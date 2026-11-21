@@ -366,10 +366,11 @@ mod tests {
     }
 
     #[test]
-    fn every_launcher_icon_pindu_names_ships_with_its_provenance() {
-        let icons =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/icons/sources");
+    fn every_launcher_icon_pindu_names_ships_in_its_icon_theme_with_its_provenance() {
+        let data = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data");
+        let icons = data.join("icons/sources");
         let provenance = std::fs::read_to_string(icons.join("LICENSE")).unwrap();
+        let resources = std::fs::read_to_string(data.join("resources.gresource.xml")).unwrap();
 
         for &source in Source::ALL {
             let Some(name) = source_icon(source).filter(|name| name.starts_with("pindu-")) else {
@@ -378,6 +379,14 @@ mod tests {
             let file = format!("{name}.svg");
             assert!(icons.join(&file).is_file(), "{file} is missing");
             assert!(provenance.contains(&file), "{file} has no provenance");
+            let alias = format!("alias=\"icons/scalable/actions/{file}\"");
+            let path = format!(">icons/sources/{file}</file>");
+            assert!(
+                resources
+                    .lines()
+                    .any(|line| line.contains(&alias) && line.contains(&path)),
+                "{file} is not in the app's icon theme"
+            );
         }
     }
 
