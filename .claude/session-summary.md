@@ -8,6 +8,13 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
+- 2026-11-21, #702: README screenshots retaken from the maintainer's real library with the released 0.6.0 bundle,
+  installed in a throwaway Flatpak installation (`FLATPAK_USER_DIR`) and run in headless gamescope by
+  `/tmp/real-shot.sh`. That bundle uses the real `~/.var/app/<id>` profile whatever `--env` says, so the profile was
+  copied aside first (a Roguelikes collection was added to the copy in use) and restored byte for byte after.
+  Gotchas: one gamescope left running keeps `gamescope-0`, so later screenshots silently came from it and a second
+  `flatpak run` only activated the stale app: export each instance's `GAMESCOPE_WAYLAND_DISPLAY`. The uinput pad
+  needs about 3 s before its first press counts. Desktop shots are 1280×900, fullscreen 1280×720.
 - 2026-11-21, Release 0.6.0 (#664, reopened): the maintainer called the final after testing rc.1 and everything
   since by hand, waiving the rc.2 that `docs/releasing.md` asks for when more than the version bump has landed since
   the last pre-release. Branch `release/664-v0.6.0-final` (the rc.1 branch `release/664-v0.6.0` is stale and still on
