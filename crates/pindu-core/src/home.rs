@@ -352,7 +352,8 @@ pub struct BackgroundContext {
     /// The system asks for high contrast (`adw::StyleManager:high-contrast`).
     pub high_contrast: bool,
     /// Art covers the background on the screen shown (the focused game's, or a section's
-    /// first game's), or the layout is Shelves, which never shows it.
+    /// first game's), or the layout is one screen of rows
+    /// (`themes::HomeLayout::one_screen`: Shelves and Explore), which never shows it.
     pub covered: bool,
 }
 
