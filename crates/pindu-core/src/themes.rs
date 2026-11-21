@@ -310,6 +310,16 @@ pub struct Discovery {
     pub skipped: Vec<(PathBuf, String)>,
 }
 
+/// The shipped design that took over from `id`, a design Pindu launcher used to ship, if it
+/// is one: Ribbon and Panorama were retired for Lobby. A design of the user's own with
+/// such an id is theirs to keep; the caller replaces only one that is not installed.
+pub fn replacement(id: &str) -> Option<&'static str> {
+    match id {
+        "ribbon" | "panorama" => Some("lobby"),
+        _ => None,
+    }
+}
+
 /// Finds the themes in `folders`, each a folder of theme folders, sorted by name; a later
 /// folder's theme replaces an earlier one with the same id.
 pub fn discover(folders: &[&Path]) -> Discovery {
@@ -479,10 +489,29 @@ mod tests {
                 theme.id
             );
         }
-        assert!(
-            found.themes.iter().any(|theme| theme.variants.len() >= 2),
-            "a shipped design is the worked example of variants"
-        );
+    }
+
+    #[test]
+    fn retired_designs_are_replaced_by_lobby() {
+        assert_eq!(replacement("ribbon"), Some("lobby"));
+        assert_eq!(replacement("panorama"), Some("lobby"));
+        for kept in ["lobby", "marquee", "shelves", "", "my-design"] {
+            assert_eq!(replacement(kept), None, "{kept}");
+        }
+    }
+
+    #[test]
+    fn lobby_ships_and_the_retired_designs_do_not() {
+        let shipped = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/themes");
+
+        let ids: Vec<String> = discover(&[&shipped])
+            .themes
+            .into_iter()
+            .map(|theme| theme.id)
+            .collect();
+
+        assert!(ids.iter().any(|id| id == "lobby"), "{ids:?}");
+        assert!(ids.iter().all(|id| replacement(id).is_none()), "{ids:?}");
     }
 
     #[test]
