@@ -813,7 +813,7 @@ fullscreen mode the game's options list them.
 ## Acknowledgments
 
 - [Cartridges](https://codeberg.org/kramo/cartridges) by kramo, the GNOME game launcher that showed how a libadwaita
-  game library can look.
+  game library can look, and whose Lutris, Bottles and Legendary icons Pindu launcher uses.
 - [Heroic Games Launcher](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher),
   [Lutris](https://github.com/lutris/lutris), [Bottles](https://github.com/bottlesdevs/Bottles),
   [Faugus Launcher](https://github.com/Faugus/faugus-launcher), [Legendary](https://github.com/legendary-gl/legendary)
@@ -828,7 +828,8 @@ fullscreen mode the game's options list them.
 ## Disclaimer
 
 Pindu launcher is not affiliated with Valve, Epic Games, GOG, Amazon or any launcher it imports from. Product names and
-trademarks belong to their owners.
+trademarks belong to their owners. Steam and the Steam logo are trademarks and/or registered trademarks of Valve
+Corporation in the U.S. and/or other countries.
 
 ## Contact
 
@@ -846,6 +847,7 @@ trademarks belong to their owners.
 | Code and everything not listed below | [GNU General Public License v3.0 or later](LICENSE) |
 | `data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in` | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `data/home/` (fullscreen Home's art) | [GPL-3.0-or-later](data/home/LICENSE) |
+| `data/icons/sources/` (launcher icons) | Each icon's own terms, listed in [`LICENSE`](data/icons/sources/LICENSE): the Steam logo (Simple Icons, CC0 1.0, used under Valve's branding guidelines), Cartridges' Lutris, Bottles and Legendary icons (GPL-3.0-or-later), Faugus Launcher's logo (MIT) and the itch.io logo (itch.io press kit) |
 | `docs/brand/readme-banner.svg` | [GPL-3.0-or-later](LICENSE); the outlined text is [Adwaita Sans](https://gitlab.gnome.org/GNOME/adwaita-fonts), SIL Open Font License 1.1 |
 | Game art in `data/screenshots/` and `docs/screenshots/desktop-*.webp` | Each game's own licence, listed in [`CREDITS.md`](data/screenshots/CREDITS.md) |
 | Game art in `docs/screenshots/fullscreen-*.webp` | Belongs to each game's publisher; shown as Pindu launcher displays a real library |

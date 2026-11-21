@@ -90,6 +90,26 @@ pub fn monogram(source: Source) -> Option<&'static str> {
     }
 }
 
+/// The symbolic icon that stands for `source`: a launcher's own mark where Pindu ships one
+/// (`pindu-source-*`, `data/icons/sources/`), and GNOME's own icon for the sources that are
+/// not a brand. `None` for the launchers whose mark Pindu does not ship (Epic, GOG and
+/// Amazon): fullscreen mode's labelled tiles show their monogram, and the desktop window a
+/// generic icon.
+pub fn source_icon(source: Source) -> Option<&'static str> {
+    match source {
+        Source::Steam => Some("pindu-source-steam-symbolic"),
+        Source::HeroicEpic | Source::HeroicGog | Source::HeroicAmazon => None,
+        Source::HeroicSideload => Some("application-x-executable-symbolic"),
+        Source::Lutris => Some("pindu-source-lutris-symbolic"),
+        Source::Bottles => Some("pindu-source-bottles-symbolic"),
+        Source::Faugus => Some("pindu-source-faugus-symbolic"),
+        Source::Legendary => Some("pindu-source-legendary-symbolic"),
+        Source::Itch => Some("pindu-source-itch-symbolic"),
+        Source::Desktop => Some("computer-symbolic"),
+        Source::Manual => Some("document-edit-symbolic"),
+    }
+}
+
 /// A section of Home's first screen: what it holds, the user's name for it when it is
 /// a collection (the shell names the others), and its games in the order they show.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -316,6 +336,48 @@ mod tests {
         assert_eq!(table.len(), Source::ALL.len());
         for (source, expected) in table {
             assert_eq!(monogram(source), expected, "{source:?}");
+        }
+    }
+
+    #[test]
+    fn a_source_shows_its_own_icon_where_pindu_ships_one() {
+        let table = [
+            (Source::Steam, Some("pindu-source-steam-symbolic")),
+            (Source::HeroicEpic, None),
+            (Source::HeroicGog, None),
+            (Source::HeroicAmazon, None),
+            (
+                Source::HeroicSideload,
+                Some("application-x-executable-symbolic"),
+            ),
+            (Source::Lutris, Some("pindu-source-lutris-symbolic")),
+            (Source::Bottles, Some("pindu-source-bottles-symbolic")),
+            (Source::Faugus, Some("pindu-source-faugus-symbolic")),
+            (Source::Legendary, Some("pindu-source-legendary-symbolic")),
+            (Source::Itch, Some("pindu-source-itch-symbolic")),
+            (Source::Desktop, Some("computer-symbolic")),
+            (Source::Manual, Some("document-edit-symbolic")),
+        ];
+
+        assert_eq!(table.len(), Source::ALL.len());
+        for (source, expected) in table {
+            assert_eq!(source_icon(source), expected, "{source:?}");
+        }
+    }
+
+    #[test]
+    fn every_launcher_icon_pindu_names_ships_with_its_provenance() {
+        let icons =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/icons/sources");
+        let provenance = std::fs::read_to_string(icons.join("LICENSE")).unwrap();
+
+        for &source in Source::ALL {
+            let Some(name) = source_icon(source).filter(|name| name.starts_with("pindu-")) else {
+                continue;
+            };
+            let file = format!("{name}.svg");
+            assert!(icons.join(&file).is_file(), "{file} is missing");
+            assert!(provenance.contains(&file), "{file} has no provenance");
         }
     }
 

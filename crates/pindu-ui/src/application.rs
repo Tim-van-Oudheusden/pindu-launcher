@@ -1191,10 +1191,26 @@ impl PinduApplication {
                 .debug_info(debug_info)
                 .debug_info_filename("pindu-launcher-debug-info.txt")
                 .build();
+            about.add_legal_section(
+                &gettext("Launcher Icons"),
+                None,
+                gtk::License::Custom,
+                Some(LAUNCHER_ICONS_LEGAL),
+            );
             about.present(app.active_window().as_ref());
         });
     }
 }
+
+/// Where the launcher icons come from and under what terms (`data/icons/sources/LICENSE`),
+/// for the About dialog. Not translated: the legal wording is the owners'.
+const LAUNCHER_ICONS_LEGAL: &str = "Steam logo: from Simple Icons (CC0 1.0), used under \
+    Valve's branding guidelines. Steam and the Steam logo are trademarks and/or registered \
+    trademarks of Valve Corporation in the U.S. and/or other countries.\n\
+    Lutris, Bottles and Legendary icons: from Cartridges, © 2023 kramo, GPL-3.0-or-later.\n\
+    Faugus Launcher logo: © 2024 Faugus, MIT License.\n\
+    itch.io logo: from the itch.io press kit, used under its guidelines.\n\
+    Pindu launcher is not affiliated with, sponsored or endorsed by any of them.";
 
 impl Default for PinduApplication {
     fn default() -> Self {
