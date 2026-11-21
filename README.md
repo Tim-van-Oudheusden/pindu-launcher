@@ -850,4 +850,5 @@ Corporation in the U.S. and/or other countries.
 | `data/icons/sources/` (launcher icons) | Each icon's own terms, listed in [`LICENSE`](data/icons/sources/LICENSE): the Steam logo (Simple Icons, CC0 1.0, used under Valve's branding guidelines), Cartridges' Lutris, Bottles and Legendary icons (GPL-3.0-or-later), Faugus Launcher's logo (MIT) and the itch.io logo (itch.io press kit) |
 | `docs/brand/readme-banner.svg` | [GPL-3.0-or-later](LICENSE); the outlined text is [Adwaita Sans](https://gitlab.gnome.org/GNOME/adwaita-fonts), SIL Open Font License 1.1 |
 | Game art in `data/screenshots/` and `docs/screenshots/desktop-*.webp` | Each game's own licence, listed in [`CREDITS.md`](data/screenshots/CREDITS.md) |
-| Game art in `docs/screenshots/fullscreen-*.webp` | Belongs to each game's publisher; shown as Pindu launcher displays a real library |
+| Game art in `docs/screenshots/fullscreen-3-library.webp` and `fullscreen-4-game-page.webp` | Belongs to each game's publisher; shown as Pindu launcher displays a real library |
+| Game art in `docs/screenshots/fullscreen-1-home.webp`, `fullscreen-2-adwaita.webp` and `fullscreen-5-quick-access.webp` | Invented games, their art made by Tim van Oudheusden for the design mockups; no licence |
