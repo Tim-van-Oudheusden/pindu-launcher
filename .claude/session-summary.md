@@ -8,6 +8,11 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
+- 2026-11-21, Release 0.6.0 (#664, reopened): the maintainer called the final after testing rc.1 and everything
+  since by hand, waiving the rc.2 that `docs/releasing.md` asks for when more than the version bump has landed since
+  the last pre-release. Branch `release/664-v0.6.0-final` (the rc.1 branch `release/664-v0.6.0` is stale and still on
+  `origin`). After the merge: tag `v0.6.0` on the merge commit, watch the Release workflow, then the recipes pull
+  request and the hardware checklist on the final's files (the maintainer adds `hardware-check:passed`).
 - 2026-11-21, #693 (Part 1 posted on the issue, answered; Part 2 stacked on #692's branch): launcher icons. Steam
   (Simple Icons), Lutris, Bottles, Legendary (Cartridges), Faugus (its MIT mono logo, stylesheet removed) and itch
   (press kit) ship in `data/icons/sources/` with `LICENSE`, aliased into the resource icon theme as
