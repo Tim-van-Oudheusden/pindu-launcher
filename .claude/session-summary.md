@@ -11,6 +11,10 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 - 2026-11-21, #685: Left and Right stop at the ends of Home's row in the layouts with two screens
   (`home::row_step`, `HomePage::navigate_row`), for the controller and, through a key controller on `carousel_row`,
   the arrow keys. Checked by eye in Panorama, Marquee and Ribbon (both screens), D-pad, left stick and arrows.
+- 2026-11-21, #684 (stacked on #685's branch, so the two summaries do not conflict): a Home card whose art loads
+  none carries `.no-art` (`window::show_art_class`, the `on_loaded` of `CoverArt::show`), and Ribbon, Marquee,
+  Lobby, Shelves and Panorama show `.jump-title` on it. Checked by eye in all five with the throwaway library's
+  "A Game Without Art" games.
 - Gotchas: `/tmp` is a tmpfs with a per-user quota: once it is full, every `flatpak run` fails with "Failed to export
   bpf: System failure beyond the control of libseccomp" (EDQUOT). Keep cargo targets out of `/tmp`
   (`~/.cache/pindu-sdk-target`). This host has no meson, blueprint-compiler or GTK headers; build and test in

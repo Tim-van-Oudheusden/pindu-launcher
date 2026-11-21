@@ -122,7 +122,10 @@ window.fullscreen-mode .home-carousel.home-tile-square .jump-title {
   transition: opacity 140ms ease-out;
 }
 
-window.fullscreen-mode .home-carousel.home-tile-square > button:focus-within .jump-title {
+/* The focused card shows its title, and so does a card without art (`.no-art`), as
+   nothing else on it says which game it is. */
+window.fullscreen-mode .home-carousel.home-tile-square > button:focus-within .jump-title,
+window.fullscreen-mode .home-carousel.home-tile-square > .no-art .jump-title {
   opacity: 1;
 }
 
