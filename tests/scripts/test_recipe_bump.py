@@ -152,6 +152,29 @@ class RecipeBumpTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn("Refs #", body.read_text())
 
+    def test_writes_a_summary_linking_the_compare_page_with_the_body_to_open_the_pull_request_by_hand(self) -> None:
+        body = self.root / "body.md"
+        summary = self.root / "summary.md"
+
+        result = self.run_script(
+            "--body", str(body), "--summary", str(summary), "--issue", "42", "--repo-url", "https://github.com/o/r",
+            "9.8.7", str(self.sums),
+        )  # fmt: skip
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        text = summary.read_text()
+        self.assertIn("(https://github.com/o/r/compare/main...chore/recipes-9.8.7)", text)
+        self.assertIn(body.read_text(), text)
+
+    def test_writes_no_summary_when_the_recipes_are_already_at_the_version(self) -> None:
+        self.run_script("9.8.7", str(self.sums))
+        summary = self.root / "summary.md"
+
+        result = self.run_script("--summary", str(summary), "9.8.7", str(self.sums))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(summary.exists())
+
     def test_writes_no_body_when_the_recipes_are_already_at_the_version(self) -> None:
         self.run_script("9.8.7", str(self.sums))
         body = self.root / "body.md"

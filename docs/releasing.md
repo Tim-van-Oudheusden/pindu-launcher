@@ -134,7 +134,10 @@ nixpkgs lines below, then pushes `chore/recipes-X.Y.Z` and opens the pull reques
 issue. A pre-release skips the job, and a rerun does nothing once the pull request is open or `main`'s recipes build
 the version. A pull request opened with the workflow's token starts no workflow: **close and reopen it** to run the
 checks, try the recipes as below, and merge it (it is high risk, `build-aux/**`). Then copy the PKGBUILD and a fresh
-`.SRCINFO` to the AUR repository. When the job fails, run the script by hand:
+`.SRCINFO` to the AUR repository. When the repository does not allow Actions to create pull requests (Settings,
+Actions, General, "Allow GitHub Actions to create and approve pull requests"), `gh pr create` is refused: the job still
+ends green after the push, with a warning, and its run summary links the compare page of `chore/recipes-X.Y.Z` and
+holds the pull request's body, so a person opens the pull request there and carries on as above. When the job fails, run the script by hand:
 `python3 scripts/recipe-bump.py X.Y.Z SHA256SUMS`, with the release's `SHA256SUMS` downloaded.
 
 - **COPR** (`.copr/Makefile`, the make_srpm method): nothing to bump. It builds `build-aux/rpm/pindu-launcher.spec`,
