@@ -160,25 +160,29 @@ fn set_class(widget: &impl IsA<gtk::Widget>, class: &str, on: bool) {
     }
 }
 
-/// The glyph of a section's labelled tile (`.section-glyph`): a launcher's monogram, or
-/// else the icon the desktop sidebar shows for the section, `size` pixels.
+/// The glyph of a section's labelled tile (`.section-glyph`): a launcher's own icon where
+/// Pindu ships one (`sections::source_icon`), else its monogram, or the icon the desktop
+/// sidebar shows for the section, `size` pixels.
 fn section_glyph(id: SectionId, size: i32) -> gtk::Widget {
     let icon = match id {
         SectionId::RecentlyPlayed => "document-open-recent-symbolic",
         SectionId::Favourites => "starred-symbolic",
         SectionId::Installed => "drive-harddisk-symbolic",
         SectionId::Collection(_) => "folder-symbolic",
-        SectionId::Source(source) => match sections::monogram(source) {
-            Some(monogram) => {
-                return gtk::Label::builder()
-                    .label(monogram)
-                    .halign(gtk::Align::Start)
-                    .css_classes(["section-glyph"])
-                    .build()
-                    .upcast();
+        SectionId::Source(source) => {
+            match (sections::source_icon(source), sections::monogram(source)) {
+                (Some(icon), _) => icon,
+                (None, Some(monogram)) => {
+                    return gtk::Label::builder()
+                        .label(monogram)
+                        .halign(gtk::Align::Start)
+                        .css_classes(["section-glyph"])
+                        .build()
+                        .upcast();
+                }
+                (None, None) => source_icon(source),
             }
-            None => source_icon(source),
-        },
+        }
     };
     gtk::Image::builder()
         .icon_name(icon)

@@ -13,4 +13,5 @@ written from scratch too, following the layout of the ps5-menu-es-de theme for E
 recreated from its published numbers; Lobby contains none of that theme's files, fonts,
 images or sounds. The tints of its launcher tiles are its own colours, not the launchers'
 brand colours; it contains no console names, console or store logos, button art or brand
-colours, and no tile carries a launcher's logo.
+colours. The launcher icons its tiles show are Pindu launcher's, listed with their own
+terms in data/icons/sources/LICENSE, not part of this design.

@@ -82,5 +82,13 @@
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-west-y-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-zl-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-zr-symbolic.svg</file>
+    <!-- Launcher icons (icons/sources/LICENSE says where each comes from), in the same
+         icon theme as the glyphs. -->
+    <file alias="icons/scalable/actions/pindu-source-steam-symbolic.svg" preprocess="xml-stripblanks">icons/sources/pindu-source-steam-symbolic.svg</file>
+    <file alias="icons/scalable/actions/pindu-source-lutris-symbolic.svg" preprocess="xml-stripblanks">icons/sources/pindu-source-lutris-symbolic.svg</file>
+    <file alias="icons/scalable/actions/pindu-source-bottles-symbolic.svg" preprocess="xml-stripblanks">icons/sources/pindu-source-bottles-symbolic.svg</file>
+    <file alias="icons/scalable/actions/pindu-source-faugus-symbolic.svg" preprocess="xml-stripblanks">icons/sources/pindu-source-faugus-symbolic.svg</file>
+    <file alias="icons/scalable/actions/pindu-source-legendary-symbolic.svg" preprocess="xml-stripblanks">icons/sources/pindu-source-legendary-symbolic.svg</file>
+    <file alias="icons/scalable/actions/pindu-source-itch-symbolic.svg" preprocess="xml-stripblanks">icons/sources/pindu-source-itch-symbolic.svg</file>
   </gresource>
 </gresources>

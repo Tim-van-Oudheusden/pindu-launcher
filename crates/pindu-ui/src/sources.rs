@@ -9,6 +9,7 @@ use gettextrs::{gettext, ngettext};
 use gtk::gio;
 use pindu_core::game_groups;
 use pindu_core::model::Source;
+use pindu_core::sections;
 use pindu_core::sync_age::SyncAge;
 
 /// The setting that stores the source order (see [`game_groups::source_order`]).
@@ -141,13 +142,11 @@ pub fn source_list(sources: &[Source]) -> String {
     }
 }
 
-/// A symbolic icon for a source's sidebar row.
+/// The symbolic icon that stands for a source wherever the window names it: its own
+/// (`sections::source_icon`), or a generic one for a launcher whose mark Pindu does not
+/// ship.
 pub fn source_icon(source: Source) -> &'static str {
-    match source {
-        Source::Desktop => "computer-symbolic",
-        Source::Manual => "document-edit-symbolic",
-        _ => "applications-games-symbolic",
-    }
+    sections::source_icon(source).unwrap_or("applications-games-symbolic")
 }
 
 /// How long ago a source last synced, as Preferences says it.

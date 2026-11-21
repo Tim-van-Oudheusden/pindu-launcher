@@ -1,0 +1,61 @@
+Launcher icons for Pindu launcher
+
+Symbolic icons that stand for the launchers Pindu imports from, in the desktop window and
+on fullscreen mode's section tiles (`pindu_core::sections::source_icon`). None of them is
+Pindu's own work; each is listed with where it comes from and under what terms it is
+used. GTK recolours them to the text colour. Pindu launcher is not affiliated with,
+sponsored or endorsed by any of these launchers or stores.
+
+pindu-source-steam-symbolic.svg
+  The Steam logo, from Simple Icons <https://simpleicons.org> (`icons/steam.svg`, commit
+  521c96fd04b0ea93034db8715eda5a4de27a58bb), traced from Valve's branding page
+  <https://partner.steamgames.com/doc/marketing/branding>. The file is released under CC0
+  1.0 by Simple Icons; the mark is used unchanged under Valve's branding guidelines.
+  Steam and the Steam logo are trademarks and/or registered trademarks of Valve
+  Corporation in the U.S. and/or other countries.
+
+pindu-source-lutris-symbolic.svg
+pindu-source-bottles-symbolic.svg
+pindu-source-legendary-symbolic.svg
+  From Cartridges by kramo <https://codeberg.org/kramo/cartridges>
+  (`data/icons/sources/{lutris,bottles,legendary}-source-symbolic.svg`, commit
+  d56323e6dd0ba9b500ee4f2b11d95f2e6240b05f), unchanged. Copyright (C) 2023 kramo, released
+  under the GNU General Public License, version 3 or (at your option) any later version.
+  Lutris's and Bottles' marks belong to their projects; Legendary has no logo, and its
+  icon is Cartridges' own design.
+
+pindu-source-faugus-symbolic.svg
+  Faugus Launcher's monochrome logo, from Faugus Launcher
+  <https://github.com/Faugus/faugus-launcher> (`assets/faugus-mono.svg`, commit
+  53eeae00aaf7f2c32724a121fcf1c7ea39df8d05). Copyright (c) 2024 Faugus, released under
+  the MIT License:
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this
+    software and associated documentation files (the "Software"), to deal in the
+    Software without restriction, including without limitation the rights to use, copy,
+    modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
+    and to permit persons to whom the Software is furnished to do so, subject to the
+    following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+    INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+    PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+    HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+    CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+    OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  Changed for GTK's symbolic icons: the stylesheet that set its colour and the class that
+  used it are removed, and its fill is black, which GTK replaces with the text colour.
+
+pindu-source-itch-symbolic.svg
+  The itch.io logo without its title, from the itch.io press kit
+  <https://itch.io/press-kit> (`itchio-textless-black.svg`, last modified 2019-01-03),
+  unchanged, used under the press kit's guidelines: not distorted, no effects added, the
+  aspect ratio kept, in a colour that contrasts with its background.
+
+Epic Games, GOG and Amazon have no icon here: their sections show a two-letter monogram in
+fullscreen mode and a generic icon in the desktop window. Heroic's sideloaded games, the
+desktop's games and the games added by hand show GNOME's own icons.

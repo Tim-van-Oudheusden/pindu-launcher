@@ -8,6 +8,13 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
+- 2026-11-21, #693 (Part 1 posted on the issue, answered; Part 2 stacked on #692's branch): launcher icons. Steam
+  (Simple Icons), Lutris, Bottles, Legendary (Cartridges), Faugus (its MIT mono logo, stylesheet removed) and itch
+  (press kit) ship in `data/icons/sources/` with `LICENSE`, aliased into the resource icon theme as
+  `pindu-source-<id>-symbolic`; `sections::source_icon` picks them, Epic/GOG/Amazon keep their monogram in
+  fullscreen and the generic icon on the desktop. `/tmp/icons-check.py` renders the bundle's icons through GTK in
+  headless gamescope (`flatpak run --socket=x11 … org.gnome.Sdk//51`, `NON_UNIQUE` app: the SDK sandbox cannot
+  own a bus name).
 - 2026-11-21, #691 (filed this session at the maintainer's request): Lobby is the default design and Ribbon and
   Panorama are gone; a setting that names either is switched to `lobby` (`themes::replacement`,
   `StyleService::follow_design`) unless the user has a design with that id. The shipped-designs test no longer asks
