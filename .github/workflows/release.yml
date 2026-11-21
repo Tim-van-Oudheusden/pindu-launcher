@@ -344,7 +344,7 @@ jobs:
           issue="$(gh issue list --state all --search "\"Release $VERSION\" in:title" --json number,title \
             --jq "[.[] | select(.title == \"Release $VERSION\")][0].number // empty")"
           gh release download "$TAG" --pattern SHA256SUMS --dir "$RUNNER_TEMP"
-          python3 -I scripts/recipe-bump.py --body "$RUNNER_TEMP/body.md" ${issue:+--issue "$issue"} \
+          python3 -I scripts/recipe-bump.py --body "$RUNNER_TEMP/body.md" --summary "$RUNNER_TEMP/summary.md" ${issue:+--issue "$issue"} \
             --repo-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
             --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             "$VERSION" "$RUNNER_TEMP/SHA256SUMS"
@@ -356,4 +356,9 @@ jobs:
             -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
             commit -q -a -m "$title" -m "From the $TAG release's SHA256SUMS.${issue:+ Refs #$issue}"
           git push --force origin "$branch"
-          gh pr create --base main --head "$branch" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          # The repository setting "Allow GitHub Actions to create and approve pull requests" may be off
+          # (#701). The branch is pushed by now, so the job ends green and a person opens the pull request.
+          if ! gh pr create --base main --head "$branch" --title "$title" --body-file "$RUNNER_TEMP/body.md"; then
+            cat "$RUNNER_TEMP/summary.md" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Actions may not open pull requests here; open $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/main...$branch by hand (see the run summary)."
+          fi

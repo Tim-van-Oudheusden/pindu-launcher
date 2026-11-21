@@ -9,12 +9,14 @@ build-aux/nix/package.nix `version` and the `src` hash, the same SHA-256 in SRI 
 
 Usage:
     python3 -I scripts/recipe-bump.py [--root DIR] [--body FILE [--issue N] [--repo-url URL] [--run-url URL]]
-        VERSION SHA256SUMS
+        [--summary FILE] VERSION SHA256SUMS
 
 VERSION is a final version, X.Y.Z without `v`: pre-releases never reach these recipes. SHA256SUMS is the release's
 checksum file, `sha256sum` output that lists pindu-launcher-VERSION.tar.xz. --root is the repository (default: the one
 holding this script). When the recipes change, --body writes the bump pull request's body to FILE, with `Refs #N` for
-the "Release X.Y.Z" issue --issue names. Prints `bumped to VERSION` or, when the recipes already build it, `already at
+the "Release X.Y.Z" issue --issue names. --summary writes, with the body, the step summary the workflow shows when
+GitHub Actions may not open the pull request: a link to the compare page of chore/recipes-VERSION and the body to open
+it with. Prints `bumped to VERSION` or, when the recipes already build it, `already at
 VERSION` (and writes no body), and exits 0; exits 2, writing no file, on a usage error, a missing or malformed
 checksum, or a recipe line it cannot find.
 """
@@ -96,6 +98,20 @@ opened with `GITHUB_TOKEN` starts no workflow: close and reopen it to run the ch
 """
 
 
+def fallback_summary(version: str, repo_url: str, body: str) -> str:
+    """The step summary for a run that could not open the pull request: where to open it, and with what body."""
+    compare = f"{repo_url}/compare/main...chore/recipes-{version}"
+    return f"""### The recipe bump needs a pull request
+
+GitHub Actions may not open pull requests in this repository, so `chore/recipes-{version}` is pushed but no pull request
+exists yet. [Open the pull request]({compare}) with the title `chore(packaging): bump the AUR and nixpkgs recipes to
+{version}` and this body:
+
+````markdown
+{body}````
+"""
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Bump the recipes; the exit status of the module docstring."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -104,6 +120,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--issue", type=int, help='the "Release X.Y.Z" issue the body refers to')
     parser.add_argument("--repo-url", default="https://github.com/Tim-van-Oudheusden/pindu-launcher")
     parser.add_argument("--run-url", default="", help="the workflow run that opens the pull request")
+    parser.add_argument("--summary", type=Path, help="also write the step summary for a pull request opened by hand")
     parser.add_argument("version")
     parser.add_argument("sums", type=Path)
     args = parser.parse_args(argv)
@@ -123,8 +140,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     for path, text in new.items():
         (args.root / path).write_text(text)
+    body = pr_body(args.version, digest, args.issue, args.repo_url, args.run_url)
     if args.body is not None:
-        args.body.write_text(pr_body(args.version, digest, args.issue, args.repo_url, args.run_url))
+        args.body.write_text(body)
+    if args.summary is not None:
+        args.summary.write_text(fallback_summary(args.version, args.repo_url, body))
     print(f"The AUR and nixpkgs recipes are bumped to {args.version} ({digest}).")
     return 0
 
