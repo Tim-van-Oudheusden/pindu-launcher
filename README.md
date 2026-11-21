@@ -209,15 +209,15 @@ A controller-first view of the same library, for the couch, a TV or a Steam Deck
 Preferences.
 
 <p align="center">
-  <img src="docs/screenshots/fullscreen-1-home.webp" width="820" alt="Fullscreen Home in the Ribbon design: recently played games across the top, with Slay the Spire 2 focused and its logo and artwork filling the background">
+  <img src="docs/screenshots/fullscreen-1-home.webp" width="820" alt="Fullscreen Home in the Lobby design: a row of labelled section tiles across the top over the red animated background, with Recently Played focused and its five covers previewed below">
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/fullscreen-2-panorama.webp" width="405" alt="Fullscreen Home in the Panorama design: recently played games along the bottom, with Balatro focused over its red and blue artwork">
+  <img src="docs/screenshots/fullscreen-2-adwaita.webp" width="405" alt="Fullscreen Home in Adwaita, the look with no design: the Home and Library tabs in the middle of the top bar, a banner for Lanternkeep with Play focused, a row of section tiles and a row of covers">
   <img src="docs/screenshots/fullscreen-3-library.webp" width="405" alt="Fullscreen Library with All, Installed and Favourites tabs and a grid of Steam games sorted by Last Played, with the Play button on Slay the Spire 2">
   <br>
   <img src="docs/screenshots/fullscreen-4-game-page.webp" width="405" alt="Drop Duchy's fullscreen game page with its logo and artwork, the Play button, Steam playtime, controller support and Steam Deck compatibility">
-  <img src="docs/screenshots/fullscreen-5-quick-access.webp" width="405" alt="Quick Access open to Design over fullscreen Home in the Lobby design, its labelled section tiles behind the panel: Lobby is chosen among five designs, and under Background Red Ribbons is selected with Blue Station available">
+  <img src="docs/screenshots/fullscreen-5-quick-access.webp" width="405" alt="Quick Access open to Design over fullscreen Home in the Lobby design: Lobby is chosen among Adwaita, Lobby, Marquee and Shelves, and under Background Red Ribbons is selected with Blue Station available">
 </p>
 
 ### Getting around
@@ -625,15 +625,15 @@ echo no_display >"$MANGOHUD_CONFIGFILE"
 
 ### Styling fullscreen mode
 
-Fullscreen mode has switchable designs (Quick Access → Design). Five ship with the app: Ribbon, the default, and
-Panorama, which open Home on a row of sections; Marquee, which opens it on your recent games over the focused game's
-art, with the sections at the end of the same row; Shelves, one screen with every section as a row of its games; and
-Lobby, labelled section tiles over the animated background with a preview of the focused section. Adwaita, the look
-with no design and the one high contrast shows, follows GNOME Software's Explore page in libadwaita's own colours: a
-header bar with the Home and Library tabs in the middle, a carousel of your recent games with Play and Details on each
-page, a row of section tiles, then a row of covers for each section; Quick Access floats as a rounded card of
-pill-shaped rows, like GNOME Shell's quick settings, and the menu drawer is a plain sidebar. A design can come in
-variants, such as Panorama's Monochrome, picked under the design. The same level blurs and dims Home's background
+Fullscreen mode has switchable designs (Quick Access → Design). Three ship with the app: Lobby, the default, labelled
+section tiles over the animated background with a preview of the focused section; Marquee, which opens Home on your
+recent games over the focused game's art, with the sections at the end of the same row; and Shelves, one screen with
+every section as a row of its games. Adwaita, the look with no design and the one high contrast shows, follows GNOME
+Software's Explore page in libadwaita's own colours: a header bar with the Home and Library tabs in the middle, a
+carousel of your recent games with Play and Details on each page, a row of section tiles, then a row of covers for each
+section; Quick Access floats as a rounded card of pill-shaped rows, like GNOME Shell's quick settings, and the menu
+drawer is a plain sidebar. Ribbon and Panorama no longer ship; if you used either, fullscreen mode opens in Lobby. A
+design can come in variants, picked under the design. The same level blurs and dims Home's background
 (Off, Low or High each), chooses the animated background under a design that offers the choice (Lobby) and turns
 **My Stylesheet**, your own CSS, on and off. Where the files go, the `theme.json` fields and the CSS names designs can
 rely on are in [`docs/fullscreen-style.md`](docs/fullscreen-style.md).

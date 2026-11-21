@@ -21,8 +21,10 @@ This page is the style contract: the files, the `theme.json` fields and the CSS 
   shipped one replaces it.
 - Pick a design in fullscreen mode's **Quick Access** panel (Guide + A, right stick click, the Steam Deck's "…"
   button, or Ctrl+2) under **Design**, or set it with
-  `gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-design <id>`. Ribbon (`ribbon`) is
-  the default; **Adwaita**, an empty id, is no design: the standard libadwaita look.
+  `gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-design <id>`. Lobby (`lobby`) is
+  the default; **Adwaita**, an empty id, is no design: the standard libadwaita look. Four looks ship: Adwaita,
+  Lobby, Marquee and Shelves. Ribbon and Panorama no longer ship; a setting that still names `ribbon` or
+  `panorama` is switched to `lobby`, unless you have a design of your own with that id.
 - A design can offer **variants** (below): pick one in Quick Access under **Design** → **Variant**, or set it with
   `gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-design-variant <variant-id>`. An empty
   or unknown id picks the design's first variant.
@@ -123,8 +125,17 @@ layout without details, white instead of the accent colour. Each entry of `varia
   design's folder (an absolute path, `..`, or a symbolic link out of it).
 - Layout options belong to the design, not a variant.
 
-Panorama is the worked example: **Accent** (`theme.css` alone) and **Monochrome** (`mono.css`, which
-redefines the accent colour variables as white).
+No shipped design has variants. The `theme.json` example above shows the shape: **Classic** is
+`theme.css` alone, and **Monochrome** adds `mono.css`, which can be as small as redefining libadwaita's
+accent variables, if the design's rules use them:
+
+```css
+window.fullscreen-mode {
+  --accent-color: #ffffff;
+  --accent-bg-color: #f2f2f2;
+  --accent-fg-color: #0d0d0d;
+}
+```
 
 ## Writing the CSS
 

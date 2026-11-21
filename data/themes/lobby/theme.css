@@ -4,7 +4,8 @@
  * background, which stays the backdrop; each tile says its section's name and number of
  * games, and a launcher's tile has its own tint. Under the row the focused section's name,
  * its details and a strip of its first covers. A section's games, the library and the game
- * page are Ribbon's. Always dark; colour comes from the background and the tints.
+ * page keep the look of Ribbon, the design Lobby grew from. Always dark; colour comes from
+ * the background and the tints.
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

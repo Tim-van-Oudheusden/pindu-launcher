@@ -481,9 +481,19 @@ impl StyleService {
         self.update();
     }
 
+    /// Applies the chosen design. A design Pindu no longer ships (`themes::replacement`)
+    /// is switched for the one that took over from it, in the setting too, unless the user
+    /// has a design of their own with that id.
     fn follow_design(&self) {
-        let id = self.settings.string(DESIGN);
-        let theme = self.design_theme(&id);
+        let mut id: String = self.settings.string(DESIGN).into();
+        let mut theme = self.design_theme(&id);
+        if theme.is_none()
+            && let Some(replacement) = themes::replacement(&id)
+        {
+            self.set_design(replacement);
+            id = replacement.to_owned();
+            theme = self.design_theme(&id);
+        }
         self.design.set_file(theme.as_ref().map(Theme::stylesheet));
         let variant = theme
             .as_ref()

@@ -8,6 +8,13 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
+- 2026-11-21, #691 (filed this session at the maintainer's request): Lobby is the default design and Ribbon and
+  Panorama are gone; a setting that names either is switched to `lobby` (`themes::replacement`,
+  `StyleService::follow_design`) unless the user has a design with that id. The shipped-designs test no longer asks
+  for a design with variants (approved). README's fullscreen screenshots 1, 2 (now `fullscreen-2-adwaita.webp`) and 5
+  were retaken at 1280×720 from the throwaway library. `meson install` into an old prefix keeps removed theme folders:
+  delete them from the prefix by hand. `/tmp/pindu-check.sh` with an empty first argument now leaves the design
+  setting alone; set `fullscreen-design=''` with `/tmp/pindu-set.sh` for Adwaita.
 - 2026-11-21, #685: Left and Right stop at the ends of Home's row in the layouts with two screens
   (`home::row_step`, `HomePage::navigate_row`), for the controller and, through a key controller on `carousel_row`,
   the arrow keys. Checked by eye in Panorama, Marquee and Ribbon (both screens), D-pad, left stick and arrows.
