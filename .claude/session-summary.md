@@ -60,6 +60,13 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   tile shelves and menu shelves. Focus goes through `panels::step_arranged_tile` and `step_shelves`; the panels follow
   `connect_layout_changed`. At Largest a tile name wider than its tile still breaks inside a word (the panel's width is
   fixed); menu cards never do (their shelves scroll sideways). Not seen: the banner (no running game in the harness).
+- 2026-11-22, #724 (stacked on #725, the last of the series): each of Adwaita (`data/style.css`, `no-design`), Lobby,
+  Marquee and Shelves styles every menu part and the arrangement it uses. Hooks: the menu's current page row or card
+  has `.current` and the description "Current page" (gtk4-rs 0.11 has no current state); small headings share
+  `.panel-heading`; Shelves' shelves without focus get `.unfocused-shelf` (`quick_section.rs`, `menu_drawer.rs`). The
+  README's two menu pictures were retaken in Lobby with the harness and `cwebp -q 80`. Not seen: the banner and
+  Playing Now cards, the unread count, reduced motion on screen. GTK's own CSS parser in the SDK checks the
+  stylesheets.
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,

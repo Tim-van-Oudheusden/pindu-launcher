@@ -8,7 +8,8 @@
 //! through the section itself, the same for the D-pad, the left stick and the arrow keys:
 //! Up and Down from one card, the tiles or the strip to the next, and between the tiles as
 //! `pindu_core::panels::step_arranged_tile` says, on shelves landing on the tile a shelf
-//! last had focused.
+//! last had focused. While a shelf's tile has focus, the other shelf's heading and tiles
+//! carry `.unfocused-shelf`, for a design to dim them as Home dims its other rows.
 
 use std::cell::{Cell, RefCell};
 
@@ -23,6 +24,7 @@ use pindu_core::panels::{
 use pindu_core::themes::QuickTiles;
 
 use crate::fullscreen_playing::card_return;
+use crate::window::set_css_class;
 
 mod imp {
     use super::*;
@@ -108,10 +110,75 @@ enum Stop {
 }
 
 impl PinduQuickSection {
-    /// Gives the section its parts, once.
+    /// Gives the section its parts, once. Each tile marks the shelves without it while it
+    /// has focus.
     pub(crate) fn set_parts(&self, parts: Parts) {
+        for tile in
+            children(parts.tiles.upcast_ref()).filter(|tile| tile.has_css_class("quick-tile"))
+        {
+            let focus = gtk::EventControllerFocus::new();
+            focus.connect_enter(glib::clone!(
+                #[weak(rename_to = section)]
+                self,
+                #[weak]
+                tile,
+                move |_| {
+                    let shelf = section
+                        .imp()
+                        .tiles
+                        .borrow()
+                        .iter()
+                        .find(|(_, each)| *each == tile)
+                        .map(|(kind, _)| kind.shelf());
+                    section.mark_shelves(shelf);
+                }
+            ));
+            focus.connect_leave(glib::clone!(
+                #[weak(rename_to = section)]
+                self,
+                move |_| section.mark_shelves(None)
+            ));
+            tile.add_controller(focus);
+        }
         self.imp().parts.replace(Some(parts));
         self.arrange_tiles();
+    }
+
+    /// On shelves, marks the heading and the tiles of every shelf but `focused`, the one
+    /// with focus, with `.unfocused-shelf`; with no shelf focused, or in any other
+    /// arrangement, none.
+    fn mark_shelves(&self, focused: Option<TileShelf>) {
+        let imp = self.imp();
+        let parts = imp.parts.borrow();
+        let Some(parts) = parts.as_ref() else {
+            return;
+        };
+        let on_shelves = imp.arrangement.get() == QuickTiles::Shelf;
+        let away = |shelf: TileShelf| on_shelves && focused.is_some_and(|each| each != shelf);
+        for (shelf, heading) in &parts.headings {
+            set_css_class(heading, "unfocused-shelf", away(*shelf));
+        }
+        let tiles = imp.tiles.borrow();
+        for widget in
+            children(parts.tiles.upcast_ref()).filter(|each| each.has_css_class("quick-tile"))
+        {
+            let shelf = tiles
+                .iter()
+                .find(|(_, each)| *each == widget)
+                .map(|(tile, _)| tile.shelf());
+            set_css_class(&widget, "unfocused-shelf", shelf.is_some_and(away));
+        }
+    }
+
+    /// The shelf of the tile that has focus, if one has.
+    fn focused_shelf(&self) -> Option<TileShelf> {
+        let focus = self.root()?.focus()?;
+        self.imp()
+            .tiles
+            .borrow()
+            .iter()
+            .find(|(_, tile)| within(&focus, tile))
+            .map(|(tile, _)| tile.shelf())
     }
 
     /// Lays `tiles`, the tiles that show in their order, each with its widget, out as the
@@ -119,6 +186,7 @@ impl PinduQuickSection {
     pub(crate) fn set_tiles(&self, tiles: Vec<(QuickTile, gtk::Widget)>) {
         self.imp().tiles.replace(tiles);
         self.place_tiles();
+        self.mark_shelves(self.focused_shelf());
     }
 
     /// Arranges the tiles as `arrangement` says, the design's.
@@ -150,6 +218,7 @@ impl PinduQuickSection {
             }
         }
         self.place_tiles();
+        self.mark_shelves(self.focused_shelf());
     }
 
     /// Places the tiles that show in the grid: in rows of the arrangement's columns from

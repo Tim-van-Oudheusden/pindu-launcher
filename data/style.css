@@ -1020,6 +1020,121 @@ window.fullscreen-mode.no-design .menu-drawer .navigation-sidebar > row:focus-vi
   outline-offset: -3px;
 }
 
+/* The row for the page under the menu (`.current`): the soft fill the focused row has,
+   a step lighter while it has focus too. */
+window.fullscreen-mode.no-design .menu-drawer .navigation-sidebar > row.current {
+  background-color: alpha(currentColor, 0.1);
+}
+
+window.fullscreen-mode.no-design .menu-drawer .navigation-sidebar > row.current:focus-visible {
+  background-color: alpha(currentColor, 0.16);
+}
+
+/* Quick Access's section strip: one rounded bar, the shown section a lighter pill in it,
+   still wider and named; the unread count in the accent colour. */
+window.fullscreen-mode.no-design .quick-access .panel-sections {
+  padding: 3px;
+  border-radius: 999px;
+  background-color: alpha(currentColor, 0.08);
+}
+
+window.fullscreen-mode.no-design .quick-access .panel-section {
+  border-radius: 999px;
+}
+
+window.fullscreen-mode.no-design .quick-access .panel-section:checked {
+  background-color: alpha(currentColor, 0.2);
+  box-shadow: none;
+}
+
+/* The page card and the activity strip are soft cards with a 16px radius; the tiles a step
+   stronger, as GNOME Shell's quick toggles, names in bold. The focused one is lighter
+   under the accent ring. */
+window.fullscreen-mode.no-design .quick-access .page-card,
+window.fullscreen-mode.no-design .quick-access .quick-tile,
+window.fullscreen-mode.no-design .quick-access .activity-strip {
+  border-radius: 16px;
+}
+
+window.fullscreen-mode.no-design .quick-access .quick-tile {
+  background-color: alpha(currentColor, 0.1);
+}
+
+window.fullscreen-mode.no-design .quick-access .page-card:focus-visible,
+window.fullscreen-mode.no-design .quick-access .quick-tile:focus-visible,
+window.fullscreen-mode.no-design .quick-access .activity-strip:focus-visible {
+  background-color: alpha(currentColor, 0.16);
+}
+
+window.fullscreen-mode.no-design .quick-access .quick-tile-name {
+  font-weight: 700;
+}
+
+/* Its tiles as pills (`.quick-tiles-pills`), as GNOME Shell draws its quick toggles: fully
+   round on the same fill, names in bold over their dimmed second lines. */
+window.fullscreen-mode.no-design .quick-access.quick-tiles-pills .quick-tile {
+  border-radius: 999px;
+}
+
+/* Second lines and numbers in both panels dimmed no further than they keep 4.5:1 on
+   their cards, in the light style too. */
+window.fullscreen-mode.no-design .quick-access .dim-label,
+window.fullscreen-mode.no-design .quick-access row .subtitle,
+window.fullscreen-mode.no-design .menu-drawer .dim-label,
+window.fullscreen-mode.no-design .menu-drawer row .subtitle {
+  opacity: 0.8;
+}
+
+/* A panel's small headings: libadwaita's heading, clear of the lists' rounded edge. */
+window.fullscreen-mode.no-design .panel-heading:not(.page-card-eyebrow) {
+  margin-left: 6px;
+  margin-right: 6px;
+  font-weight: 700;
+}
+
+/* A choice row's arrows are round buttons on a soft fill; the one at an end dims. */
+window.fullscreen-mode.no-design .choice-row .choice-arrow {
+  background-color: alpha(currentColor, 0.1);
+}
+
+window.fullscreen-mode.no-design .choice-row .choice-arrow:disabled {
+  background-color: alpha(currentColor, 0.04);
+}
+
+/* The Playing Now card's buttons: Return the suggested pill, Stop a round flat one on a
+   soft fill. Their ring sits just outside, where the accent shows on Return's accent
+   fill too. */
+window.fullscreen-mode.no-design .playing-card button.destructive-action {
+  background-color: alpha(currentColor, 0.1);
+  color: inherit;
+}
+
+window.fullscreen-mode.no-design .playing-card button.destructive-action:hover {
+  background-color: alpha(currentColor, 0.15);
+}
+
+window.fullscreen-mode.no-design .menu-drawer .playing-card button:focus-visible,
+window.fullscreen-mode.no-design .quick-access .playing-card button:focus-visible {
+  outline: 3px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* The power dock: round buttons on a soft fill, as GNOME Shell's quick settings draw
+   their action buttons; the focused one lighter under the accent ring, drawn inside. */
+window.fullscreen-mode.no-design .menu-drawer .dock-button {
+  background-color: alpha(currentColor, 0.1);
+}
+
+window.fullscreen-mode.no-design .menu-drawer .dock-button:hover {
+  background-color: alpha(currentColor, 0.15);
+}
+
+window.fullscreen-mode.no-design .menu-drawer .dock-button:focus-visible {
+  background-color: alpha(currentColor, 0.2);
+  outline: 3px solid var(--accent-color);
+  outline-offset: -3px;
+}
+
 /* Under high contrast the card's edge, the drawer's line, the lists' edges and the design
    pictures' edges are drawn stronger, as libadwaita draws its borders there. */
 @media (prefers-contrast: more) {
@@ -1059,9 +1174,17 @@ window.reduced-motion .home-carousel > button:focus-visible {
   transform: none;
 }
 
-/* With no design, both panels' rows take focus without a fade. */
+/* With no design, both panels' rows, cards, tiles and buttons take focus without a fade. */
 window.fullscreen-mode.no-design.reduced-motion .quick-access .navigation-sidebar > row,
 window.fullscreen-mode.no-design.reduced-motion .quick-access .boxed-list > row,
-window.fullscreen-mode.no-design.reduced-motion .menu-drawer .navigation-sidebar > row {
+window.fullscreen-mode.no-design.reduced-motion .menu-drawer .navigation-sidebar > row,
+window.fullscreen-mode.no-design.reduced-motion .quick-access .panel-section,
+window.fullscreen-mode.no-design.reduced-motion .quick-access .page-card,
+window.fullscreen-mode.no-design.reduced-motion .quick-access .quick-tile,
+window.fullscreen-mode.no-design.reduced-motion .quick-access .activity-strip,
+window.fullscreen-mode.no-design.reduced-motion .quick-access .design-card,
+window.fullscreen-mode.no-design.reduced-motion .choice-row .choice-arrow,
+window.fullscreen-mode.no-design.reduced-motion .playing-card button,
+window.fullscreen-mode.no-design.reduced-motion .menu-drawer .dock-button {
   transition: none;
 }

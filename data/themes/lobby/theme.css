@@ -387,21 +387,218 @@ window.fullscreen-mode .options-sheet .navigation-sidebar > row {
 window.fullscreen-mode .menu-drawer .navigation-sidebar > row:focus-visible,
 window.fullscreen-mode .quick-access .navigation-sidebar > row:focus-visible,
 window.fullscreen-mode .options-sheet .navigation-sidebar > row:focus-visible,
-window.fullscreen-mode .quick-access .boxed-list > row:focus-visible {
-  background-color: rgb(255 255 255 / 14%);
+window.fullscreen-mode .quick-access .boxed-list > row:focus-visible,
+window.fullscreen-mode .options-sheet .boxed-list > row:focus-visible {
+  background-color: rgb(255 255 255 / 16%);
   outline: 2px solid white;
   outline-offset: -2px;
 }
 
-/* The lists inside Quick Access (cover sizes, designs): one soft glass card. */
-window.fullscreen-mode .quick-access .boxed-list {
-  background-color: rgb(255 255 255 / 6%);
+/* The lists inside the panels (Quick Access's levels, the options sheet's performance
+   switches): one soft glass card each. */
+window.fullscreen-mode .quick-access .boxed-list,
+window.fullscreen-mode .options-sheet .boxed-list {
+  background-color: rgb(255 255 255 / 7%);
   border-radius: 16px;
   box-shadow: none;
 }
 
-window.fullscreen-mode .quick-access .boxed-list > row {
+window.fullscreen-mode .quick-access .boxed-list > row,
+window.fullscreen-mode .options-sheet .boxed-list > row {
   border-radius: 16px;
+}
+
+/* A row's second line in grey, which keeps 4.5:1 on the glass. */
+window.fullscreen-mode .quick-access .boxed-list > row .subtitle,
+window.fullscreen-mode .options-sheet .boxed-list > row .subtitle,
+window.fullscreen-mode .quick-access .navigation-sidebar > row label.caption {
+  color: var(--lobby-grey);
+  opacity: 1;
+}
+
+/* The menu's row for the page under it: at weight 500 on the glass. */
+window.fullscreen-mode .menu-drawer .navigation-sidebar > row.current {
+  background-color: rgb(255 255 255 / 7%);
+  font-weight: 500;
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar > row.current:focus-visible {
+  background-color: rgb(255 255 255 / 16%);
+}
+
+/* A panel's small headings: small grey capitals, as a label over Home's rows. */
+window.fullscreen-mode .panel-heading {
+  font-size: 0.7em;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lobby-grey);
+  opacity: 1;
+}
+
+/* Quick Access's section strip: no bar; the shown section a light glass pill at weight
+   500, still wider and named, the others grey; the unread count white with dark text. */
+window.fullscreen-mode .quick-access .panel-section {
+  border-radius: 999px;
+  background: none;
+  box-shadow: none;
+  color: var(--lobby-grey);
+}
+
+window.fullscreen-mode .quick-access .panel-section:checked {
+  background-color: rgb(255 255 255 / 16%);
+  color: white;
+}
+
+window.fullscreen-mode .quick-access .panel-section:checked label:not(.notification-count) {
+  font-weight: 500;
+}
+
+window.fullscreen-mode .quick-access .notification-count {
+  background-color: white;
+  color: #0f1115;
+  font-weight: 500;
+}
+
+/* Quick's tiles take the shape of Home's labelled section tiles: dark glass with a
+   hairline edge, the icon at the top, the name at weight 500 over a grey second line. The
+   page card and the activity strip are soft glass cards. The focused one lights up under
+   a white ring drawn inside it. */
+window.fullscreen-mode .quick-access .quick-tile {
+  border-radius: 14px;
+  background-color: var(--lobby-tile);
+  box-shadow: inset 0 0 0 1px var(--lobby-tile-edge);
+  color: white;
+}
+
+window.fullscreen-mode .quick-access .page-card,
+window.fullscreen-mode .quick-access .activity-strip {
+  border-radius: 16px;
+  background-color: rgb(255 255 255 / 7%);
+  color: white;
+}
+
+window.fullscreen-mode .quick-access .page-card:focus-visible,
+window.fullscreen-mode .quick-access .quick-tile:focus-visible,
+window.fullscreen-mode .quick-access .activity-strip:focus-visible {
+  background-color: rgb(255 255 255 / 16%);
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+window.fullscreen-mode .quick-access .quick-tile-name,
+window.fullscreen-mode .quick-access .page-card .heading {
+  font-weight: 500;
+}
+
+window.fullscreen-mode .quick-access .quick-tile-state,
+window.fullscreen-mode .quick-access .page-card-state,
+window.fullscreen-mode .quick-access .activity-strip .dim-label {
+  color: var(--lobby-grey);
+  opacity: 1;
+}
+
+window.fullscreen-mode .quick-access .page-card-icon {
+  background-color: rgb(255 255 255 / 10%);
+}
+
+/* A choice row: the option at weight 500 between round glass arrows; the arrow at an end
+   loses its glass and dims. */
+window.fullscreen-mode .choice-row .choice-value {
+  font-weight: 500;
+}
+
+window.fullscreen-mode .choice-row .choice-arrow {
+  background-color: rgb(255 255 255 / 10%);
+  color: white;
+}
+
+window.fullscreen-mode .choice-row .choice-arrow:disabled {
+  background: none;
+}
+
+/* Design's cards: the one in force on glass with a hairline edge, the focused one lit up
+   under the white ring. */
+window.fullscreen-mode .quick-access .design-card {
+  border-radius: 16px;
+}
+
+window.fullscreen-mode .quick-access .design-card:checked {
+  background-color: rgb(255 255 255 / 7%);
+  box-shadow: inset 0 0 0 1px var(--lobby-tile-edge);
+}
+
+window.fullscreen-mode .quick-access .design-card .design-name {
+  font-weight: 300;
+}
+
+window.fullscreen-mode .quick-access .design-card:checked .design-name {
+  font-weight: 500;
+}
+
+window.fullscreen-mode .quick-access .design-card:focus-visible {
+  background-color: rgb(255 255 255 / 16%);
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+window.fullscreen-mode .quick-access .design-card .design-preview {
+  border-radius: 10px;
+  border-color: var(--lobby-tile-edge);
+}
+
+window.fullscreen-mode .quick-access .design-card .design-reason {
+  color: var(--lobby-grey);
+  opacity: 1;
+}
+
+/* The Playing Now cards of both panels: soft glass; Return a white pill with dark text,
+   Stop a glass one. Their ring sits just outside, where it shows on white Return too. */
+window.fullscreen-mode .menu-drawer .playing-card,
+window.fullscreen-mode .quick-access .playing-card {
+  border-radius: 16px;
+  background-color: rgb(255 255 255 / 7%);
+  box-shadow: none;
+}
+
+window.fullscreen-mode .playing-card button.suggested-action {
+  background-color: white;
+  color: #0f1115;
+  font-weight: 500;
+}
+
+window.fullscreen-mode .playing-card button.destructive-action {
+  background-color: rgb(255 255 255 / 12%);
+  color: white;
+  font-weight: 500;
+}
+
+window.fullscreen-mode .menu-drawer .playing-card button:focus-visible,
+window.fullscreen-mode .quick-access .playing-card button:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+/* The power dock: round glass buttons, the focused one lit up under the white ring; one
+   the system does not offer dims its icon. */
+window.fullscreen-mode .menu-drawer .dock-button {
+  background-color: rgb(255 255 255 / 7%);
+  box-shadow: inset 0 0 0 1px var(--lobby-tile-edge);
+  color: white;
+}
+
+window.fullscreen-mode .menu-drawer .dock-button:focus-visible {
+  background-color: rgb(255 255 255 / 16%);
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+window.fullscreen-mode .menu-drawer .dock-button image.dimmed {
+  opacity: 0.45;
+}
+
+window.fullscreen-mode .menu-drawer .dock-label {
+  font-weight: 500;
 }
 
 /* Hint bar and search keyboard: light type, keys as grey pills, the cursor in white. */
@@ -426,10 +623,19 @@ window.fullscreen-mode .search-keyboard .osk-key.cursor {
   color: black;
 }
 
-/* Less motion asked for: nothing grows or slides; focus still shows. */
+/* Less motion asked for: nothing grows or slides, and the panels' sections, cards, tiles
+   and buttons light up without a fade; focus still shows. */
 @media (prefers-reduced-motion: reduce) {
   window.fullscreen-mode .home-carousel.home-tile-square > button,
-  window.fullscreen-mode .home .home-hero {
+  window.fullscreen-mode .home .home-hero,
+  window.fullscreen-mode .quick-access .panel-section,
+  window.fullscreen-mode .quick-access .page-card,
+  window.fullscreen-mode .quick-access .quick-tile,
+  window.fullscreen-mode .quick-access .activity-strip,
+  window.fullscreen-mode .quick-access .design-card,
+  window.fullscreen-mode .choice-row .choice-arrow,
+  window.fullscreen-mode .playing-card button,
+  window.fullscreen-mode .menu-drawer .dock-button {
     transition: none;
   }
 }

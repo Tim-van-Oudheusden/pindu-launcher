@@ -220,8 +220,8 @@ Adwaita, the look with no design ([Styling fullscreen mode](#styling-fullscreen-
     <td align="center"><img src="docs/screenshots/fullscreen-lobby-library.webp" width="405" alt="Lobby's Library: All, Installed and Favourites tabs over a grid of covers sorted by Last Played, with Play on Balatro"><br><sub>Library</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/fullscreen-lobby-menu.webp" width="405" alt="The menu drawer open over Lobby's Home: Home, Library, Controls, Exit Fullscreen Mode and Power"><br><sub>Menu (Start)</sub></td>
-    <td align="center"><img src="docs/screenshots/fullscreen-lobby-quick-access.webp" width="405" alt="Quick Access open over Lobby's Home, as it was before its sections: one list of Notifications, Refresh Library, Refresh Metadata, Surprise Me, Design, Controllers, Controls, Settings and Sources"><br><sub>Quick Access (R3, or Guide + A)</sub></td>
+    <td align="center"><img src="docs/screenshots/fullscreen-lobby-menu.webp" width="405" alt="The menu drawer open over Lobby's Home: Home (focused, the page under the menu), Library with its 20 games and Search, the Racing and Roguelikes collections under a Collections heading, and at the foot the power dock's round buttons: Exit Fullscreen Mode and Exit Pindu Launcher, then Suspend, Restart and Power Off"><br><sub>Menu (Start)</sub></td>
+    <td align="center"><img src="docs/screenshots/fullscreen-lobby-quick-access.webp" width="405" alt="Quick Access open over Lobby's Home on its Quick section: the clock, the strip of six sections with Quick shown, and Lobby's tiles in three columns, Bluetooth (focused, Blocked), Network (Wired), Surprise Me, Refresh Library and Add a Game"><br><sub>Quick Access (R3, or Guide + A)</sub></td>
   </tr>
   <tr>
     <th colspan="2">Marquee</th>
