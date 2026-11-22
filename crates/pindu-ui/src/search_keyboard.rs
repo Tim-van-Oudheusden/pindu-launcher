@@ -153,7 +153,8 @@ impl PinduWindow {
                 }
             }
         }
-        self.announce(
+        crate::announcement::announce(
+            self,
             &key_name(keyboard.key(), keyboard.hidden()),
             gtk::AccessibleAnnouncementPriority::Medium,
         );

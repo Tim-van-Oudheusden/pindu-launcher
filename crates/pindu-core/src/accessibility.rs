@@ -1,4 +1,5 @@
-//! Fullscreen mode's accessibility: when it moves less, and how large its type is.
+//! Fullscreen mode's accessibility: when it moves less, and how large its type is; and
+//! which of GTK's accessibility backends can take a screen reader announcement.
 
 /// The GSettings key of fullscreen mode's text size, a `TextSize`'s setting.
 pub const TEXT_SIZE_KEY: &str = "fullscreen-text-size";
@@ -110,6 +111,21 @@ impl Accessibility {
     }
 }
 
+/// The GTK accessibility contexts that implement announcements: AT-SPI, the Linux
+/// accessibility bus Orca listens on, and AccessKit, by their GType names.
+const ANNOUNCING_CONTEXTS: [&str; 2] = ["GtkAtSpiContext", "GtkAccessKitContext"];
+
+/// Whether a widget whose GTK accessibility context has the GType name `context_type` can
+/// announce a message to screen readers.
+///
+/// Without an accessibility bus GTK falls back to its test context, which has no
+/// `announce` implementation, and `gtk_accessible_announce` then calls a null function
+/// and crashes (#729). Only the contexts known to implement it announce; any other, the
+/// test context included, skips the announcement.
+pub fn announces_with(context_type: &str) -> bool {
+    ANNOUNCING_CONTEXTS.contains(&context_type)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,5 +221,19 @@ mod tests {
         assert_eq!(migrated_text_size(true, true), None);
         assert_eq!(migrated_text_size(false, false), None);
         assert_eq!(migrated_text_size(false, true), None);
+    }
+
+    #[test]
+    fn the_contexts_that_implement_announcements_announce() {
+        assert!(announces_with("GtkAtSpiContext"));
+        assert!(announces_with("GtkAccessKitContext"));
+    }
+
+    #[test]
+    fn without_an_accessibility_bus_nothing_is_announced() {
+        // GTK's fallback when no accessibility bus answers: it cannot announce (#729).
+        assert!(!announces_with("GtkTestATContext"));
+        assert!(!announces_with(""));
+        assert!(!announces_with("GtkATContext"));
     }
 }
