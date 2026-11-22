@@ -1,9 +1,9 @@
 Lobby, a fullscreen design for Pindu launcher
 Copyright (C) 2026 Pindu launcher contributors
 
-This design (theme.json and theme.css) is free software: you can redistribute it and/or
-modify it under the terms of the GNU General Public License as published by the Free
-Software Foundation, either version 3 of the License, or (at your option) any later
+This design (theme.json, theme.css and preview.svg) is free software: you can redistribute
+it and/or modify it under the terms of the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or (at your option) any later
 version. The full text of the licence is in the LICENSE file at the root of Pindu
 launcher's source, and at <https://www.gnu.org/licenses/gpl-3.0.html>.
 
@@ -15,3 +15,7 @@ images or sounds. The tints of its launcher tiles are its own colours, not the l
 brand colours; it contains no console names, console or store logos, button art or brand
 colours. The launcher icons its tiles show are Pindu launcher's, listed with their own
 terms in data/icons/sources/LICENSE, not part of this design.
+
+preview.svg, the picture Quick Access shows on Lobby's card, was drawn from scratch for
+Pindu launcher by an AI agent: a schematic of Lobby's Home in its own colours, with no
+game art, text or logos.

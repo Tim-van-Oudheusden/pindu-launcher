@@ -49,6 +49,7 @@ themes/my-design/
   theme.css
   assets/…       optional; refer to them as url("assets/bg.svg")
   mono.css       optional; a variant's stylesheet
+  preview.svg    optional; a picture of the design for Quick Access
   LICENSE        required for designs shipped with Pindu
 ```
 
@@ -61,6 +62,7 @@ themes/my-design/
   "description": "One line about it",
   "author": "You",
   "license": "CC0-1.0",
+  "preview": "preview.svg",
   "layout": {
     "home": "row-top",
     "home-tile": "square",
@@ -80,6 +82,7 @@ themes/my-design/
 | `contract` | yes | The style contract version the design was written for. A design for a newer contract than this Pindu launcher's is listed as "Needs a newer Pindu launcher" and not applied. |
 | `name` | yes | Shown in the Design list. |
 | `description`, `author`, `license` | no | About the design. |
+| `preview` | no | A picture of the design, SVG or PNG, inside the design's folder and relative to it, drawn for 16:10; Quick Access shows it at about 108×66 pixels on the design's card. A preview that is missing or lies outside the design's folder (an absolute path, `..`, or a symbolic link out of it) is refused with the reason in the log, and the design shows without a picture. |
 | `layout` | no | The layout options below. Unknown keys and values are ignored and fall back to the default. |
 | `variants` | no | The looks the design offers within itself, below. |
 
@@ -346,6 +349,8 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.task` | A row of the Running tasks in Quick Access's Notifications section, which lists what runs in the background: a label, what it is doing, a progress bar and, while it can be cancelled, a Cancel button |
 | `.control` | A row of Quick Access's Controls: the button's `.control-glyph` (after a Hold label for a held one) and the keys that do the same in `.control-keys` |
 | `.choice-row` | A row of Quick Access that changes one setting in place with Left and Right (Design's Background, Background Blur, Background Dim, Cover Size and Text Size; Controller's Button Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate and Stick Dead Zone): the setting's name, under it the chosen option's second line where it has one, and at the end the `.choice-value` (the chosen option) between two `.choice-arrow` buttons, the one at an end insensitive |
+| `.design-cards` | The row of design cards at the top of Quick Access's Design section, in a `.design-cards-scroller` that scrolls it sideways and runs to the panel's end edge; the section's page is `.design-section` |
+| `.design-card` | A design's card in that row, a toggle button, `:checked` for the design in force and insensitive for a design that needs a newer Pindu launcher: `.design-preview` (the design's `preview` clipped to rounded corners, or empty in `--card-bg-color` without one; Adwaita's is built in) with `.design-check` over it while it is in force, then `.design-name`, and for a design it cannot apply `.design-reason` under it |
 | `.options-sheet` | A game's options at the bottom |
 | `.navigation-sidebar > row` | A row in any of the three |
 | `.hint-bar` | The controller hints at the bottom; each `.hint` has `.hint-glyph`s and a `.hint-label` |

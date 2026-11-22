@@ -24,7 +24,7 @@ What each section lists, top to bottom. "→" leads to the level of that name; "
 |---|---|
 | **Quick** | The Playing Now cards · the page cards: Filters → (when the library is under the panel) and Performance → (when the focused game is one Pindu runs) · the tiles: Sound Output →, Bluetooth →, Network → (each when available), Surprise Me, Refresh Library, Add a Game · the activity strip (while something runs) |
 | **Notifications** | A **Running** heading and the background tasks, each with its progress and Cancel, while something runs · then the notifications, newest first, or the line that says there are none |
-| **Design** | The designs, Variant · then one list: the choice rows Background (when the design offers the choice), Background Blur, Background Dim, Cover Size, Text Size, then the Reduce Motion switch · My Stylesheet |
+| **Design** | The designs, as a row of cards · Variant · then one list: the choice rows Background (when the design offers the choice), Background Blur, Background Dim, Cover Size, Text Size, then the Reduce Motion switch · My Stylesheet |
 | **Controller** | The controllers · then one list: the choice rows Button Prompts and Swap Confirm and Back, the Hold to Confirm switch, the choice rows Repeat Delay, Repeat Rate and Stick Dead Zone · their note · then Controls → |
 | **System** | Network → · Bluetooth → · Sound Output → · System Update → (each when available) · then a list of their own: Navigation Sounds, Volume (insensitive while the sounds are off; Left and Right turn it), Exit After Launching · Diagnostics Report → |
 | **Manage** | Sources → · Duplicates → · Library Health → · Proton → · Add a Store → · Add a Game · Refresh Library · an **Artwork** heading: SteamGridDB Key (A types it with the on-screen keyboard; its second line says whether a key is stored, or why the keyring cannot be used), Prefer SteamGridDB Art · a **Metadata** heading: Get Metadata From Wikidata, with Refresh Metadata right under it while it is on |
@@ -98,6 +98,22 @@ others) with a target per option, so choosing an option writes the setting at on
 The choice rows are Design's Background, Background Blur, Background Dim, Cover Size and Text Size, and Controller's
 Button Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate and Stick Dead Zone. Lists whose length varies or
 whose names are long stay lists of rows: the designs, Variant, Genre, the Proton builds and the sound outputs.
+
+### Design's cards
+
+Design opens on one row of cards (`.design-cards`), in the order `pindu_core::panels::design_choices` gives: Adwaita,
+then each installed design by name. Each card shows the design's picture (its `preview`, see
+[`fullscreen-style.md`](fullscreen-style.md); Adwaita's is built in), clipped to rounded corners, over its name; a
+design without a picture shows an empty card in the card colour. The design in force is checked: a check over its
+picture, and its card is `:checked`.
+
+- A on a card applies its design at once, and Quick Access stays open on it.
+- Left and Right move along the row and stop at its ends; the row scrolls so the focused card shows whole. It runs to
+  the panel's edge, so a card cut off there shows there are more.
+- Down leaves the row for Variant, or for the first setting under it when the design has no variants (Variant is then
+  hidden); Up from there comes back to the design in force.
+- A design for a newer Pindu launcher shows insensitive, with "Needs a newer Pindu launcher" under its name.
+- A screen reader reads each card's name, and "In use" for the design in force or why a design cannot be used.
 
 ## The buttons
 

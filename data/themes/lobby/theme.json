@@ -4,6 +4,7 @@
   "description": "Labelled section tiles over the animated background, with a preview of the focused section",
   "author": "Pindu launcher contributors",
   "license": "GPL-3.0-or-later",
+  "preview": "preview.svg",
   "layout": {
     "home": "row-top",
     "home-tile": "square",

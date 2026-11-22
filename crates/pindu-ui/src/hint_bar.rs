@@ -170,10 +170,11 @@ pub(crate) fn focus_kind(focus: &gtk::Widget) -> Focus {
             _ => {}
         }
     }
-    // Menu buttons and view switcher tabs are toggle buttons that open or pick
-    // something rather than switch it.
+    // Menu buttons, view switcher tabs and Quick Access's design cards are toggle buttons
+    // that open or pick something rather than switch it.
     let picks = focus.ancestor(gtk::MenuButton::static_type()).is_some()
-        || focus.ancestor(adw::ViewSwitcher::static_type()).is_some();
+        || focus.ancestor(adw::ViewSwitcher::static_type()).is_some()
+        || focus.has_css_class("design-card");
     if focus.is::<gtk::Switch>()
         || focus.is::<gtk::CheckButton>()
         || focus.is::<adw::SwitchRow>()

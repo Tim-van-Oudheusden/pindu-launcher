@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lobby's Home, drawn as a schematic for Quick Access's Design cards: a row of tinted
+     section tiles across the top, the first focused, over the animated background; under
+     it the focused section's name, details and first covers. No text, art or logos. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 160 100">
+  <defs>
+    <radialGradient id="backdrop" cx="0.7" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#2a2e36"/>
+      <stop offset="0.7" stop-color="#0f1115"/>
+    </radialGradient>
+    <linearGradient id="ribbon" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6e2428" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#8c2a34" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#6e2428" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="100" fill="url(#backdrop)"/>
+  <!-- The animated background's ribbons -->
+  <path d="M0 70 C40 50 70 95 110 72 S150 58 160 64 L160 80 C140 74 120 92 96 86 S40 70 0 86 Z" fill="url(#ribbon)"/>
+  <path d="M0 58 C30 48 64 74 100 60 S144 46 160 52 L160 58 C140 54 120 70 96 70 S36 54 0 66 Z" fill="#a83a40" fill-opacity="0.35"/>
+  <!-- Top bar: the page tabs and the clock -->
+  <rect x="8" y="5" width="12" height="3" rx="1.5" fill="#ffffff"/>
+  <rect x="23" y="5" width="12" height="3" rx="1.5" fill="#a3a3a3"/>
+  <rect x="140" y="5" width="12" height="3" rx="1.5" fill="#ffffff"/>
+  <!-- The row of section tiles, the first focused under a white ring -->
+  <rect x="7" y="13" width="22" height="22" rx="3" fill="#0e0e12" fill-opacity="0.8" stroke="#ffffff" stroke-width="1.5"/>
+  <rect x="11" y="28" width="10" height="2" rx="1" fill="#ffffff" fill-opacity="0.85"/>
+  <rect x="33" y="14" width="20" height="20" rx="3" fill="#182c54" fill-opacity="0.85"/>
+  <rect x="56" y="14" width="20" height="20" rx="3" fill="#4a2c70" fill-opacity="0.85"/>
+  <rect x="79" y="14" width="20" height="20" rx="3" fill="#124c5c" fill-opacity="0.85"/>
+  <rect x="102" y="14" width="20" height="20" rx="3" fill="#704412" fill-opacity="0.85"/>
+  <rect x="125" y="14" width="20" height="20" rx="3" fill="#601e2c" fill-opacity="0.85"/>
+  <rect x="148" y="14" width="20" height="20" rx="3" fill="#1e4830" fill-opacity="0.85"/>
+  <g fill="#ffffff" fill-opacity="0.6">
+    <rect x="37" y="28" width="9" height="2" rx="1"/>
+    <rect x="60" y="28" width="9" height="2" rx="1"/>
+    <rect x="83" y="28" width="9" height="2" rx="1"/>
+    <rect x="106" y="28" width="9" height="2" rx="1"/>
+    <rect x="129" y="28" width="9" height="2" rx="1"/>
+  </g>
+  <!-- The focused section's name and details -->
+  <rect x="8" y="42" width="36" height="5" rx="2" fill="#ffffff"/>
+  <rect x="8" y="50" width="24" height="2.5" rx="1.25" fill="#a3a3a3"/>
+  <!-- A strip of its first covers -->
+  <g fill="#0e0e12" fill-opacity="0.72" stroke="#ffffff" stroke-opacity="0.14" stroke-width="0.6">
+    <rect x="8" y="60" width="16" height="22" rx="2"/>
+    <rect x="27" y="60" width="16" height="22" rx="2"/>
+    <rect x="46" y="60" width="16" height="22" rx="2"/>
+    <rect x="65" y="60" width="16" height="22" rx="2"/>
+  </g>
+</svg>

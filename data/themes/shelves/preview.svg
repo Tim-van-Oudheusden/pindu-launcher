@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shelves' Home, drawn as a schematic for Quick Access's Design cards: the focused
+     game's art across the top fading into the page, its title and details over it, and
+     under them rows of games, wide cards first, then covers. No text, art or logos: the
+     art is a plain wash. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 160 100">
+  <defs>
+    <linearGradient id="art" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="#2f3a48"/>
+      <stop offset="0.6" stop-color="#4c5566"/>
+      <stop offset="1" stop-color="#363b47"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d0e12" stop-opacity="0"/>
+      <stop offset="0.66" stop-color="#0d0e12" stop-opacity="1"/>
+    </linearGradient>
+    <linearGradient id="shade-left" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0d0e12" stop-opacity="0.8"/>
+      <stop offset="0.55" stop-color="#0d0e12" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="100" fill="#0d0e12"/>
+  <rect width="160" height="62" fill="url(#art)"/>
+  <circle cx="120" cy="26" r="18" fill="#7a8292" fill-opacity="0.3"/>
+  <rect width="160" height="62" fill="url(#shade-left)"/>
+  <rect width="160" height="62" fill="url(#fade)"/>
+  <!-- Top bar: the page tabs, the shown one underlined, and the clock -->
+  <rect x="9" y="6" width="11" height="3" rx="1" fill="#ffffff"/>
+  <rect x="9" y="10.5" width="11" height="0.8" fill="#ffffff"/>
+  <rect x="24" y="6" width="11" height="3" rx="1" fill="#ffffff" fill-opacity="0.8"/>
+  <rect x="140" y="6" width="11" height="3" rx="1" fill="#ffffff"/>
+  <!-- The focused game's title and details -->
+  <rect x="9" y="22" width="40" height="7" rx="2" fill="#ffffff"/>
+  <rect x="9" y="32" width="28" height="2.5" rx="1.25" fill="#ffffff" fill-opacity="0.8"/>
+  <!-- Jump Back In: wide cards, the first lifted under a white ring -->
+  <rect x="9" y="42" width="38" height="21" rx="2.5" fill="#1c1d21" stroke="#ffffff" stroke-width="1.5"/>
+  <g fill="#1c1d21" stroke="#ffffff" stroke-opacity="0.12" stroke-width="0.6">
+    <rect x="51" y="43" width="38" height="21" rx="2.5"/>
+    <rect x="93" y="43" width="38" height="21" rx="2.5"/>
+    <rect x="135" y="43" width="38" height="21" rx="2.5"/>
+  </g>
+  <!-- The next row, dimmed: covers -->
+  <rect x="9" y="69" width="22" height="2" rx="1" fill="#ffffff" fill-opacity="0.45"/>
+  <g fill="#1c1d21" fill-opacity="0.75">
+    <rect x="9" y="74" width="16" height="23" rx="2"/>
+    <rect x="28" y="74" width="16" height="23" rx="2"/>
+    <rect x="47" y="74" width="16" height="23" rx="2"/>
+    <rect x="66" y="74" width="16" height="23" rx="2"/>
+    <rect x="85" y="74" width="16" height="23" rx="2"/>
+    <rect x="104" y="74" width="16" height="23" rx="2"/>
+    <rect x="123" y="74" width="16" height="23" rx="2"/>
+    <rect x="142" y="74" width="16" height="23" rx="2"/>
+  </g>
+</svg>
