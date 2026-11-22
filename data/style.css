@@ -42,6 +42,15 @@ gridview.library > child {
   border-radius: 16px;
 }
 
+/* The desktop header bar's search field (fullscreen mode's keeps the entry's shape): a pill
+   in the entry's own colours, whose focus ring follows the round ends. The padding keeps
+   the icons clear of the curves. */
+entry.search-pill {
+  border-radius: 999px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
 /* Filter chips: compact, round toggles that stack. */
 .filter-row > togglebutton,
 .filter-row > button {

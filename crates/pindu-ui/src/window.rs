@@ -46,6 +46,13 @@ use crate::widgets::{CoverArt, CoverTile, GameListCell, ListColumn, TileSize};
 /// The filter row's genre: a stateful string action, empty for any genre.
 const GENRE_FILTER_ACTION: &str = "genre-filter";
 
+/// The desktop search field's width, in `sp`: half the 318 px it had at the default window
+/// size, 1024 px wide.
+const SEARCH_PILL_WIDTH: i32 = 159;
+
+/// The desktop search field's style class: round ends (`data/style.css`).
+const SEARCH_PILL_CLASS: &str = "search-pill";
+
 /// An item of the genre menu: `label`, choosing `genre` (empty for any).
 fn genre_item(label: &str, genre: &str) -> gio::MenuItem {
     let item = gio::MenuItem::new(Some(label), None);
@@ -126,6 +133,8 @@ mod imp {
         pub sync_spinner: TemplateChild<adw::Spinner>,
         #[template_child]
         pub empty_page: TemplateChild<adw::StatusPage>,
+        #[template_child]
+        pub search_clamp: TemplateChild<adw::Clamp>,
         #[template_child]
         pub search_entry: TemplateChild<gtk::SearchEntry>,
         #[template_child]
@@ -636,6 +645,37 @@ impl PinduWindow {
                 window.update_jump_back_in();
             }
         ));
+        // Typing in the library adds to the search through the key capture, at the caret,
+        // which leaving the field puts after the text; the field then takes focus back,
+        // without selecting the text, so the next keys edit it.
+        let leave = gtk::EventControllerFocus::new();
+        let entry = imp.search_entry.get();
+        leave.connect_leave(glib::clone!(
+            #[weak]
+            entry,
+            move |_| entry.set_position(-1)
+        ));
+        imp.search_entry.add_controller(leave);
+        imp.search_entry.connect_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |entry| {
+                let typed_in_library = window
+                    .imp()
+                    .content_stack
+                    .state_flags()
+                    .contains(gtk::StateFlags::FOCUS_WITHIN);
+                if window.is_fullscreen() || !typed_in_library {
+                    return;
+                }
+                if let Some(text) = entry.delegate().and_downcast::<gtk::Text>() {
+                    text.grab_focus_without_selecting();
+                }
+            }
+        ));
+        self.setup_search_blur();
+        self.connect_fullscreened_notify(|window| window.shape_search_entry());
+        self.shape_search_entry();
 
         let toggles = [
             &*imp.installed_filter,
@@ -691,6 +731,98 @@ impl PinduWindow {
             }
         ));
         self.update_content_page();
+    }
+
+    /// The search field is a short pill in the desktop window: half as wide as it was at
+    /// the default window size, centred as the header bar's title, and no wider in a wider
+    /// window. Fullscreen mode's search grows with the bar, as it did.
+    fn shape_search_entry(&self) {
+        let imp = self.imp();
+        let fullscreen = self.is_fullscreen();
+        // Wider than any screen, yet clear of overflow when the clamp scales it to pixels.
+        let width = if fullscreen {
+            100_000
+        } else {
+            SEARCH_PILL_WIDTH
+        };
+        imp.search_clamp.set_maximum_size(width);
+        imp.search_clamp.set_tightening_threshold(width);
+        imp.search_entry.set_hexpand(fullscreen);
+        if fullscreen {
+            imp.search_entry.remove_css_class(SEARCH_PILL_CLASS);
+        } else {
+            imp.search_entry.add_css_class(SEARCH_PILL_CLASS);
+        }
+    }
+
+    /// A click or tap outside the desktop search field takes keyboard focus off it. The
+    /// window watches presses in the capture phase without claiming them, so the click
+    /// still does what it did, window dragging included. Once the click is over, whatever
+    /// it focused keeps the focus; if nothing took it, the games shown get it.
+    fn setup_search_blur(&self) {
+        let click = gtk::GestureClick::new();
+        click.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let outside = std::rc::Rc::new(Cell::new(false));
+        click.connect_pressed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            #[strong]
+            outside,
+            move |gesture, _, x, y| outside.set(window.press_leaves_search(gesture, x, y))
+        ));
+        // `end` follows the release, and also a press another widget claimed, such as a
+        // button or the header bar's drag: the click's own focus change comes first.
+        click.connect_end(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, _| {
+                if outside.take() {
+                    glib::idle_add_local_once(glib::clone!(
+                        #[weak]
+                        window,
+                        move || window.blur_search()
+                    ));
+                }
+            }
+        ));
+        self.add_controller(click);
+    }
+
+    /// Whether a press at `x`, `y` in the window lands outside the desktop search field
+    /// while the field has focus.
+    fn press_leaves_search(&self, gesture: &gtk::GestureClick, x: f64, y: f64) -> bool {
+        let entry = &*self.imp().search_entry;
+        if self.is_fullscreen() || !entry.state_flags().contains(gtk::StateFlags::FOCUS_WITHIN) {
+            return false;
+        }
+        // A press in a popover comes in another surface's coordinates.
+        let surface = gesture.current_event().and_then(|event| event.surface());
+        if surface.is_none() || surface != self.surface() {
+            return false;
+        }
+        self.pick(x, y, gtk::PickFlags::DEFAULT)
+            .is_some_and(|picked| {
+                picked != *entry.upcast_ref::<gtk::Widget>() && !picked.is_ancestor(entry)
+            })
+    }
+
+    /// Moves focus off the search field, when a click left it there, to the games the grid
+    /// or the list shows; with no game to focus, nothing has focus.
+    fn blur_search(&self) {
+        let imp = self.imp();
+        let entry = &imp.search_entry;
+        // The click may have opened a game page over the library, which places focus itself.
+        if !entry.is_mapped() || !entry.state_flags().contains(gtk::StateFlags::FOCUS_WITHIN) {
+            return;
+        }
+        let games: Option<gtk::Widget> = match imp.content_stack.visible_child_name().as_deref() {
+            Some("grid") => Some(imp.grid.get().upcast()),
+            Some("list") => Some(imp.game_list.get().upcast()),
+            _ => None,
+        };
+        if !games.is_some_and(|games| games.is_mapped() && games.grab_focus()) {
+            gtk::prelude::GtkWindowExt::set_focus(self, None::<&gtk::Widget>);
+        }
     }
 
     /// The filter row's genre: `win.genre-filter`, whose state is the genre chosen, or
