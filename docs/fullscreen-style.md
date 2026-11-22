@@ -167,8 +167,8 @@ their `-fg-` partners. Use `--accent-color`, `--accent-bg-color` and `--accent-f
 
 `@media (prefers-color-scheme: dark)` follows the system style, and `@media (prefers-reduced-motion: reduce)`
 matches while the window is `reduced-motion`: the system's reduced-motion or animations setting, or Pindu's
-own **Reduce Motion** switch. Turn off your transitions and animations under the latter, including the
-`.home-hero` crossfade:
+own **Reduce Motion** switch (in Preferences, or in Quick Access → Design). Turn off your transitions and
+animations under the latter, including the `.home-hero` crossfade:
 
 ```css
 @media (prefers-reduced-motion: reduce) {
@@ -179,12 +179,12 @@ own **Reduce Motion** switch. Turn off your transitions and animations under the
 
 ### Text size
 
-**Text Size** has four steps, Default, Large, Larger and Largest; each step past Default adds about a quarter of
-fullscreen mode's own type size. Above Default the window is `large-text` and `text-large`, `text-larger` or
-`text-largest`, and Pindu sets `font-size` on `window.fullscreen-mode.text-large` and the others. Size your text
-in `em` so it follows, and give rows and tiles that hold text room to grow (or no fixed height) so nothing is cut
-off. A design can set its own scale under the size classes, or restyle anything at every larger size under
-`window.fullscreen-mode.large-text`.
+**Text Size** (in Preferences, or in Quick Access → Design) has four steps, Default, Large, Larger and Largest;
+each step past Default adds about a quarter of fullscreen mode's own type size. Above Default the window is
+`large-text` and `text-large`, `text-larger` or `text-largest`, and Pindu sets `font-size` on
+`window.fullscreen-mode.text-large` and the others. Size your text in `em` so it follows, and give rows and tiles
+that hold text room to grow (or no fixed height) so nothing is cut off. A design can set its own scale under the
+size classes, or restyle anything at every larger size under `window.fullscreen-mode.large-text`.
 
 ## Names
 

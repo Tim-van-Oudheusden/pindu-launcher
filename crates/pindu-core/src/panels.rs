@@ -68,15 +68,17 @@ pub enum QuickAccessSection {
     Quick,
     /// What runs in the background, then the session's notifications, newest first.
     Notifications,
-    /// The designs to pick from and their settings.
+    /// The designs to pick from and their settings, then cover size, text size and
+    /// Reduce Motion.
     Design,
-    /// The connected controllers and their settings, and what each button does.
+    /// The connected controllers and their settings, Hold to Confirm among them, and what
+    /// each button does.
     Controller,
-    /// The machine's network, Bluetooth, sound output and updates, Settings and the
-    /// diagnostics report.
+    /// The machine's network, Bluetooth, sound output and updates, the navigation sounds
+    /// and exiting after a launch, and the diagnostics report.
     System,
-    /// The sources, duplicates, Library Health, Proton and stores, and adding and
-    /// refreshing games.
+    /// The sources, duplicates, Library Health, Proton and stores, adding and refreshing
+    /// games, and where artwork and metadata come from.
     Manage,
 }
 
@@ -150,18 +152,20 @@ pub enum QuickAccessEntry {
     Running,
     /// The session's notifications, newest first, or the line that says there are none.
     Notifications,
-    /// The designs, the variant, Home's background and its blur and dim, and the user's
-    /// own stylesheet.
+    /// The designs, the variant, Home's background and its blur and dim, cover size, text
+    /// size, Reduce Motion and the user's own stylesheet.
     Designs,
-    /// The connected controllers, the button prompts, the confirm and back swap, the
-    /// repeat delay and rate and the stick's dead zone.
+    /// The connected controllers, the button prompts, the confirm and back swap, Hold to
+    /// Confirm, the repeat delay and rate and the stick's dead zone.
     Controllers,
     /// Leads to what each button and key does ([`QuickAccessLevel::Controls`]).
     Controls,
     /// Leads to the OS updates on Pindu OS ([`QuickAccessLevel::SystemUpdate`]).
     SystemUpdate,
-    /// Leads to the settings ([`QuickAccessLevel::Settings`]).
-    Settings,
+    /// The Navigation Sounds switch and, under it, their volume.
+    NavigationSounds,
+    /// The Exit After Launching switch.
+    ExitAfterLaunching,
     /// Leads to the diagnostics report ([`QuickAccessLevel::DiagnosticsReport`]).
     DiagnosticsReport,
     /// Leads to the sources ([`QuickAccessLevel::Sources`]).
@@ -174,7 +178,12 @@ pub enum QuickAccessEntry {
     Proton,
     /// Leads to the stores to install ([`QuickAccessLevel::AddStore`]).
     AddStore,
-    /// Fetches the library's metadata from Wikidata again.
+    /// The Artwork heading, the SteamGridDB key and the Prefer SteamGridDB Art switch.
+    Artwork,
+    /// The Metadata heading and the Get Metadata From Wikidata switch.
+    Metadata,
+    /// Fetches the library's metadata from Wikidata again, under the switch that turns it
+    /// on.
     RefreshMetadata,
 }
 
@@ -189,7 +198,7 @@ pub struct Shown {
     pub performance: bool,
     /// Something runs in the background: a sync, an art fetch or a Proton download.
     pub running: bool,
-    /// Metadata from Wikidata is on: Refresh Metadata shows.
+    /// Metadata from Wikidata is on: Refresh Metadata shows under its switch.
     pub metadata: bool,
     /// The system offers the network.
     pub network: bool,
@@ -230,7 +239,8 @@ pub fn section_entries(section: QuickAccessSection, shown: Shown) -> Vec<QuickAc
             (Bluetooth, shown.bluetooth),
             (SoundOutput, shown.sound_output),
             (SystemUpdate, shown.system_update),
-            (Settings, true),
+            (NavigationSounds, true),
+            (ExitAfterLaunching, true),
             (DiagnosticsReport, main_window),
         ],
         QuickAccessSection::Manage => &[
@@ -241,6 +251,8 @@ pub fn section_entries(section: QuickAccessSection, shown: Shown) -> Vec<QuickAc
             (AddStore, main_window),
             (AddGame, main_window),
             (RefreshLibrary, true),
+            (Artwork, true),
+            (Metadata, true),
             (RefreshMetadata, shown.metadata),
         ],
     };
@@ -266,8 +278,6 @@ pub enum QuickAccessLevel {
     Main,
     /// What each button and key does: every intent in groups (see [`crate::controls`]).
     Controls,
-    /// Cover size, navigation sounds and their volume, and exiting after a launch.
-    Settings,
     /// The library filters, while the library is under the panel (see [`page_entries`]).
     Filters,
     /// The Performance Overlay (MangoHud) and GameMode switches of the focused game, one
@@ -315,10 +325,9 @@ pub enum QuickAccessLevel {
 
 impl QuickAccessLevel {
     /// Every level, the sections first.
-    pub const ALL: [Self; 16] = [
+    pub const ALL: [Self; 15] = [
         Self::Main,
         Self::Controls,
-        Self::Settings,
         Self::Filters,
         Self::Performance,
         Self::Network,
@@ -340,7 +349,6 @@ impl QuickAccessLevel {
         match self {
             Self::Main => "main",
             Self::Controls => "controls",
-            Self::Settings => "settings",
             Self::Filters => "filters",
             Self::Performance => "performance",
             Self::Network => "network",
@@ -374,7 +382,6 @@ impl QuickAccessLevel {
             | Self::Bluetooth
             | Self::SoundOutput
             | Self::SystemUpdate
-            | Self::Settings
             | Self::DiagnosticsReport
             | Self::ReportLog => QuickAccessSection::System,
             Self::AddStore
@@ -1005,7 +1012,7 @@ mod tests {
     }
 
     #[test]
-    fn system_lists_the_available_system_entries_then_settings_and_the_report() {
+    fn system_lists_the_system_entries_then_the_sound_and_launch_settings_and_the_report() {
         use QuickAccessEntry::*;
         assert_eq!(
             section_entries(QuickAccessSection::System, FULL),
@@ -1014,13 +1021,14 @@ mod tests {
                 Bluetooth,
                 SoundOutput,
                 SystemUpdate,
-                Settings,
+                NavigationSounds,
+                ExitAfterLaunching,
                 DiagnosticsReport
             ]
         );
         assert_eq!(
             section_entries(QuickAccessSection::System, BARE),
-            [Settings, DiagnosticsReport]
+            [NavigationSounds, ExitAfterLaunching, DiagnosticsReport]
         );
         let update = Shown {
             system_update: true,
@@ -1029,13 +1037,13 @@ mod tests {
         };
         assert_eq!(
             section_entries(QuickAccessSection::System, update),
-            [SystemUpdate, Settings],
+            [SystemUpdate, NavigationSounds, ExitAfterLaunching],
             "the report needs the main window"
         );
     }
 
     #[test]
-    fn manage_lists_the_library_s_upkeep_and_refresh_metadata_while_metadata_is_on() {
+    fn manage_lists_the_library_s_upkeep_then_artwork_and_metadata_with_refresh_under_it() {
         use QuickAccessEntry::*;
         assert_eq!(
             section_entries(QuickAccessSection::Manage, FULL),
@@ -1047,6 +1055,8 @@ mod tests {
                 AddStore,
                 AddGame,
                 RefreshLibrary,
+                Artwork,
+                Metadata,
                 RefreshMetadata
             ]
         );
@@ -1059,8 +1069,11 @@ mod tests {
                 Proton,
                 AddStore,
                 AddGame,
-                RefreshLibrary
-            ]
+                RefreshLibrary,
+                Artwork,
+                Metadata
+            ],
+            "Refresh Metadata shows only while Wikidata metadata is on"
         );
         let over_game = Shown {
             over_game: true,
@@ -1074,9 +1087,21 @@ mod tests {
                 LibraryHealth,
                 Proton,
                 RefreshLibrary,
+                Artwork,
+                Metadata,
                 RefreshMetadata
             ],
             "Add a Store and Add a Game need the main window"
+        );
+    }
+
+    #[test]
+    fn no_level_is_called_settings() {
+        assert_eq!(QuickAccessLevel::from_name("settings"), None);
+        assert!(
+            QuickAccessLevel::ALL
+                .iter()
+                .all(|level| !level.name().contains("settings"))
         );
     }
 
@@ -1098,7 +1123,6 @@ mod tests {
             Designs,
             Controllers,
             Controls,
-            Settings,
             Sources,
             Duplicates,
             Network,
@@ -1240,7 +1264,6 @@ mod tests {
     fn b_steps_back_from_a_list_to_its_section_and_then_closes_quick_access() {
         for level in [
             QuickAccessLevel::Controls,
-            QuickAccessLevel::Settings,
             QuickAccessLevel::Filters,
             QuickAccessLevel::Performance,
             QuickAccessLevel::Network,
@@ -1274,7 +1297,6 @@ mod tests {
             (Bluetooth, S::System),
             (SoundOutput, S::System),
             (SystemUpdate, S::System),
-            (Settings, S::System),
             (DiagnosticsReport, S::System),
             (ReportLog, S::System),
             (Sources, S::Manage),
@@ -1399,9 +1421,9 @@ mod tests {
     }
 
     #[test]
-    fn quick_access_toggles_shut_from_its_settings() {
+    fn quick_access_toggles_shut_from_one_of_its_levels() {
         let mut panels = Panels::new();
-        panels.show(Panel::QuickAccess(QuickAccessLevel::Settings));
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Controls));
         assert!(panels.handle(Intent::QuickAccess, PAGE));
         assert_eq!(panels.open(), None);
         assert!(panels.handle(Intent::QuickAccess, PAGE));
@@ -1601,7 +1623,7 @@ mod tests {
     #[test]
     fn closing_forgets_the_level() {
         let mut panels = Panels::new();
-        panels.show(Panel::QuickAccess(QuickAccessLevel::Settings));
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Controls));
         panels.close();
         assert_eq!(panels.open(), None);
         panels.handle(Intent::QuickAccess, PAGE);

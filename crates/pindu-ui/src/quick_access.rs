@@ -35,12 +35,13 @@
 //! `fullscreen_sound_output`, System Update `fullscreen_system_update`, Library Health
 //! `fullscreen_health`, Diagnostics Report `fullscreen_report`, Add a Store `add_store`,
 //! Proton `fullscreen_proton_downloads`, Sources `fullscreen_sources` and Duplicates
-//! `fullscreen_duplicates`; Add a Game opens the window's `fullscreen_add_game`. Design
-//! and Settings are this module's: the design, its variant, Home's background blur and dim
-//! and the user's own stylesheet, then cover size, navigation sounds and their volume,
-//! exiting after a launch, Reduce Motion and Larger Text, the SteamGridDB key (typed
-//! hidden with the on-screen keyboard of `secret_dialog` and kept in the keyring) and
-//! Prefer SteamGridDB Art, the same settings Preferences changes.
+//! `fullscreen_duplicates`; Add a Game opens the window's `fullscreen_add_game`. The
+//! sections' own settings are this module's, the same settings Preferences changes: in
+//! Design the design, its variant, Home's background blur and dim, cover size, text size,
+//! Reduce Motion and the user's own stylesheet; in Controller Hold to Confirm; in System
+//! the navigation sounds and their volume and exiting after a launch; and in Manage the
+//! SteamGridDB key (typed hidden with the on-screen keyboard of `secret_dialog` and kept
+//! in the keyring), Prefer SteamGridDB Art and Get Metadata From Wikidata.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::sync::LazyLock;
@@ -166,8 +167,6 @@ mod imp {
         #[template_child]
         pub custom_style_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
-        pub settings_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
         pub sources_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub sources: TemplateChild<gtk::ListBox>,
@@ -220,11 +219,13 @@ mod imp {
         #[template_child]
         pub exit_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
-        pub accessibility: TemplateChild<gtk::ListBox>,
+        pub motion: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub text_sizes: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub hold: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub hold_to_confirm_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
@@ -235,6 +236,8 @@ mod imp {
         pub prefer_steamgriddb_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub metadata: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub metadata_actions: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub wikidata_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
@@ -299,6 +302,8 @@ mod imp {
         pub add_store_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub add_store_level: TemplateChild<PinduAddStoreLevel>,
+        #[template_child]
+        pub report_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub report_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
@@ -400,7 +405,10 @@ mod imp {
             let _ = self
                 .playing
                 .set(PlayingCards::new(&self.playing_cards, &self.list));
-            obj.setup_settings();
+            obj.setup_design_settings();
+            obj.setup_controller_settings();
+            obj.setup_system_settings();
+            obj.setup_manage_settings();
             obj.setup_navigation();
         }
 
@@ -568,7 +576,6 @@ impl PinduQuickAccess {
             Some(QuickAccessLevel::Network) => self.show_network(),
             Some(QuickAccessLevel::Sources) => self.show_sources(),
             Some(QuickAccessLevel::Duplicates) => self.show_duplicates(),
-            Some(QuickAccessLevel::Settings) => self.show_steamgriddb_key(),
             _ => {}
         }
         if let Some(level) = level {
@@ -612,9 +619,6 @@ impl PinduQuickAccess {
                 .entry(left, section)
                 .or_else(|| self.first_item(section)),
             (Some(QuickAccessLevel::Main), None) => self.first_item(section),
-            (Some(QuickAccessLevel::Settings), _) => {
-                imp.tile_small.ancestor(gtk::ListBoxRow::static_type())
-            }
             (Some(QuickAccessLevel::Filters), _) => first_row(&imp.filters),
             // The first switch that works: MangoHud's cannot when it is not installed.
             (Some(QuickAccessLevel::Performance), _) => {
@@ -845,7 +849,6 @@ impl PinduQuickAccess {
             QuickAccessLevel::Filters => QuickAccessEntry::Filters,
             QuickAccessLevel::Performance => QuickAccessEntry::Performance,
             QuickAccessLevel::Controls => QuickAccessEntry::Controls,
-            QuickAccessLevel::Settings => QuickAccessEntry::Settings,
             QuickAccessLevel::Sources => QuickAccessEntry::Sources,
             QuickAccessLevel::Duplicates => QuickAccessEntry::Duplicates,
             QuickAccessLevel::Bluetooth => QuickAccessEntry::Bluetooth,
@@ -867,7 +870,9 @@ impl PinduQuickAccess {
     /// The widgets that make `entry` in `section`, which show and hide together. Sound
     /// Output, Bluetooth, Network, Refresh Library and Add a Game have a row in two
     /// sections, each with the same action and second line. Design's and Controller's
-    /// own lists always show, so they have none to show and hide.
+    /// own lists and the settings of System and Manage always show, so they have none to
+    /// show and hide. Diagnostics Report and Refresh Metadata are each a list of their own,
+    /// which goes with its row.
     fn entry_widgets(
         &self,
         section: QuickAccessSection,
@@ -899,8 +904,10 @@ impl PinduQuickAccess {
             (Section::System, Entry::Bluetooth) => row(&imp.bluetooth_row),
             (Section::System, Entry::SoundOutput) => row(&imp.sound_output_row),
             (Section::System, Entry::SystemUpdate) => row(&imp.system_update_row),
-            (Section::System, Entry::Settings) => row(&imp.settings_row),
-            (Section::System, Entry::DiagnosticsReport) => row(&imp.report_row),
+            (Section::System, Entry::DiagnosticsReport) => vec![
+                imp.report_row.get().upcast(),
+                imp.report_list.get().upcast(),
+            ],
             (Section::Manage, Entry::Sources) => row(&imp.sources_row),
             (Section::Manage, Entry::Duplicates) => row(&imp.duplicates_row),
             (Section::Manage, Entry::LibraryHealth) => row(&imp.health_row),
@@ -908,7 +915,10 @@ impl PinduQuickAccess {
             (Section::Manage, Entry::AddStore) => row(&imp.add_store_row),
             (Section::Manage, Entry::AddGame) => row(&imp.add_game_row),
             (Section::Manage, Entry::RefreshLibrary) => row(&imp.refresh_row),
-            (Section::Manage, Entry::RefreshMetadata) => row(&imp.refresh_metadata_row),
+            (Section::Manage, Entry::RefreshMetadata) => vec![
+                imp.refresh_metadata_row.get().upcast(),
+                imp.metadata_actions.get().upcast(),
+            ],
             _ => Vec::new(),
         }
     }
@@ -947,6 +957,13 @@ impl PinduQuickAccess {
                 }
             }
         }
+        // System's first list holds only what the system offers: without any of it, the
+        // list goes too, and the navigation sounds come first.
+        let imp = self.imp();
+        imp.system_list.set_visible(
+            std::iter::successors(imp.system_list.first_child(), |row| row.next_sibling())
+                .any(|row| row.is_visible()),
+        );
         let listed = sections(shown);
         for section in QuickAccessSection::ALL {
             self.tab(section).set_visible(listed.contains(&section));
@@ -998,8 +1015,8 @@ impl PinduQuickAccess {
             }
             QuickAccessSection::Design => self.fill_designs(),
             QuickAccessSection::Controller => self.fill_controllers(),
-            QuickAccessSection::Quick | QuickAccessSection::System | QuickAccessSection::Manage => {
-            }
+            QuickAccessSection::Manage => self.show_steamgriddb_key(),
+            QuickAccessSection::Quick | QuickAccessSection::System => {}
         }
     }
 
@@ -1061,8 +1078,8 @@ impl PinduQuickAccess {
     /// panel opened: in Quick the first Playing Now card's Return, or else its first entry;
     /// in Notifications the first task while something runs, or else the first
     /// notification; in Design the design in force; in Controller the first controller
-    /// that can rumble, or else the first button prompt; and in System and Manage their
-    /// first entry.
+    /// that can rumble, or else the first button prompt; in System its first entry, or the
+    /// navigation sounds while the system offers none; and in Manage its first entry.
     fn first_item(&self, section: QuickAccessSection) -> Option<gtk::Widget> {
         let imp = self.imp();
         match section {
@@ -1093,7 +1110,9 @@ impl PinduQuickAccess {
                     .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
                     .or_else(|| first_shown_row(&imp.prompts))
             }
-            QuickAccessSection::System => first_shown_row(&imp.system_list),
+            QuickAccessSection::System => {
+                first_shown_row(&imp.system_list).or_else(|| first_shown_row(&imp.switches))
+            }
             QuickAccessSection::Manage => first_shown_row(&imp.manage_list),
         }
     }
@@ -1192,13 +1211,16 @@ impl PinduQuickAccess {
             imp.dead_zone.get(),
             imp.sizes.get(),
             imp.switches.get(),
-            imp.accessibility.get(),
+            imp.motion.get(),
+            imp.hold.get(),
+            imp.report_list.get(),
             imp.sources.get(),
             imp.source_order.get(),
             imp.duplicates.get(),
             imp.text_sizes.get(),
             imp.artwork.get(),
             imp.metadata.get(),
+            imp.metadata_actions.get(),
             imp.filters.get(),
             imp.genres.get(),
             imp.clear_filters.get(),
@@ -1259,49 +1281,12 @@ impl PinduQuickAccess {
         });
     }
 
-    /// Settings: cover size, navigation sounds and their volume, exiting after a launch,
-    /// Reduce Motion and Hold to Confirm, the same settings Preferences changes, applied as
-    /// they change. Text Size chooses through its setting's action. Design's My Stylesheet
-    /// is bound to its setting too.
-    fn setup_settings(&self) {
+    /// Design's settings past the design's own, the same settings Preferences changes,
+    /// applied as they change: cover size, Reduce Motion and My Stylesheet. Text Size
+    /// chooses through its setting's action, added in [`Self::setup`].
+    fn setup_design_settings(&self) {
         let imp = self.imp();
         let settings = self.settings();
-        settings
-            .bind("navigation-sounds", &*imp.sounds_row, "active")
-            .build();
-        bind_volume_slider(settings, &imp.volume_row, &imp.volume);
-        settings
-            .bind("exit-after-launch", &*imp.exit_row, "active")
-            .build();
-        settings
-            .bind(REDUCE_MOTION_KEY, &*imp.reduce_motion_row, "active")
-            .build();
-        settings
-            .bind(HOLD_TO_CONFIRM_KEY, &*imp.hold_to_confirm_row, "active")
-            .build();
-        settings
-            .bind("prefer-steamgriddb", &*imp.prefer_steamgriddb_row, "active")
-            .build();
-        settings
-            .bind(wikidata_service::SETTINGS_KEY, &*imp.wikidata_row, "active")
-            .build();
-        let show_metadata = glib::clone!(
-            #[weak(rename_to = quick_access)]
-            self,
-            move |settings: &gio::Settings| {
-                let on = settings.boolean(wikidata_service::SETTINGS_KEY);
-                quick_access.update_shown(|shown| shown.metadata = on);
-            }
-        );
-        show_metadata(settings);
-        settings.connect_changed(Some(wikidata_service::SETTINGS_KEY), move |settings, _| {
-            show_metadata(settings);
-        });
-        imp.steamgriddb_key_row.connect_activated(glib::clone!(
-            #[weak(rename_to = quick_access)]
-            self,
-            move |_| quick_access.ask_steamgriddb_key()
-        ));
         let toggles = [
             imp.tile_small.get(),
             imp.tile_medium.get(),
@@ -1328,6 +1313,9 @@ impl PinduQuickAccess {
         show_size(settings);
         settings.connect_changed(Some("tile-size"), move |settings, _| show_size(settings));
         settings
+            .bind(REDUCE_MOTION_KEY, &*imp.reduce_motion_row, "active")
+            .build();
+        settings
             .bind(CUSTOM_STYLE_KEY, &*imp.custom_style_row, "active")
             .build();
         settings.connect_changed(
@@ -1338,6 +1326,62 @@ impl PinduQuickAccess {
                 move |_, _| quick_access.show_custom_style()
             ),
         );
+    }
+
+    /// Controller's Hold to Confirm, the same setting as Preferences'.
+    fn setup_controller_settings(&self) {
+        self.settings()
+            .bind(
+                HOLD_TO_CONFIRM_KEY,
+                &*self.imp().hold_to_confirm_row,
+                "active",
+            )
+            .build();
+    }
+
+    /// System's navigation sounds and their volume, and exiting after a launch, the same
+    /// settings as Preferences'.
+    fn setup_system_settings(&self) {
+        let imp = self.imp();
+        let settings = self.settings();
+        settings
+            .bind("navigation-sounds", &*imp.sounds_row, "active")
+            .build();
+        bind_volume_slider(settings, &imp.volume_row, &imp.volume);
+        settings
+            .bind("exit-after-launch", &*imp.exit_row, "active")
+            .build();
+    }
+
+    /// Manage's Artwork and Metadata, the same settings as Preferences': the SteamGridDB
+    /// key, asked for when its row is activated, Prefer SteamGridDB Art, and Get Metadata
+    /// From Wikidata, under which Refresh Metadata shows while it is on.
+    fn setup_manage_settings(&self) {
+        let imp = self.imp();
+        let settings = self.settings();
+        imp.steamgriddb_key_row.connect_activated(glib::clone!(
+            #[weak(rename_to = quick_access)]
+            self,
+            move |_| quick_access.ask_steamgriddb_key()
+        ));
+        settings
+            .bind("prefer-steamgriddb", &*imp.prefer_steamgriddb_row, "active")
+            .build();
+        settings
+            .bind(wikidata_service::SETTINGS_KEY, &*imp.wikidata_row, "active")
+            .build();
+        let show_metadata = glib::clone!(
+            #[weak(rename_to = quick_access)]
+            self,
+            move |settings: &gio::Settings| {
+                let on = settings.boolean(wikidata_service::SETTINGS_KEY);
+                quick_access.update_shown(|shown| shown.metadata = on);
+            }
+        );
+        show_metadata(settings);
+        settings.connect_changed(Some(wikidata_service::SETTINGS_KEY), move |settings, _| {
+            show_metadata(settings);
+        });
     }
 
     /// Design chooses through `win.design`, whose state is the design in force: it checks

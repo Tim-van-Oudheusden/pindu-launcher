@@ -878,6 +878,121 @@ template $PinduQuickAccess: Box {
                   }
                 }
 
+                // Radio rows rather than a drop-down, whose popover a controller
+                // press would dismiss, or toggles side by side, which up and down
+                // step through.
+                ListBox sizes {
+                  selection-mode: none;
+                  margin-top: 6;
+
+                  styles [
+                    "boxed-list",
+                  ]
+
+                  Adw.ActionRow {
+                    title: _("Small Covers");
+                    activatable-widget: tile_small;
+
+                    [prefix]
+                    CheckButton tile_small {
+                      can-focus: false;
+                    }
+                  }
+
+                  Adw.ActionRow {
+                    title: _("Medium Covers");
+                    activatable-widget: tile_medium;
+
+                    [prefix]
+                    CheckButton tile_medium {
+                      group: tile_small;
+                      can-focus: false;
+                    }
+                  }
+
+                  Adw.ActionRow {
+                    title: _("Large Covers");
+                    activatable-widget: tile_large;
+
+                    [prefix]
+                    CheckButton tile_large {
+                      group: tile_small;
+                      can-focus: false;
+                    }
+                  }
+                }
+
+                // Radio rows on the setting's action, as the cover sizes are.
+                ListBox text_sizes {
+                  selection-mode: none;
+                  margin-top: 6;
+
+                  styles [
+                    "boxed-list",
+                  ]
+
+                  Adw.ActionRow {
+                    title: _("Default Text");
+                    activatable-widget: text_default;
+
+                    [prefix]
+                    CheckButton text_default {
+                      action-name: "win.fullscreen-text-size";
+                      action-target: "'default'";
+                      can-focus: false;
+                    }
+                  }
+
+                  Adw.ActionRow {
+                    title: _("Large Text");
+                    activatable-widget: text_large;
+
+                    [prefix]
+                    CheckButton text_large {
+                      action-name: "win.fullscreen-text-size";
+                      action-target: "'large'";
+                      can-focus: false;
+                    }
+                  }
+
+                  Adw.ActionRow {
+                    title: _("Larger Text");
+                    activatable-widget: text_larger;
+
+                    [prefix]
+                    CheckButton text_larger {
+                      action-name: "win.fullscreen-text-size";
+                      action-target: "'larger'";
+                      can-focus: false;
+                    }
+                  }
+
+                  Adw.ActionRow {
+                    title: _("Largest Text");
+                    activatable-widget: text_largest;
+
+                    [prefix]
+                    CheckButton text_largest {
+                      action-name: "win.fullscreen-text-size";
+                      action-target: "'largest'";
+                      can-focus: false;
+                    }
+                  }
+                }
+
+                ListBox motion {
+                  selection-mode: none;
+                  margin-top: 6;
+
+                  styles [
+                    "boxed-list",
+                  ]
+
+                  Adw.SwitchRow reduce_motion_row {
+                    title: _("Reduce Motion");
+                  }
+                }
+
                 // On the `fullscreen-custom-style` setting; insensitive, saying
                 // where the file goes, while there is no `fullscreen.css`.
                 ListBox custom_style {
@@ -932,7 +1047,7 @@ template $PinduQuickAccess: Box {
                   ]
                 }
 
-                // Radio rows on the settings' actions, as Settings has its sizes.
+                // Radio rows on the settings' actions, as Design has its cover sizes.
                 ListBox prompts {
                   selection-mode: none;
 
@@ -1044,6 +1159,19 @@ template $PinduQuickAccess: Box {
                       action-target: "'on'";
                       can-focus: false;
                     }
+                  }
+                }
+
+                ListBox hold {
+                  selection-mode: none;
+                  margin-top: 6;
+
+                  styles [
+                    "boxed-list",
+                  ]
+
+                  Adw.SwitchRow hold_to_confirm_row {
+                    title: _("Hold to Confirm");
                   }
                 }
 
@@ -1282,8 +1410,8 @@ template $PinduQuickAccess: Box {
                 orientation: vertical;
                 spacing: 12;
 
-                // Network, Bluetooth, Sound Output and System Update where available, Settings,
-                // and the diagnostics report but over a running game.
+                // Network, Bluetooth, Sound Output and System Update where available;
+                // hidden while none is.
                 ListBox system_list {
                   selection-mode: none;
 
@@ -1458,33 +1586,59 @@ template $PinduQuickAccess: Box {
                       }
                     };
                   }
+                }
 
-                  ListBoxRow settings_row {
-                    action-name: "win.quick-access-settings";
+                ListBox switches {
+                  selection-mode: none;
 
-                    child: Box {
-                      spacing: 16;
+                  styles [
+                    "boxed-list",
+                  ]
 
-                      Image {
-                        icon-name: "preferences-system-symbolic";
-                        accessible-role: presentation;
-                      }
-
-                      Label {
-                        label: _("Settings");
-                        xalign: 0;
-                        hexpand: true;
-                      }
-
-                      Image {
-                        icon-name: "go-next-symbolic";
-                        accessible-role: presentation;
-                      }
-                    };
+                  Adw.SwitchRow sounds_row {
+                    title: _("Navigation Sounds");
                   }
 
-                  // The diagnostics report, to photograph a page at a time; a copy is
-                  // saved as it opens.
+                  // The slider takes focus rather than its row, so left and right
+                  // turn it; the row goes insensitive while the sounds are off.
+                  Adw.ActionRow volume_row {
+                    title: _("Volume");
+                    activatable: false;
+                    focusable: false;
+
+                    [suffix]
+                    Scale volume {
+                      hexpand: true;
+                      digits: 0;
+                      draw-value: false;
+
+                      adjustment: Adjustment {
+                        lower: 0;
+                        upper: 100;
+                        step-increment: 5;
+                        page-increment: 20;
+                      };
+
+                      accessibility {
+                        label: _("Navigation Sound Volume");
+                      }
+                    }
+                  }
+
+                  Adw.SwitchRow exit_row {
+                    title: _("Exit After Launching");
+                  }
+                }
+
+                // The diagnostics report, to photograph a page at a time; a copy is
+                // saved as it opens. Hidden over a running game.
+                ListBox report_list {
+                  selection-mode: none;
+
+                  styles [
+                    "navigation-sidebar",
+                  ]
+
                   ListBoxRow report_row {
                     action-name: "win.quick-access-diagnostics-report";
 
@@ -1716,8 +1870,72 @@ template $PinduQuickAccess: Box {
                       }
                     };
                   }
+                }
 
-                  // A Wikidata refresh, shown only while Wikidata metadata is on.
+                Label {
+                  label: _("Artwork");
+                  xalign: 0;
+                  margin-top: 6;
+
+                  styles [
+                    "heading",
+                  ]
+                }
+
+                // The key is typed hidden with the on-screen keyboard and kept in the
+                // keyring; the row's subtitle says whether one is stored, or why the
+                // keyring cannot be used.
+                ListBox artwork {
+                  selection-mode: none;
+
+                  styles [
+                    "boxed-list",
+                  ]
+
+                  Adw.ActionRow steamgriddb_key_row {
+                    title: _("SteamGridDB Key");
+                    activatable: true;
+                  }
+
+                  Adw.SwitchRow prefer_steamgriddb_row {
+                    title: _("Prefer SteamGridDB Art");
+                    subtitle: _("Show it before the launcher's own art; art you pick always comes first");
+                  }
+                }
+
+                Label {
+                  label: _("Metadata");
+                  xalign: 0;
+                  margin-top: 6;
+
+                  styles [
+                    "heading",
+                  ]
+                }
+
+                ListBox metadata {
+                  selection-mode: none;
+
+                  styles [
+                    "boxed-list",
+                  ]
+
+                  Adw.SwitchRow wikidata_row {
+                    title: _("Get Metadata From Wikidata");
+                    subtitle: _("Nothing is fetched until you ask, and never during an import");
+                  }
+                }
+
+                // A Wikidata refresh, right under the switch and shown only while it
+                // is on.
+                ListBox metadata_actions {
+                  selection-mode: none;
+                  visible: false;
+
+                  styles [
+                    "navigation-sidebar",
+                  ]
+
                   ListBoxRow refresh_metadata_row {
                     action-name: "app.refresh-metadata";
                     visible: false;
@@ -1770,251 +1988,6 @@ template $PinduQuickAccess: Box {
           Box controls {
             orientation: vertical;
             spacing: 12;
-          }
-        };
-      };
-    }
-
-    StackPage {
-      name: "settings";
-
-      child: ScrolledWindow {
-        hscrollbar-policy: never;
-
-        child: Box {
-          orientation: vertical;
-          spacing: 12;
-
-          Label {
-            label: _("Settings");
-            xalign: 0;
-
-            styles [
-              "title-3",
-            ]
-          }
-
-          // Radio rows rather than a drop-down, whose popover a controller press
-          // would dismiss, or toggles side by side, which up and down step
-          // through.
-          ListBox sizes {
-            selection-mode: none;
-
-            styles [
-              "boxed-list",
-            ]
-
-            Adw.ActionRow {
-              title: _("Small Covers");
-              activatable-widget: tile_small;
-
-              [prefix]
-              CheckButton tile_small {
-                can-focus: false;
-              }
-            }
-
-            Adw.ActionRow {
-              title: _("Medium Covers");
-              activatable-widget: tile_medium;
-
-              [prefix]
-              CheckButton tile_medium {
-                group: tile_small;
-                can-focus: false;
-              }
-            }
-
-            Adw.ActionRow {
-              title: _("Large Covers");
-              activatable-widget: tile_large;
-
-              [prefix]
-              CheckButton tile_large {
-                group: tile_small;
-                can-focus: false;
-              }
-            }
-          }
-
-          ListBox switches {
-            selection-mode: none;
-
-            styles [
-              "boxed-list",
-            ]
-
-            Adw.SwitchRow sounds_row {
-              title: _("Navigation Sounds");
-            }
-
-            // The slider takes focus rather than its row, so left and right
-            // turn it; the row goes insensitive while the sounds are off.
-            Adw.ActionRow volume_row {
-              title: _("Volume");
-              activatable: false;
-              focusable: false;
-
-              [suffix]
-              Scale volume {
-                hexpand: true;
-                digits: 0;
-                draw-value: false;
-
-                adjustment: Adjustment {
-                  lower: 0;
-                  upper: 100;
-                  step-increment: 5;
-                  page-increment: 20;
-                };
-
-                accessibility {
-                  label: _("Navigation Sound Volume");
-                }
-              }
-            }
-
-            Adw.SwitchRow exit_row {
-              title: _("Exit After Launching");
-            }
-          }
-
-          Label {
-            label: _("Accessibility");
-            xalign: 0;
-            margin-top: 6;
-
-            styles [
-              "heading",
-            ]
-          }
-
-          ListBox accessibility {
-            selection-mode: none;
-
-            styles [
-              "boxed-list",
-            ]
-
-            Adw.SwitchRow reduce_motion_row {
-              title: _("Reduce Motion");
-            }
-
-            Adw.SwitchRow hold_to_confirm_row {
-              title: _("Hold to Confirm");
-            }
-          }
-
-          // Radio rows on the setting's action, as Settings has its sizes.
-          ListBox text_sizes {
-            selection-mode: none;
-
-            styles [
-              "boxed-list",
-            ]
-
-            Adw.ActionRow {
-              title: _("Default Text");
-              activatable-widget: text_default;
-
-              [prefix]
-              CheckButton text_default {
-                action-name: "win.fullscreen-text-size";
-                action-target: "'default'";
-                can-focus: false;
-              }
-            }
-
-            Adw.ActionRow {
-              title: _("Large Text");
-              activatable-widget: text_large;
-
-              [prefix]
-              CheckButton text_large {
-                action-name: "win.fullscreen-text-size";
-                action-target: "'large'";
-                can-focus: false;
-              }
-            }
-
-            Adw.ActionRow {
-              title: _("Larger Text");
-              activatable-widget: text_larger;
-
-              [prefix]
-              CheckButton text_larger {
-                action-name: "win.fullscreen-text-size";
-                action-target: "'larger'";
-                can-focus: false;
-              }
-            }
-
-            Adw.ActionRow {
-              title: _("Largest Text");
-              activatable-widget: text_largest;
-
-              [prefix]
-              CheckButton text_largest {
-                action-name: "win.fullscreen-text-size";
-                action-target: "'largest'";
-                can-focus: false;
-              }
-            }
-          }
-
-          Label {
-            label: _("Artwork");
-            xalign: 0;
-            margin-top: 6;
-
-            styles [
-              "heading",
-            ]
-          }
-
-          // The key is typed hidden with the on-screen keyboard and kept in the
-          // keyring; the row's subtitle says whether one is stored, or why the
-          // keyring cannot be used.
-          ListBox artwork {
-            selection-mode: none;
-
-            styles [
-              "boxed-list",
-            ]
-
-            Adw.ActionRow steamgriddb_key_row {
-              title: _("SteamGridDB Key");
-              activatable: true;
-            }
-
-            Adw.SwitchRow prefer_steamgriddb_row {
-              title: _("Prefer SteamGridDB Art");
-              subtitle: _("Show it before the launcher's own art; art you pick always comes first");
-            }
-          }
-
-          Label {
-            label: _("Metadata");
-            xalign: 0;
-            margin-top: 6;
-
-            styles [
-              "heading",
-            ]
-          }
-
-          // On, Refresh Metadata shows in the main list.
-          ListBox metadata {
-            selection-mode: none;
-
-            styles [
-              "boxed-list",
-            ]
-
-            Adw.SwitchRow wikidata_row {
-              title: _("Get Metadata From Wikidata");
-              subtitle: _("Nothing is fetched until you ask, and never during an import");
-            }
           }
         };
       };

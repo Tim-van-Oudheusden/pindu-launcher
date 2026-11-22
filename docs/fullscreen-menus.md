@@ -24,13 +24,18 @@ What each section lists, top to bottom. "→" leads to the level of that name; "
 |---|---|
 | **Quick** | The Playing Now cards · Filters → (when the library is under the panel) · Performance → (when the focused game is one Pindu runs) · Sound Output → · Bluetooth → · Network → (each when available) · Surprise Me · Refresh Library · Add a Game |
 | **Notifications** | A **Running** heading and the background tasks, each with its progress and Cancel, while something runs · then the notifications, newest first, or the line that says there are none |
-| **Design** | The designs, Variant, Background, Background Blur, Background Dim, My Stylesheet |
-| **Controller** | The controllers, Button Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate, Stick Dead Zone and its note · then Controls → |
-| **System** | Network → · Bluetooth → · Sound Output → · System Update → (each when available) · Settings → · Diagnostics Report → |
-| **Manage** | Sources → · Duplicates → · Library Health → · Proton → · Add a Store → · Add a Game · Refresh Library · Refresh Metadata (when Wikidata metadata is on) |
+| **Design** | The designs, Variant, Background, Background Blur, Background Dim, the cover sizes (Small, Medium and Large Covers), the text sizes (Default, Large, Larger and Largest Text), Reduce Motion, My Stylesheet |
+| **Controller** | The controllers, Button Prompts, Swap Confirm and Back, Hold to Confirm, Repeat Delay, Repeat Rate, Stick Dead Zone and its note · then Controls → |
+| **System** | Network → · Bluetooth → · Sound Output → · System Update → (each when available) · then, in a list of their own, Navigation Sounds, its Volume and Exit After Launching · then Diagnostics Report → |
+| **Manage** | Sources → · Duplicates → · Library Health → · Proton → · Add a Store → · Add a Game · Refresh Library · then **Artwork**: SteamGridDB Key and Prefer SteamGridDB Art · then **Metadata**: Get Metadata From Wikidata, and under it Refresh Metadata while it is on |
 
 - Sound Output, Bluetooth, Network, Refresh Library and Add a Game are listed twice on purpose: once where they are
   quick to reach, once where they belong. Both rows do the same and show the same second line.
+- Quick Access has no Settings level: each setting sits in the section of what it changes, with the same rows,
+  second lines and GSettings keys as before, which Preferences changes too. Text Size and Reduce Motion are with the
+  look, Hold to Confirm with the buttons. Volume is insensitive while Navigation Sounds is off, and Left and Right turn
+  it. The SteamGridDB Key row opens the hidden-text keyboard, and its second line says whether a key is stored, read
+  again each time Manage shows.
 - Over a running game (`game_overlay`), Surprise Me, Add a Store, Add a Game and Diagnostics Report are left out.
 - A section with nothing to show is left out of the strip and of LB and RB's steps.
 - Notifications marks the notifications read once it shows. When the last background task ends, the Running heading
@@ -42,7 +47,7 @@ What each section lists, top to bottom. "→" leads to the level of that name; "
 |---|---|---|
 | LB, RB, <kbd>Ctrl</kbd>+<kbd>Page Up</kbd>, <kbd>Ctrl</kbd>+<kbd>Page Down</kbd> | The section before or after, wrapping from the last to the first, with the move sound | Nothing, except that the diagnostics report turns its pages |
 | B | Closes Quick Access | Back to the section that holds the level's entry: the one it was opened from, or else the one it belongs to (the games with a log lead back to the report) |
-| Up, Down | Move through the section; Up from its first item stops there | Move through the level |
+| Up, Down | Move through the section, from one of its lists to the next and past headings and hidden lists; Up from its first item stops there | Move through the level |
 | A | Activates the focused item | Activates the focused item |
 
 The hint bar shows the LB and RB pair with **Section** while a section shows and more than one has anything to show,
@@ -56,7 +61,8 @@ unread count.
 
 - A section shown for the first time since Quick Access opened focuses its first item: in Quick the first Playing Now
   card's Return, or else its first entry; in Notifications the first task, or else the first notification; in Design
-  the design in force; in Controller the first controller that can rumble, or else the first button prompt.
+  the design in force; in Controller the first controller that can rumble, or else the first button prompt; in System
+  its first entry, or Navigation Sounds where the system offers none; in Manage Sources.
 - Coming back to a section while Quick Access stays open focuses the item it had focused.
 - Coming back from a level focuses the entry that led to it.
 

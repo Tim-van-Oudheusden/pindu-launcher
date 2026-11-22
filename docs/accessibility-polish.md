@@ -11,17 +11,18 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 ## What it does
 
 - **Text sizes.** Several text sizes in fullscreen mode replace the single Larger Text step, each checked in every
-  shipped design at 1080p.
+  shipped design at 1080p. They are chosen in Preferences or in Quick Access → Design, beside Reduce Motion.
 - **Held buttons for destructive actions.** An option, off by default, makes Power Off, Restart, Forget and Stop need
   a held button, with visible hold progress. The hold logic lives in the core and is tested. Restart, Power Off and
-  Forget already ask before acting in the cases that lose something; the hold is for people who want more.
+  Forget already ask before acting in the cases that lose something; the hold is for people who want more. It is
+  **Hold to Confirm**, in Preferences or in Quick Access → Controller, after Swap Confirm and Back.
 - **High contrast and reduced transparency.** A spike runs every shipped fullscreen design with high contrast and
   with reduced transparency (Broadway or gamescope headless) and files an issue per real defect, in M7.
 - **Screen reader.** A spike walks every desktop page with Orca, or by inspecting the accessibility tree, notes
   unlabelled controls, wrong roles and focus traps, and files an issue per real defect, in M7.
 - **Navigation repeat and dead zone.** Settings for the navigation repeat delay and rate and for the stick dead zone
   used for navigation. They change navigation only and never what a game receives. The repeat and dead-zone logic is
-  tested in the core. Quick Access's Controllers offers Repeat Delay (short 0.2 s, normal 0.3 s, long 0.6 s), Repeat
+  tested in the core. Quick Access → Controller offers Repeat Delay (short 0.2 s, normal 0.3 s, long 0.6 s), Repeat
   Rate (slow every 100 ms, normal every 50 ms, fast every 30 ms) and Stick Dead Zone (small past 30 % of the stick's
   travel, normal past half, large past 70 %), kept in GSettings.
 

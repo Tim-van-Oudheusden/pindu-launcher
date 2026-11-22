@@ -5315,10 +5315,6 @@ msgstr ""
 msgid "Controllers"
 msgstr ""
 
-#: data/ui/quick_access.blp:382 data/ui/quick_access.blp:1423
-msgid "Settings"
-msgstr ""
-
 #: data/ui/quick_access.blp:742
 msgid "Add a Game"
 msgstr ""
