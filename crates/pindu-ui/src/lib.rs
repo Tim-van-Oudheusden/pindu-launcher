@@ -4,6 +4,7 @@
 pub mod add_store;
 pub mod add_store_backend;
 pub mod add_store_service;
+pub mod announcement;
 pub mod application;
 pub mod artwork_dialog;
 pub mod audio_output_service;

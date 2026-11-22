@@ -771,7 +771,8 @@ impl PinduWindow {
                         result_count.0.settle(count)
                     };
                     if let Some(count) = settled {
-                        window.announce(
+                        crate::announcement::announce(
+                            &window,
                             &result_count_text(count),
                             gtk::AccessibleAnnouncementPriority::Medium,
                         );
