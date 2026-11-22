@@ -1263,6 +1263,18 @@ mod tests {
     }
 
     #[test]
+    fn a_section_leads_to_the_levels_of_its_entries_and_quick_to_the_system_s_too() {
+        use QuickAccessLevel::*;
+        use QuickAccessSection as S;
+        assert!(S::Quick.leads_to(Network));
+        assert!(S::System.leads_to(Network));
+        assert!(!S::Manage.leads_to(Network));
+        assert!(!S::System.leads_to(Filters));
+        assert!(!S::Quick.leads_to(SystemUpdate));
+        assert!(!S::Quick.leads_to(Main), "no section leads to the sections");
+    }
+
+    #[test]
     fn each_level_belongs_to_the_section_that_holds_its_entry() {
         use QuickAccessLevel::*;
         use QuickAccessSection as S;
