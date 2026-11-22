@@ -57,7 +57,7 @@ impl PinduQuickAccess {
     }
 
     /// Surprise Me is available while a game is installed; if it had focus when the last
-    /// one went, Design, the entry after it, takes it.
+    /// one went, the entry beside it takes it.
     fn show_surprise_me(&self, surprise: &gio::SimpleAction) {
         let Some(application) = self.application() else {
             return;
@@ -72,7 +72,7 @@ impl PinduQuickAccess {
         let had_focus = imp.surprise_row.has_focus();
         surprise.set_enabled(installed);
         if had_focus && !installed {
-            imp.design_row.grab_focus();
+            self.focus_beside(&imp.surprise_row);
         }
     }
 }

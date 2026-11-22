@@ -105,10 +105,10 @@ impl PinduQuickAccess {
     }
 
     /// Shows or hides the entry, with its subtitle, and fills the level again while it is
-    /// open; it leaves for the entries once the section is gone.
+    /// open; it leaves for the section once the update service is gone.
     fn show_system_update_state(&self, state: &UpdateState) {
         let imp = self.imp();
-        imp.system_update_row.set_visible(state.available);
+        self.update_shown(|shown| shown.system_update = state.available);
         let subtitle = if state.update_ready() {
             gettext("Update ready")
         } else {

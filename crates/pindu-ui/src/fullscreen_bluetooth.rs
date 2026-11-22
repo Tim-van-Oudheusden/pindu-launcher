@@ -173,12 +173,12 @@ impl PinduQuickAccess {
             .map(|application| application.bluetooth_service().clone())
     }
 
-    /// Shows or hides the entry, with its subtitle, fills the level again while it is
-    /// open, and shows or takes away the agent's prompt; it leaves for the entries once
-    /// the section is gone.
+    /// Shows or hides the entries (System's and Quick's), with their subtitle, fills the
+    /// level again while it is open, and shows or takes away the agent's prompt; it leaves
+    /// for the section once Bluetooth is gone.
     fn show_bluetooth_state(&self, state: &BluetoothState) {
         let imp = self.imp();
-        imp.bluetooth_row.set_visible(state.available);
+        self.update_shown(|shown| shown.bluetooth = state.available);
         imp.bluetooth_subtitle
             .set_label(&summary_text(&state.summary()));
         self.show_bluetooth_prompt(state);

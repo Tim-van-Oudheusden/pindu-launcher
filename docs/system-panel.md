@@ -15,16 +15,17 @@ the panel; where this page and an issue disagree, the issue wins.
 | Section | Place | Why |
 | --- | --- | --- |
 | Power | A **Power** entry, last in the menu drawer, leading to **Suspend**, **Restart**, **Power off** and **Exit Pindu Launcher** (#457) | The drawer already holds the ways out (Exit Fullscreen); Steam's Main Menu puts Power, with its Exit, in the same place |
-| Network | A **Network** entry in Quick Access, subtitled with the connection (`Wired`, the Wi-Fi network's name, `Offline`) | Quick Access holds the settings a player changes mid-session |
-| Bluetooth | A **Bluetooth** entry in Quick Access, subtitled with the connected devices | As above |
-| Audio output | A **Sound Output** entry in Quick Access, subtitled with the output in use | As above |
-| OS updates | A **System Update** entry in Quick Access, subtitled with the installed version, or `Update ready` | As above |
+| Network | A **Network** entry in Quick Access → System, and in Quick, subtitled with the connection (`Wired`, the Wi-Fi network's name, `Offline`) | Quick Access holds the settings a player changes mid-session |
+| Bluetooth | A **Bluetooth** entry in Quick Access → System, and in Quick, subtitled with the connected devices | As above |
+| Audio output | A **Sound Output** entry in Quick Access → System, and in Quick, subtitled with the output in use | As above |
+| OS updates | A **System Update** entry in Quick Access → System, subtitled with the installed version, or `Update ready` | As above |
 
 Each Quick Access entry leads to a level of its own (`QuickAccessLevel::Network`, `Bluetooth`, `SoundOutput`,
-`SystemUpdate`), and B steps back to the entries, as the existing levels do. The drawer's Power entry leads to
-`DrawerLevel::Power`. A passphrase or PIN is typed in a dialog with the on-screen keyboard, which takes the buttons
-first, as dialogs do today. Every entry uses stock libadwaita rows; nothing is styled beyond what the designs already
-style.
+`SystemUpdate`), and B steps back to the section the level was opened from: Quick for the three it repeats, System
+otherwise. Both rows of an entry show the same second line. The drawer's Power entry leads to `DrawerLevel::Power`.
+A passphrase or PIN is typed in a dialog with the on-screen keyboard, which takes the buttons first, as dialogs do
+today. Every entry uses stock libadwaita rows; nothing is styled beyond what the designs already style. The sections
+are described in [Fullscreen menus](fullscreen-menus.md).
 
 ## What is available
 
@@ -175,9 +176,10 @@ the services; they never talk to the bus or spawn a process themselves.
 - The panel's levels and entries extend `panels.rs` (`DrawerLevel`, `QuickAccessLevel`, `drawer_entries`).
 - Each section's level is its own composite widget with its own Blueprint (the UI level column), a single child of its
   page in the panel's Blueprint, as `HomePage` is: `quick_access.blp` for Quick Access's levels, which belong to the
-  `PinduQuickAccess` widget (#403), and `window.blp` for the drawer's Power. The section's entry stays in that panel's
-  shared list. Moving a level keeps its action names (`win.*`), the widget names controller focus finds its rows by,
-  and the style classes in [Fullscreen style](fullscreen-style.md); its rows stay direct children of their list boxes.
+  `PinduQuickAccess` widget (#403), and `window.blp` for the drawer's Power. The section's entry stays in its
+  section's list in that panel (`pindu_core::panels::section_entries`). Moving a level keeps its action names
+  (`win.*`), the widget names controller focus finds its rows by, and the style classes in
+  [Fullscreen style](fullscreen-style.md); its rows stay direct children of their list boxes.
 
 ## Pindu OS side
 

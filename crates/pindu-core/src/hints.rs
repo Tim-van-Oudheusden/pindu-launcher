@@ -64,6 +64,10 @@ pub struct Context {
     pub menu: bool,
     /// The menu drawer, Quick Access or the options sheet is open, at a level.
     pub panel: Option<Panel>,
+    /// More than one of Quick Access's sections has anything to show, so the shoulder
+    /// buttons switch between them while it shows one
+    /// (`pindu_core::panels::sections`).
+    pub sections: bool,
     /// The starting screen is up.
     pub launching: Launching,
     /// The search keyboard or the passphrase dialog is open, which takes the buttons.
@@ -119,6 +123,8 @@ pub enum Action {
     Search,
     /// Switch to the tab before or after.
     Tabs,
+    /// Switch to Quick Access's section before or after.
+    Sections,
     /// Turn to the page before or after, in the diagnostics report.
     Pages,
     /// Cycle the sort order back or forward.
@@ -276,6 +282,9 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
     let dialog_tabs = context.dialog_tabs && context.dialog;
     let report_pages = !context.dialog
         && context.panel == Some(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport));
+    let sections = !context.dialog
+        && context.sections
+        && context.panel == Some(Panel::QuickAccess(QuickAccessLevel::Main));
     [
         adjust,
         single(Intent::Activate, activate),
@@ -295,6 +304,12 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
             Intent::PreviousTab,
             Intent::NextTab,
             Action::Pages,
+        ),
+        pair(
+            sections,
+            Intent::PreviousTab,
+            Intent::NextTab,
+            Action::Sections,
         ),
         pair(tabs, Intent::PreviousSort, Intent::NextSort, Action::Sort),
     ]
@@ -457,6 +472,7 @@ mod tests {
             options: false,
             menu: false,
             panel: None,
+            sections: false,
             launching: Launching::No,
         }
     }
@@ -582,12 +598,12 @@ mod tests {
             actions(quick_access, DeviceKind::Xbox),
             [(Button::South, Action::Open), (Button::East, Action::Close)]
         );
-        let designs = Context {
-            panel: Some(Panel::QuickAccess(QuickAccessLevel::Designs)),
+        let controls = Context {
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Controls)),
             ..library
         };
         assert_eq!(
-            actions(designs, DeviceKind::Xbox),
+            actions(controls, DeviceKind::Xbox),
             [(Button::South, Action::Open), (Button::East, Action::Back)]
         );
         let desktop = Context {
@@ -601,15 +617,15 @@ mod tests {
     }
 
     #[test]
-    fn a_notification_opens_what_it_names_and_one_without_a_target_shows_only_back() {
+    fn a_notification_opens_what_it_names_and_one_without_a_target_shows_only_close() {
         let notifications = Context {
             menu: true,
-            panel: Some(Panel::QuickAccess(QuickAccessLevel::Notifications)),
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Main)),
             ..context(Focus::Link)
         };
         assert_eq!(
             actions(notifications, DeviceKind::Xbox),
-            [(Button::South, Action::Open), (Button::East, Action::Back)]
+            [(Button::South, Action::Open), (Button::East, Action::Close)]
         );
         let plain = Context {
             focus: Focus::Nothing,
@@ -617,7 +633,7 @@ mod tests {
         };
         assert_eq!(
             actions(plain, DeviceKind::Xbox),
-            [(Button::East, Action::Back)]
+            [(Button::East, Action::Close)]
         );
     }
 
@@ -625,14 +641,14 @@ mod tests {
     fn a_running_task_that_can_be_cancelled_shows_cancel_on_a() {
         let activity = Context {
             menu: true,
-            panel: Some(Panel::QuickAccess(QuickAccessLevel::Activity)),
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Main)),
             ..context(Focus::Cancel)
         };
         assert_eq!(
             actions(activity, DeviceKind::Xbox),
             [
                 (Button::South, Action::Cancel),
-                (Button::East, Action::Back)
+                (Button::East, Action::Close)
             ]
         );
         let working = Context {
@@ -641,8 +657,61 @@ mod tests {
         };
         assert_eq!(
             actions(working, DeviceKind::Xbox),
-            [(Button::East, Action::Back)]
+            [(Button::East, Action::Close)]
         );
+    }
+
+    #[test]
+    fn the_shoulders_switch_quick_access_s_sections_while_it_shows_one_of_several() {
+        let section = Context {
+            menu: true,
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+            sections: true,
+            ..context(Focus::Other)
+        };
+        for kind in DeviceKind::ALL {
+            let layout = Layout::detected(kind);
+            assert!(
+                hints(section, layout).contains(&Hint {
+                    button: layout.button(Intent::PreviousTab),
+                    pair: Some(layout.button(Intent::NextTab)),
+                    action: Action::Sections,
+                }),
+                "{kind:?}"
+            );
+        }
+        assert_eq!(
+            actions(section, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Close),
+                (Button::LeftShoulder, Action::Sections)
+            ]
+        );
+        let one = Context {
+            sections: false,
+            ..section
+        };
+        let level = Context {
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Network)),
+            ..section
+        };
+        let dialog = Context {
+            dialog: true,
+            ..section
+        };
+        let drawer = Context {
+            panel: Some(Panel::Drawer(DrawerLevel::Main)),
+            ..section
+        };
+        for context in [one, level, dialog, drawer] {
+            assert!(
+                !actions(context, DeviceKind::Xbox)
+                    .iter()
+                    .any(|&(_, action)| action == Action::Sections),
+                "{context:?}"
+            );
+        }
     }
 
     #[test]

@@ -241,13 +241,17 @@ impl PinduQuickAccess {
         self.fill_playing_cards();
     }
 
-    /// Fills the panel's cards. Focus on a card that went moves to the level's first entry.
+    /// Fills the panel's cards, which Quick shows while a game runs. Focus on a card that
+    /// went moves to the level's first item.
     fn fill_playing_cards(&self) {
         let (Some(application), Some(cards)) = (self.application(), self.imp().playing.get())
         else {
             return;
         };
-        if cards.fill(&playing_games(&application)) && self.level().is_some() {
+        let had_focus = cards.fill(&playing_games(&application));
+        let playing = self.imp().playing_cards.is_visible();
+        self.update_shown(|shown| shown.playing = playing);
+        if had_focus && self.level().is_some() {
             self.focus_level(None);
         }
     }

@@ -30,7 +30,9 @@ use pindu_core::hints::{self, Context, Focus, Hint, Launching};
 use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
 use pindu_core::launch;
 use pindu_core::model::GameId;
-use pindu_core::panels::{DrawerLevel, Panel, Panels, QuickAccessLevel, Under, page_entries};
+use pindu_core::panels::{
+    DrawerLevel, Panel, Panels, QuickAccessLevel, QuickAccessSection, Under, page_entries, sections,
+};
 
 use crate::application::PinduApplication;
 use crate::fullscreen::Sound;
@@ -256,8 +258,8 @@ impl PinduGameOverlay {
         actions.add_action(&window);
     }
 
-    /// Does what Quick Access asks for: close, show a level, leave Activity, or show a
-    /// game, which brings the main window to the front on the game's page.
+    /// Does what Quick Access asks for: close, show a level or a section, or show a game,
+    /// which brings the main window to the front on the game's page.
     fn connect_quick_access(&self) {
         let quick_access = &self.imp().quick_access;
         quick_access.connect_close_requested(glib::clone!(
@@ -270,12 +272,12 @@ impl PinduGameOverlay {
             self,
             move |_, level| overlay.show_panel(Panel::QuickAccess(level))
         ));
-        quick_access.connect_activity_ended(glib::clone!(
+        quick_access.connect_section_requested(glib::clone!(
             #[weak(rename_to = overlay)]
             self,
-            move |_| {
+            move |_, section| {
                 let mut panels = overlay.imp().panels.get();
-                panels.activity_ended();
+                panels.show_section(section);
                 overlay.set_panels(panels);
             }
         ));
@@ -311,9 +313,9 @@ impl PinduGameOverlay {
     }
 
     /// The gamescope service opened a panel over the game, or closed it: the drawer opens
-    /// at its entries, with the game's card first; Quick Access at the notifications while
-    /// one is unread, or at its entries, with Performance for the game in front. A
-    /// controller opened it, so focus shows at once.
+    /// at its entries, with the game's card first; Quick Access on Notifications while one
+    /// is unread, or else on Quick, with Performance for the game in front. A controller
+    /// opened it, so focus shows at once.
     fn set_shown(&self, shown: Option<OverGame>) {
         let imp = self.imp();
         let mut panels = Panels::new();
@@ -345,12 +347,11 @@ impl PinduGameOverlay {
                 };
                 imp.quick_access
                     .set_page(&page_entries(under), game.as_ref());
-                let level = if imp.quick_access.has_unread_notifications() {
-                    QuickAccessLevel::Notifications
+                panels.show_section(if imp.quick_access.has_unread_notifications() {
+                    QuickAccessSection::Notifications
                 } else {
-                    QuickAccessLevel::Main
-                };
-                panels.show(Panel::QuickAccess(level));
+                    QuickAccessSection::Quick
+                });
             }
             None => {}
         }
@@ -363,13 +364,16 @@ impl PinduGameOverlay {
         self.set_panels(panels);
     }
 
-    /// Shows the drawer or Quick Access at the level `panels` has, focusing it once it
-    /// shows.
+    /// Shows the drawer or Quick Access at the level (and Quick Access's section) `panels`
+    /// has, focusing it once it shows.
     fn set_panels(&self, panels: Panels) {
         let imp = self.imp();
-        let before = imp.panels.replace(panels).open();
+        let replaced = imp.panels.replace(panels);
+        let before = replaced.open();
         let open = panels.open();
-        if before == open {
+        let same_section = open != Some(Panel::QuickAccess(QuickAccessLevel::Main))
+            || replaced.section() == panels.section();
+        if before == open && same_section {
             return;
         }
         let quick_access_level = match open {
@@ -387,7 +391,8 @@ impl PinduGameOverlay {
         }
         imp.quick_access_pane
             .set_visible(quick_access_level.is_some());
-        imp.quick_access.show_level(quick_access_level);
+        imp.quick_access
+            .show_level(quick_access_level, panels.section());
         if open.is_some() {
             // Once the level shows and can take focus.
             glib::idle_add_local_once(glib::clone!(
@@ -428,9 +433,9 @@ impl PinduGameOverlay {
 
     /// Acts on a controller intent while a panel is open and holds input: an open
     /// passphrase dialog's keyboard takes every button, directions move focus as in the
-    /// main window, A activates, and B closes a dialog, steps back a level or closes the
-    /// panel. Guide, Guide + A and Misc1 are the gamescope service's; R3 and the page's
-    /// buttons are the game's.
+    /// main window, A activates, LB and RB switch Quick Access's section, and B closes a
+    /// dialog, steps back a level or closes the panel. Guide, Guide + A and Misc1 are the
+    /// gamescope service's; R3 and the page's other buttons are the game's.
     fn handle_intent(&self, intent: Intent) {
         if self.imp().panels.get().open().is_none() || !self.takes_controller() {
             return;
@@ -465,6 +470,19 @@ impl PinduGameOverlay {
                     }
                 }
                 self.play_sound(Sound::Back);
+            }
+            Intent::PreviousTab | Intent::NextTab => {
+                let mut panels = self.imp().panels.get();
+                let under = Under {
+                    dialog: self.visible_dialog().is_some(),
+                    shown: self.imp().quick_access.shown(),
+                    ..Under::default()
+                };
+                panels.handle(intent, under);
+                if panels != self.imp().panels.get() {
+                    self.set_panels(panels);
+                    self.play_sound(Sound::Move);
+                }
             }
             _ => {}
         }
@@ -592,6 +610,7 @@ impl PinduGameOverlay {
             options: false,
             menu: false,
             panel,
+            sections: sections(imp.quick_access.shown()).len() > 1,
             launching: Launching::No,
             keyboard: self.secret_dialog_typing(),
         };

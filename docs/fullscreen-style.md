@@ -20,14 +20,14 @@ This page is the style contract: the files, the `theme.json` fields and the CSS 
 - A design's `<id>` is its folder name: lowercase letters, digits and dashes. Your design with the same id as a
   shipped one replaces it.
 - Pick a design in fullscreen mode's **Quick Access** panel (Guide + A, right stick click, the Steam Deck's "…"
-  button, or Ctrl+2) under **Design**, or set it with
+  button, or Ctrl+2) in its **Design** section, or set it with
   `gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-design <id>`. Lobby (`lobby`) is
   the default; **Adwaita**, an empty id, is no design: the standard libadwaita look. Four looks ship: Adwaita,
   Lobby, Marquee and Shelves. Ribbon and Panorama no longer ship; a setting that still names `ribbon` or
   `panorama` is switched to `lobby`, unless you have a design of your own with that id.
-- A design can offer **variants** (below): pick one in Quick Access under **Design** → **Variant**, or set it with
-  `gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-design-variant <variant-id>`. An empty
-  or unknown id picks the design's first variant.
+- A design can offer **variants** (below): pick one in Quick Access's **Design** section under **Variant**, or
+  set it with `gsettings set io.github.tim_van_oudheusden.pindu-launcher fullscreen-design-variant
+  <variant-id>`. An empty or unknown id picks the design's first variant.
 - `fullscreen.css` applies while the `fullscreen-custom-style` setting is on: Quick Access's **My Stylesheet**
   switch under **Design**, or **Use My Stylesheet** in Preferences → Fullscreen, which can only be turned on
   once the file exists. Turning it off removes the style at once.
@@ -334,9 +334,11 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.menu-drawer` | The menu drawer on the left |
 | `.quick-access` | The Quick Access panel on the right |
 | `.quick-access-status` | The header at the top of Quick Access: `.clock` (the time), `.offline` (shown while there is no network) and `.battery` (the machine's battery, absent without one) |
-| `.notification-count` | The unread count on Quick Access's Notifications entry |
+| `.panel-sections` | The strip under Quick Access's header that switches its sections (Quick, Notifications, Design, Controller, System and Manage) |
+| `.panel-section` | A button of that strip, `:checked` for the section shown; it holds the section's icon, and the checked one its name too |
+| `.notification-count` | The unread count on Quick Access's Notifications section button |
 | `.notification` | A row of Quick Access's notifications; `.unread` while it is new, with an `.unread-dot` |
-| `.task` | A row of Quick Access's Activity, which lists what runs in the background: a label, what it is doing, a progress bar and, while it can be cancelled, a Cancel button |
+| `.task` | A row of the Running tasks in Quick Access's Notifications section, which lists what runs in the background: a label, what it is doing, a progress bar and, while it can be cancelled, a Cancel button |
 | `.control` | A row of Quick Access's Controls: the button's `.control-glyph` (after a Hold label for a held one) and the keys that do the same in `.control-keys` |
 | `.options-sheet` | A game's options at the bottom |
 | `.navigation-sidebar > row` | A row in any of the three |

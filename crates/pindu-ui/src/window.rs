@@ -1737,7 +1737,7 @@ fn set_css_class(widget: &impl IsA<gtk::Widget>, class: &str, on: bool) {
 /// The window's style class while Pindu moves less (`Accessibility::reduces_motion`).
 pub(crate) const REDUCED_MOTION_CLASS: &str = "reduced-motion";
 /// The setting that makes fullscreen mode move less.
-const REDUCE_MOTION_KEY: &str = "fullscreen-reduce-motion";
+pub(crate) const REDUCE_MOTION_KEY: &str = "fullscreen-reduce-motion";
 
 /// Horizontal padding around the cover grid and around each tile, as in `style.css`.
 const GRID_PADDING: f64 = 24.0;

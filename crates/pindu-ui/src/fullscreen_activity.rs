@@ -1,7 +1,8 @@
-//! Quick Access's Activity and Refresh Library entries. Activity shows while anything runs
-//! in the background (see `task_service`) and leads to a level listing each task with its
-//! progress and, where the user can cancel it, Cancel; it goes once nothing runs. Refresh
-//! Library runs the same sync as `app.import` and is unavailable while a sync runs.
+//! Notifications' Running tasks and Quick Access's Refresh Library. While anything runs in
+//! the background (see `task_service`) the Notifications section lists each task, under a
+//! Running heading, with its progress and, where the user can cancel it, Cancel; the
+//! heading and the list go once nothing runs. Refresh Library runs the same sync as
+//! `app.import` and is unavailable while a sync runs.
 
 use std::time::Duration;
 
@@ -9,7 +10,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
-use pindu_core::panels::QuickAccessLevel;
+use pindu_core::panels::QuickAccessSection;
 use pindu_core::tasks::{Cancel, Progress, Task, TaskId, TaskKind};
 
 use crate::application::PinduApplication;
@@ -19,8 +20,8 @@ use crate::quick_access::PinduQuickAccess;
 const PULSE_INTERVAL: Duration = Duration::from_millis(150);
 
 impl PinduQuickAccess {
-    /// Cancelling a task, and following the tasks and the sync: the Activity entry and
-    /// level, and whether Refresh Library is available.
+    /// Cancelling a task, and following the tasks and the sync: the Running tasks, and
+    /// whether Refresh Library is available.
     pub(crate) fn setup_activity(
         &self,
         application: &PinduApplication,
@@ -54,8 +55,8 @@ impl PinduQuickAccess {
         self.tasks_changed();
     }
 
-    /// Fills the Activity level with the running tasks, oldest first, keeping focus on
-    /// the task it was on, and moves the bars of those with no telling how far they are.
+    /// Fills the Running list with the running tasks, oldest first, keeping focus on the
+    /// task it was on, and moves the bars of those with no telling how far they are.
     pub(crate) fn show_activity(&self) {
         let Some(application) = self.application() else {
             return;
@@ -94,26 +95,30 @@ impl PinduQuickAccess {
         self.pulse_activity();
     }
 
-    /// A task started, moved on, was cancelled or ended: the Activity entry shows while
-    /// any runs, and the level follows them while it is open, leaving for Quick Access's
-    /// entries once nothing runs.
+    /// A task started, moved on, was cancelled or ended: the Running tasks show while any
+    /// runs, and follow them while Notifications shows. Once nothing runs, focus on a task
+    /// moves to the first notification.
     fn tasks_changed(&self) {
         let Some(application) = self.application() else {
             return;
         };
         let tasks = application.task_service().tasks();
         let imp = self.imp();
-        let row = &imp.activity_row;
-        let had_focus = row.has_focus();
-        row.set_visible(!tasks.is_empty());
-        if tasks.is_empty() {
-            if had_focus {
-                self.activity_entry().grab_focus();
+        let list = imp.activity.get();
+        let had_focus = self
+            .focus_widget()
+            .is_some_and(|focus| focus.is_ancestor(&list));
+        let running = !tasks.is_empty();
+        self.update_shown(|shown| shown.running = running);
+        if !running {
+            list.remove_all();
+            imp.activity_shown.take();
+            if had_focus && let Some(row) = imp.notifications.row_at_index(0) {
+                row.grab_focus();
             }
-            self.end_activity();
             return;
         }
-        if self.level() != Some(QuickAccessLevel::Activity) {
+        if !self.shows_section(QuickAccessSection::Notifications) {
             return;
         }
         // Only progress changed: the bars move, and the rows (and focus) stay.
@@ -138,38 +143,25 @@ impl PinduQuickAccess {
         }
     }
 
-    /// The entry focus goes to for Activity: Activity itself while it shows, else Refresh
-    /// Library, or the notifications while a sync keeps that unavailable.
-    pub(crate) fn activity_entry(&self) -> gtk::Widget {
-        let imp = self.imp();
-        let row = if imp.activity_row.is_visible() {
-            &imp.activity_row
-        } else if imp.refresh_row.is_sensitive() {
-            &imp.refresh_row
-        } else {
-            &imp.notifications_row
-        };
-        row.get().upcast()
-    }
-
-    /// Refresh Library is unavailable while a sync runs; if it had focus, Activity, which
-    /// now lists the sync, takes it once it is shown.
+    /// Refresh Library is unavailable while a sync runs; focus on either of its rows moves
+    /// to the row beside it.
     fn show_refresh(&self, syncing: bool) {
-        let row = &self.imp().refresh_row;
-        let had_focus = row.has_focus();
-        row.set_sensitive(!syncing);
-        if had_focus && syncing {
+        let imp = self.imp();
+        let focused = [imp.refresh_row.get(), imp.quick_refresh_row.get()]
+            .into_iter()
+            .find(|row| row.has_focus());
+        // Quick's row follows Manage's (`data/ui/quick_access.blp`).
+        imp.refresh_row.set_sensitive(!syncing);
+        if let Some(row) = focused.filter(|_| syncing) {
             glib::idle_add_local_once(glib::clone!(
                 #[weak(rename_to = quick_access)]
                 self,
-                move || {
-                    quick_access.activity_entry().grab_focus();
-                }
+                move || quick_access.focus_beside(&row)
             ));
         }
     }
 
-    /// Moves the bars of tasks with no telling how far they are while Activity shows.
+    /// Moves the bars of tasks with no telling how far they are while Notifications shows.
     fn pulse_activity(&self) {
         let imp = self.imp();
         if imp.activity_pulse.borrow().is_some() {
@@ -184,7 +176,7 @@ impl PinduQuickAccess {
                 glib::ControlFlow::Break,
                 move || {
                     let imp = quick_access.imp();
-                    if quick_access.level() != Some(QuickAccessLevel::Activity) {
+                    if !quick_access.shows_section(QuickAccessSection::Notifications) {
                         imp.activity_pulse.take();
                         return glib::ControlFlow::Break;
                     }
