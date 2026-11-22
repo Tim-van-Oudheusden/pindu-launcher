@@ -18,6 +18,11 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   `MenuShelf::Leave` went, shelves hold `DrawerEntry`; `panels::{MenuSpot, step_menu_shelves}` move focus between
   shelves and dock. Seen in the harness at Largest and 1280×480 (shelves scroll, dock stays). Not seen: activating a
   dock action (no fake logind), dimmed actions, the menu over a running game, more than two collections.
+- 2026-11-22, #746 (after #742): a Fullscreen Mode button before the main menu, the menu item gone; README's three
+  library pictures retaken with the harness (`--desktop`, 1280×900, light, `cwebp -q 80`). gamescope ignores
+  fullscreen requests once the window shows, so entering and leaving fullscreen mode can't be seen in the harness.
+  The window already needs 704 px wide on `main` (`AdwToolbarView exceeds PinduWindow width`), so it does not fit
+  at its 360 px minimum. RTL needs `--env LANG=he_IL.UTF-8` (`LANGUAGE` alone does nothing under `C.UTF-8`).
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,
