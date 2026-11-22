@@ -115,7 +115,8 @@ hand.
 Follow [`releasing.md` § When something goes wrong](releasing.md#when-something-goes-wrong): a version mismatch means
 deleting the unpublished tag and fixing the versions through a pull request; a build, test or lint failure publishes
 nothing and is fixed in a new patch version; a failed upload is rerun by hand with the tag as input; a broken published
-release is marked as a pre-release or deleted, and its tag is kept. Agents never move or reuse a published tag.
+release is marked as a pre-release and keeps its tag and files, since the distribution recipes download from it. Agents
+never move or reuse a published tag, and never delete a published release.
 
 ### An agent acted outside its instructions
 
