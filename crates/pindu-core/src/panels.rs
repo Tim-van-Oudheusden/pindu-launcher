@@ -148,7 +148,8 @@ pub enum QuickAccessEntry {
     /// The session's notifications, newest first, or the line that says there are none.
     Notifications,
     /// The designs, the variant, Home's background and its blur and dim, Cover Size, Text
-    /// Size, Reduce Motion, Button Hints and the user's own stylesheet.
+    /// Size, Reduce Motion, Button Hints, Categories on Home and the user's own
+    /// stylesheet.
     Designs,
     /// The connected controllers, the button prompts, the confirm and back swap, Hold to
     /// Confirm, the repeat delay and rate and the stick's dead zone.

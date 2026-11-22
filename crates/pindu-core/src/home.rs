@@ -1,7 +1,8 @@
 //! Fullscreen Home: its cards' size for each tile shape a design can choose and the art
 //! each shows, the details row of the focused game or section, the first screen's row as
-//! a design starts it, the rows of the Shelves layout and the moves between them, the
-//! preview of the focused section, and what Home's animated background does.
+//! a design starts it, the rows of the Shelves layout and the moves between them, where
+//! the categories are (a Categories tile and screen, or rows of their own), the preview
+//! of the focused section, and what Home's animated background does.
 
 use std::path::PathBuf;
 
@@ -91,6 +92,8 @@ pub enum Detail {
     Source(Source),
     /// How many games a section of Home's first screen holds.
     Games(u32),
+    /// How many categories the Categories tile leads to.
+    Categories(u32),
 }
 
 /// The details of `game` with `playtime_secs` played, at `now` and `utc_offset` seconds
@@ -114,6 +117,18 @@ pub fn section_details(section: &Section) -> Vec<Detail> {
     vec![Detail::Games(count)]
 }
 
+/// The details of the Categories tile, which leads to `categories`: how many there are.
+pub fn categories_details(categories: &[Section]) -> Vec<Detail> {
+    let count = u32::try_from(categories.len()).unwrap_or(u32::MAX);
+    vec![Detail::Categories(count)]
+}
+
+/// The row of the Categories screen, in the layouts with two screens: a tile for each of
+/// `categories`, in order (by name).
+pub fn categories_row(categories: &[Section]) -> Vec<SectionId> {
+    categories.iter().map(|category| category.id).collect()
+}
+
 /// An item of the row on Home's first screen, before the Library tile.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RowItem {
@@ -128,15 +143,35 @@ pub enum RowItem {
 /// The row of Home's first screen as a design starts it. With the sections: a tile for
 /// each of `sections`, in order. With the games: a card for each Recently Played game, a
 /// divider, then a tile for every other section; Recently Played itself gets no tile.
-pub fn first_screen_row(start: HomeStart, sections: &[Section]) -> Vec<RowItem> {
+/// The Categories tile follows Installed, or where Installed would be, while the
+/// library has `categories`.
+pub fn first_screen_row(
+    start: HomeStart,
+    sections: &[Section],
+    categories: &[Section],
+) -> Vec<RowItem> {
     let tiles = |sections: &[Section]| -> Vec<RowItem> {
-        sections
+        let mut tiles: Vec<RowItem> = sections
             .iter()
             .filter(|section| {
                 start == HomeStart::Sections || section.id != SectionId::RecentlyPlayed
             })
             .map(|section| RowItem::Section(section.id))
-            .collect()
+            .collect();
+        if !categories.is_empty() {
+            // Before the launchers and collections, whose number varies.
+            let at = tiles
+                .iter()
+                .position(|tile| {
+                    matches!(
+                        tile,
+                        RowItem::Section(SectionId::Source(_) | SectionId::Collection(_))
+                    )
+                })
+                .unwrap_or(tiles.len());
+            tiles.insert(at, RowItem::Section(SectionId::Categories));
+        }
+        tiles
     };
     if start == HomeStart::Sections {
         return tiles(sections);
@@ -171,17 +206,47 @@ pub struct Shelf {
 /// ends in See All.
 pub const SHELF_LIMIT: usize = 20;
 
-/// The rows of the Shelves layout: one for each of `sections`, in order, with its first
-/// `SHELF_LIMIT` games.
-pub fn shelves(sections: &[Section]) -> Vec<Shelf> {
+/// How many categories the Shelves and Explore layouts give a row of their own: those
+/// with the most games. The others share the More Categories row.
+pub const HOME_CATEGORIES: usize = 8;
+
+/// The rows of the Shelves layout: one for each of `sections`, in order, then one for
+/// each of the `HOME_CATEGORIES` `categories` with the most games, most games first, with
+/// its first `SHELF_LIMIT` games.
+pub fn shelves(sections: &[Section], categories: &[Section]) -> Vec<Shelf> {
     sections
         .iter()
+        .chain(categories_on_home(categories))
         .map(|section| Shelf {
             id: section.id,
             title: section.title.clone(),
             games: section.games.iter().take(SHELF_LIMIT).cloned().collect(),
             total: section.games.len(),
         })
+        .collect()
+}
+
+/// The `HOME_CATEGORIES` of `categories` with the most games, most games first, those
+/// with as many in the order they are listed (by name).
+fn categories_on_home(categories: &[Section]) -> Vec<&Section> {
+    let mut by_size: Vec<&Section> = categories.iter().collect();
+    by_size.sort_by_key(|category| std::cmp::Reverse(category.games.len()));
+    by_size.truncate(HOME_CATEGORIES);
+    by_size
+}
+
+/// The More Categories row's tiles, the last of the categories' rows in the Shelves and
+/// Explore layouts: the categories that get no row of their own, by name; none while
+/// every category has a row.
+pub fn more_categories(categories: &[Section]) -> Vec<SectionId> {
+    let on_home: Vec<SectionId> = categories_on_home(categories)
+        .iter()
+        .map(|category| category.id)
+        .collect();
+    categories
+        .iter()
+        .map(|category| category.id)
+        .filter(|id| !on_home.contains(id))
         .collect()
 }
 
@@ -194,12 +259,17 @@ pub enum ExploreRow {
     Tiles(Vec<SectionId>),
     /// A section as a row of its games.
     Shelf(Shelf),
+    /// The More Categories row: a tile for each of these categories, which opens the
+    /// library at it (`more_categories`).
+    MoreCategories(Vec<SectionId>),
 }
 
 /// The rows of the Explore layout: the Recently Played games, when there are any; a row
-/// of tiles for every other section, there even without one; then a shelf for each of
-/// those sections (`shelves`), in order.
-pub fn explore_rows(sections: &[Section]) -> Vec<ExploreRow> {
+/// of tiles for every other section, there even without one, and one Categories tile
+/// after them while there are `categories`; then a shelf for each of those sections and
+/// the categories with the most games (`shelves`), in order, and the More Categories row
+/// for the other categories, if any (`more_categories`).
+pub fn explore_rows(sections: &[Section], categories: &[Section]) -> Vec<ExploreRow> {
     let (recent, others): (Vec<Section>, Vec<Section>) = sections
         .iter()
         .cloned()
@@ -209,10 +279,23 @@ pub fn explore_rows(sections: &[Section]) -> Vec<ExploreRow> {
         .filter(|section| !section.games.is_empty())
         .map(|section| ExploreRow::Featured(section.games))
         .collect();
+    let tile = (!categories.is_empty()).then_some(SectionId::Categories);
     rows.push(ExploreRow::Tiles(
-        others.iter().map(|section| section.id).collect(),
+        others
+            .iter()
+            .map(|section| section.id)
+            .chain(tile)
+            .collect(),
     ));
-    rows.extend(shelves(&others).into_iter().map(ExploreRow::Shelf));
+    rows.extend(
+        shelves(&others, categories)
+            .into_iter()
+            .map(ExploreRow::Shelf),
+    );
+    let more = more_categories(categories);
+    if !more.is_empty() {
+        rows.push(ExploreRow::MoreCategories(more));
+    }
     rows
 }
 
@@ -442,6 +525,10 @@ pub fn background_in_force(offered: bool, setting: &str) -> Background {
 /// The GSettings key choosing Home's background.
 pub const BACKGROUND_KEY: &str = "fullscreen-background";
 
+/// The GSettings key of Categories on Home: while it is off, Home shows no Categories
+/// tile, no category's row and no More Categories row, as for a library without a genre.
+pub const CATEGORIES_KEY: &str = "fullscreen-home-categories";
+
 /// The GSettings key of Home's background blur, a `Strength`'s setting.
 pub const BLUR_KEY: &str = "fullscreen-background-blur";
 /// The GSettings key of Home's background dim, a `Strength`'s setting.
@@ -505,6 +592,7 @@ pub fn background_classes(blur: Strength, dim: Strength) -> Vec<&'static str> {
 mod tests {
     use super::*;
     use crate::model::LaunchKind;
+    use crate::sections::CategoryId;
 
     const ON_FIRST_SCREEN: BackgroundContext = BackgroundContext {
         fullscreen: true,
@@ -881,7 +969,7 @@ mod tests {
             section(SectionId::Source(Source::Steam), 3),
         ];
 
-        let row = first_screen_row(HomeStart::Sections, &sections);
+        let row = first_screen_row(HomeStart::Sections, &sections, &[]);
 
         assert_eq!(
             row,
@@ -902,7 +990,7 @@ mod tests {
             section(SectionId::Source(Source::Steam), 3),
         ];
 
-        let row = first_screen_row(HomeStart::Games, &sections);
+        let row = first_screen_row(HomeStart::Games, &sections, &[]);
 
         assert_eq!(
             row,
@@ -923,7 +1011,7 @@ mod tests {
             section(SectionId::Installed, 4),
         ];
 
-        let row = first_screen_row(HomeStart::Games, &sections);
+        let row = first_screen_row(HomeStart::Games, &sections, &[]);
 
         assert_eq!(
             row,
@@ -938,9 +1026,92 @@ mod tests {
     fn a_row_of_recent_games_alone_has_no_divider() {
         let recent = section(SectionId::RecentlyPlayed, 1);
 
-        let row = first_screen_row(HomeStart::Games, std::slice::from_ref(&recent));
+        let row = first_screen_row(HomeStart::Games, std::slice::from_ref(&recent), &[]);
 
         assert_eq!(row, [RowItem::Game(recent.games[0].clone())]);
+    }
+
+    /// The category `genre`, holding `count` games.
+    fn category(genre: &str, count: usize) -> Section {
+        Section {
+            title: Some(genre.to_owned()),
+            ..section(SectionId::Category(CategoryId::of(genre)), count)
+        }
+    }
+
+    #[test]
+    fn the_categories_tile_follows_installed_whatever_the_row_starts_with() {
+        let recent = section(SectionId::RecentlyPlayed, 1);
+        let sections = [
+            recent.clone(),
+            section(SectionId::Favourites, 1),
+            section(SectionId::Installed, 2),
+            section(SectionId::Source(Source::Steam), 3),
+            section(SectionId::Collection(1), 1),
+        ];
+        let categories = [category("Arcade", 1), category("Brawler", 2)];
+
+        assert_eq!(
+            first_screen_row(HomeStart::Sections, &sections, &categories),
+            [
+                RowItem::Section(SectionId::RecentlyPlayed),
+                RowItem::Section(SectionId::Favourites),
+                RowItem::Section(SectionId::Installed),
+                RowItem::Section(SectionId::Categories),
+                RowItem::Section(SectionId::Source(Source::Steam)),
+                RowItem::Section(SectionId::Collection(1)),
+            ]
+        );
+        assert_eq!(
+            first_screen_row(HomeStart::Games, &sections, &categories),
+            [
+                RowItem::Game(recent.games[0].clone()),
+                RowItem::Divider,
+                RowItem::Section(SectionId::Favourites),
+                RowItem::Section(SectionId::Installed),
+                RowItem::Section(SectionId::Categories),
+                RowItem::Section(SectionId::Source(Source::Steam)),
+                RowItem::Section(SectionId::Collection(1)),
+            ]
+        );
+    }
+
+    #[test]
+    fn the_categories_tile_stands_where_installed_would_and_not_without_categories() {
+        let sections = [
+            section(SectionId::Favourites, 1),
+            section(SectionId::Source(Source::Lutris), 2),
+        ];
+        let categories = [category("Cozy", 1)];
+
+        for start in HomeStart::ALL {
+            assert_eq!(
+                first_screen_row(start, &sections, &categories),
+                [
+                    RowItem::Section(SectionId::Favourites),
+                    RowItem::Section(SectionId::Categories),
+                    RowItem::Section(SectionId::Source(Source::Lutris)),
+                ],
+                "{start:?}"
+            );
+            // A library without a genre, or the Categories on Home switch off.
+            assert_eq!(
+                first_screen_row(start, &sections, &[]),
+                [
+                    RowItem::Section(SectionId::Favourites),
+                    RowItem::Section(SectionId::Source(Source::Lutris)),
+                ],
+                "{start:?}"
+            );
+        }
+        // At the end of a row of sections that has none after it.
+        assert_eq!(
+            first_screen_row(HomeStart::Sections, &sections[..1], &categories),
+            [
+                RowItem::Section(SectionId::Favourites),
+                RowItem::Section(SectionId::Categories),
+            ]
+        );
     }
 
     #[test]
@@ -951,7 +1122,7 @@ mod tests {
             ..section(SectionId::Collection(4), 1)
         };
 
-        let shelves = shelves(&[favourites.clone(), collection.clone()]);
+        let shelves = shelves(&[favourites.clone(), collection.clone()], &[]);
 
         assert_eq!(
             shelves,
@@ -972,12 +1143,129 @@ mod tests {
         );
     }
 
+    /// Ten categories, listed by name, holding 1 to 25 games.
+    fn ten_categories() -> Vec<Section> {
+        [
+            ("Alchemy", 3),
+            ("Bullet Hell", 25),
+            ("Cards", 1),
+            ("Dungeon", 5),
+            ("Exploration", 5),
+            ("Fishing", 2),
+            ("Gardening", 7),
+            ("Heist", 1),
+            ("Idle", 9),
+            ("Jigsaw", 4),
+        ]
+        .into_iter()
+        .map(|(genre, count)| category(genre, count))
+        .collect()
+    }
+
+    #[test]
+    fn the_eight_categories_with_the_most_games_are_shelves_after_the_sections() {
+        let collection = Section {
+            title: Some("Co-op".to_owned()),
+            ..section(SectionId::Collection(4), 1)
+        };
+        let categories = ten_categories();
+
+        let shelves = shelves(std::slice::from_ref(&collection), &categories);
+
+        assert_eq!(HOME_CATEGORIES, 8);
+        let rows: Vec<(Option<&str>, usize)> = shelves
+            .iter()
+            .map(|shelf| (shelf.title.as_deref(), shelf.total))
+            .collect();
+        // Most games first; Dungeon and Exploration tie, by name; Cards and Heist,
+        // with fewest, are left for the More Categories row.
+        assert_eq!(
+            rows,
+            [
+                (Some("Co-op"), 1),
+                (Some("Bullet Hell"), 25),
+                (Some("Idle"), 9),
+                (Some("Gardening"), 7),
+                (Some("Dungeon"), 5),
+                (Some("Exploration"), 5),
+                (Some("Jigsaw"), 4),
+                (Some("Alchemy"), 3),
+                (Some("Fishing"), 2),
+            ]
+        );
+        // A category's shelf is any section's: its first games, all counted.
+        assert_eq!(shelves[1].id, categories[1].id);
+        assert_eq!(shelves[1].games, categories[1].games[..SHELF_LIMIT]);
+    }
+
+    #[test]
+    fn the_categories_without_a_shelf_are_more_categories_by_name() {
+        let categories = ten_categories();
+
+        assert_eq!(
+            more_categories(&categories),
+            [categories[2].id, categories[7].id]
+        );
+        // A tile each for those after the eighth, by name, however many games they hold.
+        let mut eleven = categories.clone();
+        eleven.insert(0, category("Aardvark", 1));
+        assert_eq!(
+            more_categories(&eleven),
+            [eleven[0].id, eleven[3].id, eleven[8].id]
+        );
+        // Eight or fewer all have a shelf: no More Categories row.
+        assert_eq!(more_categories(&categories[..8]), []);
+        assert_eq!(more_categories(&[]), []);
+    }
+
+    #[test]
+    fn the_categories_tile_details_how_many_categories_and_each_category_its_games() {
+        let categories = ten_categories();
+
+        assert_eq!(categories_details(&categories), [Detail::Categories(10)]);
+        assert_eq!(
+            categories_details(&categories[..1]),
+            [Detail::Categories(1)]
+        );
+        assert_eq!(section_details(&categories[1]), [Detail::Games(25)]);
+    }
+
+    #[test]
+    fn categories_on_home_is_a_setting_that_starts_on() {
+        let schema = std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in"),
+        )
+        .unwrap();
+        let key = format!("<key name=\"{CATEGORIES_KEY}\" type=\"b\">");
+
+        let after = schema.split_once(&key).map(|(_, after)| after);
+        let default = after.and_then(|after| after.split_once("</default>"));
+
+        assert!(
+            default.is_some_and(|(start, _)| start.trim_end().ends_with("<default>true")),
+            "{CATEGORIES_KEY} is missing or not on by default"
+        );
+    }
+
+    #[test]
+    fn the_categories_screen_is_a_tile_for_each_category_by_name() {
+        let categories = ten_categories();
+
+        let row = categories_row(&categories);
+
+        // Every one of them, not only the eight with shelves, as they are listed.
+        let listed: Vec<SectionId> = categories.iter().map(|category| category.id).collect();
+        assert_eq!(row, listed);
+        assert_eq!(categories_row(&[]), []);
+    }
+
     #[test]
     fn a_shelf_shows_its_first_games_and_counts_them_all() {
         let full = section(SectionId::Installed, SHELF_LIMIT);
         let large = section(SectionId::Source(Source::Steam), SHELF_LIMIT + 5);
 
-        let shelves = shelves(&[full.clone(), large.clone()]);
+        let shelves = shelves(&[full.clone(), large.clone()], &[]);
 
         assert_eq!(SHELF_LIMIT, 20);
         assert_eq!(shelves[0].games, full.games);
@@ -1136,15 +1424,18 @@ mod tests {
         let favourites = section(SectionId::Favourites, 3);
         let installed = section(SectionId::Installed, 4);
 
-        let rows = explore_rows(&[recent.clone(), favourites.clone(), installed.clone()]);
+        let rows = explore_rows(
+            &[recent.clone(), favourites.clone(), installed.clone()],
+            &[],
+        );
 
         assert_eq!(
             rows,
             [
                 ExploreRow::Featured(recent.games),
                 ExploreRow::Tiles(vec![SectionId::Favourites, SectionId::Installed]),
-                ExploreRow::Shelf(shelves(std::slice::from_ref(&favourites)).remove(0)),
-                ExploreRow::Shelf(shelves(std::slice::from_ref(&installed)).remove(0)),
+                ExploreRow::Shelf(shelves(std::slice::from_ref(&favourites), &[]).remove(0)),
+                ExploreRow::Shelf(shelves(std::slice::from_ref(&installed), &[]).remove(0)),
             ]
         );
     }
@@ -1158,10 +1449,10 @@ mod tests {
             vec![section(SectionId::RecentlyPlayed, 0), favourites.clone()],
         ] {
             assert_eq!(
-                explore_rows(&sections),
+                explore_rows(&sections, &[]),
                 [
                     ExploreRow::Tiles(vec![SectionId::Favourites]),
-                    ExploreRow::Shelf(shelves(std::slice::from_ref(&favourites)).remove(0)),
+                    ExploreRow::Shelf(shelves(std::slice::from_ref(&favourites), &[]).remove(0)),
                 ]
             );
         }
@@ -1169,7 +1460,42 @@ mod tests {
 
     #[test]
     fn an_empty_library_explores_the_tiles_row_alone() {
-        assert_eq!(explore_rows(&[]), [ExploreRow::Tiles(Vec::new())]);
+        assert_eq!(explore_rows(&[], &[]), [ExploreRow::Tiles(Vec::new())]);
+    }
+
+    #[test]
+    fn explore_gives_the_categories_one_tile_then_their_shelves_after_the_sections() {
+        let favourites = section(SectionId::Favourites, 2);
+        let collection = Section {
+            title: Some("Co-op".to_owned()),
+            ..section(SectionId::Collection(4), 1)
+        };
+        let sections = [favourites.clone(), collection.clone()];
+        let categories = ten_categories();
+
+        let rows = explore_rows(&sections, &categories);
+
+        let shelves = shelves(&sections, &categories);
+        let expected: Vec<ExploreRow> = [ExploreRow::Tiles(vec![
+            SectionId::Favourites,
+            SectionId::Collection(4),
+            SectionId::Categories,
+        ])]
+        .into_iter()
+        .chain(shelves.into_iter().map(ExploreRow::Shelf))
+        .chain([ExploreRow::MoreCategories(more_categories(&categories))])
+        .collect();
+        assert_eq!(rows, expected);
+        // The category shelves follow the collection's.
+        assert!(matches!(&rows[2], ExploreRow::Shelf(shelf) if shelf.id == collection.id));
+        assert!(matches!(&rows[3], ExploreRow::Shelf(shelf) if shelf.id == categories[1].id));
+        // Eight categories or fewer: a shelf each, and no More Categories row.
+        let few = explore_rows(&sections, &categories[..3]);
+        assert_eq!(few.len(), 1 + 2 + 3);
+        assert!(
+            !few.iter()
+                .any(|row| matches!(row, ExploreRow::MoreCategories(_)))
+        );
     }
 
     #[test]

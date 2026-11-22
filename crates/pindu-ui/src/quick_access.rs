@@ -44,11 +44,11 @@
 //! Sources `fullscreen_sources` and Duplicates `fullscreen_duplicates`; Add a Game opens
 //! the window's `fullscreen_add_game`. Design is this module's: the design, chosen from a
 //! row of cards with their pictures, its variant, Home's background blur and dim, cover
-//! size, text size, Reduce Motion, Button Hints and the user's own stylesheet. So are
-//! System's navigation sounds, their volume and exiting after a launch, and Manage's
-//! SteamGridDB key (typed hidden with the on-screen keyboard of `secret_dialog` and kept in
-//! the keyring), Prefer SteamGridDB Art and Wikidata metadata, with Refresh Metadata under
-//! its switch while it is on: the same settings Preferences changes.
+//! size, text size, Reduce Motion, Button Hints, Categories on Home and the user's own
+//! stylesheet. So are System's navigation sounds, their volume and exiting after a launch,
+//! and Manage's SteamGridDB key (typed hidden with the on-screen keyboard of `secret_dialog`
+//! and kept in the keyring), Prefer SteamGridDB Art and Wikidata metadata, with Refresh
+//! Metadata under its switch while it is on: the same settings Preferences changes.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::sync::LazyLock;
@@ -61,7 +61,7 @@ use gtk::{gio, glib};
 use pindu_core::accessibility::{Accessibility, TEXT_SIZE_KEY, TextSize};
 use pindu_core::gamepad::Intent;
 use pindu_core::gamescope::prompts::{PromptHost, prompt_host};
-use pindu_core::home::{BACKGROUND_KEY, BLUR_KEY, DIM_KEY};
+use pindu_core::home::{BACKGROUND_KEY, BLUR_KEY, CATEGORIES_KEY, DIM_KEY};
 use pindu_core::keys;
 use pindu_core::model::GameId;
 use pindu_core::osk::Keyboard;
@@ -261,6 +261,8 @@ mod imp {
         pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub hint_bar_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub home_categories_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub text_size_row: TemplateChild<ChoiceRow>,
         #[template_child]
@@ -1532,7 +1534,7 @@ impl PinduQuickAccess {
 
     /// Design's Cover Size and Text Size, choice rows on their settings' actions added to
     /// `actions` as `win.tile-size` and `win.fullscreen-text-size`, then Reduce Motion,
-    /// Button Hints and My Stylesheet bound to their settings.
+    /// Button Hints, Categories on Home and My Stylesheet bound to their settings.
     fn setup_design_settings(&self, actions: &impl IsA<gio::ActionMap>) {
         let imp = self.imp();
         let cover_sizes = TILE_SIZES
@@ -1554,6 +1556,9 @@ impl PinduQuickAccess {
             .build();
         settings
             .bind(HINT_BAR_KEY, &*imp.hint_bar_row, "active")
+            .build();
+        settings
+            .bind(CATEGORIES_KEY, &*imp.home_categories_row, "active")
             .build();
         settings
             .bind(CUSTOM_STYLE_KEY, &*imp.custom_style_row, "active")

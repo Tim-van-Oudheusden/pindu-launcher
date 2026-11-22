@@ -33,6 +33,14 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   the window's settings. Seen in all four designs at default and Largest. Not seen: the starting screen (with no
   bar its hold-B-to-cancel is unannounced until Cancel shows after 5 s), the overlay over a running game. When the
   bar comes back, the focused Button Hints row sits partly under it until focus moves.
+- 2026-11-22, #744 (after #743, the last of the six; two agents, Parts A/B and Part C's wording, squashed into one
+  commit): categories on fullscreen Home by the design's `home` option. `sections::{CategoryId, categories}` (a
+  process-wide interner keeps a category's ID by name, case-blind, so `SectionId` stays `Copy`);
+  `home::{HOME_CATEGORIES, more_categories, categories_row, CATEGORIES_KEY}`: eight rows by game count, then More
+  Categories by name; the Categories tile after Installed and its screen, B steps back one screen
+  (`HomePage::go_back`). `genre_label` moved to `genres.rs`. Users read "category"; code and stored data keep
+  "genre". Seen with a seeded harness copy (`harness-744/`, 12 genres). Not seen: light, high contrast, Reduce
+  Motion, toggling the switch by hand, a screen reader.
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,

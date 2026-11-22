@@ -6,10 +6,13 @@
 //! the row with the Recently Played games as cards (`home-start`), label the tiles
 //! (`home-section-tile`) and preview the focused section's covers (`home-section-preview`).
 //! Activating a section (`win.home-section`) opens the second screen: its games, with the
-//! focused game's hero behind them. B goes back to the first screen, on the section it
-//! came from. The other two are one screen of rows that scroll; Up and Down change row
-//! (`HomePage::navigate`). Shelves: every section as a row of its games
-//! (`pindu_core::home::shelves`), then the Library row. Explore (`home::explore_rows`),
+//! focused game's hero behind them. The Categories tile, after Installed, opens the
+//! Categories screen instead (`.home-categories`): a tile per category, each opening its
+//! games. B goes back one screen, to the tile it came from. The other two are one screen
+//! of rows that scroll; Up and Down change row (`HomePage::navigate`). Shelves: every
+//! section as a row of its games (`pindu_core::home::shelves`), then the eight categories
+//! with the most games (`.home-shelf-category`), the More Categories row for the others,
+//! and the Library row. Explore (`home::explore_rows`),
 //! Adwaita's: a carousel of the Jump Back In games with Play and Details on each page
 //! (`.home-featured`), a row of compact section tiles with the Library and Big Picture
 //! tiles, then a row of games for each other section, all on the window's own background.
@@ -41,6 +44,7 @@ use pindu_core::themes::{HomeLayout, HomeStart, SectionTile, ThemeLayout, TileSh
 
 use crate::config::{PKGDATADIR, RESOURCE_BASE_PATH};
 use crate::game_page::{date, playtime};
+use crate::genres::genre_label;
 use crate::models::GameObject;
 use crate::sources::{source_icon, source_name};
 use crate::widgets::{CoverArt, SpacedLabel, TileFrame, textures};
@@ -84,6 +88,11 @@ fn detail_item(detail: Detail) -> gtk::Box {
             gettext("Launcher"),
         ),
         Detail::Games(count) => ("view-grid-symbolic", game_count(count), gettext("Games")),
+        Detail::Categories(count) => (
+            "view-app-grid-symbolic",
+            category_count(count),
+            gettext("Categories"),
+        ),
     };
     let item = gtk::Box::builder()
         .spacing(6)
@@ -106,20 +115,29 @@ fn game_count(count: u32) -> String {
     ngettext("{count} game", "{count} games", count).replace("{count}", &count.to_string())
 }
 
+/// How many categories the Categories tile leads to, as its details row and its labelled
+/// tile say it.
+fn category_count(count: u32) -> String {
+    ngettext("{count} category", "{count} categories", count).replace("{count}", &count.to_string())
+}
+
 /// How many games `section` holds.
 fn games_in(section: &Section) -> u32 {
     u32::try_from(section.games.len()).unwrap_or(u32::MAX)
 }
 
-/// A section's name: the user's for a collection, else Home's own.
+/// A section's name: a category's genre as Pindu shows it (`genre_label`), the user's
+/// for a collection, else Home's own.
 fn section_title(section: &Section) -> String {
     match (section.id, &section.title) {
+        (SectionId::Category(_), Some(genre)) => genre_label(genre),
         (_, Some(title)) => title.clone(),
         (SectionId::RecentlyPlayed, None) => gettext("Recently Played"),
         (SectionId::Favourites, None) => gettext("Favourites"),
         (SectionId::Installed, None) => gettext("Installed"),
         (SectionId::Source(source), None) => source_name(source),
-        (SectionId::Collection(_), None) => String::new(),
+        (SectionId::Categories, None) => gettext("Categories"),
+        (SectionId::Collection(_) | SectionId::Category(_), None) => String::new(),
     }
 }
 
@@ -169,6 +187,8 @@ fn section_glyph(id: SectionId, size: i32) -> gtk::Widget {
         SectionId::Favourites => "starred-symbolic",
         SectionId::Installed => "drive-harddisk-symbolic",
         SectionId::Collection(_) => "folder-symbolic",
+        SectionId::Categories => "view-app-grid-symbolic",
+        SectionId::Category(_) => "view-list-bullet-symbolic",
         SectionId::Source(source) => {
             match (sections::source_icon(source), sections::monogram(source)) {
                 (Some(icon), _) => icon,
@@ -220,43 +240,51 @@ fn section_count(count: &str) -> gtk::Label {
         .build()
 }
 
-/// A section's tile (`.home-section-tile`), which opens it through `win.home-section`,
+/// A section's tile (`.home-section-tile`), which opens it through `action`
+/// (`win.home-section`, or `win.home-section-library` on the More Categories row),
 /// `width`×`height` pixels. As art (`SectionTile::Art`): its art (`data/home/<name>.svg`)
-/// filling the tile, or for a collection, which has none, an icon over its name
-/// (`.home-collection-tile`); the art is an overlay, which does not size the tile.
+/// filling the tile, or for a collection or a category, which have none, an icon over its
+/// name (`.home-collection-tile`); the art is an overlay, which does not size the tile.
 /// Labelled (`SectionTile::Label`, `.labelled` and the section's own class): a glyph at
-/// the top left, and at the bottom left its name over its number of games.
+/// the top left, and at the bottom left its name over `count`, its number of games. A
+/// category's tile (`.section-category`) and the Categories tile (`.section-categories`)
+/// carry their class and say their count to screen readers either way.
 fn section_tile(
-    section: &Section,
+    id: SectionId,
     title: &str,
+    count: &str,
     size: (i32, i32),
     kind: SectionTile,
+    action: &str,
 ) -> gtk::Button {
     let tile = gtk::Button::builder()
         .overflow(gtk::Overflow::Hidden)
         .tooltip_text(title)
-        .action_name("win.home-section")
-        .action_target(&section.id.name().to_variant())
+        .action_name(action)
+        .action_target(&id.name().to_variant())
         .css_classes(["card", "home-section-tile"])
         .build();
-    let collection = matches!(section.id, SectionId::Collection(_));
-    if collection {
+    let no_art = matches!(id, SectionId::Collection(_) | SectionId::Category(_));
+    if no_art {
         tile.add_css_class("home-collection-tile");
     }
     tile.update_property(&[gtk::accessible::Property::Label(title)]);
+    if matches!(id, SectionId::Categories | SectionId::Category(_)) {
+        tile.add_css_class(&id.css_class());
+        tile.update_property(&[gtk::accessible::Property::Description(count)]);
+    }
     if kind == SectionTile::Label {
         tile.add_css_class("labelled");
-        tile.add_css_class(&section.id.css_class());
-        let count = game_count(games_in(section));
+        tile.add_css_class(&id.css_class());
         let label = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .css_classes(["section-label"])
             .build();
-        label.append(&section_glyph(section.id, GLYPH_SIZE));
+        label.append(&section_glyph(id, GLYPH_SIZE));
         label.append(&section_name(title));
-        label.append(&section_count(&count));
+        label.append(&section_count(count));
         tile.set_child(Some(&TileFrame::new(&label, size)));
-        tile.update_property(&[gtk::accessible::Property::Description(&count)]);
+        tile.update_property(&[gtk::accessible::Property::Description(count)]);
         return tile;
     }
     let (width, height) = size;
@@ -268,7 +296,7 @@ fn section_tile(
                 .build(),
         )
         .build();
-    if collection {
+    if no_art {
         let content = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(12)
@@ -276,9 +304,14 @@ fn section_tile(
             .margin_start(12)
             .margin_end(12)
             .build();
+        let icon = if matches!(id, SectionId::Category(_)) {
+            "view-list-bullet-symbolic"
+        } else {
+            "folder-symbolic"
+        };
         content.append(
             &gtk::Image::builder()
-                .icon_name("folder-symbolic")
+                .icon_name(icon)
                 .pixel_size(ICON_SIZE)
                 .accessible_role(gtk::AccessibleRole::Presentation)
                 .build(),
@@ -290,9 +323,18 @@ fn section_tile(
                 .css_classes(["heading"])
                 .build(),
         );
+        if matches!(id, SectionId::Category(_)) {
+            // Its count stays whole where the name ends in an ellipsis.
+            content.append(
+                &gtk::Label::builder()
+                    .label(count)
+                    .css_classes(["section-count", "dimmed"])
+                    .build(),
+            );
+        }
         frame.add_overlay(&content);
     } else {
-        let resource = format!("{RESOURCE_BASE_PATH}/home/{}.svg", section.id.name());
+        let resource = format!("{RESOURCE_BASE_PATH}/home/{}.svg", id.name());
         let art = gtk::Picture::for_resource(&resource);
         art.set_content_fit(gtk::ContentFit::Cover);
         art.set_can_shrink(true);
@@ -304,24 +346,23 @@ fn section_tile(
 }
 
 /// A section's compact tile (`.home-section-tile.labelled.compact`), in the Explore
-/// layout's row of tiles: its glyph at the left and its name over its number of games
-/// beside it, `COMPACT_TILE` pixels. It moves focus to the section's row
-/// (`win.home-section`).
-fn compact_section_tile(section: &Section, title: &str) -> gtk::Button {
-    let count = game_count(games_in(section));
+/// layout's row of tiles: its glyph at the left and its name over `count`, its number of
+/// games, beside it, `COMPACT_TILE` pixels. It moves focus to the section's row
+/// (`win.home-section`); the Categories tile to the first category's.
+fn compact_section_tile(id: SectionId, title: &str, count: &str) -> gtk::Button {
     let tile = gtk::Button::builder()
         .overflow(gtk::Overflow::Hidden)
         .tooltip_text(title)
         .action_name("win.home-section")
-        .action_target(&section.id.name().to_variant())
+        .action_target(&id.name().to_variant())
         .css_classes(["card", "home-section-tile", "labelled", "compact"])
         .build();
-    tile.add_css_class(&section.id.css_class());
+    tile.add_css_class(&id.css_class());
     tile.update_property(&[
         gtk::accessible::Property::Label(title),
-        gtk::accessible::Property::Description(&count),
+        gtk::accessible::Property::Description(count),
     ]);
-    let glyph = section_glyph(section.id, COMPACT_GLYPH_SIZE);
+    let glyph = section_glyph(id, COMPACT_GLYPH_SIZE);
     glyph.set_valign(gtk::Align::Center);
     let name = gtk::Label::builder()
         .label(title)
@@ -335,7 +376,7 @@ fn compact_section_tile(section: &Section, title: &str) -> gtk::Button {
         .hexpand(true)
         .build();
     text.append(&name);
-    text.append(&section_count(&count));
+    text.append(&section_count(count));
     let label = gtk::Box::builder()
         .spacing(12)
         .css_classes(["section-label"])
@@ -436,19 +477,40 @@ impl Focused {
     }
 }
 
-/// Home's sections, in order, and the games of each.
+/// Home's sections, in order, and its categories, by name, with the games of each.
 #[derive(Debug, Default)]
 struct Sections {
     sections: Vec<Section>,
     games: Vec<Vec<GameObject>>,
+    categories: Vec<Section>,
+    category_games: Vec<Vec<GameObject>>,
 }
 
 impl Sections {
-    /// The section `id` with its games, if Home has it.
+    /// The section or category `id` with its games, if Home has it.
     fn get(&self, id: SectionId) -> Option<(&Section, &[GameObject])> {
-        let position = self.sections.iter().position(|section| section.id == id)?;
-        let games = self.games.get(position)?;
-        Some((&self.sections[position], games))
+        let (sections, games) = match id {
+            SectionId::Category(_) => (&self.categories, &self.category_games),
+            _ => (&self.sections, &self.games),
+        };
+        let position = sections.iter().position(|section| section.id == id)?;
+        let games = games.get(position)?;
+        Some((&sections[position], games))
+    }
+
+    /// The name, and the count its tile shows, of the tile `id` stands for: a section, a
+    /// category, or the Categories tile, which counts the categories.
+    fn tile(&self, id: SectionId) -> Option<(String, u32, String)> {
+        if id == SectionId::Categories {
+            if self.categories.is_empty() {
+                return None;
+            }
+            let count = u32::try_from(self.categories.len()).unwrap_or(u32::MAX);
+            return Some((gettext("Categories"), count, category_count(count)));
+        }
+        let (section, _) = self.get(id)?;
+        let count = games_in(section);
+        Some((section_title(section), count, game_count(count)))
     }
 }
 
@@ -462,6 +524,8 @@ enum RowId {
     Tiles,
     /// A section's games.
     Section(SectionId),
+    /// The More Categories row: a tile for each category without a row of its own.
+    MoreCategories,
     /// The Shelves layout's last row: the Library and Steam Big Picture tiles.
     Library,
 }
@@ -576,14 +640,17 @@ mod imp {
         /// The Steam Big Picture tile's name and status, beside its icon while the tile is
         /// compact.
         pub big_picture_text: RefCell<Option<gtk::Box>>,
-        /// Home's sections, in order, each with its games.
+        /// Home's sections, in order, and its categories, each with its games.
         pub(super) sections: RefCell<Sections>,
-        /// The section whose games the second screen shows; `None` on the first screen
-        /// and in the Shelves layout, which has one screen.
+        /// The section or category whose games the second screen shows, or
+        /// `SectionId::Categories` while the Categories screen shows; `None` on the first
+        /// screen and in the one-screen layouts.
         pub open: Cell<Option<SectionId>>,
-        /// What the first screen's row shows before the Library tile, in order.
+        /// What the first screen's row, or the Categories screen's, shows before the
+        /// Library tile, in order.
         pub(super) row_shown: RefCell<Vec<RowKey>>,
-        /// The cards and tiles of the first screen's row, each with what it stands for.
+        /// The cards and tiles of the first screen's row, or the Categories screen's, each
+        /// with what it stands for.
         pub(super) row: RefCell<Vec<(gtk::Button, Focused)>>,
         /// The line between the row's game cards and its section tiles, if it has both.
         pub divider: RefCell<Option<gtk::Separator>>,
@@ -1055,19 +1122,26 @@ impl HomePage {
         self.imp().open.get().is_none() && !self.shelves()
     }
 
+    /// Whether the Categories screen shows.
+    fn on_categories_screen(&self) -> bool {
+        self.imp().open.get() == Some(SectionId::Categories)
+    }
+
     /// Names the screen shown on the page for designs: `.home-sections` for the first,
-    /// `.home-games` for a section's games and for the Shelves layout, neither for the
-    /// Explore layout; and `.home-start-games` on both screens while the first one's row
-    /// starts with games.
+    /// `.home-sections` and `.home-categories` for the Categories screen, `.home-games` for
+    /// a section's games and for the Shelves layout, neither for the Explore layout; and
+    /// `.home-start-games` on every screen while the first one's row starts with games.
     fn show_screen_class(&self) {
         let imp = self.imp();
         let home = &imp.home;
         let layout = imp.layout.get();
         home.remove_css_class("home-sections");
         home.remove_css_class("home-games");
+        let categories = self.on_categories_screen();
+        set_class(&**home, "home-categories", categories);
         // Explore's one screen is neither the sections nor a section's games.
         if layout.home != HomeLayout::Explore {
-            let games = !self.on_first_screen();
+            let games = !self.on_first_screen() && !categories;
             home.add_css_class(if games { "home-games" } else { "home-sections" });
         }
         set_class(
@@ -1202,7 +1276,8 @@ impl HomePage {
         };
         let context = imp.background_context.get();
         let context = BackgroundContext {
-            first_screen: context.first_screen && imp.open.get().is_none(),
+            first_screen: context.first_screen
+                && matches!(imp.open.get(), None | Some(SectionId::Categories)),
             covered: context.covered || imp.art_shown.get(),
             ..context
         };
@@ -1224,17 +1299,29 @@ impl HomePage {
         }
     }
 
-    /// Takes Home's sections, each with its games, and shows them on the screen shown. A
-    /// section whose games show and that is gone now goes back to the first screen. Focus
-    /// that went to the Library tile only because Home had no sections yet goes to its
-    /// first card or tile once it has some.
-    pub fn set_sections(&self, sections: Vec<(Section, Vec<GameObject>)>) {
+    /// Takes Home's sections and its categories, each with its games, and shows them on
+    /// the screen shown. A section or category whose games show and that is gone now goes
+    /// back a screen: a category to the Categories screen while there are categories, and
+    /// the rest to the first screen. Focus that went to the Library tile only because
+    /// Home had no sections yet goes to its first card or tile once it has some.
+    pub fn set_sections(
+        &self,
+        sections: Vec<(Section, Vec<GameObject>)>,
+        categories: Vec<(Section, Vec<GameObject>)>,
+    ) {
         let imp = self.imp();
         let (sections, games): (Vec<Section>, Vec<Vec<GameObject>>) = sections.into_iter().unzip();
+        let (categories, category_games): (Vec<Section>, Vec<Vec<GameObject>>) =
+            categories.into_iter().unzip();
         let first = imp.sections.borrow().sections.is_empty()
             && !sections.is_empty()
             && imp.library_tile.is_focus();
-        imp.sections.replace(Sections { sections, games });
+        imp.sections.replace(Sections {
+            sections,
+            games,
+            categories,
+            category_games,
+        });
         self.refresh();
         if first {
             self.focus_first();
@@ -1286,6 +1373,15 @@ impl HomePage {
             self.show_row();
             return;
         };
+        let has_categories = !imp.sections.borrow().categories.is_empty();
+        if open == SectionId::Categories {
+            if has_categories {
+                self.show_row();
+            } else {
+                self.show_sections();
+            }
+            return;
+        }
         let games = imp
             .sections
             .borrow()
@@ -1293,12 +1389,15 @@ impl HomePage {
             .map(|(_, games)| games.to_vec());
         match games {
             Some(games) if !games.is_empty() => self.show_cards(&games),
+            _ if matches!(open, SectionId::Category(_)) && has_categories => {
+                self.show_categories();
+            }
             _ => self.show_sections(),
         }
     }
 
-    /// Whether the second screen, a section's games, shows. Never in the Shelves layout,
-    /// which has one screen.
+    /// Whether a screen past the first shows: a section's games or the categories, which
+    /// B leaves. Never in the one-screen layouts.
     pub fn shows_section(&self) -> bool {
         self.imp().open.get().is_some()
     }
@@ -1328,7 +1427,7 @@ impl HomePage {
     }
 
     /// Shows the first screen, focused on the tile that last had focus there: the
-    /// section whose games showed, when coming back from them.
+    /// section whose games showed, or the Categories tile, when coming back from them.
     pub fn show_sections(&self) {
         let imp = self.imp();
         if imp.open.take().is_none() {
@@ -1343,10 +1442,44 @@ impl HomePage {
         self.focus_remembered();
     }
 
-    /// Shows the second screen with the games of the section named `name`
-    /// (`SectionId::name`), focused on the one that last had focus there; `false` when
-    /// Home has no such section. In the Shelves layout, which has no second screen, it
-    /// focuses that section's row instead.
+    /// Goes back one screen: from a category's games to the Categories screen, focused on
+    /// that category; from the Categories screen or a section's games to the first
+    /// screen, focused on the tile that opened them.
+    pub fn go_back(&self) {
+        let from_category = matches!(self.imp().open.get(), Some(SectionId::Category(_)));
+        if !(from_category && self.show_categories()) {
+            self.show_sections();
+        }
+    }
+
+    /// Shows the Categories screen, a tile per category, focused on the one that last had
+    /// focus there; `false` while Home has no category.
+    fn show_categories(&self) -> bool {
+        let imp = self.imp();
+        if imp.sections.borrow().categories.is_empty() {
+            return false;
+        }
+        if imp.open.get().is_none() {
+            imp.first_focus
+                .borrow_mut()
+                .remember((), Item::Section(SectionId::Categories));
+        }
+        self.clear_row();
+        self.clear_cards();
+        imp.open.set(Some(SectionId::Categories));
+        imp.library_tile.set_visible(false);
+        imp.big_picture_tile.set_visible(false);
+        self.show_screen_class();
+        self.show_row();
+        self.focus_remembered();
+        true
+    }
+
+    /// Shows the second screen with the games of the section or category named `name`
+    /// (`SectionId::name`), focused on the one that last had focus there, or the
+    /// Categories screen for the Categories tile; `false` when Home has no such section.
+    /// In the one-screen layouts, which have no second screen, it focuses that section's
+    /// row instead, or the first category's for the Categories tile.
     pub fn show_section(&self, name: &str) -> bool {
         let imp = self.imp();
         let Some(id) = SectionId::from_name(name) else {
@@ -1354,6 +1487,9 @@ impl HomePage {
         };
         if self.shelves() {
             return self.focus_shelf(id);
+        }
+        if id == SectionId::Categories {
+            return self.show_categories();
         }
         let games = imp
             .sections
@@ -1363,7 +1499,15 @@ impl HomePage {
         let Some(games) = games.filter(|games| !games.is_empty()) else {
             return false;
         };
-        imp.first_focus.borrow_mut().remember((), Item::Section(id));
+        // The tile B comes back to.
+        match imp.open.get() {
+            None => imp.first_focus.borrow_mut().remember((), Item::Section(id)),
+            Some(SectionId::Categories) => imp
+                .game_focus
+                .borrow_mut()
+                .remember(RowId::Section(SectionId::Categories), Item::Section(id)),
+            Some(_) => {}
+        }
         self.clear_row();
         self.clear_cards();
         imp.open.set(Some(id));
@@ -1433,14 +1577,15 @@ impl HomePage {
 
     /// Shows the first screen's row before the Library tile, as the design starts it
     /// (`home::first_screen_row`): a tile for each section, or the Recently Played games
-    /// as cards, a divider (`.home-divider`) and a tile for each other section. It is
-    /// rebuilt only when what it shows changed.
+    /// as cards, a divider (`.home-divider`) and a tile for each other section, with the
+    /// Categories tile after Installed. On the Categories screen, a tile for each category
+    /// instead (`home::categories_row`). It is rebuilt only when what it shows changed.
     fn show_row(&self) {
-        /// What an item of the row is built from.
+        /// What an item of the row is built from: a tile's section, name and count.
         enum Shown<'a> {
             Card(&'a GameObject),
             Divider,
-            Tile(&'a Section, String),
+            Tile(SectionId, String, String),
         }
         let imp = self.imp();
         let layout = imp.layout.get();
@@ -1449,25 +1594,32 @@ impl HomePage {
         let recent = sections
             .get(SectionId::RecentlyPlayed)
             .map_or(&[][..], |(_, games)| games);
-        let items: Vec<(RowKey, Shown<'_>)> =
-            home::first_screen_row(layout.home_start, &sections.sections)
+        let row = if self.on_categories_screen() {
+            home::categories_row(&sections.categories)
                 .into_iter()
-                .filter_map(|item| match item {
-                    RowItem::Game(id) => recent
-                        .iter()
-                        .find(|game| game.id() == id)
-                        .map(|game| (RowKey::Card(card_key(game)), Shown::Card(game))),
-                    RowItem::Divider => Some((RowKey::Divider, Shown::Divider)),
-                    RowItem::Section(id) => sections.get(id).map(|(section, _)| {
-                        let title = section_title(section);
-                        let count = labelled.then(|| games_in(section));
-                        (
-                            RowKey::Tile(id, title.clone(), count),
-                            Shown::Tile(section, title),
-                        )
-                    }),
-                })
-                .collect();
+                .map(RowItem::Section)
+                .collect()
+        } else {
+            home::first_screen_row(layout.home_start, &sections.sections, &sections.categories)
+        };
+        let items: Vec<(RowKey, Shown<'_>)> = row
+            .into_iter()
+            .filter_map(|item| match item {
+                RowItem::Game(id) => recent
+                    .iter()
+                    .find(|game| game.id() == id)
+                    .map(|game| (RowKey::Card(card_key(game)), Shown::Card(game))),
+                RowItem::Divider => Some((RowKey::Divider, Shown::Divider)),
+                RowItem::Section(id) => sections.tile(id).map(|(title, count, text)| {
+                    // A category's tile says its count whatever its kind.
+                    let says_count = labelled || matches!(id, SectionId::Category(_));
+                    (
+                        RowKey::Tile(id, title.clone(), says_count.then_some(count)),
+                        Shown::Tile(id, title, text),
+                    )
+                }),
+            })
+            .collect();
         let unchanged = imp
             .row_shown
             .borrow()
@@ -1501,9 +1653,15 @@ impl HomePage {
                         imp.divider.replace(Some(divider.clone()));
                         divider.upcast()
                     }
-                    Shown::Tile(section, title) => {
-                        let tile = section_tile(section, &title, size, layout.home_section_tile);
-                        let id = section.id;
+                    Shown::Tile(id, title, count) => {
+                        let tile = section_tile(
+                            id,
+                            &title,
+                            &count,
+                            size,
+                            layout.home_section_tile,
+                            "win.home-section",
+                        );
                         tile.connect_has_focus_notify(glib::clone!(
                             #[weak(rename_to = page)]
                             self,
@@ -1572,16 +1730,19 @@ impl HomePage {
     }
 
     /// Shows the rows of the one-screen layouts. Shelves (`home::shelves`): one per
-    /// section, with its first games as cards and See All where it holds more, then the
-    /// Library row. Explore (`home::explore_rows`): the Jump Back In carousel, the row of
-    /// section tiles, then a row per other section. A row is rebuilt only when what it
-    /// shows changed.
+    /// section, with its first games as cards and See All where it holds more, one per
+    /// category with the most games, the More Categories row (`home::more_categories`),
+    /// then the Library row. Explore (`home::explore_rows`): the Jump Back In carousel, the
+    /// row of section tiles with the Categories tile, then a row per other section and
+    /// category, and the More Categories row. A row is rebuilt only when what it shows
+    /// changed.
     fn show_shelves(&self) {
-        /// What a row is built from.
+        /// What a row is built from; a tile is its section's ID, name and count.
         enum Parts<'a> {
             Featured(Vec<&'a GameObject>),
-            Tiles(Vec<&'a Section>),
+            Tiles(Vec<(SectionId, String, String)>),
             Section(home::Shelf, Vec<&'a GameObject>),
+            MoreCategories(Vec<(SectionId, String, String)>),
             Library,
         }
         let imp = self.imp();
@@ -1610,9 +1771,29 @@ impl HomePage {
             );
             Some((key, Parts::Section(shelf, games)))
         };
+        // The tiles of `ids`, each with its key.
+        let tiles = |ids: &[SectionId]| -> (Vec<RowKey>, Vec<(SectionId, String, String)>) {
+            ids.iter()
+                .filter_map(|&id| {
+                    let (title, count, text) = sections.tile(id)?;
+                    Some((
+                        RowKey::Tile(id, title.clone(), Some(count)),
+                        (id, title, text),
+                    ))
+                })
+                .unzip()
+        };
+        let more_row = |ids: &[SectionId]| -> Option<(ShelfKey, Parts<'_>)> {
+            if ids.is_empty() {
+                return None;
+            }
+            let (keys, tiles) = tiles(ids);
+            let key = (RowId::MoreCategories, gettext("More Categories"), 0, keys);
+            Some((key, Parts::MoreCategories(tiles)))
+        };
         // What each row shows: its key, and what it is built from.
         let wanted: Vec<(ShelfKey, Parts<'_>)> = if layout.home == HomeLayout::Explore {
-            home::explore_rows(&sections.sections)
+            home::explore_rows(&sections.sections, &sections.categories)
                 .into_iter()
                 .filter_map(|row| match row {
                     ExploreRow::Featured(ids) => {
@@ -1621,29 +1802,18 @@ impl HomePage {
                         Some((key, Parts::Featured(games)))
                     }
                     ExploreRow::Tiles(ids) => {
-                        let tiles: Vec<&Section> = ids
-                            .iter()
-                            .filter_map(|id| sections.get(*id).map(|(section, _)| section))
-                            .collect();
-                        let keys = tiles
-                            .iter()
-                            .map(|section| {
-                                RowKey::Tile(
-                                    section.id,
-                                    section_title(section),
-                                    Some(games_in(section)),
-                                )
-                            })
-                            .collect();
+                        let (keys, tiles) = tiles(&ids);
                         Some(((RowId::Tiles, String::new(), 0, keys), Parts::Tiles(tiles)))
                     }
                     ExploreRow::Shelf(shelf) => section_row(shelf),
+                    ExploreRow::MoreCategories(ids) => more_row(&ids),
                 })
                 .collect()
         } else {
-            home::shelves(&sections.sections)
+            home::shelves(&sections.sections, &sections.categories)
                 .into_iter()
                 .filter_map(section_row)
+                .chain(more_row(&home::more_categories(&sections.categories)))
                 .chain([(
                     (RowId::Library, gettext("Library"), 0, Vec::new()),
                     Parts::Library,
@@ -1680,6 +1850,9 @@ impl HomePage {
                         Parts::Tiles(tiles) => self.tiles_shelf(key, &tiles),
                         Parts::Section(shelf, games) => {
                             self.section_shelf(key, &shelf, &games, layout)
+                        }
+                        Parts::MoreCategories(tiles) => {
+                            self.more_categories_shelf(key, &tiles, layout)
                         }
                         Parts::Library => self.library_shelf(key, layout),
                     };
@@ -1752,8 +1925,9 @@ impl HomePage {
 
     /// The row of a section in the Shelves layout: a card for each of `games`, the
     /// section's first ones, in the shape `home::shelf_shape` gives the row, then See All
-    /// (`.shelf-more`) when the section holds more. The cards load their art once the
-    /// row is near the part of the list that shows.
+    /// (`.shelf-more`) when the section holds more. A category's row also carries
+    /// `.home-shelf-category`. The cards load their art once the row is near the part of
+    /// the list that shows.
     fn section_shelf(
         &self,
         key: ShelfKey,
@@ -1765,6 +1939,9 @@ impl HomePage {
         // Jump Back In holds few games, all on the row: it says no number.
         let count = (shelf.id != SectionId::RecentlyPlayed).then_some(shelf.total);
         let (row, carousel) = Self::shelf_frame(&key.1, count, shape);
+        if matches!(shelf.id, SectionId::Category(_)) {
+            row.add_css_class("home-shelf-category");
+        }
         let mut items: Vec<(gtk::Button, Focused)> = Vec::with_capacity(games.len() + 1);
         let mut pending = Vec::with_capacity(games.len());
         for &game in games {
@@ -1796,6 +1973,56 @@ impl HomePage {
             shape,
             size,
             pending: RefCell::new(pending),
+        }
+    }
+
+    /// The More Categories row (`.home-shelf-more-categories`): a tile for each of
+    /// `tiles`, the categories without a row of their own, by name, as the Categories
+    /// screen shows them; each opens the library at All Games filtered to its category
+    /// (`win.home-section-library`).
+    fn more_categories_shelf(
+        &self,
+        key: ShelfKey,
+        tiles: &[(SectionId, String, String)],
+        layout: ThemeLayout,
+    ) -> Shelf {
+        let shape = layout.home_tile;
+        let size = home::card_size(shape, layout.home_tile_size);
+        let (row, carousel) = Self::shelf_frame(&key.1, None, shape);
+        row.add_css_class("home-shelf-more-categories");
+        let mut items: Vec<(gtk::Button, Focused)> = Vec::with_capacity(tiles.len());
+        for (id, title, count) in tiles {
+            let tile = section_tile(
+                *id,
+                title,
+                count,
+                size,
+                layout.home_section_tile,
+                "win.home-section-library",
+            );
+            let focused = Focused::Section(*id);
+            tile.connect_has_focus_notify(glib::clone!(
+                #[weak(rename_to = page)]
+                self,
+                #[strong]
+                focused,
+                move |tile| {
+                    if tile.has_focus() {
+                        page.card_focused(tile, &focused);
+                    }
+                }
+            ));
+            carousel.append(&tile);
+            items.push((tile, focused));
+        }
+        Shelf {
+            id: RowId::MoreCategories,
+            key,
+            row,
+            items,
+            shape,
+            size,
+            pending: RefCell::default(),
         }
     }
 
@@ -2063,10 +2290,10 @@ impl HomePage {
     }
 
     /// The Explore layout's row of tiles (`.home-carousel`): a compact tile for each of
-    /// `sections` (`compact_section_tile`), which moves focus to its row, then the Library
-    /// tile and, where Steam is present, the Steam Big Picture tile, moved here from the
-    /// carousel.
-    fn tiles_shelf(&self, key: ShelfKey, sections: &[&Section]) -> Shelf {
+    /// `tiles`, the sections with the Categories tile, each its ID, name and count
+    /// (`compact_section_tile`), which moves focus to its row, then the Library tile and,
+    /// where Steam is present, the Steam Big Picture tile, moved here from the carousel.
+    fn tiles_shelf(&self, key: ShelfKey, tiles: &[(SectionId, String, String)]) -> Shelf {
         let imp = self.imp();
         let carousel = gtk::Box::builder()
             .spacing(12)
@@ -2081,10 +2308,10 @@ impl HomePage {
             .margin_top(4)
             .build();
         row.append(&sideways(&carousel));
-        let mut items: Vec<(gtk::Button, Focused)> = Vec::with_capacity(sections.len() + 2);
-        for section in sections {
-            let tile = compact_section_tile(section, &section_title(section));
-            let id = section.id;
+        let mut items: Vec<(gtk::Button, Focused)> = Vec::with_capacity(tiles.len() + 2);
+        for (id, title, count) in tiles {
+            let tile = compact_section_tile(*id, title, count);
+            let id = *id;
             tile.connect_has_focus_notify(glib::clone!(
                 #[weak(rename_to = page)]
                 self,
@@ -2310,22 +2537,26 @@ impl HomePage {
     }
 
     /// Focuses the row of section `id` in the Shelves layout, on the card that last had
-    /// focus there; `false` when Home has no such row.
+    /// focus there, or for the Categories tile the first category's row; `false` when
+    /// Home has no such row.
     fn focus_shelf(&self, id: SectionId) -> bool {
         let imp = self.imp();
         let target = imp
             .shelf_rows
             .borrow()
             .iter()
-            .find(|shelf| shelf.id == RowId::Section(id))
-            .and_then(|shelf| self.remembered_in(shelf));
-        let Some((card, focused)) = target else {
+            .find(|shelf| match id {
+                SectionId::Categories => {
+                    matches!(shelf.id, RowId::Section(SectionId::Category(_)))
+                }
+                _ => shelf.id == RowId::Section(id),
+            })
+            .and_then(|shelf| Some((shelf.id, self.remembered_in(shelf)?)));
+        let Some((row, (card, focused))) = target else {
             return false;
         };
         // Remembered outright: a window that is not active does not say its focus moved.
-        imp.shelf_focus
-            .borrow_mut()
-            .remember((), RowId::Section(id));
+        imp.shelf_focus.borrow_mut().remember((), row);
         card.grab_focus();
         self.scroll_to_shelf();
         self.show_focused(&focused);
@@ -2380,6 +2611,16 @@ impl HomePage {
                     Some((tile, focused)) => (tile.clone(), focused.clone()),
                     None => (imp.library_tile.get(), Focused::Library),
                 })
+            }
+            Some(SectionId::Categories) => {
+                let row = imp.row.borrow();
+                let items: Vec<Item> = row.iter().map(|(_, focused)| focused.item()).collect();
+                let position = imp
+                    .game_focus
+                    .borrow()
+                    .position(&RowId::Section(SectionId::Categories), &items);
+                row.get(position)
+                    .map(|(tile, focused)| (tile.clone(), focused.clone()))
             }
             Some(open) => {
                 let cards = imp.cards.borrow();
@@ -2458,7 +2699,8 @@ impl HomePage {
                 self.scroll_to_shelf();
             }
         } else if let Some(open) = imp.open.get() {
-            if let Item::Game(_) = item {
+            // A section's games, or the categories on the Categories screen.
+            if matches!(item, Item::Game(_)) || open == SectionId::Categories {
                 imp.game_focus
                     .borrow_mut()
                     .remember(RowId::Section(open), item);
@@ -2472,10 +2714,11 @@ impl HomePage {
 
     /// Shows what has focus: a game's hero, logo or title and details, under "Jump Back
     /// In" (`.home-eyebrow`) on a first screen that starts with the games; a section's
-    /// name and details, without art, or over its first game's on such a first screen,
-    /// with its first covers (`.home-preview`) where the design asks for them; the title
-    /// alone for the Library and Steam Big Picture tiles. Nothing in the Explore layout,
-    /// whose rows say it all themselves.
+    /// name and details, without art, or over its first game's on such a first screen and
+    /// on the Categories screen, with its first covers (`.home-preview`) where the design
+    /// asks for them; the Categories tile as a section whose first game is its first
+    /// category's; the title alone for the Library and Steam Big Picture tiles. Nothing in
+    /// the Explore layout, whose rows say it all themselves.
     fn show_focused(&self, focused: &Focused) {
         let imp = self.imp();
         let layout = imp.layout.get();
@@ -2483,27 +2726,45 @@ impl HomePage {
             return;
         }
         let first_screen = self.on_first_screen();
+        let categories_screen = self.on_categories_screen();
         let starts_with_games = first_screen && layout.home_start == HomeStart::Games;
         imp.eyebrow
             .set_visible(starts_with_games && matches!(focused, Focused::Game(_)));
         let sections = imp.sections.borrow();
+        let on_tile = matches!(focused, Focused::Section(_));
+        if matches!(focused, Focused::Section(SectionId::Categories)) {
+            self.show_preview(None);
+            let art = sections
+                .category_games
+                .first()
+                .and_then(|games| games.first())
+                .filter(|_| starts_with_games)
+                .and_then(hero_art);
+            let details = home::categories_details(&sections.categories);
+            drop(sections);
+            self.show_info(&gettext("Categories"), &details, art);
+            return;
+        }
         let section = match focused {
             Focused::Section(id) | Focused::SeeAll(id) => sections.get(*id),
             _ => None,
         };
-        let on_tile = matches!(focused, Focused::Section(_));
-        self.show_preview(
-            section.filter(|_| first_screen && on_tile && layout.home_section_preview),
-        );
+        self.show_preview(section.filter(|_| {
+            (first_screen || categories_screen) && on_tile && layout.home_section_preview
+        }));
         match (focused, section) {
             (Focused::Game(game), _) => self.show_game(game),
             (Focused::BigPicture, _) => self.show_title(&gettext("Steam Big Picture")),
             (Focused::Section(_) | Focused::SeeAll(_), Some((section, games))) => {
                 let art = games
                     .first()
-                    .filter(|_| starts_with_games && on_tile)
+                    .filter(|_| (starts_with_games || categories_screen) && on_tile)
                     .and_then(hero_art);
-                self.show_section_info(section, art);
+                self.show_info(
+                    &section_title(section),
+                    &home::section_details(section),
+                    art,
+                );
             }
             (Focused::Library | Focused::Section(_) | Focused::SeeAll(_), _) => {
                 self.show_title(&gettext("Library"));
@@ -2523,16 +2784,16 @@ impl HomePage {
         self.fill_details(&[]);
     }
 
-    /// Shows a section's name with its details, over `art` if it is given some.
-    fn show_section_info(&self, section: &Section, art: Option<PathBuf>) {
+    /// Shows a section's `title` with its `details`, over `art` if it is given some.
+    fn show_info(&self, title: &str, details: &[Detail], art: Option<PathBuf>) {
         let imp = self.imp();
         let generation = imp.hero_generation.get() + 1;
         imp.hero_generation.set(generation);
         imp.logo.set_paintable(gtk::gdk::Paintable::NONE);
         imp.logo.set_visible(false);
         imp.title.set_visible(true);
-        imp.title.set_label(&section_title(section));
-        self.fill_details(&home::section_details(section));
+        imp.title.set_label(title);
+        self.fill_details(details);
         self.show_art(art, None, generation);
     }
 

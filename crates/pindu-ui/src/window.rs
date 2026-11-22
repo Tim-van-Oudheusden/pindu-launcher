@@ -844,7 +844,7 @@ impl PinduWindow {
                 let genre = window.desktop_genre();
                 window.imp().genre_filter.set_label(&match &genre {
                     Some(genre) => genre.clone(),
-                    None => gettext("Genre"),
+                    None => gettext("Category"),
                 });
                 window.results_changing();
                 window.apply_filters();
@@ -861,11 +861,11 @@ impl PinduWindow {
             .filter(|genre| !genre.is_empty())
     }
 
-    /// Fills the genre menu: Any Genre, then each genre of the library.
+    /// Fills the genre menu: Any Category, then each genre of the library.
     fn update_genre_menu(&self) {
         let menu = gio::Menu::new();
         let any = gio::Menu::new();
-        any.append_item(&genre_item(&gettext("Any Genre"), ""));
+        any.append_item(&genre_item(&gettext("Any Category"), ""));
         menu.append_section(None, &any);
         let genres = gio::Menu::new();
         for genre in self.library().genres() {

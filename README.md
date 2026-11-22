@@ -61,8 +61,8 @@ widgets so it looks and behaves like the rest of GNOME.
   on-screen keyboard for search and navigation sounds, with switchable designs and your own CSS
   ([Fullscreen mode](#fullscreen-mode)).
 - **A tidy library.** Browse covers in a grid, or switch the desktop window to a list with each game's source, install
-  state, last played date and playtime. Search, sort and filter by installed, favourite, Windows or native, genre or
-  never played, in either layout. Group games into your own collections, or save a filter and search as a collection
+  state, last played date and playtime. Search, sort and filter by installed, favourite, Windows or native, category
+  or never played, in either layout. Group games into your own collections, or save a filter and search as a collection
   that keeps itself up to date (**Save Filter…** beside the filters, with suggested ones such as installed and never
   played under its arrow), jump back into recent games and hide the ones you never play. The
   **Select** button in the header bar picks several games in the grid or the list at once, to favourite, hide, add to
@@ -82,12 +82,12 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Your artwork.** Covers, banners and logos from your launchers, from your own files, or from
   [SteamGridDB](https://www.steamgriddb.com) with your own API key, which stays in the system keyring. **Change
   Artwork** on a game's page, in both modes, pages through every SteamGridDB image of each kind.
-- **Your details.** **Edit…** in a game's page menu sets its developer, genres, release year and description; what
-  you change is kept when the library is imported again, and clearing a field goes back to the launcher's.
+- **Your details.** **Edit…** in a game's page menu sets its developer, categories, release year and description;
+  what you change is kept when the library is imported again, and clearing a field goes back to the launcher's.
 - **Metadata from Wikidata, if you want it.** Turn on **Get Metadata From Wikidata** in Preferences (or in Quick
   Access's Manage section), then **Refresh Metadata** in the main menu or under that switch looks your games up on
-  [Wikidata](https://www.wikidata.org) by their Steam app ID and keeps their developer and genres, labelled in your
-  language where Wikidata has it. It is off by default, runs only when you ask, never during an import, and can be
+  [Wikidata](https://www.wikidata.org) by their Steam app ID and keeps their developer and categories, labelled in
+  your language where Wikidata has it. It is off by default, runs only when you ask, never during an import, and can be
   cancelled in Activity. Details your launchers give stay underneath, and details you enter yourself come first. A
   game's page marks each detail that came from Wikidata with **Wikidata** and the date it was fetched, and on the
   desktop a button beside it opens the game's Wikidata page.
@@ -130,9 +130,9 @@ folder it was found in, when it last synced and the problems that sync ran into.
 Play starts for a game with copies from several sources when you chose none: the installed copy from the source
 highest in the list, native copies still before Windows ones. **Move Up** and **Move Down** change it.
 
-A game's page shows the details its launcher keeps offline: its developer, genres and description from Heroic; its
-developer, release year, genres and whether it has full or partial controller support from Steam's own app cache; and
-its release year from Lutris and from Heroic's Amazon library.
+A game's page shows the details its launcher keeps offline: its developer, categories (the launchers and Wikidata call
+them genres) and description from Heroic; its developer, release year, categories and whether it has full or partial
+controller support from Steam's own app cache; and its release year from Lutris and from Heroic's Amazon library.
 
 The Flatpak has no permission for Legendary's `~/.config/legendary` or the itch app's folder (`~/.config/itch`, or
 `~/.var/app/io.itch.itch/config/itch` for the itch Flatpak), and does not ask for one: Preferences → Sources says so,
@@ -249,7 +249,12 @@ Adwaita, the look with no design ([Styling fullscreen mode](#styling-fullscreen-
 ### Getting around
 
 - **Move** with the D-pad or left stick, **open** with A and **go back** with B.
-- A **game page** shows the game's developer, genres, release year, controller support, Steam Deck rating and
+- **Categories** (the launchers and Wikidata call them genres) are on Home: in Lobby and Marquee behind a
+  **Categories** tile right after Installed, which opens a screen of categories, each opening its games; in Shelves
+  and Adwaita as rows, one for each of the eight categories with the most games and a **More Categories** row for
+  the rest, each opening the library filtered to that category. Turn them off with **Categories on Home** in
+  **Quick Access → Design** or Preferences.
+- A **game page** shows the game's developer, categories, release year, controller support, Steam Deck rating and
   description below its buttons. Once a long description has focus, Down scrolls through it and Up scrolls back to its
   start before moving on.
 - The **hint bar** at the bottom names the buttons that work on each screen, drawn with the app's own glyphs for the
@@ -356,7 +361,7 @@ while Quick Access stays open. [Fullscreen menus](docs/fullscreen-menus.md) list
     system keyring, never in settings or files; the row says whether a key is stored, or that the keyring cannot be
     used and why. Missing art is fetched once a key is saved. **Prefer SteamGridDB Art** is here too.
   - **Metadata:** **Get Metadata From Wikidata**, the same switch as in Preferences, with **Refresh Metadata** right
-    under it while it is on; that asks Wikidata for your games' developer and genres.
+    under it while it is on; that asks Wikidata for your games' developer and categories.
 - **Sound Output**, subtitled with the output in use, lists the outputs PipeWire has (speakers, a television over
   HDMI, a receiver, a Bluetooth headset) with a check on the one in use. Choose one to make it the default; WirePlumber
   keeps the choice after a restart, and games that follow the default move to it. It reads the outputs with `pw-dump`
@@ -366,12 +371,12 @@ while Quick Access stays open. [Fullscreen menus](docs/fullscreen-menus.md) list
 ### Filters
 
 On the library page, **Filters** narrows every tab to installed or not installed games, to Windows or native ones, or
-to games never played, and can show hidden games too; under **Genre**, choose one of the library's genres, or **Any
-Genre**. A **Filtered** chip beside the tabs says a filter is on, and **Clear Filters** brings the whole tab back. These
-filters are separate from the desktop window's filter row and last until the app quits. **Save Filter…** keeps the
-shown tab with these filters and the search as a collection of its own, which gets a tab, a Home section and a drawer
-entry; **Save Native Games**, **Save Windows Games** and **Save Installed and Never Played** save those shelves in one
-press.
+to games never played, and can show hidden games too; under **Category**, choose one of the library's categories, or
+**Any Category**. A **Filtered** chip beside the tabs says a filter is on, and **Clear Filters** brings the whole tab
+back. These filters are separate from the desktop window's filter row and last until the app quits. **Save Filter…**
+keeps the shown tab with these filters and the search as a collection of its own, which gets a tab, a Home section and
+a drawer entry; **Save Native Games**, **Save Windows Games** and **Save Installed and Never Played** save those
+shelves in one press.
 
 ### Performance
 

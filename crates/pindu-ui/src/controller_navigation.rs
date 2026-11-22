@@ -432,7 +432,7 @@ impl PinduWindow {
                 dialog.close();
             }
         } else if self.shows_home_section() {
-            self.imp().home_page.show_sections();
+            self.imp().home_page.go_back();
         } else {
             self.imp().navigation_view.pop();
         }

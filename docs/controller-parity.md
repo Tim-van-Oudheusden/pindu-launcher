@@ -1,9 +1,10 @@
 # Controller parity
 
 On Pindu OS fullscreen mode is the whole interface: no desktop, no keyboard. Several things the desktop window can do
-have no fullscreen route: the fullscreen game page hides developer, genres, description and the launch settings, and
-nothing in fullscreen mode reaches Preferences' Sources, Artwork, Windows and Proton pages, Add Game, backups or Play
-with Logs. Controller parity closes the gaps a console owner actually needs, starting with a spike that decides which
+have no fullscreen route: the fullscreen game page hides developer, categories, description and the launch settings,
+and nothing in fullscreen mode reaches Preferences' Sources, Artwork, Windows and Proton pages, Add Game, backups or
+Play with Logs. Controller parity closes the gaps a console owner actually needs, starting with a spike that decides
+which
 those are. It is workstream **CP** of the [product analysis](product-analysis.md#84-controller-parity-for-consoles-cp),
 milestones M6 One library (#520, #521) and M7 Launch confidence (#522 and the issues #520 files).
 
@@ -21,7 +22,7 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   - adding a game by hand, which needs a way to pick a file with a controller and is the largest of these;
   - backups, which need somewhere to go on a console;
   - Play with Logs and the other Preferences pages.
-- **Game details.** Developer, genres and description show on the fullscreen game page in every shipped design, as
+- **Game details.** Developer, categories and description show on the fullscreen game page in every shipped design, as
   they do on the desktop page; a long description can be scrolled with a controller.
 - **The SteamGridDB key.** Quick Access → Manage → Artwork. It is typed hidden with the on-screen
   keyboard's hidden-text dialog (the one Wi-Fi passphrases and Bluetooth PINs use) and stored in the keyring through
@@ -81,7 +82,7 @@ permission is added.
 | Issue | Covers | Depends on |
 | --- | --- | --- |
 | #520 List what fullscreen mode cannot do that a console needs | Spike: every desktop-only flow, the issues to file, #518's destination | This page |
-| #521 Show a game's details on the fullscreen game page | Developer, genres and description in every shipped design | |
+| #521 Show a game's details on the fullscreen game page | Developer, categories and description in every shipped design | |
 | #522 Enter the SteamGridDB key in fullscreen mode | The hidden-text dialog and the keyring | #520 |
 | #565 Turn sources on and off in fullscreen mode | Quick Access's Sources level with each source's Import switch | |
 | #568 Choose a game's Proton build in fullscreen mode | Quick Access, Performance: the default or a build on this machine, the desktop page's setting | #520 |

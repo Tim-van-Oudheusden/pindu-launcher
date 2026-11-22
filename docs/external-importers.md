@@ -134,7 +134,7 @@ The answer is the `Snapshot` written down:
 | `last_played_at` | integer | `last_played_at` | Unix seconds, UTC; the helper converts local times with `utc_offset` |
 | `genres` | list of strings | `genres` | |
 | `artwork` | object: `cover`, `hero`, `logo`, `icon`, `square` | `artwork` | Absolute paths Pindu can read; others dropped with a problem |
-| `flags` | object: `hidden`, `favourite`, `categories` | `source_flags` | Applied once, when the game first enters the library |
+| `flags` | object: `hidden`, `favourite`, `categories` | `source_flags` | Applied once, when the game first enters the library; `categories` names the launcher's own categories that hold the game, which become collections, not the game's categories in `genres` |
 | `service` | object: `service`, `service_id` | `service` | See [Grouping](#grouping) |
 | `runner`, `year` | string, integer | `runner`, `year` | |
 

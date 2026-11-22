@@ -267,6 +267,25 @@ with it. A on a section tile moves focus to that section's row. Up and Down chan
 layout; Up from the carousel reaches the top bar, and Down from the top bar comes back to the row and item
 that last had focus.
 
+**Categories on Home.** Home's categories are the genres the library's games have, hidden and removed
+games left out; **Categories on Home** (Quick Access → Design, Preferences → Fullscreen, GSettings
+`fullscreen-home-categories`, on by default) turns them off in every layout, as does a library with no
+genre. In the layouts with two screens the first screen's row has a **Categories** tile right after
+Installed, `.home-section-tile.section-categories` (its art is `data/home/categories.svg`; labelled, a glyph,
+"Categories" and the number of categories). Focused, it shows what a focused section does, its first
+category's first game standing in for the section's. A on it opens the **Categories screen**: `.home` is
+`.home-sections` and `.home-categories` while it shows, and its row holds a tile per category, by name,
+`.home-section-tile.section-category`, which looks like a collection's tile (`.home-collection-tile` when
+not labelled) with the category's name and number of games, over the focused category's first game's art. A
+on a category opens its games, `.home-games`, as for a section. B goes back one screen: from a category's
+games to the Categories screen, on that category, then to the first screen, on the Categories tile. In the
+Shelves and Explore layouts the eight categories with the most games (most first, ties by name) are rows
+after the collections' rows, `.home-shelf.home-shelf-category`, with See All opening the library at All Games
+filtered to that category; the others share one last row before the Library row, **More Categories**,
+`.home-shelf.home-shelf-more-categories`, a `.section-category` tile each, by name, which opens the library
+the same way. The Explore layout's row of compact tiles has one Categories tile after the collections' tiles,
+which moves focus to the first category's row. These names are added; the contract's version does not change.
+
 A design with `"home-background-choice": true` offers **Quick Access → Design → Background**, which
 switches between **Red Ribbons** (the default) and **Blue Station**; Lobby is the shipped one that does.
 Use Up and Down to move between Background and the other Design settings. The choice applies immediately
@@ -341,7 +360,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.game-hero` | The art at the top, with its `.hero-gradient` |
 | `.game-actions` | The row of buttons; `.game-play` is Play |
 | `.playing-card` | The Playing Now card while the game runs; the menu drawer and the top of Quick Access show it too, with `.session-time`, how long the game has run. As a banner (a panel with `.playing-card-banner`) it holds the game's art (`.playing-card-art`) under its text in a `.playing-card-scrim`, and is `.no-art` while it has none |
-| `.game-about` | The About group: the developer, genres, release year, controller support and a Steam game's Steam Deck rating, in a `.boxed-list` whose rows take focus |
+| `.game-about` | The About group: the developer, categories, release year, controller support and a Steam game's Steam Deck rating, in a `.boxed-list` whose rows take focus |
 | `.game-description` | The description; it takes focus, and Up and Down scroll through it while it has it |
 | `.launch-overlay` | The overlay while a game starts: the game's logo (`.launch-logo`), or its title (`.title-1`) when it has none, over a spinner, the status line and, after a while, Cancel. Without a design it stays dark in the light style too, so a logo made for a dark backdrop shows on it |
 | `.launch-logo` | The logo on `.launch-overlay`, contained and centred in 480×160, unless you grow it with `min-width`/`min-height`; it stands in for the title, which it carries as its accessible label |
@@ -375,7 +394,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.design-cards` | The row of design cards at the top of Quick Access's Design section, in a `.design-cards-scroller` that scrolls it sideways and runs to the panel's end edge; the section's page is `.design-section` |
 | `.design-card` | A design's card in that row, a toggle button, `:checked` for the design in force and insensitive for a design that needs a newer Pindu launcher: `.design-preview` (the design's `preview` clipped to rounded corners, or empty in `--card-bg-color` without one; Adwaita's is built in) with `.design-check` over it while it is in force, then `.design-name`, and for a design it cannot apply `.design-reason` under it |
 | `.options-sheet` | A game's options at the bottom |
-| `.panel-heading` | A small heading in a panel, over a group of rows or tiles: the page card's "For This Page", the menu's Collections and Windows, Quick Access's Running, Notifications, Variant, Artwork, Metadata, Copy Order, Genre and Proton, the shown section's name on a rail (`.panel-section-title`), and the headings of its levels (Bluetooth's, Network's, Library Health's, Proton's and What Each Button Does's). Each is also libadwaita's `.heading`, but the page card's, which is `.caption`, and the section's name, which is `.title-3` |
+| `.panel-heading` | A small heading in a panel, over a group of rows or tiles: the page card's "For This Page", the menu's Collections and Windows, Quick Access's Running, Notifications, Variant, Artwork, Metadata, Copy Order, Category and Proton, the shown section's name on a rail (`.panel-section-title`), and the headings of its levels (Bluetooth's, Network's, Library Health's, Proton's and What Each Button Does's). Each is also libadwaita's `.heading`, but the page card's, which is `.caption`, and the section's name, which is `.title-3` |
 | `.navigation-sidebar > row` | A row in any of the three |
 | `.hint-bar` | The controller hints at the bottom; each `.hint` has `.hint-glyph`s and a `.hint-label` |
 | `.search-keyboard` | The on-screen keyboard; `.osk-key` a key, `.osk-key.cursor` the one under the cursor |

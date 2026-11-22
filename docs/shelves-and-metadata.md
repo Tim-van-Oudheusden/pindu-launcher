@@ -1,8 +1,9 @@
 # Shelves and metadata
 
 A large library needs more ways to slice it than source, install state and platform, and the metadata Pindu has is
-thin and uneven across sources: Heroic fills developer and, for some stores, genres and a description; Steam fills
-developer; and each sync overwrites those columns, so a value from anywhere else cannot live there. This workstream
+thin and uneven across sources: Heroic fills developer and, for some stores, categories (the launchers and Wikidata
+call them genres) and a description; Steam fills developer; and each sync overwrites those columns, so a value from
+anywhere else cannot live there. This workstream
 saves filters as shelves, reads the metadata the launchers already hold, keeps every value with its origin, and only
 then considers an online provider. It is workstream **MD** of the
 [product analysis](product-analysis.md#85-shelves-and-metadata-md), milestones M6 One library (#524, #525), M7 Launch
@@ -18,24 +19,32 @@ In this order, local data first:
    computed, not stored. Collections already appear in the desktop sidebar, as fullscreen tabs and as Home sections,
    so a saved filter becomes a shelf there, renamed and deleted like a collection. Useful shelves that need no new
    data (installed and never played, recently added, native, Windows, no longer listed by its source, needs a
-   permission) are offered as suggestions the user can save, not hard-coded sections. A genre filter and a
+   permission) are offered as suggestions the user can save, not hard-coded sections. A category filter and a
    never-played filter join both shells and can be saved.
 
    As built (#524): a saved filter is a `collections` row with its view, filter toggles and normalised search in
    `saved_filters` (migration 0007); `pindu_core::saved_filters` computes its members with the library views' own
-   matching each time the library loads, so games cannot be added to it by hand and a source's categories never land
-   in it. Saving is offered while a toggle or a search narrows a view other than Hidden or another saved filter:
+   matching each time the library loads, so games cannot be added to it by hand and a launcher's own categories never
+   land in it. Saving is offered while a toggle or a search narrows a view other than Hidden or another saved filter:
    **Save Filter…** in the desktop filter row and in fullscreen Quick Access's Filters, which name it after what it
    shows. The suggestions offered are **Native Games**, **Windows Games** and, since #525, **Installed and Never
    Played**; the others need a filter that does not exist yet (added recently, no longer listed, needs a permission).
 
-   As built (#525): the filters gain **Never Played** (games with no last played time) and a genre, matched ignoring
-   case against the game's resolved genres. The desktop filter row has a **Never Played** toggle and a **Genre** menu
-   (Any Genre, then each genre of the library); fullscreen Quick Access's Filters has a **Never Played** switch and a
-   **Genre** list with a check on the one chosen, reached with the D-pad like every row there. `pindu_core::library`
-   matches them (`Filters::never_played`, `Filters::genre`) and lists the genres to offer (`genres`); saved filters
-   keep both in `saved_filters` (migration 0010), and backups carry them as `never_played` and `genre` beside the other
-   toggles.
+   As built (#525): the filters gain **Never Played** (games with no last played time) and a category, matched
+   ignoring case against the game's resolved categories. The desktop filter row has a **Never Played** toggle and a
+   **Category** menu (Any Category, then each category of the library); fullscreen Quick Access's Filters has a
+   **Never Played** switch and a **Category** list with a check on the one chosen, reached with the D-pad like every
+   row there. `pindu_core::library` matches them (`Filters::never_played`, `Filters::genre`) and lists the categories
+   to offer (`genres`); saved filters keep both in `saved_filters` (migration 0010), and backups carry them as
+   `never_played` and `genre` beside the other toggles.
+
+   As built (#744): fullscreen Home shows the genres as **categories** (`pindu_core::sections::categories`, the
+   genres of the games the library shows, hidden and removed games left out). The designs whose Home is rows of
+   games (Shelves, Adwaita) get a row for each of the eight categories with the most games, after the
+   collections, and a **More Categories** row for the rest; the designs with two screens (Lobby, Marquee) get a
+   **Categories** tile after Installed that opens a screen of category tiles. A category opens the library at All
+   Games filtered to it (`Filters::genre`). **Categories on Home** (`fullscreen-home-categories`) turns them off.
+   Nothing new is stored: the code and the stored data keep "genre".
 
    Backups (#600) carry each saved filter as a collection entry with no games and a `filter` beside it: its view,
    toggles and search, with a view of a collection naming that collection, since IDs differ between libraries.
@@ -44,13 +53,13 @@ In this order, local data first:
    filter gains no stored games. A filter whose view this version does not know imports as an empty plain collection.
    This extends backup format 2 (#509), unreleased until then, so format 1 and 2 backups still import.
 2. **Metadata the launchers already hold.** A spike lists, per source, the fields available offline and how reliable
-   they are in real libraries: release year, genres, controller support and Steam Deck compatibility from Steam's
+   they are in real libraries: release year, categories, controller support and Steam Deck compatibility from Steam's
    binary `appinfo.vdf`, which the Steam importer already parses, and `year` from Lutris's `pga.db`. The fields it
    finds reliable are imported offline, with fixture tests.
 
    As built (#527), following #523's write-up: Steam's `appinfo.vdf` gives the release year (the UTC year of
-   `original_release_date`, else `steam_release_date`; 0 means unknown), genres (the `genres` IDs named from a fixed
-   table: 1 Action, 2 Strategy, 3 RPG, 4 Casual, 9 Racing, 18 Sports, 23 Indie, 25 Adventure, 28 Simulation, 29
+   `original_release_date`, else `steam_release_date`; 0 means unknown), categories (Steam's `genres` IDs named from a
+   fixed table: 1 Action, 2 Strategy, 3 RPG, 4 Casual, 9 Racing, 18 Sports, 23 Indie, 25 Adventure, 28 Simulation, 29
    Massively Multiplayer; Free To Play, Early Access and unknown IDs are dropped) and controller support (`full` or
    `partial`; absent means not declared, not none). Lutris gives `year` and Heroic's Amazon library the year of
    `extra.releaseDate`. All of them become source values in `game_metadata` (fields `release-year` and
@@ -58,7 +67,7 @@ In this order, local data first:
    Steam's genre names translated. The year also stays in the source details, where grouping copies compares it.
 3. **Metadata with its origin.** A table holds values by field with their origin (source, provider, user) and time.
    Reading prefers the user's value, then a provider's, then the source's; a sync changes source values only. The user
-   can edit developer, genres, description and release year from the desktop game page (and from fullscreen mode if
+   can edit developer, categories, description and release year from the desktop game page (and from fullscreen mode if
    #520 says a console needs it), and that value survives syncs and refreshes.
 
    As built (#526): `game_metadata` (migration 0008) holds one row per game, field (`developer`, `genres`,
@@ -74,13 +83,14 @@ In this order, local data first:
    user's value cannot turn it into the source's. Release year and controller support joined the table with #527.
 
    Backups (#619) carry the user's and providers' values in a `metadata` list, each with the game's per-source ID, its
-   field, origin, value (genres as a list, a release year as a number, a Steam Deck rating as its object) and time; a
+   field, origin, value (categories as a list, a release year as a number, a Steam Deck rating as its object) and
+   time; a
    source's values are left out, as the next sync writes them. A restore adds a value only where that origin has none
    for the field in this library, keeps the time it was set and counts it, so it never overwrites a value already
    there; a value for a game the library lacks is skipped and the game counted as missing. This extends backup format
    2 (#509), unreleased until then, so format 1 and 2 backups still import.
 
-   As built (#530): the desktop **Edit…** dialog (a game page's ⋮ menu) has a Details group with Developer, Genres
+   As built (#530): the desktop **Edit…** dialog (a game page's ⋮ menu) has a Details group with Developer, Categories
    (separated by commas) and Description, filled with what the game shows; as #520 decided, fullscreen mode has no
    edit. Saving goes through `pindu_core::metadata::edit_by_user(store, game, shown, edited, now)`, which writes user
    values for every copy of the game's group: a field the user left as shown keeps each copy's own user value, a
@@ -114,9 +124,10 @@ In this order, local data first:
    Wikidata's `P1733`), one after another, to `query.wikidata.org` through the app's soup3 stack, with a User-Agent
    naming the project's address and the SteamGridDB client's 429 back-off (`steamgriddb::retry_delay`, following
    `Retry-After`).
-   Each answer gives developers (`P178`) and genres (`P136`), labelled in the UI's languages, then `en`, then `mul`; a
-   value with no label in those is left out. Developers become one value, joined with commas, genres a sorted list,
-   both stored with origin `provider` through `Store::set_metadata`, timed when they were fetched (a refresh that
+   Each answer gives developers (`P178`) and Wikidata's genres (`P136`), labelled in the UI's languages, then `en`,
+   then `mul`; a value with no label in those is left out. Developers become one value, joined with commas,
+   categories a sorted list, both stored with origin `provider` through `Store::set_metadata`, timed when they were
+   fetched (a refresh that
    finds the same value keeps its earlier time), so a user's value still wins and a sync leaves them alone. The
    origin `provider` means Wikidata, the only provider. A game Wikidata has no item for keeps what it had. The run
    is a task in Activity (and a toast with Cancel on the desktop); each batch is stored as it arrives, so a

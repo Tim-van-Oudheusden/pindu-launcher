@@ -34,7 +34,7 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
 
     Adw.PreferencesGroup {
       title: _("Metadata");
-      description: _("Refresh Metadata, in the main menu and in Quick Access, looks your games up on Wikidata by their Steam app ID for their developer and genres. Details you enter yourself always come first.");
+      description: _("Refresh Metadata, in the main menu and in Quick Access, looks your games up on Wikidata by their Steam app ID for their developer and categories. Details you enter yourself always come first.");
 
       Adw.SwitchRow wikidata_row {
         title: _("Get Metadata From Wikidata");
@@ -303,6 +303,12 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
       Adw.SwitchRow hint_bar_row {
         title: _("Button Hints");
         subtitle: _("Show what each controller button does at the bottom");
+      }
+
+      // On the `fullscreen-home-categories` setting, as Quick Access's Categories on Home.
+      Adw.SwitchRow home_categories_row {
+        title: _("Categories on Home");
+        subtitle: _("A row for each category in the designs whose Home is rows of games, and a Categories tile in the others");
       }
 
       Adw.SwitchRow sounds_row {

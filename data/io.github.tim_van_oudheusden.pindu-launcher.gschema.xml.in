@@ -60,7 +60,7 @@
     <key name="wikidata-metadata" type="b">
       <default>false</default>
       <summary>Get metadata from Wikidata</summary>
-      <description>Let Refresh Metadata look games up on Wikidata by their Steam app ID for their developer and genres. Nothing is fetched until you ask, and never during an import.</description>
+      <description>Let Refresh Metadata look games up on Wikidata by their Steam app ID for their developer and categories. Nothing is fetched until you ask, and never during an import.</description>
     </key>
     <key name="show-titles" type="b">
       <default>true</default>
@@ -203,6 +203,11 @@
       <default>false</default>
       <summary>Hold to confirm in fullscreen mode</summary>
       <description>Make Power Off, Restart, Forget and Stop need the controller's confirm button held down for a second in fullscreen mode, with the hold's progress shown. The keyboard and the pointer act at once.</description>
+    </key>
+    <key name="fullscreen-home-categories" type="b">
+      <default>true</default>
+      <summary>Categories on fullscreen Home</summary>
+      <description>Show the library's categories on fullscreen Home: as rows of their own in the designs whose Home is rows of games, behind a Categories tile in the others. Off, Home shows neither.</description>
     </key>
     <key name="fullscreen-custom-style" type="b">
       <default>false</default>

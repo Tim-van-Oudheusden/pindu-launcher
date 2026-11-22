@@ -110,7 +110,8 @@ impl PinduWindow {
         let imp = self.imp();
         let navigation_view = &imp.navigation_view;
         let page = navigation_view.visible_page();
-        // Home's second screen, a section's games, goes back to its first like a page.
+        // Home's screens past the first, a section's games and the categories, go back a
+        // screen like a page.
         let page_below = page
             .as_ref()
             .and_then(|page| navigation_view.previous_page(page))

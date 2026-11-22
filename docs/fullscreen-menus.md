@@ -212,7 +212,7 @@ others) with a target per option, so choosing an option writes the setting at on
 
 The choice rows are Design's Background, Background Blur, Background Dim, Cover Size and Text Size, and Controller's
 Button Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate and Stick Dead Zone. Lists whose length varies or
-whose names are long stay lists of rows: the designs, Variant, Genre, the Proton builds and the sound outputs.
+whose names are long stay lists of rows: the designs, Variant, Category, the Proton builds and the sound outputs.
 
 ### Design's cards
 

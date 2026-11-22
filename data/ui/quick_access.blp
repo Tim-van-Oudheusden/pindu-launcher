@@ -1222,6 +1222,11 @@ template $PinduQuickAccess: Box {
                     title: _("Button Hints");
                     subtitle: _("Show what each controller button does at the bottom");
                   }
+
+                  // On the `fullscreen-home-categories` setting.
+                  Adw.SwitchRow home_categories_row {
+                    title: _("Categories on Home");
+                  }
                 }
 
                 // On the `fullscreen-custom-style` setting; insensitive, saying
@@ -2191,7 +2196,7 @@ template $PinduQuickAccess: Box {
           }
 
           Label {
-            label: _("Genre");
+            label: _("Category");
             xalign: 0;
 
             styles [
@@ -2200,7 +2205,7 @@ template $PinduQuickAccess: Box {
             ]
           }
 
-          // Any Genre, then each genre of the library, with a check on the one chosen;
+          // Any Category, then each category of the library, with a check on the one chosen;
           // filled as the panel shows Filters.
           ListBox genres {
             selection-mode: none;

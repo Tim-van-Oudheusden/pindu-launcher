@@ -31,6 +31,7 @@
     <file compressed="true">style.css</file>
     <!-- The art of fullscreen Home's section tiles, by section name (`SectionId::name`). -->
     <file preprocess="xml-stripblanks">home/bottles.svg</file>
+    <file preprocess="xml-stripblanks">home/categories.svg</file>
     <file preprocess="xml-stripblanks">home/desktop.svg</file>
     <file preprocess="xml-stripblanks">home/faugus.svg</file>
     <file preprocess="xml-stripblanks">home/favourites.svg</file>
