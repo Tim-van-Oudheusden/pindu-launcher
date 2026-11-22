@@ -6,7 +6,6 @@
 //! sandbox (see `proton_launch`).
 
 use std::rc::Rc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use adw::prelude::*;
 use gettextrs::gettext;
@@ -174,7 +173,7 @@ pub fn play(
                         // A game whose session keeps the app up keeps it up until its
                         // outcome and log are written too.
                         recording.follow(child, log, tracks.then(|| app.hold()));
-                        library.mark_played(&game.id, now()).await;
+                        library.mark_played(&game.id, session_service::now()).await;
                         starting(&game.title, start)
                     }
                     Err(error) => {
@@ -327,7 +326,7 @@ fn hand_to_launcher(
         glib::spawn_future_local(async move {
             recording.end(ending).await;
             if ending == Ending::HandedOff {
-                library.mark_played(&id, now()).await;
+                library.mark_played(&id, session_service::now()).await;
             }
             drop(hold);
             if exit {
@@ -493,10 +492,4 @@ pub fn open_big_picture(
             _ => {}
         }
     });
-}
-
-pub(crate) fn now() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |elapsed| elapsed.as_secs() as i64)
 }

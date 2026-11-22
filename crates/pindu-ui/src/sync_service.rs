@@ -3,7 +3,6 @@
 
 use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use gettextrs::gettext;
 use gtk::glib;
@@ -18,6 +17,7 @@ use pindu_core::sources::sync::{SyncSummary, Tally, sync_all};
 use pindu_core::store::Store;
 use pindu_core::tasks::TaskKind;
 
+use crate::session_service;
 use crate::sources::source_name;
 use crate::task_service::TaskService;
 
@@ -218,9 +218,7 @@ fn run_sync() -> Result<(SyncSummary, bool), String> {
         .source_states()
         .map(|states| is_first_sync(&states))
         .map_err(|error| error.to_string())?;
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |elapsed| elapsed.as_secs() as i64);
+    let now = session_service::now();
     // GLib reads the local time zone; the core has none of its own.
     let utc_offset = glib::DateTime::now_local().map_or(0, |local| local.utc_offset().as_seconds());
     sync_all(&store, &HostDirs::from_env(), now, utc_offset)

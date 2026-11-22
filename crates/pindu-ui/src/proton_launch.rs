@@ -38,11 +38,11 @@ use pindu_core::sources::location::HostDirs;
 use pindu_core::umu::{self, RuntimeSetup};
 
 use crate::config::APP_ID;
-use crate::launch_service::{now, starting};
+use crate::launch_service::starting;
 use crate::log_service::{self, LaunchLog};
 use crate::outcome_service;
 use crate::save_service;
-use crate::session_service::SessionService;
+use crate::session_service::{SessionService, now};
 
 /// How often the setup dialog's progress moves.
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(250);

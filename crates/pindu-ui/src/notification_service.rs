@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use pindu_core::notifications::{Kind, Log, Notification, Target};
 
-use crate::launch_service::now;
+use crate::session_service::now;
 
 /// Something the shells do when the log changes.
 type Listener = Box<dyn Fn()>;

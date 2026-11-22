@@ -27,6 +27,7 @@ use crate::file_service::{self, PickedImage};
 use crate::library_service::LibraryService;
 use crate::proton_choice::{FirstChoice, ProtonChoice};
 use crate::proton_launch;
+use crate::session_service;
 use crate::steamgriddb_service::steam_app_id;
 use crate::window::PinduWindow;
 
@@ -1048,9 +1049,7 @@ pub(crate) fn save_to_store(
     defaults: Defaults,
 ) -> Result<bool, String> {
     let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |elapsed| elapsed.as_secs() as i64);
+    let now = session_service::now();
     let (id, added) = match (mode, form) {
         (Mode::Add, Some(form)) => (
             manual::add_game(&store, &form, &defaults, now).map_err(|e| e.to_string())?,
