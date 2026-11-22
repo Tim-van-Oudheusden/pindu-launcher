@@ -17,14 +17,14 @@
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/desktop-1-library.webp" width="820" alt="Desktop library with a sidebar for library views, sources with their launcher icons and a Roguelikes collection, filter chips above the cover grid, and a Jump Back In row with Balatro, Slay the Spire 2, Slay the Spire and Drop Duchy">
+  <img src="docs/screenshots/desktop-1-library.webp" width="820" alt="Desktop library with a sidebar for library views, sources with their launcher icons and the Racing and Roguelikes collections, a header bar with search, view, sort, Fullscreen Mode and main menu buttons, filter chips above the cover grid, and a Jump Back In row with Aurora Drift, Ember Hollow, Glass Cathedral and Orbit Tailor">
 </p>
 
 <p align="center">
   <img src="docs/screenshots/desktop-2-game-page.webp" width="405" alt="Slay the Spire 2's game page with its banner art, a Play button, 129 hours of Steam playtime and About details from Steam">
-  <img src="docs/screenshots/desktop-3-play-history.webp" width="405" alt="Play History with the games played this week and earlier, each with its last-played date and playtime">
+  <img src="docs/screenshots/desktop-3-play-history.webp" width="405" alt="Play History with the games played today, this week and earlier, each with its last-played date and playtime">
   <br>
-  <img src="docs/screenshots/desktop-4-collection.webp" width="405" alt="The Roguelikes collection with covers for Balatro, Slay the Spire 2, Slay the Spire, The Loopler, The Bazaar, Streets of Rogue, Slots &amp; Daggers and CloverPit">
+  <img src="docs/screenshots/desktop-4-collection.webp" width="405" alt="The Roguelikes collection with covers for Ember Hollow and Moss &amp; Machine">
   <img src="docs/screenshots/desktop-5-game-page-dark.webp" width="405" alt="Balatro's game page in dark style, with its logo over the banner art and its game details">
 </p>
 
@@ -205,8 +205,8 @@ For the development build, use `io.github.tim_van_oudheusden.pindu-launcher-deve
 
 A controller-first view of the same library, for the couch, a TV or a Steam Deck.
 
-**To open it:** press <kbd>F11</kbd>, start the app with `--fullscreen`, or turn on **Start in Fullscreen Mode** in
-Preferences.
+**To open it:** click the **Fullscreen Mode** button in the header bar, press <kbd>F11</kbd>, start the app with
+`--fullscreen`, or turn on **Start in Fullscreen Mode** in Preferences.
 
 Fullscreen mode comes in four looks, picked in **Quick Access → Design**: three designs that ship with the app and
 Adwaita, the look with no design ([Styling fullscreen mode](#styling-fullscreen-mode)).

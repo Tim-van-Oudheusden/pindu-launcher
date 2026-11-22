@@ -2,9 +2,10 @@
 //! The window goes fullscreen and the mode follows its `fullscreened` property: top bars
 //! and the sidebar hide, type grows, controllers are listened to, focus is kept on the
 //! page, Home is the first page, with the library (in tabs) and game pages above it.
-//! Entering and leaving go through `win.fullscreen-mode` (main menu, F11, `--fullscreen`,
-//! Guide) and `win.leave-fullscreen` (the menu's power dock's Exit Fullscreen Mode); Esc goes
-//! through `win.escape`, which goes back from a Home section's games first.
+//! Entering and leaving go through `win.fullscreen-mode` (the header bar's Fullscreen Mode
+//! button, F11, `--fullscreen`, Guide) and `win.leave-fullscreen` (the menu's power dock's Exit
+//! Fullscreen Mode); Esc goes through `win.escape`, which goes back from a Home section's games
+//! first.
 //! Keys stand in for the controller's other buttons (`pindu_core::keys`).
 
 use std::cell::RefCell;

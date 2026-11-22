@@ -222,6 +222,17 @@ template $PinduWindow: Adw.ApplicationWindow {
                         }
 
                         [end]
+                        Button {
+                          icon-name: "view-fullscreen-symbolic";
+                          tooltip-text: _("Fullscreen Mode");
+                          action-name: "win.fullscreen-mode";
+
+                          accessibility {
+                            label: _("Fullscreen Mode");
+                          }
+                        }
+
+                        [end]
                         MenuButton {
                           icon-name: "view-sort-descending-symbolic";
                           tooltip-text: _("Sort");
@@ -905,11 +916,6 @@ menu primary_menu {
     item {
       label: _("Show _Hidden Games");
       action: "win.show-hidden";
-    }
-
-    item {
-      label: _("_Fullscreen Mode");
-      action: "win.fullscreen-mode";
     }
 
     item {
