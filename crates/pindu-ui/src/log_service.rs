@@ -15,7 +15,7 @@ use pindu_core::launch::{Command, Start};
 use pindu_core::launch_outcome;
 use pindu_core::logs::{self, KEEP, SHORT_LOG_BYTES, Tail};
 use pindu_core::model::GameId;
-use pindu_core::paths;
+use pindu_core::paths::default_data_home;
 
 /// The log a launch keeps: a full one, or a short one.
 #[derive(Debug)]
@@ -97,7 +97,7 @@ impl ShortLog {
     /// Starts a new short log for a game: makes its logs folder, writes the header and
     /// drops the short logs beyond the newest few. Blocks; run it on a worker thread.
     fn create(id: &GameId, title: &str, command: &Command) -> io::Result<Self> {
-        let dir = logs::game_logs_dir(&data_home(), id);
+        let dir = logs::game_logs_dir(&default_data_home(), id);
         fs::create_dir_all(&dir)?;
         let (stamp, started) = start_stamps()?;
         let mut names = file_names(&dir)?;
@@ -144,7 +144,7 @@ impl GameLog {
         proton: bool,
         start: Start,
     ) -> io::Result<Self> {
-        let dir = logs::game_logs_dir(&data_home(), id);
+        let dir = logs::game_logs_dir(&default_data_home(), id);
         fs::create_dir_all(&dir)?;
         let (stamp, started) = start_stamps()?;
         let mut names = file_names(&dir)?;
@@ -238,7 +238,7 @@ pub fn could_not_keep(title: &str) -> String {
 
 /// A game's newest log, if it has one. Blocks; run it on a worker thread.
 pub fn latest(id: &GameId) -> Option<PathBuf> {
-    let dir = logs::game_logs_dir(&data_home(), id);
+    let dir = logs::game_logs_dir(&default_data_home(), id);
     let names = file_names(&dir).ok()?;
     logs::latest_log(&names).map(|name| dir.join(name))
 }
@@ -246,7 +246,7 @@ pub fn latest(id: &GameId) -> Option<PathBuf> {
 /// The log named `name` of one launch of the game with `id`, while it is kept. Blocks;
 /// run it on a worker thread.
 pub fn launch_log(id: &GameId, name: &str) -> Option<PathBuf> {
-    logs::launch_log(&data_home(), id, name).filter(|path| path.is_file())
+    logs::launch_log(&default_data_home(), id, name).filter(|path| path.is_file())
 }
 
 /// The names of the files in `dir`.
@@ -254,13 +254,4 @@ pub(crate) fn file_names(dir: &Path) -> io::Result<Vec<String>> {
     fs::read_dir(dir)?
         .map(|entry| Ok(entry?.file_name().to_string_lossy().into_owned()))
         .collect()
-}
-
-/// `$XDG_DATA_HOME`, or its default under the home folder.
-pub(crate) fn data_home() -> PathBuf {
-    let xdg_data_home = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from);
-    paths::data_home(
-        xdg_data_home.as_deref(),
-        &std::env::home_dir().unwrap_or_default(),
-    )
 }

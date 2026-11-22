@@ -16,14 +16,14 @@ use pindu_core::diagnostics::{
 };
 use pindu_core::launch::Command;
 use pindu_core::model::GameId;
-use pindu_core::paths::default_library_db_path;
+use pindu_core::paths::{default_data_home, default_library_db_path};
 use pindu_core::report_screen::{self, KEEP};
 use pindu_core::store::Store;
 use pindu_core::system::update::{OS_RELEASE_FILES, OsRelease};
 use pindu_core::umu;
 
 use crate::config::{APP_ID, VERSION};
-use crate::log_service::{self, data_home, file_names};
+use crate::log_service::{self, file_names};
 use crate::{permission_service, proton_launch, session_service};
 
 /// How long `gamescope --version` may take before the report goes without it.
@@ -63,7 +63,7 @@ pub async fn save_report(report: String) -> Result<PathBuf, String> {
 }
 
 fn write_report(report: &str) -> io::Result<PathBuf> {
-    let dir = report_screen::reports_dir(&data_home());
+    let dir = report_screen::reports_dir(&default_data_home());
     fs::create_dir_all(&dir)?;
     let now = glib::DateTime::now_local().map_err(io::Error::other)?;
     let stamp = now.format("%Y-%m-%dT%H-%M-%S").map_err(io::Error::other)?;
