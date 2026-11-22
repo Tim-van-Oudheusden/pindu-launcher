@@ -342,7 +342,8 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.playing-card` | The Playing Now card while the game runs; the menu drawer and the top of Quick Access show it too, with `.session-time`, how long the game has run. As a banner (a panel with `.playing-card-banner`) it holds the game's art (`.playing-card-art`) under its text in a `.playing-card-scrim`, and is `.no-art` while it has none |
 | `.game-about` | The About group: the developer, genres, release year, controller support and a Steam game's Steam Deck rating, in a `.boxed-list` whose rows take focus |
 | `.game-description` | The description; it takes focus, and Up and Down scroll through it while it has it |
-| `.launch-overlay` | The overlay while a game starts |
+| `.launch-overlay` | The overlay while a game starts: the game's logo (`.launch-logo`), or its title (`.title-1`) when it has none, over a spinner, the status line and, after a while, Cancel. Without a design it stays dark in the light style too, so a logo made for a dark backdrop shows on it |
+| `.launch-logo` | The logo on `.launch-overlay`, contained and centred in 480×160, unless you grow it with `min-width`/`min-height`; it stands in for the title, which it carries as its accessible label |
 
 **Panels and bars**
 

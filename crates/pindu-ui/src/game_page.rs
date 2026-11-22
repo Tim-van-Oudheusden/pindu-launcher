@@ -73,7 +73,7 @@ mod imp {
         #[template_child]
         pub launch_overlay: TemplateChild<gtk::Box>,
         #[template_child]
-        pub launch_art: TemplateChild<gtk::Picture>,
+        pub launch_logo: TemplateChild<gtk::Picture>,
         #[template_child]
         pub launch_title: TemplateChild<gtk::Label>,
         #[template_child]
@@ -252,9 +252,11 @@ impl GamePage {
         self.set_title(title);
         imp.title.set_label(title);
         imp.launch_title.set_label(title);
-        // The logo stands in for the title once it loads.
-        imp.logo
-            .update_property(&[gtk::accessible::Property::Label(title)]);
+        // The logo stands in for the title once it loads, on the page and on the starting
+        // screen.
+        for logo in [&*imp.logo, &*imp.launch_logo] {
+            logo.update_property(&[gtk::accessible::Property::Label(title)]);
+        }
     }
 
     fn show(&self, object: &GameObject, library: &LibraryService) {
@@ -422,18 +424,18 @@ impl GamePage {
             if let Some(path) = hero.or(cover)
                 && let (Ok(texture), Some(page)) = (textures::load(&path).await, page.upgrade())
             {
-                let imp = page.imp();
-                imp.hero.set_paintable(Some(&texture));
-                imp.launch_art.set_paintable(Some(&texture));
-                imp.launch_art.set_visible(true);
+                page.imp().hero.set_paintable(Some(&texture));
             }
             if let Some(path) = logo
                 && let (Ok(texture), Some(page)) = (textures::load(&path).await, page.upgrade())
             {
                 let imp = page.imp();
-                imp.logo.set_paintable(Some(&texture));
-                imp.logo.set_visible(true);
+                for logo in [&*imp.logo, &*imp.launch_logo] {
+                    logo.set_paintable(Some(&texture));
+                    logo.set_visible(true);
+                }
                 imp.title.set_visible(false);
+                imp.launch_title.set_visible(false);
             }
         });
         if let Some(application) = gio::Application::default().and_downcast::<PinduApplication>() {
