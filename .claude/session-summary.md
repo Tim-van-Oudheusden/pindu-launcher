@@ -36,6 +36,12 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   System; Artwork and Metadata headings in Manage, Refresh Metadata under the Wikidata switch through a Blueprint
   binding). Core: `QuickAccessEntry::{NavigationSounds, Artwork, Metadata}` keep `sections()` right; `Shown.metadata`
   went. Not seen: the SteamGridDB key row's keyboard (the harness has no keyring, so the row is insensitive there).
+- 2026-11-22, #721 (stacked on #720): Design opens on a row of design cards; `theme.json`'s optional `"preview"` is
+  resolved by `themes::file_inside` (shared with variant stylesheets), a bad one is logged from
+  `Discovery::problems` and the design still lists. The shipped `preview.svg`s and Adwaita's built-in
+  `data/designs/adwaita-preview.svg` are AI-drawn (their LICENSE files and `AI_DISCLOSURE.md` say so). GtkStack keeps
+  clipping after a transition, so the panel turns it off on its two stacks. Not seen: Orca, right to left, a PNG
+  preview.
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,
@@ -45,8 +51,9 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   device while it runs. Pass `--env GTK_A11Y=none`: without an accessibility bus the first `announce()` crashes the
   app (#729, also on `main` with the search keyboard).
 - Gotchas: `/tmp` is a tmpfs with a per-user quota; keep cargo targets and prefixes in `~/.cache/pindu-work/`, and
-  run cargo-mutants (installed in the SDK cargo home) with `TMPDIR` there and `--gitignore true`, or it copies
-  `_build/` into `/tmp` and fills the quota. CI's mutants check covers every changed pindu-core line. This
+  run cargo-mutants (installed in the SDK cargo home) with `TMPDIR` there, `--gitignore true` and
+  `CARGO_TARGET_DIR` unset (`sdk.sh` sets one, and parallel workers sharing it test each other's mutants), or it
+  copies `_build/` into `/tmp` and fills the quota. CI's mutants check covers every changed pindu-core line. This
   host has no meson, blueprint-compiler, GTK headers or sqlite3 dev library: host `cargo check -p pindu-core --tests`
   works, everything else runs in the SDK. Give parallel agents their own `CARGO_TARGET_DIR`. GTK measures an
   ellipsizing label with `letter-spacing` too narrow (`widgets/spaced_label.rs`); a wrapping label asked for its width

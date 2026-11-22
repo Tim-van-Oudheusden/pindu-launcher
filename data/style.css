@@ -558,6 +558,72 @@ window.game-overlay {
   min-height: 44px;
 }
 
+/* Design's row of cards runs to the panel's end edge, so a card cut off there shows there
+   are more: the section's page reaches over the panel's end padding, and all on it but the
+   row keeps clear of it again. */
+.quick-access .design-section {
+  margin-right: -24px;
+}
+
+.quick-access .design-section > viewport > box > :not(.design-cards-scroller) {
+  margin-right: 24px;
+}
+
+.quick-access .design-section:dir(rtl) {
+  margin-right: 0;
+  margin-left: -24px;
+}
+
+.quick-access .design-section:dir(rtl) > viewport > box > :not(.design-cards-scroller) {
+  margin-right: 0;
+  margin-left: 24px;
+}
+
+/* A design card: its picture with rounded corners over its name, in the card colour where
+   it has none. The card in force is tinted and its picture carries a check, so it shows
+   without relying on colour; focus draws a ring inside the card, which the row never
+   cuts. */
+.quick-access .design-card {
+  padding: 6px 6px 8px;
+  border-radius: 14px;
+  background: none;
+  box-shadow: none;
+}
+
+.quick-access .design-card:hover {
+  background-color: alpha(currentColor, 0.07);
+}
+
+.quick-access .design-card:checked {
+  background-color: alpha(currentColor, 0.12);
+}
+
+.quick-access .design-card:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: -3px;
+}
+
+.quick-access .design-card .design-preview {
+  border-radius: 9px;
+  background-color: var(--card-bg-color);
+  border: 1px solid alpha(currentColor, 0.12);
+}
+
+.quick-access .design-card .design-check {
+  min-width: 22px;
+  min-height: 22px;
+  margin: 4px;
+  border-radius: 11px;
+  background-color: var(--window-fg-color);
+  color: var(--window-bg-color);
+  -gtk-icon-size: 14px;
+}
+
+.quick-access .design-card .design-reason {
+  font-size: 0.87em;
+  opacity: 0.8;
+}
+
 .menu-drawer button:focus-visible,
 .quick-access .playing-card button:focus-visible {
   outline: 3px solid var(--window-fg-color);
@@ -770,6 +836,35 @@ window.fullscreen-mode.no-design .quick-access .boxed-list > row:focus-visible {
   border-radius: 16px;
 }
 
+/* The design cards: the page reaches over the card's narrower padding, and focus and the
+   check take the accent colour, as the rows' ring does. */
+window.fullscreen-mode.no-design .quick-access .design-section {
+  margin-right: -20px;
+}
+
+window.fullscreen-mode.no-design .quick-access .design-section > viewport > box > :not(.design-cards-scroller) {
+  margin-right: 20px;
+}
+
+window.fullscreen-mode.no-design .quick-access .design-section:dir(rtl) {
+  margin-right: 0;
+  margin-left: -20px;
+}
+
+window.fullscreen-mode.no-design .quick-access .design-section:dir(rtl) > viewport > box > :not(.design-cards-scroller) {
+  margin-right: 0;
+  margin-left: 20px;
+}
+
+window.fullscreen-mode.no-design .quick-access .design-card:focus-visible {
+  outline-color: var(--accent-color);
+}
+
+window.fullscreen-mode.no-design .quick-access .design-card .design-check {
+  background-color: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+}
+
 /* The menu drawer: a full-height sidebar at the start edge, with a line at its inner edge;
    its rows show only when focused, with the same ring as Quick Access's. */
 window.fullscreen-mode.no-design .menu-drawer {
@@ -792,8 +887,8 @@ window.fullscreen-mode.no-design .menu-drawer .navigation-sidebar > row:focus-vi
   outline-offset: -3px;
 }
 
-/* Under high contrast the card's edge, the drawer's line and the lists' edges are drawn
-   stronger, as libadwaita draws its borders there. */
+/* Under high contrast the card's edge, the drawer's line, the lists' edges and the design
+   pictures' edges are drawn stronger, as libadwaita draws its borders there. */
 @media (prefers-contrast: more) {
   window.fullscreen-mode.no-design .quick-access {
     box-shadow: 0 0 0 1px alpha(currentColor, 0.5), 0 12px 40px rgb(0 0 0 / 50%);
@@ -801,6 +896,10 @@ window.fullscreen-mode.no-design .menu-drawer .navigation-sidebar > row:focus-vi
 
   window.fullscreen-mode.no-design .quick-access .boxed-list {
     box-shadow: 0 0 0 1px alpha(currentColor, 0.5);
+  }
+
+  window.fullscreen-mode.no-design .quick-access .design-card .design-preview {
+    border-color: alpha(currentColor, 0.5);
   }
 
   window.fullscreen-mode.no-design .menu-drawer {

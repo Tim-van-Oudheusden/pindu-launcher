@@ -39,12 +39,13 @@
 //! `fullscreen_health`, Diagnostics Report `fullscreen_report`, Add a Store `add_store`,
 //! Proton `fullscreen_proton_downloads`, Sources `fullscreen_sources` and Duplicates
 //! `fullscreen_duplicates`; Add a Game opens the window's `fullscreen_add_game`. Design
-//! is this module's: the design, its variant, Home's background blur and dim, cover size,
-//! text size, Reduce Motion and the user's own stylesheet. So are System's navigation
-//! sounds, their volume and exiting after a launch, and Manage's SteamGridDB key (typed
-//! hidden with the on-screen keyboard of `secret_dialog` and kept in the keyring), Prefer
-//! SteamGridDB Art and Wikidata metadata, with Refresh Metadata under its switch while it
-//! is on: the same settings Preferences changes.
+//! is this module's: the design, chosen from a row of cards with their pictures, its
+//! variant, Home's background blur and dim, cover size, text size, Reduce Motion and the
+//! user's own stylesheet. So are System's navigation sounds, their volume and exiting
+//! after a launch, and Manage's SteamGridDB key (typed hidden with the on-screen keyboard
+//! of `secret_dialog` and kept in the keyring), Prefer SteamGridDB Art and Wikidata
+//! metadata, with Refresh Metadata under its switch while it is on: the same settings
+//! Preferences changes.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::sync::LazyLock;
@@ -62,15 +63,16 @@ use pindu_core::keys;
 use pindu_core::model::GameId;
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{
-    PageEntry, QuickAccessEntry, QuickAccessLevel, QuickAccessSection, QuickFocus, Shown,
-    design_choices, quick_first_focus, quick_tiles, section_entries, sections, variant_choices,
+    DesignChoice, PageEntry, QuickAccessEntry, QuickAccessLevel, QuickAccessSection, QuickFocus,
+    Shown, design_choices, quick_first_focus, quick_tiles, section_entries, sections,
+    variant_choices,
 };
 use pindu_core::paths;
 use pindu_core::tasks::Task;
 
 use crate::add_store::PinduAddStoreLevel;
 use crate::application::PinduApplication;
-use crate::config::APP_ID;
+use crate::config::{APP_ID, RESOURCE_BASE_PATH};
 use crate::fullscreen::bind_volume_slider;
 use crate::fullscreen_bluetooth::PinduBluetoothLevel;
 use crate::fullscreen_clock::Clock;
@@ -167,7 +169,7 @@ mod imp {
         #[template_child]
         pub activity: TemplateChild<gtk::ListBox>,
         #[template_child]
-        pub designs: TemplateChild<gtk::ListBox>,
+        pub designs: TemplateChild<gtk::Box>,
         #[template_child]
         pub variant_title: TemplateChild<gtk::Label>,
         #[template_child]
@@ -1131,19 +1133,9 @@ impl PinduQuickAccess {
             QuickAccessSection::Notifications => {
                 first_shown_row(&imp.activity).or_else(|| first_shown_row(&imp.notifications))
             }
-            QuickAccessSection::Design => {
-                let checked = imp.design_action.get().and_then(|action| action.state());
-                let mut rows =
-                    std::iter::successors(imp.designs.first_child(), |row| row.next_sibling());
-                rows.find(|row| {
-                    row.downcast_ref::<adw::ActionRow>()
-                        .and_then(adw::ActionRow::activatable_widget)
-                        .and_downcast::<gtk::CheckButton>()
-                        .and_then(|check| check.action_target_value())
-                        == checked
-                })
-                .or_else(|| first_shown_row(&imp.designs))
-            }
+            QuickAccessSection::Design => self
+                .design_card_in_force()
+                .or_else(|| self.design_cards().find(gtk::Widget::is_sensitive)),
             QuickAccessSection::Controller => {
                 std::iter::successors(imp.controllers.first_child(), |row| row.next_sibling())
                     .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
@@ -1255,7 +1247,6 @@ impl PinduQuickAccess {
         for list in [
             imp.activity.get(),
             imp.notifications.get(),
-            imp.designs.get(),
             imp.variants.get(),
             imp.design_choices.get(),
             imp.custom_style.get(),
@@ -1300,10 +1291,17 @@ impl PinduQuickAccess {
             imp.report_list.get(),
             imp.manage_list.get(),
         ] {
-            list.connect_keynav_failed(|list, direction| {
-                step_out_of_list(list, direction);
-                glib::Propagation::Stop
-            });
+            list.connect_keynav_failed(glib::clone!(
+                #[weak(rename_to = quick_access)]
+                self,
+                #[upgrade_or]
+                glib::Propagation::Stop,
+                move |list, direction| {
+                    step_out_of_list(list, direction);
+                    quick_access.enter_design_cards();
+                    glib::Propagation::Stop
+                }
+            ));
         }
         let escape = gtk::ShortcutController::new();
         let quick_access = self.downgrade();
@@ -1412,7 +1410,7 @@ impl PinduQuickAccess {
     }
 
     /// Design chooses through `win.design`, whose state is the design in force: it checks
-    /// the matching row, and follows the setting, which Preferences can change too. Its
+    /// the matching card, and follows the setting, which Preferences can change too. Its
     /// variants do the same through `win.design-variant`. Background, Background Blur and
     /// Background Dim are choice rows on their settings' actions.
     fn setup_designs(&self, application: &PinduApplication, actions: &impl IsA<gio::ActionMap>) {
@@ -1517,36 +1515,62 @@ impl PinduQuickAccess {
             self,
             move |_| quick_access.show_background_choice()
         ));
+        // The row of design cards reaches past the stacks to the panel's edge. A GtkStack
+        // clips its children while a transition runs, but stays clipped once it ends.
+        for stack in [imp.stack.get(), imp.sections.get()] {
+            stack.connect_transition_running_notify(|stack| {
+                if !stack.is_transition_running() {
+                    stack.set_overflow(gtk::Overflow::Visible);
+                }
+            });
+        }
     }
 
-    /// Design: Default, then each installed design, with a check on the one in force. A
-    /// design for a newer Pindu launcher shows but cannot be chosen. Then the variants of
-    /// the design in force and My Stylesheet as things now are.
+    /// Design: a card for Adwaita, then for each installed design, the one in force
+    /// checked. A design for a newer Pindu launcher shows but cannot be chosen. Then the
+    /// variants of the design in force and My Stylesheet as things now are.
     fn fill_designs(&self) {
         let imp = self.imp();
         let Some(application) = self.application() else {
             return;
         };
         let service = application.style_service();
-        imp.designs.remove_all();
+        while let Some(card) = imp.designs.first_child() {
+            imp.designs.remove(&card);
+        }
         for choice in design_choices(&service.designs(), &service.design()) {
-            let subtitle = if choice.available {
-                choice.description
-            } else {
-                needs_newer_launcher()
-            };
-            let row = radio_row(
-                "win.design",
-                &choice.id,
-                &choice.name.unwrap_or_else(no_design_name),
-            );
-            row.set_subtitle(&subtitle);
-            row.set_sensitive(choice.available);
-            imp.designs.append(&row);
+            imp.designs.append(&design_card(choice));
         }
         self.fill_variants();
         self.show_background_choice();
         self.show_custom_style();
+    }
+
+    /// The design cards, in their row's order.
+    fn design_cards(&self) -> impl Iterator<Item = gtk::Widget> {
+        std::iter::successors(self.imp().designs.first_child(), |card| card.next_sibling())
+    }
+
+    /// The card of the design in force.
+    fn design_card_in_force(&self) -> Option<gtk::Widget> {
+        let checked = self.imp().design_action.get()?.state()?;
+        self.design_cards().find(|card| {
+            card.downcast_ref::<gtk::ToggleButton>()
+                .and_then(gtk::prelude::ActionableExt::action_target_value)
+                .as_ref()
+                == Some(&checked)
+        })
+    }
+
+    /// Coming up into the row of cards from a list under it, focus goes to the design in
+    /// force rather than to whichever card GTK finds nearest.
+    fn enter_design_cards(&self) {
+        let focus = self.root().and_then(|root| root.focus());
+        if focus.is_some_and(|focus| focus.is_ancestor(&*self.imp().designs))
+            && let Some(card) = self.design_card_in_force()
+        {
+            card.grab_focus();
+        }
     }
 
     /// The Variant list: the variants of the design in force, with a check on the one in
@@ -1713,7 +1737,7 @@ fn no_design_name() -> String {
     "Adwaita".to_owned()
 }
 
-/// A row of a list of choices (Design's designs and variants, Filters' genres): `title`,
+/// A row of a list of choices (Design's variants, Filters' genres): `title`,
 /// with a check on the stateful `action` for `id`, which the row's activation sets.
 pub(crate) fn radio_row(action: &str, id: &str, title: &str) -> adw::ActionRow {
     let check = gtk::CheckButton::builder()
@@ -1733,6 +1757,103 @@ pub(crate) fn radio_row(action: &str, id: &str, title: &str) -> adw::ActionRow {
 /// Why Design cannot apply a design written for a newer style contract.
 fn needs_newer_launcher() -> String {
     gettext("Needs a newer Pindu launcher")
+}
+
+/// The size, in logical pixels, a design's 16:10 picture shows at on its card.
+const PREVIEW_SIZE: (i32, i32) = (108, 66);
+
+/// A card of Design's row (`.design-card`): the design's picture (`.design-preview`),
+/// clipped to rounded corners, or an empty one in the card colour for a design without
+/// one, with a check (`.design-check`) while it is in force, over its name
+/// (`.design-name`). Adwaita's picture is built in. A design for a newer Pindu launcher
+/// cannot be chosen and says why under its name (`.design-reason`). The card chooses
+/// through `win.design`, whose state checks it; a screen reader reads its name, and
+/// whether it is in use or why it cannot be.
+fn design_card(choice: DesignChoice) -> gtk::ToggleButton {
+    let name = choice.name.unwrap_or_else(no_design_name);
+    let (width, height) = PREVIEW_SIZE;
+    let frame = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    frame.set_size_request(width, height);
+    let preview = gtk::Overlay::builder()
+        .child(&frame)
+        .overflow(gtk::Overflow::Hidden)
+        .halign(gtk::Align::Center)
+        .css_classes(["design-preview"])
+        .build();
+    let picture = if choice.id.is_empty() {
+        Some(gtk::Picture::for_resource(&format!(
+            "{RESOURCE_BASE_PATH}/designs/adwaita-preview.svg"
+        )))
+    } else {
+        choice.preview.map(gtk::Picture::for_filename)
+    };
+    if let Some(picture) = picture {
+        picture.set_content_fit(gtk::ContentFit::Cover);
+        picture.set_can_shrink(true);
+        picture.set_accessible_role(gtk::AccessibleRole::Presentation);
+        preview.add_overlay(&picture);
+    }
+    let check = gtk::Image::builder()
+        .icon_name("object-select-symbolic")
+        .halign(gtk::Align::End)
+        .valign(gtk::Align::Start)
+        .visible(false)
+        .accessible_role(gtk::AccessibleRole::Presentation)
+        .css_classes(["design-check"])
+        .build();
+    preview.add_overlay(&check);
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 6);
+    content.append(&preview);
+    content.append(&card_text(&name, 1, "design-name"));
+    let card = gtk::ToggleButton::builder()
+        .child(&content)
+        .sensitive(choice.available)
+        .valign(gtk::Align::Start)
+        .css_classes(["design-card"])
+        .build();
+    card.update_property(&[gtk::accessible::Property::Label(&name)]);
+    if !choice.description.is_empty() {
+        card.set_tooltip_text(Some(&choice.description));
+    }
+    if choice.available {
+        card.set_action_name(Some("win.design"));
+        card.set_action_target_value(Some(&choice.id.to_variant()));
+        card.bind_property("active", &check, "visible")
+            .sync_create()
+            .build();
+        let describe = |card: &gtk::ToggleButton| {
+            if card.is_active() {
+                card.update_property(&[gtk::accessible::Property::Description(&gettext("In use"))]);
+            } else {
+                card.reset_property(gtk::AccessibleProperty::Description);
+            }
+        };
+        describe(&card);
+        card.connect_toggled(describe);
+    } else {
+        let reason = needs_newer_launcher();
+        content.append(&card_text(&reason, 3, "design-reason"));
+        card.update_property(&[gtk::accessible::Property::Description(&reason)]);
+    }
+    card
+}
+
+/// A line, or `lines` lines, of a design card's text, centred, ellipsized past them. An
+/// inscription rather than a label: its size follows its lines and characters, not its
+/// text, so the sideways-scrolling row, which measures its cards without a width, keeps
+/// room for every line at every text size.
+fn card_text(text: &str, lines: u32, class: &str) -> gtk::Inscription {
+    gtk::Inscription::builder()
+        .text(text)
+        .min_chars(12)
+        .nat_chars(12)
+        .min_lines(lines)
+        .nat_lines(lines)
+        .wrap_mode(gtk::pango::WrapMode::WordChar)
+        .text_overflow(gtk::InscriptionOverflow::EllipsizeEnd)
+        .xalign(0.5)
+        .css_classes([class])
+        .build()
 }
 
 /// The first row of `list` that shows and can take focus, while the list shows.

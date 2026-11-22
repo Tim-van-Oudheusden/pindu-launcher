@@ -346,10 +346,22 @@ impl StyleService {
         self.update();
     }
 
-    /// The installed designs, found afresh and sorted by name.
+    /// The installed designs, found afresh and sorted by name. The folders skipped, and
+    /// what a design that still loaded is missing (a refused preview), are logged.
     pub fn designs(&self) -> Vec<themes::Theme> {
         let folders = self.theme_folders.each_ref().map(PathBuf::as_path);
-        themes::discover(&folders).themes
+        let found = themes::discover(&folders);
+        for (dir, reason) in &found.skipped {
+            glib::g_info!("pindu", "Skipped the theme in {}: {reason}", dir.display());
+        }
+        for (dir, reason) in &found.problems {
+            glib::g_info!(
+                "pindu",
+                "The theme in {} loaded without part of it: {reason}",
+                dir.display()
+            );
+        }
+        found.themes
     }
 
     /// The chosen design's id; empty for none.
@@ -511,12 +523,7 @@ impl StyleService {
         if id.is_empty() {
             return None;
         }
-        let folders = self.theme_folders.each_ref().map(PathBuf::as_path);
-        let found = themes::discover(&folders);
-        for (dir, reason) in &found.skipped {
-            glib::g_info!("pindu", "Skipped the theme in {}: {reason}", dir.display());
-        }
-        let Some(theme) = found.themes.into_iter().find(|theme| theme.id == id) else {
+        let Some(theme) = self.designs().into_iter().find(|theme| theme.id == id) else {
             glib::g_info!("pindu", "The fullscreen design “{id}” is not installed");
             return None;
         };

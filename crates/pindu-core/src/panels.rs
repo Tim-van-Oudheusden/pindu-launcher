@@ -879,6 +879,9 @@ pub struct DesignChoice {
     pub active: bool,
     /// Whether this Pindu launcher can apply it.
     pub available: bool,
+    /// The theme's picture of its Home (`Theme::preview`); `None` for a design without
+    /// one, and for Adwaita, whose preview the shell has built in.
+    pub preview: Option<std::path::PathBuf>,
 }
 
 /// What the Quick Access panel's Designs level lists: Adwaita first, then `themes` in
@@ -894,6 +897,7 @@ pub fn design_choices(themes: &[Theme], active: &str) -> Vec<DesignChoice> {
         description: String::new(),
         active: !applies,
         available: true,
+        preview: None,
     };
     let designs = themes.iter().map(|theme| DesignChoice {
         id: theme.id.clone(),
@@ -901,6 +905,7 @@ pub fn design_choices(themes: &[Theme], active: &str) -> Vec<DesignChoice> {
         description: theme.description.clone(),
         active: applies && theme.id == active,
         available: theme.supported(),
+        preview: theme.preview.clone(),
     });
     std::iter::once(default).chain(designs).collect()
 }
@@ -2134,6 +2139,7 @@ mod tests {
             contract,
             layout: Default::default(),
             variants: Vec::new(),
+            preview: None,
         }
     }
 
@@ -2167,6 +2173,22 @@ mod tests {
                 "{active:?}"
             );
         }
+    }
+
+    #[test]
+    fn each_design_choice_carries_its_designs_preview() {
+        let mut pictured = theme("mango", "Mango", 1);
+        pictured.preview = Some("/themes/mango/preview.svg".into());
+        let themes = [pictured, theme("plain", "Plain", 1)];
+        let previews: Vec<_> = design_choices(&themes, "")
+            .into_iter()
+            .map(|choice| choice.preview)
+            .collect();
+        assert_eq!(
+            previews,
+            [None, Some("/themes/mango/preview.svg".into()), None],
+            "Adwaita's built-in preview is the shell's"
+        );
     }
 
     fn with_variants(mut theme: Theme, ids: &[&str]) -> Theme {

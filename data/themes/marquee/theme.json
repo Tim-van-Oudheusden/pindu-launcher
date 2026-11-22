@@ -4,6 +4,7 @@
   "description": "Your recent games over the focused game's art, with the sections at the end of the row",
   "author": "Pindu launcher contributors",
   "license": "GPL-3.0-or-later",
+  "preview": "preview.svg",
   "layout": {
     "home": "hero-bottom",
     "home-start": "games",

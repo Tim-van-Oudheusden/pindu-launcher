@@ -944,6 +944,8 @@ template $PinduQuickAccess: Box {
           StackPage {
             name: "design";
 
+            // Runs to the panel's end edge (style.css), so a card cut off there shows
+            // there are more.
             child: ScrolledWindow {
               hscrollbar-policy: never;
               accessible-role: tab_panel;
@@ -952,18 +954,37 @@ template $PinduQuickAccess: Box {
                 labelled-by: design_tab;
               }
 
+              styles [
+                "design-section",
+              ]
+
               child: Box {
                 orientation: vertical;
                 spacing: 12;
 
-                // Default, then each installed design, with a check on the one in
-                // force; filled in code.
-                ListBox designs {
-                  selection-mode: none;
+                // Adwaita, then each installed design, as cards with their pictures in
+                // one row, which scrolls to keep the focused card whole; the one in force
+                // is checked. Filled in code.
+                ScrolledWindow {
+                  hscrollbar-policy: external;
+                  vscrollbar-policy: never;
 
                   styles [
-                    "boxed-list",
+                    "design-cards-scroller",
                   ]
+
+                  child: Box designs {
+                    spacing: 6;
+                    accessible-role: group;
+
+                    accessibility {
+                      label: _("Designs");
+                    }
+
+                    styles [
+                      "design-cards",
+                    ]
+                  };
                 }
 
                 // The variants of the design in force, with a check on the one in

@@ -30,6 +30,9 @@ pub struct Theme {
     /// The looks the theme offers within itself, in its order; empty for a theme with one
     /// look.
     pub variants: Vec<Variant>,
+    /// A picture of the design (`theme.json` `preview`), SVG or PNG, inside the theme
+    /// folder; `None` for a theme without one or with one Pindu refused.
+    pub preview: Option<PathBuf>,
 }
 
 /// A look a theme offers within itself (`theme.json` `variants`): its stylesheet loads
@@ -308,6 +311,9 @@ pub struct Discovery {
     pub themes: Vec<Theme>,
     /// A theme folder that could not be used, and why.
     pub skipped: Vec<(PathBuf, String)>,
+    /// A theme found without something its `theme.json` asks for, such as its preview,
+    /// and why.
+    pub problems: Vec<(PathBuf, String)>,
 }
 
 /// The shipped design that took over from `id`, a design Pindu launcher used to ship, if it
@@ -334,7 +340,10 @@ pub fn discover(folders: &[&Path]) -> Discovery {
                 continue;
             }
             match read_theme(&dir) {
-                Ok(theme) => {
+                Ok((theme, problem)) => {
+                    if let Some(reason) = problem {
+                        found.problems.push((dir, reason));
+                    }
                     found.themes.retain(|known| known.id != theme.id);
                     found.themes.push(theme);
                 }
@@ -348,8 +357,9 @@ pub fn discover(folders: &[&Path]) -> Discovery {
     found
 }
 
-/// The theme in `dir`, named after the folder.
-fn read_theme(dir: &Path) -> Result<Theme, String> {
+/// The theme in `dir`, named after the folder, and why it lacks its preview if it asked for
+/// one Pindu refused.
+fn read_theme(dir: &Path) -> Result<(Theme, Option<String>), String> {
     let id = dir
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
@@ -369,15 +379,26 @@ fn read_theme(dir: &Path) -> Result<Theme, String> {
     if !dir.join("theme.css").is_file() {
         return Err("there is no theme.css".to_owned());
     }
-    Ok(Theme {
+    let variants = read_variants(dir, metadata.get("variants"))?;
+    let (preview, problem) = match metadata.get("preview") {
+        None => (None, None),
+        Some(Json::String(path)) => match file_inside(dir, path, "preview") {
+            Ok(file) => (Some(file), None),
+            Err(reason) => (None, Some(reason)),
+        },
+        Some(_) => (None, Some("the preview is not a path".to_owned())),
+    };
+    let theme = Theme {
         id,
         name,
         description: text("description").unwrap_or_default(),
         dir: dir.to_owned(),
         contract,
         layout: ThemeLayout::from_json(metadata.get("layout")),
-        variants: read_variants(dir, metadata.get("variants"))?,
-    })
+        variants,
+        preview,
+    };
+    Ok((theme, problem))
 }
 
 /// Whether `id` may name a theme or a variant: a–z, 0–9 and dashes.
@@ -416,7 +437,7 @@ fn read_variants(dir: &Path, variants: Option<&Json>) -> Result<Vec<Variant>, St
         let stylesheet = match variant.get("stylesheet") {
             None => None,
             Some(Json::String(path)) => Some(
-                variant_stylesheet(dir, path)
+                file_inside(dir, path, "stylesheet")
                     .map_err(|reason| format!("variant “{id}”: {reason}"))?,
             ),
             Some(_) => return Err(format!("variant “{id}”'s stylesheet is not a path")),
@@ -430,32 +451,28 @@ fn read_variants(dir: &Path, variants: Option<&Json>) -> Result<Vec<Variant>, St
     Ok(read)
 }
 
-/// The stylesheet at `path`, relative to the theme folder `dir`, which it may not leave:
-/// not by `..`, an absolute path or a symbolic link.
-fn variant_stylesheet(dir: &Path, path: &str) -> Result<PathBuf, String> {
+/// The file at `path`, relative to the theme folder `dir`, which it may not leave: not by
+/// `..`, an absolute path or a symbolic link. `what` names it in the reason it is refused.
+fn file_inside(dir: &Path, path: &str, what: &str) -> Result<PathBuf, String> {
     let relative = Path::new(path);
     let inside = relative
         .components()
         .all(|part| matches!(part, Component::Normal(_) | Component::CurDir));
     if path.is_empty() || !inside {
-        return Err(format!(
-            "the stylesheet {path} is not inside the theme folder"
-        ));
+        return Err(format!("the {what} {path} is not inside the theme folder"));
     }
     let file = dir.join(relative);
     let resolved = file
         .canonicalize()
-        .map_err(|error| format!("the stylesheet {path}: {error}"))?;
+        .map_err(|error| format!("the {what} {path}: {error}"))?;
     let folder = dir
         .canonicalize()
         .map_err(|error| format!("the theme folder: {error}"))?;
     if !resolved.starts_with(&folder) {
-        return Err(format!(
-            "the stylesheet {path} is not inside the theme folder"
-        ));
+        return Err(format!("the {what} {path} is not inside the theme folder"));
     }
     if !resolved.is_file() {
-        return Err(format!("the stylesheet {path} is not a file"));
+        return Err(format!("the {what} {path} is not a file"));
     }
     Ok(file)
 }
@@ -480,6 +497,7 @@ mod tests {
         let found = discover(&[&shipped]);
 
         assert!(found.skipped.is_empty(), "{:?}", found.skipped);
+        assert!(found.problems.is_empty(), "{:?}", found.problems);
         assert!(!found.themes.is_empty());
         for theme in &found.themes {
             assert!(theme.supported(), "{} needs a newer contract", theme.id);
@@ -488,6 +506,7 @@ mod tests {
                 "{} has no LICENSE",
                 theme.id
             );
+            assert!(theme.preview.is_some(), "{} has no preview", theme.id);
         }
     }
 
@@ -1088,6 +1107,117 @@ mod tests {
             .collect();
         skipped.sort();
         assert_eq!(skipped, ["absolute", "linked", "nested-parent", "parent"]);
+    }
+
+    #[test]
+    fn a_theme_names_its_preview_inside_its_folder() {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(
+            user.path(),
+            "pictured",
+            r#"{"contract": 1, "name": "Pictured", "preview": "assets/preview.svg"}"#,
+        );
+        fs::create_dir(user.path().join("pictured/assets")).unwrap();
+        fs::write(user.path().join("pictured/assets/preview.svg"), "<svg/>").unwrap();
+        write_theme(user.path(), "plain", r#"{"contract": 1, "name": "Plain"}"#);
+
+        let found = discover(&[user.path()]);
+
+        let previews: Vec<_> = found
+            .themes
+            .iter()
+            .map(|theme| (theme.id.as_str(), theme.preview.clone()))
+            .collect();
+        assert_eq!(
+            previews,
+            [
+                (
+                    "pictured",
+                    Some(user.path().join("pictured/assets/preview.svg"))
+                ),
+                ("plain", None),
+            ]
+        );
+        assert!(found.problems.is_empty(), "{:?}", found.problems);
+    }
+
+    #[test]
+    fn a_bad_preview_is_refused_and_the_theme_still_lists() {
+        let user = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let absolute = outside.path().join("evil.png");
+        fs::write(&absolute, "").unwrap();
+        write_theme(user.path(), "other", r#"{"contract": 1, "name": "Other"}"#);
+        fs::write(user.path().join("other/preview.png"), "").unwrap();
+        for (id, preview) in [
+            ("missing", Json::from("gone.png")),
+            ("parent", Json::from("../other/preview.png")),
+            (
+                "nested-parent",
+                Json::from("assets/../../other/preview.png"),
+            ),
+            ("absolute", Json::from(absolute.display().to_string())),
+            ("linked", Json::from("evil.png")),
+            ("not-a-path", Json::from(3)),
+        ] {
+            write_theme(
+                user.path(),
+                id,
+                &format!(r#"{{"contract": 1, "name": "{id}", "preview": {preview}}}"#),
+            );
+        }
+        std::os::unix::fs::symlink(&absolute, user.path().join("linked/evil.png")).unwrap();
+
+        let found = discover(&[user.path()]);
+
+        assert!(found.skipped.is_empty(), "{:?}", found.skipped);
+        let mut ids: Vec<_> = found
+            .themes
+            .iter()
+            .filter(|theme| theme.id != "other")
+            .map(|theme| {
+                assert_eq!(theme.preview, None, "{}", theme.id);
+                theme.id.as_str()
+            })
+            .collect();
+        ids.sort_unstable();
+        let mut troubled: Vec<_> = found
+            .problems
+            .iter()
+            .map(|(dir, reason)| {
+                assert!(reason.contains("preview"), "{}: {reason}", dir.display());
+                dir.file_name().unwrap().to_string_lossy().into_owned()
+            })
+            .collect();
+        troubled.sort();
+        let expected = [
+            "absolute",
+            "linked",
+            "missing",
+            "nested-parent",
+            "not-a-path",
+            "parent",
+        ];
+        assert_eq!(ids, expected);
+        assert_eq!(troubled, expected);
+    }
+
+    #[test]
+    fn a_preview_path_through_dot_dot_is_refused_even_where_it_stays_inside() {
+        let user = tempfile::tempdir().unwrap();
+        write_theme(
+            user.path(),
+            "roundabout",
+            r#"{"contract": 1, "name": "Roundabout", "preview": "assets/../preview.svg"}"#,
+        );
+        fs::create_dir(user.path().join("roundabout/assets")).unwrap();
+        fs::write(user.path().join("roundabout/preview.svg"), "<svg/>").unwrap();
+
+        let found = discover(&[user.path()]);
+
+        assert_eq!(found.themes.len(), 1);
+        assert_eq!(found.themes[0].preview, None);
+        assert_eq!(found.problems.len(), 1, "{:?}", found.problems);
     }
 
     #[test]

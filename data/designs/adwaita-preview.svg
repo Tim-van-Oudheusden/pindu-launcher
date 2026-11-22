@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Adwaita's Home (the Explore layout), drawn as a schematic for Quick Access's Design
+     cards in libadwaita's dark colours: the top bar, the Jump Back In carousel's page
+     with its dots, a row of compact section tiles and a row of covers. No text, art or
+     logos. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 160 100">
+  <rect width="160" height="100" fill="#222226"/>
+  <!-- Top bar: the page tabs, the shown one in a pill, and the clock -->
+  <rect x="58" y="4" width="20" height="6" rx="3" fill="#ffffff" fill-opacity="0.1"/>
+  <rect x="62" y="6" width="12" height="2" rx="1" fill="#ffffff"/>
+  <rect x="83" y="6" width="12" height="2" rx="1" fill="#ffffff" fill-opacity="0.6"/>
+  <rect x="142" y="6" width="10" height="2" rx="1" fill="#ffffff" fill-opacity="0.8"/>
+  <!-- The carousel's page: art in a rounded card, title, details and Play -->
+  <rect x="8" y="14" width="144" height="38" rx="5" fill="#3a3a40"/>
+  <rect x="8" y="14" width="144" height="38" rx="5" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.08" stroke-width="0.6"/>
+  <rect x="14" y="26" width="34" height="6" rx="2" fill="#ffffff"/>
+  <rect x="14" y="35" width="24" height="2.5" rx="1.25" fill="#ffffff" fill-opacity="0.6"/>
+  <rect x="14" y="41" width="16" height="6" rx="3" fill="#3584e4"/>
+  <rect x="33" y="41" width="16" height="6" rx="3" fill="#ffffff" fill-opacity="0.15"/>
+  <g fill="#ffffff">
+    <circle cx="74" cy="56" r="1.2"/>
+    <circle cx="80" cy="56" r="1.2" fill-opacity="0.35"/>
+    <circle cx="86" cy="56" r="1.2" fill-opacity="0.35"/>
+  </g>
+  <!-- The compact section tiles, the first focused under an accent ring -->
+  <rect x="8" y="61" width="30" height="11" rx="3" fill="#ffffff" fill-opacity="0.08" stroke="#3584e4" stroke-width="1.2"/>
+  <g fill="#ffffff" fill-opacity="0.08">
+    <rect x="42" y="61" width="30" height="11" rx="3"/>
+    <rect x="76" y="61" width="30" height="11" rx="3"/>
+    <rect x="110" y="61" width="30" height="11" rx="3"/>
+    <rect x="144" y="61" width="30" height="11" rx="3"/>
+  </g>
+  <!-- A row of covers -->
+  <g fill="#ffffff" fill-opacity="0.08">
+    <rect x="8" y="77" width="15" height="22" rx="2"/>
+    <rect x="26" y="77" width="15" height="22" rx="2"/>
+    <rect x="44" y="77" width="15" height="22" rx="2"/>
+    <rect x="62" y="77" width="15" height="22" rx="2"/>
+    <rect x="80" y="77" width="15" height="22" rx="2"/>
+    <rect x="98" y="77" width="15" height="22" rx="2"/>
+    <rect x="116" y="77" width="15" height="22" rx="2"/>
+    <rect x="134" y="77" width="15" height="22" rx="2"/>
+    <rect x="152" y="77" width="15" height="22" rx="2"/>
+  </g>
+</svg>
