@@ -42,6 +42,12 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   `data/designs/adwaita-preview.svg` are AI-drawn (their LICENSE files and `AI_DISCLOSURE.md` say so). GtkStack keeps
   clipping after a transition, so the panel turns it off on its two stacks. Not seen: Orca, right to left, a PNG
   preview.
+- 2026-11-22, #722 (stacked on #721): the menu's main level is Home, Library with its count, Search
+  (`win.drawer-search`, `fullscreen::search_from_menu`) and the first five collections (`INLINE_COLLECTIONS`), All
+  Collections past five; View or X on a collection opens its actions from either level and B returns there (Panels
+  remembers which). Rebinding moved to Quick Access → Controller → Change Buttons (`QuickAccessLevel::Bindings`,
+  `fullscreen_bindings.rs`), beside What Each Button Does. Not seen: more than five collections, Rename from the menu,
+  the menu over a running game.
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,

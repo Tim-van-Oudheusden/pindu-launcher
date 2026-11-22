@@ -9,8 +9,7 @@
 //! dismisses on a controller press. Quick Access is a widget of its own, `PinduQuickAccess`
 //! (`quick_access`), which the window hosts as the sidebar of its `quick_access` split
 //! view: the window tells it which level and section show and what lies under it, and does
-//! what it asks for. The drawer's Power level is `fullscreen_power`'s, and its Controls
-//! level is `fullscreen_bindings`'s.
+//! what it asks for. The drawer's Power level is `fullscreen_power`'s.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -53,6 +52,10 @@ impl PinduWindow {
                 window.show_library();
             })
             .build();
+        // Closes the menu and searches with the on-screen keyboard, as Y does.
+        let search = gio::ActionEntry::builder("drawer-search")
+            .activate(|window: &Self, _, _| window.search_from_menu())
+            .build();
         let collections = gio::ActionEntry::builder("drawer-collections")
             .activate(|window: &Self, _, _| {
                 window.show_panel(Panel::Drawer(DrawerLevel::Collections));
@@ -84,6 +87,7 @@ impl PinduWindow {
             close,
             home,
             library,
+            search,
             collections,
             collection,
             options,
@@ -212,10 +216,24 @@ impl PinduWindow {
                 }
             }
         ));
+        // Library's and the collections' numbers of games.
+        self.library().connect_counts_changed(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.fill_drawer()
+        ));
+        if let Some(application) = self.application().and_downcast::<PinduApplication>() {
+            let gamepad = application.gamepad_service();
+            imp.drawer_panel.show_search_button(gamepad.active_layout());
+            gamepad.connect_active_layout_notify(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |layout| window.imp().drawer_panel.show_search_button(layout)
+            ));
+        }
         self.setup_add_store();
         self.setup_fullscreen_add_game();
         self.setup_power();
-        self.setup_controls_level();
         self.fill_drawer();
     }
 
@@ -280,7 +298,9 @@ impl PinduWindow {
         let game = self.focused_game();
         let imp = self.imp();
         let collection = match self.open_panel() {
-            Some(Panel::Drawer(DrawerLevel::Collections)) => imp.drawer_panel.focused_collection(),
+            Some(Panel::Drawer(DrawerLevel::Main | DrawerLevel::Collections)) => {
+                imp.drawer_panel.focused_collection()
+            }
             _ => None,
         };
         let under = Under {
@@ -304,7 +324,7 @@ impl PinduWindow {
             }
             (
                 Some(Panel::Drawer(DrawerLevel::Collection)),
-                Some(Panel::Drawer(DrawerLevel::Collections)),
+                Some(Panel::Drawer(DrawerLevel::Main | DrawerLevel::Collections)),
             ) => {
                 if let Some(id) = collection {
                     imp.drawer_panel
@@ -318,30 +338,29 @@ impl PinduWindow {
     }
 
     /// Keeps the drawer's collection levels in step with the collections: the shown
-    /// collection's actions after it moved or was renamed, or, once it is deleted, the
-    /// collections, or the drawer's entries when none is left.
+    /// collection's actions after it moved or was renamed, or, once it is deleted, where
+    /// its actions were opened from (the entries, or the collections); and the entries
+    /// once no collection is left. The entries' own rows are `fill_drawer`'s.
     fn follow_collections(&self) {
-        let drawer = &self.imp().drawer_panel;
+        let imp = self.imp();
+        let drawer = &imp.drawer_panel;
         let collections = self.library().collections();
-        let level = match self.open_panel() {
+        let mut panels = imp.panels.get();
+        match panels.open() {
             Some(Panel::Drawer(DrawerLevel::Collection)) => {
                 let shown = drawer.shown_collection();
                 if shown.is_some_and(|id| drawer.show_collection(&collections, id)) {
                     return;
                 }
-                DrawerLevel::Collections
+                panels.handle(Intent::Back, Under::default());
             }
-            Some(Panel::Drawer(DrawerLevel::Collections)) => DrawerLevel::Collections,
+            Some(Panel::Drawer(DrawerLevel::Collections)) => {}
             _ => return,
-        };
-        let level = if collections.is_empty() {
-            DrawerLevel::Main
-        } else {
-            level
-        };
-        if self.open_panel() != Some(Panel::Drawer(level)) {
-            self.show_panel(Panel::Drawer(level));
         }
+        if collections.is_empty() {
+            panels.show(Panel::Drawer(DrawerLevel::Main));
+        }
+        self.set_panels(panels);
     }
 
     /// The game a focused cover or card shows, or the shown game page's.
@@ -458,11 +477,6 @@ impl PinduWindow {
         if open == Some(Panel::Drawer(DrawerLevel::Power)) {
             self.show_power();
         }
-        if open == Some(Panel::Drawer(DrawerLevel::Controls)) {
-            self.show_controls_level();
-        } else if before == Some(Panel::Drawer(DrawerLevel::Controls)) {
-            self.leave_controls_level();
-        }
         let drawer = matches!(open, Some(Panel::Drawer(_)));
         let quick_access = quick_access_level.is_some();
         let sheet = matches!(open, Some(Panel::Options(_)));
@@ -560,17 +574,15 @@ impl PinduWindow {
         }
     }
 
-    /// The drawer's collections and its Power entry. Its Playing Now cards are
-    /// `fullscreen_playing`'s.
+    /// The drawer's entries as the library now is, with its Power entry. Its Playing Now
+    /// cards are `fullscreen_playing`'s.
     fn fill_drawer(&self) {
         let application = self.application().and_downcast::<PinduApplication>();
         let power = application.as_ref().is_some_and(|application| {
             let state = application.system_power_service().state();
             !self.power_level_entries(&state).is_empty()
         });
-        self.imp()
-            .drawer_panel
-            .fill(&self.library().collections(), power);
+        self.imp().drawer_panel.fill(self.library(), power);
     }
 
     /// The sheet's title and actions for `game`, its performance switches for a game we

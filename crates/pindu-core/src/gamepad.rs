@@ -903,8 +903,8 @@ impl Intents {
         Layout::resolve(kind, self.settings)
     }
 
-    /// What a press of `button` on `device` does while the menu drawer's Controls waits for
-    /// a button ([`Capture::of`]). A button still held since before the wait is no new
+    /// What a press of `button` on `device` does while Quick Access's Change Buttons waits
+    /// for a button ([`Capture::of`]). A button still held since before the wait is no new
     /// press: a held trigger reports each further move as another press.
     pub fn capture(&self, device: DeviceId, button: Button) -> Capture {
         if self.pressed.contains_key(&(device, button)) {
@@ -986,8 +986,9 @@ pub const REBINDABLE_BUTTONS: [Button; 11] = [
     Button::RightStick,
 ];
 
-/// The intents the player can give another of the [`REBINDABLE_BUTTONS`], in the order the
-/// menu drawer's Controls lists them. Each keeps at least one button whatever is assigned.
+/// The intents the player can give another of the [`REBINDABLE_BUTTONS`], in the order
+/// Quick Access's Change Buttons lists them. Each keeps at least one button whatever is
+/// assigned.
 pub const REBINDABLE_INTENTS: [Intent; 10] = [
     Intent::Activate,
     Intent::Back,
@@ -1154,11 +1155,11 @@ fn rebindable_index(button: Button) -> usize {
         .expect("a rebindable button")
 }
 
-/// How long the menu drawer's Controls waits for the button to give a function before it
-/// gives up.
+/// How long Quick Access's Change Buttons waits for the button to give a function before
+/// it gives up.
 pub const CAPTURE_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// What a button pressed while the menu drawer's Controls waits for one does: the press
+/// What a button pressed while Quick Access's Change Buttons waits for one does: the press
 /// goes to the wait, never to an intent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Capture {

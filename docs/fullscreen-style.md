@@ -334,7 +334,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 
 | Name | What |
 |---|---|
-| `.menu-drawer` | The menu drawer on the left |
+| `.menu-drawer` | The menu drawer on the left: the Playing Now cards, Home, Library, Search, the first collections under a Collections heading, then their levels. Each row's number of games is `.numeric` and `.dim-label` |
 | `.quick-access` | The Quick Access panel on the right |
 | `.quick-access-status` | The header at the top of Quick Access: `.clock` (the time), `.offline` (shown while there is no network) and `.battery` (the machine's battery, absent without one) |
 | `.panel-sections` | The strip under Quick Access's header that switches its sections (Quick, Notifications, Design, Controller, System and Manage) |
@@ -347,7 +347,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.notification-count` | The unread count on Quick Access's Notifications section button |
 | `.notification` | A row of Quick Access's notifications; `.unread` while it is new, with an `.unread-dot` |
 | `.task` | A row of the Running tasks in Quick Access's Notifications section, which lists what runs in the background: a label, what it is doing, a progress bar and, while it can be cancelled, a Cancel button |
-| `.control` | A row of Quick Access's Controls: the button's `.control-glyph` (after a Hold label for a held one) and the keys that do the same in `.control-keys` |
+| `.control` | A row of Quick Access → Controller → What Each Button Does: the button's `.control-glyph` (after a Hold label for a held one) and the keys that do the same in `.control-keys`. The buttons are changed in Change Buttons beside it, whose rows are plain `.navigation-sidebar` rows; the menu drawer has no Controls any more |
 | `.choice-row` | A row of Quick Access that changes one setting in place with Left and Right (Design's Background, Background Blur, Background Dim, Cover Size and Text Size; Controller's Button Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate and Stick Dead Zone): the setting's name, under it the chosen option's second line where it has one, and at the end the `.choice-value` (the chosen option) between two `.choice-arrow` buttons, the one at an end insensitive |
 | `.design-cards` | The row of design cards at the top of Quick Access's Design section, in a `.design-cards-scroller` that scrolls it sideways and runs to the panel's end edge; the section's page is `.design-section` |
 | `.design-card` | A design's card in that row, a toggle button, `:checked` for the design in force and insensitive for a design that needs a newer Pindu launcher: `.design-preview` (the design's `preview` clipped to rounded corners, or empty in `--card-bg-color` without one; Adwaita's is built in) with `.design-check` over it while it is in force, then `.design-name`, and for a design it cannot apply `.design-reason` under it |
