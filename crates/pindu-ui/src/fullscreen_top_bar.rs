@@ -2,11 +2,13 @@
 //! Home and the library, at its start or in its middle (`ThemeLayout::top_bar_tabs`), the
 //! shown page's tab checked, and a clock (see `fullscreen_clock`). It shows over Home and
 //! the library, whose backdrop runs on under it on Home but in the Explore layout; the
-//! controller reaches the tabs by moving up from the page.
+//! controller reaches the tabs by moving up from the page. The menu drawer's row for the
+//! shown page is marked as the tabs are.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gio, glib};
+use pindu_core::panels::DrawerEntry;
 use pindu_core::themes::{HomeLayout, TopBarTabs};
 
 use crate::application::PinduApplication;
@@ -77,8 +79,9 @@ impl PinduWindow {
 
     /// Shows the bar while fullscreen mode shows Home or the library and the design in
     /// force wants it, with its tabs where the design puts them, checks the shown page's
-    /// tab, and runs the clock while it shows. Home's backdrop runs on under the bar,
-    /// except in the Explore layout, whose rows start under it.
+    /// tab, marks the menu drawer's row for it, and runs the clock while it shows. Home's
+    /// backdrop runs on under the bar, except in the Explore layout, whose rows start
+    /// under it.
     pub(crate) fn update_fullscreen_top_bar(&self) {
         let imp = self.imp();
         let page = imp.navigation_view.visible_page();
@@ -94,6 +97,13 @@ impl PinduWindow {
         }
         let on_home = page.as_ref() == Some(imp.home_page.upcast_ref());
         let on_library = page.as_ref() == Some(&*imp.library_page);
+        imp.drawer_panel.set_current(if on_home {
+            Some(DrawerEntry::Home)
+        } else if on_library {
+            Some(DrawerEntry::Library)
+        } else {
+            None
+        });
         let layout = self
             .application()
             .and_downcast::<PinduApplication>()

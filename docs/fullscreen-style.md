@@ -349,18 +349,19 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | Name | What |
 |---|---|
 | `.menu-drawer` | The menu drawer on the left: the Playing Now cards, Home, Library, Search, the first collections under a Collections heading, then their levels. Each row's number of games is `.numeric` and `.dim-label`. Also `.menu-shelves` with `"menu-entries": "shelves"`, and `.playing-card-banner` with `"playing-card": "banner"` |
+| `.menu-drawer row.current` | The row for the page under the menu, Home or Library, while either is shown, and with `.menu-shelves` its card (`.menu-card.current`); a screen reader reads it as the current page |
 | `.power-dock` | The menu drawer's power dock, under its main level's list: Exit Fullscreen Mode, Switch to Desktop and Exit Pindu Launcher at its start, Suspend, Restart and Power Off at its end |
 | `.dock-button` | A round button of the dock (also `.circular`), at least 52px across, holding only its icon; one the system does not offer has a `.dimmed` icon and still takes focus |
 | `.dock-label` | The line over the dock that names the focused button, and says why a dimmed one is unavailable; empty while focus is elsewhere |
-| `.menu-shelf-heading` | With `.menu-shelves`, the heading of a shelf of the menu's main level: Go To, Collections or Leave, over its row of cards (`.menu-shelf`), which scrolls sideways |
+| `.menu-shelf-heading` | With `.menu-shelves`, the heading of a shelf of the menu's main level: Go To, Collections or Leave, over its row of cards (`.menu-shelf`), which scrolls sideways. While a card of one shelf has focus, the other shelves' headings and the scrolled windows holding their rows are `.unfocused-shelf` |
 | `.menu-card` | A card on one of the menu's shelves, at least 96px square: its icon (`.menu-card-icon`) over its name (`.menu-card-name`) and, under it, a number of games or why it does nothing (`.menu-card-detail`). A card of the Leave shelf is also `.leave-card`; one the system does not offer has a `.dimmed` icon and still takes focus |
 | `.quick-access` | The Quick Access panel on the right; also `.panel-sections-side` with `"panel-sections": "side"`, `.quick-tiles-pills`, `.quick-tiles-list` or `.quick-tiles-shelf` as `quick-tiles` says (none for `"grid"`), and `.playing-card-banner` with `"playing-card": "banner"` |
 | `.quick-access-status` | The header at the top of Quick Access: `.clock` (the time), `.offline` (shown while there is no network) and `.battery` (the machine's battery, absent without one) |
 | `.panel-sections` | The strip under Quick Access's header that switches its sections (Quick, Notifications, Design, Controller, System and Manage); a rail down the panel's inner edge, about 60px wide, with `.panel-sections-side` |
 | `.panel-section` | A button of that strip, `:checked` for the section shown; it holds the section's icon, and across the top the checked one its name too |
-| `.panel-section-title` | With `.panel-sections-side`, the shown section's name over its page |
+| `.panel-section-title` | With `.panel-sections-side`, the shown section's name over its page; also `.panel-heading` |
 | `.page-card` | A card at the top of Quick Access's Quick section for what the page under the panel offers (Filters, Performance), a button at least 64px tall: its icon in a round chip (`.page-card-icon`), the "For This Page" eyebrow (`.page-card-eyebrow`) over its name, and at its end a second line (`.page-card-state`, the filters that are on) and an arrow |
-| `.quick-tiles` | The tiles in Quick Access's Quick section, 10px apart, filled from the start: three equal columns; two with `.quick-tiles-pills`; one with `.quick-tiles-list`; and with `.quick-tiles-shelf` each shelf's heading (`.quick-tiles-heading`, Devices or Library) over a row of its tiles |
+| `.quick-tiles` | The tiles in Quick Access's Quick section, 10px apart, filled from the start: three equal columns; two with `.quick-tiles-pills`; one with `.quick-tiles-list`; and with `.quick-tiles-shelf` each shelf's heading (`.quick-tiles-heading`, Devices or Library) over a row of its tiles. While a tile of one shelf has focus, the other shelf's heading and tiles are `.unfocused-shelf` |
 | `.quick-tile` | A tile, a button about 100px tall that grows taller at larger text sizes: its icon (`.quick-tile-icon`) at the top, a small arrow (`.quick-tile-arrow`) on a tile that leads to a level, and its name (`.quick-tile-name`) at the bottom; insensitive (`:disabled`) when it cannot be used now. As a pill, at least 56px tall, and as a row, at least 48px, its icon sits at its start, its name and second line (`.quick-tile-text`) beside it and the arrow at its end |
 | `.quick-tile-state` | A tile's second line under its name, or at a row's end: the sound output, the Bluetooth devices or the network connection in use |
 | `.activity-strip` | The button at the bottom of Quick Access's Quick section while something runs in the background: the oldest task's label, its progress bar and its percentage; it shows the Notifications section |
@@ -372,11 +373,48 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.design-cards` | The row of design cards at the top of Quick Access's Design section, in a `.design-cards-scroller` that scrolls it sideways and runs to the panel's end edge; the section's page is `.design-section` |
 | `.design-card` | A design's card in that row, a toggle button, `:checked` for the design in force and insensitive for a design that needs a newer Pindu launcher: `.design-preview` (the design's `preview` clipped to rounded corners, or empty in `--card-bg-color` without one; Adwaita's is built in) with `.design-check` over it while it is in force, then `.design-name`, and for a design it cannot apply `.design-reason` under it |
 | `.options-sheet` | A game's options at the bottom |
+| `.panel-heading` | A small heading in a panel, over a group of rows or tiles: the page card's "For This Page", the menu's Collections and Windows, Quick Access's Running, Notifications, Variant, Artwork, Metadata, Copy Order, Genre and Proton, the shown section's name on a rail (`.panel-section-title`), and the headings of its levels (Bluetooth's, Network's, Library Health's, Proton's and What Each Button Does's). Each is also libadwaita's `.heading`, but the page card's, which is `.caption`, and the section's name, which is `.title-3` |
 | `.navigation-sidebar > row` | A row in any of the three |
 | `.hint-bar` | The controller hints at the bottom; each `.hint` has `.hint-glyph`s and a `.hint-label` |
 | `.search-keyboard` | The on-screen keyboard; `.osk-key` a key, `.osk-key.cursor` the one under the cursor |
 
 Other widgets inside these are libadwaita's and GTK's own; their names may change with them.
+
+## Styling the menus
+
+The menu drawer, Quick Access and the options sheet are the panels. A design that restyles them should
+give each of these parts its look, so none is left with Pindu's base style beside it:
+
+- the panels themselves: `.menu-drawer`, `.quick-access`, `.options-sheet`, their rows
+  (`.navigation-sidebar > row`) and their lists (`.boxed-list`), with the focused row's ring;
+- the section strip: `.panel-sections`, `.panel-section` and its `:checked` state, and the unread
+  count, `.notification-count`; as a rail (`.quick-access.panel-sections-side`), with the section's
+  name over its page, `.panel-section-title`;
+- the page card, `.page-card`, with `.page-card-icon`, `.page-card-eyebrow` and `.page-card-state`;
+- the tiles: `.quick-tiles`, `.quick-tile`, its `.quick-tile-name` and second line
+  (`.quick-tile-state`), insensitive (`:disabled`) and focused (`:focus-visible`), in the
+  arrangement the design takes: the grid, pills (`.quick-tiles-pills`), rows (`.quick-tiles-list`)
+  or shelves (`.quick-tiles-shelf`, with `.quick-tiles-heading` and `.unfocused-shelf`);
+- the activity strip, `.activity-strip`;
+- the choice rows: `.choice-row`, its `.choice-value` and `.choice-arrow`s, the one at an end
+  insensitive;
+- the design cards: `.design-card`, `:checked` and focused, with `.design-preview`, `.design-check`,
+  `.design-name` and `.design-reason`;
+- the Playing Now card of both panels, `.playing-card`, and its two buttons: Return
+  (`.suggested-action`) and Stop (`.destructive-action`); as a banner (`.playing-card-banner`), its
+  `.playing-card-scrim` over the art, which keeps its text readable over any art, and `.no-art`;
+- the menu's rows, with `.current` on the one for the page under it, or with `.menu-shelves` its
+  shelves: `.menu-shelf-heading`, `.menu-shelf`, `.menu-card` (`.current` on the one for the page
+  under it, `.leave-card` on the Leave shelf's, a `.dimmed` icon on one the system does not offer)
+  and `.unfocused-shelf`;
+- the small headings, `.panel-heading`;
+- the power dock: `.power-dock`, `.dock-button`, one with a `.dimmed` icon, and `.dock-label`.
+
+Keep text on each surface at 4.5:1, second lines included; tell the focused item apart by more than
+colour, such as a ring (`outline` with a negative `outline-offset` draws it inside the item, where a
+scrolled list never cuts it); size what holds text in `em`; and turn off under
+`@media (prefers-reduced-motion: reduce)` what you animate. The shipped designs style every part on
+this list.
 
 ## Compatibility
 

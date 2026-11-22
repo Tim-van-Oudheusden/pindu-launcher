@@ -10,8 +10,9 @@
 //! and Right move along it, stopping at its ends.
 //!
 //! Which level is open is the host's (`pindu_core::panels::Panels`): the host shows a
-//! level with `show_level` and fills the entries with `fill` and the dock with `fill_dock`
-//! as the library and the system change; the rows' and the dock's `win.*` actions are the
+//! level with `show_level`, marks the row for the page under the drawer with
+//! `set_current`, and fills the entries with `fill` and the dock with `fill_dock` as the
+//! library and the system change; the rows' and the dock's `win.*` actions are the
 //! host's. The main window hosts it on the left, where Start or Guide opens it over the
 //! page. Over a running game in a `--steam` gamescope the overlay window (`game_overlay`)
 //! hosts it too, where Guide opens it over the game and it leaves out what would leave the
@@ -23,7 +24,10 @@
 //! (`pindu_core::panels::menu_shelves`), in place of the list and the dock. Left and Right
 //! move along a shelf, Up and Down change shelf, landing on the card that shelf last had
 //! focused, and Up from the main level's first item wraps to where the dock lands. The
-//! drawer follows the design's layout (`follow_layout`), the Playing Now cards' look too.
+//! card for the page under the drawer carries `.current` as its row does, and while a
+//! shelf's card has focus the other shelves' headings and rows carry `.unfocused-shelf`.
+//! The drawer follows the design's layout (`follow_layout`), the Playing Now cards' look
+//! too.
 
 use std::cell::{Cell, OnceCell, RefCell};
 
@@ -70,6 +74,8 @@ mod imp {
         #[template_child]
         pub list: TemplateChild<gtk::ListBox>,
         #[template_child]
+        pub home_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
         pub library_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub library_count: TemplateChild<gtk::Label>,
@@ -95,6 +101,10 @@ mod imp {
         pub inline: RefCell<Vec<gtk::ListBoxRow>>,
         /// Whether the drawer is hosted over a running game.
         pub over_game: Cell<bool>,
+        /// The library's number of games, which its row says to a screen reader.
+        pub library_games: Cell<u32>,
+        /// The row for the page under the drawer, Home or Library, if either.
+        pub current: Cell<Option<DrawerEntry>>,
         /// The Playing Now cards over the main level's entries.
         pub(crate) cards: OnceCell<PlayingCards>,
         /// The collection the collection level shows the actions of.
@@ -145,7 +155,7 @@ mod imp {
                         .margin_top(12)
                         .margin_bottom(6)
                         .margin_start(12)
-                        .css_classes(["heading"])
+                        .css_classes(["heading", "panel-heading"])
                         .build();
                     row.set_header(Some(&heading));
                 }
@@ -257,10 +267,8 @@ impl PinduMenuDrawer {
         let entries = drawer_entries(false, collections.len(), imp.over_game.get());
         let library_count = counts.get(View::All);
         imp.library_count.set_label(&library_count.to_string());
-        imp.library_row
-            .update_property(&[gtk::accessible::Property::Description(&game_count(
-                library_count,
-            ))]);
+        imp.library_games.set(library_count);
+        self.describe_places();
         imp.search_row
             .set_visible(entries.contains(&DrawerEntry::Search));
         imp.all_collections_row
@@ -313,6 +321,63 @@ impl PinduMenuDrawer {
             let row = collection_rows(&list).find(|row| row_collection(row) == Some(id));
             if let Some(row) = row {
                 row.grab_focus();
+            }
+        }
+    }
+
+    /// Marks the row for `current`, the page under the drawer (Home or Library), and its
+    /// card on the shelves, with `.current`, and says so to a screen reader; any other
+    /// entry, or `None`, marks none.
+    pub(crate) fn set_current(&self, current: Option<DrawerEntry>) {
+        let imp = self.imp();
+        imp.current.set(current);
+        for (row, entry) in [
+            (&*imp.home_row, DrawerEntry::Home),
+            (&*imp.library_row, DrawerEntry::Library),
+        ] {
+            set_css_class(row, "current", current == Some(entry));
+        }
+        self.describe_places();
+    }
+
+    /// Tells a screen reader, beside each place's name, the library's number of games and
+    /// which row or card is the page under the drawer, and marks that card `.current`.
+    fn describe_places(&self) {
+        let imp = self.imp();
+        let current = imp.current.get();
+        let games = game_count(imp.library_games.get());
+        let library = if current == Some(DrawerEntry::Library) {
+            // Translators: how a screen reader describes the menu's Library row while the
+            // library is the page under the menu; {games} is how many games it holds, as
+            // "12 games".
+            gettext("Current page, {games}").replace("{games}", &games)
+        } else {
+            games
+        };
+        imp.library_row
+            .update_property(&[gtk::accessible::Property::Description(&library)]);
+        let home = (current == Some(DrawerEntry::Home)).then(|| gettext("Current page"));
+        match &home {
+            Some(home) => imp
+                .home_row
+                .update_property(&[gtk::accessible::Property::Description(home)]),
+            None => imp
+                .home_row
+                .reset_property(gtk::AccessibleProperty::Description),
+        }
+        for (card, button) in imp.shelf_cards.borrow().iter().flat_map(|(_, cards)| cards) {
+            let MenuCard::Place(entry @ (DrawerEntry::Home | DrawerEntry::Library)) = *card else {
+                continue;
+            };
+            set_css_class(button, "current", current == Some(entry));
+            match (entry, &home) {
+                (DrawerEntry::Library, _) => {
+                    button.update_property(&[gtk::accessible::Property::Description(&library)]);
+                }
+                (_, Some(home)) => {
+                    button.update_property(&[gtk::accessible::Property::Description(home)]);
+                }
+                (_, None) => button.reset_property(gtk::AccessibleProperty::Description),
             }
         }
     }
@@ -558,19 +623,12 @@ impl PinduMenuDrawer {
                         None,
                         "win.drawer-home",
                     ),
-                    MenuCard::Place(DrawerEntry::Library) => {
-                        let button = place_card(
-                            "view-grid-symbolic",
-                            &gettext("Library"),
-                            Some(&library_count),
-                            "win.drawer-library",
-                        );
-                        let count = library_count.parse().unwrap_or(0);
-                        button.update_property(&[gtk::accessible::Property::Description(
-                            &game_count(count),
-                        )]);
-                        button
-                    }
+                    MenuCard::Place(DrawerEntry::Library) => place_card(
+                        "view-grid-symbolic",
+                        &gettext("Library"),
+                        Some(&library_count),
+                        "win.drawer-library",
+                    ),
                     MenuCard::Place(DrawerEntry::Search) => place_card(
                         "system-search-symbolic",
                         &gettext("Search"),
@@ -612,11 +670,27 @@ impl PinduMenuDrawer {
                 .propagate_natural_height(true)
                 .child(&viewport)
                 .build();
+            // While a card of this shelf has focus, the other shelves are marked.
+            let focus = gtk::EventControllerFocus::new();
+            focus.connect_enter(glib::clone!(
+                #[weak(rename_to = drawer)]
+                self,
+                #[weak]
+                scroller,
+                move |_| drawer.mark_shelves(Some(scroller.upcast_ref()))
+            ));
+            focus.connect_leave(glib::clone!(
+                #[weak(rename_to = drawer)]
+                self,
+                move |_| drawer.mark_shelves(None)
+            ));
+            scroller.add_controller(focus);
             imp.shelves.append(&heading);
             imp.shelves.append(&scroller);
             built.push((shelf, buttons));
         }
         imp.shelf_cards.replace(built);
+        self.describe_places();
         let Some((shelf, along, collection)) = focused else {
             return;
         };
@@ -636,6 +710,23 @@ impl PinduMenuDrawer {
         drop(cards);
         if let Some(button) = target {
             button.grab_focus();
+        }
+    }
+
+    /// Marks the heading and the row of every shelf but `focused`, the row whose card has
+    /// focus, with `.unfocused-shelf`; with no shelf focused, none.
+    fn mark_shelves(&self, focused: Option<&gtk::Widget>) {
+        let shelves = self.imp().shelves.get();
+        // Each shelf is its heading followed by its row.
+        let mut child = shelves.first_child();
+        while let Some(heading) = child {
+            let Some(row) = heading.next_sibling() else {
+                break;
+            };
+            let away = focused.is_some_and(|focused| *focused != row);
+            set_css_class(&heading, "unfocused-shelf", away);
+            set_css_class(&row, "unfocused-shelf", away);
+            child = row.next_sibling();
         }
     }
 

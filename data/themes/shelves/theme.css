@@ -286,21 +286,291 @@ window.fullscreen-mode .options-sheet .navigation-sidebar > row {
 window.fullscreen-mode .menu-drawer .navigation-sidebar > row:focus-visible,
 window.fullscreen-mode .quick-access .navigation-sidebar > row:focus-visible,
 window.fullscreen-mode .options-sheet .navigation-sidebar > row:focus-visible,
-window.fullscreen-mode .quick-access .boxed-list > row:focus-visible {
+window.fullscreen-mode .quick-access .boxed-list > row:focus-visible,
+window.fullscreen-mode .options-sheet .boxed-list > row:focus-visible {
   background-color: var(--shelves-glass);
   outline: 3px solid white;
   outline-offset: -3px;
 }
 
-/* The lists inside Quick Access (cover sizes, designs): one solid card. */
-window.fullscreen-mode .quick-access .boxed-list {
+/* The lists inside the panels (Quick Access's levels, the options sheet's performance
+   switches): one solid card each. */
+window.fullscreen-mode .quick-access .boxed-list,
+window.fullscreen-mode .options-sheet .boxed-list {
   background-color: var(--shelves-surface);
   border-radius: 12px;
   box-shadow: none;
 }
 
-window.fullscreen-mode .quick-access .boxed-list > row {
+window.fullscreen-mode .quick-access .boxed-list > row,
+window.fullscreen-mode .options-sheet .boxed-list > row {
   border-radius: 12px;
+}
+
+/* A row's second line, muted. */
+window.fullscreen-mode .quick-access .boxed-list > row .subtitle,
+window.fullscreen-mode .options-sheet .boxed-list > row .subtitle,
+window.fullscreen-mode .quick-access .navigation-sidebar > row label.caption {
+  color: var(--shelves-muted);
+  opacity: 1;
+}
+
+/* The menu's row for the page under it: its name at weight 600 over a 3px white line. */
+window.fullscreen-mode .menu-drawer .navigation-sidebar > row.current {
+  font-weight: 600;
+}
+
+window.fullscreen-mode .menu-drawer .navigation-sidebar > row.current > box > label:not(.dim-label) {
+  padding-bottom: 2px;
+  box-shadow: inset 0 -3px white;
+}
+
+/* A panel's small headings, and the headings of Quick's and the menu's shelves: the shelf
+   titles' small spaced capitals. */
+window.fullscreen-mode .panel-heading,
+window.fullscreen-mode .quick-access .quick-tiles-heading,
+window.fullscreen-mode .menu-drawer .menu-shelf-heading {
+  font-size: 0.75em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: white;
+  opacity: 1;
+}
+
+/* Quick Access's section strip: a line under it; the shown section in white over a 3px
+   white line, still wider and named, the others muted. The unread count white with dark
+   text. */
+window.fullscreen-mode .quick-access .panel-sections {
+  box-shadow: inset 0 -1px rgb(255 255 255 / 14%);
+}
+
+window.fullscreen-mode .quick-access .panel-section {
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--shelves-muted);
+}
+
+window.fullscreen-mode .quick-access .panel-section:checked {
+  background: none;
+  box-shadow: inset 0 -3px white;
+  color: white;
+}
+
+window.fullscreen-mode .quick-access .panel-section:checked label:not(.notification-count) {
+  font-weight: 600;
+}
+
+window.fullscreen-mode .quick-access .notification-count {
+  background-color: white;
+  color: #0d0e12;
+  font-weight: 700;
+}
+
+/* Quick's page card, tiles and activity strip, and Design's cards: solid cards. The
+   focused tile or design card lifts 4px on glass, as a focused cover does on Home, and
+   each focused card takes a white ring drawn inside it; the tiles and the design cards
+   keep room above them for the lift. */
+window.fullscreen-mode .quick-access .page-card,
+window.fullscreen-mode .quick-access .quick-tile,
+window.fullscreen-mode .quick-access .activity-strip {
+  border-radius: 12px;
+  background-color: var(--shelves-surface);
+  color: white;
+}
+
+window.fullscreen-mode .quick-access .quick-tiles,
+window.fullscreen-mode .quick-access .design-cards {
+  padding-top: 4px;
+}
+
+window.fullscreen-mode .quick-access .quick-tile,
+window.fullscreen-mode .quick-access .design-card {
+  transition: transform 140ms ease-out, background-color 140ms ease-out, opacity 160ms ease-out;
+}
+
+window.fullscreen-mode .quick-access .page-card:focus-visible,
+window.fullscreen-mode .quick-access .quick-tile:focus-visible,
+window.fullscreen-mode .quick-access .activity-strip:focus-visible,
+window.fullscreen-mode .quick-access .design-card:focus-visible {
+  background-color: var(--shelves-glass);
+  outline: 3px solid white;
+  outline-offset: -3px;
+}
+
+window.fullscreen-mode .quick-access .quick-tile:focus-visible,
+window.fullscreen-mode .quick-access .design-card:focus-visible {
+  transform: translateY(-4px);
+}
+
+/* Quick's tiles as shelves (`.quick-tiles-shelf`) and the menu's entries as shelves of
+   cards (`.menu-shelves`), Shelves' own arrangements: while one shelf has focus the others
+   dim, heading and all (`.unfocused-shelf`), as Home dims its other rows. */
+window.fullscreen-mode .quick-access .quick-tiles-heading,
+window.fullscreen-mode .menu-drawer.menu-shelves .menu-shelf-heading,
+window.fullscreen-mode .menu-drawer.menu-shelves scrolledwindow {
+  transition: opacity 160ms ease-out;
+}
+
+window.fullscreen-mode .quick-access .unfocused-shelf,
+window.fullscreen-mode .menu-drawer .unfocused-shelf {
+  opacity: 0.72;
+}
+
+/* The menu's cards: solid, as the tiles, names at the normal weight; the focused one lifts
+   4px on glass under the white ring drawn inside it, the card for the page under the menu
+   (`.current`) has its name at weight 600 and a 3px white line under it. Each shelf keeps
+   room above for the lift and below for the line. One the system does not offer dims its
+   icon, as the dock does. */
+window.fullscreen-mode .menu-drawer .menu-shelf {
+  padding: 6px 0 5px;
+}
+
+window.fullscreen-mode .menu-drawer .menu-card {
+  border-radius: 12px;
+  background-color: var(--shelves-surface);
+  color: white;
+  transition: transform 140ms ease-out, background-color 140ms ease-out;
+}
+
+window.fullscreen-mode .menu-drawer .menu-card:focus-visible {
+  background-color: var(--shelves-glass);
+  outline: 3px solid white;
+  outline-offset: -3px;
+  transform: translateY(-4px);
+}
+
+window.fullscreen-mode .menu-drawer .menu-card .menu-card-name {
+  font-weight: 400;
+}
+
+window.fullscreen-mode .menu-drawer .menu-card.current .menu-card-name {
+  font-weight: 600;
+}
+
+window.fullscreen-mode .menu-drawer .menu-card.current {
+  box-shadow: 0 3px white;
+}
+
+window.fullscreen-mode .menu-drawer .menu-card .menu-card-detail {
+  color: var(--shelves-muted);
+  opacity: 1;
+}
+
+window.fullscreen-mode .menu-drawer .menu-card image.dimmed {
+  opacity: 0.4;
+}
+
+window.fullscreen-mode .quick-access .quick-tile-name,
+window.fullscreen-mode .quick-access .page-card .heading {
+  font-weight: 600;
+}
+
+window.fullscreen-mode .quick-access .quick-tile-state,
+window.fullscreen-mode .quick-access .page-card-state,
+window.fullscreen-mode .quick-access .activity-strip .dim-label {
+  color: var(--shelves-muted);
+  opacity: 1;
+}
+
+window.fullscreen-mode .quick-access .page-card-icon {
+  background-color: var(--shelves-glass);
+}
+
+/* A choice row: the option at weight 600 between arrows on the glass; the arrow at an
+   end loses its glass and dims. */
+window.fullscreen-mode .choice-row .choice-value {
+  font-weight: 600;
+}
+
+window.fullscreen-mode .choice-row .choice-arrow {
+  background-color: var(--shelves-glass);
+  color: white;
+}
+
+window.fullscreen-mode .choice-row .choice-arrow:disabled {
+  background: none;
+}
+
+window.fullscreen-mode .quick-access .design-card {
+  border-radius: 12px;
+  background-color: var(--shelves-surface);
+}
+
+window.fullscreen-mode .quick-access .design-card:checked {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 30%);
+}
+
+window.fullscreen-mode .quick-access .design-card .design-name {
+  font-weight: 400;
+}
+
+window.fullscreen-mode .quick-access .design-card:checked .design-name {
+  font-weight: 600;
+}
+
+window.fullscreen-mode .quick-access .design-card .design-preview {
+  border-radius: 8px;
+}
+
+window.fullscreen-mode .quick-access .design-card .design-reason {
+  color: var(--shelves-muted);
+  opacity: 1;
+}
+
+/* The Playing Now cards of both panels: solid cards; Return a white rectangle with dark
+   text, Stop on the glass. Their ring sits just outside, where it shows on white Return
+   too. */
+window.fullscreen-mode .menu-drawer .playing-card,
+window.fullscreen-mode .quick-access .playing-card {
+  border-radius: 12px;
+  background-color: var(--shelves-surface);
+  box-shadow: none;
+}
+
+window.fullscreen-mode .playing-card button.suggested-action,
+window.fullscreen-mode .playing-card button.destructive-action {
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+window.fullscreen-mode .playing-card button.suggested-action {
+  background-color: white;
+  color: #0d0e12;
+}
+
+window.fullscreen-mode .playing-card button.destructive-action {
+  background-color: var(--shelves-glass);
+  color: white;
+}
+
+window.fullscreen-mode .menu-drawer .playing-card button:focus-visible,
+window.fullscreen-mode .quick-access .playing-card button:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 2px;
+}
+
+/* The power dock: solid rounded squares, the focused one on the glass under the white
+   ring; one the system does not offer dims its icon. */
+window.fullscreen-mode .menu-drawer .dock-button {
+  border-radius: 12px;
+  background-color: var(--shelves-surface);
+  color: white;
+}
+
+window.fullscreen-mode .menu-drawer .dock-button:focus-visible {
+  background-color: var(--shelves-glass);
+  outline: 3px solid white;
+  outline-offset: -3px;
+}
+
+window.fullscreen-mode .menu-drawer .dock-button image.dimmed {
+  opacity: 0.4;
+}
+
+window.fullscreen-mode .menu-drawer .dock-label {
+  font-weight: 600;
 }
 
 /* Hint bar and search keyboard. */
@@ -322,11 +592,24 @@ window.fullscreen-mode .search-keyboard .osk-key.cursor {
   color: black;
 }
 
-/* Less motion asked for: no lifting, dimming or fading in steps; focus keeps its ring. */
+/* Less motion asked for: no lifting, dimming or fading in steps, in the panels too; focus
+   keeps its ring. */
 @media (prefers-reduced-motion: reduce) {
   window.fullscreen-mode .home .home-hero,
   window.fullscreen-mode .home-shelf,
-  window.fullscreen-mode .home-shelf .home-carousel > button {
+  window.fullscreen-mode .home-shelf .home-carousel > button,
+  window.fullscreen-mode .quick-access .panel-section,
+  window.fullscreen-mode .quick-access .page-card,
+  window.fullscreen-mode .quick-access .quick-tile,
+  window.fullscreen-mode .quick-access .quick-tiles-heading,
+  window.fullscreen-mode .menu-drawer.menu-shelves .menu-shelf-heading,
+  window.fullscreen-mode .menu-drawer.menu-shelves scrolledwindow,
+  window.fullscreen-mode .menu-drawer .menu-card,
+  window.fullscreen-mode .quick-access .activity-strip,
+  window.fullscreen-mode .quick-access .design-card,
+  window.fullscreen-mode .choice-row .choice-arrow,
+  window.fullscreen-mode .playing-card button,
+  window.fullscreen-mode .menu-drawer .dock-button {
     transition: none;
   }
 }

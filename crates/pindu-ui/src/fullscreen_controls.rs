@@ -72,7 +72,7 @@ impl PinduQuickAccess {
             let heading = gtk::Label::builder()
                 .label(group_label(section.group))
                 .xalign(0.0)
-                .css_classes(["heading"])
+                .css_classes(["heading", "panel-heading"])
                 .build();
             if container.first_child().is_some() {
                 heading.set_margin_top(6);
