@@ -225,6 +225,25 @@ mod tests {
     }
 
     #[test]
+    fn the_default_data_home_is_xdg_data_home_or_local_share() {
+        let dir = default_data_home();
+
+        assert!(
+            dir.is_absolute() || dir.ends_with(".local/share"),
+            "{dir:?}"
+        );
+    }
+
+    #[test]
+    fn the_library_art_and_proton_builds_share_the_default_data_home() {
+        let app_dir = default_data_home().join(APP_DIR);
+
+        assert_eq!(default_library_db_path(), app_dir.join("library.db"));
+        assert_eq!(default_user_art_dir(), app_dir.join("art"));
+        assert_eq!(default_tools_dir(), app_dir.join("compatibilitytools.d"));
+    }
+
+    #[test]
     fn the_fullscreen_style_lives_in_xdg_config_home() {
         let path = fullscreen_style_path(Some(Path::new("/config")), Path::new("/home/me"));
 
