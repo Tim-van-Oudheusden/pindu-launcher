@@ -1,0 +1,14 @@
+Quick Access's design previews for Pindu launcher
+
+adwaita.svg — the preview of Adwaita, Home with no design
+Copyright (C) 2026 Pindu launcher contributors
+
+Drawn for Pindu launcher by an AI agent (#721) as a schematic of the app's own Home: no
+game art, no text, no logos. The previews of the shipped designs live in their own folders
+under data/themes/, each covered by that folder's LICENSE.
+
+This file is free software: you can redistribute it and/or modify it under the terms of
+the GNU General Public License as published by the Free Software Foundation, either version
+3 of the License, or (at your option) any later version. The full text of the licence is in
+the LICENSE file at the root of Pindu launcher's source, and at
+<https://www.gnu.org/licenses/gpl-3.0.html>.

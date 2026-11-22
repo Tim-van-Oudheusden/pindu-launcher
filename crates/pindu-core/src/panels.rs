@@ -8,6 +8,8 @@
 //! This decides which one is open and at which level, what Start, Guide, R3, View or X and
 //! B do to them, and what each lists.
 
+use std::path::PathBuf;
+
 use crate::gamepad::Intent;
 use crate::launch::{self, WebPage};
 use crate::model::Game;
@@ -517,12 +519,13 @@ pub struct DesignChoice {
     pub id: String,
     /// The theme's name; `None` for Adwaita, which the shell names.
     pub name: Option<String>,
-    /// The theme's description; empty for Adwaita.
-    pub description: String,
     /// The design in force, which the panel checks.
     pub active: bool,
     /// Whether this Pindu launcher can apply it.
     pub available: bool,
+    /// The theme's picture of its Home (`Theme::preview`); `None` for a theme without one,
+    /// and for Adwaita, whose picture the shell has.
+    pub preview: Option<PathBuf>,
 }
 
 /// What the Quick Access panel's Designs level lists: Adwaita first, then `themes` in
@@ -535,16 +538,16 @@ pub fn design_choices(themes: &[Theme], active: &str) -> Vec<DesignChoice> {
     let default = DesignChoice {
         id: String::new(),
         name: None,
-        description: String::new(),
         active: !applies,
         available: true,
+        preview: None,
     };
     let designs = themes.iter().map(|theme| DesignChoice {
         id: theme.id.clone(),
         name: Some(theme.name.clone()),
-        description: theme.description.clone(),
         active: applies && theme.id == active,
         available: theme.supported(),
+        preview: theme.preview.clone(),
     });
     std::iter::once(default).chain(designs).collect()
 }
@@ -1263,6 +1266,7 @@ mod tests {
             contract,
             layout: Default::default(),
             variants: Vec::new(),
+            preview: None,
         }
     }
 
@@ -1296,6 +1300,23 @@ mod tests {
                 "{active:?}"
             );
         }
+    }
+
+    #[test]
+    fn each_design_carries_its_preview_and_adwaita_none_for_the_shell_to_give() {
+        let mut pictured = theme("pictured", "Pictured", 1);
+        pictured.preview = Some("/themes/pictured/preview.svg".into());
+        let themes = [pictured, theme("plain", "Plain", 1)];
+
+        let previews: Vec<_> = design_choices(&themes, "")
+            .into_iter()
+            .map(|choice| choice.preview)
+            .collect();
+
+        assert_eq!(
+            previews,
+            [None, Some("/themes/pictured/preview.svg".into()), None]
+        );
     }
 
     fn with_variants(mut theme: Theme, ids: &[&str]) -> Theme {

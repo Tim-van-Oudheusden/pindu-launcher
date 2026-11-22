@@ -51,7 +51,7 @@ made without AI. Binary files (images, video, PDFs) count no lines; they are lis
 | MetaInfo (`data/*.metainfo.xml.in`) | 8 of 9 (89%) | 67% | 41% | Mixed: the text is a person's (#58); release notes, branding and later edits are AI-written |
 | `data/icons` | 6 of 6 (100%) | 100% | 0% | AI-made: an AI agent redrew the person's icon artwork (`assets/pindu_icon.png`) as the SVG app icons (#57, PR #102) and drew the controller glyphs. The launcher icons in `data/icons/sources/` are not AI-made: they are other projects' files copied by an AI agent, unchanged but for the Faugus logo's stylesheet (#693) |
 | `data/screenshots` | 0 of 2 | 0% | 100% | A person's, without AI (#58); an AI agent later narrowed `CREDITS.md`'s opening sentence to this folder when the README's screenshots stopped showing the demo library (#702) |
-| Other `data/` (desktop, GSettings, D-Bus, CSS, fullscreen designs, Home art) | 61 of 62 (98%) | 100% | 0% | AI-written, except Home's background video (below) |
+| Other `data/` (desktop, GSettings, D-Bus, CSS, fullscreen designs, Home art) | 61 of 62 (98%) | 100% | 0% | AI-written, except Home's background video (below); the designs' preview pictures in Quick Access (`data/themes/*/preview.svg`, `data/previews/`) are AI-drawn (#721) |
 | `po/` (translations) | 80 of 90 (89%) | 68% | 0% | The template and the build files are AI-made; the translations come from people in Weblate |
 | `tests/` | 6 of 6 (100%) | 100% | 0% | Entirely AI-written |
 | `scripts/` | 11 of 11 (100%) | 100% | 0% | Entirely AI-written |

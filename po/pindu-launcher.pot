@@ -3075,6 +3075,10 @@ msgid ""
 "Type your API key from SteamGridDB's preferences. It is kept in your keyring."
 msgstr ""
 
+#: crates/pindu-ui/src/quick_access.rs:1379
+msgid "In use"
+msgstr ""
+
 #. / Why Design cannot apply a design written for a newer style contract.
 
 #: crates/pindu-ui/src/quick_access.rs:1324

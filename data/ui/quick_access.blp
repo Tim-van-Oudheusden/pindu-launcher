@@ -77,9 +77,15 @@ template $PinduQuickAccess: Box {
     }
   }
 
+  // Reaches the panel's end edge, its levels keeping the panel's padding, so Design's
+  // row of cards can run off it (style.css, `.quick-access-levels`).
   Stack stack {
     vexpand: true;
     transition-type: crossfade;
+
+    styles [
+      "quick-access-levels",
+    ]
 
     StackPage {
       name: "main";
@@ -817,12 +823,22 @@ template $PinduQuickAccess: Box {
     StackPage {
       name: "designs";
 
+      // The level reaches the panel's end edge so the row of cards can run off it;
+      // its content keeps the panel's padding (style.css, `.design-page`).
       child: ScrolledWindow {
         hscrollbar-policy: never;
+
+        styles [
+          "design-page",
+        ]
 
         child: Box {
           orientation: vertical;
           spacing: 12;
+
+          styles [
+            "design-page-content",
+          ]
 
           Label {
             label: _("Design");
@@ -833,14 +849,21 @@ template $PinduQuickAccess: Box {
             ]
           }
 
-          // Default, then each installed design, with a check on the one in
-          // force; filled in code.
-          ListBox designs {
-            selection-mode: none;
+          // Adwaita, then each installed design, as a card with its preview and
+          // name, the one in force checked; filled in code. The row runs to the
+          // panel's edge, so a card cut off there shows there are more; it scrolls
+          // to the focused card.
+          ScrolledWindow {
+            hscrollbar-policy: external;
+            vscrollbar-policy: never;
 
             styles [
-              "boxed-list",
+              "design-cards",
             ]
+
+            child: Box designs {
+              spacing: 12;
+            };
           }
 
           // The variants of the design in force, with a check on the one in

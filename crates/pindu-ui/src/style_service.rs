@@ -346,10 +346,19 @@ impl StyleService {
         self.update();
     }
 
-    /// The installed designs, found afresh and sorted by name.
+    /// The installed designs, found afresh and sorted by name. A design whose preview was
+    /// refused lists without one, and the reason is logged.
     pub fn designs(&self) -> Vec<themes::Theme> {
         let folders = self.theme_folders.each_ref().map(PathBuf::as_path);
-        themes::discover(&folders).themes
+        let found = themes::discover(&folders);
+        for (dir, reason) in &found.refused_previews {
+            glib::g_info!(
+                "pindu",
+                "The theme in {} shows without a preview: {reason}",
+                dir.display()
+            );
+        }
+        found.themes
     }
 
     /// The chosen design's id; empty for none.

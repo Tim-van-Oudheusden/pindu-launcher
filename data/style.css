@@ -529,6 +529,86 @@ window.game-overlay {
   outline-offset: 3px;
 }
 
+/* Quick Access's Design level: its row of design cards runs to the panel's end edge, so a
+   card cut off there shows there are more. The level stack reaches that edge, through the
+   panel's 24px padding; every level keeps the padding but Design, whose content keeps it
+   for all but the row. */
+.quick-access .quick-access-levels {
+  margin-right: -24px;
+}
+
+.quick-access .quick-access-levels > *,
+.quick-access .design-page-content {
+  margin-right: 24px;
+}
+
+.quick-access .quick-access-levels > .design-page {
+  margin-right: 0;
+}
+
+.quick-access .design-cards {
+  margin-right: -24px;
+}
+
+.quick-access .quick-access-levels:dir(rtl),
+.quick-access .design-cards:dir(rtl) {
+  margin-right: 0;
+  margin-left: -24px;
+}
+
+.quick-access .quick-access-levels > *:dir(rtl),
+.quick-access .design-page-content:dir(rtl) {
+  margin-right: 0;
+  margin-left: 24px;
+}
+
+.quick-access .quick-access-levels > .design-page:dir(rtl) {
+  margin-left: 0;
+}
+
+/* A design's card: its preview over its name. The preview is about 108×66 at the default
+   Text Size and grows with the text, clipped to rounded corners over the card colour,
+   which a design without a preview shows empty. The design in force is ringed in the
+   accent colour and carries a check, so it does not rest on colour alone; the focused
+   card takes a ring in the text colour. */
+.quick-access .design-card,
+.quick-access .design-card:checked {
+  padding: 6px;
+  border-radius: 14px;
+  background: none;
+  box-shadow: none;
+}
+
+.quick-access .design-card:hover {
+  background-color: alpha(currentColor, 0.07);
+}
+
+.quick-access .design-card:focus-visible {
+  outline: 3px solid var(--window-fg-color);
+  outline-offset: -3px;
+}
+
+.quick-access .design-card .design-preview {
+  min-width: 5.45em;
+  min-height: 3.35em;
+  border-radius: 8px;
+  background-color: var(--card-bg-color);
+}
+
+.quick-access .design-card:checked .design-preview {
+  outline: 3px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.quick-access .design-card .design-check {
+  margin: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background-color: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+  -gtk-icon-size: 14px;
+}
+
 .options-sheet {
   padding: 24px 24px 36px;
 }
@@ -560,6 +640,38 @@ window.fullscreen-mode.no-design .quick-access {
 
 window.fullscreen-mode.no-design .quick-access:dir(rtl) {
   margin: 16px 0 16px 16px;
+}
+
+/* The card's padding is 20px: the level stack and the row of design cards reach its edge
+   through that instead. */
+window.fullscreen-mode.no-design .quick-access .quick-access-levels,
+window.fullscreen-mode.no-design .quick-access .design-cards {
+  margin-right: -20px;
+}
+
+window.fullscreen-mode.no-design .quick-access .quick-access-levels > *,
+window.fullscreen-mode.no-design .quick-access .design-page-content {
+  margin-right: 20px;
+}
+
+window.fullscreen-mode.no-design .quick-access .quick-access-levels > .design-page {
+  margin-right: 0;
+}
+
+window.fullscreen-mode.no-design .quick-access .quick-access-levels:dir(rtl),
+window.fullscreen-mode.no-design .quick-access .design-cards:dir(rtl) {
+  margin-right: 0;
+  margin-left: -20px;
+}
+
+window.fullscreen-mode.no-design .quick-access .quick-access-levels > *:dir(rtl),
+window.fullscreen-mode.no-design .quick-access .design-page-content:dir(rtl) {
+  margin-right: 0;
+  margin-left: 20px;
+}
+
+window.fullscreen-mode.no-design .quick-access .quick-access-levels > .design-page:dir(rtl) {
+  margin-left: 0;
 }
 
 /* The clock a little larger, Offline and the battery as round chips. */

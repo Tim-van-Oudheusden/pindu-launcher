@@ -47,6 +47,7 @@ This page is the style contract: the files, the `theme.json` fields and the CSS 
 themes/my-design/
   theme.json
   theme.css
+  preview.svg    optional; its card in Quick Access (SVG or PNG, any name)
   assets/…       optional; refer to them as url("assets/bg.svg")
   mono.css       optional; a variant's stylesheet
   LICENSE        required for designs shipped with Pindu
@@ -61,6 +62,7 @@ themes/my-design/
   "description": "One line about it",
   "author": "You",
   "license": "CC0-1.0",
+  "preview": "preview.svg",
   "layout": {
     "home": "row-top",
     "home-tile": "square",
@@ -78,8 +80,9 @@ themes/my-design/
 | Field | Required | Meaning |
 |---|---|---|
 | `contract` | yes | The style contract version the design was written for. A design for a newer contract than this Pindu launcher's is listed as "Needs a newer Pindu launcher" and not applied. |
-| `name` | yes | Shown in the Design list. |
+| `name` | yes | Shown on the design's card in Quick Access → Design. |
 | `description`, `author`, `license` | no | About the design. |
+| `preview` | no | A picture of the design's Home, shown on its card in Quick Access → Design: an SVG or PNG inside the design's folder, relative to it (`"preview.svg"`, `"assets/home.png"`). Draw it for 16:10; it shows at about 108×66 logical pixels at the default Text Size, larger at the larger ones, with its corners rounded. Like a variant's `stylesheet` it may not leave the folder: a missing file, an absolute path, `..` or a symbolic link out of the folder is refused. A refused preview does not stop the design: it shows without a picture, and the reason is logged. Without one the card is empty, in the card colour. |
 | `layout` | no | The layout options below. Unknown keys and values are ignored and fall back to the default. |
 | `variants` | no | The looks the design offers within itself, below. |
 
@@ -336,6 +339,8 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.quick-access-status` | The header at the top of Quick Access: `.clock` (the time), `.offline` (shown while there is no network) and `.battery` (the machine's battery, absent without one) |
 | `.notification-count` | The unread count on Quick Access's Notifications entry |
 | `.notification` | A row of Quick Access's notifications; `.unread` while it is new, with an `.unread-dot` |
+| `.design-cards` | The row of cards at the top of Quick Access → Design, which scrolls sideways and runs to the panel's end edge |
+| `.design-card` | A design's card in that row (a toggle button): its `.design-preview` (the picture, or an empty card in `--card-bg-color` without one), its `.design-name` and, for a design that needs a newer Pindu launcher, a `.caption` saying so. `:checked` while the design is in force, when its `.design-check` shows on the preview |
 | `.task` | A row of Quick Access's Activity, which lists what runs in the background: a label, what it is doing, a progress bar and, while it can be cancelled, a Cancel button |
 | `.control` | A row of Quick Access's Controls: the button's `.control-glyph` (after a Hold label for a held one) and the keys that do the same in `.control-keys` |
 | `.options-sheet` | A game's options at the bottom |

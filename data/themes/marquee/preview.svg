@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Marquee's Home, as a schematic for its card in Quick Access: the focused game's art
+     filling the screen under a shade, its title and details at the left, and the row of
+     square cards along the bottom, the focused one under a white ring. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 160 100">
+  <defs>
+    <linearGradient id="art" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3a3f4f"/>
+      <stop offset="0.6" stop-color="#1f2026"/>
+      <stop offset="1" stop-color="#0b0c0f"/>
+    </linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0.45" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="100" fill="url(#art)"/>
+  <circle cx="118" cy="34" r="26" fill="#55607a" opacity="0.35"/>
+  <path d="M60 64l26-28 18 18 14-12 42 34v24H60z" fill="#2c3242" opacity="0.8"/>
+  <rect width="160" height="100" fill="url(#shade)"/>
+  <rect x="8" y="7" width="16" height="3" rx="1.5" fill="#ffffff"/>
+  <rect x="28" y="7" width="16" height="3" rx="1.5" fill="#ffffff" opacity="0.6"/>
+  <rect x="140" y="7" width="12" height="3" rx="1.5" fill="#ffffff"/>
+  <rect x="8" y="34" width="46" height="7" rx="2" fill="#ffffff"/>
+  <rect x="8" y="45" width="16" height="5" rx="2.5" fill="#1a1b1f" opacity="0.9"/>
+  <rect x="27" y="45" width="20" height="5" rx="2.5" fill="#1a1b1f" opacity="0.9"/>
+  <rect x="8" y="64" width="24" height="24" rx="4" fill="#ffffff" opacity="0.28"/>
+  <rect x="8" y="64" width="24" height="24" rx="4" fill="none" stroke="#ffffff" stroke-width="1.6"/>
+  <rect x="36" y="68" width="20" height="20" rx="3.5" fill="#ffffff" opacity="0.16"/>
+  <rect x="60" y="68" width="20" height="20" rx="3.5" fill="#ffffff" opacity="0.16"/>
+  <rect x="84" y="68" width="20" height="20" rx="3.5" fill="#ffffff" opacity="0.16"/>
+  <rect x="108" y="68" width="20" height="20" rx="3.5" fill="#ffffff" opacity="0.12"/>
+  <rect x="132" y="68" width="20" height="20" rx="3.5" fill="#ffffff" opacity="0.12"/>
+  <rect x="156" y="68" width="20" height="20" rx="3.5" fill="#ffffff" opacity="0.12"/>
+</svg>

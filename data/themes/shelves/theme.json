@@ -4,6 +4,7 @@
   "description": "Every section as a row of its games; Up and Down change row",
   "author": "Pindu launcher contributors",
   "license": "GPL-3.0-or-later",
+  "preview": "preview.svg",
   "layout": {
     "home": "shelves",
     "home-tile": "portrait",

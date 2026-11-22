@@ -45,6 +45,9 @@
     <file preprocess="xml-stripblanks">home/manual.svg</file>
     <file preprocess="xml-stripblanks">home/recently-played.svg</file>
     <file preprocess="xml-stripblanks">home/steam.svg</file>
+    <!-- Adwaita's preview on its card in Quick Access (`themes::ADWAITA_PREVIEW`); the
+         shipped designs' previews are files in their folders. -->
+    <file preprocess="xml-stripblanks">previews/adwaita.svg</file>
     <!-- Controller glyphs for the hint bar; GtkApplication adds icons/ to the icon theme. -->
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-dpad-down-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pindu-glyph-dpad-left-symbolic.svg</file>
