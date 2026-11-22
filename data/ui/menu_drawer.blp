@@ -171,6 +171,14 @@ template $PinduMenuDrawer: Box {
               };
             }
           }
+
+          // With `"menu-entries": "shelves"`, in place of the list and the dock: Go To,
+          // Collections and Leave, each a heading over a row of cards (`menu_drawer.rs`).
+          Box shelves {
+            orientation: vertical;
+            spacing: 6;
+            visible: false;
+          }
         };
       };
     }

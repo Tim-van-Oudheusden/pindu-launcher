@@ -16,6 +16,14 @@
 //! page. Over a running game in a `--steam` gamescope the overlay window (`game_overlay`)
 //! hosts it too, where Guide opens it over the game and it leaves out what would leave the
 //! game or end the session (`set_over_game`), the dock among them.
+//!
+//! A design may arrange the main level's entries as shelves (`"menu-entries": "shelves"`,
+//! `.menu-shelves`): Go To with Home, Library and Search, Collections with every
+//! collection, and Leave with the dock's entries, each a heading over a row of cards
+//! (`pindu_core::panels::menu_shelves`), in place of the list and the dock. Left and Right
+//! move along a shelf, Up and Down change shelf, landing on the card that shelf last had
+//! focused, and Up from the main level's first item wraps to where the dock lands. The
+//! drawer follows the design's layout (`follow_layout`), the Playing Now cards' look too.
 
 use std::cell::{Cell, OnceCell, RefCell};
 
@@ -23,23 +31,27 @@ use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::glib;
 use gtk::prelude::*;
-use pindu_core::gamepad::{Intent, Layout};
+use pindu_core::gamepad::{Direction, Intent, Layout};
 use pindu_core::gamescope::Xid;
-use pindu_core::gamescope::session::{SwitchToDesktop, power_dock};
+use pindu_core::gamescope::session::{DockEntry, SwitchToDesktop, dock_landing, power_dock};
 use pindu_core::hints;
 use pindu_core::library::View;
 use pindu_core::model::Collection;
 use pindu_core::panels::{
-    CollectionAction, DrawerEntry, DrawerLevel, collection_actions, drawer_entries,
+    CollectionAction, DrawerEntry, DrawerLevel, MenuCard, MenuShelf, ShelfStep, collection_actions,
+    drawer_entries, menu_shelves, step_shelves,
 };
 use pindu_core::system::power::PowerState;
+use pindu_core::themes::{MenuEntries, PlayingCard, ThemeLayout};
 
+use crate::application::PinduApplication;
 use crate::collection_actions::collection_icon;
 use crate::fullscreen_panels::drawer_row;
 use crate::fullscreen_playing::PlayingCards;
-use crate::fullscreen_power::PinduPowerDock;
+use crate::fullscreen_power::{PinduPowerDock, leave_card};
 use crate::hint_bar::{GLYPH_SIZE, glyph_label};
 use crate::models::LibraryModel;
+use crate::window::set_css_class;
 
 mod imp {
     use super::*;
@@ -72,6 +84,8 @@ mod imp {
         #[template_child]
         pub dock: TemplateChild<PinduPowerDock>,
         #[template_child]
+        pub shelves: TemplateChild<gtk::Box>,
+        #[template_child]
         pub collections: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub collection_title: TemplateChild<gtk::Label>,
@@ -87,6 +101,16 @@ mod imp {
         pub collection: Cell<Option<i64>>,
         /// The collection level's actions, a row each.
         pub actions: RefCell<Vec<CollectionAction>>,
+        /// How the design arranges the main level's entries.
+        pub entries: Cell<MenuEntries>,
+        /// Every collection's card, in the user's order, for the Collections shelf.
+        pub(crate) collection_cards: RefCell<Vec<CollectionCard>>,
+        /// The dock's entries, and whether the app runs sandboxed, for the Leave shelf.
+        pub dock_entries: RefCell<(Vec<DockEntry>, bool)>,
+        /// The shelves' cards, top to bottom, each with its button.
+        pub shelf_cards: RefCell<CardShelves>,
+        /// The card each shelf last had focused, for Up and Down to land on.
+        pub shelf_last: RefCell<Vec<MenuCard>>,
     }
 
     #[glib::object_subclass]
@@ -176,10 +200,14 @@ mod imp {
     }
 
     impl WidgetImpl for PinduMenuDrawer {
-        /// Moves to, from and along the power dock where it lies that way, before the
-        /// focused widget's own lists and boxes move focus.
+        /// Moves to, from and along the power dock or the shelves where they lie that way,
+        /// before the focused widget's own lists and boxes move focus.
         fn focus(&self, direction: gtk::DirectionType) -> bool {
-            match self.obj().dock_step(direction) {
+            let obj = self.obj();
+            match obj
+                .dock_step(direction)
+                .or_else(|| obj.shelf_step(direction))
+            {
                 Some(target) => {
                     target.grab_focus();
                     true
@@ -265,6 +293,18 @@ impl PinduMenuDrawer {
         for collection in &collections {
             imp.collections.append(&row_for(collection));
         }
+        imp.collection_cards.replace(
+            collections
+                .iter()
+                .map(|collection| CollectionCard {
+                    id: collection.id,
+                    name: collection.name.clone(),
+                    saved_filter: library.saved_filter(collection.id).is_some(),
+                    games: counts.get(View::Collection(collection.id)),
+                })
+                .collect(),
+        );
+        self.fill_shelves();
         if let Some(id) = focused {
             let list = match imp.stack.visible_child_name().as_deref() {
                 Some("collections") => imp.collections.get(),
@@ -322,15 +362,19 @@ impl PinduMenuDrawer {
         }
     }
 
-    /// The collection whose row has focus, in the main level's entries or in the
-    /// collections level, if one does: what View or X shows the actions of.
+    /// The collection whose row or card has focus, in the main level's entries or shelves
+    /// or in the collections level, if one does: what View or X shows the actions of.
     pub(crate) fn focused_collection(&self) -> Option<i64> {
         let imp = self.imp();
-        [imp.list.get(), imp.collections.get()]
+        let row = [imp.list.get(), imp.collections.get()]
             .iter()
             .flat_map(collection_rows)
             .find(|row| row.is_focus())
-            .and_then(|row| row_collection(&row))
+            .and_then(|row| row_collection(&row));
+        row.or_else(|| {
+            self.focused_card()
+                .and_then(|(_, card)| card_collection(&card))
+        })
     }
 
     /// The collection the collection level shows the actions of.
@@ -415,7 +459,8 @@ impl PinduMenuDrawer {
         true
     }
 
-    /// Shows `level`, with the power dock under the main level.
+    /// Shows `level`, with the power dock under the main level while its entries are a
+    /// list.
     pub(crate) fn show_level(&self, level: DrawerLevel) {
         let imp = self.imp();
         imp.stack.set_visible_child_name(match level {
@@ -423,7 +468,317 @@ impl PinduMenuDrawer {
             DrawerLevel::Collections => "collections",
             DrawerLevel::Collection => "collection",
         });
-        imp.dock_holder.set_visible(level == DrawerLevel::Main);
+        imp.dock_holder
+            .set_visible(level == DrawerLevel::Main && imp.entries.get() == MenuEntries::List);
+    }
+
+    /// Follows the layout of the fullscreen design in force from `application`'s style
+    /// service, as Home does: now, and at once whenever it changes.
+    pub(crate) fn follow_layout(&self, application: &PinduApplication) {
+        let style = application.style_service();
+        style.connect_layout_changed(glib::clone!(
+            #[weak(rename_to = drawer)]
+            self,
+            move |layout| drawer.set_layout(layout)
+        ));
+        self.set_layout(style.layout());
+    }
+
+    /// Arranges the drawer as `layout` says: the main level's entries as a list over the
+    /// dock, or as shelves (`.menu-shelves`), and the Playing Now cards compact or as
+    /// banners (`.playing-card-banner`). Focus on an entry that moves goes to the main
+    /// level's first item.
+    fn set_layout(&self, layout: ThemeLayout) {
+        let imp = self.imp();
+        let banner = layout.playing_card == PlayingCard::Banner;
+        set_css_class(self, "playing-card-banner", banner);
+        self.cards().set_arrangement(layout.playing_card);
+        if imp.entries.replace(layout.menu_entries) == layout.menu_entries {
+            return;
+        }
+        let shelves = layout.menu_entries == MenuEntries::Shelves;
+        set_css_class(self, "menu-shelves", shelves);
+        let focus = self
+            .root()
+            .and_then(|root| gtk::prelude::RootExt::focus(&root));
+        let moved = [
+            imp.list.upcast_ref::<gtk::Widget>(),
+            imp.dock.upcast_ref(),
+            imp.shelves.upcast_ref(),
+        ]
+        .into_iter()
+        .any(|area| focus.as_ref().is_some_and(|focus| focus.is_ancestor(area)));
+        imp.list.set_visible(!shelves);
+        imp.shelves.set_visible(shelves);
+        let main = imp.stack.visible_child_name().as_deref() == Some("main");
+        imp.dock_holder.set_visible(main && !shelves);
+        self.fill_shelves();
+        if moved && let Some(target) = self.focus_target(DrawerLevel::Main, None) {
+            target.grab_focus();
+        }
+    }
+
+    /// Builds the shelves (`pindu_core::panels::menu_shelves`) as the library and the dock
+    /// now are, while the design asks for them: each a heading over a row of cards that
+    /// scrolls sideways. A card that had focus gives it to the one now in its place.
+    fn fill_shelves(&self) {
+        let imp = self.imp();
+        let focused = self.focused_card().map(|(card, button)| {
+            let shelf = self.shelf_of(card);
+            let along = imp
+                .shelf_cards
+                .borrow()
+                .iter()
+                .find_map(|(_, cards)| cards.iter().position(|(_, each)| *each == button));
+            (shelf, along.unwrap_or(0), card_collection(&button))
+        });
+        while let Some(child) = imp.shelves.first_child() {
+            imp.shelves.remove(&child);
+        }
+        imp.shelf_cards.borrow_mut().clear();
+        if imp.entries.get() != MenuEntries::Shelves {
+            return;
+        }
+        let collections = imp.collection_cards.borrow().clone();
+        let (dock, sandboxed) = imp.dock_entries.borrow().clone();
+        let library_count = imp.library_count.label();
+        let mut built = Vec::new();
+        for (shelf, cards) in menu_shelves(collections.len(), imp.over_game.get(), &dock) {
+            let row = gtk::Box::builder()
+                .spacing(12)
+                .homogeneous(true)
+                .css_classes(["menu-shelf"])
+                .build();
+            let mut buttons = Vec::new();
+            for card in cards {
+                let button = match card {
+                    MenuCard::Place(DrawerEntry::Home) => place_card(
+                        "go-home-symbolic",
+                        &gettext("Home"),
+                        None,
+                        "win.drawer-home",
+                    ),
+                    MenuCard::Place(DrawerEntry::Library) => {
+                        let button = place_card(
+                            "view-grid-symbolic",
+                            &gettext("Library"),
+                            Some(&library_count),
+                            "win.drawer-library",
+                        );
+                        let count = library_count.parse().unwrap_or(0);
+                        button.update_property(&[gtk::accessible::Property::Description(
+                            &game_count(count),
+                        )]);
+                        button
+                    }
+                    MenuCard::Place(DrawerEntry::Search) => place_card(
+                        "system-search-symbolic",
+                        &gettext("Search"),
+                        None,
+                        "win.drawer-search",
+                    ),
+                    MenuCard::Place(DrawerEntry::Collection(index)) => {
+                        let Some(collection) = collections.get(index) else {
+                            continue;
+                        };
+                        collection_card(collection)
+                    }
+                    // Neither is on a shelf: the cards sit over the shelves, and every
+                    // collection is on its own.
+                    MenuCard::Place(DrawerEntry::PlayingNow | DrawerEntry::AllCollections) => {
+                        continue;
+                    }
+                    MenuCard::Leave(entry) => leave_card(entry, sandboxed),
+                };
+                row.append(&button);
+                buttons.push((card, button));
+            }
+            let heading = gtk::Label::builder()
+                .label(shelf_name(shelf))
+                .xalign(0.0)
+                .css_classes(["heading", "menu-shelf-heading"])
+                .build();
+            row.update_property(&[gtk::accessible::Property::Label(&shelf_name(shelf))]);
+            row.set_accessible_role(gtk::AccessibleRole::Group);
+            // The row is laid out at its natural width, the height it was measured at, so
+            // its cards are never squeezed taller than the shelf.
+            let viewport = gtk::Viewport::builder()
+                .hscroll_policy(gtk::ScrollablePolicy::Natural)
+                .child(&row)
+                .build();
+            let scroller = gtk::ScrolledWindow::builder()
+                .hscrollbar_policy(gtk::PolicyType::Automatic)
+                .vscrollbar_policy(gtk::PolicyType::Never)
+                .propagate_natural_height(true)
+                .child(&viewport)
+                .build();
+            imp.shelves.append(&heading);
+            imp.shelves.append(&scroller);
+            built.push((shelf, buttons));
+        }
+        imp.shelf_cards.replace(built);
+        let Some((shelf, along, collection)) = focused else {
+            return;
+        };
+        let cards = imp.shelf_cards.borrow();
+        let target = collection
+            .and_then(|id| {
+                cards
+                    .iter()
+                    .flat_map(|(_, cards)| cards)
+                    .find(|(_, button)| card_collection(button) == Some(id))
+            })
+            .or_else(|| {
+                let (_, on) = cards.iter().find(|(each, _)| Some(*each) == shelf)?;
+                on.get(along).or(on.last())
+            })
+            .map(|(_, button)| button.clone());
+        drop(cards);
+        if let Some(button) = target {
+            button.grab_focus();
+        }
+    }
+
+    /// The card that has focus on the shelves, with its button.
+    fn focused_card(&self) -> Option<(MenuCard, gtk::Button)> {
+        self.imp()
+            .shelf_cards
+            .borrow()
+            .iter()
+            .flat_map(|(_, cards)| cards)
+            .find(|(_, button)| button.is_focus())
+            .cloned()
+    }
+
+    /// The shelf `card` sits on.
+    fn shelf_of(&self, card: MenuCard) -> Option<MenuShelf> {
+        self.imp()
+            .shelf_cards
+            .borrow()
+            .iter()
+            .find(|(_, cards)| cards.iter().any(|(each, _)| *each == card))
+            .map(|(shelf, _)| *shelf)
+    }
+
+    /// The button of `card` on the shelves.
+    fn card_button(&self, card: MenuCard) -> Option<gtk::Widget> {
+        self.imp()
+            .shelf_cards
+            .borrow()
+            .iter()
+            .flat_map(|(_, cards)| cards)
+            .find(|(each, _)| *each == card)
+            .map(|(_, button)| button.clone().upcast())
+    }
+
+    /// The card focus lands on in the first shelf, or the last (`last`): the one it last
+    /// had focused, else its first.
+    fn shelf_landing(&self, last: bool) -> Option<gtk::Widget> {
+        let imp = self.imp();
+        let shelves = imp.shelf_cards.borrow();
+        let (_, cards) = if last {
+            shelves.last()?
+        } else {
+            shelves.first()?
+        };
+        let remembered = imp.shelf_last.borrow();
+        cards
+            .iter()
+            .find(|(card, _)| remembered.contains(card))
+            .or(cards.first())
+            .map(|(_, button)| button.clone().upcast())
+    }
+
+    /// The Leave shelf's card Up from the top of the menu wraps to
+    /// (`pindu_core::gamescope::session::dock_landing`), as the dock's.
+    fn leave_landing(&self) -> Option<gtk::Widget> {
+        let dock = self.imp().dock_entries.borrow().0.clone();
+        let entry = dock.get(dock_landing(&dock)?)?;
+        self.card_button(MenuCard::Leave(*entry))
+    }
+
+    /// Where `direction` takes focus to, from or along the shelves, while the main level
+    /// shows them: on a card as `pindu_core::panels::step_shelves` says, out of the first
+    /// shelf Up to the windows or the Playing Now cards over them, or else round to where
+    /// the Leave shelf lands; into the first shelf Down from the last card or window over
+    /// it; and from the main level's first item Up round to where the Leave shelf lands.
+    /// `None` where the shelves have no part in the move.
+    fn shelf_step(&self, direction: gtk::DirectionType) -> Option<gtk::Widget> {
+        let imp = self.imp();
+        if imp.entries.get() != MenuEntries::Shelves
+            || imp.stack.visible_child_name().as_deref() != Some("main")
+        {
+            return None;
+        }
+        let rtl = self.direction() == gtk::TextDirection::Rtl;
+        let direction = match direction {
+            gtk::DirectionType::Up => Direction::Up,
+            gtk::DirectionType::Down => Direction::Down,
+            gtk::DirectionType::Left if rtl => Direction::Right,
+            gtk::DirectionType::Left => Direction::Left,
+            gtk::DirectionType::Right if rtl => Direction::Left,
+            gtk::DirectionType::Right => Direction::Right,
+            _ => return None,
+        };
+        let focus = gtk::prelude::RootExt::focus(&self.root()?)?;
+        if let Some((at, _)) = self.focused_card() {
+            let shelves: Vec<(MenuShelf, Vec<MenuCard>)> = imp
+                .shelf_cards
+                .borrow()
+                .iter()
+                .map(|(shelf, cards)| (*shelf, cards.iter().map(|(card, _)| *card).collect()))
+                .collect();
+            {
+                let shelf = self.shelf_of(at);
+                let mut last = imp.shelf_last.borrow_mut();
+                last.retain(|card| self.shelf_of(*card) != shelf);
+                last.push(at);
+            }
+            let step = step_shelves(&shelves, at, direction, &imp.shelf_last.borrow());
+            return match step {
+                ShelfStep::To(card) => self.card_button(card),
+                ShelfStep::Above => self.above_shelves().or(Some(focus)),
+                ShelfStep::Below => Some(focus),
+            };
+        }
+        match direction {
+            Direction::Up if self.is_first_item(&focus) => self.leave_landing(),
+            Direction::Down if self.is_over_shelves(&focus) => self.shelf_landing(false),
+            _ => None,
+        }
+    }
+
+    /// Where Up from the first shelf goes: the last window, else the last Playing Now
+    /// card's Return, else round to where the Leave shelf lands.
+    fn above_shelves(&self) -> Option<gtk::Widget> {
+        let imp = self.imp();
+        if imp.windows.is_visible()
+            && let Some(row) = last_row(&imp.windows)
+        {
+            return Some(row);
+        }
+        if imp.playing_cards.is_visible() {
+            return imp
+                .playing_cards
+                .last_child()
+                .as_ref()
+                .and_then(crate::fullscreen_playing::card_return);
+        }
+        self.leave_landing()
+    }
+
+    /// Whether `focus` is on the last item over the shelves: the last window, or else the
+    /// last Playing Now card.
+    fn is_over_shelves(&self, focus: &gtk::Widget) -> bool {
+        let imp = self.imp();
+        if imp.windows.is_visible() {
+            return last_row(&imp.windows).is_some_and(|row| row == *focus);
+        }
+        imp.playing_cards.is_visible()
+            && imp
+                .playing_cards
+                .last_child()
+                .is_some_and(|card| focus.is_ancestor(&card))
     }
 
     /// Where focus goes as `level` shows, after `left` (the level focus comes from): the
@@ -437,6 +792,35 @@ impl PinduMenuDrawer {
     ) -> Option<gtk::Widget> {
         let imp = self.imp();
         let first_row = |list: &gtk::ListBox| list.row_at_index(0).map(|row| row.upcast());
+        if level == DrawerLevel::Main && imp.entries.get() == MenuEntries::Shelves {
+            return match left {
+                Some(DrawerLevel::Collection | DrawerLevel::Collections) => {
+                    let shown = imp.collection.get();
+                    let cards = imp.shelf_cards.borrow();
+                    let collections = cards
+                        .iter()
+                        .find(|(shelf, _)| *shelf == MenuShelf::Collections)
+                        .map(|(_, cards)| cards.as_slice())
+                        .unwrap_or_default();
+                    collections
+                        .iter()
+                        .find(|(_, button)| shown.is_some() && card_collection(button) == shown)
+                        .or(collections.first())
+                        .map(|(_, button)| button.clone().upcast())
+                        .or_else(|| self.shelf_landing(false))
+                }
+                _ if imp.playing_cards.is_visible() => imp
+                    .playing_cards
+                    .first_child()
+                    .as_ref()
+                    .and_then(crate::fullscreen_playing::card_return),
+                _ => {
+                    let cards = imp.shelf_cards.borrow();
+                    let first = cards.first().and_then(|(_, cards)| cards.first());
+                    first.map(|(_, button)| button.clone().upcast())
+                }
+            };
+        }
         match (level, left) {
             (DrawerLevel::Main, Some(DrawerLevel::Collections)) => {
                 Some(imp.all_collections_row.get().upcast())
@@ -487,6 +871,8 @@ impl PinduMenuDrawer {
         let had_focus = imp.dock.focused().is_some();
         let entries = power_dock(state, switch, exit, imp.over_game.get());
         imp.dock.fill(&entries, state.sandboxed);
+        imp.dock_entries.replace((entries.clone(), state.sandboxed));
+        self.fill_shelves();
         if had_focus
             && entries.is_empty()
             && let Some(row) = last_row(&imp.list)
@@ -537,7 +923,7 @@ impl PinduMenuDrawer {
     }
 
     /// Whether `focus` is on the main level's first item: a button of the first Playing
-    /// Now card while a game runs, or else Home.
+    /// Now card while a game runs, or else Home, as a row or as a card.
     fn is_first_item(&self, focus: &gtk::Widget) -> bool {
         let imp = self.imp();
         if imp.playing_cards.is_visible() {
@@ -545,6 +931,12 @@ impl PinduMenuDrawer {
                 .playing_cards
                 .first_child()
                 .is_some_and(|card| focus.is_ancestor(&card));
+        }
+        if imp.entries.get() == MenuEntries::Shelves {
+            return self
+                .card_button(MenuCard::Place(DrawerEntry::Home))
+                .as_ref()
+                == Some(focus);
         }
         imp.list
             .row_at_index(0)
@@ -601,4 +993,107 @@ fn collection_row(collection: &Collection, saved_filter: bool, games: u32) -> gt
 /// How many games a place holds, as a screen reader reads it.
 fn game_count(count: u32) -> String {
     ngettext("{count} game", "{count} games", count).replace("{count}", &count.to_string())
+}
+
+/// The menu's shelves, top to bottom, each card with its button.
+type CardShelves = Vec<(MenuShelf, Vec<(MenuCard, gtk::Button)>)>;
+
+/// What a collection's card on the Collections shelf shows.
+#[derive(Debug, Clone)]
+pub(crate) struct CollectionCard {
+    /// The collection's ID, which the card opens.
+    id: i64,
+    /// Its name.
+    name: String,
+    /// Whether it is a saved filter, which its icon shows.
+    saved_filter: bool,
+    /// Its number of games.
+    games: u32,
+}
+
+/// The heading over `shelf`.
+fn shelf_name(shelf: MenuShelf) -> String {
+    match shelf {
+        MenuShelf::GoTo => gettext("Go To"),
+        MenuShelf::Collections => gettext("Collections"),
+        MenuShelf::Leave => gettext("Leave"),
+    }
+}
+
+/// A card on one of the menu's shelves (`.menu-card`): its icon (`.menu-card-icon`) over
+/// its name (`.menu-card-name`, wrapped between words), and under it `detail`, a number of
+/// games or why the card does nothing, when there is one (`.menu-card-detail`).
+pub(crate) fn menu_card(icon: &str, name: &str, detail: Option<&str>) -> gtk::Button {
+    let content = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(6)
+        .valign(gtk::Align::Center)
+        .build();
+    content.append(
+        &gtk::Image::builder()
+            .icon_name(icon)
+            .accessible_role(gtk::AccessibleRole::Presentation)
+            .css_classes(["menu-card-icon"])
+            .build(),
+    );
+    // Wrapped between words only, so a card is at least as wide as its longest word and
+    // grows taller for more lines: no name is cut or broken inside a word.
+    content.append(
+        &gtk::Label::builder()
+            .label(name)
+            .justify(gtk::Justification::Center)
+            .wrap(true)
+            .wrap_mode(gtk::pango::WrapMode::Word)
+            .max_width_chars(12)
+            .css_classes(["menu-card-name"])
+            .build(),
+    );
+    if let Some(detail) = detail {
+        content.append(
+            &gtk::Label::builder()
+                .label(detail)
+                .justify(gtk::Justification::Center)
+                .wrap(true)
+                .wrap_mode(gtk::pango::WrapMode::Word)
+                .max_width_chars(10)
+                .accessible_role(gtk::AccessibleRole::Presentation)
+                .css_classes(["menu-card-detail", "caption", "dim-label", "numeric"])
+                .build(),
+        );
+    }
+    gtk::Button::builder()
+        .child(&content)
+        .css_classes(["menu-card"])
+        .build()
+}
+
+/// A card of the Go To shelf, leading to `action`, as its row does.
+fn place_card(icon: &str, name: &str, detail: Option<&str>, action: &str) -> gtk::Button {
+    let card = menu_card(icon, name, detail);
+    card.set_action_name(Some(action));
+    card
+}
+
+/// A collection's card: its icon, its name and its number of games, opening the
+/// collection in the library as its row does.
+fn collection_card(collection: &CollectionCard) -> gtk::Button {
+    let card = menu_card(
+        collection_icon(collection.saved_filter),
+        &collection.name,
+        Some(&collection.games.to_string()),
+    );
+    card.update_property(&[gtk::accessible::Property::Description(&game_count(
+        collection.games,
+    ))]);
+    card.set_action_name(Some("win.drawer-collection"));
+    card.set_action_target_value(Some(&collection.id.to_variant()));
+    card
+}
+
+/// The collection a card opens, if it opens one.
+fn card_collection(card: &gtk::Button) -> Option<i64> {
+    if card.action_name().as_deref() != Some("win.drawer-collection") {
+        return None;
+    }
+    card.action_target_value()?.get::<i64>()
 }

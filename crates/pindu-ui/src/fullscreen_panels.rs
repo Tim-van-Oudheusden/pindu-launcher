@@ -223,6 +223,7 @@ impl PinduWindow {
             move |_| window.fill_drawer()
         ));
         if let Some(application) = self.application().and_downcast::<PinduApplication>() {
+            imp.drawer_panel.follow_layout(&application);
             let gamepad = application.gamepad_service();
             imp.drawer_panel.show_search_button(gamepad.active_layout());
             gamepad.connect_active_layout_notify(glib::clone!(

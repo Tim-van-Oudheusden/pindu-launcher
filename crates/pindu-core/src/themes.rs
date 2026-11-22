@@ -75,6 +75,15 @@ pub struct ThemeLayout {
     /// `"home-background-choice"`: whether the design offers Quick Access's choice of
     /// Home's animated background; without it Home shows the default one.
     pub home_background_choice: bool,
+    /// `"panel-sections"`: where Quick Access's section strip sits.
+    pub panel_sections: PanelSections,
+    /// `"quick-tiles"`: how Quick's tiles are laid out.
+    pub quick_tiles: QuickTiles,
+    /// `"menu-entries"`: how the menu drawer's places, collections and ways out are laid
+    /// out.
+    pub menu_entries: MenuEntries,
+    /// `"playing-card"`: how the Playing Now card is drawn.
+    pub playing_card: PlayingCard,
 }
 
 /// The sizes, in pixels, a theme can give the shorter side of Home's cards.
@@ -83,9 +92,11 @@ pub const HOME_TILE_SIZES: RangeInclusive<i32> = 64..=400;
 impl ThemeLayout {
     /// Adwaita's layout, in force while fullscreen mode shows no design: Home as rows
     /// that start with a carousel of the Jump Back In games (`HomeLayout::Explore`), 116
-    /// pixel wide covers, labelled section tiles, the games' details, and the top bar with
-    /// its tabs in the middle. `ThemeLayout::default()`, what a `theme.json` leaves out,
-    /// is not this.
+    /// pixel wide covers, labelled section tiles, the games' details, the top bar with its
+    /// tabs in the middle, and the menus as GNOME arranges its own: Quick Access's sections
+    /// across the top, Quick's tiles as two columns of pills, the menu's entries as rows and
+    /// a compact Playing Now card. `ThemeLayout::default()`, what a `theme.json` leaves
+    /// out, is not this.
     pub fn adwaita() -> Self {
         Self {
             home: HomeLayout::Explore,
@@ -94,8 +105,14 @@ impl ThemeLayout {
             top_bar: true,
             top_bar_tabs: TopBarTabs::Center,
             home_details: true,
+            home_start: HomeStart::Sections,
             home_section_tile: SectionTile::Label,
-            ..Self::default()
+            home_section_preview: false,
+            home_background_choice: false,
+            panel_sections: PanelSections::Top,
+            quick_tiles: QuickTiles::Pills,
+            menu_entries: MenuEntries::List,
+            playing_card: PlayingCard::Compact,
         }
     }
 
@@ -126,6 +143,18 @@ impl ThemeLayout {
                 .unwrap_or_default(),
             home_section_preview: flag("home-section-preview"),
             home_background_choice: flag("home-background-choice"),
+            panel_sections: text("panel-sections")
+                .and_then(PanelSections::from_name)
+                .unwrap_or_default(),
+            quick_tiles: text("quick-tiles")
+                .and_then(QuickTiles::from_name)
+                .unwrap_or_default(),
+            menu_entries: text("menu-entries")
+                .and_then(MenuEntries::from_name)
+                .unwrap_or_default(),
+            playing_card: text("playing-card")
+                .and_then(PlayingCard::from_name)
+                .unwrap_or_default(),
         }
     }
 }
@@ -279,6 +308,130 @@ impl SectionTile {
 
     fn from_name(name: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|tile| tile.name() == name)
+    }
+}
+
+/// Where Quick Access's section strip sits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PanelSections {
+    /// Across the panel's top.
+    #[default]
+    Top,
+    /// A rail of icons down the panel's inner edge, with the shown section's name over
+    /// its content.
+    Side,
+}
+
+impl PanelSections {
+    /// Every place, the default first.
+    pub const ALL: [Self; 2] = [Self::Top, Self::Side];
+
+    /// The place's name in `theme.json`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Top => "top",
+            Self::Side => "side",
+        }
+    }
+
+    fn from_name(name: &str) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|sections| sections.name() == name)
+    }
+}
+
+/// How Quick's tiles are laid out. Which tiles show and their order do not change with it
+/// ([`crate::panels::quick_tiles`]); where each direction leads does
+/// ([`crate::panels::step_arranged_tile`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum QuickTiles {
+    /// A grid of three columns, each tile's icon over its name.
+    #[default]
+    Grid,
+    /// Two columns of wide pills, each tile's icon beside its name.
+    Pills,
+    /// Full-width rows, each tile's second line at the row's end.
+    List,
+    /// Shelves, each a heading over a row that Left and Right move along: Devices and
+    /// Library ([`crate::panels::TileShelf`]).
+    Shelf,
+}
+
+impl QuickTiles {
+    /// Every arrangement, the default first.
+    pub const ALL: [Self; 4] = [Self::Grid, Self::Pills, Self::List, Self::Shelf];
+
+    /// The arrangement's name in `theme.json`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Grid => "grid",
+            Self::Pills => "pills",
+            Self::List => "list",
+            Self::Shelf => "shelf",
+        }
+    }
+
+    fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|tiles| tiles.name() == name)
+    }
+}
+
+/// How the menu drawer's places, collections and ways out are laid out. Which entries it
+/// holds and their order do not change with it ([`crate::panels::drawer_entries`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MenuEntries {
+    /// Rows, with the power dock under them.
+    #[default]
+    List,
+    /// Three shelves of cards, each card with its icon and name: Go To, Collections and
+    /// Leave ([`crate::panels::menu_shelves`]).
+    Shelves,
+}
+
+impl MenuEntries {
+    /// Every arrangement, the default first.
+    pub const ALL: [Self; 2] = [Self::List, Self::Shelves];
+
+    /// The arrangement's name in `theme.json`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::List => "list",
+            Self::Shelves => "shelves",
+        }
+    }
+
+    fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|entries| entries.name() == name)
+    }
+}
+
+/// How the Playing Now card is drawn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PlayingCard {
+    /// As it has been: "Playing Now" and how long the game has run, its title, then Return
+    /// and Stop.
+    #[default]
+    Compact,
+    /// A banner of the game's hero art, else its cover, across the panel's top, with the
+    /// title over a scrim.
+    Banner,
+}
+
+impl PlayingCard {
+    /// Every way of drawing it, the default first.
+    pub const ALL: [Self; 2] = [Self::Compact, Self::Banner];
+
+    /// The way's name in `theme.json`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Compact => "compact",
+            Self::Banner => "banner",
+        }
+    }
+
+    fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|card| card.name() == name)
     }
 }
 
@@ -815,12 +968,157 @@ mod tests {
                 top_bar_tabs: TopBarTabs::Center,
                 home_details: true,
                 home_section_tile: SectionTile::Label,
+                panel_sections: PanelSections::Top,
+                quick_tiles: QuickTiles::Pills,
+                menu_entries: MenuEntries::List,
+                playing_card: PlayingCard::Compact,
                 ..ThemeLayout::default()
             }
         );
         // What a `theme.json` leaves out stays today's.
         assert_eq!(ThemeLayout::default().home, HomeLayout::HeroBottom);
         assert!(!ThemeLayout::default().top_bar);
+    }
+
+    #[test]
+    fn the_arrangement_options_name_their_values_the_default_first() {
+        assert_eq!(PanelSections::ALL.map(PanelSections::name), ["top", "side"]);
+        assert_eq!(
+            QuickTiles::ALL.map(QuickTiles::name),
+            ["grid", "pills", "list", "shelf"]
+        );
+        assert_eq!(MenuEntries::ALL.map(MenuEntries::name), ["list", "shelves"]);
+        assert_eq!(
+            PlayingCard::ALL.map(PlayingCard::name),
+            ["compact", "banner"]
+        );
+        assert_eq!(PanelSections::default(), PanelSections::ALL[0]);
+        assert_eq!(QuickTiles::default(), QuickTiles::ALL[0]);
+        assert_eq!(MenuEntries::default(), MenuEntries::ALL[0]);
+        assert_eq!(PlayingCard::default(), PlayingCard::ALL[0]);
+    }
+
+    #[test]
+    fn a_theme_can_place_quick_access_s_sections() {
+        for sections in PanelSections::ALL {
+            assert_eq!(
+                layout_of(&format!(r#"{{"panel-sections": "{}"}}"#, sections.name()))
+                    .panel_sections,
+                sections
+            );
+        }
+        for odd in [
+            r#"{"panel-sections": "bottom"}"#,
+            r#"{"panel-sections": "Side"}"#,
+            r#"{"panel-sections": true}"#,
+            "{}",
+        ] {
+            assert_eq!(layout_of(odd).panel_sections, PanelSections::Top, "{odd}");
+        }
+    }
+
+    #[test]
+    fn a_theme_can_arrange_quick_s_tiles() {
+        for tiles in QuickTiles::ALL {
+            assert_eq!(
+                layout_of(&format!(r#"{{"quick-tiles": "{}"}}"#, tiles.name())).quick_tiles,
+                tiles
+            );
+        }
+        for odd in [
+            r#"{"quick-tiles": "shelves"}"#,
+            r#"{"quick-tiles": "Pills"}"#,
+            r#"{"quick-tiles": 2}"#,
+            "{}",
+        ] {
+            assert_eq!(layout_of(odd).quick_tiles, QuickTiles::Grid, "{odd}");
+        }
+    }
+
+    #[test]
+    fn a_theme_can_arrange_the_menu_s_entries() {
+        for entries in MenuEntries::ALL {
+            assert_eq!(
+                layout_of(&format!(r#"{{"menu-entries": "{}"}}"#, entries.name())).menu_entries,
+                entries
+            );
+        }
+        for odd in [
+            r#"{"menu-entries": "shelf"}"#,
+            r#"{"menu-entries": "grid"}"#,
+            r#"{"menu-entries": null}"#,
+            "{}",
+        ] {
+            assert_eq!(layout_of(odd).menu_entries, MenuEntries::List, "{odd}");
+        }
+    }
+
+    #[test]
+    fn a_theme_can_draw_the_playing_card_as_a_banner() {
+        for card in PlayingCard::ALL {
+            assert_eq!(
+                layout_of(&format!(r#"{{"playing-card": "{}"}}"#, card.name())).playing_card,
+                card
+            );
+        }
+        for odd in [
+            r#"{"playing-card": "hero"}"#,
+            r#"{"playing-card": "Banner"}"#,
+            r#"{"playing-card": false}"#,
+            "{}",
+        ] {
+            assert_eq!(layout_of(odd).playing_card, PlayingCard::Compact, "{odd}");
+        }
+        // Adding options does not raise the contract.
+        assert_eq!(CONTRACT, 1);
+    }
+
+    #[test]
+    fn each_shipped_design_arranges_the_menus_its_own_way() {
+        let shipped = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/themes");
+        let found = discover(&[&shipped]);
+        let arrangement = |id: &str| {
+            let layout = found
+                .themes
+                .iter()
+                .find(|theme| theme.id == id)
+                .map(|theme| theme.layout)
+                .unwrap_or_else(|| panic!("{id} is not shipped"));
+            (
+                layout.panel_sections,
+                layout.quick_tiles,
+                layout.menu_entries,
+                layout.playing_card,
+            )
+        };
+
+        assert_eq!(
+            arrangement("lobby"),
+            (
+                PanelSections::Top,
+                QuickTiles::Grid,
+                MenuEntries::List,
+                PlayingCard::Compact
+            )
+        );
+        assert_eq!(
+            arrangement("marquee"),
+            (
+                PanelSections::Side,
+                QuickTiles::List,
+                MenuEntries::List,
+                PlayingCard::Banner
+            )
+        );
+        assert_eq!(
+            arrangement("shelves"),
+            (
+                PanelSections::Top,
+                QuickTiles::Shelf,
+                MenuEntries::Shelves,
+                PlayingCard::Compact
+            )
+        );
     }
 
     #[test]

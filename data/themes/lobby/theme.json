@@ -13,6 +13,10 @@
     "home-section-preview": true,
     "home-background-choice": true,
     "top-bar": true,
-    "home-details": true
+    "home-details": true,
+    "panel-sections": "top",
+    "quick-tiles": "grid",
+    "menu-entries": "list",
+    "playing-card": "compact"
   }
 }

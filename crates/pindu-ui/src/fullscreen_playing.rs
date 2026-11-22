@@ -5,7 +5,8 @@
 //! panel shows. The window has the cards' `win.playing-return` and `win.playing-stop`. In
 //! a `--steam` gamescope, Return also brings the game back to the front, the drawer and
 //! Quick Access over a game hold the same cards, and a store-launched game that plays gets
-//! a card too, whose Stop closes its windows.
+//! a card too, whose Stop closes its windows. A design draws the cards compact or as banners
+//! of the game's art (`pindu_core::themes::PlayingCard`), in both panels and over a game.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -16,8 +17,10 @@ use gettextrs::gettext;
 use gtk::glib;
 use pindu_core::model::Timestamp;
 use pindu_core::session_time::{SessionTimeWords, session_time_text, until_next_minute};
+use pindu_core::themes::PlayingCard;
 
 use crate::application::PinduApplication;
+use crate::home_page::{hero_art, load_picture};
 use crate::menu_drawer::PinduMenuDrawer;
 use crate::models::GameObject;
 use crate::quick_access::PinduQuickAccess;
@@ -32,6 +35,10 @@ pub(crate) struct PlayingCards(Rc<Inner>);
 #[derive(Debug)]
 struct Inner {
     cards: gtk::Box,
+    /// The games the cards show, each with when its session began.
+    playing: RefCell<Vec<(GameObject, Timestamp)>>,
+    /// How the design draws the cards.
+    arrangement: Cell<PlayingCard>,
     /// The cards' time labels, each with when its session began.
     times: RefCell<Vec<(gtk::Label, Timestamp)>>,
     /// The next tick of the times while the panel shows.
@@ -44,10 +51,26 @@ impl PlayingCards {
     pub(crate) fn new(cards: &gtk::Box) -> Self {
         Self(Rc::new(Inner {
             cards: cards.clone(),
+            playing: RefCell::new(Vec::new()),
+            arrangement: Cell::new(PlayingCard::default()),
             times: RefCell::new(Vec::new()),
             tick: RefCell::new(None),
             shown: Cell::new(false),
         }))
+    }
+
+    /// Draws the cards as `arrangement`, the design's, says, at once; a card that had focus
+    /// gives it to the first card's Return.
+    pub(crate) fn set_arrangement(&self, arrangement: PlayingCard) {
+        if self.0.arrangement.replace(arrangement) == arrangement {
+            return;
+        }
+        let playing = self.0.playing.borrow().clone();
+        if self.fill(&playing)
+            && let Some(button) = self.0.cards.first_child().as_ref().and_then(card_return)
+        {
+            button.grab_focus();
+        }
     }
 
     /// Up from the top of `list`, under the cards, goes to the nearest card's Return
@@ -70,8 +93,9 @@ impl PlayingCards {
         ));
     }
 
-    /// Shows a card for each of `playing`, the first started first, and hides the cards
-    /// without one. Says whether a card had focus, which the panel then takes back.
+    /// Shows a card for each of `playing`, the first started first, drawn as the design
+    /// says, and hides the cards without one. Says whether a card had focus, which the
+    /// panel then takes back.
     pub(crate) fn fill(&self, playing: &[(GameObject, Timestamp)]) -> bool {
         let cards = &self.0.cards;
         let had_focus = cards
@@ -82,12 +106,18 @@ impl PlayingCards {
             cards.remove(&card);
         }
         let now = session_service::now();
+        let arrangement = self.0.arrangement.get();
         let mut times = Vec::new();
         for (game, started_at) in playing {
-            let (card, time) = playing_card(game, session_time(*started_at, now));
+            let time = session_time(*started_at, now);
+            let (card, time) = match arrangement {
+                PlayingCard::Compact => playing_card(game, time),
+                PlayingCard::Banner => playing_banner(game, time),
+            };
             cards.append(&card);
             times.push((time, *started_at));
         }
+        self.0.playing.replace(playing.to_vec());
         cards.set_visible(!playing.is_empty());
         self.0.times.replace(times);
         self.update_times();
@@ -281,14 +311,59 @@ fn session_time(started_at: Timestamp, now: Timestamp) -> String {
     )
 }
 
-/// A Playing Now card for a game that runs: its title, `time` it has run, and Return to
-/// its page, or Stop it when we started it. Also gives the label of its time, to move it
-/// on.
-fn playing_card(game: &GameObject, time: String) -> (gtk::Box, gtk::Label) {
+/// A compact Playing Now card for a game that runs (`.playing-card`): its title, `time` it
+/// has run, and Return to its page, or Stop it when we started it. Also gives the label of
+/// its time, to move it on.
+fn playing_card(game: &GameObject, time: String) -> (gtk::Widget, gtk::Label) {
+    let (card, time) = card_content(game, time);
+    card.add_css_class("card");
+    card.add_css_class("playing-card");
+    (card.upcast(), time)
+}
+
+/// A Playing Now card drawn as a banner, in a panel that is `.playing-card-banner`: the
+/// game's art (`.playing-card-art`), its hero or else its cover, loaded as Home loads a
+/// game's hero, filling the card, with what the compact card holds over a scrim at its foot
+/// (`.playing-card-scrim`). Without art, or until it loads, the card is `.no-art`, in the
+/// card colour. The card grows with its text at a larger text size.
+fn playing_banner(game: &GameObject, time: String) -> (gtk::Widget, gtk::Label) {
+    let art = gtk::Picture::builder()
+        .content_fit(gtk::ContentFit::Cover)
+        .can_shrink(true)
+        .height_request(BANNER_HEIGHT)
+        .accessible_role(gtk::AccessibleRole::Presentation)
+        .css_classes(["playing-card-art"])
+        .build();
+    let card = gtk::Overlay::builder()
+        .child(&art)
+        .overflow(gtk::Overflow::Hidden)
+        .css_classes(["card", "playing-card", "no-art"])
+        .build();
+    let (scrim, time) = card_content(game, time);
+    scrim.set_valign(gtk::Align::End);
+    scrim.add_css_class("playing-card-scrim");
+    card.add_overlay(&scrim);
+    card.set_measure_overlay(&scrim, true);
+    if let Some(path) = hero_art(game) {
+        let card = card.downgrade();
+        load_picture(&art, path, move |_| {
+            if let Some(card) = card.upgrade() {
+                card.remove_css_class("no-art");
+            }
+        });
+    }
+    (card.upcast(), time)
+}
+
+/// The least height, in logical pixels, of a Playing Now card drawn as a banner.
+const BANNER_HEIGHT: i32 = 168;
+
+/// What a Playing Now card holds, top to bottom: "Playing Now" and `time` the game has run,
+/// its title, then Return and Stop. Also gives the label of its time.
+fn card_content(game: &GameObject, time: String) -> (gtk::Box, gtk::Label) {
     let card = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(12)
-        .css_classes(["card", "playing-card"])
         .build();
     let heading = gtk::Box::builder().spacing(12).build();
     heading.append(
@@ -333,7 +408,13 @@ fn playing_card(game: &GameObject, time: String) -> (gtk::Box, gtk::Label) {
     (card, time)
 }
 
-/// A Playing Now card's Return button: a card holds its labels, then its buttons.
+/// A Playing Now card's Return button: a card holds its labels, then its buttons; a banner
+/// holds them over its art.
 pub(crate) fn card_return(card: &gtk::Widget) -> Option<gtk::Widget> {
-    card.last_child()?.first_child()
+    let content = if card.is::<gtk::Overlay>() {
+        card.last_child()?
+    } else {
+        card.clone()
+    };
+    content.last_child()?.first_child()
 }

@@ -2713,7 +2713,7 @@ impl HomePage {
 }
 
 /// The art that fills the page behind a game: its hero, or else its cover.
-fn hero_art(game: &GameObject) -> Option<PathBuf> {
+pub(crate) fn hero_art(game: &GameObject) -> Option<PathBuf> {
     let entry = game.entry();
     entry.art.hero.clone().or_else(|| entry.art.cover.clone())
 }
@@ -2728,7 +2728,7 @@ fn game_details(game: &GameObject) -> Vec<Detail> {
 
 /// Shows the image at `path` in `picture`: at once when it is in memory, else once it has
 /// loaded, and then runs `loaded`. An image that does not load leaves the picture empty.
-fn load_picture(
+pub(crate) fn load_picture(
     picture: &gtk::Picture,
     path: PathBuf,
     loaded: impl FnOnce(&gtk::Picture) + 'static,

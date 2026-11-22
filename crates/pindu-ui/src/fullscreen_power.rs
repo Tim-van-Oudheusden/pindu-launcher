@@ -28,6 +28,7 @@ use pindu_core::gamescope::session::{
 use pindu_core::system::power::{PowerAction, PowerEntry, PowerState, asks_first};
 
 use crate::application::PinduApplication;
+use crate::menu_drawer::menu_card;
 use crate::session_service;
 use crate::system_power_service::SystemPowerService;
 use crate::window::PinduWindow;
@@ -353,40 +354,7 @@ impl PinduPowerDock {
     /// and is exposed as disabled with the reason as its description; it still takes
     /// focus, so the line over the dock can give the reason.
     fn dock_button(&self, entry: DockEntry, sandboxed: bool) -> gtk::Button {
-        let (name, icon, action) = match entry {
-            DockEntry::ExitFullscreen => (
-                gettext("Exit Fullscreen Mode"),
-                "view-restore-symbolic",
-                "win.leave-fullscreen",
-            ),
-            DockEntry::SwitchToDesktop(_) => (
-                gettext("Switch to Desktop"),
-                "user-desktop-symbolic",
-                "win.power-desktop",
-            ),
-            DockEntry::Exit => (
-                gettext("Exit Pindu Launcher"),
-                "application-exit-symbolic",
-                "app.quit",
-            ),
-            DockEntry::Power(PowerEntry { action, .. }) => match action {
-                PowerAction::Suspend => (
-                    gettext("Suspend"),
-                    "media-playback-pause-symbolic",
-                    "win.power-suspend",
-                ),
-                PowerAction::Restart => (
-                    gettext("Restart"),
-                    "system-reboot-symbolic",
-                    "win.power-restart",
-                ),
-                PowerAction::PowerOff => (
-                    gettext("Power Off"),
-                    "system-shutdown-symbolic",
-                    "win.power-off",
-                ),
-            },
-        };
+        let (name, icon, action) = dock_entry(entry);
         let image = gtk::Image::builder()
             .icon_name(icon)
             .accessible_role(gtk::AccessibleRole::Presentation)
@@ -421,6 +389,67 @@ impl PinduPowerDock {
         ));
         button.add_controller(focus);
         button
+    }
+}
+
+/// A card of the menu's Leave shelf (`.leave-card`) for `entry`, one of the dock's: its
+/// icon over its name, doing what the dock's button does through the same action, so Hold
+/// to Confirm and asking first work on it as on the dock. One the system does not offer is
+/// dimmed, has no action, and says why under its name and to a screen reader; it still
+/// takes focus.
+pub(crate) fn leave_card(entry: DockEntry, sandboxed: bool) -> gtk::Button {
+    let (name, icon, action) = dock_entry(entry);
+    let reason = unavailable_reason(entry, sandboxed);
+    let card = menu_card(icon, &name, reason.as_deref());
+    card.add_css_class("leave-card");
+    match reason {
+        None => card.set_action_name(Some(action)),
+        Some(reason) => {
+            if let Some(icon) = card.child().and_then(|content| content.first_child()) {
+                icon.add_css_class("dimmed");
+            }
+            card.update_state(&[gtk::accessible::State::Disabled(true)]);
+            card.update_property(&[gtk::accessible::Property::Description(&reason)]);
+        }
+    }
+    card
+}
+
+/// The name, icon and action of a dock entry.
+fn dock_entry(entry: DockEntry) -> (String, &'static str, &'static str) {
+    match entry {
+        DockEntry::ExitFullscreen => (
+            gettext("Exit Fullscreen Mode"),
+            "view-restore-symbolic",
+            "win.leave-fullscreen",
+        ),
+        DockEntry::SwitchToDesktop(_) => (
+            gettext("Switch to Desktop"),
+            "user-desktop-symbolic",
+            "win.power-desktop",
+        ),
+        DockEntry::Exit => (
+            gettext("Exit Pindu Launcher"),
+            "application-exit-symbolic",
+            "app.quit",
+        ),
+        DockEntry::Power(PowerEntry { action, .. }) => match action {
+            PowerAction::Suspend => (
+                gettext("Suspend"),
+                "media-playback-pause-symbolic",
+                "win.power-suspend",
+            ),
+            PowerAction::Restart => (
+                gettext("Restart"),
+                "system-reboot-symbolic",
+                "win.power-restart",
+            ),
+            PowerAction::PowerOff => (
+                gettext("Power Off"),
+                "system-shutdown-symbolic",
+                "win.power-off",
+            ),
+        },
     }
 }
 

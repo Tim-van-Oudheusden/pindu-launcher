@@ -12,6 +12,10 @@
     "home-tile-size": 112,
     "home-section-tile": "label",
     "top-bar": true,
-    "home-details": true
+    "home-details": true,
+    "panel-sections": "side",
+    "quick-tiles": "list",
+    "menu-entries": "list",
+    "playing-card": "banner"
   }
 }

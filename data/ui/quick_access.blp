@@ -82,13 +82,16 @@ template $PinduQuickAccess: Box {
     transition-type: crossfade;
 
     // The sections: the strip, then the shown section's page, which scrolls by itself.
-    // A level replaces both while it shows.
+    // A level replaces both while it shows. With the sections at the side
+    // (`"panel-sections": "side"`) the strip is a rail at the panel's inner edge and the
+    // shown section's name heads its page; the strip, the name and the page are placed
+    // in code.
     StackPage {
       name: "main";
 
-      child: Box {
-        orientation: vertical;
-        spacing: 12;
+      child: Grid main_grid {
+        row-spacing: 12;
+        column-spacing: 12;
 
         // A toggle per section, the shown one checked and named. The pointer and touch
         // press them; the controller's focus never lands on them (LB and RB switch
@@ -105,8 +108,12 @@ template $PinduQuickAccess: Box {
             "panel-sections",
           ]
 
+          layout {
+            column: 0;
+            row: 0;
+          }
+
           ToggleButton quick_tab {
-            hexpand: bind quick_tab.active;
             can-focus: false;
             focus-on-click: false;
             accessible-role: tab;
@@ -134,7 +141,6 @@ template $PinduQuickAccess: Box {
 
               Label {
                 label: _("Quick");
-                visible: bind quick_tab.active;
                 ellipsize: end;
                 max-width-chars: 20;
               }
@@ -142,7 +148,6 @@ template $PinduQuickAccess: Box {
           }
 
           ToggleButton notifications_tab {
-            hexpand: bind notifications_tab.active;
             can-focus: false;
             focus-on-click: false;
             accessible-role: tab;
@@ -170,7 +175,6 @@ template $PinduQuickAccess: Box {
 
               Label {
                 label: _("Notifications");
-                visible: bind notifications_tab.active;
                 ellipsize: end;
                 max-width-chars: 20;
               }
@@ -188,7 +192,6 @@ template $PinduQuickAccess: Box {
           }
 
           ToggleButton design_tab {
-            hexpand: bind design_tab.active;
             can-focus: false;
             focus-on-click: false;
             accessible-role: tab;
@@ -216,7 +219,6 @@ template $PinduQuickAccess: Box {
 
               Label {
                 label: _("Design");
-                visible: bind design_tab.active;
                 ellipsize: end;
                 max-width-chars: 20;
               }
@@ -224,7 +226,6 @@ template $PinduQuickAccess: Box {
           }
 
           ToggleButton controller_tab {
-            hexpand: bind controller_tab.active;
             can-focus: false;
             focus-on-click: false;
             accessible-role: tab;
@@ -252,7 +253,6 @@ template $PinduQuickAccess: Box {
 
               Label {
                 label: _("Controller");
-                visible: bind controller_tab.active;
                 ellipsize: end;
                 max-width-chars: 20;
               }
@@ -260,7 +260,6 @@ template $PinduQuickAccess: Box {
           }
 
           ToggleButton system_tab {
-            hexpand: bind system_tab.active;
             can-focus: false;
             focus-on-click: false;
             accessible-role: tab;
@@ -288,7 +287,6 @@ template $PinduQuickAccess: Box {
 
               Label {
                 label: _("System");
-                visible: bind system_tab.active;
                 ellipsize: end;
                 max-width-chars: 20;
               }
@@ -296,7 +294,6 @@ template $PinduQuickAccess: Box {
           }
 
           ToggleButton manage_tab {
-            hexpand: bind manage_tab.active;
             can-focus: false;
             focus-on-click: false;
             accessible-role: tab;
@@ -324,7 +321,6 @@ template $PinduQuickAccess: Box {
 
               Label {
                 label: _("Manage");
-                visible: bind manage_tab.active;
                 ellipsize: end;
                 max-width-chars: 20;
               }
@@ -332,9 +328,32 @@ template $PinduQuickAccess: Box {
           }
         }
 
+        // The shown section's name, over its page while the strip is a rail.
+        Label section_title {
+          xalign: 0;
+          visible: false;
+          accessible-role: presentation;
+
+          styles [
+            "panel-section-title",
+            "title-3",
+          ]
+
+          layout {
+            column: 0;
+            row: 1;
+          }
+        }
+
         Stack sections {
+          hexpand: true;
           vexpand: true;
           transition-type: crossfade;
+
+          layout {
+            column: 0;
+            row: 2;
+          }
 
           StackPage {
             name: "quick";
@@ -494,9 +513,10 @@ template $PinduQuickAccess: Box {
                   };
                 }
 
-                // Three equal columns, filled from the start with the tiles that show
-                // (`pindu_core::panels::quick_tiles`), placed in code. A tile's top
-                // expands inside it, not the grid inside the page.
+                // The tiles that show (`pindu_core::panels::quick_tiles`), placed in code as
+                // the design arranges them (`quick_section.rs`): by default three equal
+                // columns, each tile's icon over its name. A tile's top expands inside it, not
+                // the grid inside the page. The shelves' headings show on shelves only.
                 Grid quick_tiles {
                   column-spacing: 10;
                   row-spacing: 10;
@@ -506,6 +526,28 @@ template $PinduQuickAccess: Box {
                   styles [
                     "quick-tiles",
                   ]
+
+                  Label devices_heading {
+                    label: _("Devices");
+                    xalign: 0;
+                    visible: false;
+
+                    styles [
+                      "heading",
+                      "quick-tiles-heading",
+                    ]
+                  }
+
+                  Label library_heading {
+                    label: _("Library");
+                    xalign: 0;
+                    visible: false;
+
+                    styles [
+                      "heading",
+                      "quick-tiles-heading",
+                    ]
+                  }
 
                   // As System's Sound Output row: the same level and second line.
                   Button quick_sound_output_tile {
@@ -517,60 +559,83 @@ template $PinduQuickAccess: Box {
                       "quick-tile",
                     ]
 
-                    child: Box {
-                      orientation: vertical;
-                      spacing: 4;
+                    // The icon, the name over the second line, and the arrow of a tile that
+                    // leads to a level, placed as the tiles are arranged (`quick_section.rs`).
+                    child: Grid {
+                      row-spacing: 4;
+
+                      Image {
+                        icon-name: "audio-volume-high-symbolic";
+                        halign: start;
+                        valign: start;
+                        hexpand: true;
+                        vexpand: true;
+                        accessible-role: presentation;
+
+                        styles [
+                          "quick-tile-icon",
+                        ]
+
+                        layout {
+                          column: 0;
+                          row: 0;
+                        }
+                      }
+
+                      Image {
+                        icon-name: "go-next-symbolic";
+                        valign: start;
+                        accessible-role: presentation;
+
+                        styles [
+                          "quick-tile-arrow",
+                        ]
+
+                        layout {
+                          column: 1;
+                          row: 0;
+                        }
+                      }
 
                       Box {
-                        valign: start;
-                        vexpand: true;
+                        orientation: vertical;
+                        spacing: 4;
 
-                        Image {
-                          icon-name: "audio-volume-high-symbolic";
-                          halign: start;
-                          hexpand: true;
-                          accessible-role: presentation;
+                        styles [
+                          "quick-tile-text",
+                        ]
+
+                        layout {
+                          column: 0;
+                          row: 1;
+                          column-span: 2;
+                        }
+
+                        Label {
+                          label: _("Sound Output");
+                          xalign: 0;
+                          wrap: true;
+                          wrap-mode: word_char;
+                          max-width-chars: 10;
 
                           styles [
-                            "quick-tile-icon",
+                            "quick-tile-name",
                           ]
                         }
 
-                        Image {
-                          icon-name: "go-next-symbolic";
-                          valign: start;
-                          accessible-role: presentation;
+                        Label {
+                          label: bind sound_output_subtitle.label;
+                          visible: bind sound_output_subtitle.visible;
+                          xalign: 0;
+                          ellipsize: end;
+                          max-width-chars: 10;
 
                           styles [
-                            "quick-tile-arrow",
+                            "quick-tile-state",
+                            "caption",
+                            "dim-label",
                           ]
                         }
-                      }
-
-                      Label {
-                        label: _("Sound Output");
-                        xalign: 0;
-                        wrap: true;
-                        wrap-mode: word_char;
-                        max-width-chars: 10;
-
-                        styles [
-                          "quick-tile-name",
-                        ]
-                      }
-
-                      Label {
-                        label: bind sound_output_subtitle.label;
-                        visible: bind sound_output_subtitle.visible;
-                        xalign: 0;
-                        ellipsize: end;
-                        max-width-chars: 10;
-
-                        styles [
-                          "quick-tile-state",
-                          "caption",
-                          "dim-label",
-                        ]
                       }
                     };
                   }
@@ -585,59 +650,82 @@ template $PinduQuickAccess: Box {
                       "quick-tile",
                     ]
 
-                    child: Box {
-                      orientation: vertical;
-                      spacing: 4;
+                    // The icon, the name over the second line, and the arrow of a tile that
+                    // leads to a level, placed as the tiles are arranged (`quick_section.rs`).
+                    child: Grid {
+                      row-spacing: 4;
+
+                      Image {
+                        icon-name: "bluetooth-active-symbolic";
+                        halign: start;
+                        valign: start;
+                        hexpand: true;
+                        vexpand: true;
+                        accessible-role: presentation;
+
+                        styles [
+                          "quick-tile-icon",
+                        ]
+
+                        layout {
+                          column: 0;
+                          row: 0;
+                        }
+                      }
+
+                      Image {
+                        icon-name: "go-next-symbolic";
+                        valign: start;
+                        accessible-role: presentation;
+
+                        styles [
+                          "quick-tile-arrow",
+                        ]
+
+                        layout {
+                          column: 1;
+                          row: 0;
+                        }
+                      }
 
                       Box {
-                        valign: start;
-                        vexpand: true;
+                        orientation: vertical;
+                        spacing: 4;
 
-                        Image {
-                          icon-name: "bluetooth-active-symbolic";
-                          halign: start;
-                          hexpand: true;
-                          accessible-role: presentation;
+                        styles [
+                          "quick-tile-text",
+                        ]
+
+                        layout {
+                          column: 0;
+                          row: 1;
+                          column-span: 2;
+                        }
+
+                        Label {
+                          label: _("Bluetooth");
+                          xalign: 0;
+                          wrap: true;
+                          wrap-mode: word_char;
+                          max-width-chars: 10;
 
                           styles [
-                            "quick-tile-icon",
+                            "quick-tile-name",
                           ]
                         }
 
-                        Image {
-                          icon-name: "go-next-symbolic";
-                          valign: start;
-                          accessible-role: presentation;
+                        Label {
+                          label: bind bluetooth_subtitle.label;
+                          xalign: 0;
+                          ellipsize: end;
+                          max-width-chars: 10;
 
                           styles [
-                            "quick-tile-arrow",
+                            "quick-tile-state",
+                            "caption",
+                            "dim-label",
                           ]
                         }
-                      }
-
-                      Label {
-                        label: _("Bluetooth");
-                        xalign: 0;
-                        wrap: true;
-                        wrap-mode: word_char;
-                        max-width-chars: 10;
-
-                        styles [
-                          "quick-tile-name",
-                        ]
-                      }
-
-                      Label {
-                        label: bind bluetooth_subtitle.label;
-                        xalign: 0;
-                        ellipsize: end;
-                        max-width-chars: 10;
-
-                        styles [
-                          "quick-tile-state",
-                          "caption",
-                          "dim-label",
-                        ]
                       }
                     };
                   }
@@ -652,59 +740,82 @@ template $PinduQuickAccess: Box {
                       "quick-tile",
                     ]
 
-                    child: Box {
-                      orientation: vertical;
-                      spacing: 4;
+                    // The icon, the name over the second line, and the arrow of a tile that
+                    // leads to a level, placed as the tiles are arranged (`quick_section.rs`).
+                    child: Grid {
+                      row-spacing: 4;
+
+                      Image {
+                        icon-name: bind network_icon.icon-name;
+                        halign: start;
+                        valign: start;
+                        hexpand: true;
+                        vexpand: true;
+                        accessible-role: presentation;
+
+                        styles [
+                          "quick-tile-icon",
+                        ]
+
+                        layout {
+                          column: 0;
+                          row: 0;
+                        }
+                      }
+
+                      Image {
+                        icon-name: "go-next-symbolic";
+                        valign: start;
+                        accessible-role: presentation;
+
+                        styles [
+                          "quick-tile-arrow",
+                        ]
+
+                        layout {
+                          column: 1;
+                          row: 0;
+                        }
+                      }
 
                       Box {
-                        valign: start;
-                        vexpand: true;
+                        orientation: vertical;
+                        spacing: 4;
 
-                        Image {
-                          icon-name: bind network_icon.icon-name;
-                          halign: start;
-                          hexpand: true;
-                          accessible-role: presentation;
+                        styles [
+                          "quick-tile-text",
+                        ]
+
+                        layout {
+                          column: 0;
+                          row: 1;
+                          column-span: 2;
+                        }
+
+                        Label {
+                          label: _("Network");
+                          xalign: 0;
+                          wrap: true;
+                          wrap-mode: word_char;
+                          max-width-chars: 10;
 
                           styles [
-                            "quick-tile-icon",
+                            "quick-tile-name",
                           ]
                         }
 
-                        Image {
-                          icon-name: "go-next-symbolic";
-                          valign: start;
-                          accessible-role: presentation;
+                        Label {
+                          label: bind network_subtitle.label;
+                          xalign: 0;
+                          ellipsize: end;
+                          max-width-chars: 10;
 
                           styles [
-                            "quick-tile-arrow",
+                            "quick-tile-state",
+                            "caption",
+                            "dim-label",
                           ]
                         }
-                      }
-
-                      Label {
-                        label: _("Network");
-                        xalign: 0;
-                        wrap: true;
-                        wrap-mode: word_char;
-                        max-width-chars: 10;
-
-                        styles [
-                          "quick-tile-name",
-                        ]
-                      }
-
-                      Label {
-                        label: bind network_subtitle.label;
-                        xalign: 0;
-                        ellipsize: end;
-                        max-width-chars: 10;
-
-                        styles [
-                          "quick-tile-state",
-                          "caption",
-                          "dim-label",
-                        ]
                       }
                     };
                   }
@@ -717,36 +828,54 @@ template $PinduQuickAccess: Box {
                       "quick-tile",
                     ]
 
-                    child: Box {
-                      orientation: vertical;
-                      spacing: 4;
+                    // The icon, the name over the second line, and the arrow of a tile that
+                    // leads to a level, placed as the tiles are arranged (`quick_section.rs`).
+                    child: Grid {
+                      row-spacing: 4;
 
-                      Box {
+                      Image {
+                        icon-name: "media-playlist-shuffle-symbolic";
+                        halign: start;
                         valign: start;
+                        hexpand: true;
                         vexpand: true;
+                        accessible-role: presentation;
 
-                        Image {
-                          icon-name: "media-playlist-shuffle-symbolic";
-                          halign: start;
-                          hexpand: true;
-                          accessible-role: presentation;
+                        styles [
+                          "quick-tile-icon",
+                        ]
 
-                          styles [
-                            "quick-tile-icon",
-                          ]
+                        layout {
+                          column: 0;
+                          row: 0;
                         }
                       }
 
-                      Label {
-                        label: _("Surprise Me");
-                        xalign: 0;
-                        wrap: true;
-                        wrap-mode: word_char;
-                        max-width-chars: 10;
+                      Box {
+                        orientation: vertical;
+                        spacing: 4;
 
                         styles [
-                          "quick-tile-name",
+                          "quick-tile-text",
                         ]
+
+                        layout {
+                          column: 0;
+                          row: 1;
+                          column-span: 2;
+                        }
+
+                        Label {
+                          label: _("Surprise Me");
+                          xalign: 0;
+                          wrap: true;
+                          wrap-mode: word_char;
+                          max-width-chars: 10;
+
+                          styles [
+                            "quick-tile-name",
+                          ]
+                        }
                       }
                     };
                   }
@@ -760,36 +889,54 @@ template $PinduQuickAccess: Box {
                       "quick-tile",
                     ]
 
-                    child: Box {
-                      orientation: vertical;
-                      spacing: 4;
+                    // The icon, the name over the second line, and the arrow of a tile that
+                    // leads to a level, placed as the tiles are arranged (`quick_section.rs`).
+                    child: Grid {
+                      row-spacing: 4;
 
-                      Box {
+                      Image {
+                        icon-name: "view-refresh-symbolic";
+                        halign: start;
                         valign: start;
+                        hexpand: true;
                         vexpand: true;
+                        accessible-role: presentation;
 
-                        Image {
-                          icon-name: "view-refresh-symbolic";
-                          halign: start;
-                          hexpand: true;
-                          accessible-role: presentation;
+                        styles [
+                          "quick-tile-icon",
+                        ]
 
-                          styles [
-                            "quick-tile-icon",
-                          ]
+                        layout {
+                          column: 0;
+                          row: 0;
                         }
                       }
 
-                      Label {
-                        label: _("Refresh Library");
-                        xalign: 0;
-                        wrap: true;
-                        wrap-mode: word_char;
-                        max-width-chars: 10;
+                      Box {
+                        orientation: vertical;
+                        spacing: 4;
 
                         styles [
-                          "quick-tile-name",
+                          "quick-tile-text",
                         ]
+
+                        layout {
+                          column: 0;
+                          row: 1;
+                          column-span: 2;
+                        }
+
+                        Label {
+                          label: _("Refresh Library");
+                          xalign: 0;
+                          wrap: true;
+                          wrap-mode: word_char;
+                          max-width-chars: 10;
+
+                          styles [
+                            "quick-tile-name",
+                          ]
+                        }
                       }
                     };
                   }
@@ -802,36 +949,54 @@ template $PinduQuickAccess: Box {
                       "quick-tile",
                     ]
 
-                    child: Box {
-                      orientation: vertical;
-                      spacing: 4;
+                    // The icon, the name over the second line, and the arrow of a tile that
+                    // leads to a level, placed as the tiles are arranged (`quick_section.rs`).
+                    child: Grid {
+                      row-spacing: 4;
 
-                      Box {
+                      Image {
+                        icon-name: "applications-games-symbolic";
+                        halign: start;
                         valign: start;
+                        hexpand: true;
                         vexpand: true;
+                        accessible-role: presentation;
 
-                        Image {
-                          icon-name: "applications-games-symbolic";
-                          halign: start;
-                          hexpand: true;
-                          accessible-role: presentation;
+                        styles [
+                          "quick-tile-icon",
+                        ]
 
-                          styles [
-                            "quick-tile-icon",
-                          ]
+                        layout {
+                          column: 0;
+                          row: 0;
                         }
                       }
 
-                      Label {
-                        label: _("Add a Game");
-                        xalign: 0;
-                        wrap: true;
-                        wrap-mode: word_char;
-                        max-width-chars: 10;
+                      Box {
+                        orientation: vertical;
+                        spacing: 4;
 
                         styles [
-                          "quick-tile-name",
+                          "quick-tile-text",
                         ]
+
+                        layout {
+                          column: 0;
+                          row: 1;
+                          column-span: 2;
+                        }
+
+                        Label {
+                          label: _("Add a Game");
+                          xalign: 0;
+                          wrap: true;
+                          wrap-mode: word_char;
+                          max-width-chars: 10;
+
+                          styles [
+                            "quick-tile-name",
+                          ]
+                        }
                       }
                     };
                   }

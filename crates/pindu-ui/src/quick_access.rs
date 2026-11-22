@@ -15,7 +15,10 @@
 //! row where they belong, with one action and one second line. The pointer and touch
 //! press the strip's toggles (`win.quick-access-section`); the controller's focus never
 //! lands on them, LB and RB switch section. A section remembers the item it had focused
-//! while the panel stays open.
+//! while the panel stays open. The panel follows the design in force at once
+//! (`set_layout`): the strip across the top or as a rail down its inner edge, Quick's
+//! tiles as the design arranges them (`quick_section`) and the Playing Now cards compact
+//! or as banners; what the sections hold never changes with it.
 //!
 //! Which level and section show is the host's (`pindu_core::panels::Panels`, which also
 //! holds the host's other panels): the host shows them with
@@ -64,11 +67,12 @@ use pindu_core::model::GameId;
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{
     DesignChoice, PageEntry, QuickAccessEntry, QuickAccessLevel, QuickAccessSection, QuickFocus,
-    Shown, design_choices, quick_first_focus, quick_tiles, section_entries, sections,
+    Shown, TileShelf, design_choices, quick_first_focus, quick_tiles, section_entries, sections,
     variant_choices,
 };
 use pindu_core::paths;
 use pindu_core::tasks::Task;
+use pindu_core::themes::{PanelSections, PlayingCard, QuickTiles, ThemeLayout};
 
 use crate::add_store::PinduAddStoreLevel;
 use crate::application::PinduApplication;
@@ -92,7 +96,7 @@ use crate::secret_dialog::ask_secret;
 use crate::steamgriddb_service;
 use crate::widgets::{ChoiceOption, ChoiceRow};
 use crate::wikidata_service;
-use crate::window::REDUCE_MOTION_KEY;
+use crate::window::{REDUCE_MOTION_KEY, set_css_class};
 
 mod imp {
     use super::*;
@@ -127,6 +131,12 @@ mod imp {
         #[template_child]
         pub sections: TemplateChild<gtk::Stack>,
         #[template_child]
+        pub main_grid: TemplateChild<gtk::Grid>,
+        #[template_child]
+        pub section_strip: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub section_title: TemplateChild<gtk::Label>,
+        #[template_child]
         pub quick_section: TemplateChild<PinduQuickSection>,
         #[template_child]
         pub playing_cards: TemplateChild<gtk::Box>,
@@ -138,6 +148,10 @@ mod imp {
         pub performance_card: TemplateChild<gtk::Button>,
         #[template_child]
         pub quick_tiles: TemplateChild<gtk::Grid>,
+        #[template_child]
+        pub devices_heading: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub library_heading: TemplateChild<gtk::Label>,
         #[template_child]
         pub quick_sound_output_tile: TemplateChild<gtk::Button>,
         #[template_child]
@@ -391,6 +405,8 @@ mod imp {
         pub surprise_previous: RefCell<Option<GameId>>,
         /// Whether the panel is hosted over a running game.
         pub over_game: Cell<bool>,
+        /// Where the design puts the section strip.
+        pub panel_sections: Cell<PanelSections>,
     }
 
     #[glib::object_subclass]
@@ -991,7 +1007,11 @@ impl PinduQuickAccess {
         }
         let tiles = quick_tiles(shown)
             .into_iter()
-            .flat_map(|tile| self.entry_widgets(QuickAccessSection::Quick, tile.entry()))
+            .flat_map(|tile| {
+                self.entry_widgets(QuickAccessSection::Quick, tile.entry())
+                    .into_iter()
+                    .map(move |widget| (tile, widget))
+            })
             .collect();
         let imp = self.imp();
         imp.quick_section.set_tiles(tiles);
@@ -1030,6 +1050,93 @@ impl PinduQuickAccess {
         }
     }
 
+    /// Arranges the panel as `layout`, the design's, says, at once while it is open: the
+    /// section strip across the top or as a rail down the panel's inner edge
+    /// (`.panel-sections-side`) with the shown section's name over its page, Quick's tiles
+    /// (`.quick-tiles-pills`, `.quick-tiles-list` or `.quick-tiles-shelf`, none for the
+    /// grid) and the Playing Now cards (`.playing-card-banner`). What the panel holds and
+    /// where focus is stay as they are.
+    pub(crate) fn set_layout(&self, layout: ThemeLayout) {
+        let imp = self.imp();
+        let side = layout.panel_sections == PanelSections::Side;
+        imp.panel_sections.set(layout.panel_sections);
+        set_css_class(self, "panel-sections-side", side);
+        for tiles in QuickTiles::ALL {
+            if tiles != QuickTiles::Grid {
+                let class = format!("quick-tiles-{}", tiles.name());
+                set_css_class(self, &class, layout.quick_tiles == tiles);
+            }
+        }
+        let banner = layout.playing_card == PlayingCard::Banner;
+        set_css_class(self, "playing-card-banner", banner);
+        let (orientation, valign) = if side {
+            (gtk::Orientation::Vertical, gtk::Align::Start)
+        } else {
+            (gtk::Orientation::Horizontal, gtk::Align::Fill)
+        };
+        imp.section_strip.set_orientation(orientation);
+        imp.section_strip.set_valign(valign);
+        imp.section_strip
+            .update_property(&[gtk::accessible::Property::Orientation(orientation)]);
+        if let Some(layout) = imp.main_grid.layout_manager() {
+            // Strip, name and page: down the panel, or the rail beside the name over the
+            // page.
+            let places: [(gtk::Widget, (i32, i32, i32)); 3] = [
+                (
+                    imp.section_strip.get().upcast(),
+                    if side { (0, 0, 2) } else { (0, 0, 1) },
+                ),
+                (
+                    imp.section_title.get().upcast(),
+                    if side { (1, 0, 1) } else { (0, 1, 1) },
+                ),
+                (
+                    imp.sections.get().upcast(),
+                    if side { (1, 1, 1) } else { (0, 2, 1) },
+                ),
+            ];
+            for (widget, (column, row, rows)) in places {
+                if let Ok(child) = layout
+                    .layout_child(&widget)
+                    .downcast::<gtk::GridLayoutChild>()
+                {
+                    child.set_column(column);
+                    child.set_row(row);
+                    child.set_row_span(rows);
+                }
+            }
+        }
+        self.show_strip();
+        imp.quick_section.set_arrangement(layout.quick_tiles);
+        if let Some(playing) = imp.playing.get() {
+            playing.set_arrangement(layout.playing_card);
+        }
+    }
+
+    /// Marks the shown section in the strip: across the top its toggle widens and names
+    /// it; on a rail each toggle is its icon, and the name heads the section's page.
+    fn show_strip(&self) {
+        let imp = self.imp();
+        let side = imp.panel_sections.get() == PanelSections::Side;
+        let shown = imp.section.get();
+        for section in QuickAccessSection::ALL {
+            let tab = self.tab(section);
+            let named = !side && section == shown;
+            tab.set_hexpand(named);
+            // The toggle's icon, then its name.
+            let name = tab
+                .child()
+                .and_then(|content| content.first_child())
+                .and_then(|icon| icon.next_sibling());
+            if let Some(name) = name {
+                name.set_visible(named);
+            }
+        }
+        imp.section_title
+            .set_label(&self.tab(shown).tooltip_text().unwrap_or_default());
+        imp.section_title.set_visible(side);
+    }
+
     /// Whether the panel shows `section` now, at its main level.
     pub(crate) fn shows_section(&self, section: QuickAccessSection) -> bool {
         self.level() == Some(QuickAccessLevel::Main) && self.imp().section.get() == section
@@ -1055,6 +1162,7 @@ impl PinduQuickAccess {
                 gtk::StackTransitionType::None
             });
         imp.sections.set_visible_child_name(section.name());
+        self.show_strip();
         match section {
             QuickAccessSection::Quick => self.show_activity_strip(),
             QuickAccessSection::Notifications => {
@@ -1225,6 +1333,10 @@ impl PinduQuickAccess {
                 imp.performance_card.get().upcast(),
             ],
             tiles: imp.quick_tiles.get(),
+            headings: [
+                (TileShelf::Devices, imp.devices_heading.get().upcast()),
+                (TileShelf::Library, imp.library_heading.get().upcast()),
+            ],
             strip: imp.activity_strip.get().upcast(),
         });
         imp.activity_strip.connect_clicked(glib::clone!(
@@ -1529,8 +1641,12 @@ impl PinduQuickAccess {
         service.connect_layout_changed(glib::clone!(
             #[weak(rename_to = quick_access)]
             self,
-            move |_| quick_access.show_background_choice()
+            move |layout| {
+                quick_access.show_background_choice();
+                quick_access.set_layout(layout);
+            }
         ));
+        self.set_layout(service.layout());
         // The row of design cards reaches past the stacks to the panel's edge. A GtkStack
         // clips its children while a transition runs, but stays clipped once it ends.
         for stack in [imp.stack.get(), imp.sections.get()] {

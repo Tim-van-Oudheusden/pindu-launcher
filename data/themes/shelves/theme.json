@@ -10,6 +10,10 @@
     "home-tile": "portrait",
     "home-tile-size": 132,
     "top-bar": true,
-    "home-details": true
+    "home-details": true,
+    "panel-sections": "top",
+    "quick-tiles": "shelf",
+    "menu-entries": "shelves",
+    "playing-card": "compact"
   }
 }
