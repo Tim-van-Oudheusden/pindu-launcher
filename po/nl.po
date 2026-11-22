@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 23:53+0100\n"
+"POT-Creation-Date: 2026-11-22 23:56+0100\n"
 "PO-Revision-Date: 2026-11-07 18:15+0000\n"
 "Last-Translator: Tim <tim-van-oudheusden@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/pindu-launcher/"
@@ -5321,9 +5321,9 @@ msgstr ""
 
 #: data/ui/preferences.blp:297
 msgid ""
-"The library at the size of a TV, driven by a controller. Enter it from the "
-"main menu, with F11 or with the controller's Guide button; leave it with F11 "
-"or Esc."
+"The library at the size of a TV, driven by a controller. Enter it with the "
+"Fullscreen Mode button in the header bar, with F11 or with the controller's "
+"Guide button; leave it with F11 or Esc."
 msgstr ""
 
 #: data/ui/preferences.blp:300
