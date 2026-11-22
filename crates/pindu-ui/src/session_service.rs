@@ -369,7 +369,9 @@ fn request_background() {
     });
 }
 
-/// The time now, as sessions record it.
+/// The time now, as the library records it: session times, when a game was last played or
+/// added, a source's last sync, a save snapshot's time and a notification's time all come
+/// from this one clock, so they can be compared with each other.
 pub(crate) fn now() -> Timestamp {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)

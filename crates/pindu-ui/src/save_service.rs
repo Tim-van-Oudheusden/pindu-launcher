@@ -24,11 +24,10 @@ use pindu_core::tasks::TaskKind;
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
 use crate::file_service;
-use crate::launch_service::now;
 use crate::library_service::LibraryService;
 use crate::permission_service;
 use crate::proton_launch;
-use crate::session_service::SessionService;
+use crate::session_service::{SessionService, now};
 use crate::task_service::TaskService;
 
 thread_local! {
