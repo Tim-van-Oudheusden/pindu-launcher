@@ -44,11 +44,11 @@
 //! Sources `fullscreen_sources` and Duplicates `fullscreen_duplicates`; Add a Game opens
 //! the window's `fullscreen_add_game`. Design is this module's: the design, chosen from a
 //! row of cards with their pictures, its variant, Home's background blur and dim, cover
-//! size, text size, Reduce Motion and the user's own stylesheet. So are System's
-//! navigation sounds, their volume and exiting after a launch, and Manage's SteamGridDB key
-//! (typed hidden with the on-screen keyboard of `secret_dialog` and kept in the keyring),
-//! Prefer SteamGridDB Art and Wikidata metadata, with Refresh Metadata under its switch
-//! while it is on: the same settings Preferences changes.
+//! size, text size, Reduce Motion, Button Hints and the user's own stylesheet. So are
+//! System's navigation sounds, their volume and exiting after a launch, and Manage's
+//! SteamGridDB key (typed hidden with the on-screen keyboard of `secret_dialog` and kept in
+//! the keyring), Prefer SteamGridDB Art and Wikidata metadata, with Refresh Metadata under
+//! its switch while it is on: the same settings Preferences changes.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::sync::LazyLock;
@@ -89,6 +89,7 @@ use crate::fullscreen_proton_downloads::PinduProtonLevel;
 use crate::fullscreen_report::PinduReportLevel;
 use crate::fullscreen_sound_output::PinduSoundOutputLevel;
 use crate::fullscreen_system_update::PinduSystemUpdateLevel;
+use crate::hint_bar::HINT_BAR_KEY;
 use crate::models::GameObject;
 use crate::preferences::TILE_SIZES;
 use crate::quick_section::{Parts, PinduQuickSection, children};
@@ -258,6 +259,8 @@ mod imp {
         pub report_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub hint_bar_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub text_size_row: TemplateChild<ChoiceRow>,
         #[template_child]
@@ -1528,8 +1531,8 @@ impl PinduQuickAccess {
     }
 
     /// Design's Cover Size and Text Size, choice rows on their settings' actions added to
-    /// `actions` as `win.tile-size` and `win.fullscreen-text-size`, then Reduce Motion and
-    /// My Stylesheet bound to their settings.
+    /// `actions` as `win.tile-size` and `win.fullscreen-text-size`, then Reduce Motion,
+    /// Button Hints and My Stylesheet bound to their settings.
     fn setup_design_settings(&self, actions: &impl IsA<gio::ActionMap>) {
         let imp = self.imp();
         let cover_sizes = TILE_SIZES
@@ -1548,6 +1551,9 @@ impl PinduQuickAccess {
         let settings = self.settings();
         settings
             .bind(REDUCE_MOTION_KEY, &*imp.reduce_motion_row, "active")
+            .build();
+        settings
+            .bind(HINT_BAR_KEY, &*imp.hint_bar_row, "active")
             .build();
         settings
             .bind(CUSTOM_STYLE_KEY, &*imp.custom_style_row, "active")

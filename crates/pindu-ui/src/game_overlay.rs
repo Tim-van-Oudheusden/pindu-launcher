@@ -38,7 +38,7 @@ use pindu_core::panels::{
 use crate::application::PinduApplication;
 use crate::controller_navigation::{Adjusted, adjust_slider};
 use crate::fullscreen::Sound;
-use crate::hint_bar::{fill_hint_bar, focus_kind};
+use crate::hint_bar::{HINT_BAR_KEY, fill_hint_bar, focus_kind};
 use crate::hold_progress::{HoldProgress, destructive_action};
 use crate::menu_drawer::PinduMenuDrawer;
 use crate::quick_access::PinduQuickAccess;
@@ -163,6 +163,14 @@ impl PinduGameOverlay {
         overlay.connect_notify_local(Some("visible-dialog"), |overlay, _| {
             overlay.update_hints();
         });
+        window.settings().connect_changed(
+            Some(HINT_BAR_KEY),
+            glib::clone!(
+                #[weak]
+                overlay,
+                move |_, _| overlay.update_hints()
+            ),
+        );
         // A click beside the panel, on the game, closes it.
         let click = gtk::GestureClick::new();
         click.connect_released(glib::clone!(
@@ -562,20 +570,28 @@ impl PinduGameOverlay {
         }
     }
 
-    /// Shows the hints for where focus is in the open panel while a controller is in use,
-    /// under that panel, and hides the bars otherwise.
+    /// Shows the hints for where focus is in the open panel while a controller is in use
+    /// and the main window's Button Hints is on, under that panel, and hides the bars
+    /// otherwise; the panel then reaches the bottom of the screen.
     pub(crate) fn update_hints(&self) {
         let imp = self.imp();
+        let shows_bar = imp
+            .main_window
+            .upgrade()
+            .is_some_and(|window| window.settings().boolean(HINT_BAR_KEY));
         let layout = imp
             .application
             .upgrade()
-            .and_then(|application| application.gamepad_service().active_layout());
+            .and_then(|application| application.gamepad_service().active_layout())
+            .filter(|_| shows_bar);
         let panel = imp.panels.get().open();
         let on_drawer = matches!(panel, Some(Panel::Drawer(_)));
         imp.drawer_hint_bar
             .set_visible(layout.is_some() && on_drawer);
         imp.hint_bar.set_visible(layout.is_some() && !on_drawer);
         let Some(layout) = layout else {
+            // Filled again from scratch once a bar shows.
+            imp.hints.replace(None);
             return;
         };
         let context = Context {

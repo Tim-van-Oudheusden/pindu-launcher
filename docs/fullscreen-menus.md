@@ -133,7 +133,7 @@ What each section lists, top to bottom. "→" leads to the level of that name; "
 |---|---|
 | **Quick** | The Playing Now cards · the page cards: Filters → (when the library is under the panel) and Performance → (when the focused game is one Pindu runs) · the tiles: Sound Output →, Bluetooth →, Network → (each when available), Surprise Me, Refresh Library, Add a Game · the activity strip (while something runs) |
 | **Notifications** | A **Running** heading and the background tasks, each with its progress and Cancel, while something runs · then the notifications, newest first, or the line that says there are none |
-| **Design** | The designs, as a row of cards · Variant · then one list: the choice rows Background (when the design offers the choice), Background Blur, Background Dim, Cover Size, Text Size, then the Reduce Motion switch · My Stylesheet |
+| **Design** | The designs, as a row of cards · Variant · then one list: the choice rows Background (when the design offers the choice), Background Blur, Background Dim, Cover Size, Text Size, then the Reduce Motion and Button Hints switches · My Stylesheet |
 | **Controller** | The controllers · then one list: the choice rows Button Prompts and Swap Confirm and Back, the Hold to Confirm switch, the choice rows Repeat Delay, Repeat Rate and Stick Dead Zone · their note · then What Each Button Does → · Change Buttons → (not over a running game) |
 | **System** | Network → · Bluetooth → · Sound Output → · System Update → (each when available) · then a list of their own: Navigation Sounds, Volume (insensitive while the sounds are off; Left and Right turn it), Exit After Launching · Diagnostics Report → |
 | **Manage** | Sources → · Duplicates → · Library Health → · Proton → · Add a Store → · Add a Game · Refresh Library · an **Artwork** heading: SteamGridDB Key (A types it with the on-screen keyboard; its second line says whether a key is stored, or why the keyring cannot be used), Prefer SteamGridDB Art · a **Metadata** heading: Get Metadata From Wikidata, with Refresh Metadata right under it while it is on |
@@ -148,6 +148,11 @@ What each section lists, top to bottom. "→" leads to the level of that name; "
 - Quick Access has no Settings level: each setting sits in the section it belongs to (#720), as the table says, and
   writes the same GSettings key Preferences does. Up and Down go on from one list of a section to the next.
 - Manage reads whether a SteamGridDB key is stored each time it shows.
+- Design's **Button Hints** (`fullscreen-hint-bar`, on by default; also in Preferences → Fullscreen) shows the hint
+  bar. Off, it hides the main window's bar and the bars under the menu drawer and Quick Access over a running game at
+  once, and pages and panels reach the bottom of the screen. Turned on, the bar comes back with the current hints. It
+  changes nothing the buttons or keys do: the starting screen still cancels on a held back button, and offers its
+  Cancel button after a few seconds.
 
 ### Quick
 

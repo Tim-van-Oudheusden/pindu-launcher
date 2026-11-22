@@ -29,6 +29,7 @@ use crate::application::PinduApplication;
 use crate::config::APP_ID;
 use crate::file_service;
 use crate::fullscreen::bind_volume_slider;
+use crate::hint_bar::HINT_BAR_KEY;
 use crate::permission_service;
 use crate::proton_choice::{FirstChoice, ProtonChoice};
 use crate::proton_downloads_page::ProtonDownloadsPage;
@@ -73,6 +74,8 @@ mod imp {
         pub swap_row: TemplateChild<adw::ComboRow>,
         #[template_child]
         pub start_fullscreen_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub hint_bar_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub sounds_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
@@ -235,6 +238,9 @@ mod imp {
                 .build();
             settings
                 .bind("start-in-fullscreen", &*self.start_fullscreen_row, "active")
+                .build();
+            settings
+                .bind(HINT_BAR_KEY, &*self.hint_bar_row, "active")
                 .build();
             settings
                 .bind("navigation-sounds", &*self.sounds_row, "active")

@@ -28,6 +28,11 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   the field (`connect_changed` while `content_stack` has focus). The field is a 159 sp `Adw.Clamp`ed pill
   (`.search-pill`), 318 px before. The harness gained `click:X,Y` and `move:X,Y` (xdotool). Not seen: window drag,
   touch.
+- 2026-11-22, #743 (stacked on #745): Button Hints (`fullscreen-hint-bar`, `hint_bar::HINT_BAR_KEY`) hides only
+  the hint bar, not the bottom area, so the search keyboard still works; the overlay's two bars follow it through
+  the window's settings. Seen in all four designs at default and Largest. Not seen: the starting screen (with no
+  bar its hold-B-to-cancel is unannounced until Cancel shows after 5 s), the overlay over a running game. When the
+  bar comes back, the focused Button Hints row sits partly under it until focus moves.
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,

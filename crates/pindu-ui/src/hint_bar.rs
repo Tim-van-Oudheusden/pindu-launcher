@@ -2,7 +2,7 @@
 //! controller's glyphs. Which hints show is `pindu_core::hints`; this follows the focused
 //! widget, the shown page, open dialogs and the active controller, and draws the bar. The
 //! menu drawer and Quick Access over a game (`game_overlay`) draw their own bars the same
-//! way.
+//! way. Button Hints (`fullscreen-hint-bar`) hides all three.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -22,8 +22,13 @@ use crate::window::PinduWindow;
 /// How large glyphs draw, to read from across the room.
 pub(crate) const GLYPH_SIZE: i32 = 32;
 
+/// The setting that shows the hint bar, Button Hints: the main window's and the two over
+/// a running game (`game_overlay`).
+pub(crate) const HINT_BAR_KEY: &str = "fullscreen-hint-bar";
+
 impl PinduWindow {
-    /// Keeps the hint bar up to date while the window is fullscreen with a controller.
+    /// Keeps the hint bar up to date while the window is fullscreen with a controller and
+    /// Button Hints is on.
     pub(crate) fn setup_hint_bar(&self, application: &PinduApplication) {
         application
             .gamepad_service()
@@ -44,19 +49,23 @@ impl PinduWindow {
                 self,
                 move |_| window.update_hints()
             ));
-        self.settings().connect_changed(
-            Some(HOLD_TO_CONFIRM_KEY),
-            glib::clone!(
-                #[weak(rename_to = window)]
-                self,
-                move |_, _| window.update_hints()
-            ),
-        );
+        for key in [HOLD_TO_CONFIRM_KEY, HINT_BAR_KEY] {
+            self.settings().connect_changed(
+                Some(key),
+                glib::clone!(
+                    #[weak(rename_to = window)]
+                    self,
+                    move |_, _| window.update_hints()
+                ),
+            );
+        }
         self.update_hints();
     }
 
     /// Shows the hints for where focus is now, in fullscreen mode while a controller is in
-    /// use, and hides the bar otherwise.
+    /// use and Button Hints is on, and hides the bar otherwise. The search keyboard, a
+    /// bottom bar too, shows in fullscreen mode with a controller either way; with the hint
+    /// bar hidden too, the bottom bars take no room while it is closed.
     pub(crate) fn update_hints(&self) {
         let imp = self.imp();
         let layout = self
@@ -65,7 +74,11 @@ impl PinduWindow {
             .and_then(|application| application.gamepad_service().active_layout())
             .filter(|_| self.is_fullscreen());
         imp.hint_toolbar.set_reveal_bottom_bars(layout.is_some());
+        let layout = layout.filter(|_| self.settings().boolean(HINT_BAR_KEY));
+        imp.hint_bar.set_visible(layout.is_some());
         let Some(layout) = layout else {
+            // Filled again from scratch once it shows.
+            imp.hints.replace(None);
             return;
         };
         // While a game we started has the controller, only Guide (and Guide + A) does
