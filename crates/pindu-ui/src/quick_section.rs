@@ -567,7 +567,7 @@ fn arrange_tile_text(text: &gtk::Widget, arrangement: QuickTiles) {
 }
 
 /// The children of `widget`, first to last.
-fn children(widget: &gtk::Widget) -> impl Iterator<Item = gtk::Widget> {
+pub(crate) fn children(widget: &gtk::Widget) -> impl Iterator<Item = gtk::Widget> + use<> {
     std::iter::successors(widget.first_child(), |child| child.next_sibling())
 }
 
