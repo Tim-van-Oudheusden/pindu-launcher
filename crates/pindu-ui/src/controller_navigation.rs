@@ -171,6 +171,7 @@ impl PinduWindow {
         if self.report_page_intent(intent) {
             return;
         }
+        let panels = self.imp().panels.get();
         if self.handle_panel_intent(intent) {
             match intent {
                 Intent::Back => self.play_sound(Sound::Back),
@@ -179,6 +180,10 @@ impl PinduWindow {
                 | Intent::QuickAccess
                 | Intent::SystemQuickAccess
                 | Intent::Options => self.play_sound(Sound::Select),
+                // LB and RB switched Quick Access's section.
+                Intent::PreviousTab | Intent::NextTab if self.imp().panels.get() != panels => {
+                    self.play_sound(Sound::Move);
+                }
                 _ => {}
             }
             return;

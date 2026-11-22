@@ -1,7 +1,7 @@
-//! Quick Access's notifications: the Notifications entry with the unread count, and its
-//! level, which lists what happened in the background this session (see
-//! `notification_service`), newest first, and marks it read once shown. An entry with a
-//! target opens it on A: a game's page, or Preferences at its Permissions group.
+//! Quick Access's notifications: the unread count on the Notifications section's toggle,
+//! and the section's list of what happened in the background this session (see
+//! `notification_service`), newest first, marked read once shown. An entry with a target
+//! opens it on A: a game's page, or Preferences at its Permissions group.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -9,14 +9,14 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::model::GameId;
 use pindu_core::notifications::{Kind, Notification, Target};
-use pindu_core::panels::QuickAccessLevel;
+use pindu_core::panels::QuickAccessSection;
 
 use crate::application::PinduApplication;
 use crate::quick_access::PinduQuickAccess;
 
 impl PinduQuickAccess {
-    /// The entries' targets, and following the notifications: the entry's count, and the
-    /// level while it shows.
+    /// The entries' targets, and following the notifications: the toggle's count, and the
+    /// list while Notifications shows.
     pub(crate) fn setup_notifications(
         &self,
         application: &PinduApplication,
@@ -56,8 +56,8 @@ impl PinduQuickAccess {
         self.show_unread_count();
     }
 
-    /// Fills the Notifications level, newest first, and marks them read: the user sees
-    /// them now. Unread ones stand out until the level is filled again.
+    /// Fills the Notifications list, newest first, and marks them read: the user sees them
+    /// now. Unread ones stand out until the list is filled again.
     pub(crate) fn show_notifications(&self) {
         let Some(application) = self.application() else {
             return;
@@ -87,17 +87,17 @@ impl PinduQuickAccess {
         }
     }
 
-    /// A posted notification, or the log read: the count follows, and the level shows a
-    /// new one while it is open.
+    /// A posted notification, or the log read: the count follows, and the section shows a
+    /// new one while it shows.
     fn notifications_changed(&self) {
-        let open = self.level() == Some(QuickAccessLevel::Notifications);
+        let open = self.shows_section(QuickAccessSection::Notifications);
         if open && self.has_unread_notifications() {
             self.show_notifications();
         }
         self.show_unread_count();
     }
 
-    /// The Notifications entry's count of unread notifications, hidden at none.
+    /// The Notifications toggle's count of unread notifications, hidden at none.
     fn show_unread_count(&self) {
         let Some(application) = self.application() else {
             return;
@@ -106,13 +106,13 @@ impl PinduQuickAccess {
         let label = &self.imp().unread;
         label.set_visible(unread > 0);
         label.set_label(&unread.to_string());
-        let row = &self.imp().notifications_row;
+        let tab = &self.imp().notifications_tab;
         // Translators: how many notifications are unread; {count} is a number.
         let description = gettext("{count} unread").replace("{count}", &unread.to_string());
         if unread > 0 {
-            row.update_property(&[gtk::accessible::Property::Description(&description)]);
+            tab.update_property(&[gtk::accessible::Property::Description(&description)]);
         } else {
-            row.reset_property(gtk::AccessibleProperty::Description);
+            tab.reset_property(gtk::AccessibleProperty::Description);
         }
     }
 

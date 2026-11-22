@@ -2,6 +2,7 @@
 //! key does in fullscreen mode, in groups (see `pindu_core::controls`), with the glyphs of
 //! the controller in use beside the keys that stand in for them, or the keys alone
 //! without a controller. The list follows the controller in use and its button prompts.
+//! The tab buttons say that they also switch Quick Access's sections while it is open.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -104,7 +105,9 @@ impl PinduQuickAccess {
 
 /// A row of the list: the glyph of the button (with Hold before it for a held one, and
 /// the glyph of the button pressed with it for a chord) and the keys that stand in for it,
-/// named for screen readers by the buttons, the keys and what they do.
+/// named for screen readers by the buttons, the keys and what they do. The tab buttons
+/// (LB and RB, Ctrl+Page Up and Ctrl+Page Down) say they switch Quick Access's sections
+/// too.
 fn control_row(control: &Control, glyphs: Option<Glyphs>) -> adw::ActionRow {
     let action = action_label(control.intent);
     let row = adw::ActionRow::builder()
@@ -112,6 +115,11 @@ fn control_row(control: &Control, glyphs: Option<Glyphs>) -> adw::ActionRow {
         .use_markup(false)
         .css_classes(["control"])
         .build();
+    if matches!(control.intent, Intent::PreviousTab | Intent::NextTab) {
+        row.set_subtitle(&gettext(
+            "Also switches Quick Access's section while it is open",
+        ));
+    }
     let button = control.button.zip(glyphs).map(|(button, glyphs)| {
         let shown = gtk::Box::builder()
             .spacing(6)

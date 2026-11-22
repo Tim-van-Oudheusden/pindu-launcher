@@ -1,8 +1,8 @@
-//! Quick Access's Controllers: the Controllers entry's level, which lists each connected
-//! pad with the glyphs it shows and its battery where one can be told to be its (see
-//! `pindu_core::controllers`), rumbles a pad when its row is selected, and holds the Button
-//! Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate and Stick Dead Zone settings
-//! as radio rows. The list follows pads as they are plugged in and out, and the batteries
+//! Quick Access's Controller section: it lists each connected pad with the glyphs it shows
+//! and its battery where one can be told to be its (see `pindu_core::controllers`),
+//! rumbles a pad when its row is selected, and holds the Button Prompts, Swap Confirm and
+//! Back, Repeat Delay, Repeat Rate and Stick Dead Zone settings as radio rows, then the
+//! Controls entry. The list follows pads as they are plugged in and out, and the batteries
 //! as they are read.
 
 use adw::prelude::*;
@@ -13,7 +13,7 @@ use pindu_core::controllers::{Controller, controllers};
 use pindu_core::gamepad::{
     DEAD_ZONE_KEY, DeviceId, Glyphs, PROMPTS_KEY, REPEAT_DELAY_KEY, REPEAT_RATE_KEY, SWAP_KEY,
 };
-use pindu_core::panels::QuickAccessLevel;
+use pindu_core::panels::QuickAccessSection;
 
 use crate::application::PinduApplication;
 use crate::quick_access::PinduQuickAccess;
@@ -67,14 +67,14 @@ impl PinduQuickAccess {
     }
 
     /// A pad came or went, the settings changed its glyphs, or the batteries were read:
-    /// the level shows it while it is open.
+    /// the section shows it while it shows.
     fn controllers_changed(&self) {
-        if self.level() == Some(QuickAccessLevel::Controllers) {
+        if self.shows_section(QuickAccessSection::Controller) {
             self.fill_controllers();
         }
     }
 
-    /// Fills the Controllers list, keeping focus on the pad it was on, or on the level's
+    /// Fills the Controllers list, keeping focus on the pad it was on, or on the section's
     /// first item when that pad is gone.
     pub(crate) fn fill_controllers(&self) {
         let Some(application) = self.application() else {

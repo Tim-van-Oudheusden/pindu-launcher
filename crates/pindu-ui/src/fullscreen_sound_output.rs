@@ -127,12 +127,12 @@ impl PinduQuickAccess {
         imp.sound_output_level.focus_target(checked.as_ref())
     }
 
-    /// Shows or hides the entry, with the output in use under it, and lists the outputs
-    /// again while the level is open and they changed; it leaves for the entries once the
-    /// section is gone.
+    /// Shows or hides the entries (System's and Quick's), with the output in use under
+    /// them, and lists the outputs again while the level is open and they changed; it
+    /// leaves for the section once sound output is gone.
     fn show_sound_output_state(&self, state: &AudioState) {
         let imp = self.imp();
-        imp.sound_output_row.set_visible(state.available);
+        self.update_shown(|shown| shown.sound_output = state.available);
         let in_use = state
             .outputs
             .in_use()

@@ -1,12 +1,10 @@
 //! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
-//! leaving, and the machine's power), the Quick Access panel on the right (notifications,
-//! what runs in the background, the design, the controllers and what each button does, a
-//! few settings, the network, Bluetooth, the sound output, OS updates on Pindu OS, Library
-//! Health, the diagnostics report, and entries for the page under it such as the library's
-//! filters and a focused game's performance switches) and the options sheet at the bottom
-//! (what to do with one game).
-//! This decides which one is open and at which level, what Start, Guide, R3, View or X and
-//! B do to them, and what each lists.
+//! leaving, and the machine's power), the Quick Access panel on the right, in six sections
+//! LB and RB switch between (Quick, Notifications, Design, Controller, System and Manage;
+//! see [`section_entries`]), some of whose entries lead to a level, and the options sheet
+//! at the bottom (what to do with one game).
+//! This decides which one is open, at which level and section, what Start, Guide, R3,
+//! View or X, LB, RB and B do to them, and what each lists.
 
 use crate::gamepad::Intent;
 use crate::launch::{self, WebPage};
@@ -59,19 +57,213 @@ pub enum OptionsLevel {
     Copies,
 }
 
-/// What the Quick Access panel shows: its entries, or the list one of them leads to.
+/// A section of the Quick Access panel, which LB and RB switch between while the panel
+/// shows one ([`QuickAccessLevel::Main`]). Each lists its entries (see
+/// [`section_entries`]), some of which lead to a level.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum QuickAccessSection {
+    /// The Playing Now cards, the entries for the page under the panel and the things to
+    /// reach in one press. Quick Access opens on it.
+    #[default]
+    Quick,
+    /// What runs in the background, then the session's notifications, newest first.
+    Notifications,
+    /// The designs to pick from and their settings.
+    Design,
+    /// The connected controllers and their settings, and what each button does.
+    Controller,
+    /// The machine's network, Bluetooth, sound output and updates, Settings and the
+    /// diagnostics report.
+    System,
+    /// The sources, duplicates, Library Health, Proton and stores, and adding and
+    /// refreshing games.
+    Manage,
+}
+
+impl QuickAccessSection {
+    /// Every section, in the order the strip shows them and LB and RB step through them.
+    pub const ALL: [Self; 6] = [
+        Self::Quick,
+        Self::Notifications,
+        Self::Design,
+        Self::Controller,
+        Self::System,
+        Self::Manage,
+    ];
+
+    /// The name the section goes by: its page of the panel's section stack, and what
+    /// `win.quick-access-section` takes to show it.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Quick => "quick",
+            Self::Notifications => "notifications",
+            Self::Design => "design",
+            Self::Controller => "controller",
+            Self::System => "system",
+            Self::Manage => "manage",
+        }
+    }
+
+    /// The section that goes by `name` (see [`Self::name`]), if one does.
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|section| section.name() == name)
+    }
+
+    /// Whether one of the section's entries leads to `level`: the section that holds it
+    /// ([`QuickAccessLevel::section`]), and Quick for Sound Output, Bluetooth and Network,
+    /// which it lists too.
+    pub fn leads_to(self, level: QuickAccessLevel) -> bool {
+        let quick = matches!(
+            level,
+            QuickAccessLevel::SoundOutput | QuickAccessLevel::Bluetooth | QuickAccessLevel::Network
+        );
+        level != QuickAccessLevel::Main
+            && (level.section() == self || (self == Self::Quick && quick))
+    }
+}
+
+/// An entry of one of Quick Access's sections: a row, a list or cards that act, or lead
+/// to a level.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QuickAccessEntry {
+    /// The Playing Now cards, one for each game we started that runs, with Return and Stop.
+    PlayingNow,
+    /// Leads to the library filters ([`QuickAccessLevel::Filters`]).
+    Filters,
+    /// Leads to the focused game's performance switches
+    /// ([`QuickAccessLevel::Performance`]).
+    Performance,
+    /// Leads to the sound outputs ([`QuickAccessLevel::SoundOutput`]).
+    SoundOutput,
+    /// Leads to Bluetooth ([`QuickAccessLevel::Bluetooth`]).
+    Bluetooth,
+    /// Leads to the network ([`QuickAccessLevel::Network`]).
+    Network,
+    /// Shows a random installed game.
+    SurpriseMe,
+    /// Imports the sources again.
+    RefreshLibrary,
+    /// Opens Add a Game.
+    AddGame,
+    /// A Running heading and what runs in the background, each with its progress and
+    /// Cancel.
+    Running,
+    /// The session's notifications, newest first, or the line that says there are none.
+    Notifications,
+    /// The designs, the variant, Home's background and its blur and dim, and the user's
+    /// own stylesheet.
+    Designs,
+    /// The connected controllers, the button prompts, the confirm and back swap, the
+    /// repeat delay and rate and the stick's dead zone.
+    Controllers,
+    /// Leads to what each button and key does ([`QuickAccessLevel::Controls`]).
+    Controls,
+    /// Leads to the OS updates on Pindu OS ([`QuickAccessLevel::SystemUpdate`]).
+    SystemUpdate,
+    /// Leads to the settings ([`QuickAccessLevel::Settings`]).
+    Settings,
+    /// Leads to the diagnostics report ([`QuickAccessLevel::DiagnosticsReport`]).
+    DiagnosticsReport,
+    /// Leads to the sources ([`QuickAccessLevel::Sources`]).
+    Sources,
+    /// Leads to the duplicates ([`QuickAccessLevel::Duplicates`]).
+    Duplicates,
+    /// Leads to Library Health ([`QuickAccessLevel::LibraryHealth`]).
+    LibraryHealth,
+    /// Leads to the Proton builds ([`QuickAccessLevel::Proton`]).
+    Proton,
+    /// Leads to the stores to install ([`QuickAccessLevel::AddStore`]).
+    AddStore,
+    /// Fetches the library's metadata from Wikidata again.
+    RefreshMetadata,
+}
+
+/// The facts that decide which of Quick Access's entries show (see [`section_entries`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Shown {
+    /// A game we started runs: the Playing Now cards show.
+    pub playing: bool,
+    /// The page under the panel offers Filters ([`page_entries`]).
+    pub filters: bool,
+    /// The page under the panel offers Performance ([`page_entries`]).
+    pub performance: bool,
+    /// Something runs in the background: a sync, an art fetch or a Proton download.
+    pub running: bool,
+    /// Metadata from Wikidata is on: Refresh Metadata shows.
+    pub metadata: bool,
+    /// The system offers the network.
+    pub network: bool,
+    /// The system offers Bluetooth.
+    pub bluetooth: bool,
+    /// The system offers the sound outputs.
+    pub sound_output: bool,
+    /// The system offers OS updates (Pindu OS).
+    pub system_update: bool,
+    /// The panel is over a running game (`game_overlay`), which leaves out what needs the
+    /// main window: Surprise Me, Add a Store, Add a Game and Diagnostics Report.
+    pub over_game: bool,
+}
+
+/// What `section` lists while `shown` holds, top to bottom. Sound Output, Bluetooth,
+/// Network, Refresh Library and Add a Game are listed twice, once in Quick and once where
+/// they belong.
+pub fn section_entries(section: QuickAccessSection, shown: Shown) -> Vec<QuickAccessEntry> {
+    use QuickAccessEntry::*;
+    let main_window = !shown.over_game;
+    let entries: &[(QuickAccessEntry, bool)] = match section {
+        QuickAccessSection::Quick => &[
+            (PlayingNow, shown.playing),
+            (Filters, shown.filters),
+            (Performance, shown.performance),
+            (SoundOutput, shown.sound_output),
+            (Bluetooth, shown.bluetooth),
+            (Network, shown.network),
+            (SurpriseMe, main_window),
+            (RefreshLibrary, true),
+            (AddGame, main_window),
+        ],
+        QuickAccessSection::Notifications => &[(Running, shown.running), (Notifications, true)],
+        QuickAccessSection::Design => &[(Designs, true)],
+        QuickAccessSection::Controller => &[(Controllers, true), (Controls, true)],
+        QuickAccessSection::System => &[
+            (Network, shown.network),
+            (Bluetooth, shown.bluetooth),
+            (SoundOutput, shown.sound_output),
+            (SystemUpdate, shown.system_update),
+            (Settings, true),
+            (DiagnosticsReport, main_window),
+        ],
+        QuickAccessSection::Manage => &[
+            (Sources, true),
+            (Duplicates, true),
+            (LibraryHealth, true),
+            (Proton, true),
+            (AddStore, main_window),
+            (AddGame, main_window),
+            (RefreshLibrary, true),
+            (RefreshMetadata, shown.metadata),
+        ],
+    };
+    entries
+        .iter()
+        .filter_map(|&(entry, show)| show.then_some(entry))
+        .collect()
+}
+
+/// The sections that have anything to show while `shown` holds, in their order.
+pub fn sections(shown: Shown) -> Vec<QuickAccessSection> {
+    QuickAccessSection::ALL
+        .into_iter()
+        .filter(|&section| !section_entries(section, shown).is_empty())
+        .collect()
+}
+
+/// What the Quick Access panel shows: one of its sections, or the list one of their
+/// entries leads to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QuickAccessLevel {
-    /// The panel's entries.
+    /// The section [`Panels::section`] names, under the section strip.
     Main,
-    /// The session's notifications, newest first.
-    Notifications,
-    /// What runs in the background: syncs, art fetches and Proton downloads.
-    Activity,
-    /// The designs to pick from.
-    Designs,
-    /// The connected controllers, the button prompts and the confirm and back swap.
-    Controllers,
     /// What each button and key does: every intent in groups (see [`crate::controls`]).
     Controls,
     /// Cover size, navigation sounds and their volume, and exiting after a launch.
@@ -122,13 +314,9 @@ pub enum QuickAccessLevel {
 }
 
 impl QuickAccessLevel {
-    /// Every level, the entries first.
-    pub const ALL: [Self; 20] = [
+    /// Every level, the sections first.
+    pub const ALL: [Self; 16] = [
         Self::Main,
-        Self::Notifications,
-        Self::Activity,
-        Self::Designs,
-        Self::Controllers,
         Self::Controls,
         Self::Settings,
         Self::Filters,
@@ -151,10 +339,6 @@ impl QuickAccessLevel {
     pub fn name(self) -> &'static str {
         match self {
             Self::Main => "main",
-            Self::Notifications => "notifications",
-            Self::Activity => "activity",
-            Self::Designs => "designs",
-            Self::Controllers => "controllers",
             Self::Controls => "controls",
             Self::Settings => "settings",
             Self::Filters => "filters",
@@ -177,6 +361,29 @@ impl QuickAccessLevel {
     pub fn from_name(name: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|level| level.name() == name)
     }
+
+    /// The section that holds the entry leading to the level, which B leads back to when
+    /// the level was not reached from another section that leads to it (see
+    /// [`QuickAccessSection::leads_to`]). The sections themselves ([`Self::Main`]) are
+    /// Quick's, where the panel opens.
+    pub fn section(self) -> QuickAccessSection {
+        match self {
+            Self::Main | Self::Filters | Self::Performance => QuickAccessSection::Quick,
+            Self::Controls => QuickAccessSection::Controller,
+            Self::Network
+            | Self::Bluetooth
+            | Self::SoundOutput
+            | Self::SystemUpdate
+            | Self::Settings
+            | Self::DiagnosticsReport
+            | Self::ReportLog => QuickAccessSection::System,
+            Self::AddStore
+            | Self::LibraryHealth
+            | Self::Proton
+            | Self::Sources
+            | Self::Duplicates => QuickAccessSection::Manage,
+        }
+    }
 }
 
 /// What lies under the panels when an intent comes in.
@@ -189,19 +396,23 @@ pub struct Under {
     pub own_game: bool,
     /// A dialog is open over everything, and takes the buttons first.
     pub dialog: bool,
-    /// A notification is unread: Quick Access opens at the notifications.
+    /// A notification is unread: Quick Access opens on its Notifications section.
     pub unread: bool,
     /// The page is fullscreen mode's library: Quick Access offers its filters.
     pub library: bool,
     /// A collection in the drawer's Collections level has focus: View or X has a
     /// collection to show actions for.
     pub collection: bool,
+    /// What Quick Access's sections show, which decides the sections LB and RB step
+    /// through (see [`sections`]).
+    pub shown: Shown,
 }
 
-/// The panel that is open, if any.
+/// The panel that is open, if any, and the section Quick Access shows at its main level.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Panels {
     open: Option<Panel>,
+    section: QuickAccessSection,
 }
 
 impl Panels {
@@ -215,10 +426,17 @@ impl Panels {
         self.open
     }
 
+    /// The section Quick Access shows while it is at [`QuickAccessLevel::Main`], or the
+    /// one B leads back to from its level.
+    pub fn section(&self) -> QuickAccessSection {
+        self.section
+    }
+
     /// Acts on a controller intent and says whether the panels took it, so the page does
     /// not act on it too. Start and Guide toggle the drawer, R3, Guide + A and the Steam
-    /// Deck's "…" toggle Quick Access (at its notifications while one is unread, as
-    /// Steam's does), View or X opens the options for a game, or in the drawer's
+    /// Deck's "…" toggle Quick Access (on its Notifications section while one is unread,
+    /// as Steam's does, else on Quick), LB and RB step through Quick Access's sections
+    /// while it shows one, View or X opens the options for a game, or in the drawer's
     /// Collections leads to the focused collection's actions, and B steps back a level or
     /// closes. Opening one panel closes the other. While a panel is open the page's own
     /// buttons (search, tabs, sort) wait; directions and A move and act inside it.
@@ -233,12 +451,26 @@ impl Panels {
                 self.open = None;
             }
             (Intent::QuickAccess | Intent::SystemQuickAccess, _) => {
-                let level = if under.unread {
-                    QuickAccessLevel::Notifications
+                self.show_section(if under.unread {
+                    QuickAccessSection::Notifications
                 } else {
-                    QuickAccessLevel::Main
+                    QuickAccessSection::Quick
+                });
+            }
+            (
+                Intent::PreviousTab | Intent::NextTab,
+                Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+            ) => {
+                let shown = sections(under.shown);
+                let at = shown.iter().position(|&section| section == self.section);
+                let step = match (at, intent) {
+                    (Some(at), Intent::NextTab) => (at + 1) % shown.len(),
+                    (Some(at), _) => (at + shown.len() - 1) % shown.len(),
+                    (None, _) => 0,
                 };
-                self.open = Some(Panel::QuickAccess(level));
+                if let Some(&section) = shown.get(step) {
+                    self.section = section;
+                }
             }
             (Intent::Options, None) if under.game => {
                 self.open = Some(Panel::Options(OptionsLevel::Main));
@@ -280,23 +512,33 @@ impl Panels {
     }
 
     /// Shows `panel` at its level: opened by a button rather than a controller, or one of
-    /// its entries leading to a list.
+    /// its entries leading to a list. A Quick Access level reached from a section that
+    /// leads to it keeps that section for B to lead back to; any other takes its own
+    /// ([`QuickAccessLevel::section`]).
     pub fn show(&mut self, panel: Panel) {
+        if let Panel::QuickAccess(level) = panel
+            && level != QuickAccessLevel::Main
+        {
+            let from_section = self.open == Some(Panel::QuickAccess(QuickAccessLevel::Main))
+                && self.section.leads_to(level);
+            if !from_section {
+                self.section = level.section();
+            }
+        }
         self.open = Some(panel);
+    }
+
+    /// Shows Quick Access's `section`: opened by a button or the pointer on the section
+    /// strip.
+    pub fn show_section(&mut self, section: QuickAccessSection) {
+        self.section = section;
+        self.open = Some(Panel::QuickAccess(QuickAccessLevel::Main));
     }
 
     /// Closes the open panel: an entry did its work, the pointer clicked outside it, or
     /// the window left fullscreen mode.
     pub fn close(&mut self) {
         self.open = None;
-    }
-
-    /// Nothing runs in the background any more: Quick Access leaves its Activity, which
-    /// has nothing left to list, for its entries.
-    pub fn activity_ended(&mut self) {
-        if self.open == Some(Panel::QuickAccess(QuickAccessLevel::Activity)) {
-            self.open = Some(Panel::QuickAccess(QuickAccessLevel::Main));
-        }
     }
 }
 
@@ -597,6 +839,7 @@ mod tests {
         unread: false,
         library: false,
         collection: false,
+        shown: BARE,
     };
     const GAME: Under = Under {
         game: true,
@@ -605,6 +848,7 @@ mod tests {
         unread: false,
         library: false,
         collection: false,
+        shown: BARE,
     };
     const DIALOG: Under = Under {
         game: true,
@@ -613,6 +857,7 @@ mod tests {
         unread: false,
         library: false,
         collection: false,
+        shown: BARE,
     };
 
     fn drawer() -> Option<Panel> {
@@ -628,9 +873,276 @@ mod tests {
     }
 
     #[test]
+    fn quick_access_has_six_sections_in_order_each_with_its_name() {
+        use QuickAccessSection::*;
+        assert_eq!(
+            QuickAccessSection::ALL,
+            [Quick, Notifications, Design, Controller, System, Manage]
+        );
+        let names = QuickAccessSection::ALL.map(QuickAccessSection::name);
+        assert_eq!(
+            names,
+            [
+                "quick",
+                "notifications",
+                "design",
+                "controller",
+                "system",
+                "manage"
+            ]
+        );
+        for section in QuickAccessSection::ALL {
+            assert_eq!(QuickAccessSection::from_name(section.name()), Some(section));
+        }
+        assert_eq!(QuickAccessSection::from_name("Quick"), None);
+        assert_eq!(QuickAccessSection::from_name("main"), None);
+    }
+
+    /// Nothing optional shows: no game runs, nothing in the background, no page entry,
+    /// no system entry, metadata off, in the main window.
+    const BARE: Shown = Shown {
+        playing: false,
+        filters: false,
+        performance: false,
+        running: false,
+        metadata: false,
+        network: false,
+        bluetooth: false,
+        sound_output: false,
+        system_update: false,
+        over_game: false,
+    };
+    /// Everything optional shows.
+    const FULL: Shown = Shown {
+        playing: true,
+        filters: true,
+        performance: true,
+        running: true,
+        metadata: true,
+        network: true,
+        bluetooth: true,
+        sound_output: true,
+        system_update: true,
+        over_game: false,
+    };
+
+    #[test]
+    fn quick_lists_the_cards_the_page_s_entries_the_system_s_and_the_quick_actions() {
+        use QuickAccessEntry::*;
+        assert_eq!(
+            section_entries(QuickAccessSection::Quick, FULL),
+            [
+                PlayingNow,
+                Filters,
+                Performance,
+                SoundOutput,
+                Bluetooth,
+                Network,
+                SurpriseMe,
+                RefreshLibrary,
+                AddGame
+            ]
+        );
+        assert_eq!(
+            section_entries(QuickAccessSection::Quick, BARE),
+            [SurpriseMe, RefreshLibrary, AddGame]
+        );
+        let some = Shown {
+            filters: true,
+            bluetooth: true,
+            ..BARE
+        };
+        assert_eq!(
+            section_entries(QuickAccessSection::Quick, some),
+            [Filters, Bluetooth, SurpriseMe, RefreshLibrary, AddGame]
+        );
+        let over_game = Shown {
+            over_game: true,
+            ..FULL
+        };
+        assert_eq!(
+            section_entries(QuickAccessSection::Quick, over_game),
+            [
+                PlayingNow,
+                Filters,
+                Performance,
+                SoundOutput,
+                Bluetooth,
+                Network,
+                RefreshLibrary
+            ],
+            "Surprise Me and Add a Game need the main window"
+        );
+    }
+
+    #[test]
+    fn notifications_lists_what_runs_first_while_something_does() {
+        use QuickAccessEntry::*;
+        assert_eq!(
+            section_entries(QuickAccessSection::Notifications, FULL),
+            [Running, Notifications]
+        );
+        assert_eq!(
+            section_entries(QuickAccessSection::Notifications, BARE),
+            [Notifications],
+            "the notifications, or the line that says there are none"
+        );
+    }
+
+    #[test]
+    fn design_and_controller_hold_what_their_levels_held() {
+        use QuickAccessEntry::*;
+        for shown in [BARE, FULL] {
+            assert_eq!(
+                section_entries(QuickAccessSection::Design, shown),
+                [Designs]
+            );
+            assert_eq!(
+                section_entries(QuickAccessSection::Controller, shown),
+                [Controllers, Controls]
+            );
+        }
+    }
+
+    #[test]
+    fn system_lists_the_available_system_entries_then_settings_and_the_report() {
+        use QuickAccessEntry::*;
+        assert_eq!(
+            section_entries(QuickAccessSection::System, FULL),
+            [
+                Network,
+                Bluetooth,
+                SoundOutput,
+                SystemUpdate,
+                Settings,
+                DiagnosticsReport
+            ]
+        );
+        assert_eq!(
+            section_entries(QuickAccessSection::System, BARE),
+            [Settings, DiagnosticsReport]
+        );
+        let update = Shown {
+            system_update: true,
+            over_game: true,
+            ..BARE
+        };
+        assert_eq!(
+            section_entries(QuickAccessSection::System, update),
+            [SystemUpdate, Settings],
+            "the report needs the main window"
+        );
+    }
+
+    #[test]
+    fn manage_lists_the_library_s_upkeep_and_refresh_metadata_while_metadata_is_on() {
+        use QuickAccessEntry::*;
+        assert_eq!(
+            section_entries(QuickAccessSection::Manage, FULL),
+            [
+                Sources,
+                Duplicates,
+                LibraryHealth,
+                Proton,
+                AddStore,
+                AddGame,
+                RefreshLibrary,
+                RefreshMetadata
+            ]
+        );
+        assert_eq!(
+            section_entries(QuickAccessSection::Manage, BARE),
+            [
+                Sources,
+                Duplicates,
+                LibraryHealth,
+                Proton,
+                AddStore,
+                AddGame,
+                RefreshLibrary
+            ]
+        );
+        let over_game = Shown {
+            over_game: true,
+            ..FULL
+        };
+        assert_eq!(
+            section_entries(QuickAccessSection::Manage, over_game),
+            [
+                Sources,
+                Duplicates,
+                LibraryHealth,
+                Proton,
+                RefreshLibrary,
+                RefreshMetadata
+            ],
+            "Add a Store and Add a Game need the main window"
+        );
+    }
+
+    #[test]
+    fn every_entry_of_the_old_main_list_has_a_place_in_a_section() {
+        use QuickAccessEntry::*;
+        let listed: Vec<QuickAccessEntry> = QuickAccessSection::ALL
+            .into_iter()
+            .flat_map(|section| section_entries(section, FULL))
+            .collect();
+        for entry in [
+            Notifications,
+            Running,
+            RefreshLibrary,
+            RefreshMetadata,
+            SurpriseMe,
+            Filters,
+            Performance,
+            Designs,
+            Controllers,
+            Controls,
+            Settings,
+            Sources,
+            Duplicates,
+            Network,
+            Bluetooth,
+            SoundOutput,
+            SystemUpdate,
+            LibraryHealth,
+            AddStore,
+            DiagnosticsReport,
+            Proton,
+            AddGame,
+        ] {
+            assert!(listed.contains(&entry), "{entry:?}");
+        }
+    }
+
+    #[test]
+    fn a_section_with_nothing_to_show_is_left_out() {
+        assert_eq!(sections(BARE), QuickAccessSection::ALL);
+        assert_eq!(sections(FULL), QuickAccessSection::ALL);
+        let over_game = Shown {
+            over_game: true,
+            ..BARE
+        };
+        assert_eq!(
+            sections(over_game),
+            QuickAccessSection::ALL,
+            "each still has something"
+        );
+        for section in QuickAccessSection::ALL {
+            for shown in [BARE, FULL, over_game] {
+                assert_eq!(
+                    sections(shown).contains(&section),
+                    !section_entries(section, shown).is_empty(),
+                    "{section:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn each_quick_access_level_has_the_name_its_page_goes_by() {
         assert_eq!(QuickAccessLevel::Main.name(), "main");
-        assert_eq!(QuickAccessLevel::Designs.name(), "designs");
+        assert_eq!(QuickAccessLevel::Controls.name(), "controls");
         assert_eq!(QuickAccessLevel::SoundOutput.name(), "sound-output");
         assert_eq!(QuickAccessLevel::SystemUpdate.name(), "system-update");
         assert_eq!(QuickAccessLevel::AddStore.name(), "add-store");
@@ -725,12 +1237,8 @@ mod tests {
     }
 
     #[test]
-    fn b_steps_back_from_a_list_and_then_closes_quick_access() {
+    fn b_steps_back_from_a_list_to_its_section_and_then_closes_quick_access() {
         for level in [
-            QuickAccessLevel::Notifications,
-            QuickAccessLevel::Activity,
-            QuickAccessLevel::Designs,
-            QuickAccessLevel::Controllers,
             QuickAccessLevel::Controls,
             QuickAccessLevel::Settings,
             QuickAccessLevel::Filters,
@@ -744,12 +1252,150 @@ mod tests {
         ] {
             let mut panels = Panels::new();
             panels.handle(Intent::QuickAccess, PAGE);
+            panels.show_section(level.section());
             panels.show(Panel::QuickAccess(level));
             assert!(panels.handle(Intent::Back, PAGE), "{level:?}");
             assert_eq!(panels.open(), quick_access(), "{level:?}");
+            assert_eq!(panels.section(), level.section(), "{level:?}");
             assert!(panels.handle(Intent::Back, PAGE), "{level:?}");
             assert_eq!(panels.open(), None, "{level:?}");
         }
+    }
+
+    #[test]
+    fn a_section_leads_to_the_levels_of_its_entries_and_quick_to_the_system_s_too() {
+        use QuickAccessLevel::*;
+        use QuickAccessSection as S;
+        assert!(S::Quick.leads_to(Network));
+        assert!(S::System.leads_to(Network));
+        assert!(!S::Manage.leads_to(Network));
+        assert!(!S::System.leads_to(Filters));
+        assert!(!S::Quick.leads_to(SystemUpdate));
+        assert!(!S::Quick.leads_to(Main), "no section leads to the sections");
+    }
+
+    #[test]
+    fn each_level_belongs_to_the_section_that_holds_its_entry() {
+        use QuickAccessLevel::*;
+        use QuickAccessSection as S;
+        for (level, section) in [
+            (Filters, S::Quick),
+            (Performance, S::Quick),
+            (Controls, S::Controller),
+            (Network, S::System),
+            (Bluetooth, S::System),
+            (SoundOutput, S::System),
+            (SystemUpdate, S::System),
+            (Settings, S::System),
+            (DiagnosticsReport, S::System),
+            (ReportLog, S::System),
+            (Sources, S::Manage),
+            (Duplicates, S::Manage),
+            (LibraryHealth, S::Manage),
+            (Proton, S::Manage),
+            (AddStore, S::Manage),
+        ] {
+            assert_eq!(level.section(), section, "{level:?}");
+        }
+    }
+
+    #[test]
+    fn b_from_a_level_reached_from_quick_leads_back_to_quick() {
+        for level in [
+            QuickAccessLevel::Network,
+            QuickAccessLevel::Bluetooth,
+            QuickAccessLevel::SoundOutput,
+        ] {
+            let mut panels = Panels::new();
+            panels.handle(Intent::QuickAccess, PAGE);
+            panels.show(Panel::QuickAccess(level));
+            assert!(panels.handle(Intent::Back, PAGE));
+            assert_eq!(panels.open(), quick_access(), "{level:?}");
+            assert_eq!(panels.section(), QuickAccessSection::Quick, "{level:?}");
+        }
+        let mut panels = Panels::new();
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Network));
+        panels.handle(Intent::Back, PAGE);
+        assert_eq!(
+            panels.section(),
+            QuickAccessSection::System,
+            "shown without a section, its own"
+        );
+    }
+
+    #[test]
+    fn quick_access_opens_on_quick_and_b_closes_it_from_any_section() {
+        for section in QuickAccessSection::ALL {
+            let mut panels = Panels::new();
+            assert!(panels.handle(Intent::QuickAccess, PAGE));
+            assert_eq!(panels.open(), quick_access());
+            assert_eq!(panels.section(), QuickAccessSection::Quick);
+            panels.show_section(section);
+            assert_eq!(panels.open(), quick_access());
+            assert_eq!(panels.section(), section);
+            assert!(panels.handle(Intent::Back, PAGE), "{section:?}");
+            assert_eq!(panels.open(), None, "{section:?}");
+        }
+    }
+
+    #[test]
+    fn lb_and_rb_step_through_the_sections_and_wrap() {
+        let mut panels = Panels::new();
+        panels.handle(Intent::QuickAccess, PAGE);
+        let mut seen = Vec::new();
+        for _ in QuickAccessSection::ALL {
+            assert!(panels.handle(Intent::NextTab, PAGE));
+            assert_eq!(panels.open(), quick_access());
+            seen.push(panels.section());
+        }
+        assert_eq!(
+            seen,
+            [
+                QuickAccessSection::Notifications,
+                QuickAccessSection::Design,
+                QuickAccessSection::Controller,
+                QuickAccessSection::System,
+                QuickAccessSection::Manage,
+                QuickAccessSection::Quick,
+            ],
+            "RB wraps from the last to the first"
+        );
+        assert!(panels.handle(Intent::PreviousTab, PAGE));
+        assert_eq!(
+            panels.section(),
+            QuickAccessSection::Manage,
+            "LB wraps from the first to the last"
+        );
+        assert!(panels.handle(Intent::PreviousTab, PAGE));
+        assert_eq!(panels.section(), QuickAccessSection::System);
+    }
+
+    #[test]
+    fn lb_and_rb_do_nothing_at_a_level() {
+        let mut panels = Panels::new();
+        panels.handle(Intent::QuickAccess, PAGE);
+        panels.show_section(QuickAccessSection::System);
+        panels.show(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport));
+        for intent in [Intent::NextTab, Intent::PreviousTab] {
+            assert!(panels.handle(intent, PAGE), "swallowed");
+            assert_eq!(
+                panels.open(),
+                Some(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport))
+            );
+            assert_eq!(panels.section(), QuickAccessSection::System);
+        }
+    }
+
+    #[test]
+    fn quick_access_does_not_remember_the_section_it_was_closed_on() {
+        let mut panels = Panels::new();
+        panels.handle(Intent::QuickAccess, PAGE);
+        panels.handle(Intent::NextTab, PAGE);
+        panels.handle(Intent::NextTab, PAGE);
+        panels.handle(Intent::QuickAccess, PAGE);
+        assert_eq!(panels.open(), None);
+        panels.handle(Intent::QuickAccess, PAGE);
+        assert_eq!(panels.section(), QuickAccessSection::Quick);
     }
 
     #[test]
@@ -775,25 +1421,22 @@ mod tests {
     }
 
     #[test]
-    fn quick_access_opens_at_its_notifications_while_one_is_unread() {
+    fn quick_access_opens_on_its_notifications_while_one_is_unread() {
         let unread = Under {
             unread: true,
             ..PAGE
         };
         let mut panels = Panels::new();
         assert!(panels.handle(Intent::QuickAccess, unread));
-        assert_eq!(
-            panels.open(),
-            Some(Panel::QuickAccess(QuickAccessLevel::Notifications))
-        );
+        assert_eq!(panels.open(), quick_access());
+        assert_eq!(panels.section(), QuickAccessSection::Notifications);
         assert!(panels.handle(Intent::Back, PAGE));
-        assert_eq!(panels.open(), quick_access(), "B leads to its entries");
-        panels.close();
+        assert_eq!(panels.open(), None, "B closes it from a section");
         assert!(panels.handle(Intent::QuickAccess, PAGE));
         assert_eq!(
-            panels.open(),
-            quick_access(),
-            "read, it opens at its entries"
+            panels.section(),
+            QuickAccessSection::Quick,
+            "read, it opens on Quick"
         );
     }
 
@@ -975,29 +1618,6 @@ mod tests {
         assert_eq!(panels.open(), None);
         panels.handle(Intent::QuickAccess, PAGE);
         assert_eq!(panels.open(), quick_access());
-    }
-
-    #[test]
-    fn quick_access_leaves_its_activity_once_nothing_runs() {
-        let mut panels = Panels::new();
-        panels.show(Panel::QuickAccess(QuickAccessLevel::Activity));
-        panels.activity_ended();
-        assert_eq!(panels.open(), quick_access());
-
-        for open in [
-            None,
-            drawer(),
-            options(),
-            quick_access(),
-            Some(Panel::QuickAccess(QuickAccessLevel::Settings)),
-        ] {
-            let mut panels = Panels::new();
-            if let Some(panel) = open {
-                panels.show(panel);
-            }
-            panels.activity_ended();
-            assert_eq!(panels.open(), open, "{open:?} stays");
-        }
     }
 
     #[test]

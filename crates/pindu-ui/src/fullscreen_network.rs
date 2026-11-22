@@ -152,14 +152,15 @@ impl PinduQuickAccess {
             .map(|application| application.network_service().clone())
     }
 
-    /// Shows or hides the entry, with its icon and subtitle, shows or takes away the
-    /// passphrase prompt, and fills the level again while it is open; it leaves for the
-    /// entries once the section is gone or not allowed.
+    /// Shows or hides the entries (System's and Quick's), with their icon and subtitle,
+    /// shows or takes away the passphrase prompt, and fills the level again while it is
+    /// open; it leaves for the section once the network is gone or not allowed.
     fn show_network_state(&self, state: &NetworkState) {
         let imp = self.imp();
-        let row = &imp.network_row;
-        row.set_visible(state.availability != Availability::Hidden);
-        row.set_sensitive(state.availability == Availability::Shown);
+        let available = state.availability != Availability::Hidden;
+        self.update_shown(|shown| shown.network = available);
+        imp.network_row
+            .set_sensitive(state.availability == Availability::Shown);
         if let Some(summary) = &state.summary {
             imp.network_icon.set_icon_name(Some(summary_icon(summary)));
             imp.network_subtitle.set_label(&summary_text(summary));

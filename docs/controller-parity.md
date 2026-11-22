@@ -23,34 +23,34 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   - Play with Logs and the other Preferences pages.
 - **Game details.** Developer, genres and description show on the fullscreen game page in every shipped design, as
   they do on the desktop page; a long description can be scrolled with a controller.
-- **The SteamGridDB key.** Quick Access → Settings → Artwork. It is typed hidden with the on-screen keyboard's
-  hidden-text dialog (the one Wi-Fi passphrases and Bluetooth PINs use) and stored in the keyring through oo7, never in
-  GSettings, files or logs. Without a working keyring the entry says so in place and cannot be chosen. The Prefer
-  SteamGridDB Art switch sits beside it, as #520 decided.
-- **Sources.** Quick Access's Sources level lists every imported source with its icon, whether it was found on this
-  computer and its Import switch, the same setting as Preferences, Sources; changing it syncs as it does there. The
-  folder override and Show in Sidebar stay desktop-only.
-- **Duplicates.** Quick Access's Duplicates level lists the duplicate suggestions and the groups the sync made, as the
-  desktop's Duplicates page does ([game identity](game-identity.md#reviewing-duplicates)). A on a suggestion opens to
-  Group and Not the Same Game; A on an automatic group opens to Undo Grouping.
-- **A game's Proton build.** For a game Pindu runs through Proton, Quick Access's Performance level lists the
+- **The SteamGridDB key.** Quick Access → System → Settings → Artwork. It is typed hidden with the on-screen
+  keyboard's hidden-text dialog (the one Wi-Fi passphrases and Bluetooth PINs use) and stored in the keyring through
+  oo7, never in GSettings, files or logs. Without a working keyring the entry says so in place and cannot be chosen.
+  The Prefer SteamGridDB Art switch sits beside it, as #520 decided.
+- **Sources.** Quick Access → Manage → Sources lists every imported source with its icon, whether it was found on
+  this computer and its Import switch, the same setting as Preferences, Sources; changing it syncs as it does there.
+  The folder override and Show in Sidebar stay desktop-only.
+- **Duplicates.** Quick Access → Manage → Duplicates lists the duplicate suggestions and the groups the sync made, as
+  the desktop's Duplicates page does ([game identity](game-identity.md#reviewing-duplicates)). A on a suggestion
+  opens to Group and Not the Same Game; A on an automatic group opens to Undo Grouping.
+- **A game's Proton build.** For a game Pindu runs through Proton, Quick Access → Quick → Performance lists the
   default and the builds on this machine, newest first, as check rows a controller moves through. It is the same
   setting as the desktop game page's Proton row and applies the next time the game starts. Other games have no list.
-- **Proton builds.** Quick Access's **Proton** level picks the default Proton build and the default MangoHud and
+- **Proton builds.** Quick Access → Manage → **Proton** picks the default Proton build and the default MangoHud and
   GameMode for new Windows games (the same settings as Preferences' Windows page), lists the downloaded builds, which
   A asks to remove, and, once the player checks, the GE-Proton and Proton-CachyOS releases, which A downloads. A
-  download is a task in Activity that can be cancelled there or with A on its row. The default prefix folder, the
-  folder save snapshots are copied to and adding a game's save folders stay desktop-only: they need the portal's
-  folder chooser, which grants access to a folder the sandbox cannot otherwise reach. Fullscreen mode's Save
-  Snapshots lists a game's save folders, says why one cannot be reached and removes one.
-- **Adding a game by hand.** Quick Access's Add a Game adds a native game, an installed Windows game or a Windows
-  installer's game in fullscreen mode. Fullscreen mode draws its own picker, as a portal's file chooser runs in another
-  process that controller navigation cannot drive. It starts at the Games folder, the home folder and the drives
-  mounted under `/run/media/<user>`, lists folders and only the files the step accepts (`pindu_core::file_picker`,
-  read through `file_service`), and says that it shows only what the launcher can already read. The title is
-  prefilled from the program and typed with the on-screen keyboard. A Windows game's Proton build is picked from the
-  same list as Performance's (the default, then the builds on this machine), and it runs through umu as on the
-  desktop. Arguments and the working folder stay the desktop dialog's.
+  download is a Running task in Quick Access → Notifications that can be cancelled there or with A on its row. The
+  default prefix folder, the folder save snapshots are copied to and adding a game's save folders stay desktop-only:
+  they need the portal's folder chooser, which grants access to a folder the sandbox cannot otherwise reach.
+  Fullscreen mode's Save Snapshots lists a game's save folders, says why one cannot be reached and removes one.
+- **Adding a game by hand.** Quick Access's Add a Game (in Quick and in Manage) adds a native game, an installed
+  Windows game or a Windows installer's game in fullscreen mode. Fullscreen mode draws its own picker, as a portal's
+  file chooser runs in another process that controller navigation cannot drive. It starts at the Games folder, the
+  home folder and the drives mounted under `/run/media/<user>`, lists folders and only the files the step accepts
+  (`pindu_core::file_picker`, read through `file_service`), and says that it shows only what the launcher can already
+  read. The title is prefilled from the program and typed with the on-screen keyboard. A Windows game's Proton build
+  is picked from the same list as Performance's (the default, then the builds on this machine), and it runs through
+  umu as on the desktop. Arguments and the working folder stay the desktop dialog's.
 - **Collections.** View or X on a collection in the menu drawer's Collections leads to Rename…, Move Up, Move Down
   and Delete…, the desktop sidebar's collection menu. A name, new or changed, is typed with the on-screen keyboard
   in the passphrase dialog, showing its text; Delete asks first, with Cancel chosen.

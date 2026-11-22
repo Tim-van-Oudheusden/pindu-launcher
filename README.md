@@ -221,7 +221,7 @@ Adwaita, the look with no design ([Styling fullscreen mode](#styling-fullscreen-
   </tr>
   <tr>
     <td align="center"><img src="docs/screenshots/fullscreen-lobby-menu.webp" width="405" alt="The menu drawer open over Lobby's Home: Home, Library, Controls, Exit Fullscreen Mode and Power"><br><sub>Menu (Start)</sub></td>
-    <td align="center"><img src="docs/screenshots/fullscreen-lobby-quick-access.webp" width="405" alt="Quick Access open over Lobby's Home: Notifications, Refresh Library, Refresh Metadata, Surprise Me, Design, Controllers, Controls, Settings and Sources"><br><sub>Quick Access (R3, or Guide + A)</sub></td>
+    <td align="center"><img src="docs/screenshots/fullscreen-lobby-quick-access.webp" width="405" alt="Quick Access open over Lobby's Home, as it was before its sections: one list of Notifications, Refresh Library, Refresh Metadata, Surprise Me, Design, Controllers, Controls, Settings and Sources"><br><sub>Quick Access (R3, or Guide + A)</sub></td>
   </tr>
   <tr>
     <th colspan="2">Marquee</th>
@@ -254,9 +254,9 @@ Adwaita, the look with no design ([Styling fullscreen mode](#styling-fullscreen-
   start before moving on.
 - The **hint bar** at the bottom names the buttons that work on each screen, drawn with the app's own glyphs for the
   controller you hold.
-- **Controls** in Quick Access lists everything the buttons do, grouped into moving, the library, the panels and
-  launching. It shows the glyphs of the controller in use and the keys that do the same, including ones the hint bar
-  leaves out, such as holding B to cancel a launch. Without a controller it lists the keys alone.
+- **Controls** in Quick Access → Controller lists everything the buttons do, grouped into moving, the library, the
+  panels and launching. It shows the glyphs of the controller in use and the keys that do the same, including ones the
+  hint bar leaves out, such as holding B to cancel a launch. Without a controller it lists the keys alone.
 
 ### Collections
 
@@ -294,18 +294,25 @@ Open it with Guide + A (hold the Guide button and press the bottom face button, 
 click, the Steam Deck's "…" button, or <kbd>Ctrl</kbd>+<kbd>2</kbd>. Guide on its own acts when you let go of it, so
 Guide + A never also opens the menu drawer.
 
+Quick Access is split into six sections, a strip of icons under its status header: **Quick**, **Notifications**,
+**Design**, **Controller**, **System** and **Manage**. LB and RB, or <kbd>Ctrl</kbd>+<kbd>Page Up</kbd> and
+<kbd>Ctrl</kbd>+<kbd>Page Down</kbd>, switch section, wrapping round; the pointer or a touch can press a section's
+icon too. It opens on Quick, or on Notifications while one is unread, and each section keeps the item you were on
+while Quick Access stays open. [Fullscreen menus](docs/fullscreen-menus.md) lists what each section holds:
+
 - **Status:** the time, the battery, whether you are offline, and the game you are playing with how long it has run.
 - **Notifications** from this session: games a sync added or found missing, artwork fetched or not, Proton downloads,
   games that need a permission, a Bluetooth device that did not pair, connect, disconnect or go, a rollback or restart
   the system refused, a network that could not be joined, and a program that kept the machine from suspending,
   restarting or powering off. Quick Access opens on them while one is unread.
-- **Activity:** a running library sync, SteamGridDB artwork fetch, Proton download, or save snapshot or restore, with
-  its progress. Artwork fetches and Proton downloads can be cancelled; a cancelled download leaves nothing behind.
+- **Running** (at the top of Notifications, while something runs): a running library sync, SteamGridDB artwork
+  fetch, Proton download, or save snapshot or restore, with its progress. Artwork fetches and Proton downloads can be
+  cancelled; a cancelled download leaves nothing behind.
 - **Notifications** from this session: games a sync added or found missing, artwork fetched or not, metadata refreshed
   or not, Proton downloads, games that need a permission, a Bluetooth device that did not pair, connect, disconnect or
   go, a rollback or restart the system refused, a network that could not be joined, and a program that kept the
   machine from suspending, restarting or powering off. Quick Access opens on them while one is unread.
-- **Activity:** a running library sync, SteamGridDB artwork fetch, Wikidata metadata refresh, Proton download or save
+- **Running:** a running library sync, SteamGridDB artwork fetch, Wikidata metadata refresh, Proton download or save
   snapshot, with its progress. Artwork fetches, metadata refreshes and Proton downloads can be cancelled; a cancelled
   download leaves nothing behind, and a cancelled refresh keeps what it had stored.
 - **Refresh Library** reads your launchers again, offline like every sync.
@@ -373,8 +380,8 @@ row, and it applies the next time the game starts.
 
 ### Network
 
-Where NetworkManager runs, Quick Access has a **Network** entry, subtitled with the connection in use: `Wired`, the
-Wi-Fi network's name, or `Offline`.
+Where NetworkManager runs, Quick Access → System has a **Network** entry, repeated in Quick, subtitled with the
+connection in use: `Wired`, the Wi-Fi network's name, or `Offline`.
 
 - Its level shows each wired and Wi-Fi device with its state (connected, connecting, disconnected, cable unplugged),
   Wi-Fi's switch, and the Wi-Fi networks in range, strongest first. Opening it looks for networks. The network in use
@@ -393,9 +400,9 @@ The Flatpak has no access to the system bus, so the entry does not show there.
 
 ### Bluetooth
 
-Where [BlueZ](https://www.bluez.org/) runs and the machine has a Bluetooth adapter, Quick Access has a **Bluetooth**
-entry, subtitled with the connected devices, or with whether Bluetooth is off or blocked. Its level pairs a wireless
-controller or headset with a controller only.
+Where [BlueZ](https://www.bluez.org/) runs and the machine has a Bluetooth adapter, Quick Access → System has a
+**Bluetooth** entry, repeated in Quick, subtitled with the connected devices, or with whether Bluetooth is off or
+blocked. Its level pairs a wireless controller or headset with a controller only.
 
 - A switch turns Bluetooth on or off. When airplane mode or a hardware switch blocks the radio, the level says so
   instead.
@@ -412,9 +419,9 @@ The Flatpak has no access to the system bus, so the entry does not show there; u
 
 ### System Update
 
-On [Pindu OS](https://github.com/Tim-van-Oudheusden/pindu-os), Quick Access has a **System Update** entry, subtitled
-with the installed version, or with "Update ready" once an update has downloaded. Pindu OS installs updates when the
-console restarts, so the entry never restarts it by itself.
+On [Pindu OS](https://github.com/Tim-van-Oudheusden/pindu-os), Quick Access → System has a **System Update** entry,
+subtitled with the installed version, or with "Update ready" once an update has downloaded. Pindu OS installs updates
+when the console restarts, so the entry never restarts it by itself.
 
 - **Restart to Update** restarts into the update that is waiting.
 - **Roll Back to *version*** goes back to the previous version after asking: the console restarts into it, and the
@@ -426,8 +433,8 @@ Elsewhere, another distribution or the Flatpak, the entry does not show.
 
 ### Library Health in Quick Access
 
-Quick Access has a **Library Health** entry, subtitled with how many problems need attention. Its level shows the
-same report as the desktop's Library Health page: **Sources**, **Launching**, **Artwork** and **Library Data**, read
+Quick Access → Manage has a **Library Health** entry, subtitled with how many problems need attention. Its level shows
+the same report as the desktop's Library Health page: **Sources**, **Launching**, **Artwork** and **Library Data**, read
 with a controller alone. Each row takes focus; a problem's row names its next step and takes it on A, closing Quick
 Access: Preferences at Sources, Preferences at the host access command, or umu-launcher's install instructions.
 
@@ -446,8 +453,8 @@ once: after it is closed it never shows again.
 ### Add a Store
 
 A library with no games, such as a fresh Pindu OS, offers **Add a Store** on its empty page, in fullscreen mode and on
-the desktop; Quick Access has it any time. It lists Steam, Heroic and Lutris with a line on what each is for, marks the
-ones already installed, and installs the one you pick from Flathub, all with a controller alone:
+the desktop; Quick Access → Manage has it any time. It lists Steam, Heroic and Lutris with a line on what each is for,
+marks the ones already installed, and installs the one you pick from Flathub, all with a controller alone:
 
 - The native packages run `flatpak` themselves: into the system installation when it has a `flathub` remote (Pindu
   OS ships one, and lets the console's user install without a password), otherwise into your user installation, after
@@ -458,7 +465,8 @@ ones already installed, and installs the one you pick from Flathub, all with a c
 
 ### Proton
 
-Quick Access's **Proton** does what Preferences' Windows and Proton pages do for Proton, with a controller alone:
+Quick Access → Manage → **Proton** does what Preferences' Windows and Proton pages do for Proton, with a controller
+alone:
 
 - **Defaults:** the Proton build Windows games run with unless their page names one (**Newest** follows the newest
   build on the machine), and whether games added from now on start with **MangoHud** and **GameMode**. These are the
@@ -470,8 +478,8 @@ Quick Access's **Proton** does what Preferences' Windows and Proton pages do for
   it can be cancelled; selecting its row again stops it too. A notification says how it ended.
 ### Add a Game
 
-**Add a Game** in Quick Access adds a game by hand without leaving fullscreen mode, with a controller alone. Choose a
-native game, an installed Windows game, or a Windows installer, then:
+**Add a Game** in Quick Access (in Quick and in Manage) adds a game by hand without leaving fullscreen mode, with a
+controller alone. Choose a native game, an installed Windows game, or a Windows installer, then:
 
 - Pick the game's folder, or the installer, in a picker fullscreen mode draws itself. It starts at the Games folder,
   your home folder and the drives the system has mounted under `/run/media/<user>`, and lists only folders and, for an
@@ -489,15 +497,15 @@ spawn, a prefix of your choice and art are set in the desktop's Add Game and Edi
 
 ### Controllers
 
-- **Controllers** in Quick Access lists the controllers it sees, with the glyphs each shows and its battery where the
-  system reports one. Select one to make it rumble, so you can tell which is which.
+- The **Controller** section of Quick Access lists the controllers it sees, with the glyphs each shows and its battery
+  where the system reports one. Select one to make it rumble, so you can tell which is which.
 - **Button Prompts** (there or in Preferences) picks the glyphs instead of following the controller: letters, shapes,
   or letters with A on the right. This helps under Steam Input, where every controller looks like Steam's own.
 - **Swap Confirm and Back** makes the right button confirm and the bottom one go back everywhere in fullscreen mode.
-- **Repeat Delay**, **Repeat Rate** and **Stick Dead Zone**, also in Quick Access's Controllers, set how soon and how
+- **Repeat Delay**, **Repeat Rate** and **Stick Dead Zone**, also in Quick Access → Controller, set how soon and how
   fast a held direction keeps moving focus, and how far the left stick moves before it does: a long delay for a hand
-  that lets go late, a large dead zone for a stick that drifts. They change only how the launcher moves its own focus;
-  a game receives the controller unchanged.
+  that lets go late, a large dead zone for a stick that drifts. They change only how the launcher moves its own focus; a
+  game receives the controller unchanged.
 - **Controls** in the menu drawer (Start or Guide) lists what the buttons can do (Select, Back, Search, Game Options,
   Menu, Quick Access and the tab and sort switches) with the button for each. Choose one and press the button to give
   it; the function that had that button takes the old one. Guide, or five seconds without a press, leaves it as it was.
@@ -818,10 +826,10 @@ distribution and session, each source's state and game count, the sandbox permis
 schema version and the last sync's problems. It holds no game titles and writes your home folder as `~`; nothing is
 sent anywhere.
 
-In fullscreen mode, where nothing can be copied, open Quick Access and choose **Diagnostics Report**. It shows the
-same report in large text, a page at a time ("Page 1 of 3"), for a phone to photograph: LB and RB, or **Previous
-Page** and **Next Page**, turn the pages, and Up and Down scroll a page the screen cannot fit. Each time it opens, a
-copy is saved to `~/.local/share/pindu-launcher/reports/` (in the Flatpak,
+In fullscreen mode, where nothing can be copied, open Quick Access → System → **Diagnostics Report**. It shows the same
+report in large text, a page at a time ("Page 1 of 3"), for a phone to photograph: LB and RB, or **Previous Page** and
+**Next Page**, turn the pages, and Up and Down scroll a page the screen cannot fit. Each time it opens, a copy is saved
+to `~/.local/share/pindu-launcher/reports/` (in the Flatpak,
 `~/.var/app/io.github.tim_van_oudheusden.pindu-launcher/data/pindu-launcher/reports/`), named after the date and time;
 the newest ten are kept, and the screen says where the copy went.
 

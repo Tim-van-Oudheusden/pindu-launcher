@@ -8,9 +8,9 @@
 //! say. They are widgets in the window rather than popover menus, which the compositor
 //! dismisses on a controller press. Quick Access is a widget of its own, `PinduQuickAccess`
 //! (`quick_access`), which the window hosts as the sidebar of its `quick_access` split
-//! view: the window tells it which level shows and what lies under it, and does what it
-//! asks for. The drawer's Power level is `fullscreen_power`'s, and its Controls level is
-//! `fullscreen_bindings`'s.
+//! view: the window tells it which level and section show and what lies under it, and does
+//! what it asks for. The drawer's Power level is `fullscreen_power`'s, and its Controls
+//! level is `fullscreen_bindings`'s.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -22,8 +22,8 @@ use pindu_core::keys;
 use pindu_core::launch;
 use pindu_core::library::View;
 use pindu_core::panels::{
-    DrawerLevel, GameOption, OptionsLevel, Panel, Panels, QuickAccessLevel, Under, page_entries,
-    sheet_options, with_save_snapshots,
+    DrawerLevel, GameOption, OptionsLevel, Panel, Panels, QuickAccessLevel, QuickAccessSection,
+    Under, page_entries, sheet_options, with_save_snapshots,
 };
 
 use crate::application::PinduApplication;
@@ -236,10 +236,10 @@ impl PinduWindow {
             self,
             move |_, level| window.show_panel(Panel::QuickAccess(level))
         ));
-        panel.connect_activity_ended(glib::clone!(
+        panel.connect_section_requested(glib::clone!(
             #[weak(rename_to = window)]
             self,
-            move |_| window.leave_activity()
+            move |_, section| window.show_quick_access_section(section)
         ));
         panel.connect_game_requested(glib::clone!(
             #[weak(rename_to = window)]
@@ -290,6 +290,7 @@ impl PinduWindow {
             unread: imp.quick_access_panel.has_unread_notifications(),
             library: self.library_under_panels(),
             collection: collection.is_some(),
+            shown: imp.quick_access_panel.shown(),
         };
         let mut panels = imp.panels.get();
         if !panels.handle(intent, under) {
@@ -420,21 +421,24 @@ impl PinduWindow {
         self.set_panels(panels);
     }
 
-    /// Nothing runs any more: Quick Access leaves its Activity for its entries.
-    fn leave_activity(&self) {
+    /// Shows Quick Access's `section`: the pointer pressed its toggle in the strip.
+    fn show_quick_access_section(&self, section: QuickAccessSection) {
         let mut panels = self.imp().panels.get();
-        panels.activity_ended();
+        panels.show_section(section);
         self.set_panels(panels);
     }
 
-    /// Shows `panels` as they now are: the drawer, Quick Access or the sheet, at its level,
-    /// with focus inside the open one and the page under it out of focus's way, or back on
-    /// the page.
+    /// Shows `panels` as they now are: the drawer, Quick Access or the sheet, at its level
+    /// (and Quick Access's section), with focus inside the open one and the page under it
+    /// out of focus's way, or back on the page.
     fn set_panels(&self, panels: Panels) {
         let imp = self.imp();
-        let before = imp.panels.replace(panels).open();
+        let replaced = imp.panels.replace(panels);
+        let before = replaced.open();
         let open = panels.open();
-        if before == open {
+        let same_section = open != Some(Panel::QuickAccess(QuickAccessLevel::Main))
+            || replaced.section() == panels.section();
+        if before == open && same_section {
             return;
         }
         if before.is_none() {
@@ -473,7 +477,8 @@ impl PinduWindow {
         imp.quick_access.set_show_sidebar(quick_access);
         imp.options_sheet.set_open(sheet);
         // After the sidebar shows, as the split view gives focus back into it.
-        imp.quick_access_panel.show_level(quick_access_level);
+        imp.quick_access_panel
+            .show_level(quick_access_level, panels.section());
         match open {
             Some(Panel::Drawer(level)) => imp.drawer_panel.show_level(level),
             Some(Panel::Options(level)) => imp.options_stack.set_visible_child_name(match level {

@@ -11,7 +11,7 @@ use gtk::glib;
 use pindu_core::gamepad::Layout;
 use pindu_core::hints::{self, Action, Context, Focus, GlyphName, Hint};
 use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
-use pindu_core::panels::{DrawerLevel, Panel};
+use pindu_core::panels::{DrawerLevel, Panel, sections};
 
 use crate::application::PinduApplication;
 use crate::artwork_dialog::ArtworkDialog;
@@ -89,8 +89,9 @@ impl PinduWindow {
     /// Where the user is, for the hints: the focused widget, an open dialog, whether a
     /// page lies below the shown one, whether it searches (Home and the library), whether
     /// it has tabs (the library in fullscreen mode), whether a game has options, whether
-    /// Start opens the menu drawer, an open panel, whether the launch overlay is up and
-    /// the open search keyboard.
+    /// Start opens the menu drawer, an open panel, whether Quick Access has more than one
+    /// section to switch between, whether the launch overlay is up and the open search
+    /// keyboard.
     fn hint_context(&self) -> Context {
         let imp = self.imp();
         let navigation_view = &imp.navigation_view;
@@ -127,6 +128,7 @@ impl PinduWindow {
             },
             menu: self.is_fullscreen(),
             panel: self.open_panel(),
+            sections: sections(imp.quick_access_panel.shown()).len() > 1,
             launching: self.launching(),
             keyboard: self
                 .secret_dialog_typing()
@@ -231,6 +233,7 @@ fn action_label(action: Action) -> String {
         Action::Close => gettext("Close"),
         Action::Search => gettext("Search"),
         Action::Tabs => gettext("Tabs"),
+        Action::Sections => gettext("Section"),
         Action::Pages => gettext("Pages"),
         Action::Sort => gettext("Sort"),
         Action::Adjust => gettext("Adjust"),
