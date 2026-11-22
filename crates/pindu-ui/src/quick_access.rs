@@ -91,7 +91,7 @@ use crate::fullscreen_sound_output::PinduSoundOutputLevel;
 use crate::fullscreen_system_update::PinduSystemUpdateLevel;
 use crate::models::GameObject;
 use crate::preferences::TILE_SIZES;
-use crate::quick_section::{Parts, PinduQuickSection};
+use crate::quick_section::{Parts, PinduQuickSection, children};
 use crate::secret_dialog::ask_secret;
 use crate::steamgriddb_service;
 use crate::widgets::{ChoiceOption, ChoiceRow};
@@ -373,7 +373,7 @@ mod imp {
         pub shown: Cell<Shown>,
         /// The item each section had focused when it was left, while the panel stays
         /// open; a section without one shows for the first time since the panel opened.
-        pub remembered: RefCell<Vec<(QuickAccessSection, glib::WeakRef<gtk::Widget>)>>,
+        pub(crate) remembered: RefCell<Vec<super::RememberedFocus>>,
         /// `win.quick-access-section`, whose state is the section shown, which checks its
         /// toggle in the strip.
         pub section_action: OnceCell<gio::SimpleAction>,
@@ -475,6 +475,19 @@ glib::wrapper! {
     pub struct PinduQuickAccess(ObjectSubclass<imp::PinduQuickAccess>)
         @extends gtk::Box, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
+}
+
+/// The item a section had focused when it was left, while the panel stays open.
+#[derive(Debug)]
+pub(crate) struct RememberedFocus {
+    /// The section it is in.
+    section: QuickAccessSection,
+    /// The item itself.
+    widget: glib::WeakRef<gtk::Widget>,
+    /// Where it sat under the section's page, the index of each widget among its parent's
+    /// children, to find the item that took its place when the section rebuilt its rows
+    /// as it showed again (Notifications, Design and Controller do).
+    path: Vec<usize>,
 }
 
 /// The panel asks its host to close it.
@@ -1198,7 +1211,9 @@ impl PinduQuickAccess {
     }
 
     /// Remembers the item focused in `section`, which is being left, for when it shows
-    /// again while the panel stays open.
+    /// again while the panel stays open: the widget, and where it sits under the section's
+    /// page in case the section rebuilds its rows as it shows (Notifications, Design and
+    /// Controller do).
     fn remember_focus(&self, section: QuickAccessSection) {
         let imp = self.imp();
         let Some(page) = imp.sections.child_by_name(section.name()) else {
@@ -1207,23 +1222,47 @@ impl PinduQuickAccess {
         let Some(focus) = self.focus_widget().filter(|focus| focus.is_ancestor(&page)) else {
             return;
         };
+        let mut path = Vec::new();
+        let mut widget = focus.clone();
+        while widget != page {
+            let Some(parent) = widget.parent() else {
+                return;
+            };
+            let Some(index) = children(&parent).position(|child| child == widget) else {
+                return;
+            };
+            path.push(index);
+            widget = parent;
+        }
+        path.reverse();
         let mut remembered = imp.remembered.borrow_mut();
-        remembered.retain(|(each, _)| *each != section);
-        remembered.push((section, focus.downgrade()));
+        remembered.retain(|each| each.section != section);
+        remembered.push(RememberedFocus {
+            section,
+            widget: focus.downgrade(),
+            path,
+        });
     }
 
-    /// The item `section` had focused when it was last left, while it still shows and can
-    /// take focus.
+    /// The item `section` had focused when it was last left, or the one that took its place
+    /// when the section rebuilt its rows, while it shows and can take focus.
     fn remembered(&self, section: QuickAccessSection) -> Option<gtk::Widget> {
         let imp = self.imp();
         let page = imp.sections.child_by_name(section.name())?;
-        let widget = imp
-            .remembered
-            .borrow()
-            .iter()
-            .find(|(each, _)| *each == section)?
-            .1
-            .upgrade()?;
+        let widget = {
+            let remembered = imp.remembered.borrow();
+            let focus = remembered.iter().find(|each| each.section == section)?;
+            focus
+                .widget
+                .upgrade()
+                .filter(|widget| widget.is_ancestor(&page))
+                .or_else(|| {
+                    focus
+                        .path
+                        .iter()
+                        .try_fold(page.clone(), |widget, &index| children(&widget).nth(index))
+                })?
+        };
         let shows = std::iter::successors(Some(widget.clone()), |widget| widget.parent())
             .take_while(|widget| *widget != page)
             .all(|widget| widget.is_visible());
