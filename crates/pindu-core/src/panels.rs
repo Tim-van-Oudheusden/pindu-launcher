@@ -8,7 +8,7 @@
 //! View or X, LB, RB and B do to them, and what each lists.
 
 use crate::gamepad::{Direction, Intent};
-use crate::gamescope::session::DockEntry;
+use crate::gamescope::session::{DockEntry, dock_landing};
 use crate::grid;
 use crate::launch::{self, WebPage};
 use crate::model::Game;
@@ -854,46 +854,77 @@ pub enum MenuShelf {
     GoTo,
     /// Collections: every collection, the row scrolling.
     Collections,
-    /// Leave: the power dock's entries, with their names shown.
-    Leave,
 }
 
-/// A card on one of the menu's shelves.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MenuCard {
-    /// A place or a collection, as the drawer's entry does it.
-    Place(DrawerEntry),
-    /// A way out or the machine's power, as the dock's entry does it.
-    Leave(DockEntry),
-}
-
-/// The menu's shelves, top to bottom, when its entries are shelves: Go To with Home,
-/// Library and Search as [`drawer_entries`] has them, Collections with every one of the
-/// `collections` (so All Collections is not needed), then Leave with the `dock`
-/// ([`crate::gamescope::session::power_dock`]). A shelf with nothing on it is left out.
-/// The Playing Now card sits over the shelves. Focus moves through them as
-/// [`step_shelves`] has it.
-pub fn menu_shelves(
-    collections: usize,
-    over_game: bool,
-    dock: &[DockEntry],
-) -> Vec<(MenuShelf, Vec<MenuCard>)> {
-    let go_to = drawer_entries(false, 0, over_game)
-        .into_iter()
-        .map(MenuCard::Place)
-        .collect();
-    let collections = (0..collections)
-        .map(|index| MenuCard::Place(DrawerEntry::Collection(index)))
-        .collect();
-    let leave = dock.iter().copied().map(MenuCard::Leave).collect();
+/// The menu's shelves, top to bottom, when its entries are shelves, each with its cards,
+/// a place or a collection as the drawer's entry does it: Go To with Home, Library and
+/// Search as [`drawer_entries`] has them, then Collections with every one of the
+/// `collections` (so All Collections is not needed). A shelf with nothing on it is left
+/// out. The Playing Now card sits over the shelves and the power dock under them.
+pub fn menu_shelves(collections: usize, over_game: bool) -> Vec<(MenuShelf, Vec<DrawerEntry>)> {
+    let go_to = drawer_entries(false, 0, over_game);
+    let collections = (0..collections).map(DrawerEntry::Collection).collect();
     [
         (MenuShelf::GoTo, go_to),
         (MenuShelf::Collections, collections),
-        (MenuShelf::Leave, leave),
     ]
     .into_iter()
-    .filter(|(_, cards): &(MenuShelf, Vec<MenuCard>)| !cards.is_empty())
+    .filter(|(_, cards): &(MenuShelf, Vec<DrawerEntry>)| !cards.is_empty())
     .collect()
+}
+
+/// Where focus is on the menu's main level while its entries are shelves: a card on one
+/// of them, or a button of the power dock under them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MenuSpot {
+    /// The card for this place or collection.
+    Card(DrawerEntry),
+    /// The power dock's button at this index, start to end.
+    Dock(usize),
+}
+
+/// Where `direction` moves focus from `at` on the menu's `shelves` ([`menu_shelves`])
+/// and the power `dock` under them ([`crate::gamescope::session::power_dock`]), as the
+/// dock does under the list. On the shelves as [`step_shelves`] has it, with `last` the
+/// cards that last had focus on their shelves; Up from the first shelf goes out of the
+/// shelves when `anything_over` (the Playing Now cards or the game's windows sit over
+/// them), else wraps to where the dock lands
+/// ([`crate::gamescope::session::dock_landing`]); Down from the last shelf enters the
+/// dock at its first button. On the dock Up returns to the last shelf, on its card in
+/// `last`, else its first; Left and Right move along the dock and stop at its ends; Down
+/// stays. Where there is nothing to go to, focus stays.
+pub fn step_menu_shelves(
+    shelves: &[(MenuShelf, Vec<DrawerEntry>)],
+    dock: &[DockEntry],
+    at: MenuSpot,
+    direction: Direction,
+    last: &[DrawerEntry],
+    anything_over: bool,
+) -> ShelfStep<MenuSpot> {
+    let stay = ShelfStep::To(at);
+    match at {
+        MenuSpot::Card(card) => match step_shelves(shelves, card, direction, last) {
+            ShelfStep::To(card) => ShelfStep::To(MenuSpot::Card(card)),
+            ShelfStep::Above if anything_over => ShelfStep::Above,
+            ShelfStep::Above => {
+                dock_landing(dock).map_or(stay, |index| ShelfStep::To(MenuSpot::Dock(index)))
+            }
+            ShelfStep::Below if dock.is_empty() => stay,
+            ShelfStep::Below => ShelfStep::To(MenuSpot::Dock(0)),
+        },
+        MenuSpot::Dock(index) => match direction {
+            Direction::Up => shelves.last().map_or(stay, |(_, cards)| {
+                let remembered = cards.iter().find(|card| last.contains(card));
+                remembered
+                    .or(cards.first())
+                    .map_or(stay, |&card| ShelfStep::To(MenuSpot::Card(card)))
+            }),
+            Direction::Down => stay,
+            Direction::Left => ShelfStep::To(MenuSpot::Dock(index.saturating_sub(1))),
+            Direction::Right if index + 1 < dock.len() => ShelfStep::To(MenuSpot::Dock(index + 1)),
+            Direction::Right => stay,
+        },
+    }
 }
 
 /// An action of the drawer's level for one collection ([`DrawerLevel::Collection`]), as
@@ -1642,6 +1673,78 @@ mod tests {
         }
     }
 
+    #[test]
+    fn the_menu_s_shelves_are_go_to_and_every_collection() {
+        use DrawerEntry::*;
+        assert_eq!(
+            menu_shelves(2, false),
+            [
+                (MenuShelf::GoTo, vec![Home, Library, Search]),
+                (MenuShelf::Collections, vec![Collection(0), Collection(1)]),
+            ]
+        );
+        // Every collection is a card, so All Collections is not needed.
+        let many = INLINE_COLLECTIONS + 3;
+        let shelves = menu_shelves(many, false);
+        assert_eq!(
+            shelves[1],
+            (MenuShelf::Collections, (0..many).map(Collection).collect())
+        );
+        // A shelf with nothing on it is left out.
+        let kinds = |shelves: Vec<(MenuShelf, Vec<DrawerEntry>)>| {
+            shelves
+                .into_iter()
+                .map(|(kind, _)| kind)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(kinds(menu_shelves(0, false)), [MenuShelf::GoTo]);
+        // Over a running game: no Search.
+        assert_eq!(
+            menu_shelves(1, true),
+            [
+                (MenuShelf::GoTo, vec![Home, Library]),
+                (MenuShelf::Collections, vec![Collection(0)]),
+            ]
+        );
+    }
+
+    #[test]
+    fn the_menu_s_shelves_step_as_quick_s_do() {
+        use Direction::{Down, Left, Right, Up};
+        use DrawerEntry::*;
+        let shelves = menu_shelves(3, false);
+        let step =
+            |at, direction, last: &[DrawerEntry]| step_shelves(&shelves, at, direction, last);
+
+        assert_eq!(step(Home, Right, &[]), ShelfStep::To(Library));
+        assert_eq!(
+            step(Search, Right, &[]),
+            ShelfStep::To(Search),
+            "the shelf ends"
+        );
+        assert_eq!(
+            step(Collection(0), Left, &[]),
+            ShelfStep::To(Collection(0)),
+            "the shelf starts"
+        );
+        assert_eq!(step(Library, Down, &[]), ShelfStep::To(Collection(0)));
+        assert_eq!(
+            step(Library, Down, &[Collection(2)]),
+            ShelfStep::To(Collection(2))
+        );
+        assert_eq!(
+            step(Collection(1), Up, &[Collection(1), Search]),
+            ShelfStep::To(Search)
+        );
+        assert_eq!(step(Home, Up, &[]), ShelfStep::Above);
+        assert_eq!(step(Collection(1), Down, &[]), ShelfStep::Below);
+        assert_eq!(
+            step(PlayingNow, Right, &[]),
+            ShelfStep::To(PlayingNow),
+            "a card on no shelf stays where it is"
+        );
+    }
+
     fn dock() -> Vec<DockEntry> {
         use crate::system::power::{PowerAction, PowerEntry};
         let power = |action| {
@@ -1660,110 +1763,67 @@ mod tests {
     }
 
     #[test]
-    fn the_menu_s_shelves_are_go_to_every_collection_and_the_ways_out() {
-        use DrawerEntry::*;
-        let dock = dock();
-        let leave: Vec<_> = dock.iter().copied().map(MenuCard::Leave).collect();
-        assert_eq!(
-            menu_shelves(2, false, &dock),
-            [
-                (
-                    MenuShelf::GoTo,
-                    vec![
-                        MenuCard::Place(Home),
-                        MenuCard::Place(Library),
-                        MenuCard::Place(Search)
-                    ]
-                ),
-                (
-                    MenuShelf::Collections,
-                    vec![
-                        MenuCard::Place(Collection(0)),
-                        MenuCard::Place(Collection(1))
-                    ]
-                ),
-                (MenuShelf::Leave, leave.clone()),
-            ]
-        );
-        // Every collection is a card, so All Collections is not needed.
-        let many = INLINE_COLLECTIONS + 3;
-        let shelves = menu_shelves(many, false, &dock);
-        assert_eq!(
-            shelves[1],
-            (
-                MenuShelf::Collections,
-                (0..many)
-                    .map(|index| MenuCard::Place(Collection(index)))
-                    .collect()
-            )
-        );
-        // A shelf with nothing on it is left out.
-        let kinds = |shelves: Vec<(MenuShelf, Vec<MenuCard>)>| {
-            shelves
-                .into_iter()
-                .map(|(kind, _)| kind)
-                .collect::<Vec<_>>()
-        };
-        assert_eq!(
-            kinds(menu_shelves(0, false, &dock)),
-            [MenuShelf::GoTo, MenuShelf::Leave]
-        );
-        // Over a running game: no Search, and no dock.
-        assert_eq!(
-            menu_shelves(1, true, &[]),
-            [
-                (
-                    MenuShelf::GoTo,
-                    vec![MenuCard::Place(Home), MenuCard::Place(Library)]
-                ),
-                (MenuShelf::Collections, vec![MenuCard::Place(Collection(0))]),
-            ]
-        );
-    }
-
-    #[test]
-    fn the_menu_s_shelves_step_as_quick_s_do() {
+    fn the_menu_s_shelves_lead_to_and_from_the_power_dock() {
         use Direction::{Down, Left, Right, Up};
         use DrawerEntry::*;
+        use MenuSpot::{Card, Dock};
+        let shelves = menu_shelves(3, false);
         let dock = dock();
-        let shelves = menu_shelves(3, false, &dock);
-        let suspend = MenuCard::Leave(dock[2]);
-        let step = |at, direction, last: &[MenuCard]| step_shelves(&shelves, at, direction, last);
-        let place = MenuCard::Place;
+        let suspend = Dock(2);
+        let step = |at, direction, last: &[DrawerEntry]| {
+            step_menu_shelves(&shelves, &dock, at, direction, last, false)
+        };
 
-        assert_eq!(step(place(Home), Right, &[]), ShelfStep::To(place(Library)));
+        // Along a shelf and between shelves as Quick's shelves.
+        assert_eq!(step(Card(Home), Right, &[]), ShelfStep::To(Card(Library)));
         assert_eq!(
-            step(place(Search), Right, &[]),
-            ShelfStep::To(place(Search)),
-            "the shelf ends"
+            step(Card(Library), Down, &[Collection(2)]),
+            ShelfStep::To(Card(Collection(2)))
+        );
+        // Up from the top wraps to where the dock lands: Suspend.
+        assert_eq!(step(Card(Home), Up, &[]), ShelfStep::To(suspend));
+        assert_eq!(step(Card(Search), Up, &[]), ShelfStep::To(suspend));
+        // With the Playing Now cards or the game's windows over the shelves, Up goes to
+        // them.
+        assert_eq!(
+            step_menu_shelves(&shelves, &dock, Card(Home), Up, &[], true),
+            ShelfStep::Above
+        );
+        // Down from the last shelf enters the dock at its start.
+        assert_eq!(step(Card(Collection(1)), Down, &[]), ShelfStep::To(Dock(0)));
+        // Up from the dock returns to the last shelf, on the card it last had focused.
+        assert_eq!(
+            step(Dock(3), Up, &[Search, Collection(1)]),
+            ShelfStep::To(Card(Collection(1)))
         );
         assert_eq!(
-            step(place(Collection(0)), Left, &[]),
-            ShelfStep::To(place(Collection(0))),
-            "the shelf starts"
+            step(Dock(3), Up, &[Search]),
+            ShelfStep::To(Card(Collection(0)))
         );
+        // Left and Right move along the dock and stop at its ends; Down stays.
+        assert_eq!(step(Dock(2), Left, &[]), ShelfStep::To(Dock(1)));
+        assert_eq!(step(Dock(2), Right, &[]), ShelfStep::To(Dock(3)));
         assert_eq!(
-            step(place(Library), Down, &[]),
-            ShelfStep::To(place(Collection(0)))
+            step(Dock(0), Left, &[]),
+            ShelfStep::To(Dock(0)),
+            "its start"
         );
+        assert_eq!(step(Dock(4), Right, &[]), ShelfStep::To(Dock(4)), "its end");
+        assert_eq!(step(Dock(2), Down, &[]), ShelfStep::To(Dock(2)));
+
+        // Without a dock, over a running game, Down from the last shelf and Up from the
+        // top stay.
+        let over_game = menu_shelves(1, true);
+        let bare = |at, direction| step_menu_shelves(&over_game, &[], at, direction, &[], false);
         assert_eq!(
-            step(place(Library), Down, &[place(Collection(2))]),
-            ShelfStep::To(place(Collection(2)))
+            bare(Card(Collection(0)), Down),
+            ShelfStep::To(Card(Collection(0)))
         );
+        assert_eq!(bare(Card(Home), Up), ShelfStep::To(Card(Home)));
+        // Without shelves, Up from the dock stays.
         assert_eq!(
-            step(place(Collection(1)), Down, &[suspend]),
-            ShelfStep::To(suspend)
-        );
-        assert_eq!(
-            step(suspend, Up, &[place(Collection(1)), place(Search)]),
-            ShelfStep::To(place(Collection(1)))
-        );
-        assert_eq!(step(place(Home), Up, &[]), ShelfStep::Above);
-        assert_eq!(step(suspend, Down, &[]), ShelfStep::Below);
-        assert_eq!(
-            step(MenuCard::Place(PlayingNow), Right, &[]),
-            ShelfStep::To(MenuCard::Place(PlayingNow)),
-            "a card on no shelf stays where it is"
+            step_menu_shelves(&[], &dock, Dock(1), Up, &[], false),
+            ShelfStep::To(Dock(1))
         );
     }
 

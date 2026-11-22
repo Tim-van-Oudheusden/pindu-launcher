@@ -173,8 +173,9 @@ template $PinduMenuDrawer: Box {
             }
           }
 
-          // With `"menu-entries": "shelves"`, in place of the list and the dock: Go To,
-          // Collections and Leave, each a heading over a row of cards (`menu_drawer.rs`).
+          // With `"menu-entries": "shelves"`, in place of the list: Go To and Collections,
+          // each a heading over a row of cards (`menu_drawer.rs`), over the dock as the list
+          // is.
           Box shelves {
             orientation: vertical;
             spacing: 6;
@@ -248,9 +249,9 @@ template $PinduMenuDrawer: Box {
     }
   }
 
-  // The main level's power dock (`fullscreen_power.blp`), under its scrolling list so it
-  // stays in view however long the list is; shown with the main level only. The drawer
-  // over a running game has none.
+  // The main level's power dock (`fullscreen_power.blp`), under its scrolling list or
+  // shelves so it stays in view however long they are; shown with the main level only.
+  // The drawer over a running game has none.
   Adw.Bin dock_holder {
     margin-top: 12;
 
