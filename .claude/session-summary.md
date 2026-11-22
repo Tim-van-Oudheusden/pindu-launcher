@@ -14,6 +14,10 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   texture, the title hidden while it shows; no banner. Without a design the overlay stays dark in the light style
   (a white logo vanished on the light one). Seen in the harness with a seeded `library.db` of hand-added games that
   run `sleep 40` (`~/.cache/pindu-work/harness-747/`). Not seen: a screen reader, `--steam` gamescope, held B.
+- 2026-11-22, #742 (stacked on #747): Shelves' menu is Go To and Collections over the power dock; `MenuCard` and
+  `MenuShelf::Leave` went, shelves hold `DrawerEntry`; `panels::{MenuSpot, step_menu_shelves}` move focus between
+  shelves and dock. Seen in the harness at Largest and 1280×480 (shelves scroll, dock stays). Not seen: activating a
+  dock action (no fake logind), dimmed actions, the menu over a running game, more than two collections.
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,

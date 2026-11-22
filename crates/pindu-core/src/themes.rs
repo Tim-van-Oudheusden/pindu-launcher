@@ -384,8 +384,8 @@ pub enum MenuEntries {
     /// Rows, with the power dock under them.
     #[default]
     List,
-    /// Three shelves of cards, each card with its icon and name: Go To, Collections and
-    /// Leave ([`crate::panels::menu_shelves`]).
+    /// Two shelves of cards, each card with its icon and name: Go To and Collections
+    /// ([`crate::panels::menu_shelves`]), with the power dock under them.
     Shelves,
 }
 

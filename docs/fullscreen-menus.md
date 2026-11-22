@@ -47,14 +47,14 @@ below. The arrangements apply in the main window and over a running game alike.
   with no tile left out. In columns Left and Right move along a row and Up and Down keep the column; on shelves Left
   and Right move along a shelf and Up and Down change shelf, landing on the tile that shelf last had focused, as
   Home's shelves do. Tiles still lead or act; they never switch, and pills take no accent fill for "on".
-- **The menu as shelves** (`"shelves"`, `pindu_core::panels::menu_shelves`): in place of the rows and the dock,
-  three shelves of cards, each card its icon and name: **Go To** (Home, Library with its number of games, Search),
-  **Collections** (every collection with its number of games, the row scrolling sideways, so there is no All
-  Collections) and **Leave** (the dock's entries, with their names; one the system does not offer is dimmed and says
-  why under its name). Left and Right move along a shelf, Up and Down change shelf as on Quick's shelves. Up from the
-  main level's first item (a Playing Now card, else Home) still wraps to Suspend, now its card on Leave. View or X on
-  a collection's card leads to its actions, and B back to that card. The Leave cards run the dock's actions, so Hold
-  to Confirm, asking first while a game runs and the hint bar work on them as on the dock.
+- **The menu as shelves** (`"shelves"`, `pindu_core::panels::menu_shelves`): in place of the rows, two shelves of
+  cards, each card its icon and name: **Go To** (Home, Library with its number of games, Search) and **Collections**
+  (every collection with its number of games, the row scrolling sideways, so there is no All Collections). The power
+  dock stays at the bottom of the menu, under the shelves, as under the rows. Left and Right move along a shelf, Up
+  and Down change shelf as on Quick's shelves. The dock's focus rules hold (`pindu_core::panels::step_menu_shelves`):
+  Up from the main level's first item (a Playing Now card, else any card of the first shelf) wraps to Suspend, Down
+  from the last shelf enters the dock, and Up from the dock returns to the card the last shelf last had focused. View
+  or X on a collection's card leads to its actions, and B back to that card.
 - **The Playing Now card as a banner** (`"banner"`): the game's hero art, else its cover, loaded as Home loads a
   game's hero, across the top of the drawer's main level and of Quick, with "Playing Now", the time, the title, Return
   and Stop over a scrim at its foot. Without art the banner is the card colour.
@@ -89,8 +89,8 @@ Over a running game (`game_overlay`) the drawer leaves out Search and the power 
 
 ## The power dock
 
-Power is the menu's dock: a row of round buttons at the bottom of the main level, under its scrolling list, so it
-stays in view however many collections there are (`PinduPowerDock`, `crates/pindu-ui/src/fullscreen_power.rs`,
+Power is the menu's dock: a row of round buttons at the bottom of the main level, under its scrolling list or shelves,
+so it stays in view however many collections there are (`PinduPowerDock`, `crates/pindu-ui/src/fullscreen_power.rs`,
 `data/ui/fullscreen_power.blp`). What it holds is `pindu_core::gamescope::session::power_dock`, in two groups:
 
 - **Leaving the launcher**, at its start: **Exit Fullscreen Mode**, **Switch to Desktop** in a gamescope-session-plus
@@ -111,7 +111,8 @@ Focus:
   and lands on Suspend; without it, on the machine group's first button; without that group, on the dock's first
   button (`pindu_core::gamescope::session::dock_landing`). Suspend is Start, Up, A.
 - Down from the list's last row enters the dock at its first button. Up from the dock goes back to the list's last
-  row; Down stays.
+  row; Down stays. Under shelves, the last shelf takes the list's last row's place, Up landing on the card it last had
+  focused.
 - Left and Right move along the dock and stop at its ends. Power Off is Start, Up, Right, Right, A.
 - The menu still opens on the first Playing Now card's Return, or on Home.
 - The hint bar says what A does on the focused button: Select, Hold for Restart and Power Off while Hold to Confirm is

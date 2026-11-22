@@ -104,7 +104,7 @@ CSS restyles widgets but cannot move, add or remove them. These options change w
 | `home-details` | `false`, `true` | A row under Home's title: the focused section's number of games, or the focused game's playtime, when it was last played and its source. |
 | `panel-sections` | `"top"`, `"side"` | Where Quick Access's section strip sits: across the top, or as a rail of icons down the panel's inner edge, with the shown section's name over its content. |
 | `quick-tiles` | `"grid"`, `"pills"`, `"list"`, `"shelf"` | Quick's tiles as a grid of three columns with the icon over the name; as two columns of wide pills with the icon beside the name; as full-width rows with the second line at the row's end; or as shelves, each a heading over a row that Left and Right move along: Devices (Sound Output, Bluetooth and Network) and Library (Surprise Me, Refresh Library and Add a Game), a shelf with no tile left out. |
-| `menu-entries` | `"list"`, `"shelves"` | The menu's places, collections and ways out as rows with the power dock under them; or as three shelves of cards, each card with its icon and name: Go To (Home, Library and Search), Collections (every collection, the row scrolling, so there is no All Collections) and Leave (the dock's entries, with their names shown). |
+| `menu-entries` | `"list"`, `"shelves"` | The menu's places and collections as rows, or as two shelves of cards, each card with its icon and name: Go To (Home, Library and Search) and Collections (every collection, the row scrolling, so there is no All Collections). The power dock, with the ways out, stays under them either way. |
 | `playing-card` | `"compact"`, `"banner"` | The Playing Now card as it has been: "Playing Now" and how long the game has run, its title, then Return and Stop; or as a banner of the game's hero art, else its cover (the card colour without either), across the panel's top with the title over a scrim and Return and Stop on it. |
 
 The last four arrange the menu drawer and Quick Access, in the main window and over a running game; they
@@ -113,8 +113,9 @@ the same order, and every button does the same thing. What changes is where thin
 neighbours are a Left/Right or an Up/Down apart. In a grid, pills and rows, Left and Right move along a row
 and stop at its ends, and Up and Down keep the column, into a shorter row its nearest tile. On shelves,
 Left and Right move along a shelf and stop at its ends, and Up and Down change shelf, to the card that shelf
-last had focused, as on Home's shelves. Up from the top of the menu still lands on Suspend with
-`"menu-entries": "shelves"`.
+last had focused, as on Home's shelves. With `"menu-entries": "shelves"` the dock keeps its rules: Up from
+the top of the menu still lands on Suspend, Down from the last shelf enters the dock, and Up from the dock
+returns to the last shelf.
 
 Adwaita, fullscreen mode with no design (and what shows under high contrast), has a layout of its own:
 `"home": "explore"`, `"home-tile": "portrait"` at 116 pixels, `"top-bar": true` with `"top-bar-tabs":
@@ -351,11 +352,11 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 |---|---|
 | `.menu-drawer` | The menu drawer on the left: the Playing Now cards, Home, Library, Search, the first collections under a Collections heading, then their levels. Each row's number of games is `.numeric` and `.dim-label`. Also `.menu-shelves` with `"menu-entries": "shelves"`, and `.playing-card-banner` with `"playing-card": "banner"` |
 | `.menu-drawer row.current` | The row for the page under the menu, Home or Library, while either is shown, and with `.menu-shelves` its card (`.menu-card.current`); a screen reader reads it as the current page |
-| `.power-dock` | The menu drawer's power dock, under its main level's list: Exit Fullscreen Mode, Switch to Desktop and Exit Pindu Launcher at its start, Suspend, Restart and Power Off at its end |
+| `.power-dock` | The menu drawer's power dock, under its main level's list or shelves: Exit Fullscreen Mode, Switch to Desktop and Exit Pindu Launcher at its start, Suspend, Restart and Power Off at its end |
 | `.dock-button` | A round button of the dock (also `.circular`), at least 52px across, holding only its icon; one the system does not offer has a `.dimmed` icon and still takes focus |
 | `.dock-label` | The line over the dock that names the focused button, and says why a dimmed one is unavailable; empty while focus is elsewhere |
-| `.menu-shelf-heading` | With `.menu-shelves`, the heading of a shelf of the menu's main level: Go To, Collections or Leave, over its row of cards (`.menu-shelf`), which scrolls sideways. While a card of one shelf has focus, the other shelves' headings and the scrolled windows holding their rows are `.unfocused-shelf` |
-| `.menu-card` | A card on one of the menu's shelves, at least 96px square: its icon (`.menu-card-icon`) over its name (`.menu-card-name`) and, under it, a number of games or why it does nothing (`.menu-card-detail`). A card of the Leave shelf is also `.leave-card`; one the system does not offer has a `.dimmed` icon and still takes focus |
+| `.menu-shelf-heading` | With `.menu-shelves`, the heading of a shelf of the menu's main level: Go To or Collections, over its row of cards (`.menu-shelf`), which scrolls sideways. While a card of one shelf has focus, the other shelves' headings and the scrolled windows holding their rows are `.unfocused-shelf` |
+| `.menu-card` | A card on one of the menu's shelves, at least 96px square: its icon (`.menu-card-icon`) over its name (`.menu-card-name`) and, under it, a number of games (`.menu-card-detail`) |
 | `.quick-access` | The Quick Access panel on the right; also `.panel-sections-side` with `"panel-sections": "side"`, `.quick-tiles-pills`, `.quick-tiles-list` or `.quick-tiles-shelf` as `quick-tiles` says (none for `"grid"`), and `.playing-card-banner` with `"playing-card": "banner"` |
 | `.quick-access-status` | The header at the top of Quick Access: `.clock` (the time), `.offline` (shown while there is no network) and `.battery` (the machine's battery, absent without one) |
 | `.panel-sections` | The strip under Quick Access's header that switches its sections (Quick, Notifications, Design, Controller, System and Manage); a rail down the panel's inner edge, about 60px wide, with `.panel-sections-side` |
@@ -406,8 +407,7 @@ give each of these parts its look, so none is left with Pindu's base style besid
   `.playing-card-scrim` over the art, which keeps its text readable over any art, and `.no-art`;
 - the menu's rows, with `.current` on the one for the page under it, or with `.menu-shelves` its
   shelves: `.menu-shelf-heading`, `.menu-shelf`, `.menu-card` (`.current` on the one for the page
-  under it, `.leave-card` on the Leave shelf's, a `.dimmed` icon on one the system does not offer)
-  and `.unfocused-shelf`;
+  under it) and `.unfocused-shelf`;
 - the small headings, `.panel-heading`;
 - the power dock: `.power-dock`, `.dock-button`, one with a `.dimmed` icon, and `.dock-label`.
 

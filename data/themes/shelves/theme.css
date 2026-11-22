@@ -421,8 +421,7 @@ window.fullscreen-mode .menu-drawer .unfocused-shelf {
 /* The menu's cards: solid, as the tiles, names at the normal weight; the focused one lifts
    4px on glass under the white ring drawn inside it, the card for the page under the menu
    (`.current`) has its name at weight 600 and a 3px white line under it. Each shelf keeps
-   room above for the lift and below for the line. One the system does not offer dims its
-   icon, as the dock does. */
+   room above for the lift and below for the line. */
 window.fullscreen-mode .menu-drawer .menu-shelf {
   padding: 6px 0 5px;
 }
@@ -456,10 +455,6 @@ window.fullscreen-mode .menu-drawer .menu-card.current {
 window.fullscreen-mode .menu-drawer .menu-card .menu-card-detail {
   color: var(--shelves-muted);
   opacity: 1;
-}
-
-window.fullscreen-mode .menu-drawer .menu-card image.dimmed {
-  opacity: 0.4;
 }
 
 window.fullscreen-mode .quick-access .quick-tile-name,
@@ -551,8 +546,10 @@ window.fullscreen-mode .quick-access .playing-card button:focus-visible {
   outline-offset: 2px;
 }
 
-/* The power dock: solid rounded squares, the focused one on the glass under the white
-   ring; one the system does not offer dims its icon. */
+/* The power dock under the menu's list or shelves, in the cards' look: solid rounded
+   squares, the focused one on the glass under the white ring drawn inside it; one the
+   system does not offer dims its icon. The line over it names the focused one at weight
+   600. */
 window.fullscreen-mode .menu-drawer .dock-button {
   border-radius: 12px;
   background-color: var(--shelves-surface);
