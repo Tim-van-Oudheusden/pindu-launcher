@@ -51,9 +51,13 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   read. The title is prefilled from the program and typed with the on-screen keyboard. A Windows game's Proton build
   is picked from the same list as Performance's (the default, then the builds on this machine), and it runs through
   umu as on the desktop. Arguments and the working folder stay the desktop dialog's.
-- **Collections.** View or X on a collection in the menu drawer's Collections leads to Rename…, Move Up, Move Down
-  and Delete…, the desktop sidebar's collection menu. A name, new or changed, is typed with the on-screen keyboard
-  in the passphrase dialog, showing its text; Delete asks first, with Cancel chosen.
+- **Collections.** The menu drawer's main level lists the first five collections, and All Collections leads to every
+  one. View or X on a collection in either leads to Rename…, Move Up, Move Down and Delete…, the desktop sidebar's
+  collection menu. A name, new or changed, is typed with the on-screen keyboard in the passphrase dialog, showing its
+  text; Delete asks first, with Cancel chosen.
+- **Changing the buttons.** Quick Access → Controller → Change Buttons gives a function another controller button,
+  with Reset to Defaults; What Each Button Does beside it lists what every button and key does. The menu drawer has
+  no Controls entry any more. Change Buttons is left out over a running game.
 
 ## Flatpak, native and Pindu OS
 

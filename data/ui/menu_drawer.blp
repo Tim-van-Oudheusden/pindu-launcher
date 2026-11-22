@@ -2,10 +2,11 @@ using Gtk 4.0;
 using Adw 1;
 
 // Fullscreen mode's menu drawer (`menu_drawer.rs`): the main level with the Playing Now
-// cards and the entries, the collections and one collection's actions, Controls and Power.
-// The main window holds it on the left, where Start or Guide opens it over the page; over a
-// running game in a `--steam` gamescope the overlay window holds it, where Guide opens it
-// over the game. Its rows' `win.*` actions are the host's.
+// cards and the places (Home, Library, Search and the first collections), every collection
+// and one collection's actions, and Power. The main window holds it on the left, where
+// Start or Guide opens it over the page; over a running game in a `--steam` gamescope the
+// overlay window holds it, where Guide opens it over the game. Its rows' `win.*` actions
+// are the host's.
 template $PinduMenuDrawer: Box {
   orientation: vertical;
   accessible-role: group;
@@ -85,7 +86,7 @@ template $PinduMenuDrawer: Box {
               };
             }
 
-            ListBoxRow {
+            ListBoxRow library_row {
               action-name: "win.drawer-library";
 
               child: Box {
@@ -99,25 +100,68 @@ template $PinduMenuDrawer: Box {
                 Label {
                   label: _("Library");
                   xalign: 0;
+                  hexpand: true;
+                  ellipsize: end;
+                }
+
+                // How many games the library holds, as Home's Library tile says.
+                Label library_count {
+                  styles [
+                    "dim-label",
+                    "numeric",
+                  ]
                 }
               };
             }
 
-            ListBoxRow collections_row {
-              action-name: "win.drawer-collections";
+            // Starts a search with the on-screen keyboard, as Y does; ends with the glyph
+            // of the button that does it on the controller in use. Left out over a
+            // running game.
+            ListBoxRow search_row {
+              action-name: "win.drawer-search";
 
               child: Box {
                 spacing: 16;
 
                 Image {
-                  icon-name: "folder-symbolic";
+                  icon-name: "system-search-symbolic";
                   accessible-role: presentation;
                 }
 
                 Label {
-                  label: _("Collections");
+                  label: _("Search");
                   xalign: 0;
                   hexpand: true;
+                  ellipsize: end;
+                }
+
+                Image search_glyph {
+                  accessible-role: presentation;
+                  visible: false;
+                }
+              };
+            }
+
+            // The first collections go here, under a Collections heading, each with its
+            // icon, its name and its number of games (`menu_drawer.rs`).
+            // Leads to every collection, when there are more than the entries list.
+            ListBoxRow all_collections_row {
+              action-name: "win.drawer-collections";
+              visible: false;
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "view-more-horizontal-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("All Collections");
+                  xalign: 0;
+                  hexpand: true;
+                  ellipsize: end;
                 }
 
                 Image {
@@ -128,30 +172,6 @@ template $PinduMenuDrawer: Box {
             }
 
             // Left out over a running game.
-            ListBoxRow controls_row {
-              action-name: "win.drawer-controls";
-
-              child: Box {
-                spacing: 16;
-
-                Image {
-                  icon-name: "input-gaming-symbolic";
-                  accessible-role: presentation;
-                }
-
-                Label {
-                  label: _("Controls");
-                  xalign: 0;
-                  hexpand: true;
-                }
-
-                Image {
-                  icon-name: "go-next-symbolic";
-                  accessible-role: presentation;
-                }
-              };
-            }
-
             ListBoxRow exit_fullscreen_row {
               action-name: "win.leave-fullscreen";
 
@@ -232,8 +252,9 @@ template $PinduMenuDrawer: Box {
       };
     }
 
-    // One collection's actions, which View or X on it in the collections leads to: Rename…,
-    // Move Up, Move Down and Delete…, as the desktop sidebar's collection menu has them.
+    // One collection's actions, which View or X on a collection in the entries or in the
+    // collections leads to: Rename…, Move Up, Move Down and Delete…, as the desktop
+    // sidebar's collection menu has them.
     StackPage {
       name: "collection";
 
@@ -259,68 +280,6 @@ template $PinduMenuDrawer: Box {
             styles [
               "navigation-sidebar",
             ]
-          }
-        };
-      };
-    }
-
-    // The functions a controller button can be given, each with its button
-    // (`fullscreen_bindings`), then Reset to Defaults.
-    StackPage {
-      name: "controls";
-
-      child: ScrolledWindow {
-        hscrollbar-policy: never;
-
-        child: Box {
-          orientation: vertical;
-          spacing: 12;
-
-          Label {
-            label: _("Controls");
-            xalign: 0;
-
-            styles [
-              "title-3",
-            ]
-          }
-
-          ListBox controls {
-            selection-mode: none;
-
-            accessibility {
-              label: _("Controls");
-            }
-
-            styles [
-              "navigation-sidebar",
-            ]
-          }
-
-          ListBox controls_reset {
-            selection-mode: none;
-
-            styles [
-              "navigation-sidebar",
-            ]
-
-            ListBoxRow {
-              action-name: "win.controls-reset";
-
-              child: Box {
-                spacing: 16;
-
-                Image {
-                  icon-name: "edit-undo-symbolic";
-                  accessible-role: presentation;
-                }
-
-                Label {
-                  label: _("Reset to Defaults");
-                  xalign: 0;
-                }
-              };
-            }
           }
         };
       };

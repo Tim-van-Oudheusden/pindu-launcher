@@ -1138,7 +1138,8 @@ template $PinduQuickAccess: Box {
                   ]
                 }
 
-                // What each button and key does.
+                // What each button and key does, and the buttons to change, which is left
+                // out over a running game.
                 ListBox controller_list {
                   margin-top: 6;
                   selection-mode: none;
@@ -1159,9 +1160,35 @@ template $PinduQuickAccess: Box {
                       }
 
                       Label {
-                        label: _("Controls");
+                        label: _("What Each Button Does");
                         xalign: 0;
                         hexpand: true;
+                        ellipsize: end;
+                      }
+
+                      Image {
+                        icon-name: "go-next-symbolic";
+                        accessible-role: presentation;
+                      }
+                    };
+                  }
+
+                  ListBoxRow bindings_row {
+                    action-name: "win.quick-access-bindings";
+
+                    child: Box {
+                      spacing: 16;
+
+                      Image {
+                        icon-name: "input-gaming-symbolic";
+                        accessible-role: presentation;
+                      }
+
+                      Label {
+                        label: _("Change Buttons");
+                        xalign: 0;
+                        hexpand: true;
+                        ellipsize: end;
                       }
 
                       Image {
@@ -1739,8 +1766,9 @@ template $PinduQuickAccess: Box {
           spacing: 12;
 
           Label {
-            label: _("Controls");
+            label: _("What Each Button Does");
             xalign: 0;
+            wrap: true;
 
             styles [
               "title-3",
@@ -1753,6 +1781,69 @@ template $PinduQuickAccess: Box {
           Box controls {
             orientation: vertical;
             spacing: 12;
+          }
+        };
+      };
+    }
+
+    // The functions a controller button can be given, each with its button
+    // (`fullscreen_bindings`), then Reset to Defaults.
+    StackPage {
+      name: "bindings";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 12;
+
+          Label {
+            label: _("Change Buttons");
+            xalign: 0;
+            wrap: true;
+
+            styles [
+              "title-3",
+            ]
+          }
+
+          ListBox bindings {
+            selection-mode: none;
+
+            accessibility {
+              label: _("Change Buttons");
+            }
+
+            styles [
+              "navigation-sidebar",
+            ]
+          }
+
+          ListBox bindings_reset {
+            selection-mode: none;
+
+            styles [
+              "navigation-sidebar",
+            ]
+
+            ListBoxRow {
+              action-name: "win.bindings-reset";
+
+              child: Box {
+                spacing: 16;
+
+                Image {
+                  icon-name: "edit-undo-symbolic";
+                  accessible-role: presentation;
+                }
+
+                Label {
+                  label: _("Reset to Defaults");
+                  xalign: 0;
+                }
+              };
+            }
           }
         };
       };

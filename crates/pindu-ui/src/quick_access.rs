@@ -31,21 +31,21 @@
 //!
 //! The sections and levels are filled by: Notifications `fullscreen_notifications`, its
 //! Running tasks and Refresh Library `fullscreen_activity`, Surprise Me
-//! `fullscreen_surprise`, Controller `fullscreen_controllers`, Controls
-//! `fullscreen_controls`, Filters (offered on the library page) `fullscreen_library`,
-//! Performance (offered for a game we run ourselves) `fullscreen_performance`, Network
-//! `fullscreen_network`, Bluetooth `fullscreen_bluetooth`, Sound Output
-//! `fullscreen_sound_output`, System Update `fullscreen_system_update`, Library Health
-//! `fullscreen_health`, Diagnostics Report `fullscreen_report`, Add a Store `add_store`,
-//! Proton `fullscreen_proton_downloads`, Sources `fullscreen_sources` and Duplicates
-//! `fullscreen_duplicates`; Add a Game opens the window's `fullscreen_add_game`. Design
-//! is this module's: the design, chosen from a row of cards with their pictures, its
-//! variant, Home's background blur and dim, cover size, text size, Reduce Motion and the
-//! user's own stylesheet. So are System's navigation sounds, their volume and exiting
-//! after a launch, and Manage's SteamGridDB key (typed hidden with the on-screen keyboard
-//! of `secret_dialog` and kept in the keyring), Prefer SteamGridDB Art and Wikidata
-//! metadata, with Refresh Metadata under its switch while it is on: the same settings
-//! Preferences changes.
+//! `fullscreen_surprise`, Controller `fullscreen_controllers`, What Each Button Does
+//! (Controls) `fullscreen_controls`, Change Buttons (Bindings) `fullscreen_bindings`,
+//! Filters (offered on the library page) `fullscreen_library`, Performance (offered for a
+//! game we run ourselves) `fullscreen_performance`, Network `fullscreen_network`,
+//! Bluetooth `fullscreen_bluetooth`, Sound Output `fullscreen_sound_output`, System Update
+//! `fullscreen_system_update`, Library Health `fullscreen_health`, Diagnostics Report
+//! `fullscreen_report`, Add a Store `add_store`, Proton `fullscreen_proton_downloads`,
+//! Sources `fullscreen_sources` and Duplicates `fullscreen_duplicates`; Add a Game opens
+//! the window's `fullscreen_add_game`. Design is this module's: the design, chosen from a
+//! row of cards with their pictures, its variant, Home's background blur and dim, cover
+//! size, text size, Reduce Motion and the user's own stylesheet. So are System's
+//! navigation sounds, their volume and exiting after a launch, and Manage's SteamGridDB key
+//! (typed hidden with the on-screen keyboard of `secret_dialog` and kept in the keyring),
+//! Prefer SteamGridDB Art and Wikidata metadata, with Refresh Metadata under its switch
+//! while it is on: the same settings Preferences changes.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::sync::LazyLock;
@@ -217,7 +217,13 @@ mod imp {
         #[template_child]
         pub controls_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
+        pub bindings_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
         pub controls: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub bindings: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub bindings_reset: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub system_list: TemplateChild<gtk::ListBox>,
         #[template_child]
@@ -500,6 +506,7 @@ impl PinduQuickAccess {
         self.setup_activity(application, actions);
         self.setup_controllers(application, actions);
         self.setup_controls(application);
+        self.setup_bindings(application, actions);
         self.setup_filters(actions);
         self.setup_surprise_me(application, actions);
         self.setup_network(application, actions);
@@ -564,12 +571,16 @@ impl PinduQuickAccess {
         } else if before == main {
             self.remember_focus(before_section);
         }
+        if before == Some(QuickAccessLevel::Bindings) {
+            self.leave_bindings();
+        }
         if before == Some(QuickAccessLevel::Bluetooth) {
             self.leave_bluetooth();
         }
         match level {
             Some(QuickAccessLevel::Main) => self.fill_section(section, before == main),
             Some(QuickAccessLevel::Controls) => self.fill_controls(),
+            Some(QuickAccessLevel::Bindings) => self.fill_bindings(),
             Some(QuickAccessLevel::Filters) => {
                 self.fill_genres();
                 self.show_filters();
@@ -656,6 +667,7 @@ impl PinduQuickAccess {
             (Some(QuickAccessLevel::Sources), _) => first_row(&imp.sources),
             // Filled once the review is read, which then focuses the first.
             (Some(QuickAccessLevel::Duplicates), _) => first_row(&imp.duplicates),
+            (Some(QuickAccessLevel::Bindings), _) => first_row(&imp.bindings),
             (Some(QuickAccessLevel::Controls), _) => {
                 std::iter::successors(imp.controls.first_child(), |child| child.next_sibling())
                     .find_map(|child| child.downcast::<gtk::ListBox>().ok())
@@ -863,6 +875,7 @@ impl PinduQuickAccess {
             QuickAccessLevel::Filters => QuickAccessEntry::Filters,
             QuickAccessLevel::Performance => QuickAccessEntry::Performance,
             QuickAccessLevel::Controls => QuickAccessEntry::Controls,
+            QuickAccessLevel::Bindings => QuickAccessEntry::Bindings,
             QuickAccessLevel::Sources => QuickAccessEntry::Sources,
             QuickAccessLevel::Duplicates => QuickAccessEntry::Duplicates,
             QuickAccessLevel::Bluetooth => QuickAccessEntry::Bluetooth,
@@ -913,6 +926,7 @@ impl PinduQuickAccess {
                 vec![imp.notifications.get().upcast()]
             }
             (Section::Controller, Entry::Controls) => row(&imp.controls_row),
+            (Section::Controller, Entry::Bindings) => row(&imp.bindings_row),
             (Section::System, Entry::Network) => row(&imp.network_row),
             (Section::System, Entry::Bluetooth) => row(&imp.bluetooth_row),
             (Section::System, Entry::SoundOutput) => row(&imp.sound_output_row),
@@ -1286,6 +1300,8 @@ impl PinduQuickAccess {
             network_devices,
             wifi_radio,
             wifi_networks,
+            imp.bindings.get(),
+            imp.bindings_reset.get(),
             imp.controller_list.get(),
             imp.system_list.get(),
             imp.report_list.get(),

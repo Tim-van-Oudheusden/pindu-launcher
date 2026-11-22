@@ -8,7 +8,8 @@
 //! panel's levels as the main window does, for the game in front, and acts on the
 //! controller while it holds input.
 //!
-//! The drawer over a game holds the Playing Now cards, Home, Library and Collections; an
+//! The drawer over a game holds the Playing Now cards, Home, Library, the first collections
+//! and All Collections when there are more (no Search, Exit Fullscreen Mode or Power); an
 //! entry other than a card brings the main window to the front, where it does what it
 //! does there. Quick Access over a game offers what needs no library page and no flow of
 //! the main window ([`PinduQuickAccess::set_over_game`]). Network's passphrase and
@@ -214,7 +215,7 @@ impl PinduGameOverlay {
         actions.add_action(&permissions);
     }
 
-    /// The drawer's entries: Collections leads to its level here; Home, Library and a
+    /// The drawer's entries: All Collections leads to its level here; Home, Library and a
     /// collection bring the main window to the front, which goes there; a window of the
     /// game shows that window and closes the drawer.
     fn add_drawer_actions(&self, actions: &gio::SimpleActionGroup) {
@@ -328,7 +329,7 @@ impl PinduGameOverlay {
             Some(OverGame::Menu) => {
                 if let Some(application) = &application {
                     imp.drawer
-                        .fill(&application.library_service().model().collections(), false);
+                        .fill(&application.library_service().model(), false);
                     imp.drawer
                         .show_windows(&application.gamescope_service().front_windows());
                 }

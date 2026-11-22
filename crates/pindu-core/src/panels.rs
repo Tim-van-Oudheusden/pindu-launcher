@@ -38,9 +38,6 @@ pub enum DrawerLevel {
     /// Suspend, Restart and Power Off, as the system allows them (see
     /// [`crate::system::power`]), and Exit Pindu Launcher.
     Power,
-    /// The functions a controller button can be given, each with its button, and Reset to
-    /// Defaults (see [`crate::gamepad::Bindings`]).
-    Controls,
 }
 
 /// What the options sheet shows: the game's actions, or one of the lists an action leads
@@ -159,6 +156,9 @@ pub enum QuickAccessEntry {
     Controllers,
     /// Leads to what each button and key does ([`QuickAccessLevel::Controls`]).
     Controls,
+    /// Leads to the functions a controller button can be given
+    /// ([`QuickAccessLevel::Bindings`]); left out over a running game.
+    Bindings,
     /// Leads to the OS updates on Pindu OS ([`QuickAccessLevel::SystemUpdate`]).
     SystemUpdate,
     /// A list of its own: Navigation Sounds, their Volume under it, insensitive while
@@ -203,7 +203,8 @@ pub struct Shown {
     /// The system offers OS updates (Pindu OS).
     pub system_update: bool,
     /// The panel is over a running game (`game_overlay`), which leaves out what needs the
-    /// main window: Surprise Me, Add a Store, Add a Game and Diagnostics Report.
+    /// main window: Surprise Me, Add a Store, Add a Game and Diagnostics Report; and
+    /// Change Buttons, which would change the controls under the game.
     pub over_game: bool,
 }
 
@@ -221,7 +222,11 @@ pub fn section_entries(section: QuickAccessSection, shown: Shown) -> Vec<QuickAc
         ],
         QuickAccessSection::Notifications => &[(Running, shown.running), (Notifications, true)],
         QuickAccessSection::Design => &[(Designs, true)],
-        QuickAccessSection::Controller => &[(Controllers, true), (Controls, true)],
+        QuickAccessSection::Controller => &[
+            (Controllers, true),
+            (Controls, true),
+            (Bindings, main_window),
+        ],
         QuickAccessSection::System => &[
             (Network, shown.network),
             (Bluetooth, shown.bluetooth),
@@ -385,6 +390,9 @@ pub enum QuickAccessLevel {
     Main,
     /// What each button and key does: every intent in groups (see [`crate::controls`]).
     Controls,
+    /// The functions a controller button can be given, each with its button, and Reset to
+    /// Defaults (see [`crate::gamepad::Bindings`]).
+    Bindings,
     /// The library filters, while the library is under the panel (see [`page_entries`]).
     Filters,
     /// The Performance Overlay (MangoHud) and GameMode switches of the focused game, one
@@ -432,9 +440,10 @@ pub enum QuickAccessLevel {
 
 impl QuickAccessLevel {
     /// Every level, the sections first.
-    pub const ALL: [Self; 15] = [
+    pub const ALL: [Self; 16] = [
         Self::Main,
         Self::Controls,
+        Self::Bindings,
         Self::Filters,
         Self::Performance,
         Self::Network,
@@ -456,6 +465,7 @@ impl QuickAccessLevel {
         match self {
             Self::Main => "main",
             Self::Controls => "controls",
+            Self::Bindings => "bindings",
             Self::Filters => "filters",
             Self::Performance => "performance",
             Self::Network => "network",
@@ -484,7 +494,7 @@ impl QuickAccessLevel {
     pub fn section(self) -> QuickAccessSection {
         match self {
             Self::Main | Self::Filters | Self::Performance => QuickAccessSection::Quick,
-            Self::Controls => QuickAccessSection::Controller,
+            Self::Controls | Self::Bindings => QuickAccessSection::Controller,
             Self::Network
             | Self::Bluetooth
             | Self::SoundOutput
@@ -514,19 +524,22 @@ pub struct Under {
     pub unread: bool,
     /// The page is fullscreen mode's library: Quick Access offers its filters.
     pub library: bool,
-    /// A collection in the drawer's Collections level has focus: View or X has a
-    /// collection to show actions for.
+    /// A collection in the drawer's entries or its Collections level has focus: View or X
+    /// has a collection to show actions for.
     pub collection: bool,
     /// What Quick Access's sections show, which decides the sections LB and RB step
     /// through (see [`sections`]).
     pub shown: Shown,
 }
 
-/// The panel that is open, if any, and the section Quick Access shows at its main level.
+/// The panel that is open, if any, the section Quick Access shows at its main level, and
+/// whether a collection's actions were opened from the drawer's entries rather than its
+/// Collections level, for B to lead back there.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Panels {
     open: Option<Panel>,
     section: QuickAccessSection,
+    collection_from_main: bool,
 }
 
 impl Panels {
@@ -550,8 +563,9 @@ impl Panels {
     /// not act on it too. Start and Guide toggle the drawer, R3, Guide + A and the Steam
     /// Deck's "…" toggle Quick Access (on its Notifications section while one is unread,
     /// as Steam's does, else on Quick), LB and RB step through Quick Access's sections
-    /// while it shows one, View or X opens the options for a game, or in the drawer's
-    /// Collections leads to the focused collection's actions, and B steps back a level or
+    /// while it shows one, View or X opens the options for a game, or on a collection in
+    /// the drawer's entries or its Collections leads to that collection's actions, and B
+    /// steps back a level (from a collection's actions, to where they were opened from) or
     /// closes. Opening one panel closes the other. While a panel is open the page's own
     /// buttons (search, tabs, sort) wait; directions and A move and act inside it.
     pub fn handle(&mut self, intent: Intent, under: Under) -> bool {
@@ -589,9 +603,11 @@ impl Panels {
             (Intent::Options, None) if under.game => {
                 self.open = Some(Panel::Options(OptionsLevel::Main));
             }
-            (Intent::Options, Some(Panel::Drawer(DrawerLevel::Collections)))
-                if under.collection =>
-            {
+            (
+                Intent::Options,
+                Some(Panel::Drawer(from @ (DrawerLevel::Main | DrawerLevel::Collections))),
+            ) if under.collection => {
+                self.collection_from_main = from == DrawerLevel::Main;
                 self.open = Some(Panel::Drawer(DrawerLevel::Collection));
             }
             (
@@ -605,7 +621,11 @@ impl Panels {
                 self.open = None;
             }
             (Intent::Back, Some(Panel::Drawer(DrawerLevel::Collection))) => {
-                self.open = Some(Panel::Drawer(DrawerLevel::Collections));
+                self.open = Some(Panel::Drawer(if self.collection_from_main {
+                    DrawerLevel::Main
+                } else {
+                    DrawerLevel::Collections
+                }));
             }
             (Intent::Back, Some(Panel::Drawer(_))) => {
                 self.open = Some(Panel::Drawer(DrawerLevel::Main));
@@ -628,8 +648,15 @@ impl Panels {
     /// Shows `panel` at its level: opened by a button rather than a controller, or one of
     /// its entries leading to a list. A Quick Access level reached from a section that
     /// leads to it keeps that section for B to lead back to; any other takes its own
-    /// ([`QuickAccessLevel::section`]).
+    /// ([`QuickAccessLevel::section`]). A collection's actions shown from the drawer's
+    /// entries lead back to them, as they do when View or X led there.
     pub fn show(&mut self, panel: Panel) {
+        if panel == Panel::Drawer(DrawerLevel::Collection)
+            && let Some(Panel::Drawer(from @ (DrawerLevel::Main | DrawerLevel::Collections))) =
+                self.open
+        {
+            self.collection_from_main = from == DrawerLevel::Main;
+        }
         if let Panel::QuickAccess(level) = panel
             && level != QuickAccessLevel::Main
         {
@@ -656,6 +683,10 @@ impl Panels {
     }
 }
 
+/// How many collections the drawer's entries list, the first in the user's order; with
+/// more, [`DrawerEntry::AllCollections`] leads to every one.
+pub const INLINE_COLLECTIONS: usize = 5;
+
 /// An entry of the menu drawer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DrawerEntry {
@@ -665,8 +696,14 @@ pub enum DrawerEntry {
     Home,
     /// Go to the library.
     Library,
-    /// Lead to the collections ([`DrawerLevel::Collections`]).
-    Collections,
+    /// Start a search with the on-screen keyboard, as Y does.
+    Search,
+    /// Open the collection at this index of the user's order in the library; View or X on
+    /// it leads to its actions ([`DrawerLevel::Collection`]).
+    Collection(usize),
+    /// Lead to every collection ([`DrawerLevel::Collections`]), when there are more than
+    /// [`INLINE_COLLECTIONS`].
+    AllCollections,
     /// Leave fullscreen mode for the desktop window.
     ExitFullscreen,
     /// Lead to suspending, restarting and powering off the machine, and to quitting
@@ -674,26 +711,40 @@ pub enum DrawerEntry {
     Power,
 }
 
-/// The drawer's entries, top to bottom: a Playing Now card while a game we started runs,
-/// Collections when there are any, and Power last while its level lists anything
-/// ([`crate::gamescope::session::power_level`]), which it does except in the launcher's
-/// own session on a system that offers none of its actions.
-pub fn drawer_entries(playing: bool, collections: bool, power: bool) -> Vec<DrawerEntry> {
+/// The drawer's entries, top to bottom: a Playing Now card while a game we started runs
+/// (`playing`), Home, Library and Search, the first [`INLINE_COLLECTIONS`] of the
+/// `collections` and All Collections when there are more, then Exit Fullscreen Mode, and
+/// Power last while its level lists anything (`power`;
+/// [`crate::gamescope::session::power_level`]), which it does except in the launcher's own
+/// session on a system that offers none of its actions. Over a running game (`over_game`)
+/// the drawer leaves out Search, Exit Fullscreen Mode and Power: what would leave the game
+/// or end the session.
+pub fn drawer_entries(
+    playing: bool,
+    collections: usize,
+    over_game: bool,
+    power: bool,
+) -> Vec<DrawerEntry> {
     use DrawerEntry::*;
-    let playing = playing.then_some(PlayingNow);
-    let collections = collections.then_some(Collections);
-    let power = power.then_some(Power);
-    [
-        playing,
-        Some(Home),
-        Some(Library),
-        collections,
-        Some(ExitFullscreen),
-        power,
-    ]
-    .into_iter()
-    .flatten()
-    .collect()
+    let mut entries = Vec::with_capacity(INLINE_COLLECTIONS + 7);
+    if playing {
+        entries.push(PlayingNow);
+    }
+    entries.extend([Home, Library]);
+    if !over_game {
+        entries.push(Search);
+    }
+    entries.extend((0..collections.min(INLINE_COLLECTIONS)).map(Collection));
+    if collections > INLINE_COLLECTIONS {
+        entries.push(AllCollections);
+    }
+    if !over_game {
+        entries.push(ExitFullscreen);
+        if power {
+            entries.push(Power);
+        }
+    }
+    entries
 }
 
 /// An action of the drawer's level for one collection ([`DrawerLevel::Collection`]), as
@@ -1253,9 +1304,22 @@ mod tests {
             );
             assert_eq!(
                 section_entries(QuickAccessSection::Controller, shown),
-                [Controllers, Controls]
+                [Controllers, Controls, Bindings]
             );
         }
+    }
+
+    #[test]
+    fn over_a_running_game_controller_leaves_out_change_buttons() {
+        use QuickAccessEntry::*;
+        let over_game = Shown {
+            over_game: true,
+            ..FULL
+        };
+        assert_eq!(
+            section_entries(QuickAccessSection::Controller, over_game),
+            [Controllers, Controls]
+        );
     }
 
     #[test]
@@ -1396,6 +1460,7 @@ mod tests {
     fn each_quick_access_level_has_the_name_its_page_goes_by() {
         assert_eq!(QuickAccessLevel::Main.name(), "main");
         assert_eq!(QuickAccessLevel::Controls.name(), "controls");
+        assert_eq!(QuickAccessLevel::Bindings.name(), "bindings");
         assert_eq!(QuickAccessLevel::SoundOutput.name(), "sound-output");
         assert_eq!(QuickAccessLevel::SystemUpdate.name(), "system-update");
         assert_eq!(QuickAccessLevel::AddStore.name(), "add-store");
@@ -1498,6 +1563,7 @@ mod tests {
     fn b_steps_back_from_a_list_to_its_section_and_then_closes_quick_access() {
         for level in [
             QuickAccessLevel::Controls,
+            QuickAccessLevel::Bindings,
             QuickAccessLevel::Filters,
             QuickAccessLevel::Performance,
             QuickAccessLevel::Network,
@@ -1539,6 +1605,7 @@ mod tests {
             (Filters, S::Quick),
             (Performance, S::Quick),
             (Controls, S::Controller),
+            (Bindings, S::Controller),
             (Network, S::System),
             (Bluetooth, S::System),
             (SoundOutput, S::System),
@@ -1782,6 +1849,40 @@ mod tests {
     }
 
     #[test]
+    fn view_or_x_on_a_collection_in_the_drawer_s_entries_leads_to_its_actions_and_b_back() {
+        let collection = Under {
+            collection: true,
+            ..PAGE
+        };
+        let mut panels = Panels::new();
+        panels.handle(Intent::Menu, PAGE);
+        assert!(panels.handle(Intent::Options, PAGE), "taken, not acted on");
+        assert_eq!(panels.open(), drawer(), "no collection has focus");
+        assert!(panels.handle(Intent::Options, collection));
+        assert_eq!(panels.open(), Some(Panel::Drawer(DrawerLevel::Collection)));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), drawer(), "back where it was opened from");
+
+        panels.show(Panel::Drawer(DrawerLevel::Collections));
+        assert!(panels.handle(Intent::Options, collection));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(
+            panels.open(),
+            Some(Panel::Drawer(DrawerLevel::Collections)),
+            "the Collections level remembers its own"
+        );
+
+        panels.show(Panel::Drawer(DrawerLevel::Main));
+        panels.show(Panel::Drawer(DrawerLevel::Collection));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(
+            panels.open(),
+            drawer(),
+            "shown by the pointer from the entries"
+        );
+    }
+
+    #[test]
     fn view_or_x_opens_the_options_for_a_focused_game_and_b_closes_them() {
         let mut panels = Panels::new();
         assert!(!panels.handle(Intent::Options, PAGE), "no game, no options");
@@ -1850,20 +1951,28 @@ mod tests {
     }
 
     #[test]
-    fn b_leaves_the_controls_level_for_the_drawer_s_entries_first_and_start_closes_it() {
+    fn b_leads_from_change_buttons_back_to_the_controller_section_and_start_swaps_it() {
         let mut panels = Panels::new();
-        panels.handle(Intent::Menu, PAGE);
-        panels.show(Panel::Drawer(DrawerLevel::Controls));
+        panels.show_section(QuickAccessSection::Controller);
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Bindings));
         assert!(panels.handle(Intent::Back, PAGE));
-        assert_eq!(panels.open(), drawer());
-        assert!(panels.handle(Intent::Back, PAGE));
-        assert_eq!(panels.open(), None);
+        assert_eq!(panels.open(), quick_access());
+        assert_eq!(panels.section(), QuickAccessSection::Controller);
 
-        panels.show(Panel::Drawer(DrawerLevel::Controls));
+        panels.show_section(QuickAccessSection::Quick);
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Bindings));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(
+            panels.section(),
+            QuickAccessSection::Controller,
+            "its own section, whichever showed"
+        );
+
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Bindings));
         assert!(panels.handle(Intent::Search, PAGE), "taken, not acted on");
         assert!(!panels.handle(Intent::Activate, PAGE), "A chooses a row");
         assert!(panels.handle(Intent::Menu, PAGE));
-        assert_eq!(panels.open(), None);
+        assert_eq!(panels.open(), drawer());
     }
 
     #[test]
@@ -1888,16 +1997,61 @@ mod tests {
     }
 
     #[test]
-    fn the_drawer_lists_playing_now_first_and_collections_when_there_are_any() {
+    fn the_drawer_lists_playing_now_first_then_the_places_and_the_first_collections() {
         use DrawerEntry::*;
         assert_eq!(
-            drawer_entries(true, true, false),
-            [PlayingNow, Home, Library, Collections, ExitFullscreen]
+            drawer_entries(true, 0, false, false),
+            [PlayingNow, Home, Library, Search, ExitFullscreen]
         );
         assert_eq!(
-            drawer_entries(false, false, false),
-            [Home, Library, ExitFullscreen],
-            "settings live in Quick Access"
+            drawer_entries(false, 0, false, false),
+            [Home, Library, Search, ExitFullscreen],
+            "no collections, and settings live in Quick Access"
+        );
+        assert_eq!(
+            drawer_entries(false, 3, false, false),
+            [
+                Home,
+                Library,
+                Search,
+                Collection(0),
+                Collection(1),
+                Collection(2),
+                ExitFullscreen
+            ]
+        );
+    }
+
+    #[test]
+    fn the_drawer_lists_five_collections_and_all_collections_only_beyond_them() {
+        use DrawerEntry::*;
+        assert_eq!(INLINE_COLLECTIONS, 5);
+        let five = [
+            Home,
+            Library,
+            Search,
+            Collection(0),
+            Collection(1),
+            Collection(2),
+            Collection(3),
+            Collection(4),
+        ];
+        assert_eq!(
+            drawer_entries(false, 5, false, false),
+            [&five[..], &[ExitFullscreen]].concat()
+        );
+        assert_eq!(
+            drawer_entries(false, 7, false, false),
+            [&five[..], &[AllCollections, ExitFullscreen]].concat()
+        );
+    }
+
+    #[test]
+    fn over_a_running_game_the_drawer_leaves_out_search_exit_fullscreen_and_power() {
+        use DrawerEntry::*;
+        assert_eq!(
+            drawer_entries(true, 1, true, true),
+            [PlayingNow, Home, Library, Collection(0)]
         );
     }
 
@@ -1905,12 +2059,12 @@ mod tests {
     fn the_drawer_lists_power_last_where_its_level_lists_anything_and_quit_lives_there() {
         use DrawerEntry::*;
         assert_eq!(
-            drawer_entries(false, false, true),
-            [Home, Library, ExitFullscreen, Power]
+            drawer_entries(false, 0, false, true),
+            [Home, Library, Search, ExitFullscreen, Power]
         );
         assert_eq!(
-            drawer_entries(true, false, true),
-            [PlayingNow, Home, Library, ExitFullscreen, Power]
+            drawer_entries(true, 0, false, true),
+            [PlayingNow, Home, Library, Search, ExitFullscreen, Power]
         );
     }
 

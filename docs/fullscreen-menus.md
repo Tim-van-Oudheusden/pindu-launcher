@@ -1,13 +1,42 @@
 # Fullscreen menus
 
 Fullscreen mode has two menus: the menu drawer on the left (Start or Guide) and Quick Access on the right (Guide + A,
-a right stick click, the Steam Deck's "…" button, or <kbd>Ctrl</kbd>+<kbd>2</kbd>). This page says how Quick Access is
-arranged and what each part holds. The maintainer chose this arrangement, design A of the fullscreen menus design
-pass, on 2026-11-22; it is built in the issues of that series, starting with #717, and each one extends this page.
+a right stick click, the Steam Deck's "…" button, or <kbd>Ctrl</kbd>+<kbd>2</kbd>). The menu drawer is where to go;
+Quick Access is the state of things and the settings. This page says how both are arranged and what each part holds.
+The maintainer chose this arrangement, design A of the fullscreen menus design pass, on 2026-11-22; it is built in the
+issues of that series, starting with #717, and each one extends this page.
 
 Which panel is open, at which level and section, and what the buttons do to them is `pindu_core::panels` (`Panels`);
-what each section lists, and in which order, is `pindu_core::panels::section_entries`. The panel itself is
-`PinduQuickAccess` (`crates/pindu-ui/src/quick_access.rs`, `data/ui/quick_access.blp`).
+what the drawer's main level lists is `pindu_core::panels::drawer_entries`, and what each Quick Access section lists,
+and in which order, `pindu_core::panels::section_entries`. The drawer is `PinduMenuDrawer`
+(`crates/pindu-ui/src/menu_drawer.rs`, `data/ui/menu_drawer.blp`), Quick Access `PinduQuickAccess`
+(`crates/pindu-ui/src/quick_access.rs`, `data/ui/quick_access.blp`).
+
+## The menu drawer's main level
+
+The drawer is a full-height panel that slides out from the left. Its main level is the places, top to bottom:
+
+1. The Playing Now cards, one for each game that runs, and over a running game its windows when it has more than one.
+2. **Home**.
+3. **Library**, with the number of games at its end: the number Home's Library tile shows.
+4. **Search**: closes the menu and starts a search with the on-screen keyboard, as Y does. From a page where Y does
+   nothing, such as a game's page, it goes to the library first. The row ends with the glyph of the Search button on
+   the controller in use, so it also teaches the shortcut; it follows a changed binding at once.
+5. A **Collections** heading and the first five collections (`INLINE_COLLECTIONS`) in the user's order, each with its
+   icon, its name and its number of games. A long name ends in an ellipsis; the number stays in view. A opens the
+   collection's tab in the library. With no collections the heading and the rows are left out.
+6. **All Collections**, only with more than five: leads to the Collections level, which lists every one.
+7. **Exit Fullscreen Mode** and **Power** (when its level lists anything).
+
+Over a running game (`game_overlay`) the drawer leaves out Search, Exit Fullscreen Mode and Power.
+
+- View or X on a collection, in the main level or in the Collections level, leads to its actions: Rename…, Move Up,
+  Move Down and Delete…. The hint bar shows View while a collection has focus. B goes back to where they were opened
+  from, with focus on that collection (or on All Collections when a move took it past the first five).
+- B from the Collections level goes back to the main level, with focus on All Collections.
+- The rows follow the library as collections are added, renamed, reordered and deleted, and as the numbers of games
+  change. Deleting the collection whose actions show goes back to where they were opened from.
+- The menu has no Controls: what each button does and changing the buttons are in Quick Access's Controller section.
 
 ## Quick Access's sections
 
@@ -25,13 +54,14 @@ What each section lists, top to bottom. "→" leads to the level of that name; "
 | **Quick** | The Playing Now cards · the page cards: Filters → (when the library is under the panel) and Performance → (when the focused game is one Pindu runs) · the tiles: Sound Output →, Bluetooth →, Network → (each when available), Surprise Me, Refresh Library, Add a Game · the activity strip (while something runs) |
 | **Notifications** | A **Running** heading and the background tasks, each with its progress and Cancel, while something runs · then the notifications, newest first, or the line that says there are none |
 | **Design** | The designs, as a row of cards · Variant · then one list: the choice rows Background (when the design offers the choice), Background Blur, Background Dim, Cover Size, Text Size, then the Reduce Motion switch · My Stylesheet |
-| **Controller** | The controllers · then one list: the choice rows Button Prompts and Swap Confirm and Back, the Hold to Confirm switch, the choice rows Repeat Delay, Repeat Rate and Stick Dead Zone · their note · then Controls → |
+| **Controller** | The controllers · then one list: the choice rows Button Prompts and Swap Confirm and Back, the Hold to Confirm switch, the choice rows Repeat Delay, Repeat Rate and Stick Dead Zone · their note · then What Each Button Does → · Change Buttons → (not over a running game) |
 | **System** | Network → · Bluetooth → · Sound Output → · System Update → (each when available) · then a list of their own: Navigation Sounds, Volume (insensitive while the sounds are off; Left and Right turn it), Exit After Launching · Diagnostics Report → |
 | **Manage** | Sources → · Duplicates → · Library Health → · Proton → · Add a Store → · Add a Game · Refresh Library · an **Artwork** heading: SteamGridDB Key (A types it with the on-screen keyboard; its second line says whether a key is stored, or why the keyring cannot be used), Prefer SteamGridDB Art · a **Metadata** heading: Get Metadata From Wikidata, with Refresh Metadata right under it while it is on |
 
 - Sound Output, Bluetooth, Network, Refresh Library and Add a Game are listed twice on purpose: once where they are
   quick to reach, once where they belong. The tile and the row do the same and show the same second line.
-- Over a running game (`game_overlay`), Surprise Me, Add a Store, Add a Game and Diagnostics Report are left out.
+- Over a running game (`game_overlay`), Surprise Me, Add a Store, Add a Game, Diagnostics Report and Change Buttons are
+  left out.
 - A section with nothing to show is left out of the strip and of LB and RB's steps.
 - Notifications marks the notifications read once it shows. When the last background task ends, the Running heading
   and its list go, and focus on a task moves to the first notification.
@@ -126,11 +156,22 @@ picture, and its card is `:checked`.
 | A | Activates the focused item | Activates the focused item |
 
 The hint bar shows the LB and RB pair with **Section** while a section shows and more than one has anything to show,
-in the main window and over a running game. Quick Access's Controls and the keyboard shortcuts dialog say the same.
+in the main window and over a running game. Quick Access's What Each Button Does and the keyboard shortcuts dialog say
+the same.
 
 The pointer and touch can press a section button. The controller's focus never lands on the strip; a screen reader
 hears it as tabs, each section page as the tab panel its button names, and the Notifications button carries the
 unread count.
+
+## The Controller section's levels
+
+- **What Each Button Does** lists every button and key and what it does in fullscreen mode, in groups, with the
+  glyphs of the controller in use.
+- **Change Buttons** lists the functions a controller button can be given, each with its button, then **Reset to
+  Defaults**. Choosing one shows "Press a button…" and takes the next press; Guide, or a few seconds without a press,
+  leaves it as it was. The hints, the menu's Search and What Each Button Does follow a change at once.
+
+Each level's title is its row's name. B leads back to the Controller section, with focus on the row that led there.
 
 ## Focus
 

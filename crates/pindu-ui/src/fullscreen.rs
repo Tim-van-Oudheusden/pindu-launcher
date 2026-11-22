@@ -518,6 +518,20 @@ impl PinduWindow {
         true
     }
 
+    /// The menu's Search: closes the menu and searches with the on-screen keyboard, as Y
+    /// does; from a page where Y does nothing, such as a game's page, in the library.
+    pub(crate) fn search_from_menu(&self) {
+        self.close_panel();
+        if self.visible_dialog().is_some() {
+            return;
+        }
+        if !self.start_search() {
+            self.show_library();
+            self.start_search();
+        }
+        self.open_search_keyboard();
+    }
+
     /// Focuses the search entry, showing its top bar meanwhile in fullscreen mode.
     pub(crate) fn focus_search_entry(&self) {
         let imp = self.imp();

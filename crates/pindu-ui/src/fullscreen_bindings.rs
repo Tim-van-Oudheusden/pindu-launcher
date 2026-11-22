@@ -1,11 +1,12 @@
-//! The menu drawer's Controls: its entry after Collections, and its level, which lists the
-//! functions a controller button can be given (`pindu_core::gamepad::REBINDABLE_INTENTS`),
-//! each with the glyph of its button on the controller in use, then Reset to Defaults.
-//! Choosing a function shows "Press a button…" and gives it the next button pressed,
-//! swapping with the function that had it; Guide, or a few seconds without a press, leaves
-//! it as it was. The gamepad service waits for the press and keeps the choice, which the
-//! hints and Quick Access's Controls follow at once. Guide, the D-pad, the left stick and
-//! the keys stay as they are. The drawer over a running game leaves the entry out.
+//! Quick Access's Change Buttons: the last entry of its Controller section, and its level,
+//! which lists the functions a controller button can be given
+//! (`pindu_core::gamepad::REBINDABLE_INTENTS`), each with the glyph of its button on the
+//! controller in use, then Reset to Defaults. Choosing a function shows "Press a button…"
+//! and gives it the next button pressed, swapping with the function that had it; Guide, or
+//! a few seconds without a press, leaves it as it was. The gamepad service waits for the
+//! press and keeps the choice, which the hints and What Each Button Does follow at once.
+//! Guide, the D-pad, the left stick and the keys stay as they are. Over a running game the
+//! section leaves the entry out.
 
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
@@ -13,99 +14,88 @@ use gtk::prelude::*;
 use gtk::{gio, glib};
 use pindu_core::gamepad::{DeviceKind, Intent, Layout, REBINDABLE_INTENTS};
 use pindu_core::hints;
-use pindu_core::panels::{DrawerLevel, Panel};
+use pindu_core::panels::QuickAccessLevel;
 
 use crate::application::PinduApplication;
 use crate::fullscreen_controls::action_label;
-use crate::gamepad_service::GamepadService;
 use crate::hint_bar::{GLYPH_SIZE, glyph_label};
-use crate::window::PinduWindow;
+use crate::quick_access::PinduQuickAccess;
 
-impl PinduWindow {
-    /// Adds the entry's and Reset to Defaults' actions, gives a chosen function the next
-    /// button pressed, and lists the buttons again as the controller in use or the
-    /// bindings change.
-    pub(crate) fn setup_controls_level(&self) {
-        let controls = gio::ActionEntry::builder("drawer-controls")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::Drawer(DrawerLevel::Controls));
-            })
-            .build();
-        let reset = gio::ActionEntry::builder("controls-reset")
-            .activate(|window: &Self, _, _| {
-                if let Some(service) = window.bindings_service() {
-                    service.reset_bindings();
+impl PinduQuickAccess {
+    /// Adds Reset to Defaults' action to `actions`, gives a chosen function the next button
+    /// pressed, and lists the buttons again as the controller in use or the bindings
+    /// change.
+    pub(crate) fn setup_bindings(
+        &self,
+        application: &PinduApplication,
+        actions: &impl IsA<gio::ActionMap>,
+    ) {
+        self.add_host_action(actions, "bindings-reset", None, |quick_access, _| {
+            if let Some(application) = quick_access.application() {
+                application.gamepad_service().reset_bindings();
+            }
+            // Without a controller no layout changes to list them again.
+            quick_access.fill_bindings();
+        });
+        self.imp().bindings.connect_row_activated(glib::clone!(
+            #[weak(rename_to = quick_access)]
+            self,
+            move |_, row| {
+                let intent = usize::try_from(row.index())
+                    .ok()
+                    .and_then(|index| REBINDABLE_INTENTS.get(index).copied());
+                if let Some(intent) = intent {
+                    quick_access.rebind_function(intent);
                 }
-                // Without a controller no layout changes to list them again.
-                window.fill_controls_level();
-            })
-            .build();
-        self.add_action_entries([controls, reset]);
-        self.imp()
-            .drawer_panel
-            .controls()
-            .connect_row_activated(glib::clone!(
-                #[weak(rename_to = window)]
-                self,
-                move |_, row| {
-                    let intent = usize::try_from(row.index())
-                        .ok()
-                        .and_then(|index| REBINDABLE_INTENTS.get(index).copied());
-                    if let Some(intent) = intent {
-                        window.rebind_function(intent);
-                    }
-                }
-            ));
-        if let Some(service) = self.bindings_service() {
-            service.connect_active_layout_notify(glib::clone!(
-                #[weak(rename_to = window)]
+            }
+        ));
+        application
+            .gamepad_service()
+            .connect_active_layout_notify(glib::clone!(
+                #[weak(rename_to = quick_access)]
                 self,
                 move |_| {
-                    if window.open_panel() == Some(Panel::Drawer(DrawerLevel::Controls)) {
-                        window.fill_controls_level();
+                    if quick_access.level() == Some(QuickAccessLevel::Bindings) {
+                        quick_access.fill_bindings();
                     }
                 }
             ));
-        }
-    }
-
-    /// The level opens: it lists the buttons as they are bound now.
-    pub(crate) fn show_controls_level(&self) {
-        self.fill_controls_level();
     }
 
     /// The level closes: a function still waiting for a button keeps its own.
-    pub(crate) fn leave_controls_level(&self) {
-        if let Some(service) = self.bindings_service() {
-            service.cancel_rebind();
+    pub(crate) fn leave_bindings(&self) {
+        if let Some(application) = self.application() {
+            application.gamepad_service().cancel_rebind();
         }
     }
 
     /// Waits for the button to give `intent`, showing "Press a button…" on its row until
     /// one is pressed or the wait ends.
     fn rebind_function(&self, intent: Intent) {
-        let Some(service) = self.bindings_service() else {
+        let Some(application) = self.application() else {
             return;
         };
-        service.rebind_next_press(
+        application.gamepad_service().rebind_next_press(
             intent,
             glib::clone!(
-                #[weak(rename_to = window)]
+                #[weak(rename_to = quick_access)]
                 self,
-                move |_| window.fill_controls_level()
+                move |_| quick_access.fill_bindings()
             ),
         );
-        self.fill_controls_level();
+        self.fill_bindings();
     }
 
     /// Lists each function with its button, or "Press a button…" on the one waiting for
     /// one, keeping focus on the row it was on.
-    fn fill_controls_level(&self) {
-        let Some(service) = self.bindings_service() else {
+    pub(crate) fn fill_bindings(&self) {
+        let Some(application) = self.application() else {
             return;
         };
-        let list = self.imp().drawer_panel.controls().clone();
-        let focused = gtk::prelude::GtkWindowExt::focus(self)
+        let service = application.gamepad_service();
+        let list = self.imp().bindings.get();
+        let focused = self
+            .focus_widget()
             .and_then(|focus| focus.ancestor(gtk::ListBoxRow::static_type()))
             .and_downcast::<gtk::ListBoxRow>()
             .filter(|row| row.parent().as_ref() == Some(list.upcast_ref()))
@@ -122,13 +112,6 @@ impl PinduWindow {
         if let Some(row) = focused.and_then(|index| list.row_at_index(index)) {
             row.grab_focus();
         }
-    }
-
-    /// The gamepad service, which waits for the button and keeps the bindings.
-    fn bindings_service(&self) -> Option<GamepadService> {
-        self.application()
-            .and_downcast::<PinduApplication>()
-            .map(|application| application.gamepad_service().clone())
     }
 }
 
@@ -166,9 +149,9 @@ fn binding_row(intent: Intent, layout: Layout, waiting: bool) -> gtk::ListBoxRow
         glyph_label(hints::glyph_name(layout.glyphs, button))
     };
     let row = gtk::ListBoxRow::builder().child(&content).build();
-    // Translators: a row of the menu drawer's Controls as a screen reader reads it, such
-    // as "Search: Y"; {action} is the function and {button} the controller button that
-    // does it, or "Press a button…" while the row waits for one.
+    // Translators: a row of Quick Access's Change Buttons as a screen reader reads it,
+    // such as "Search: Y"; {action} is the function and {button} the controller button
+    // that does it, or "Press a button…" while the row waits for one.
     let name = gettext("{action}: {button}")
         .replace("{action}", &action)
         .replace("{button}", &button);

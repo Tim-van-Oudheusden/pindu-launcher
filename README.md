@@ -254,14 +254,17 @@ Adwaita, the look with no design ([Styling fullscreen mode](#styling-fullscreen-
   start before moving on.
 - The **hint bar** at the bottom names the buttons that work on each screen, drawn with the app's own glyphs for the
   controller you hold.
-- **Controls** in Quick Access → Controller lists everything the buttons do, grouped into moving, the library, the
-  panels and launching. It shows the glyphs of the controller in use and the keys that do the same, including ones the
-  hint bar leaves out, such as holding B to cancel a launch. Without a controller it lists the keys alone.
+- **What Each Button Does** in Quick Access → Controller lists everything the buttons do, grouped into moving, the
+  library, the panels and launching. It shows the glyphs of the controller in use and the keys that do the same,
+  including ones the hint bar leaves out, such as holding B to cancel a launch. Without a controller it lists the keys
+  alone.
 
 ### Collections
 
-A game's options (View or X) add it to collections or take it out, and **New Collection…** makes one. **Collections**
-in the menu drawer (Start or Guide) lists them; A opens one's tab in the library, and View or X on one leads to
+A game's options (View or X) add it to collections or take it out, and **New Collection…** makes one. The menu drawer
+(Start or Guide) lists your first five collections under its places (**Home**, **Library** with its number of games,
+and **Search**, which starts a search with the on-screen keyboard as Y does), each with its number of games, and **All
+Collections** lists every one when you have more. A opens one's tab in the library, and View or X on one leads to
 **Rename…**, **Move Up**, **Move Down** and **Delete…**, as the desktop sidebar's collection menu has them.
 
 - Names are typed with the on-screen keyboard (capitals and symbols are a key away); Start or Done saves, and B on an
@@ -511,12 +514,13 @@ spawn, a prefix of your choice and art are set in the desktop's Add Game and Edi
   fast a held direction keeps moving focus, and how far the left stick moves before it does: a long delay for a hand
   that lets go late, a large dead zone for a stick that drifts. They change only how the launcher moves its own focus; a
   game receives the controller unchanged.
-- **Controls** in the menu drawer (Start or Guide) lists what the buttons can do (Select, Back, Search, Game Options,
+- **Change Buttons** in Quick Access → Controller lists what the buttons can do (Select, Back, Search, Game Options,
   Menu, Quick Access and the tab and sort switches) with the button for each. Choose one and press the button to give
   it; the function that had that button takes the old one. Guide, or five seconds without a press, leaves it as it was.
-  The choice is kept, and the hint bar and Quick Access's Controls follow it at once. **Reset to Defaults** restores
-  the usual buttons. Guide, the D-pad, the left stick and the keys never change, and with Swap Confirm and Back on, a
-  button goes by where it sits after the swap. The drawer over a running game leaves Controls out.
+  The choice is kept, and the hint bar, the menu's Search and What Each Button Does follow it at once. **Reset to
+  Defaults** restores the usual buttons. Guide, the D-pad, the left stick and the keys never change, and with Swap
+  Confirm and Back on, a button goes by where it sits after the swap. Quick Access over a running game leaves Change
+  Buttons out.
 
 ### Running in gamescope
 
@@ -564,7 +568,7 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
 - Guide during play, let go without pressing another button, opens the menu drawer over the running game, in a
   see-through window of its own that gamescope draws above the game (`STEAM_OVERLAY`), as Guide opens Steam's menu.
   The game stays in front behind it. The drawer holds the game's Playing Now card (Return closes the drawer, Stop ends a
-  game the app started), Home, Library and Collections, which bring the app to the front there; Controls, leaving
+  game the app started), Home, Library and the collections, which bring the app to the front there; Search, leaving
   fullscreen mode and Power are left out. Guide again, or B, closes it and gives input back to the game. When the game
   has more than one window gamescope could show (`GAMESCOPE_FOCUSABLE_WINDOWS`), such as its own launcher's and the
   game's, the drawer lists them by title under its card; picking one pins it (`GAMESCOPECTRL_BASELAYER_WINDOW`) while
@@ -573,10 +577,10 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   again, or B, closes it, and Guide turns from it to the menu drawer. R3 stays the game's. The game sees the A of
   Guide + A too: the app reads controllers alongside games and cannot take a press from them. Over a game Quick Access
   shows the levels that need no library page or flow of the app's window: Performance is the game's, Playing Now's
-  Return and Stop work, and Surprise Me and Add a Store are left out. Network's passphrase and Bluetooth's PIN, code
-  and confirmation are asked over the game and answered with the controller there. A passphrase still unanswered as
-  Quick Access closes moves to the app's window and comes back when Quick Access opens again; closing it while pairing
-  refuses, as leaving Bluetooth does. The controller still reaches the game while it is open.
+  Return and Stop work, and Surprise Me, Add a Store and Change Buttons are left out. Network's passphrase and
+  Bluetooth's PIN, code and confirmation are asked over the game and answered with the controller there. A passphrase
+  still unanswered as Quick Access closes moves to the app's window and comes back when Quick Access opens again;
+  closing it while pairing refuses, as leaving Bluetooth does. The controller still reaches the game while it is open.
 - With `MANGOHUD_CONFIGFILE` naming a file the app can write, as gamescope-session-plus and `gamescope --steam
   --mangoapp` set it, the Performance Overlay switch drives their MangoApp instead of wrapping games in `mangohud`: the
   app rewrites the file in place with `preset=2` or `no_display` for the game in front, when it comes to the front and

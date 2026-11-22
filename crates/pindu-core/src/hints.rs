@@ -60,8 +60,8 @@ pub struct Context {
     /// mode's Add Game).
     pub dialog_back: bool,
     /// A game has focus (a cover or card) or the page is a game's: View opens its options.
-    /// In the drawer's Collections level, a collection has focus: View leads to its
-    /// actions.
+    /// In the drawer's entries or its Collections level, a collection has focus: View
+    /// leads to its actions.
     pub options: bool,
     /// Start opens the menu drawer (fullscreen mode).
     pub menu: bool,
@@ -262,9 +262,13 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
     // Y searches the page under a dialog, so it waits for the dialog to close; so do the
     // page's tabs, sort, options, menu and Quick Access.
     let search = (context.search && page).then_some(Action::Search);
-    // The drawer's collections take View too, for one collection's actions.
-    let collections =
-        !context.dialog && context.panel == Some(Panel::Drawer(DrawerLevel::Collections));
+    // The drawer's collections, in its entries or its Collections level, take View too,
+    // for one collection's actions.
+    let collections = !context.dialog
+        && matches!(
+            context.panel,
+            Some(Panel::Drawer(DrawerLevel::Main | DrawerLevel::Collections))
+        );
     let options = (context.options && (page || collections)).then_some(Action::Options);
     let menu = (context.menu && page).then_some(Action::Menu);
     // Quick Access shows the chord every pad has, rather than R3, which games use too.
@@ -745,8 +749,10 @@ mod tests {
             menu: true,
             ..context(Focus::Other)
         };
+        // In the drawer, options says whether a collection has focus, not the game under it.
         let drawer = Context {
             panel: Some(Panel::Drawer(DrawerLevel::Main)),
+            options: false,
             ..library
         };
         assert_eq!(
@@ -842,6 +848,35 @@ mod tests {
             [
                 (Button::South, Action::Select),
                 (Button::East, Action::Back)
+            ]
+        );
+    }
+
+    #[test]
+    fn a_collection_in_the_drawer_s_entries_shows_view_for_its_actions() {
+        let entries = Context {
+            options: true,
+            menu: true,
+            panel: Some(Panel::Drawer(DrawerLevel::Main)),
+            ..context(Focus::Other)
+        };
+        assert_eq!(
+            actions(entries, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Close),
+                (Button::Select, Action::Options)
+            ]
+        );
+        let none_focused = Context {
+            options: false,
+            ..entries
+        };
+        assert_eq!(
+            actions(none_focused, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Close)
             ]
         );
     }

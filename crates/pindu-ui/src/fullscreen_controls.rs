@@ -1,8 +1,9 @@
-//! Quick Access's Controls: the Controls entry's level, which lists what each button and
-//! key does in fullscreen mode, in groups (see `pindu_core::controls`), with the glyphs of
-//! the controller in use beside the keys that stand in for them, or the keys alone
-//! without a controller. The list follows the controller in use and its button prompts.
-//! The tab buttons say that they also switch Quick Access's sections while it is open.
+//! Quick Access's What Each Button Does (the Controls level), which lists what each
+//! button and key does in fullscreen mode, in groups (see `pindu_core::controls`), with the
+//! glyphs of the controller in use beside the keys that stand in for them, or the keys
+//! alone without a controller. The list follows the controller in use and its button
+//! prompts. The tab buttons say that they also switch Quick Access's sections while it is
+//! open.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -144,15 +145,15 @@ fn control_row(control: &Control, glyphs: Option<Glyphs>) -> adw::ActionRow {
         row.add_prefix(&shown);
         let name = glyph_label(hints::glyph_name(glyphs, button));
         if let Some(chord) = control.chord {
-            // Translators: two buttons pressed together, as Quick Access's Controls reads
-            // them to a screen reader; {held} is the one held down, such as "Home", and
-            // {pressed} the one pressed while it is, such as "A" or "Cross".
+            // Translators: two buttons pressed together, as Quick Access's What Each Button
+            // Does reads them to a screen reader; {held} is the one held down, such as
+            // "Home", and {pressed} the one pressed while it is, such as "A" or "Cross".
             gettext("{held} + {pressed}")
                 .replace("{held}", &name)
                 .replace("{pressed}", &glyph_label(hints::glyph_name(glyphs, chord)))
         } else if control.held {
-            // Translators: a button held down, as Quick Access's Controls reads it to a
-            // screen reader; {button} is its name, such as "B" or "Circle".
+            // Translators: a button held down, as Quick Access's What Each Button Does reads
+            // it to a screen reader; {button} is its name, such as "B" or "Circle".
             gettext("Hold {button}").replace("{button}", &name)
         } else {
             name
@@ -166,8 +167,8 @@ fn control_row(control: &Control, glyphs: Option<Glyphs>) -> adw::ActionRow {
             .build();
         for (index, chord) in control.keys.iter().enumerate() {
             if index > 0 {
-                // Translators: between two keys that do the same in Quick Access's
-                // Controls, such as "Menu or Shift F10".
+                // Translators: between two keys that do the same in Quick Access's What
+                // Each Button Does, such as "Menu or Shift F10".
                 let or = gtk::Label::builder()
                     .label(gettext("or"))
                     .css_classes(["dim-label"])
@@ -183,24 +184,24 @@ fn control_row(control: &Control, glyphs: Option<Glyphs>) -> adw::ActionRow {
         .iter()
         .map(|&chord| key_label(chord))
         .reduce(|first, second| {
-            // Translators: two keys that do the same, as Quick Access's Controls reads
-            // them to a screen reader, such as "Menu or Shift+F10".
+            // Translators: two keys that do the same, as Quick Access's What Each Button
+            // Does reads them to a screen reader, such as "Menu or Shift+F10".
             gettext("{first} or {second}")
                 .replace("{first}", &first)
                 .replace("{second}", &second)
         });
     let name = match (button, keys) {
-        // Translators: a row of Quick Access's Controls as a screen reader reads it, such
-        // as "A or Return: Select"; {button} is the controller button, {keys} the keys
-        // that do the same and {action} what they do.
+        // Translators: a row of Quick Access's What Each Button Does as a screen reader
+        // reads it, such as "A or Return: Select"; {button} is the controller button,
+        // {keys} the keys that do the same and {action} what they do.
         (Some(button), Some(keys)) => gettext("{button} or {keys}: {action}")
             .replace("{button}", &button)
             .replace("{keys}", &keys),
-        // Translators: a row of Quick Access's Controls as a screen reader reads it, such
-        // as "Hold B: Cancel Launch".
+        // Translators: a row of Quick Access's What Each Button Does as a screen reader
+        // reads it, such as "Hold B: Cancel Launch".
         (Some(button), None) => gettext("{button}: {action}").replace("{button}", &button),
-        // Translators: a row of Quick Access's Controls without a controller, as a screen
-        // reader reads it, such as "Ctrl+F: Search".
+        // Translators: a row of Quick Access's What Each Button Does without a controller,
+        // as a screen reader reads it, such as "Ctrl+F: Search".
         (None, Some(keys)) => gettext("{keys}: {action}").replace("{keys}", &keys),
         (None, None) => "{action}".to_owned(),
     }
@@ -228,7 +229,7 @@ fn group_label(group: Group) -> String {
     }
 }
 
-/// What Quick Access's Controls, and the menu drawer's, say an intent does.
+/// What Quick Access's What Each Button Does and Change Buttons say an intent does.
 pub(crate) fn action_label(intent: Intent) -> String {
     match intent {
         Intent::Navigate(Direction::Up) => gettext("Move Up"),

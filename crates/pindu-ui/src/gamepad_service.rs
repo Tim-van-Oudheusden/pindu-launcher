@@ -5,7 +5,7 @@
 //! functions, which decide every pad's layout, and the Repeat Delay, Repeat Rate and Stick
 //! Dead Zone settings, which shape only the launcher's own navigation. Keeps the connected
 //! pads for Quick Access's Controllers, rumbles one to identify it, and waits for the button
-//! to give a function in the menu drawer's Controls.
+//! to give a function in Quick Access's Change Buttons.
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -50,7 +50,8 @@ struct Inner {
     /// Holds the Button Prompts, Swap Confirm and Back and bindings settings, and their
     /// signals.
     settings: gio::Settings,
-    /// The wait for the button to give a function, while the menu drawer's Controls waits.
+    /// The wait for the button to give a function, while Quick Access's Change Buttons
+    /// waits.
     capture: RefCell<Option<Capturing>>,
     /// The buttons pressed while waiting, by device: their presses go to the wait rather
     /// than to an intent until they are let go, as a trigger reports each move as a press.

@@ -120,9 +120,10 @@ impl PinduWindow {
                 .visible_dialog()
                 .and_downcast::<PinduFullscreenAddGame>()
                 .is_some_and(|dialog| dialog.goes_back()),
-            // In the drawer's collections, View is for the focused collection.
+            // In the drawer's entries and its collections, View is for the focused
+            // collection.
             options: match self.open_panel() {
-                Some(Panel::Drawer(DrawerLevel::Collections)) => {
+                Some(Panel::Drawer(DrawerLevel::Main | DrawerLevel::Collections)) => {
                     imp.drawer_panel.focused_collection().is_some()
                 }
                 _ => self.focused_game().is_some(),
