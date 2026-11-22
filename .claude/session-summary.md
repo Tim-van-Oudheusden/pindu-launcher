@@ -48,6 +48,12 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   remembers which). Rebinding moved to Quick Access → Controller → Change Buttons (`QuickAccessLevel::Bindings`,
   `fullscreen_bindings.rs`), beside What Each Button Does. Not seen: more than five collections, Rename from the menu,
   the menu over a running game.
+- 2026-11-22, #723 (stacked on #722): the menu's Power level and its Exit Fullscreen Mode row became the power dock
+  at the bottom of the menu (`PinduPowerDock` in `fullscreen_power.rs`; `gamescope::session::{power_dock,
+  dock_landing}`): Up from the menu's top lands on Suspend; an action the system does not offer stays, dimmed, takes
+  focus and its label says why. Checked with a fake logind on a private system bus (`DBUS_SYSTEM_BUS_ADDRESS`), so
+  nothing reached the host. Not seen: anything with a running game (asking first, an inhibitor refusal), the Flatpak's
+  `needs_host_access` reason. libadwaita's `.dimmed` barely fades under high contrast.
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,

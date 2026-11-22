@@ -711,6 +711,23 @@ window.game-overlay {
   }
 }
 
+/* The menu drawer's power dock under its list: round buttons at least 52px across, each
+   an icon, under a line naming the focused one. A button the system does not offer dims
+   its icon only, so its focus ring stays as clear as the others'. */
+.menu-drawer .dock-button {
+  min-width: 52px;
+  min-height: 52px;
+  padding: 0;
+}
+
+.menu-drawer .dock-button image {
+  -gtk-icon-size: 24px;
+}
+
+.menu-drawer .dock-label {
+  font-weight: bold;
+}
+
 .options-sheet {
   padding: 24px 24px 36px;
 }

@@ -725,16 +725,16 @@ mod tests {
 
     #[test]
     fn an_action_that_needs_a_hold_says_so_on_a() {
-        let power = Context {
+        let dock = Context {
             menu: true,
-            panel: Some(Panel::Drawer(DrawerLevel::Power)),
+            panel: Some(Panel::Drawer(DrawerLevel::Main)),
             ..context(Focus::Hold)
         };
         assert_eq!(
-            actions(power, DeviceKind::Xbox),
+            actions(dock, DeviceKind::Xbox),
             [
                 (Button::South, Action::HoldToConfirm),
-                (Button::East, Action::Back)
+                (Button::East, Action::Close)
             ]
         );
     }

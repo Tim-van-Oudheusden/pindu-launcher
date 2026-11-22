@@ -1,4 +1,4 @@
-//! Suspend, restart and power off, for the Power entry of fullscreen mode's menu drawer,
+//! Suspend, restart and power off, for the power dock of fullscreen mode's menu drawer,
 //! through logind. Pindu OS boots into fullscreen mode with no desktop, so these are the
 //! only way to turn the console off with a controller. A [`PowerBackend`] asks logind what
 //! the session may do (`CanSuspend`, `CanReboot`, `CanPowerOff`) and does it; [`SystemPower`]
@@ -21,7 +21,7 @@ use std::rc::{Rc, Weak};
 
 use super::{Availability, Permission, ServiceFacts};
 
-/// Something the Power level offers.
+/// Something the power dock offers for the machine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PowerAction {
     /// Suspend to RAM (logind's `Suspend`).
@@ -33,7 +33,7 @@ pub enum PowerAction {
 }
 
 impl PowerAction {
-    /// Every action, in the order the level lists them.
+    /// Every action, in the order the dock lists them.
     pub const ALL: [Self; 3] = [Self::Suspend, Self::Restart, Self::PowerOff];
 
     /// What an inhibitor has to name to stop this action, as logind's `ListInhibitors`
@@ -83,7 +83,7 @@ impl Facts {
     }
 }
 
-/// An entry of the Power level.
+/// A machine entry of the power dock.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PowerEntry {
     /// What it does.
@@ -93,11 +93,11 @@ pub struct PowerEntry {
     pub allowed: bool,
 }
 
-/// What the Power entry and level show.
+/// What the power dock shows for the machine.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PowerState {
-    /// The level's entries, top to bottom; none at all leaves them out of the drawer's
-    /// Power level.
+    /// The dock's machine entries, start to end; none at all leaves the dock with only
+    /// its ways out of the launcher.
     pub entries: Vec<PowerEntry>,
     /// Whether the entries are greyed out because the app may not run commands on the
     /// host, which Preferences explains, rather than because the system does not allow
@@ -148,12 +148,12 @@ impl PowerState {
         }
     }
 
-    /// Whether the level lists Suspend, Restart or Power Off.
+    /// Whether the dock lists Suspend, Restart or Power Off.
     pub fn shown(&self) -> bool {
         !self.entries.is_empty()
     }
 
-    /// Whether the level offers `action`, allowed.
+    /// Whether the dock offers `action`, allowed.
     pub fn allows(&self, action: PowerAction) -> bool {
         self.entries
             .iter()
@@ -300,7 +300,7 @@ impl SystemPower {
         }));
     }
 
-    /// Runs `action` when the level offers it allowed, and nothing runs yet. The shell
+    /// Runs `action` when the dock offers it allowed, and nothing runs yet. The shell
     /// asks first where [`asks_first`] says so.
     pub fn run(&self, action: PowerAction) {
         if self.inner.running.get().is_some() || !self.inner.state.borrow().allows(action) {

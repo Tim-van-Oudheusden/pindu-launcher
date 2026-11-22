@@ -436,7 +436,7 @@ impl PinduApplication {
 
     /// Whether the launcher runs as its own login session (`--session`, or a `--steam`
     /// gamescope the display manager started), where quitting leaves nothing behind, so the
-    /// Power level has no Exit. Read once from the environment.
+    /// power dock has no Exit. Read once from the environment.
     pub fn runs_as_own_session(&self) -> bool {
         let imp = self.imp();
         *imp.own_session.get_or_init(|| {

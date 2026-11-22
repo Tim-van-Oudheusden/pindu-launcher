@@ -2,11 +2,11 @@ using Gtk 4.0;
 using Adw 1;
 
 // Fullscreen mode's menu drawer (`menu_drawer.rs`): the main level with the Playing Now
-// cards and the places (Home, Library, Search and the first collections), every collection
-// and one collection's actions, and Power. The main window holds it on the left, where
-// Start or Guide opens it over the page; over a running game in a `--steam` gamescope the
-// overlay window holds it, where Guide opens it over the game. Its rows' `win.*` actions
-// are the host's.
+// cards and the places (Home, Library, Search and the first collections) over the power
+// dock, every collection, and one collection's actions. The main window holds it on the
+// left, where Start or Guide opens it over the page; over a running game in a `--steam`
+// gamescope the overlay window holds it, where Guide opens it over the game. Its rows' and
+// the dock's `win.*` actions are the host's.
 template $PinduMenuDrawer: Box {
   orientation: vertical;
   accessible-role: group;
@@ -170,53 +170,6 @@ template $PinduMenuDrawer: Box {
                 }
               };
             }
-
-            // Left out over a running game.
-            ListBoxRow exit_fullscreen_row {
-              action-name: "win.leave-fullscreen";
-
-              child: Box {
-                spacing: 16;
-
-                Image {
-                  icon-name: "view-restore-symbolic";
-                  accessible-role: presentation;
-                }
-
-                Label {
-                  label: _("Exit Fullscreen Mode");
-                  xalign: 0;
-                }
-              };
-            }
-
-            // Leads to Suspend, Restart and Power Off, and to Exit Pindu Launcher; shown
-            // while that level lists anything, which it does except in the launcher's own
-            // session on a system that offers none of the actions.
-            ListBoxRow power_row {
-              action-name: "win.drawer-power";
-              visible: false;
-
-              child: Box {
-                spacing: 16;
-
-                Image {
-                  icon-name: "system-shutdown-symbolic";
-                  accessible-role: presentation;
-                }
-
-                Label {
-                  label: _("Power");
-                  xalign: 0;
-                  hexpand: true;
-                }
-
-                Image {
-                  icon-name: "go-next-symbolic";
-                  accessible-role: presentation;
-                }
-              };
-            }
           }
         };
       };
@@ -284,11 +237,14 @@ template $PinduMenuDrawer: Box {
         };
       };
     }
+  }
 
-    StackPage {
-      name: "power";
+  // The main level's power dock (`fullscreen_power.blp`), under its scrolling list so it
+  // stays in view however long the list is; shown with the main level only. The drawer
+  // over a running game has none.
+  Adw.Bin dock_holder {
+    margin-top: 12;
 
-      child: $PinduPowerLevel power_level {};
-    }
+    child: $PinduPowerDock dock {};
   }
 }

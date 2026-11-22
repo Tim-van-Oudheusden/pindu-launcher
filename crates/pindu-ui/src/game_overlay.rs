@@ -9,7 +9,7 @@
 //! controller while it holds input.
 //!
 //! The drawer over a game holds the Playing Now cards, Home, Library, the first collections
-//! and All Collections when there are more (no Search, Exit Fullscreen Mode or Power); an
+//! and All Collections when there are more (no Search, and no power dock); an
 //! entry other than a card brings the main window to the front, where it does what it
 //! does there. Quick Access over a game offers what needs no library page and no flow of
 //! the main window ([`PinduQuickAccess::set_over_game`]). Network's passphrase and
@@ -328,8 +328,7 @@ impl PinduGameOverlay {
         match shown {
             Some(OverGame::Menu) => {
                 if let Some(application) = &application {
-                    imp.drawer
-                        .fill(&application.library_service().model(), false);
+                    imp.drawer.fill(&application.library_service().model());
                     imp.drawer
                         .show_windows(&application.gamescope_service().front_windows());
                 }
