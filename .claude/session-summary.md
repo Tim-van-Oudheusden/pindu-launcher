@@ -22,7 +22,12 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   library pictures retaken with the harness (`--desktop`, 1280×900, light, `cwebp -q 80`). gamescope ignores
   fullscreen requests once the window shows, so entering and leaving fullscreen mode can't be seen in the harness.
   The window already needs 704 px wide on `main` (`AdwToolbarView exceeds PinduWindow width`), so it does not fit
-  at its 360 px minimum. RTL needs `--env LANG=he_IL.UTF-8` (`LANGUAGE` alone does nothing under `C.UTF-8`).
+  at its 360 px minimum (#750). RTL needs `--env LANG=he_IL.UTF-8` (`LANGUAGE` alone does nothing under `C.UTF-8`).
+- 2026-11-22, #745 (stacked on #746): a capture-phase `GestureClick` on the desktop window blurs the search after a
+  click outside it (`setup_search_blur`, `blur_search`), never claiming the click; typing in the library refocuses
+  the field (`connect_changed` while `content_stack` has focus). The field is a 159 sp `Adw.Clamp`ed pill
+  (`.search-pill`), 318 px before. The harness gained `click:X,Y` and `move:X,Y` (xdotool). Not seen: window drag,
+  touch.
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,
