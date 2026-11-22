@@ -1,9 +1,9 @@
 //! Quick Access's Controller section: it lists each connected pad with the glyphs it shows
 //! and its battery where one can be told to be its (see `pindu_core::controllers`),
 //! rumbles a pad when its row is selected, and holds the Button Prompts, Swap Confirm and
-//! Back, Repeat Delay, Repeat Rate and Stick Dead Zone settings as choice rows, then the
-//! Controls entry. The list follows pads as they are plugged in and out, and the batteries
-//! as they are read.
+//! Back, Repeat Delay, Repeat Rate and Stick Dead Zone settings as choice rows, with the
+//! Hold to Confirm switch after Swap Confirm and Back, then the Controls entry. The list
+//! follows pads as they are plugged in and out, and the batteries as they are read.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -13,6 +13,7 @@ use pindu_core::controllers::{Controller, controllers};
 use pindu_core::gamepad::{
     DEAD_ZONE_KEY, DeviceId, Glyphs, PROMPTS_KEY, REPEAT_DELAY_KEY, REPEAT_RATE_KEY, SWAP_KEY,
 };
+use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
 use pindu_core::panels::QuickAccessSection;
 
 use crate::application::PinduApplication;
@@ -20,8 +21,8 @@ use crate::quick_access::PinduQuickAccess;
 use crate::widgets::ChoiceOption;
 
 impl PinduQuickAccess {
-    /// The choice rows on the settings' actions, Identify, and following the pads and the
-    /// batteries.
+    /// The choice rows on the settings' actions, Hold to Confirm bound to its setting,
+    /// Identify, and following the pads and the batteries.
     pub(crate) fn setup_controllers(
         &self,
         application: &PinduApplication,
@@ -60,6 +61,9 @@ impl PinduQuickAccess {
                 explained("on", gettext("On"), gettext("The right button confirms")),
             ],
         );
+        self.settings()
+            .bind(HOLD_TO_CONFIRM_KEY, &*imp.hold_to_confirm_row, "active")
+            .build();
         self.add_choice(
             actions,
             REPEAT_DELAY_KEY,

@@ -31,6 +31,11 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   key). `controller_navigation::adjust_slider` turns sliders and choice rows for both hosts (`Adjusted`); steps are
   `pindu_core::choice`. Seen in the harness at Largest and in Hebrew under high contrast. Not seen: the pointer on the
   arrows, a screen reader. Right sent within a second of changing Swap Confirm and Back was once lost.
+- 2026-11-22, #720 (stacked on #719): the Settings level is gone; its rows sit in their sections (Cover Size, Text
+  Size, Reduce Motion in Design; Hold to Confirm in Controller; Navigation Sounds, Volume, Exit After Launching in
+  System; Artwork and Metadata headings in Manage, Refresh Metadata under the Wikidata switch through a Blueprint
+  binding). Core: `QuickAccessEntry::{NavigationSounds, Artwork, Metadata}` keep `sections()` right; `Shown.metadata`
+  went. Not seen: the SteamGridDB key row's keyboard (the harness has no keyring, so the row is insensitive there).
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,

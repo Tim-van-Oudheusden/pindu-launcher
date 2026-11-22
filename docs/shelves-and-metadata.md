@@ -106,14 +106,15 @@ In this order, local data first:
    for SteamGridDB.
 
    As built (#529, after spike #528 chose Wikidata): **Get Metadata From Wikidata** (GSettings `wikidata-metadata`,
-   off by default) in Preferences, General, and in fullscreen Quick Access's settings shows **Refresh Metadata** in
-   the desktop main menu and in Quick Access. Only that action fetches; a sync never does. `pindu_core::wikidata`
-   looks games up by Steam app ID only, never by title: a Steam game by its own, another by the Steam ID its source
-   links it to (Lutris's `steam` service) or by a grouped Steam copy's. Hidden games and games no longer in the
-   library are left out. The IDs go out in SPARQL queries of up to 100 (`VALUES ?steam { … }`, Wikidata's `P1733`),
-   one after another, to `query.wikidata.org` through the app's soup3 stack, with a User-Agent naming the project's
-   address and the SteamGridDB client's 429 back-off (`steamgriddb::retry_delay`, following `Retry-After`). Each
-   answer gives developers (`P178`) and genres (`P136`), labelled in the UI's languages, then `en`, then `mul`; a
+   off by default) in Preferences, General, and in fullscreen Quick Access's Manage section shows **Refresh Metadata**
+   in the desktop main menu and right under that switch in Quick Access. Only that action fetches; a sync never
+   does. `pindu_core::wikidata` looks games up by Steam app ID only, never by title: a Steam game by its own, another
+   by the Steam ID its source links it to (Lutris's `steam` service) or by a grouped Steam copy's. Hidden games and
+   games no longer in the library are left out. The IDs go out in SPARQL queries of up to 100 (`VALUES ?steam { … }`,
+   Wikidata's `P1733`), one after another, to `query.wikidata.org` through the app's soup3 stack, with a User-Agent
+   naming the project's address and the SteamGridDB client's 429 back-off (`steamgriddb::retry_delay`, following
+   `Retry-After`).
+   Each answer gives developers (`P178`) and genres (`P136`), labelled in the UI's languages, then `en`, then `mul`; a
    value with no label in those is left out. Developers become one value, joined with commas, genres a sorted list,
    both stored with origin `provider` through `Store::set_metadata`, timed when they were fetched (a refresh that
    finds the same value keeps its earlier time), so a user's value still wins and a sync leaves them alone. The

@@ -988,9 +988,11 @@ template $PinduQuickAccess: Box {
                   ]
                 }
 
-                // Choice rows on the settings' actions, their options set in code.
-                // Background shows only while the design in force offers the choice
-                // (`home-background-choice`).
+                // Choice rows on the settings' actions, their options set in code, then
+                // Reduce Motion. Background shows only while the design in force offers
+                // the choice (`home-background-choice`). Choice rows (`PinduChoiceRow`)
+                // change in place with Left and Right, where a drop-down's popover would
+                // be dismissed by a controller press.
                 ListBox design_choices {
                   selection-mode: none;
                   margin-top: 6;
@@ -1010,6 +1012,18 @@ template $PinduQuickAccess: Box {
 
                   $PinduChoiceRow dim_row {
                     title: _("Background Dim");
+                  }
+
+                  $PinduChoiceRow cover_size_row {
+                    title: _("Cover Size");
+                  }
+
+                  $PinduChoiceRow text_size_row {
+                    title: _("Text Size");
+                  }
+
+                  Adw.SwitchRow reduce_motion_row {
+                    title: _("Reduce Motion");
                   }
                 }
 
@@ -1074,6 +1088,10 @@ template $PinduQuickAccess: Box {
 
                   $PinduChoiceRow swap_row {
                     title: _("Swap Confirm and Back");
+                  }
+
+                  Adw.SwitchRow hold_to_confirm_row {
+                    title: _("Hold to Confirm");
                   }
 
                   $PinduChoiceRow repeat_delay_row {
@@ -1151,8 +1169,8 @@ template $PinduQuickAccess: Box {
                 orientation: vertical;
                 spacing: 12;
 
-                // Network, Bluetooth, Sound Output and System Update where available, Settings,
-                // and the diagnostics report but over a running game.
+                // Network, Bluetooth, Sound Output and System Update where available;
+                // hidden while none is.
                 ListBox system_list {
                   selection-mode: none;
 
@@ -1327,33 +1345,61 @@ template $PinduQuickAccess: Box {
                       }
                     };
                   }
+                }
 
-                  ListBoxRow settings_row {
-                    action-name: "win.quick-access-settings";
+                ListBox switches {
+                  selection-mode: none;
+                  margin-top: 6;
 
-                    child: Box {
-                      spacing: 16;
+                  styles [
+                    "boxed-list",
+                  ]
 
-                      Image {
-                        icon-name: "preferences-system-symbolic";
-                        accessible-role: presentation;
-                      }
-
-                      Label {
-                        label: _("Settings");
-                        xalign: 0;
-                        hexpand: true;
-                      }
-
-                      Image {
-                        icon-name: "go-next-symbolic";
-                        accessible-role: presentation;
-                      }
-                    };
+                  Adw.SwitchRow sounds_row {
+                    title: _("Navigation Sounds");
                   }
 
-                  // The diagnostics report, to photograph a page at a time; a copy is
-                  // saved as it opens.
+                  // The slider takes focus rather than its row, so left and right
+                  // turn it; the row goes insensitive while the sounds are off.
+                  Adw.ActionRow volume_row {
+                    title: _("Volume");
+                    activatable: false;
+                    focusable: false;
+
+                    [suffix]
+                    Scale volume {
+                      hexpand: true;
+                      digits: 0;
+                      draw-value: false;
+
+                      adjustment: Adjustment {
+                        lower: 0;
+                        upper: 100;
+                        step-increment: 5;
+                        page-increment: 20;
+                      };
+
+                      accessibility {
+                        label: _("Navigation Sound Volume");
+                      }
+                    }
+                  }
+
+                  Adw.SwitchRow exit_row {
+                    title: _("Exit After Launching");
+                  }
+                }
+
+                // The diagnostics report but over a running game, to photograph a page
+                // at a time; a copy is saved as it opens.
+                ListBox report_list {
+                  selection-mode: none;
+                  margin-top: 6;
+
+                  styles [
+                    "navigation-sidebar",
+                  ]
+
                   ListBoxRow report_row {
                     action-name: "win.quick-access-diagnostics-report";
 
@@ -1585,26 +1631,73 @@ template $PinduQuickAccess: Box {
                       }
                     };
                   }
+                }
+
+                Label artwork_title {
+                  label: _("Artwork");
+                  xalign: 0;
+                  margin-top: 6;
+
+                  styles [
+                    "heading",
+                  ]
+                }
+
+                // The key is typed hidden with the on-screen keyboard and kept in the
+                // keyring; the row's subtitle says whether one is stored, or why the
+                // keyring cannot be used.
+                ListBox artwork {
+                  selection-mode: none;
+
+                  styles [
+                    "boxed-list",
+                  ]
+
+                  Adw.ActionRow steamgriddb_key_row {
+                    title: _("SteamGridDB Key");
+                    activatable: true;
+                  }
+
+                  Adw.SwitchRow prefer_steamgriddb_row {
+                    title: _("Prefer SteamGridDB Art");
+                    subtitle: _("Show it before the launcher's own art; art you pick always comes first");
+                  }
+                }
+
+                Label metadata_title {
+                  label: _("Metadata");
+                  xalign: 0;
+                  margin-top: 6;
+
+                  styles [
+                    "heading",
+                  ]
+                }
+
+                ListBox metadata {
+                  selection-mode: none;
+
+                  styles [
+                    "boxed-list",
+                  ]
+
+                  Adw.SwitchRow wikidata_row {
+                    title: _("Get Metadata From Wikidata");
+                    subtitle: _("Nothing is fetched until you ask, and never during an import");
+                  }
 
                   // A Wikidata refresh, shown only while Wikidata metadata is on.
-                  ListBoxRow refresh_metadata_row {
+                  Adw.ActionRow refresh_metadata_row {
+                    title: _("Refresh Metadata");
                     action-name: "app.refresh-metadata";
-                    visible: false;
+                    activatable: true;
+                    visible: bind wikidata_row.active;
 
-                    child: Box {
-                      spacing: 16;
-
-                      Image {
-                        icon-name: "text-x-generic-symbolic";
-                        accessible-role: presentation;
-                      }
-
-                      Label {
-                        label: _("Refresh Metadata");
-                        xalign: 0;
-                        hexpand: true;
-                      }
-                    };
+                    [prefix]
+                    Image {
+                      icon-name: "text-x-generic-symbolic";
+                      accessible-role: presentation;
+                    }
                   }
                 }
               };
@@ -1639,170 +1732,6 @@ template $PinduQuickAccess: Box {
           Box controls {
             orientation: vertical;
             spacing: 12;
-          }
-        };
-      };
-    }
-
-    StackPage {
-      name: "settings";
-
-      child: ScrolledWindow {
-        hscrollbar-policy: never;
-
-        child: Box {
-          orientation: vertical;
-          spacing: 12;
-
-          Label {
-            label: _("Settings");
-            xalign: 0;
-
-            styles [
-              "title-3",
-            ]
-          }
-
-          // Cover Size and Text Size are choice rows (`PinduChoiceRow`): Left and Right
-          // change them in place, where a drop-down's popover would be dismissed by a
-          // controller press, and radio rows or toggles side by side take a stop each.
-          ListBox sizes {
-            selection-mode: none;
-
-            styles [
-              "boxed-list",
-            ]
-
-            $PinduChoiceRow cover_size_row {
-              title: _("Cover Size");
-            }
-
-            $PinduChoiceRow text_size_row {
-              title: _("Text Size");
-            }
-          }
-
-          ListBox switches {
-            selection-mode: none;
-
-            styles [
-              "boxed-list",
-            ]
-
-            Adw.SwitchRow sounds_row {
-              title: _("Navigation Sounds");
-            }
-
-            // The slider takes focus rather than its row, so left and right
-            // turn it; the row goes insensitive while the sounds are off.
-            Adw.ActionRow volume_row {
-              title: _("Volume");
-              activatable: false;
-              focusable: false;
-
-              [suffix]
-              Scale volume {
-                hexpand: true;
-                digits: 0;
-                draw-value: false;
-
-                adjustment: Adjustment {
-                  lower: 0;
-                  upper: 100;
-                  step-increment: 5;
-                  page-increment: 20;
-                };
-
-                accessibility {
-                  label: _("Navigation Sound Volume");
-                }
-              }
-            }
-
-            Adw.SwitchRow exit_row {
-              title: _("Exit After Launching");
-            }
-          }
-
-          Label {
-            label: _("Accessibility");
-            xalign: 0;
-            margin-top: 6;
-
-            styles [
-              "heading",
-            ]
-          }
-
-          ListBox accessibility {
-            selection-mode: none;
-
-            styles [
-              "boxed-list",
-            ]
-
-            Adw.SwitchRow reduce_motion_row {
-              title: _("Reduce Motion");
-            }
-
-            Adw.SwitchRow hold_to_confirm_row {
-              title: _("Hold to Confirm");
-            }
-          }
-
-          Label {
-            label: _("Artwork");
-            xalign: 0;
-            margin-top: 6;
-
-            styles [
-              "heading",
-            ]
-          }
-
-          // The key is typed hidden with the on-screen keyboard and kept in the
-          // keyring; the row's subtitle says whether one is stored, or why the
-          // keyring cannot be used.
-          ListBox artwork {
-            selection-mode: none;
-
-            styles [
-              "boxed-list",
-            ]
-
-            Adw.ActionRow steamgriddb_key_row {
-              title: _("SteamGridDB Key");
-              activatable: true;
-            }
-
-            Adw.SwitchRow prefer_steamgriddb_row {
-              title: _("Prefer SteamGridDB Art");
-              subtitle: _("Show it before the launcher's own art; art you pick always comes first");
-            }
-          }
-
-          Label {
-            label: _("Metadata");
-            xalign: 0;
-            margin-top: 6;
-
-            styles [
-              "heading",
-            ]
-          }
-
-          // On, Refresh Metadata shows in the main list.
-          ListBox metadata {
-            selection-mode: none;
-
-            styles [
-              "boxed-list",
-            ]
-
-            Adw.SwitchRow wikidata_row {
-              title: _("Get Metadata From Wikidata");
-              subtitle: _("Nothing is fetched until you ask, and never during an import");
-            }
           }
         };
       };
