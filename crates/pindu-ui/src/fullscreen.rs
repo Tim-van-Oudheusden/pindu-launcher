@@ -14,9 +14,11 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::ngettext;
 use gtk::{gdk, gio, glib};
-use pindu_core::home::{self, BACKGROUND_KEY, BLUR_KEY, BackgroundContext, DIM_KEY, Strength};
+use pindu_core::home::{
+    self, BACKGROUND_KEY, BLUR_KEY, BackgroundContext, CATEGORIES_KEY, DIM_KEY, Strength,
+};
 use pindu_core::keys::{self, Escape, Modifiers};
-use pindu_core::library::View;
+use pindu_core::library::{Filters, View};
 use pindu_core::sections::SectionId;
 use pindu_core::sound::{media_volume, tone_wav};
 use pindu_core::themes::ThemeLayout;
@@ -233,11 +235,11 @@ impl PinduWindow {
         self.unfullscreen();
     }
 
-    /// Acts on Esc in fullscreen mode (`keys::escape`): back from a Home section's games to
-    /// Home's first screen, or out of fullscreen mode.
+    /// Acts on Esc in fullscreen mode (`keys::escape`): back one of Home's screens, from a
+    /// section's games or the categories, or out of fullscreen mode.
     fn escape(&self) {
         match keys::escape(self.shows_home_section()) {
-            Escape::ShowSections => self.imp().home_page.show_sections(),
+            Escape::ShowSections => self.imp().home_page.go_back(),
             Escape::LeaveFullscreen => self.leave_fullscreen(),
         }
     }
@@ -297,7 +299,9 @@ impl PinduWindow {
     /// tile opens its games (`win.home-section` with the section's name), the Library
     /// tile goes to the library (`win.show-library`), the Steam Big Picture tile opens
     /// Big Picture (`big_picture`), and See All in a row of the Shelves layout goes to the
-    /// library at that section's view (`win.home-section-library` with its name).
+    /// library at that section's view (`win.home-section-library` with its name), as does
+    /// a tile of the More Categories row. Home's categories show while Categories on Home
+    /// (`CATEGORIES_KEY`) is on.
     pub(crate) fn setup_home(&self) {
         let show_library = gio::ActionEntry::builder("show-library")
             .activate(|window: &Self, _, _| window.show_library())
@@ -355,6 +359,14 @@ impl PinduWindow {
             move |_| window.update_home()
         ));
         self.update_home();
+        self.settings().connect_changed(
+            Some(CATEGORIES_KEY),
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_, _| window.update_home()
+            ),
+        );
         self.connect_suspended_notify(|window| window.update_home_background());
         self.connect_visible_notify(|window| window.update_home_background());
         adw::StyleManager::default().connect_high_contrast_notify(glib::clone!(
@@ -400,7 +412,9 @@ impl PinduWindow {
     fn update_home(&self) {
         let home = &self.imp().home_page;
         home.set_library_count(self.library().counts().get(View::All));
-        home.set_sections(self.library().home_sections());
+        let categories = self.settings().boolean(CATEGORIES_KEY);
+        let (sections, categories) = self.library().home_sections(categories);
+        home.set_sections(sections, categories);
     }
 
     /// Shows Home's first screen: back down to Home, from a section's games too.
@@ -424,16 +438,31 @@ impl PinduWindow {
     }
 
     /// Shows the library at the view that holds all of Home's `section`, on the cover
-    /// the controller was last on there: See All in the Shelves layout.
+    /// the controller was last on there: See All in the Shelves layout. A category opens
+    /// All Games filtered to its genre alone, which Quick Access's Filters show.
     fn show_section_library(&self, section: SectionId) {
         if !self.is_fullscreen() {
             return;
+        }
+        if let Some(genre) = section.genre() {
+            let filters = Filters {
+                genre: Some(genre),
+                ..Filters::default()
+            };
+            if let Some(application) = self.application().and_downcast::<PinduApplication>() {
+                application.set_fullscreen_filters(filters);
+            }
+            let quick_access = &self.imp().quick_access_panel;
+            quick_access.show_filters();
+            quick_access.show_filters_card();
+            self.apply_filters();
         }
         self.set_shown_view(section.view());
         self.show_library();
     }
 
-    /// Whether Home shows, on its second screen: a section's games, which B leaves.
+    /// Whether Home shows a screen past its first: a section's games or the categories,
+    /// which B leaves one at a time.
     pub(crate) fn shows_home_section(&self) -> bool {
         let imp = self.imp();
         imp.navigation_view.visible_page().as_ref()

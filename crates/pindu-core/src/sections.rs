@@ -1,9 +1,67 @@
 //! Fullscreen Home's sections, the first screen's tiles: Recently played, Favourites,
 //! Installed, one per launcher, then the user's collections, each with its games. The
-//! Library tile that ends the row is not a section.
+//! Library tile that ends the row is not a section. Home's categories, the genres the
+//! library's games have (`categories`), are sections too, behind one Categories tile or
+//! as rows of their own, as the design's layout shows them (`crate::home`).
+
+use std::collections::HashMap;
+use std::sync::{Mutex, PoisonError};
 
 use crate::library::{self, SortKey, SortMode, View};
 use crate::model::{Collection, Game, GameId, Source};
+
+/// A category of Home, a genre named ignoring case: the same name always gives the same
+/// ID while Pindu runs, so a category keeps its ID, and what had focus on it, when the
+/// library reloads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CategoryId(usize);
+
+/// The genres given an ID so far: each one's ID by its name in lower case, and its name
+/// as the library last spelled it, by ID.
+#[derive(Default)]
+struct Interned {
+    ids: HashMap<String, usize>,
+    names: Vec<String>,
+}
+
+static CATEGORIES: Mutex<Option<Interned>> = Mutex::new(None);
+
+/// Runs `f` on the genres given an ID so far.
+fn interned<T>(f: impl FnOnce(&mut Interned) -> T) -> T {
+    let mut guard = CATEGORIES.lock().unwrap_or_else(PoisonError::into_inner);
+    f(guard.get_or_insert_with(Interned::default))
+}
+
+impl CategoryId {
+    /// The ID of the category `genre`, spelled as the library spells it now.
+    pub fn of(genre: &str) -> Self {
+        interned(|interned| {
+            let key = genre.to_lowercase();
+            let id = match interned.ids.get(&key) {
+                Some(&id) => {
+                    genre.clone_into(&mut interned.names[id]);
+                    id
+                }
+                None => {
+                    interned.names.push(genre.to_owned());
+                    interned.ids.insert(key, interned.names.len() - 1);
+                    interned.names.len() - 1
+                }
+            };
+            Self(id)
+        })
+    }
+
+    /// The ID of the category `genre` if it has one, without giving it one.
+    fn find(genre: &str) -> Option<Self> {
+        interned(|interned| interned.ids.get(&genre.to_lowercase()).copied().map(Self))
+    }
+
+    /// The category's genre, as the library last spelled it.
+    pub fn genre(self) -> String {
+        interned(|interned| interned.names[self.0].clone())
+    }
+}
 
 /// Which games a section holds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -18,11 +76,16 @@ pub enum SectionId {
     Source(Source),
     /// A user collection, by ID.
     Collection(i64),
+    /// Home's categories as one tile, which leads to them: the Categories screen of the
+    /// layouts with two screens, the categories' rows of the Explore layout.
+    Categories,
+    /// A category: the games of one genre.
+    Category(CategoryId),
 }
 
 impl SectionId {
     /// The section's name: its art's file name (`data/home/<name>.svg`) for all but a
-    /// collection, which is `collection-<id>`.
+    /// collection, which is `collection-<id>`, and a category, `category-<genre>`.
     pub fn name(self) -> String {
         match self {
             Self::RecentlyPlayed => RECENTLY_PLAYED.to_owned(),
@@ -30,6 +93,8 @@ impl SectionId {
             Self::Installed => INSTALLED.to_owned(),
             Self::Source(source) => source.as_str().to_owned(),
             Self::Collection(id) => format!("{COLLECTION_PREFIX}{id}"),
+            Self::Categories => CATEGORIES_NAME.to_owned(),
+            Self::Category(id) => format!("{CATEGORY_PREFIX}{}", id.genre()),
         }
     }
 
@@ -39,23 +104,33 @@ impl SectionId {
             RECENTLY_PLAYED => Some(Self::RecentlyPlayed),
             FAVOURITES => Some(Self::Favourites),
             INSTALLED => Some(Self::Installed),
-            _ => match name.strip_prefix(COLLECTION_PREFIX) {
-                Some(id) => id.parse().ok().map(Self::Collection),
-                None => name.parse().ok().map(Self::Source),
-            },
+            CATEGORIES_NAME => Some(Self::Categories),
+            _ => {
+                if let Some(id) = name.strip_prefix(COLLECTION_PREFIX) {
+                    id.parse().ok().map(Self::Collection)
+                } else if let Some(genre) = name.strip_prefix(CATEGORY_PREFIX) {
+                    CategoryId::find(genre).map(Self::Category)
+                } else {
+                    name.parse().ok().map(Self::Source)
+                }
+            }
         }
     }
 
     /// The class the section's tile carries for designs: `section-` and [`Self::name`],
-    /// or `section-collection` for every collection.
+    /// or `section-collection` for every collection and `section-category` for every
+    /// category.
     pub fn css_class(self) -> String {
         match self {
             Self::Collection(_) => "section-collection".to_owned(),
+            Self::Category(_) => "section-category".to_owned(),
             _ => format!("section-{}", self.name()),
         }
     }
 
-    /// The library view that shows all of the section's games, where its See All goes.
+    /// The library view that shows all of the section's games, where its See All goes:
+    /// All Games for a category, which the library narrows to its genre
+    /// ([`Self::genre`]), and for the Categories tile.
     pub fn view(self) -> View {
         match self {
             Self::RecentlyPlayed => View::PlayHistory,
@@ -63,6 +138,16 @@ impl SectionId {
             Self::Installed => View::Installed,
             Self::Source(source) => View::Source(source),
             Self::Collection(id) => View::Collection(id),
+            Self::Categories | Self::Category(_) => View::All,
+        }
+    }
+
+    /// The genre the library is filtered to (`library::Filters::genre`) when the section
+    /// opens there: a category's; `None` for every other section.
+    pub fn genre(self) -> Option<String> {
+        match self {
+            Self::Category(id) => Some(id.genre()),
+            _ => None,
         }
     }
 }
@@ -71,6 +156,8 @@ const RECENTLY_PLAYED: &str = "recently-played";
 const FAVOURITES: &str = "favourites";
 const INSTALLED: &str = "installed";
 const COLLECTION_PREFIX: &str = "collection-";
+const CATEGORIES_NAME: &str = "categories";
+const CATEGORY_PREFIX: &str = "category-";
 
 /// The two letters a launcher's section tile shows where a design labels its tiles;
 /// `None` for a source that is not a launcher, which shows an icon. Not translated.
@@ -111,12 +198,13 @@ pub fn source_icon(source: Source) -> Option<&'static str> {
 }
 
 /// A section of Home's first screen: what it holds, the user's name for it when it is
-/// a collection (the shell names the others), and its games in the order they show.
+/// a collection and the genre as the library spells it when it is a category (the shell
+/// names the others), and its games in the order they show.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Section {
     /// What the section holds.
     pub id: SectionId,
-    /// The collection's name; `None` for the other sections.
+    /// The collection's name or the category's genre; `None` for the other sections.
     pub title: Option<String>,
     /// The section's games, in the order they show.
     pub games: Vec<GameId>,
@@ -132,13 +220,10 @@ pub fn sections(games: &[(&Game, &[i64])], collections: &[Collection]) -> Vec<Se
         .map(|game| game.id.clone())
         .collect();
     let in_view = |view: View| -> Vec<GameId> {
-        let mut shown: Vec<(SortKey, &Game)> = games
-            .iter()
-            .filter(|(game, held_by)| view.shows(game, held_by))
-            .map(|(game, _)| (SortKey::new(game, 0), *game))
-            .collect();
-        shown.sort_by(|(a, _), (b, _)| library::compare(SortMode::LastPlayed, a, b));
-        shown.into_iter().map(|(_, game)| game.id.clone()).collect()
+        in_view(games, view)
+            .into_iter()
+            .map(|game| game.id.clone())
+            .collect()
     };
     let section = |id, title, games| Section { id, title, games };
     [
@@ -165,6 +250,46 @@ pub fn sections(games: &[(&Game, &[i64])], collections: &[Collection]) -> Vec<Se
     .collect()
 }
 
+/// The games of `games` that `view` shows, most recently played first, then by name.
+fn in_view<'a>(games: &[(&'a Game, &[i64])], view: View) -> Vec<&'a Game> {
+    let mut shown: Vec<(SortKey, &Game)> = games
+        .iter()
+        .filter(|(game, held_by)| view.shows(game, held_by))
+        .map(|(game, _)| (SortKey::new(game, 0), *game))
+        .collect();
+    shown.sort_by(|(a, _), (b, _)| library::compare(SortMode::LastPlayed, a, b));
+    shown.into_iter().map(|(_, game)| game).collect()
+}
+
+/// Home's categories: every genre of the games the library shows (`library::genres`),
+/// hidden and removed games left out, in its order, each with its games in the order of
+/// every section, most recently played first, then by name. A game is in each of its
+/// genres' categories. `games` are every game with the IDs of the collections holding it.
+pub fn categories(games: &[(&Game, &[i64])]) -> Vec<Section> {
+    let shown = in_view(games, View::All);
+    // Named as the library's own list names them, in the library's order.
+    let listed = games
+        .iter()
+        .filter(|(game, held_by)| View::All.shows(game, held_by))
+        .map(|(game, _)| *game);
+    library::genres(listed)
+        .into_iter()
+        .map(|genre| Section {
+            id: SectionId::Category(CategoryId::of(&genre)),
+            games: shown
+                .iter()
+                .filter(|game| {
+                    game.genres
+                        .iter()
+                        .any(|own| library::same_genre(own, &genre))
+                })
+                .map(|game| game.id.clone())
+                .collect(),
+            title: Some(genre),
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -186,6 +311,141 @@ mod tests {
 
     fn ids(sections: &[Section]) -> Vec<SectionId> {
         sections.iter().map(|section| section.id).collect()
+    }
+
+    /// `game` with `genres`.
+    fn with_genres(mut game: Game, genres: &[&str]) -> Game {
+        game.genres = genres.iter().map(|&genre| genre.to_owned()).collect();
+        game
+    }
+
+    #[test]
+    fn categories_are_the_genres_by_name_each_with_its_games_and_a_game_in_each_of_its_own() {
+        let old = with_genres(game(Source::Steam, "Old", Some(100)), &["Strategy"]);
+        let quest = with_genres(
+            game(Source::Lutris, "Quest", Some(500)),
+            &["RPG", "strategy"],
+        );
+        let alpha = with_genres(game(Source::Steam, "Alpha", None), &["Strategy"]);
+        let plain = game(Source::Steam, "Plain", Some(900));
+        let games = [
+            (&old, &[][..]),
+            (&quest, &[][..]),
+            (&alpha, &[][..]),
+            (&plain, &[][..]),
+        ];
+
+        let categories = categories(&games);
+
+        assert_eq!(
+            categories,
+            [
+                Section {
+                    id: SectionId::Category(CategoryId::of("RPG")),
+                    title: Some("RPG".to_owned()),
+                    games: vec![quest.id.clone()],
+                },
+                // Spelled as first seen, its games as every section orders them.
+                Section {
+                    id: SectionId::Category(CategoryId::of("Strategy")),
+                    title: Some("Strategy".to_owned()),
+                    games: vec![quest.id.clone(), old.id.clone(), alpha.id.clone()],
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn hidden_and_removed_games_count_for_no_category() {
+        // Genres of their own: every test shares the names given an ID.
+        let mut hidden = with_genres(game(Source::Steam, "Hidden", Some(5)), &["Horror", "Shmup"]);
+        hidden.hidden = true;
+        let mut missing = with_genres(game(Source::Lutris, "Missing", Some(6)), &["Karting"]);
+        missing.missing_since = Some(1);
+        let mut removed = with_genres(game(Source::Steam, "Removed", None), &["Shmup"]);
+        removed.user_removed = true;
+        let shown = with_genres(game(Source::Steam, "Shown", None), &["shmup"]);
+        let games = [
+            (&hidden, &[][..]),
+            (&missing, &[][..]),
+            (&removed, &[][..]),
+            (&shown, &[][..]),
+        ];
+
+        let categories_shown = categories(&games);
+
+        assert_eq!(
+            categories_shown,
+            [Section {
+                id: SectionId::Category(CategoryId::of("shmup")),
+                title: Some("shmup".to_owned()),
+                games: vec![shown.id.clone()],
+            }]
+        );
+        assert!(categories(&[(&hidden, &[][..])]).is_empty());
+    }
+
+    #[test]
+    fn a_category_keeps_its_id_by_name_over_a_reload_whatever_its_case() {
+        let before = with_genres(game(Source::Steam, "A", None), &["Metroidvania"]);
+        let after = with_genres(game(Source::Lutris, "B", None), &["METROIDVANIA"]);
+
+        let first = categories(&[(&before, &[][..])]).remove(0).id;
+        let reloaded = categories(&[(&after, &[][..])]).remove(0).id;
+
+        assert_eq!(first, reloaded);
+        // Named as the library spells it now, and found by that name.
+        assert_eq!(reloaded.name(), "category-METROIDVANIA");
+        assert_eq!(SectionId::from_name("category-METROIDVANIA"), Some(first));
+        assert_eq!(SectionId::from_name("category-metroidvania"), Some(first));
+        assert_ne!(first, SectionId::Category(CategoryId::of("Roguelike")));
+        assert_eq!(SectionId::from_name("category-never-a-genre-here"), None);
+    }
+
+    #[test]
+    fn a_category_opens_the_library_at_all_games_with_its_genre() {
+        let tactics = SectionId::Category(CategoryId::of("Tactics"));
+
+        assert_eq!(tactics.view(), View::All);
+        assert_eq!(tactics.genre().as_deref(), Some("Tactics"));
+        for other in [
+            SectionId::Installed,
+            SectionId::Collection(3),
+            SectionId::Categories,
+        ] {
+            assert_eq!(other.genre(), None, "{other:?}");
+        }
+    }
+
+    #[test]
+    fn the_categories_tile_and_each_category_are_named_and_classed_for_designs() {
+        assert_eq!(SectionId::Categories.name(), "categories");
+        assert_eq!(
+            SectionId::from_name("categories"),
+            Some(SectionId::Categories)
+        );
+        assert_eq!(SectionId::Categories.css_class(), "section-categories");
+        for genre in ["Puzzle", "Sports"] {
+            assert_eq!(
+                SectionId::Category(CategoryId::of(genre)).css_class(),
+                "section-category"
+            );
+        }
+    }
+
+    #[test]
+    fn the_categories_tile_ships_its_art_as_a_resource_under_home_s_licence() {
+        let data = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data");
+        let resources = std::fs::read_to_string(data.join("resources.gresource.xml")).unwrap();
+        let provenance = std::fs::read_to_string(data.join("home/LICENSE")).unwrap();
+        let art = format!("home/{}.svg", SectionId::Categories.name());
+
+        assert!(data.join(&art).is_file(), "{art} is missing");
+        assert!(
+            resources.contains(&format!(">{art}</file>")),
+            "{art} is not a resource"
+        );
+        assert!(provenance.contains("The section tiles (*.svg)"));
     }
 
     #[test]

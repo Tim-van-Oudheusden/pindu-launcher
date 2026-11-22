@@ -85,7 +85,7 @@ impl PinduQuickAccess {
         ]
     }
 
-    /// The genre list: Any Genre, then each genre of the library, and the genre chosen if
+    /// The genre list: Any Category, then each genre of the library, and the genre chosen if
     /// the library no longer has it, so it can be cleared.
     pub(crate) fn fill_genres(&self) {
         let imp = self.imp();
@@ -102,7 +102,7 @@ impl PinduQuickAccess {
         imp.genres.remove_all();
         let action = format!("win.{GENRE_ACTION}");
         imp.genres
-            .append(&radio_row(&action, "", &gettext("Any Genre")));
+            .append(&radio_row(&action, "", &gettext("Any Category")));
         for genre in genres {
             imp.genres.append(&radio_row(&action, &genre, &genre));
         }

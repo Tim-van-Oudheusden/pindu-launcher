@@ -34,6 +34,7 @@ use pindu_core::wikidata::Provenance;
 use crate::application::PinduApplication;
 use crate::collection_actions::collection_menu;
 use crate::failed_launch;
+use crate::genres::genre_label;
 use crate::group_actions::group_menu;
 use crate::launch_service::launcher_name;
 use crate::library_service::LibraryService;
@@ -941,24 +942,6 @@ fn facts(game: &Game, playtime_secs: i64, origin: Option<PlaytimeOrigin>) -> Vec
     facts
 }
 
-/// A genre as the page shows it: the genres Steam's importer names, translated; any other
-/// as its source wrote it.
-fn genre_label(genre: &str) -> String {
-    match genre {
-        "Action" => gettext("Action"),
-        "Strategy" => gettext("Strategy"),
-        "RPG" => gettext("RPG"),
-        "Casual" => gettext("Casual"),
-        "Racing" => gettext("Racing"),
-        "Sports" => gettext("Sports"),
-        "Indie" => gettext("Indie"),
-        "Adventure" => gettext("Adventure"),
-        "Simulation" => gettext("Simulation"),
-        "Massively Multiplayer" => gettext("Massively Multiplayer"),
-        other => other.to_owned(),
-    }
-}
-
 /// How well a game supports a controller, as the page shows it.
 fn controller_support_label(support: ControllerSupport) -> String {
     match support {
@@ -1102,7 +1085,7 @@ pub(crate) fn date(timestamp: Timestamp) -> String {
 fn origin_label(provenance: &Provenance) -> gtk::Label {
     gtk::Label::builder()
         .label(
-            // Translators: beside a game's developer or genres; {date} is when they were
+            // Translators: beside a game's developer or categories; {date} is when they were
             // fetched from Wikidata, the online database.
             gettext("Wikidata, {date}").replace("{date}", &date(provenance.fetched_at)),
         )

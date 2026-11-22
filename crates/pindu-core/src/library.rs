@@ -663,7 +663,7 @@ impl Filters {
 }
 
 /// Whether two genre names are the same, ignoring case: sources spell them differently.
-fn same_genre(a: &str, b: &str) -> bool {
+pub(crate) fn same_genre(a: &str, b: &str) -> bool {
     a.chars()
         .flat_map(char::to_lowercase)
         .eq(b.chars().flat_map(char::to_lowercase))

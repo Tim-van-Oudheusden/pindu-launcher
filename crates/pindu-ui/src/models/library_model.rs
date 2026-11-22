@@ -22,6 +22,9 @@ use pindu_core::sections::{self, Section};
 
 use super::GameObject;
 
+/// A section or category of fullscreen Home with its games, in the order they show.
+pub type HomeSection = (Section, Vec<GameObject>);
+
 mod imp {
     use super::*;
 
@@ -227,8 +230,9 @@ impl LibraryModel {
         pindu_core::library::genres(games.iter().map(|game| &**game))
     }
 
-    /// Fullscreen Home's sections (`pindu_core::sections`), each with its games.
-    pub fn home_sections(&self) -> Vec<(Section, Vec<GameObject>)> {
+    /// Fullscreen Home's sections and, with `categories`, its categories
+    /// (`pindu_core::sections`), each with its games.
+    pub fn home_sections(&self, categories: bool) -> (Vec<HomeSection>, Vec<HomeSection>) {
         let games = &self.imp().games;
         let objects: Vec<GameObject> = (0..games.n_items())
             .filter_map(|position| games.item(position).and_downcast::<GameObject>())
@@ -239,23 +243,31 @@ impl LibraryModel {
             .map(|entry| (&entry.game, entry.collections.as_slice()))
             .collect();
         let sections = sections::sections(&pairs, &self.imp().collections.borrow());
+        let categories = if categories {
+            sections::categories(&pairs)
+        } else {
+            Vec::new()
+        };
         drop(pairs);
         drop(entries);
         let objects: HashMap<GameId, GameObject> = objects
             .into_iter()
             .map(|object| (object.id(), object))
             .collect();
-        sections
-            .into_iter()
-            .map(|section| {
-                let games = section
-                    .games
-                    .iter()
-                    .filter_map(|id| objects.get(id).cloned())
-                    .collect();
-                (section, games)
-            })
-            .collect()
+        let with_games = |sections: Vec<Section>| -> Vec<HomeSection> {
+            sections
+                .into_iter()
+                .map(|section| {
+                    let games = section
+                        .games
+                        .iter()
+                        .filter_map(|id| objects.get(id).cloned())
+                        .collect();
+                    (section, games)
+                })
+                .collect()
+        };
+        (with_games(sections), with_games(categories))
     }
 
     /// The user's collections, in their order, saved filters among them.

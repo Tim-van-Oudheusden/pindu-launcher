@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder art for Home's "categories" tile; the maintainer replaces it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1c1d21"/>
+  <path d="M166 166h70v70h-70zM276 166h70v70h-70zM166 276h70v70h-70z" fill="none" stroke="#c0c4cc" stroke-width="20" stroke-linejoin="round"/><path d="M276 276h40l30 35-30 35h-40z" fill="none" stroke="#c0c4cc" stroke-width="20" stroke-linejoin="round"/>
+</svg>

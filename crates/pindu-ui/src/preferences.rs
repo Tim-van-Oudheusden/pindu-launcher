@@ -19,6 +19,7 @@ use pindu_core::accessibility::{TEXT_SIZE_KEY, TextSize};
 use pindu_core::custom_style::ProblemSummary;
 use pindu_core::gamepad::{PROMPTS_KEY, Prompts, SWAP_KEY, Swap};
 use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
+use pindu_core::home::CATEGORIES_KEY;
 use pindu_core::model::{Source, SourceState};
 use pindu_core::paths;
 use pindu_core::sources::location::sandbox_hides;
@@ -84,6 +85,8 @@ mod imp {
         pub volume_scale: TemplateChild<gtk::Scale>,
         #[template_child]
         pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub home_categories_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub text_size_row: TemplateChild<adw::ComboRow>,
         #[template_child]
@@ -241,6 +244,9 @@ mod imp {
                 .build();
             settings
                 .bind(HINT_BAR_KEY, &*self.hint_bar_row, "active")
+                .build();
+            settings
+                .bind(CATEGORIES_KEY, &*self.home_categories_row, "active")
                 .build();
             settings
                 .bind("navigation-sounds", &*self.sounds_row, "active")

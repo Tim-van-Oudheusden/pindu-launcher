@@ -16,7 +16,7 @@ The strategic conclusion of the original analysis stands: Pindu should **not** b
 
 Checking the analysis against the source changed three things that matter for planning:
 
-1. **Much of the proposed data model already exists.** Source health is stored on every sync and only shown as a ten-second toast. Developer, genres and description are in the schema and on the desktop game page. Launch settings already cover arguments, environment, Proton build, prefix and wrapper commands. Several proposals are therefore smaller than they looked (Library Health, diagnostics, shelves) and one is larger (game identity, because everything is keyed on the per-source game ID). Section 2.5 has the inventory.
+1. **Much of the proposed data model already exists.** Source health is stored on every sync and only shown as a ten-second toast. Developer, categories and description are in the schema and on the desktop game page. Launch settings already cover arguments, environment, Proton build, prefix and wrapper commands. Several proposals are therefore smaller than they looked (Library Health, diagnostics, shelves) and one is larger (game identity, because everything is keyed on the per-source game ID). Section 2.5 has the inventory.
 2. **The scarce resource is the maintainer, not implementation.** The agent pipeline produced about 600 commits and seven releases in fifteen days. What does not scale is the maintainer's decisions, the line-by-line review of high-risk changes, the human-only work and the checks on real hardware. Issues should therefore put decisions first, and section 14 lists the ones to take before anything is filed.
 3. **Pindu OS makes fullscreen mode the interface.** A console has no desktop environment and no keyboard. Fullscreen mode has no route to most of Preferences, to adding a game by hand, to the SteamGridDB key or to a game's details and launch settings. The desktop window can be driven with a controller, so some of that is reachable by leaving fullscreen mode, but typing and file choosers are not, and a desktop window on a television is not the product. Controller parity is a roadmap item of its own, and "works with a controller alone" belongs in every acceptance checklist.
 
@@ -252,7 +252,7 @@ Playnite's lasting strengths are a unified library that includes games that are 
 
 ## 5.3 Heroic Games Launcher
 
-Heroic covers fewer stores and owns more of their lifecycle: install, update, repair and move, Wine and Proton management, ProtonDB and Steam Deck information, cloud saves and categories.[20] In 2026 it moved onto Pindu's ground. Version 2.21 in April added a console-like fullscreen mode for controllers and achievements for GOG games; 2.22 in May let that mode install and update games and added editing of a game's name and cover.[21][22] Its tracker has a request for a filter that shows a game owned on several platforms only once.[23]
+Heroic covers fewer stores and owns more of their lifecycle: install, update, repair and move, Wine and Proton management, ProtonDB and Steam Deck information, cloud saves and Heroic's own categories.[20] In 2026 it moved onto Pindu's ground. Version 2.21 in April added a console-like fullscreen mode for controllers and achievements for GOG games; 2.22 in May let that mode install and update games and added editing of a game's name and cover.[21][22] Its tracker has a request for a filter that shows a game owned on several platforms only once.[23]
 
 **What to learn:** compatibility information belongs at the point of deciding to launch; save resilience is valued; console users expect to install and maintain games without a keyboard. Pindu's Add a Store and Open in Launcher already hand that work to the store.
 
@@ -467,7 +467,7 @@ On Pindu OS fullscreen mode is the interface a console owner is meant to use, an
 ### What exists today
 
 - Quick Access and the game options sheet as listed in section 4.8.
-- The fullscreen game page hides developer, genres, description and the launch settings.
+- The fullscreen game page hides developer, categories, description and the launch settings.
 - The desktop window can be driven with a controller: directions move focus, A activates and B goes back. Exit Fullscreen Mode in the drawer leads to it.
 - An on-screen keyboard with capitals, symbols and a hidden-text dialog, added for Wi-Fi passphrases and Bluetooth PINs. It belongs to fullscreen mode.[2]
 
@@ -491,7 +491,7 @@ A spike first: go through every desktop-only flow, say whether a console needs i
 | ID | Issue | Done when | Labels | Depends on |
 | --- | --- | --- | --- | --- |
 | CP-1 | List what fullscreen mode cannot do that a console needs | A write-up lists each desktop-only flow, whether a console needs it, and the issues to file | `type:spike` `area:ui` | |
-| CP-2 | Show a game's details on the fullscreen game page | Developer, genres and description show in fullscreen mode in every shipped design | `type:feature` `area:ui` | |
+| CP-2 | Show a game's details on the fullscreen game page | Developer, categories and description show in fullscreen mode in every shipped design | `type:feature` `area:ui` | |
 | CP-3 | Enter the SteamGridDB key in fullscreen mode | The key is typed hidden with the on-screen keyboard and stored in the keyring; without a keyring the entry says so | `type:feature` `area:ui` `area:art` | CP-1 |
 
 ## 8.5 Shelves and metadata (MD)
@@ -502,9 +502,9 @@ A large library needs more ways to slice it than source, install state and platf
 
 ### What exists today
 
-- `games` has developer, genres and description. Heroic fills developer and, for some stores, genres and a description; Steam fills developer. The desktop game page shows them.[11]
+- `games` has developer, categories (the launchers and Wikidata call them genres; the column is `genres`) and description. Heroic fills developer and, for some stores, categories and a description; Steam fills developer. The desktop game page shows them.[11]
 - Each sync overwrites those columns with what the importer returned, so a value from anywhere else cannot live there.
-- The Steam importer already parses Steam's binary `appinfo.vdf` and reads name, type, platforms, developer and icon from it. The same section holds more: controller support appears in the repository's own test data, and genres, release date and Steam Deck compatibility are expected there (to confirm in MD-1).
+- The Steam importer already parses Steam's binary `appinfo.vdf` and reads name, type, platforms, developer and icon from it. The same section holds more: controller support appears in the repository's own test data, and categories, release date and Steam Deck compatibility are expected there (to confirm in MD-1).
 - Lutris's database has a `year` column that is not read.
 - Views and filters as listed in section 2.1. Fullscreen Home already has sections for recently played, favourites, installed, each launcher and each collection.
 - The spec's order for metadata is the sources' own data first, SteamGridDB for art, and ProtonDB, HowLongToBeat and PCGamingWiki on the backlog.[9]
@@ -514,7 +514,7 @@ A large library needs more ways to slice it than source, install state and platf
 In this order, which differs from the original's "provider first":
 
 1. **Saved filters.** Let a filter be saved as a dynamic collection. Collections already appear in the sidebar, as fullscreen tabs and as Home sections, so a saved filter becomes a shelf with no further work. Useful shelves need no new data: installed and never played, recently added, native, Windows, no longer listed by its source, needs a permission.
-2. **Metadata the launchers already hold.** Read release year, genres, controller support and Steam Deck compatibility from the files Pindu already opens. No network, no key.
+2. **Metadata the launchers already hold.** Read release year, categories, controller support and Steam Deck compatibility from the files Pindu already opens. No network, no key.
 3. **A place for metadata with its origin.** Keep values from the source, from a provider and from the user apart, prefer them in the reverse of that order, and let a sync touch only the source's values.
 4. **An online provider, opt-in, after a spike.** The spike compares candidates on licence and terms, whether a key is needed (on a console it must be typed with the on-screen keyboard and stored in a keyring), which store IDs it maps (which helps section 8.1), the fields it has and its rate limits. Candidates to assess, none of them verified here: SteamGridDB, which is integrated already; IGDB, which Playnite uses; PCGamingWiki; and Wikidata, which is openly licensed and carries store identifiers.
 
@@ -535,9 +535,9 @@ Whatever is chosen follows the existing network rules: nothing is fetched during
 | --- | --- | --- | --- | --- |
 | MD-1 | Find what metadata the launchers' own files hold | A write-up lists, per source, the fields available offline and how reliable they are in real libraries, and which to import | `type:spike` `area:import` | |
 | MD-2 | Save a filter as a dynamic collection | A saved filter appears in the sidebar, as a fullscreen tab and as a Home section, and is renamed and deleted like a collection | `type:feature` `area:core` `area:ui` | GI-4, for migration order |
-| MD-3 | Filter the library by genre and by never played | Both filters work in both shells and can be saved | `type:feature` `area:core` `area:ui` | MD-2 |
+| MD-3 | Filter the library by category and by never played | Both filters work in both shells and can be saved | `type:feature` `area:core` `area:ui` | MD-2 |
 | MD-4 | Keep metadata apart from source fields, with its origin | A table holds values by field with origin and time; reading prefers the user's value, then a provider's, then the source's; a sync changes source values only | `type:feature` `area:core` | MD-2, for migration order |
-| MD-5 | Import release year, genres and controller support from Steam and Lutris | The fields MD-1 found reliable are imported offline, with fixture tests | `type:feature` `area:import` | MD-1, MD-4 |
+| MD-5 | Import release year, categories and controller support from Steam and Lutris | The fields MD-1 found reliable are imported offline, with fixture tests | `type:feature` `area:import` | MD-1, MD-4 |
 | MD-6 | Choose an online metadata provider | A write-up compares the candidates on the criteria above and recommends one, or none | `type:spike` `area:core` | |
 | MD-7 | Fetch metadata on request and cache it | Off by default; a refresh is a cancellable task in Activity; nothing is fetched during an import; each value records its provider | `type:feature` `area:core` `area:ui` | MD-4, MD-6 |
 | MD-8 | Edit a game's details by hand | The user's value wins and survives syncs and refreshes | `type:feature` `area:ui` | MD-4 |
@@ -782,7 +782,7 @@ The architecture keeps decisions that can be tested in `pindu-core` and the shel
 
 ## 10.2 Store where a value came from
 
-Title from Steam, cover from the user, description from a provider, playtime from two sources, preferred copy by the user's choice: the interface can only explain a conflict, and a sync can only avoid undoing a decision, if each value records its origin. Artwork already does this with an origin per image. Developer, genres and description do not, and each sync replaces them (section 8.5).
+Title from Steam, cover from the user, description from a provider, playtime from two sources, preferred copy by the user's choice: the interface can only explain a conflict, and a sync can only avoid undoing a decision, if each value records its origin. Artwork already does this with an origin per image. Developer, categories and description do not, and each sync replaces them (section 8.5).
 
 ## 10.3 Background work stays visible and cancellable
 
@@ -866,7 +866,7 @@ Agents stop when a product decision is missing. Settling these first lets the is
 **Corrected against the repository**
 
 - The newest release is 0.5.1, not 0.5.0; the system panel shipped in 0.4.0 and the gamescope session work in 0.5.0.
-- Developer, genres and description are already in the schema and on the desktop game page. The original said the product had no such layer.
+- Developer, categories and description are already in the schema and on the desktop game page. The original said the product had no such layer.
 - Source health is already stored. Library Health is mostly a view, not a new model.
 - Launch settings already include arguments, environment, working folder, Proton build, prefix and wrapper commands. Named profiles were demoted and replaced by Start Safely.
 - Duplicates between desktop entries and launchers are already prevented at import.
