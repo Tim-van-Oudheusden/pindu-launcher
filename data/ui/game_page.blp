@@ -402,22 +402,29 @@ template $PinduGamePage: Adw.NavigationPage {
           valign: center;
           hexpand: true;
 
-          // The hero art, or the cover cropped; the title below names it.
+          // The logo, which stands in for the title as on the page, within 480×160
+          // whatever the image's size: the clamps cap its natural size, and a design's
+          // `min-width`/`min-height` enlarge it.
           Adw.Clamp {
             maximum-size: 480;
             tightening-threshold: 480;
 
-            child: Picture launch_art {
-              visible: false;
-              content-fit: cover;
-              height-request: 225;
-              can-shrink: true;
-              overflow: hidden;
-              accessible-role: presentation;
+            child: Adw.Clamp {
+              orientation: vertical;
+              maximum-size: 160;
+              tightening-threshold: 160;
 
-              styles [
-                "card",
-              ]
+              child: Picture launch_logo {
+                visible: false;
+                content-fit: contain;
+                width-request: 480;
+                height-request: 160;
+                can-shrink: true;
+
+                styles [
+                  "launch-logo",
+                ]
+              };
             };
           }
 

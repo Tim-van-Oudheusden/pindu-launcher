@@ -8,65 +8,12 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-22, #717 (first of the menus series #717 → #718 → #719 → #720 → #721 → #722 → #723 → #725 → #724, each
-  pull request stacked on the one before so the summaries do not conflict): Quick Access is six sections under a
-  strip (`QuickAccessSection`, `section_entries`, `sections`, `Shown` in `panels.rs`; `Panels::section`,
-  `show_section`; `hints::Action::Sections`). The four former levels (Notifications, Activity, Designs, Controllers)
-  are section content; LB/RB and Ctrl+Page Up/Down switch sections; `win.quick-access-section`. Row visibility
-  comes only from `section_entries`; the Quick copies of Sound Output, Bluetooth, Network, Refresh Library and Add a
-  Game bind their second line, icon and availability to the System/Manage originals. Checked with the harness below
-  in Lobby, Adwaita, Marquee and Shelves at every Text Size: "Notifications" ellipsizes in the strip at Larger and
-  Largest (tooltip and accessible name keep it whole). Not seen: the panel over a running game, the pointer on the
-  strip, a screen reader.
-- 2026-11-22, #718 (stacked on #717): Quick's page cards (Filters with the filters that are on,
-  `library::Filters::names_on`; Performance for the focused game), the six tiles (`panels::quick_tiles`, laid out
-  three to a row from the start by `quick_section.rs`'s `PinduQuickSection`, whose `focus` vfunc takes both the arrow
-  keys and the controller's moves through `panels::step_tile`) and the activity strip. Tile names wrap without a line
-  limit, so "Refresh Library" takes three lines at Largest rather than being cut. Not seen: the Playing Now focus
-  paths, Quick over a running game, the Sound Output tile and the Flatpak's single row (no running game or system
-  services in the harness).
-- 2026-11-22, #719 (stacked on #718): `widgets/choice_row.rs`'s `PinduChoiceRow` replaces the ten radio groups
-  (Background, Background Blur, Background Dim; Button Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate, Stick
-  Dead Zone; Settings' Cover Size and Text Size), bound to the same stateful actions (`win.tile-size` is new, same
-  key). `controller_navigation::adjust_slider` turns sliders and choice rows for both hosts (`Adjusted`); steps are
-  `pindu_core::choice`. Seen in the harness at Largest and in Hebrew under high contrast. Not seen: the pointer on the
-  arrows, a screen reader. Right sent within a second of changing Swap Confirm and Back was once lost.
-- 2026-11-22, #720 (stacked on #719): the Settings level is gone; its rows sit in their sections (Cover Size, Text
-  Size, Reduce Motion in Design; Hold to Confirm in Controller; Navigation Sounds, Volume, Exit After Launching in
-  System; Artwork and Metadata headings in Manage, Refresh Metadata under the Wikidata switch through a Blueprint
-  binding). Core: `QuickAccessEntry::{NavigationSounds, Artwork, Metadata}` keep `sections()` right; `Shown.metadata`
-  went. Not seen: the SteamGridDB key row's keyboard (the harness has no keyring, so the row is insensitive there).
-- 2026-11-22, #721 (stacked on #720): Design opens on a row of design cards; `theme.json`'s optional `"preview"` is
-  resolved by `themes::file_inside` (shared with variant stylesheets), a bad one is logged from
-  `Discovery::problems` and the design still lists. The shipped `preview.svg`s and Adwaita's built-in
-  `data/designs/adwaita-preview.svg` are AI-drawn (their LICENSE files and `AI_DISCLOSURE.md` say so). GtkStack keeps
-  clipping after a transition, so the panel turns it off on its two stacks. Not seen: Orca, right to left, a PNG
-  preview.
-- 2026-11-22, #722 (stacked on #721): the menu's main level is Home, Library with its count, Search
-  (`win.drawer-search`, `fullscreen::search_from_menu`) and the first five collections (`INLINE_COLLECTIONS`), All
-  Collections past five; View or X on a collection opens its actions from either level and B returns there (Panels
-  remembers which). Rebinding moved to Quick Access → Controller → Change Buttons (`QuickAccessLevel::Bindings`,
-  `fullscreen_bindings.rs`), beside What Each Button Does. Not seen: more than five collections, Rename from the menu,
-  the menu over a running game.
-- 2026-11-22, #723 (stacked on #722): the menu's Power level and its Exit Fullscreen Mode row became the power dock
-  at the bottom of the menu (`PinduPowerDock` in `fullscreen_power.rs`; `gamescope::session::{power_dock,
-  dock_landing}`): Up from the menu's top lands on Suspend; an action the system does not offer stays, dimmed, takes
-  focus and its label says why. Checked with a fake logind on a private system bus (`DBUS_SYSTEM_BUS_ADDRESS`), so
-  nothing reached the host. Not seen: anything with a running game (asking first, an inhibitor refusal), the Flatpak's
-  `needs_host_access` reason. libadwaita's `.dimmed` barely fades under high contrast.
-- 2026-11-22, #725 (stacked on #723): four layout options in `theme.json` (`panel-sections`, `quick-tiles`,
-  `menu-entries`, `playing-card`; `themes::{PanelSections, QuickTiles, MenuEntries, PlayingCard}`) arrange the menus
-  per design: Adwaita pills, Lobby the defaults, Marquee a side rail, list tiles and a Playing Now banner, Shelves
-  tile shelves and menu shelves. Focus goes through `panels::step_arranged_tile` and `step_shelves`; the panels follow
-  `connect_layout_changed`. At Largest a tile name wider than its tile still breaks inside a word (the panel's width is
-  fixed); menu cards never do (their shelves scroll sideways). Not seen: the banner (no running game in the harness).
-- 2026-11-22, #724 (stacked on #725, the last of the series): each of Adwaita (`data/style.css`, `no-design`), Lobby,
-  Marquee and Shelves styles every menu part and the arrangement it uses. Hooks: the menu's current page row or card
-  has `.current` and the description "Current page" (gtk4-rs 0.11 has no current state); small headings share
-  `.panel-heading`; Shelves' shelves without focus get `.unfocused-shelf` (`quick_section.rs`, `menu_drawer.rs`). The
-  README's two menu pictures were retaken in Lobby with the harness and `cwebp -q 80`. Not seen: the banner and
-  Playing Now cards, the unread count, reduced motion on screen. GTK's own CSS parser in the SDK checks the
-  stylesheets.
+- 2026-11-22, #747 (first of a stack, #747 → … → #744; six issues worked by parallel agents in worktrees
+  `~/.cache/pindu-work/wt-<N>` and stacked at the end so the summaries, the .pot and shared docs do not conflict):
+  the starting screen shows the game's logo (`launch_logo`, `.launch-logo`, 480×160 contained) from the header's
+  texture, the title hidden while it shows; no banner. Without a design the overlay stays dark in the light style
+  (a white logo vanished on the light one). Seen in the harness with a seeded `library.db` of hand-added games that
+  run `sleep 40` (`~/.cache/pindu-work/harness-747/`). Not seen: a screen reader, `--steam` gamescope, held B.
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,
@@ -74,7 +21,8 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   (`key:ctrl+Page_Down`) and `shot:PATH.png`. The host's own desktop games and Flatpaks show up in its library, and
   its first notification is "Added 20 games", so Quick Access opens on Notifications there. The pad is a real host
   device while it runs. Pass `--env GTK_A11Y=none`: without an accessibility bus the first `announce()` crashes the
-  app (#729, also on `main` with the search keyboard).
+  app (#729, also on `main` with the search keyboard). The app gets no system bus (`DBUS_SYSTEM_BUS_ADDRESS` points
+  nowhere): before that, two runs suspended the real PC from the power dock. A fake logind needs its own private bus.
 - Gotchas: `/tmp` is a tmpfs with a per-user quota; keep cargo targets and prefixes in `~/.cache/pindu-work/`, and
   run cargo-mutants (installed in the SDK cargo home) with `TMPDIR` there, `--gitignore true` and
   `CARGO_TARGET_DIR` unset (`sdk.sh` sets one, and parallel workers sharing it test each other's mutants), or it

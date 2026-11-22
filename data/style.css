@@ -462,6 +462,16 @@ window.fullscreen-mode .game-actions button:focus-visible {
   background-color: alpha(var(--window-bg-color), 0.92);
 }
 
+/* A game's logo is light art made for a dark backdrop, so without a design the starting
+   screen keeps the dark style's window colour and white text in the light style too.
+   The shipped designs are always dark. */
+@media (prefers-color-scheme: light) {
+  window.fullscreen-mode.no-design .launch-overlay {
+    background-color: rgb(34 34 38 / 92%);
+    color: white;
+  }
+}
+
 /* The game's description takes focus in fullscreen mode, so a controller can scroll
    through it: a ring around it while it has it. */
 window.fullscreen-mode .game-description {
