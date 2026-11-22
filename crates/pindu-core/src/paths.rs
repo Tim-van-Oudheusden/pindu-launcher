@@ -15,35 +15,34 @@ pub fn data_home(xdg_data_home: Option<&Path>, home: &Path) -> PathBuf {
     }
 }
 
-/// `$XDG_DATA_HOME/pindu-launcher/library.db`.
-pub fn library_db_path(xdg_data_home: Option<&Path>, home: &Path) -> PathBuf {
-    data_home(xdg_data_home, home)
-        .join(APP_DIR)
-        .join("library.db")
+/// [`data_home`] for the current process environment. The library, the user art folder,
+/// the Play with Logs folder and our Proton builds all live under it, so they must
+/// resolve it the same way.
+pub fn default_data_home() -> PathBuf {
+    let xdg_data_home = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from);
+    let home = std::env::home_dir().unwrap_or_default();
+    data_home(xdg_data_home.as_deref(), &home)
+}
+
+/// `$XDG_DATA_HOME/pindu-launcher/library.db`, for the data home `data_home`.
+pub fn library_db_path(data_home: &Path) -> PathBuf {
+    data_home.join(APP_DIR).join("library.db")
 }
 
 /// `$XDG_DATA_HOME/pindu-launcher/art`: art the user picked, which unlike the art cache
 /// cannot be rebuilt.
 pub fn default_user_art_dir() -> PathBuf {
-    let xdg_data_home = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from);
-    let home = std::env::home_dir().unwrap_or_default();
-    data_home(xdg_data_home.as_deref(), &home)
-        .join(APP_DIR)
-        .join("art")
+    default_data_home().join(APP_DIR).join("art")
 }
 
 /// The library path for the current process environment.
 pub fn default_library_db_path() -> PathBuf {
-    let xdg_data_home = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from);
-    let home = std::env::home_dir().unwrap_or_default();
-    library_db_path(xdg_data_home.as_deref(), &home)
+    library_db_path(&default_data_home())
 }
 
 /// `$XDG_DATA_HOME/pindu-launcher/compatibilitytools.d`: our own Proton builds.
 pub fn default_tools_dir() -> PathBuf {
-    let xdg_data_home = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from);
-    let home = std::env::home_dir().unwrap_or_default();
-    data_home(xdg_data_home.as_deref(), &home)
+    default_data_home()
         .join(APP_DIR)
         .join("compatibilitytools.d")
 }
@@ -200,14 +199,14 @@ mod tests {
 
     #[test]
     fn the_library_lives_in_xdg_data_home() {
-        let path = library_db_path(Some(Path::new("/data")), Path::new("/home/me"));
+        let path = library_db_path(&data_home(Some(Path::new("/data")), Path::new("/home/me")));
 
         assert_eq!(path, Path::new("/data/pindu-launcher/library.db"));
     }
 
     #[test]
     fn without_xdg_data_home_the_library_lives_in_local_share() {
-        let path = library_db_path(None, Path::new("/home/me"));
+        let path = library_db_path(&data_home(None, Path::new("/home/me")));
 
         assert_eq!(
             path,
@@ -217,7 +216,7 @@ mod tests {
 
     #[test]
     fn a_relative_xdg_data_home_is_ignored() {
-        let path = library_db_path(Some(Path::new("data")), Path::new("/home/me"));
+        let path = library_db_path(&data_home(Some(Path::new("data")), Path::new("/home/me")));
 
         assert_eq!(
             path,
