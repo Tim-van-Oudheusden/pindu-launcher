@@ -183,8 +183,15 @@ was started from as its source, and the tag is the run's input.
   version; a published tag is never moved.
 - **The publish step fails** (a network or permissions error): run the Release workflow by hand from the Actions tab
   with the tag as input. It rebuilds the tag and replaces the files of an existing release.
-- **A published release is broken:** mark it as a pre-release or delete it on GitHub, and release a fixed patch
-  version. Keep the tag, so the version is never reused.
+- **A published release is broken:** mark it as a pre-release on GitHub, so it is no longer "latest", and release a
+  fixed patch version. Keep the tag, so the version is never reused, and keep the release and its files: never delete
+  it. COPR's `Source0` and `SHA256SUMS`, the AUR `source` and the nixpkgs `src` all download from the release, and so
+  does the [build provenance](#verify-an-rpms-build-provenance) check, so a deleted release stops every recipe
+  building until the fixed version is bumped. Then:
+  - remove `hardware-check:passed` from the "Release X.Y.Z" issue, so Pindu OS does not promote the broken version
+    to `:stable`;
+  - close the `chore/recipes-X.Y.Z` pull request if it is still open, and start no COPR build for the version;
+  - let the fixed version's own [recipe bump](#distribution-recipes) replace it downstream.
 
 ## Hardware checklist
 
