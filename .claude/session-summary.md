@@ -23,6 +23,7 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   fullscreen requests once the window shows, so entering and leaving fullscreen mode can't be seen in the harness.
   The window already needs 704 px wide on `main` (`AdwToolbarView exceeds PinduWindow width`), so it does not fit
   at its 360 px minimum (#750). RTL needs `--env LANG=he_IL.UTF-8` (`LANGUAGE` alone does nothing under `C.UTF-8`).
+  A follow-up after #744 fixed Preferences → Fullscreen's description, which still said "from the main menu".
 - 2026-11-22, #745 (stacked on #746): a capture-phase `GestureClick` on the desktop window blurs the search after a
   click outside it (`setup_search_blur`, `blur_search`), never claiming the click; typing in the library refocuses
   the field (`connect_changed` while `content_stack` has focus). The field is a 159 sp `Adw.Clamp`ed pill
