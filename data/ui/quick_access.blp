@@ -1181,10 +1181,10 @@ template $PinduQuickAccess: Box {
                 }
 
                 // Choice rows on the settings' actions, their options set in code, then
-                // Reduce Motion. Background shows only while the design in force offers
-                // the choice (`home-background-choice`). Choice rows (`PinduChoiceRow`)
-                // change in place with Left and Right, where a drop-down's popover would
-                // be dismissed by a controller press.
+                // Reduce Motion and Button Hints. Background shows only while the design in
+                // force offers the choice (`home-background-choice`). Choice rows
+                // (`PinduChoiceRow`) change in place with Left and Right, where a drop-down's
+                // popover would be dismissed by a controller press.
                 ListBox design_choices {
                   selection-mode: none;
                   margin-top: 6;
@@ -1216,6 +1216,11 @@ template $PinduQuickAccess: Box {
 
                   Adw.SwitchRow reduce_motion_row {
                     title: _("Reduce Motion");
+                  }
+
+                  Adw.SwitchRow hint_bar_row {
+                    title: _("Button Hints");
+                    subtitle: _("Show what each controller button does at the bottom");
                   }
                 }
 

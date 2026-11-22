@@ -178,6 +178,11 @@
       <summary>Reduce motion in fullscreen mode</summary>
       <description>Hold Home's animated background on its first frame and change art without a crossfade in fullscreen mode. Turning off animations in the system settings does the same.</description>
     </key>
+    <key name="fullscreen-hint-bar" type="b">
+      <default>true</default>
+      <summary>Button hints in fullscreen mode</summary>
+      <description>Show the bar at the bottom of fullscreen mode that says what each controller button does, with the controller's glyphs, while a controller is in use. Turning it off changes nothing the buttons do.</description>
+    </key>
     <key name="fullscreen-text-size" type="s">
       <choices>
         <choice value="default"/>

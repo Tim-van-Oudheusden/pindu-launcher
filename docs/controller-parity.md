@@ -58,6 +58,10 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **Changing the buttons.** Quick Access → Controller → Change Buttons gives a function another controller button,
   with Reset to Defaults; What Each Button Does beside it lists what every button and key does. The menu drawer has
   no Controls entry any more. Change Buttons is left out over a running game.
+- **Button Hints.** Quick Access → Design → Button Hints, after Reduce Motion, turns the hint bar at the bottom of
+  fullscreen mode off and on: the main window's bar and the bars under the menu drawer and Quick Access over a running
+  game. It is on by default and the same setting as Preferences → Fullscreen → Button Hints (`fullscreen-hint-bar`).
+  Hidden, the bar leaves no strip behind, and the buttons, the keys and the starting screen do what they did.
 
 ## Flatpak, native and Pindu OS
 
