@@ -273,20 +273,24 @@ Collections** lists every one when you have more. A opens one's tab in the libra
 
 ### Power
 
-The menu drawer (Start or Guide) ends with a **Power** entry, leading to **Suspend**, **Restart** and **Power Off**
-where the system lets you, and then **Exit Pindu Launcher**, so a console without a keyboard can be turned off with a
-controller. B steps back to the drawer's entries.
+Power is the menu drawer's dock (Start or Guide): a row of round buttons at the bottom of the menu, always in view,
+with **Exit Fullscreen Mode**, **Exit Pindu Launcher** and the like at its start and **Suspend**, **Restart** and
+**Power Off** at its end, so a console without a keyboard can be turned off with a controller. Up from the top of the
+menu wraps to it and lands on Suspend, so Suspend is Start, Up, A; Left and Right move along it, and a line over it
+names the focused button.
 
-- An action the system does not allow is greyed out and says so; one the machine cannot do at all is not listed.
+- An action the system does not allow stays in the dock, dimmed: it takes focus, the line says why, and A does
+  nothing. One the machine cannot do at all is not there.
 - While a game Pindu started is running, Restart and Power Off ask first, since its unsaved progress would be lost.
   Suspend does not ask: the game carries on when the machine wakes.
 - With **Hold to Confirm** on in Quick Access's Accessibility or Preferences, Restart and Power Off act only once the
   confirm button has been held down for a second.
 - When a program holds the machine on (an update installing, for example), a notification names it.
+- Over a running game the menu has no dock.
 
 The Flatpak has no access to the system bus, so it asks the host's logind through
-[host access](#starting-games-on-the-host); without it Suspend, Restart and Power Off are greyed out and say Preferences
-gives the access. In a [gamescope-session-plus session](#a-gamescope-session-plus-session) the level also has **Switch
+[host access](#starting-games-on-the-host); without it Suspend, Restart and Power Off are dimmed and say Preferences
+gives the access. In a [gamescope-session-plus session](#a-gamescope-session-plus-session) the dock also has **Switch
 to Desktop**, in the Flatpak too. In the launcher's own session (`--session`, or a `--steam` gamescope whose login
 session is named after gamescope or Pindu) it leaves out Exit Pindu Launcher, since quitting would leave an empty
 screen.
@@ -638,11 +642,11 @@ the client file in `share/gamescope-session-plus/sessions.d/pindu` and the login
 installed.
 
 - The session runs `pindu-launcher --fullscreen --session`. `--session` tells the app that it is the session's
-  client: the session ends when the app quits, so closing its window does nothing, and the drawer's Power level has no
+  client: the session ends when the app quits, so closing its window does nothing, and the menu's power dock has no
   Exit Pindu Launcher. Switch to Desktop, Restart or Power Off leave the session.
-- **Switch to Desktop** in the drawer's Power level runs `/usr/lib/os-session-select desktop`, the distribution's
+- **Switch to Desktop** in the menu's power dock runs `/usr/lib/os-session-select desktop`, the distribution's
   script that switches to the desktop session, and then quits. It asks first while a game Pindu started is running.
-  Where the distribution has no `os-session-select`, the entry is not there.
+  Where the distribution has no `os-session-select`, the button is not there.
 - The client file points `MANGOHUD_CONFIGFILE` at `$XDG_RUNTIME_DIR/pindu-launcher/mangohud.conf`, holding
   `no_display`, and falls back to the desktop (`short_session_recover`) after five sessions in a row that ended within
   a minute.

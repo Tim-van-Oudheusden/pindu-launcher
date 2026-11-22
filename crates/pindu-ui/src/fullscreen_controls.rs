@@ -108,7 +108,7 @@ impl PinduQuickAccess {
 /// the glyph of the button pressed with it for a chord) and the keys that stand in for it,
 /// named for screen readers by the buttons, the keys and what they do. The tab buttons
 /// (LB and RB, Ctrl+Page Up and Ctrl+Page Down) say they switch Quick Access's sections
-/// too.
+/// too, and the menu's buttons that Power is its dock.
 fn control_row(control: &Control, glyphs: Option<Glyphs>) -> adw::ActionRow {
     let action = action_label(control.intent);
     let row = adw::ActionRow::builder()
@@ -119,6 +119,11 @@ fn control_row(control: &Control, glyphs: Option<Glyphs>) -> adw::ActionRow {
     if matches!(control.intent, Intent::PreviousTab | Intent::NextTab) {
         row.set_subtitle(&gettext(
             "Also switches Quick Access's section while it is open",
+        ));
+    }
+    if matches!(control.intent, Intent::Menu | Intent::Home) {
+        row.set_subtitle(&gettext(
+            "Power is the dock at its bottom, a press of Up from its top",
         ));
     }
     let button = control.button.zip(glyphs).map(|(button, glyphs)| {

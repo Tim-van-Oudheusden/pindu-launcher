@@ -1,34 +1,48 @@
 using Gtk 4.0;
 using Adw 1;
 
-// The menu drawer's Power level, the "power" page of the window's drawer stack. Its entry
-// row stays in the window's shared drawer list.
-template $PinduPowerLevel: Adw.Bin {
-  child: ScrolledWindow {
-    hscrollbar-policy: never;
+// The menu drawer's power dock, at the bottom of its main level under the scrolling list:
+// a line naming the focused button, over a row of round buttons, the ways out of the
+// launcher at its start and the machine's at its end. Hidden while it has no buttons.
+template $PinduPowerDock: Adw.Bin {
+  visible: false;
 
-    child: Box {
-      orientation: vertical;
+  styles [
+    "power-dock",
+  ]
+
+  child: Box {
+    orientation: vertical;
+    spacing: 12;
+
+    // The focused button's name, and why it is dimmed when the system does not offer it;
+    // empty while focus is elsewhere. Each button says the same to a screen reader.
+    Label label {
+      wrap: true;
+      wrap-mode: word_char;
+      justify: center;
+      accessible-role: presentation;
+
+      styles [
+        "dock-label",
+      ]
+    }
+
+    Box {
       spacing: 12;
 
-      Label {
-        label: _("Power");
-        xalign: 0;
-
-        styles [
-          "title-3",
-        ]
+      // Exit Fullscreen Mode, Switch to Desktop and Exit Pindu Launcher.
+      Box leaving {
+        spacing: 8;
+        hexpand: true;
+        halign: start;
       }
 
-      // Suspend, Restart and Power Off, filled from what logind allows (the host's in the
-      // Flatpak), then Switch to Desktop and Exit Pindu Launcher where they are offered.
-      ListBox drawer_power {
-        selection-mode: none;
-
-        styles [
-          "navigation-sidebar",
-        ]
+      // Suspend, Restart and Power Off.
+      Box machine {
+        spacing: 8;
+        halign: end;
       }
-    };
+    }
   };
 }

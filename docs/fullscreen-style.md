@@ -335,6 +335,9 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | Name | What |
 |---|---|
 | `.menu-drawer` | The menu drawer on the left: the Playing Now cards, Home, Library, Search, the first collections under a Collections heading, then their levels. Each row's number of games is `.numeric` and `.dim-label` |
+| `.power-dock` | The menu drawer's power dock, under its main level's list: Exit Fullscreen Mode, Switch to Desktop and Exit Pindu Launcher at its start, Suspend, Restart and Power Off at its end |
+| `.dock-button` | A round button of the dock (also `.circular`), at least 52px across, holding only its icon; one the system does not offer has a `.dimmed` icon and still takes focus |
+| `.dock-label` | The line over the dock that names the focused button, and says why a dimmed one is unavailable; empty while focus is elsewhere |
 | `.quick-access` | The Quick Access panel on the right |
 | `.quick-access-status` | The header at the top of Quick Access: `.clock` (the time), `.offline` (shown while there is no network) and `.battery` (the machine's battery, absent without one) |
 | `.panel-sections` | The strip under Quick Access's header that switches its sections (Quick, Notifications, Design, Controller, System and Manage) |

@@ -168,6 +168,8 @@ pub(crate) fn focus_kind(focus: &gtk::Widget) -> Focus {
         match button.action_name().as_deref() {
             Some("app.play") => return Focus::Play,
             Some("app.stop") => return Focus::Stop,
+            // A power dock button the system does not offer, which A leaves alone.
+            None if button.has_css_class("dock-button") => return Focus::Nothing,
             _ => {}
         }
     }

@@ -3,7 +3,7 @@
 //! and the sidebar hide, type grows, controllers are listened to, focus is kept on the
 //! page, Home is the first page, with the library (in tabs) and game pages above it.
 //! Entering and leaving go through `win.fullscreen-mode` (main menu, F11, `--fullscreen`,
-//! Guide) and `win.leave-fullscreen` (the menu drawer's "Exit Fullscreen Mode"); Esc goes
+//! Guide) and `win.leave-fullscreen` (the menu's power dock's Exit Fullscreen Mode); Esc goes
 //! through `win.escape`, which goes back from a Home section's games first.
 //! Keys stand in for the controller's other buttons (`pindu_core::keys`).
 
@@ -226,8 +226,8 @@ impl PinduWindow {
         self.fullscreen();
     }
 
-    /// Leaves fullscreen mode. The menu drawer's "Exit Fullscreen Mode" calls this through
-    /// `win.leave-fullscreen`.
+    /// Leaves fullscreen mode. The menu's power dock's Exit Fullscreen Mode calls this
+    /// through `win.leave-fullscreen`.
     pub fn leave_fullscreen(&self) {
         self.unfullscreen();
     }

@@ -1,26 +1,30 @@
-//! The menu drawer's Power (`pindu_core::system::power`): its entry, last on the drawer's
-//! main level, and its level with Suspend, Restart and Power Off, each greyed out with a
-//! reason when the system does not allow it, then Exit Pindu Launcher, which quits. Natively
-//! the actions ask logind on the system bus; in the Flatpak they ask the host's logind
-//! through host spawn, and without it show greyed out, saying Preferences gives the access.
-//! Restart and Power Off ask first while a game we started runs. As gamescope-session-plus's
-//! client (`--session`, `pindu_core::gamescope::session`) the level also offers Switch to
-//! Desktop, which runs the distribution's `os-session-select desktop` on the host and then
-//! quits, ending the session; it asks first as Restart does. In the launcher's own session
-//! quitting would leave the screen empty, so there Exit is left out. The level is
-//! [`PinduPowerLevel`], with its own Blueprint (`data/ui/fullscreen_power.blp`); the window
-//! keeps the entry, which sits in the drawer's shared list, the level's `win.power-*`
-//! actions and the question asked first. Both show [`SystemPowerService`]'s state and the
-//! window calls it; neither talks to logind itself.
+//! The menu drawer's power dock (`pindu_core::gamescope::session::power_dock`): a row of
+//! round buttons at the bottom of its main level, always in view under the scrolling list.
+//! The ways out of the launcher sit at its start: Exit Fullscreen Mode, Switch to Desktop
+//! and Exit Pindu Launcher, which quits. The machine's sit at its end: Suspend, Restart and
+//! Power Off, each dimmed with a reason when the system does not offer it, which still
+//! takes focus but does nothing. A line over the dock names the focused button. Natively
+//! the machine's actions ask logind on the system bus; in the Flatpak they ask the host's
+//! logind through host spawn, and without it show dimmed, saying Preferences gives the
+//! access. Restart and Power Off ask first while a game we started runs. As
+//! gamescope-session-plus's client (`--session`, `pindu_core::gamescope::session`) the
+//! dock also offers Switch to Desktop, which runs the distribution's `os-session-select
+//! desktop` on the host and then quits, ending the session; it asks first as Restart does.
+//! In the launcher's own session quitting would leave the screen empty, so there Exit is
+//! left out. The dock is [`PinduPowerDock`], with its own Blueprint
+//! (`data/ui/fullscreen_power.blp`); the window keeps the buttons' `win.power-*` actions
+//! and the question asked first. Both show [`SystemPowerService`]'s state and the window
+//! calls it; neither talks to logind itself.
+
+use std::cell::RefCell;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::gamescope::session::{
-    PowerLevelEntry, SwitchToDesktop, asks_before_switching, power_level,
+    DockEntry, DockGroup, SwitchToDesktop, asks_before_switching, dock_landing,
 };
-use pindu_core::panels::{DrawerLevel, Panel};
 use pindu_core::system::power::{PowerAction, PowerEntry, PowerState, asks_first};
 
 use crate::application::PinduApplication;
@@ -33,15 +37,23 @@ mod imp {
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
     #[template(resource = "/io/github/tim_van_oudheusden/pindu-launcher/ui/fullscreen_power.ui")]
-    pub struct PinduPowerLevel {
+    pub struct PinduPowerDock {
         #[template_child]
-        pub drawer_power: TemplateChild<gtk::ListBox>,
+        pub label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub leaving: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub machine: TemplateChild<gtk::Box>,
+        /// The buttons, start to end.
+        pub buttons: RefCell<Vec<gtk::Button>>,
+        /// The button Up from the top of the menu lands on.
+        pub landing: RefCell<Option<gtk::Button>>,
     }
 
     #[glib::object_subclass]
-    impl ObjectSubclass for PinduPowerLevel {
-        const NAME: &'static str = "PinduPowerLevel";
-        type Type = super::PinduPowerLevel;
+    impl ObjectSubclass for PinduPowerDock {
+        const NAME: &'static str = "PinduPowerDock";
+        type Type = super::PinduPowerDock;
         type ParentType = adw::Bin;
 
         fn class_init(klass: &mut Self::Class) {
@@ -53,32 +65,39 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for PinduPowerLevel {}
+    impl ObjectImpl for PinduPowerDock {
+        fn constructed(&self) {
+            self.parent_constructed();
+            // The line names the focused button, and is empty once focus leaves the dock.
+            let focus = gtk::EventControllerFocus::new();
+            focus.connect_leave(glib::clone!(
+                #[weak(rename_to = label)]
+                self.label,
+                move |_| label.set_label("")
+            ));
+            self.obj().add_controller(focus);
+        }
+    }
 
-    impl WidgetImpl for PinduPowerLevel {}
+    impl WidgetImpl for PinduPowerDock {}
 
-    impl BinImpl for PinduPowerLevel {}
+    impl BinImpl for PinduPowerDock {}
 }
 
 glib::wrapper! {
-    /// The menu drawer's Power level: Suspend, Restart and Power Off, as the system allows
-    /// them, Switch to Desktop in a gamescope-session-plus session, and Exit Pindu Launcher
-    /// outside the launcher's own session. It is the `"power"` page of the window's drawer
-    /// stack.
-    pub struct PinduPowerLevel(ObjectSubclass<imp::PinduPowerLevel>)
+    /// The menu drawer's power dock: Exit Fullscreen Mode, Switch to Desktop in a
+    /// gamescope-session-plus session and Exit Pindu Launcher outside the launcher's own
+    /// session at its start; Suspend, Restart and Power Off, as the system offers them, at
+    /// its end. It sits at the bottom of the drawer's main level.
+    pub struct PinduPowerDock(ObjectSubclass<imp::PinduPowerDock>)
         @extends adw::Bin, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
 impl PinduWindow {
-    /// Adds the entry's and the level's actions, and shows the entry as the section is and
-    /// as it changes.
+    /// Adds the dock's actions, and fills the dock as the system's power state is and as
+    /// it changes.
     pub(crate) fn setup_power(&self) {
-        let power = gio::ActionEntry::builder("drawer-power")
-            .activate(|window: &Self, _, _| {
-                window.show_panel(Panel::Drawer(DrawerLevel::Power));
-            })
-            .build();
         let suspend = gio::ActionEntry::builder("power-suspend")
             .activate(|window: &Self, _, _| window.press_power(PowerAction::Suspend))
             .build();
@@ -91,7 +110,7 @@ impl PinduWindow {
         let desktop = gio::ActionEntry::builder("power-desktop")
             .activate(|window: &Self, _, _| window.press_switch_to_desktop())
             .build();
-        self.add_action_entries([power, suspend, restart, power_off, desktop]);
+        self.add_action_entries([suspend, restart, power_off, desktop]);
         let Some(service) = self.system_power_service() else {
             return;
         };
@@ -103,28 +122,11 @@ impl PinduWindow {
         self.show_power_state(&service.state());
     }
 
-    /// The level opens: it lists the actions as last read.
+    /// The drawer opens: the dock shows the actions as last read.
     pub(crate) fn show_power(&self) {
         if let Some(service) = self.system_power_service() {
-            let state = service.state();
-            self.imp()
-                .drawer_panel
-                .power_level()
-                .fill(&self.power_level_entries(&state), state.sandboxed);
+            self.show_power_state(&service.state());
         }
-    }
-
-    /// The Power level's entries for `state`: what the system allows, Switch to Desktop for
-    /// gamescope-session-plus's client, and Exit outside the launcher's own session.
-    pub(crate) fn power_level_entries(&self, state: &PowerState) -> Vec<PowerLevelEntry> {
-        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
-            return Vec::new();
-        };
-        power_level(
-            state,
-            application.session().switch_to_desktop(),
-            !application.runs_as_own_session(),
-        )
     }
 
     fn system_power_service(&self) -> Option<SystemPowerService> {
@@ -133,32 +135,24 @@ impl PinduWindow {
             .map(|application| application.system_power_service().clone())
     }
 
-    /// The level's Switch to Desktop, offered to gamescope-session-plus's client.
+    /// The dock's Switch to Desktop, offered to gamescope-session-plus's client.
     fn switch_to_desktop(&self) -> Option<SwitchToDesktop> {
         self.application()
             .and_downcast::<PinduApplication>()
             .and_then(|application| application.session().switch_to_desktop())
     }
 
-    /// Shows or hides the drawer's entry, and fills the level again while it is open; it
-    /// leaves for the drawer's entries once the level has nothing left to list.
+    /// Fills the drawer's dock for `state`: what the system offers, Switch to Desktop for
+    /// gamescope-session-plus's client, and Exit outside the launcher's own session.
     fn show_power_state(&self, state: &PowerState) {
-        let entries = self.power_level_entries(state);
-        let shown = !entries.is_empty();
-        self.imp().drawer_panel.power_row().set_visible(shown);
-        if self.open_panel() != Some(Panel::Drawer(DrawerLevel::Power)) {
+        let Some(application) = self.application().and_downcast::<PinduApplication>() else {
             return;
-        }
-        if !shown {
-            self.show_panel(Panel::Drawer(DrawerLevel::Main));
-            return;
-        }
-        let level = self.imp().drawer_panel.power_level();
-        let had_focus = level.has_focus();
-        level.fill(&entries, state.sandboxed);
-        if had_focus {
-            self.focus_panel(None);
-        }
+        };
+        self.imp().drawer_panel.fill_dock(
+            state,
+            application.session().switch_to_desktop(),
+            !application.runs_as_own_session(),
+        );
     }
 
     /// Runs `action`, asking first while a game we started runs when it would end it.
@@ -291,128 +285,154 @@ impl PinduWindow {
     }
 }
 
-impl PinduPowerLevel {
-    /// Where focus goes on the level: the first action the system allows, or else the
-    /// first one.
-    pub(crate) fn focus_target(&self) -> Option<gtk::Widget> {
-        let list = &self.imp().drawer_power;
-        std::iter::successors(list.first_child(), |row| row.next_sibling())
-            .find(|row| row.is_sensitive())
-            .or_else(|| list.first_child())
-    }
-
-    /// Whether focus is on one of the level's rows, which filling it again takes away.
-    pub(crate) fn has_focus(&self) -> bool {
-        let list = &self.imp().drawer_power;
-        self.root()
-            .and_then(|root| gtk::prelude::RootExt::focus(&root))
-            .is_some_and(|focus| focus.is_ancestor(&**list))
-    }
-
-    /// The level's rows for `entries`; Suspend, Restart and Power Off not allowed say the
-    /// app needs access outside the sandbox when `sandboxed`, or else that the system does
-    /// not allow them.
-    pub(crate) fn fill(&self, entries: &[PowerLevelEntry], sandboxed: bool) {
-        let list = &self.imp().drawer_power;
-        list.remove_all();
-        for entry in entries {
-            let row = match *entry {
-                PowerLevelEntry::Power(entry) => power_row(entry, sandboxed),
-                PowerLevelEntry::SwitchToDesktop(switch) => {
-                    let allowed = if switch.allowed {
-                        Ok(())
-                    } else {
-                        Err(needs_host_access())
-                    };
-                    level_row(
-                        &gettext("Switch to Desktop"),
-                        "user-desktop-symbolic",
-                        "win.power-desktop",
-                        allowed,
-                    )
+impl PinduPowerDock {
+    /// The dock's buttons for `entries`, start to end, its leaving group at its start and
+    /// its machine group at its end, and where Up from the top of the menu lands. Suspend,
+    /// Restart and Power Off not allowed say the app needs access outside the sandbox when
+    /// `sandboxed`, or else that the system does not allow them. The dock shows while it
+    /// has buttons. A button that had focus gives it to the one now in its place.
+    pub(crate) fn fill(&self, entries: &[DockEntry], sandboxed: bool) {
+        let imp = self.imp();
+        let focused = self.focused();
+        for group in [&imp.leaving, &imp.machine] {
+            while let Some(child) = group.first_child() {
+                group.remove(&child);
+            }
+        }
+        let buttons: Vec<gtk::Button> = entries
+            .iter()
+            .map(|entry| {
+                let button = self.dock_button(*entry, sandboxed);
+                match entry.group() {
+                    DockGroup::Leaving => imp.leaving.append(&button),
+                    DockGroup::Machine => imp.machine.append(&button),
                 }
-                PowerLevelEntry::Exit => level_row(
-                    &gettext("Exit Pindu Launcher"),
-                    "application-exit-symbolic",
-                    "app.quit",
-                    Ok(()),
-                ),
-            };
-            list.append(&row);
+                button
+            })
+            .collect();
+        imp.landing
+            .replace(dock_landing(entries).and_then(|index| buttons.get(index).cloned()));
+        let refocus = focused.and_then(|index| buttons.get(index).or(buttons.last()).cloned());
+        self.set_visible(!buttons.is_empty());
+        imp.buttons.replace(buttons);
+        if let Some(button) = refocus {
+            button.grab_focus();
         }
     }
-}
 
-/// Why an entry is greyed out in the Flatpak without host spawn.
-fn needs_host_access() -> String {
-    gettext("Needs access outside the sandbox, in Preferences")
-}
+    /// The index of the button that has focus, if one does.
+    pub(crate) fn focused(&self) -> Option<usize> {
+        self.imp()
+            .buttons
+            .borrow()
+            .iter()
+            .position(|button| button.is_focus())
+    }
 
-/// The row of an entry of the level: insensitive, saying why, when it is not allowed:
-/// the app needs access outside the sandbox (`sandboxed`), or the system does not allow it.
-fn power_row(entry: PowerEntry, sandboxed: bool) -> gtk::ListBoxRow {
-    let (title, icon, action) = match entry.action {
-        PowerAction::Suspend => (
-            gettext("Suspend"),
-            "media-playback-pause-symbolic",
-            "win.power-suspend",
-        ),
-        PowerAction::Restart => (
-            gettext("Restart"),
-            "system-reboot-symbolic",
-            "win.power-restart",
-        ),
-        PowerAction::PowerOff => (
-            gettext("Power Off"),
-            "system-shutdown-symbolic",
-            "win.power-off",
-        ),
-    };
-    let allowed = if entry.allowed {
-        Ok(())
-    } else if sandboxed {
-        Err(needs_host_access())
-    } else {
-        Err(gettext("Not allowed on this system"))
-    };
-    level_row(&title, icon, action, allowed)
-}
+    /// The button at `index`, start to end.
+    pub(crate) fn button(&self, index: usize) -> Option<gtk::Widget> {
+        self.imp()
+            .buttons
+            .borrow()
+            .get(index)
+            .map(|button| button.clone().upcast())
+    }
 
-/// A row of the level running `action`: insensitive, saying why (`allowed`'s error), when
-/// it is not allowed.
-fn level_row(
-    title: &str,
-    icon: &str,
-    action: &str,
-    allowed: Result<(), String>,
-) -> gtk::ListBoxRow {
-    let content = gtk::Box::builder().spacing(16).build();
-    content.append(
-        &gtk::Image::builder()
+    /// The button Up from the top of the menu lands on
+    /// (`pindu_core::gamescope::session::dock_landing`).
+    pub(crate) fn landing(&self) -> Option<gtk::Widget> {
+        self.imp()
+            .landing
+            .borrow()
+            .clone()
+            .map(|button| button.upcast())
+    }
+
+    /// A round button for `entry`: its icon, with its name as its tooltip and accessible
+    /// label. One the system does not offer is dimmed, has no action, so A does nothing,
+    /// and is exposed as disabled with the reason as its description; it still takes
+    /// focus, so the line over the dock can give the reason.
+    fn dock_button(&self, entry: DockEntry, sandboxed: bool) -> gtk::Button {
+        let (name, icon, action) = match entry {
+            DockEntry::ExitFullscreen => (
+                gettext("Exit Fullscreen Mode"),
+                "view-restore-symbolic",
+                "win.leave-fullscreen",
+            ),
+            DockEntry::SwitchToDesktop(_) => (
+                gettext("Switch to Desktop"),
+                "user-desktop-symbolic",
+                "win.power-desktop",
+            ),
+            DockEntry::Exit => (
+                gettext("Exit Pindu Launcher"),
+                "application-exit-symbolic",
+                "app.quit",
+            ),
+            DockEntry::Power(PowerEntry { action, .. }) => match action {
+                PowerAction::Suspend => (
+                    gettext("Suspend"),
+                    "media-playback-pause-symbolic",
+                    "win.power-suspend",
+                ),
+                PowerAction::Restart => (
+                    gettext("Restart"),
+                    "system-reboot-symbolic",
+                    "win.power-restart",
+                ),
+                PowerAction::PowerOff => (
+                    gettext("Power Off"),
+                    "system-shutdown-symbolic",
+                    "win.power-off",
+                ),
+            },
+        };
+        let image = gtk::Image::builder()
             .icon_name(icon)
             .accessible_role(gtk::AccessibleRole::Presentation)
-            .build(),
-    );
-    let labels = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .hexpand(true)
-        .build();
-    labels.append(&gtk::Label::builder().label(title).xalign(0.0).build());
-    if let Err(reason) = &allowed {
-        labels.append(
-            &gtk::Label::builder()
-                .label(reason)
-                .xalign(0.0)
-                .wrap(true)
-                .css_classes(["caption", "dimmed"])
-                .build(),
-        );
+            .build();
+        let button = gtk::Button::builder()
+            .child(&image)
+            .tooltip_text(&name)
+            .css_classes(["circular", "dock-button"])
+            .build();
+        button.update_property(&[gtk::accessible::Property::Label(&name)]);
+        let line = match unavailable_reason(entry, sandboxed) {
+            None => {
+                button.set_action_name(Some(action));
+                name
+            }
+            Some(reason) => {
+                image.add_css_class("dimmed");
+                button.update_state(&[gtk::accessible::State::Disabled(true)]);
+                button.update_property(&[gtk::accessible::Property::Description(&reason)]);
+                // Translators: what the line over the power dock says on an action the
+                // system does not offer: its name, then why.
+                gettext("{name} — {reason}")
+                    .replace("{name}", &name)
+                    .replace("{reason}", &reason)
+            }
+        };
+        let focus = gtk::EventControllerFocus::new();
+        focus.connect_enter(glib::clone!(
+            #[weak(rename_to = label)]
+            self.imp().label,
+            move |_| label.set_label(&line)
+        ));
+        button.add_controller(focus);
+        button
     }
-    content.append(&labels);
-    let row = gtk::ListBoxRow::builder()
-        .child(&content)
-        .sensitive(allowed.is_ok())
-        .build();
-    row.set_action_name(Some(action));
-    row
+}
+
+/// Why `entry` is dimmed, when the system does not offer it: the app needs access outside
+/// the sandbox (`sandboxed`, and always for Switch to Desktop), or the system does not
+/// allow it.
+fn unavailable_reason(entry: DockEntry, sandboxed: bool) -> Option<String> {
+    if entry.allowed() {
+        None
+    } else if sandboxed || matches!(entry, DockEntry::SwitchToDesktop(_)) {
+        Some(gettext("Needs access outside the sandbox, in Preferences"))
+    } else {
+        Some(gettext("Not allowed on this system"))
+    }
 }

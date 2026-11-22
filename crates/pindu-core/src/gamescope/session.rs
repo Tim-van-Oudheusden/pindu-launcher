@@ -1,9 +1,9 @@
 //! gamescope-session-plus: what changes when the launcher is a session's client, started
 //! with `--session` by the `sessions.d/pindu` client file. session-plus exports nothing
 //! that says so, and the session ends when its client exits, so with the flag closing the
-//! window does not quit the app, and the menu drawer's Power level offers Switch to
-//! Desktop where the distribution has `os-session-select`. Here too is what the Power
-//! level lists ([`power_level`]): in the launcher's own session, the flag's or a `--steam`
+//! window does not quit the app, and the menu drawer's power dock offers Switch to
+//! Desktop where the distribution has `os-session-select`. Here too is what the dock
+//! holds ([`power_dock`]): in the launcher's own session, the flag's or a `--steam`
 //! gamescope's that the display manager started ([`runs_as_own_session`]), it leaves out
 //! Exit Pindu Launcher, as quitting would leave nothing on the screen.
 
@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use crate::launch::Command;
-use crate::system::power::{PowerEntry, PowerState};
+use crate::system::power::{PowerAction, PowerEntry, PowerState};
 
 /// Where the distribution keeps `os-session-select`, on the host.
 const OS_SESSION_SELECT: &str = "/usr/lib/os-session-select";
@@ -28,7 +28,7 @@ pub struct Session {
     pub host_spawn: bool,
 }
 
-/// The Power level's Switch to Desktop entry.
+/// The power dock's Switch to Desktop entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SwitchToDesktop {
     /// Whether the app may run `os-session-select`; when not, the entry shows insensitive
@@ -43,7 +43,7 @@ impl Session {
         !self.client
     }
 
-    /// The Power level's Switch to Desktop entry: offered to a session's client where the
+    /// The power dock's Switch to Desktop entry: offered to a session's client where the
     /// distribution has `os-session-select`, and allowed where the app may run it on the
     /// host.
     pub fn switch_to_desktop(&self) -> Option<SwitchToDesktop> {
@@ -76,31 +76,88 @@ pub fn asks_before_switching(game_running: bool) -> bool {
     game_running
 }
 
-/// An entry of the menu drawer's Power level.
+/// An entry of the menu drawer's power dock.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PowerLevelEntry {
-    /// Suspend, Restart or Power Off, as the system allows it.
-    Power(PowerEntry),
+pub enum DockEntry {
+    /// Exit Fullscreen Mode, which leaves fullscreen mode for the desktop window.
+    ExitFullscreen,
     /// Switch to Desktop, for gamescope-session-plus's client.
     SwitchToDesktop(SwitchToDesktop),
     /// Exit Pindu Launcher, which quits the app.
     Exit,
+    /// Suspend, Restart or Power Off, as the system allows it.
+    Power(PowerEntry),
 }
 
-/// The Power level's entries, top to bottom: Suspend, Restart and Power Off as `power`
-/// lists them, Switch to Desktop where `switch` offers it, then Exit Pindu Launcher where
-/// `exit` says quitting leaves something behind, which is not so in the launcher's own
-/// session (see [`runs_as_own_session`]). The drawer has its Power entry while the level
-/// lists anything.
-pub fn power_level(
+/// One of the power dock's two groups.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DockGroup {
+    /// Leaving the launcher, at the dock's start: Exit Fullscreen Mode, Switch to Desktop
+    /// and Exit Pindu Launcher.
+    Leaving,
+    /// The machine, at the dock's end: Suspend, Restart and Power Off.
+    Machine,
+}
+
+impl DockEntry {
+    /// The group the entry sits in.
+    pub fn group(&self) -> DockGroup {
+        match self {
+            Self::ExitFullscreen | Self::SwitchToDesktop(_) | Self::Exit => DockGroup::Leaving,
+            Self::Power(_) => DockGroup::Machine,
+        }
+    }
+
+    /// Whether the entry can be used. One that cannot stays in the dock, greyed out, and
+    /// still takes focus so it can say why: Switch to Desktop where the app may not run
+    /// `os-session-select` on the host, and an action the system does not allow, or that
+    /// the Flatpak cannot ask for without host access ([`PowerState::sandboxed`]).
+    pub fn allowed(&self) -> bool {
+        match self {
+            Self::ExitFullscreen | Self::Exit => true,
+            Self::SwitchToDesktop(switch) => switch.allowed,
+            Self::Power(entry) => entry.allowed,
+        }
+    }
+}
+
+/// The power dock's entries, start to end, in two groups ([`DockEntry::group`]). Leaving
+/// the launcher: Exit Fullscreen Mode, Switch to Desktop where `switch` offers it, then
+/// Exit Pindu Launcher where `exit` says quitting leaves something behind, which is not so
+/// in the launcher's own session (see [`runs_as_own_session`]). The machine: Suspend,
+/// Restart and Power Off as `power` lists them, including those the system does not allow
+/// ([`DockEntry::allowed`]). Over a running game (`over_game`) the drawer has no dock:
+/// each of them would leave the game or end the session.
+pub fn power_dock(
     power: &PowerState,
     switch: Option<SwitchToDesktop>,
     exit: bool,
-) -> Vec<PowerLevelEntry> {
-    let actions = power.entries.iter().copied().map(PowerLevelEntry::Power);
-    let switch = switch.map(PowerLevelEntry::SwitchToDesktop);
-    let exit = exit.then_some(PowerLevelEntry::Exit);
-    actions.chain(switch).chain(exit).collect()
+    over_game: bool,
+) -> Vec<DockEntry> {
+    if over_game {
+        return Vec::new();
+    }
+    let switch = switch.map(DockEntry::SwitchToDesktop);
+    let exit = exit.then_some(DockEntry::Exit);
+    let actions = power.entries.iter().copied().map(DockEntry::Power);
+    std::iter::once(DockEntry::ExitFullscreen)
+        .chain(switch)
+        .chain(exit)
+        .chain(actions)
+        .collect()
+}
+
+/// Where focus lands in `dock` when Up from the top of the menu wraps to it: Suspend,
+/// which loses nothing, even when the system does not allow it; without it, the first
+/// entry of the machine group; without that group, the dock's first entry. `None` when
+/// there is no dock.
+pub fn dock_landing(dock: &[DockEntry]) -> Option<usize> {
+    let suspend = |entry: &DockEntry| matches!(entry, DockEntry::Power(power) if power.action == PowerAction::Suspend);
+    let machine = |entry: &DockEntry| entry.group() == DockGroup::Machine;
+    dock.iter()
+        .position(suspend)
+        .or_else(|| dock.iter().position(machine))
+        .or_else(|| (!dock.is_empty()).then_some(0))
 }
 
 /// Whether the launcher runs as its own login session, where nothing is left once it
@@ -133,6 +190,7 @@ pub fn runs_as_own_session(
 mod tests {
     use super::*;
     use crate::system::power::{PowerAction, PowerEntry};
+    use DockGroup::{Leaving, Machine};
 
     #[test]
     fn closing_the_window_quits_only_outside_a_session() {
@@ -212,71 +270,128 @@ mod tests {
         }
     }
 
-    #[test]
-    fn the_power_level_lists_the_actions_then_switch_to_desktop_then_exit() {
-        let power = PowerState {
-            entries: PowerAction::ALL.map(allowed).to_vec(),
+    fn every_action(allowed: bool) -> PowerState {
+        PowerState {
+            entries: PowerAction::ALL
+                .map(|action| PowerEntry { action, allowed })
+                .to_vec(),
             ..PowerState::default()
-        };
+        }
+    }
+
+    fn groups(dock: &[DockEntry]) -> Vec<DockGroup> {
+        dock.iter().map(|entry| entry.group()).collect()
+    }
+
+    #[test]
+    fn a_desktop_session_s_dock_leaves_fullscreen_or_quits_then_holds_the_machine() {
+        let dock = power_dock(&every_action(true), None, true, false);
+        assert_eq!(
+            dock,
+            [
+                DockEntry::ExitFullscreen,
+                DockEntry::Exit,
+                DockEntry::Power(allowed(PowerAction::Suspend)),
+                DockEntry::Power(allowed(PowerAction::Restart)),
+                DockEntry::Power(allowed(PowerAction::PowerOff)),
+            ]
+        );
+        assert_eq!(groups(&dock), [Leaving, Leaving, Machine, Machine, Machine]);
+        assert_eq!(dock_landing(&dock), Some(2), "Suspend");
+    }
+
+    #[test]
+    fn a_session_client_s_dock_offers_switch_to_desktop_where_the_session_has_it() {
         let switch = SwitchToDesktop { allowed: true };
+        let dock = power_dock(&every_action(true), Some(switch), false, false);
         assert_eq!(
-            power_level(&power, Some(switch), true),
+            dock,
             [
-                PowerLevelEntry::Power(allowed(PowerAction::Suspend)),
-                PowerLevelEntry::Power(allowed(PowerAction::Restart)),
-                PowerLevelEntry::Power(allowed(PowerAction::PowerOff)),
-                PowerLevelEntry::SwitchToDesktop(switch),
-                PowerLevelEntry::Exit,
+                DockEntry::ExitFullscreen,
+                DockEntry::SwitchToDesktop(switch),
+                DockEntry::Power(allowed(PowerAction::Suspend)),
+                DockEntry::Power(allowed(PowerAction::Restart)),
+                DockEntry::Power(allowed(PowerAction::PowerOff)),
             ]
         );
+        assert_eq!(groups(&dock), [Leaving, Leaving, Machine, Machine, Machine]);
+        assert_eq!(dock_landing(&dock), Some(2), "Suspend");
+
+        let dock = power_dock(&every_action(true), None, false, false);
         assert_eq!(
-            power_level(&power, None, true),
+            dock,
             [
-                PowerLevelEntry::Power(allowed(PowerAction::Suspend)),
-                PowerLevelEntry::Power(allowed(PowerAction::Restart)),
-                PowerLevelEntry::Power(allowed(PowerAction::PowerOff)),
-                PowerLevelEntry::Exit,
+                DockEntry::ExitFullscreen,
+                DockEntry::Power(allowed(PowerAction::Suspend)),
+                DockEntry::Power(allowed(PowerAction::Restart)),
+                DockEntry::Power(allowed(PowerAction::PowerOff)),
             ]
         );
+        assert_eq!(groups(&dock), [Leaving, Machine, Machine, Machine]);
+        assert_eq!(dock_landing(&dock), Some(1), "Suspend");
     }
 
     #[test]
-    fn the_launcher_s_own_session_has_no_exit() {
+    fn the_launcher_s_own_session_has_no_exit_and_lands_on_the_first_machine_action() {
         let power = PowerState {
-            entries: vec![allowed(PowerAction::PowerOff)],
+            entries: vec![
+                allowed(PowerAction::Restart),
+                allowed(PowerAction::PowerOff),
+            ],
             ..PowerState::default()
         };
+        let dock = power_dock(&power, None, false, false);
         assert_eq!(
-            power_level(&power, None, false),
-            [PowerLevelEntry::Power(allowed(PowerAction::PowerOff))]
+            dock,
+            [
+                DockEntry::ExitFullscreen,
+                DockEntry::Power(allowed(PowerAction::Restart)),
+                DockEntry::Power(allowed(PowerAction::PowerOff)),
+            ]
         );
+        assert_eq!(groups(&dock), [Leaving, Machine, Machine]);
+        assert_eq!(dock_landing(&dock), Some(1), "Restart, without Suspend");
     }
 
     #[test]
-    fn exit_alone_still_fills_the_level() {
-        assert_eq!(
-            power_level(&PowerState::default(), None, true),
-            [PowerLevelEntry::Exit]
-        );
-    }
-
-    #[test]
-    fn switch_to_desktop_alone_fills_the_level_and_nothing_at_all_leaves_it_empty() {
+    fn without_power_actions_the_dock_holds_only_the_ways_out_and_lands_on_the_first() {
         let none = PowerState::default();
-        let restart = PowerState {
-            entries: vec![allowed(PowerAction::Restart)],
-            ..PowerState::default()
-        };
-        let switch = Some(SwitchToDesktop { allowed: false });
-        assert!(power_level(&none, None, false).is_empty());
+        let dock = power_dock(&none, None, true, false);
+        assert_eq!(dock, [DockEntry::ExitFullscreen, DockEntry::Exit]);
+        assert_eq!(groups(&dock), [Leaving, Leaving]);
+        assert_eq!(dock_landing(&dock), Some(0));
+
+        let dock = power_dock(&none, None, false, false);
         assert_eq!(
-            power_level(&none, switch, false),
-            [PowerLevelEntry::SwitchToDesktop(SwitchToDesktop {
-                allowed: false
-            })]
+            dock,
+            [DockEntry::ExitFullscreen],
+            "the launcher's own session"
         );
-        assert!(!power_level(&restart, None, false).is_empty());
-        assert!(!power_level(&restart, switch, false).is_empty());
+        assert_eq!(dock_landing(&dock), Some(0));
+    }
+
+    #[test]
+    fn actions_the_system_does_not_offer_stay_in_the_dock_unavailable_and_take_the_wrap() {
+        let sandboxed = PowerState {
+            sandboxed: true,
+            ..every_action(false)
+        };
+        let switch = SwitchToDesktop { allowed: false };
+        let dock = power_dock(&sandboxed, Some(switch), false, false);
+        assert_eq!(
+            dock.iter().map(DockEntry::allowed).collect::<Vec<_>>(),
+            [true, false, false, false, false]
+        );
+        assert_eq!(groups(&dock), [Leaving, Leaving, Machine, Machine, Machine]);
+        assert_eq!(dock_landing(&dock), Some(2), "Suspend, though unavailable");
+    }
+
+    #[test]
+    fn over_a_running_game_the_drawer_has_no_dock() {
+        let switch = SwitchToDesktop { allowed: true };
+        let dock = power_dock(&every_action(true), Some(switch), true, true);
+        assert!(dock.is_empty());
+        assert_eq!(dock_landing(&dock), None);
     }
 
     fn desktop(name: &'static str, value: &'static str) -> impl Fn(&str) -> Option<String> {

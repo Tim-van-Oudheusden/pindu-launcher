@@ -2,15 +2,20 @@
 //! [`PinduMenuDrawer`], with its own Blueprint (`data/ui/menu_drawer.blp`). It holds the
 //! level stack: the main level with the Playing Now cards (`fullscreen_playing`) and the
 //! places (Home, Library with its number of games, Search with the glyph of the button
-//! that searches, and the first collections under a Collections heading), every collection,
-//! one collection's actions, and Power (`fullscreen_power`).
+//! that searches, and the first collections under a Collections heading), every
+//! collection, and one collection's actions. Under the main level's scrolling list sits the
+//! power dock (`fullscreen_power`), with the ways out of the launcher and the machine's
+//! power actions. Up from the main level's first item wraps to the dock, Down from the
+//! list's last row enters it; Up from the dock goes back to the list's last row, and Left
+//! and Right move along it, stopping at its ends.
 //!
 //! Which level is open is the host's (`pindu_core::panels::Panels`): the host shows a
-//! level with `show_level` and fills the entries with `fill` as the library changes; the
-//! rows' `win.*` actions are the host's. The main window hosts it on the left, where Start
-//! or Guide opens it over the page. Over a running game in a `--steam` gamescope the
-//! overlay window (`game_overlay`) hosts it too, where Guide opens it over the game and it
-//! leaves out what would leave the game or end the session (`set_over_game`).
+//! level with `show_level` and fills the entries with `fill` and the dock with `fill_dock`
+//! as the library and the system change; the rows' and the dock's `win.*` actions are the
+//! host's. The main window hosts it on the left, where Start or Guide opens it over the
+//! page. Over a running game in a `--steam` gamescope the overlay window (`game_overlay`)
+//! hosts it too, where Guide opens it over the game and it leaves out what would leave the
+//! game or end the session (`set_over_game`), the dock among them.
 
 use std::cell::{Cell, OnceCell, RefCell};
 
@@ -20,17 +25,19 @@ use gtk::glib;
 use gtk::prelude::*;
 use pindu_core::gamepad::{Intent, Layout};
 use pindu_core::gamescope::Xid;
+use pindu_core::gamescope::session::{SwitchToDesktop, power_dock};
 use pindu_core::hints;
 use pindu_core::library::View;
 use pindu_core::model::Collection;
 use pindu_core::panels::{
     CollectionAction, DrawerEntry, DrawerLevel, collection_actions, drawer_entries,
 };
+use pindu_core::system::power::PowerState;
 
 use crate::collection_actions::collection_icon;
 use crate::fullscreen_panels::drawer_row;
 use crate::fullscreen_playing::PlayingCards;
-use crate::fullscreen_power::PinduPowerLevel;
+use crate::fullscreen_power::PinduPowerDock;
 use crate::hint_bar::{GLYPH_SIZE, glyph_label};
 use crate::models::LibraryModel;
 
@@ -61,17 +68,15 @@ mod imp {
         #[template_child]
         pub all_collections_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
-        pub exit_fullscreen_row: TemplateChild<gtk::ListBoxRow>,
+        pub dock_holder: TemplateChild<adw::Bin>,
         #[template_child]
-        pub power_row: TemplateChild<gtk::ListBoxRow>,
+        pub dock: TemplateChild<PinduPowerDock>,
         #[template_child]
         pub collections: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub collection_title: TemplateChild<gtk::Label>,
         #[template_child]
         pub collection_actions: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub power_level: TemplateChild<PinduPowerLevel>,
         /// The first collections' rows in the main level's entries, before All Collections.
         pub inline: RefCell<Vec<gtk::ListBoxRow>>,
         /// Whether the drawer is hosted over a running game.
@@ -91,7 +96,7 @@ mod imp {
         type ParentType = gtk::Box;
 
         fn class_init(klass: &mut Self::Class) {
-            PinduPowerLevel::ensure_type();
+            PinduPowerDock::ensure_type();
             klass.bind_template();
         }
 
@@ -170,16 +175,28 @@ mod imp {
         }
     }
 
-    impl WidgetImpl for PinduMenuDrawer {}
+    impl WidgetImpl for PinduMenuDrawer {
+        /// Moves to, from and along the power dock where it lies that way, before the
+        /// focused widget's own lists and boxes move focus.
+        fn focus(&self, direction: gtk::DirectionType) -> bool {
+            match self.obj().dock_step(direction) {
+                Some(target) => {
+                    target.grab_focus();
+                    true
+                }
+                None => self.parent_focus(direction),
+            }
+        }
+    }
 
     impl BoxImpl for PinduMenuDrawer {}
 }
 
 glib::wrapper! {
     /// Fullscreen mode's menu drawer: the Playing Now cards, Home, Library, Search, the
-    /// first collections, All Collections, leaving fullscreen mode and Power, with every
-    /// collection, one collection's actions and Power as levels of their own; quitting is
-    /// on the Power level.
+    /// first collections and All Collections, over the power dock with leaving fullscreen
+    /// mode, quitting and the machine's power actions; every collection and one
+    /// collection's actions are levels of their own.
     pub struct PinduMenuDrawer(ObjectSubclass<imp::PinduMenuDrawer>)
         @extends gtk::Box, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
@@ -192,26 +209,24 @@ impl PinduMenuDrawer {
     }
 
     /// Leaves out the entries that would leave the game, leave fullscreen mode or end the
-    /// session, for the drawer over a running game: Search, Exit Fullscreen Mode and
-    /// Power, which holds Exit.
+    /// session, for the drawer over a running game: Search, and the power dock, which
+    /// `fill_dock` then leaves empty.
     pub(crate) fn set_over_game(&self) {
         let imp = self.imp();
         imp.over_game.set(true);
         imp.search_row.set_visible(false);
-        imp.exit_fullscreen_row.set_visible(false);
-        imp.power_row.set_visible(false);
     }
 
     /// Shows the entries that apply (`pindu_core::panels::drawer_entries`) as `library`
     /// now is: Library's number of games, the first collections under a Collections
-    /// heading, each with its number of games, All Collections when there are more, and
-    /// Power while `power` says its level lists anything; and every collection in the
-    /// Collections level. A collection that had focus keeps it.
-    pub(crate) fn fill(&self, library: &LibraryModel, power: bool) {
+    /// heading, each with its number of games, and All Collections when there are more;
+    /// and every collection in the Collections level. A collection that had focus keeps
+    /// it.
+    pub(crate) fn fill(&self, library: &LibraryModel) {
         let imp = self.imp();
         let collections = library.collections();
         let counts = library.counts();
-        let entries = drawer_entries(false, collections.len(), imp.over_game.get(), power);
+        let entries = drawer_entries(false, collections.len(), imp.over_game.get());
         let library_count = counts.get(View::All);
         imp.library_count.set_label(&library_count.to_string());
         imp.library_row
@@ -222,10 +237,6 @@ impl PinduMenuDrawer {
             .set_visible(entries.contains(&DrawerEntry::Search));
         imp.all_collections_row
             .set_visible(entries.contains(&DrawerEntry::AllCollections));
-        imp.exit_fullscreen_row
-            .set_visible(entries.contains(&DrawerEntry::ExitFullscreen));
-        imp.power_row
-            .set_visible(entries.contains(&DrawerEntry::Power));
         let focused = self.focused_collection();
         let row_for = |collection: &Collection| {
             collection_row(
@@ -404,20 +415,21 @@ impl PinduMenuDrawer {
         true
     }
 
-    /// Shows `level`.
+    /// Shows `level`, with the power dock under the main level.
     pub(crate) fn show_level(&self, level: DrawerLevel) {
-        self.imp().stack.set_visible_child_name(match level {
+        let imp = self.imp();
+        imp.stack.set_visible_child_name(match level {
             DrawerLevel::Main => "main",
             DrawerLevel::Collections => "collections",
             DrawerLevel::Collection => "collection",
-            DrawerLevel::Power => "power",
         });
+        imp.dock_holder.set_visible(level == DrawerLevel::Main);
     }
 
     /// Where focus goes as `level` shows, after `left` (the level focus comes from): the
     /// entry that led to a level just left (the collection whose actions were shown, or
     /// All Collections when it is no longer among the entries), the first Playing Now
-    /// card's Return, or the level's first entry. Power's own focus is its host's.
+    /// card's Return, or the level's first entry.
     pub(crate) fn focus_target(
         &self,
         level: DrawerLevel,
@@ -429,7 +441,6 @@ impl PinduMenuDrawer {
             (DrawerLevel::Main, Some(DrawerLevel::Collections)) => {
                 Some(imp.all_collections_row.get().upcast())
             }
-            (DrawerLevel::Main, Some(DrawerLevel::Power)) => Some(imp.power_row.get().upcast()),
             (DrawerLevel::Main, Some(DrawerLevel::Collection)) => {
                 let shown = imp.collection.get();
                 let inline = imp.inline.borrow();
@@ -459,19 +470,92 @@ impl PinduMenuDrawer {
             }
             (DrawerLevel::Collections, _) => first_row(&imp.collections),
             (DrawerLevel::Collection, _) => first_row(&imp.collection_actions),
-            (DrawerLevel::Power, _) => imp.power_level.focus_target(),
         }
     }
 
-    /// The drawer's Power level.
-    pub(crate) fn power_level(&self) -> &PinduPowerLevel {
-        &self.imp().power_level
+    /// Fills the power dock (`pindu_core::gamescope::session::power_dock`) for `state`,
+    /// with `switch` for gamescope-session-plus's client and Exit when `exit`; over a
+    /// running game it stays empty. Focus on a button that goes away moves to the list's
+    /// last row.
+    pub(crate) fn fill_dock(
+        &self,
+        state: &PowerState,
+        switch: Option<SwitchToDesktop>,
+        exit: bool,
+    ) {
+        let imp = self.imp();
+        let had_focus = imp.dock.focused().is_some();
+        let entries = power_dock(state, switch, exit, imp.over_game.get());
+        imp.dock.fill(&entries, state.sandboxed);
+        if had_focus
+            && entries.is_empty()
+            && let Some(row) = last_row(&imp.list)
+        {
+            row.grab_focus();
+        }
     }
 
-    /// The drawer's Power entry.
-    pub(crate) fn power_row(&self) -> &gtk::ListBoxRow {
-        &self.imp().power_row
+    /// Where `direction` takes focus to, from or along the power dock, while the main
+    /// level shows it: from the main level's first item (a Playing Now card's buttons, or
+    /// else Home) Up wraps to where the dock lands; Down from the list's last row enters
+    /// the dock at its first button; on the dock Up goes to the list's last row, Down
+    /// stays, and Left and Right move along it and stop at its ends. `None` where the
+    /// dock has no part in the move.
+    fn dock_step(&self, direction: gtk::DirectionType) -> Option<gtk::Widget> {
+        let imp = self.imp();
+        let dock = &imp.dock;
+        if !dock.is_visible() || !imp.dock_holder.is_visible() {
+            return None;
+        }
+        let focus = gtk::prelude::RootExt::focus(&self.root()?)?;
+        if let Some(index) = dock.focused() {
+            let rtl = self.direction() == gtk::TextDirection::Rtl;
+            let along = |forward: bool| {
+                let next = if forward {
+                    index.checked_add(1)
+                } else {
+                    index.checked_sub(1)
+                };
+                next.and_then(|next| dock.button(next))
+                    .or(Some(focus.clone()))
+            };
+            return match direction {
+                gtk::DirectionType::Up => last_row(&imp.list).or(Some(focus)),
+                gtk::DirectionType::Down => Some(focus),
+                gtk::DirectionType::Left => along(rtl),
+                gtk::DirectionType::Right => along(!rtl),
+                _ => None,
+            };
+        }
+        match direction {
+            gtk::DirectionType::Up if self.is_first_item(&focus) => dock.landing(),
+            gtk::DirectionType::Down if last_row(&imp.list).is_some_and(|row| row == focus) => {
+                dock.button(0)
+            }
+            _ => None,
+        }
     }
+
+    /// Whether `focus` is on the main level's first item: a button of the first Playing
+    /// Now card while a game runs, or else Home.
+    fn is_first_item(&self, focus: &gtk::Widget) -> bool {
+        let imp = self.imp();
+        if imp.playing_cards.is_visible() {
+            return imp
+                .playing_cards
+                .first_child()
+                .is_some_and(|card| focus.is_ancestor(&card));
+        }
+        imp.list
+            .row_at_index(0)
+            .is_some_and(|home| home.upcast_ref::<gtk::Widget>() == focus)
+    }
+}
+
+/// The last row of `list` that shows.
+fn last_row(list: &gtk::ListBox) -> Option<gtk::Widget> {
+    std::iter::successors(list.last_child(), |row| row.prev_sibling())
+        .find(|row| row.is_visible() && row.is::<gtk::ListBoxRow>())
 }
 
 /// The index of the row of `list` that has focus, if one does.

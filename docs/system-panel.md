@@ -14,7 +14,7 @@ the panel; where this page and an issue disagree, the issue wins.
 
 | Section | Place | Why |
 | --- | --- | --- |
-| Power | A **Power** entry, last in the menu drawer, leading to **Suspend**, **Restart**, **Power off** and **Exit Pindu Launcher** (#457) | The drawer already holds the ways out (Exit Fullscreen); Steam's Main Menu puts Power, with its Exit, in the same place |
+| Power | The menu drawer's **power dock**, a row of round buttons at the bottom of its main level, always in view: **Exit Fullscreen Mode**, **Switch to Desktop** and **Exit Pindu Launcher** at its start, **Suspend**, **Restart** and **Power off** at its end (#723). Up from the top of the menu wraps to it and lands on Suspend | The drawer already holds the ways out; leaving is what a console does most often there, so it is one press from the menu's top. Steam's Main Menu puts Power, with its Exit, in the same place |
 | Network | A **Network** entry in Quick Access → System, and in Quick, subtitled with the connection (`Wired`, the Wi-Fi network's name, `Offline`) | Quick Access holds the settings a player changes mid-session |
 | Bluetooth | A **Bluetooth** entry in Quick Access → System, and in Quick, subtitled with the connected devices | As above |
 | Audio output | A **Sound Output** entry in Quick Access → System, and in Quick, subtitled with the output in use | As above |
@@ -22,7 +22,7 @@ the panel; where this page and an issue disagree, the issue wins.
 
 Each Quick Access entry leads to a level of its own (`QuickAccessLevel::Network`, `Bluetooth`, `SoundOutput`,
 `SystemUpdate`), and B steps back to the section the level was opened from: Quick for the three it repeats, System
-otherwise. Both rows of an entry show the same second line. The drawer's Power entry leads to `DrawerLevel::Power`.
+otherwise. Both rows of an entry show the same second line. Power has no level: its actions are the drawer's dock.
 A passphrase or PIN is typed in a dialog with the on-screen keyboard, which takes the buttons first, as dialogs do
 today. Every entry uses stock libadwaita rows; nothing is styled beyond what the designs already style. The sections
 are described in [Fullscreen menus](fullscreen-menus.md).
@@ -62,22 +62,26 @@ session bus. No crate is added.
 
 ### Power
 
+Power is the menu drawer's dock (`pindu_core::gamescope::session::power_dock`), described in
+[Fullscreen menus](fullscreen-menus.md#the-power-dock). Over a running game the drawer has no dock.
+
 Service: logind, `org.freedesktop.login1` on the system bus. In the Flatpak, with the host-spawn override, the same
 calls go to the host's logind as `busctl --system --json=short call … org.freedesktop.login1.Manager <Method>` through
 `flatpak-spawn --host` (`host_logind_backend.rs`, parsed by `system::power::busctl`); it does not follow logind
-coming and going. Without the override, Suspend, Restart and Power off show greyed out with "Needs access outside the
-sandbox, in Preferences", as Switch to Desktop does.
+coming and going. Without the override, Suspend, Restart and Power off show dimmed, and the line over the dock says
+"Needs access outside the sandbox, in Preferences" when one has focus, as Switch to Desktop does.
 
 - **Suspend**, **Restart** and **Power off** call `Manager.Suspend`, `Manager.Reboot` and `Manager.PowerOff` with
   `interactive = true`. Each shows only when the matching `CanSuspend`, `CanReboot` or `CanPowerOff` answers `yes` or
-  `challenge` (rule 4 above for `no`; `na` hides it).
+  `challenge` (rule 4 above for `no`: it stays in the dock dimmed, takes focus, says why and does nothing on A; `na`
+  hides it).
 - While a game the launcher started is running, Restart and Power off first ask in a dialog naming the game ("Power
   off while *Game* is running? Unsaved progress is lost"). Suspend does not ask.
 - A block inhibitor that stops the action (logind refuses the call) is reported as an in-app notification naming who
   holds it (`ListInhibitors`), not as a failure of the launcher.
-- **Exit Pindu Launcher** follows them and quits (`app.quit`). It is left out in the launcher's own session
-  (`--session`, or a `--steam` gamescope whose login session's `XDG_SESSION_DESKTOP`, else `DESKTOP_SESSION`, names
-  gamescope or Pindu), where quitting would leave an empty screen. The main level has no Quit of its own.
+- **Exit Pindu Launcher** quits (`app.quit`). It is left out in the launcher's own session (`--session`, or a
+  `--steam` gamescope whose login session's `XDG_SESSION_DESKTOP`, else `DESKTOP_SESSION`, names gamescope or
+  Pindu), where quitting would leave an empty screen. The main level has no Quit of its own.
 
 ### Network
 
@@ -159,7 +163,7 @@ the services; they never talk to the bus or spawn a process themselves.
 | Section | Core module (pure logic and the trait) | UI backend | UI service | UI level |
 | --- | --- | --- | --- | --- |
 | Availability | `system` (the rules in [What is available](#what-is-available), from facts the backends report) | | | |
-| Power | `system::power` (`PowerBackend`), `system::power::busctl` | `logind_backend.rs`, `host_logind_backend.rs` (Flatpak) | `system_power_service.rs` | `PinduPowerLevel` (`fullscreen_power.rs`), `data/ui/fullscreen_power.blp` |
+| Power | `system::power` (`PowerBackend`), `system::power::busctl` | `logind_backend.rs`, `host_logind_backend.rs` (Flatpak) | `system_power_service.rs` | `PinduPowerDock` (`fullscreen_power.rs`), `data/ui/fullscreen_power.blp` |
 | Network | `system::network` (`NetworkBackend`) | `networkmanager_backend.rs` | `network_service.rs` | `PinduNetworkLevel` (`fullscreen_network.rs`), `data/ui/fullscreen_network.blp` |
 | Bluetooth | `system::bluetooth` (`BluetoothBackend`) | `bluez_backend.rs` | `bluetooth_service.rs` | `PinduBluetoothLevel` (`fullscreen_bluetooth.rs`), `data/ui/fullscreen_bluetooth.blp` |
 | Audio output | `system::audio` (`AudioBackend`, `pw-dump` parser) | `wireplumber_backend.rs` | `audio_output_service.rs` | `PinduSoundOutputLevel` (`fullscreen_sound_output.rs`), `data/ui/fullscreen_sound_output.blp` |
@@ -176,8 +180,8 @@ the services; they never talk to the bus or spawn a process themselves.
 - The panel's levels and entries extend `panels.rs` (`DrawerLevel`, `QuickAccessLevel`, `drawer_entries`).
 - Each section's level is its own composite widget with its own Blueprint (the UI level column), a single child of its
   page in the panel's Blueprint, as `HomePage` is: `quick_access.blp` for Quick Access's levels, which belong to the
-  `PinduQuickAccess` widget (#403), and `window.blp` for the drawer's Power. The section's entry stays in its
-  section's list in that panel (`pindu_core::panels::section_entries`). Moving a level keeps its action names
+  `PinduQuickAccess` widget (#403), and `fullscreen_power.blp` for the drawer's power dock. The section's entry stays
+  in its section's list in that panel (`pindu_core::panels::section_entries`). Moving a level keeps its action names
   (`win.*`), the widget names controller focus finds its rows by, and the style classes in
   [Fullscreen style](fullscreen-style.md); its rows stay direct children of their list boxes.
 

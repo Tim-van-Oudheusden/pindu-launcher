@@ -4,7 +4,7 @@
 # The session ends when the client exits.
 
 # --session: this process is the session's client, so closing its window does not quit,
-# and the Power level offers Switch to Desktop.
+# and the menu's power dock offers Switch to Desktop.
 CLIENTCMD="pindu-launcher --fullscreen --session"
 
 # MangoApp's settings file, in a folder of the launcher's own instead of the /tmp file

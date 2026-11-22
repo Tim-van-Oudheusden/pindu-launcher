@@ -26,9 +26,8 @@ The drawer is a full-height panel that slides out from the left. Its main level 
    icon, its name and its number of games. A long name ends in an ellipsis; the number stays in view. A opens the
    collection's tab in the library. With no collections the heading and the rows are left out.
 6. **All Collections**, only with more than five: leads to the Collections level, which lists every one.
-7. **Exit Fullscreen Mode** and **Power** (when its level lists anything).
 
-Over a running game (`game_overlay`) the drawer leaves out Search, Exit Fullscreen Mode and Power.
+Over a running game (`game_overlay`) the drawer leaves out Search and the power dock.
 
 - View or X on a collection, in the main level or in the Collections level, leads to its actions: Rename…, Move Up,
   Move Down and Delete…. The hint bar shows View while a collection has focus. B goes back to where they were opened
@@ -37,6 +36,36 @@ Over a running game (`game_overlay`) the drawer leaves out Search, Exit Fullscre
 - The rows follow the library as collections are added, renamed, reordered and deleted, and as the numbers of games
   change. Deleting the collection whose actions show goes back to where they were opened from.
 - The menu has no Controls: what each button does and changing the buttons are in Quick Access's Controller section.
+
+## The power dock
+
+Power is the menu's dock: a row of round buttons at the bottom of the main level, under its scrolling list, so it
+stays in view however many collections there are (`PinduPowerDock`, `crates/pindu-ui/src/fullscreen_power.rs`,
+`data/ui/fullscreen_power.blp`). What it holds is `pindu_core::gamescope::session::power_dock`, in two groups:
+
+- **Leaving the launcher**, at its start: **Exit Fullscreen Mode**, **Switch to Desktop** in a gamescope-session-plus
+  session, and **Exit Pindu Launcher** outside the launcher's own session.
+- **The machine**, at its end: **Suspend**, **Restart** and **Power Off**, as the system lists them.
+
+Each button is an icon, with its name as its tooltip and its accessible label. A line over the dock names the focused
+button, and is empty while focus is elsewhere. An action the system does not offer stays in the dock, dimmed, and
+still takes focus: the line gives the reason (the system does not allow it, or in the Flatpak that Preferences gives
+the access), A does nothing, and a screen reader hears it as disabled with the reason. The buttons run the same
+actions the Power level's rows did, so Hold to Confirm, asking first while a game runs and an inhibitor's refusal
+work as before; the hold's progress shows over the round button. The rules are in
+[System panel](system-panel.md#power).
+
+Focus:
+
+- Up from the main level's first item (a Playing Now card's buttons while a game runs, else Home) wraps to the dock
+  and lands on Suspend; without it, on the machine group's first button; without that group, on the dock's first
+  button (`pindu_core::gamescope::session::dock_landing`). Suspend is Start, Up, A.
+- Down from the list's last row enters the dock at its first button. Up from the dock goes back to the list's last
+  row; Down stays.
+- Left and Right move along the dock and stop at its ends. Power Off is Start, Up, Right, Right, A.
+- The menu still opens on the first Playing Now card's Return, or on Home.
+- The hint bar says what A does on the focused button: Select, Hold for Restart and Power Off while Hold to Confirm is
+  on, and nothing on a dimmed one.
 
 ## Quick Access's sections
 
@@ -166,7 +195,8 @@ unread count.
 ## The Controller section's levels
 
 - **What Each Button Does** lists every button and key and what it does in fullscreen mode, in groups, with the
-  glyphs of the controller in use.
+  glyphs of the controller in use. The Menu rows add that Power is the dock at the menu's bottom, a press of Up from
+  its top.
 - **Change Buttons** lists the functions a controller button can be given, each with its button, then **Reset to
   Defaults**. Choosing one shows "Press a button…" and takes the next press; Guide, or a few seconds without a press,
   leaves it as it was. The hints, the menu's Search and What Each Button Does follow a change at once.

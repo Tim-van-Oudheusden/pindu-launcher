@@ -9,7 +9,7 @@
 //! dismisses on a controller press. Quick Access is a widget of its own, `PinduQuickAccess`
 //! (`quick_access`), which the window hosts as the sidebar of its `quick_access` split
 //! view: the window tells it which level and section show and what lies under it, and does
-//! what it asks for. The drawer's Power level is `fullscreen_power`'s.
+//! what it asks for. The drawer's power dock is `fullscreen_power`'s.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -474,9 +474,6 @@ impl PinduWindow {
         if quick_access_level.is_some() && !matches!(before, Some(Panel::QuickAccess(_))) {
             self.show_page_entries();
         }
-        if open == Some(Panel::Drawer(DrawerLevel::Power)) {
-            self.show_power();
-        }
         let drawer = matches!(open, Some(Panel::Drawer(_)));
         let quick_access = quick_access_level.is_some();
         let sheet = matches!(open, Some(Panel::Options(_)));
@@ -574,15 +571,11 @@ impl PinduWindow {
         }
     }
 
-    /// The drawer's entries as the library now is, with its Power entry. Its Playing Now
-    /// cards are `fullscreen_playing`'s.
+    /// The drawer's entries as the library now is, and its power dock as the system's
+    /// power state is. Its Playing Now cards are `fullscreen_playing`'s.
     fn fill_drawer(&self) {
-        let application = self.application().and_downcast::<PinduApplication>();
-        let power = application.as_ref().is_some_and(|application| {
-            let state = application.system_power_service().state();
-            !self.power_level_entries(&state).is_empty()
-        });
-        self.imp().drawer_panel.fill(self.library(), power);
+        self.imp().drawer_panel.fill(self.library());
+        self.show_power();
     }
 
     /// The sheet's title and actions for `game`, its performance switches for a game we

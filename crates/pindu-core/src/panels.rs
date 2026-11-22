@@ -1,8 +1,9 @@
-//! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go,
-//! leaving, and the machine's power), the Quick Access panel on the right, in six sections
-//! LB and RB switch between (Quick, Notifications, Design, Controller, System and Manage;
-//! see [`section_entries`]), some of whose entries lead to a level, and the options sheet
-//! at the bottom (what to do with one game).
+//! Fullscreen mode's panels over its pages: the menu drawer on the left (where to go, and
+//! at its bottom the power dock for leaving and the machine's power; see
+//! [`crate::gamescope::session::power_dock`]), the Quick Access panel on the right, in
+//! six sections LB and RB switch between (Quick, Notifications, Design, Controller,
+//! System and Manage; see [`section_entries`]), some of whose entries lead to a level,
+//! and the options sheet at the bottom (what to do with one game).
 //! This decides which one is open, at which level and section, what Start, Guide, R3,
 //! View or X, LB, RB and B do to them, and what each lists.
 
@@ -35,9 +36,6 @@ pub enum DrawerLevel {
     /// One collection's actions: rename, move up or down, and delete (see
     /// [`collection_actions`]).
     Collection,
-    /// Suspend, Restart and Power Off, as the system allows them (see
-    /// [`crate::system::power`]), and Exit Pindu Launcher.
-    Power,
 }
 
 /// What the options sheet shows: the game's actions, or one of the lists an action leads
@@ -704,29 +702,16 @@ pub enum DrawerEntry {
     /// Lead to every collection ([`DrawerLevel::Collections`]), when there are more than
     /// [`INLINE_COLLECTIONS`].
     AllCollections,
-    /// Leave fullscreen mode for the desktop window.
-    ExitFullscreen,
-    /// Lead to suspending, restarting and powering off the machine, and to quitting
-    /// ([`DrawerLevel::Power`]).
-    Power,
 }
 
 /// The drawer's entries, top to bottom: a Playing Now card while a game we started runs
-/// (`playing`), Home, Library and Search, the first [`INLINE_COLLECTIONS`] of the
-/// `collections` and All Collections when there are more, then Exit Fullscreen Mode, and
-/// Power last while its level lists anything (`power`;
-/// [`crate::gamescope::session::power_level`]), which it does except in the launcher's own
-/// session on a system that offers none of its actions. Over a running game (`over_game`)
-/// the drawer leaves out Search, Exit Fullscreen Mode and Power: what would leave the game
-/// or end the session.
-pub fn drawer_entries(
-    playing: bool,
-    collections: usize,
-    over_game: bool,
-    power: bool,
-) -> Vec<DrawerEntry> {
+/// (`playing`), Home, Library and Search, then the first [`INLINE_COLLECTIONS`] of the
+/// `collections` and All Collections when there are more. The ways out and the machine's
+/// power are the dock's under them ([`crate::gamescope::session::power_dock`]). Over a
+/// running game (`over_game`) the drawer leaves out Search, which would leave the game.
+pub fn drawer_entries(playing: bool, collections: usize, over_game: bool) -> Vec<DrawerEntry> {
     use DrawerEntry::*;
-    let mut entries = Vec::with_capacity(INLINE_COLLECTIONS + 7);
+    let mut entries = Vec::with_capacity(INLINE_COLLECTIONS + 5);
     if playing {
         entries.push(PlayingNow);
     }
@@ -737,12 +722,6 @@ pub fn drawer_entries(
     entries.extend((0..collections.min(INLINE_COLLECTIONS)).map(Collection));
     if collections > INLINE_COLLECTIONS {
         entries.push(AllCollections);
-    }
-    if !over_game {
-        entries.push(ExitFullscreen);
-        if power {
-            entries.push(Power);
-        }
     }
     entries
 }
@@ -1986,38 +1965,26 @@ mod tests {
     }
 
     #[test]
-    fn b_leaves_the_power_level_for_the_drawer_s_entries_first() {
-        let mut panels = Panels::new();
-        panels.handle(Intent::Menu, PAGE);
-        panels.show(Panel::Drawer(DrawerLevel::Power));
-        assert!(panels.handle(Intent::Back, PAGE));
-        assert_eq!(panels.open(), drawer());
-        assert!(panels.handle(Intent::Back, PAGE));
-        assert_eq!(panels.open(), None);
-    }
-
-    #[test]
     fn the_drawer_lists_playing_now_first_then_the_places_and_the_first_collections() {
         use DrawerEntry::*;
         assert_eq!(
-            drawer_entries(true, 0, false, false),
-            [PlayingNow, Home, Library, Search, ExitFullscreen]
+            drawer_entries(true, 0, false),
+            [PlayingNow, Home, Library, Search]
         );
         assert_eq!(
-            drawer_entries(false, 0, false, false),
-            [Home, Library, Search, ExitFullscreen],
+            drawer_entries(false, 0, false),
+            [Home, Library, Search],
             "no collections, and settings live in Quick Access"
         );
         assert_eq!(
-            drawer_entries(false, 3, false, false),
+            drawer_entries(false, 3, false),
             [
                 Home,
                 Library,
                 Search,
                 Collection(0),
                 Collection(1),
-                Collection(2),
-                ExitFullscreen
+                Collection(2)
             ]
         );
     }
@@ -2036,35 +2003,19 @@ mod tests {
             Collection(3),
             Collection(4),
         ];
+        assert_eq!(drawer_entries(false, 5, false), five);
         assert_eq!(
-            drawer_entries(false, 5, false, false),
-            [&five[..], &[ExitFullscreen]].concat()
-        );
-        assert_eq!(
-            drawer_entries(false, 7, false, false),
-            [&five[..], &[AllCollections, ExitFullscreen]].concat()
+            drawer_entries(false, 7, false),
+            [&five[..], &[AllCollections]].concat()
         );
     }
 
     #[test]
-    fn over_a_running_game_the_drawer_leaves_out_search_exit_fullscreen_and_power() {
+    fn over_a_running_game_the_drawer_leaves_out_search() {
         use DrawerEntry::*;
         assert_eq!(
-            drawer_entries(true, 1, true, true),
+            drawer_entries(true, 1, true),
             [PlayingNow, Home, Library, Collection(0)]
-        );
-    }
-
-    #[test]
-    fn the_drawer_lists_power_last_where_its_level_lists_anything_and_quit_lives_there() {
-        use DrawerEntry::*;
-        assert_eq!(
-            drawer_entries(false, 0, false, true),
-            [Home, Library, Search, ExitFullscreen, Power]
-        );
-        assert_eq!(
-            drawer_entries(true, 0, false, true),
-            [PlayingNow, Home, Library, Search, ExitFullscreen, Power]
         );
     }
 
