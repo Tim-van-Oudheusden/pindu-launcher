@@ -1,7 +1,7 @@
 //! Quick Access's Controller section: it lists each connected pad with the glyphs it shows
 //! and its battery where one can be told to be its (see `pindu_core::controllers`),
 //! rumbles a pad when its row is selected, and holds the Button Prompts, Swap Confirm and
-//! Back, Repeat Delay, Repeat Rate and Stick Dead Zone settings as radio rows, then the
+//! Back, Repeat Delay, Repeat Rate and Stick Dead Zone settings as choice rows, then the
 //! Controls entry. The list follows pads as they are plugged in and out, and the batteries
 //! as they are read.
 
@@ -17,25 +17,87 @@ use pindu_core::panels::QuickAccessSection;
 
 use crate::application::PinduApplication;
 use crate::quick_access::PinduQuickAccess;
+use crate::widgets::ChoiceOption;
 
 impl PinduQuickAccess {
-    /// The settings' actions the radio rows choose through, Identify, and following the
-    /// pads and the batteries.
+    /// The choice rows on the settings' actions, Identify, and following the pads and the
+    /// batteries.
     pub(crate) fn setup_controllers(
         &self,
         application: &PinduApplication,
         actions: &impl IsA<gio::ActionMap>,
     ) {
-        let settings = self.settings();
-        for key in [
+        let imp = self.imp();
+        let explained = |target, label: String, detail: String| {
+            ChoiceOption::new(target, label).with_detail(detail)
+        };
+        self.add_choice(
+            actions,
             PROMPTS_KEY,
+            &imp.prompts_row,
+            vec![
+                explained(
+                    "auto",
+                    gettext("Automatic"),
+                    gettext("As the controller shows them"),
+                ),
+                ChoiceOption::new("letters", gettext("Letters")),
+                ChoiceOption::new("shapes", gettext("Shapes")),
+                ChoiceOption::new("nintendo-letters", gettext("Letters, A on the Right")),
+            ],
+        );
+        self.add_choice(
+            actions,
             SWAP_KEY,
+            &imp.swap_row,
+            vec![
+                explained(
+                    "auto",
+                    gettext("Automatic"),
+                    gettext("Swapped when A is on the right"),
+                ),
+                explained("off", gettext("Off"), gettext("The bottom button confirms")),
+                explained("on", gettext("On"), gettext("The right button confirms")),
+            ],
+        );
+        self.add_choice(
+            actions,
             REPEAT_DELAY_KEY,
+            &imp.repeat_delay_row,
+            vec![
+                explained("short", gettext("Short"), gettext("After 0.2 seconds")),
+                explained("normal", gettext("Normal"), gettext("After 0.3 seconds")),
+                explained("long", gettext("Long"), gettext("After 0.6 seconds")),
+            ],
+        );
+        self.add_choice(
+            actions,
             REPEAT_RATE_KEY,
+            &imp.repeat_rate_row,
+            vec![
+                explained("slow", gettext("Slow"), gettext("10 moves a second")),
+                explained("normal", gettext("Normal"), gettext("20 moves a second")),
+                explained("fast", gettext("Fast"), gettext("About 33 moves a second")),
+            ],
+        );
+        self.add_choice(
+            actions,
             DEAD_ZONE_KEY,
-        ] {
-            actions.add_action(&settings.create_action(key));
-        }
+            &imp.dead_zone_row,
+            vec![
+                explained(
+                    "small",
+                    gettext("Small"),
+                    gettext("A light push moves focus"),
+                ),
+                explained("normal", gettext("Normal"), gettext("A push halfway")),
+                explained(
+                    "large",
+                    gettext("Large"),
+                    gettext("A firm push, for a stick that drifts"),
+                ),
+            ],
+        );
         self.add_host_action(
             actions,
             "identify-controller",

@@ -35,6 +35,7 @@ use pindu_core::panels::{
 };
 
 use crate::application::PinduApplication;
+use crate::controller_navigation::{Adjusted, adjust_slider};
 use crate::fullscreen::Sound;
 use crate::hint_bar::{fill_hint_bar, focus_kind};
 use crate::hold_progress::{HoldProgress, destructive_action};
@@ -445,12 +446,14 @@ impl PinduGameOverlay {
             return;
         }
         match intent {
-            Intent::Navigate(direction) => {
-                if !self.adjust_slider(direction) {
+            Intent::Navigate(direction) => match adjust_slider(self.upcast_ref(), direction) {
+                Adjusted::Nothing => {
                     self.navigate(direction);
                     self.play_sound(Sound::Move);
                 }
-            }
+                Adjusted::Choice(true) => self.play_sound(Sound::Move),
+                Adjusted::Slider | Adjusted::Choice(false) => {}
+            },
             Intent::Activate => {
                 if let Some(focus) = gtk::prelude::GtkWindowExt::focus(self) {
                     focus.activate();
@@ -532,22 +535,6 @@ impl PinduGameOverlay {
             keyboard_focused: self.is_active(),
         }
         .takes_controller()
-    }
-
-    /// Left and right turn the focused slider a step, as in the main window; says whether
-    /// they did.
-    fn adjust_slider(&self, direction: Direction) -> bool {
-        let step = match direction {
-            Direction::Left => gtk::ScrollType::StepLeft,
-            Direction::Right => gtk::ScrollType::StepRight,
-            Direction::Up | Direction::Down => return false,
-        };
-        let Some(slider) = gtk::prelude::GtkWindowExt::focus(self).and_downcast::<gtk::Range>()
-        else {
-            return false;
-        };
-        slider.emit_move_slider(step);
-        true
     }
 
     /// Moves focus as the arrow keys would, keeping it where it was when nothing lies that

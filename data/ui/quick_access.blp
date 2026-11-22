@@ -988,158 +988,28 @@ template $PinduQuickAccess: Box {
                   ]
                 }
 
-                // Radio rows on the settings' actions, as Settings has its sizes. The
-                // Background heading and its list show only while the design in force
-                // offers the choice (`home-background-choice`).
-                Label background_title {
-                  label: _("Background");
-                  xalign: 0;
-                  margin-top: 6;
-                  visible: false;
-
-                  styles [
-                    "heading",
-                  ]
-                }
-
-                ListBox backgrounds {
+                // Choice rows on the settings' actions, their options set in code.
+                // Background shows only while the design in force offers the choice
+                // (`home-background-choice`).
+                ListBox design_choices {
                   selection-mode: none;
-                  visible: false;
+                  margin-top: 6;
 
                   styles [
                     "boxed-list",
                   ]
 
-                  Adw.ActionRow {
-                    title: _("Red Ribbons");
-                    activatable-widget: background_red;
-
-                    [prefix]
-                    CheckButton background_red {
-                      action-name: "win.fullscreen-background";
-                      action-target: "'red-ribbons'";
-                      can-focus: false;
-                    }
+                  $PinduChoiceRow background_row {
+                    title: _("Background");
+                    visible: false;
                   }
 
-                  Adw.ActionRow {
-                    title: _("Blue Station");
-                    activatable-widget: background_blue;
-
-                    [prefix]
-                    CheckButton background_blue {
-                      action-name: "win.fullscreen-background";
-                      action-target: "'blue-station'";
-                      can-focus: false;
-                    }
-                  }
-                }
-
-                Label {
-                  label: _("Background Blur");
-                  xalign: 0;
-                  margin-top: 6;
-
-                  styles [
-                    "heading",
-                  ]
-                }
-
-                ListBox blur {
-                  selection-mode: none;
-
-                  styles [
-                    "boxed-list",
-                  ]
-
-                  Adw.ActionRow {
-                    title: _("Off");
-                    activatable-widget: blur_off;
-
-                    [prefix]
-                    CheckButton blur_off {
-                      action-name: "win.fullscreen-background-blur";
-                      action-target: "'off'";
-                      can-focus: false;
-                    }
+                  $PinduChoiceRow blur_row {
+                    title: _("Background Blur");
                   }
 
-                  Adw.ActionRow {
-                    title: _("Low");
-                    activatable-widget: blur_low;
-
-                    [prefix]
-                    CheckButton blur_low {
-                      action-name: "win.fullscreen-background-blur";
-                      action-target: "'low'";
-                      can-focus: false;
-                    }
-                  }
-
-                  Adw.ActionRow {
-                    title: _("High");
-                    activatable-widget: blur_high;
-
-                    [prefix]
-                    CheckButton blur_high {
-                      action-name: "win.fullscreen-background-blur";
-                      action-target: "'high'";
-                      can-focus: false;
-                    }
-                  }
-                }
-
-                Label {
-                  label: _("Background Dim");
-                  xalign: 0;
-                  margin-top: 6;
-
-                  styles [
-                    "heading",
-                  ]
-                }
-
-                ListBox dim {
-                  selection-mode: none;
-
-                  styles [
-                    "boxed-list",
-                  ]
-
-                  Adw.ActionRow {
-                    title: _("Off");
-                    activatable-widget: dim_off;
-
-                    [prefix]
-                    CheckButton dim_off {
-                      action-name: "win.fullscreen-background-dim";
-                      action-target: "'off'";
-                      can-focus: false;
-                    }
-                  }
-
-                  Adw.ActionRow {
-                    title: _("Low");
-                    activatable-widget: dim_low;
-
-                    [prefix]
-                    CheckButton dim_low {
-                      action-name: "win.fullscreen-background-dim";
-                      action-target: "'low'";
-                      can-focus: false;
-                    }
-                  }
-
-                  Adw.ActionRow {
-                    title: _("High");
-                    activatable-widget: dim_high;
-
-                    [prefix]
-                    CheckButton dim_high {
-                      action-name: "win.fullscreen-background-dim";
-                      action-target: "'high'";
-                      can-focus: false;
-                    }
+                  $PinduChoiceRow dim_row {
+                    title: _("Background Dim");
                   }
                 }
 
@@ -1187,301 +1057,35 @@ template $PinduQuickAccess: Box {
                   ]
                 }
 
-                Label {
-                  label: _("Button Prompts");
-                  xalign: 0;
-                  margin-top: 6;
-
-                  styles [
-                    "heading",
-                  ]
-                }
-
-                // Radio rows on the settings' actions, as Settings has its sizes.
-                ListBox prompts {
+                // Choice rows on the settings' actions, their options set in code. The
+                // repeat and dead-zone rows change how the launcher moves its own focus; a
+                // game receives the controller unchanged.
+                ListBox controller_choices {
                   selection-mode: none;
+                  margin-top: 6;
 
                   styles [
                     "boxed-list",
                   ]
 
-                  Adw.ActionRow {
-                    title: _("Automatic");
-                    subtitle: _("As the controller shows them");
-                    activatable-widget: prompts_auto;
-
-                    [prefix]
-                    CheckButton prompts_auto {
-                      action-name: "win.controller-prompts";
-                      action-target: "'auto'";
-                      can-focus: false;
-                    }
+                  $PinduChoiceRow prompts_row {
+                    title: _("Button Prompts");
                   }
 
-                  Adw.ActionRow {
-                    title: _("Letters");
-                    activatable-widget: prompts_letters;
-
-                    [prefix]
-                    CheckButton prompts_letters {
-                      action-name: "win.controller-prompts";
-                      action-target: "'letters'";
-                      can-focus: false;
-                    }
+                  $PinduChoiceRow swap_row {
+                    title: _("Swap Confirm and Back");
                   }
 
-                  Adw.ActionRow {
-                    title: _("Shapes");
-                    activatable-widget: prompts_shapes;
-
-                    [prefix]
-                    CheckButton prompts_shapes {
-                      action-name: "win.controller-prompts";
-                      action-target: "'shapes'";
-                      can-focus: false;
-                    }
+                  $PinduChoiceRow repeat_delay_row {
+                    title: _("Repeat Delay");
                   }
 
-                  Adw.ActionRow {
-                    title: _("Letters, A on the Right");
-                    activatable-widget: prompts_letters_east;
-
-                    [prefix]
-                    CheckButton prompts_letters_east {
-                      action-name: "win.controller-prompts";
-                      action-target: "'nintendo-letters'";
-                      can-focus: false;
-                    }
-                  }
-                }
-
-                Label {
-                  label: _("Swap Confirm and Back");
-                  xalign: 0;
-                  margin-top: 6;
-
-                  styles [
-                    "heading",
-                  ]
-                }
-
-                ListBox swap {
-                  selection-mode: none;
-
-                  styles [
-                    "boxed-list",
-                  ]
-
-                  Adw.ActionRow {
-                    title: _("Automatic");
-                    subtitle: _("Swapped when A is on the right");
-                    activatable-widget: swap_auto;
-
-                    [prefix]
-                    CheckButton swap_auto {
-                      action-name: "win.swap-confirm-back";
-                      action-target: "'auto'";
-                      can-focus: false;
-                    }
+                  $PinduChoiceRow repeat_rate_row {
+                    title: _("Repeat Rate");
                   }
 
-                  Adw.ActionRow {
-                    title: _("Off");
-                    subtitle: _("The bottom button confirms");
-                    activatable-widget: swap_off;
-
-                    [prefix]
-                    CheckButton swap_off {
-                      action-name: "win.swap-confirm-back";
-                      action-target: "'off'";
-                      can-focus: false;
-                    }
-                  }
-
-                  Adw.ActionRow {
-                    title: _("On");
-                    subtitle: _("The right button confirms");
-                    activatable-widget: swap_on;
-
-                    [prefix]
-                    CheckButton swap_on {
-                      action-name: "win.swap-confirm-back";
-                      action-target: "'on'";
-                      can-focus: false;
-                    }
-                  }
-                }
-
-                Label {
-                  label: _("Repeat Delay");
-                  xalign: 0;
-                  margin-top: 6;
-
-                  styles [
-                    "heading",
-                  ]
-                }
-
-                // How the launcher moves its own focus; a game receives the
-                // controller unchanged. Radio rows on the settings' actions.
-                ListBox repeat_delay {
-                  selection-mode: none;
-
-                  styles [
-                    "boxed-list",
-                  ]
-
-                  Adw.ActionRow {
-                    title: _("Short");
-                    subtitle: _("After 0.2 seconds");
-                    activatable-widget: repeat_delay_short;
-
-                    [prefix]
-                    CheckButton repeat_delay_short {
-                      action-name: "win.navigation-repeat-delay";
-                      action-target: "'short'";
-                      can-focus: false;
-                    }
-                  }
-
-                  Adw.ActionRow {
-                    title: _("Normal");
-                    subtitle: _("After 0.3 seconds");
-                    activatable-widget: repeat_delay_normal;
-
-                    [prefix]
-                    CheckButton repeat_delay_normal {
-                      action-name: "win.navigation-repeat-delay";
-                      action-target: "'normal'";
-                      can-focus: false;
-                    }
-                  }
-
-                  Adw.ActionRow {
-                    title: _("Long");
-                    subtitle: _("After 0.6 seconds");
-                    activatable-widget: repeat_delay_long;
-
-                    [prefix]
-                    CheckButton repeat_delay_long {
-                      action-name: "win.navigation-repeat-delay";
-                      action-target: "'long'";
-                      can-focus: false;
-                    }
-                  }
-                }
-
-                Label {
-                  label: _("Repeat Rate");
-                  xalign: 0;
-                  margin-top: 6;
-
-                  styles [
-                    "heading",
-                  ]
-                }
-
-                ListBox repeat_rate {
-                  selection-mode: none;
-
-                  styles [
-                    "boxed-list",
-                  ]
-
-                  Adw.ActionRow {
-                    title: _("Slow");
-                    subtitle: _("10 moves a second");
-                    activatable-widget: repeat_rate_slow;
-
-                    [prefix]
-                    CheckButton repeat_rate_slow {
-                      action-name: "win.navigation-repeat-rate";
-                      action-target: "'slow'";
-                      can-focus: false;
-                    }
-                  }
-
-                  Adw.ActionRow {
-                    title: _("Normal");
-                    subtitle: _("20 moves a second");
-                    activatable-widget: repeat_rate_normal;
-
-                    [prefix]
-                    CheckButton repeat_rate_normal {
-                      action-name: "win.navigation-repeat-rate";
-                      action-target: "'normal'";
-                      can-focus: false;
-                    }
-                  }
-
-                  Adw.ActionRow {
-                    title: _("Fast");
-                    subtitle: _("About 33 moves a second");
-                    activatable-widget: repeat_rate_fast;
-
-                    [prefix]
-                    CheckButton repeat_rate_fast {
-                      action-name: "win.navigation-repeat-rate";
-                      action-target: "'fast'";
-                      can-focus: false;
-                    }
-                  }
-                }
-
-                Label {
-                  label: _("Stick Dead Zone");
-                  xalign: 0;
-                  margin-top: 6;
-
-                  styles [
-                    "heading",
-                  ]
-                }
-
-                ListBox dead_zone {
-                  selection-mode: none;
-
-                  styles [
-                    "boxed-list",
-                  ]
-
-                  Adw.ActionRow {
-                    title: _("Small");
-                    subtitle: _("A light push moves focus");
-                    activatable-widget: dead_zone_small;
-
-                    [prefix]
-                    CheckButton dead_zone_small {
-                      action-name: "win.navigation-dead-zone";
-                      action-target: "'small'";
-                      can-focus: false;
-                    }
-                  }
-
-                  Adw.ActionRow {
-                    title: _("Normal");
-                    subtitle: _("A push halfway");
-                    activatable-widget: dead_zone_normal;
-
-                    [prefix]
-                    CheckButton dead_zone_normal {
-                      action-name: "win.navigation-dead-zone";
-                      action-target: "'normal'";
-                      can-focus: false;
-                    }
-                  }
-
-                  Adw.ActionRow {
-                    title: _("Large");
-                    subtitle: _("A firm push, for a stick that drifts");
-                    activatable-widget: dead_zone_large;
-
-                    [prefix]
-                    CheckButton dead_zone_large {
-                      action-name: "win.navigation-dead-zone";
-                      action-target: "'large'";
-                      can-focus: false;
-                    }
+                  $PinduChoiceRow dead_zone_row {
+                    title: _("Stick Dead Zone");
                   }
                 }
 
@@ -2059,9 +1663,9 @@ template $PinduQuickAccess: Box {
             ]
           }
 
-          // Radio rows rather than a drop-down, whose popover a controller press
-          // would dismiss, or toggles side by side, which up and down step
-          // through.
+          // Cover Size and Text Size are choice rows (`PinduChoiceRow`): Left and Right
+          // change them in place, where a drop-down's popover would be dismissed by a
+          // controller press, and radio rows or toggles side by side take a stop each.
           ListBox sizes {
             selection-mode: none;
 
@@ -2069,36 +1673,12 @@ template $PinduQuickAccess: Box {
               "boxed-list",
             ]
 
-            Adw.ActionRow {
-              title: _("Small Covers");
-              activatable-widget: tile_small;
-
-              [prefix]
-              CheckButton tile_small {
-                can-focus: false;
-              }
+            $PinduChoiceRow cover_size_row {
+              title: _("Cover Size");
             }
 
-            Adw.ActionRow {
-              title: _("Medium Covers");
-              activatable-widget: tile_medium;
-
-              [prefix]
-              CheckButton tile_medium {
-                group: tile_small;
-                can-focus: false;
-              }
-            }
-
-            Adw.ActionRow {
-              title: _("Large Covers");
-              activatable-widget: tile_large;
-
-              [prefix]
-              CheckButton tile_large {
-                group: tile_small;
-                can-focus: false;
-              }
+            $PinduChoiceRow text_size_row {
+              title: _("Text Size");
             }
           }
 
@@ -2167,63 +1747,6 @@ template $PinduQuickAccess: Box {
 
             Adw.SwitchRow hold_to_confirm_row {
               title: _("Hold to Confirm");
-            }
-          }
-
-          // Radio rows on the setting's action, as Settings has its sizes.
-          ListBox text_sizes {
-            selection-mode: none;
-
-            styles [
-              "boxed-list",
-            ]
-
-            Adw.ActionRow {
-              title: _("Default Text");
-              activatable-widget: text_default;
-
-              [prefix]
-              CheckButton text_default {
-                action-name: "win.fullscreen-text-size";
-                action-target: "'default'";
-                can-focus: false;
-              }
-            }
-
-            Adw.ActionRow {
-              title: _("Large Text");
-              activatable-widget: text_large;
-
-              [prefix]
-              CheckButton text_large {
-                action-name: "win.fullscreen-text-size";
-                action-target: "'large'";
-                can-focus: false;
-              }
-            }
-
-            Adw.ActionRow {
-              title: _("Larger Text");
-              activatable-widget: text_larger;
-
-              [prefix]
-              CheckButton text_larger {
-                action-name: "win.fullscreen-text-size";
-                action-target: "'larger'";
-                can-focus: false;
-              }
-            }
-
-            Adw.ActionRow {
-              title: _("Largest Text");
-              activatable-widget: text_largest;
-
-              [prefix]
-              CheckButton text_largest {
-                action-name: "win.fullscreen-text-size";
-                action-target: "'largest'";
-                can-focus: false;
-              }
             }
           }
 

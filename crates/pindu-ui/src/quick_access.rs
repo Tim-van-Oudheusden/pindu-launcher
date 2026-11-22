@@ -88,6 +88,7 @@ use crate::preferences::TILE_SIZES;
 use crate::quick_section::{Parts, PinduQuickSection};
 use crate::secret_dialog::ask_secret;
 use crate::steamgriddb_service;
+use crate::widgets::{ChoiceOption, ChoiceRow};
 use crate::wikidata_service;
 use crate::window::REDUCE_MOTION_KEY;
 
@@ -174,13 +175,13 @@ mod imp {
         #[template_child]
         pub variants: TemplateChild<gtk::ListBox>,
         #[template_child]
-        pub background_title: TemplateChild<gtk::Label>,
+        pub design_choices: TemplateChild<gtk::ListBox>,
         #[template_child]
-        pub backgrounds: TemplateChild<gtk::ListBox>,
+        pub background_row: TemplateChild<ChoiceRow>,
         #[template_child]
-        pub blur: TemplateChild<gtk::ListBox>,
+        pub blur_row: TemplateChild<ChoiceRow>,
         #[template_child]
-        pub dim: TemplateChild<gtk::ListBox>,
+        pub dim_row: TemplateChild<ChoiceRow>,
         #[template_child]
         pub custom_style: TemplateChild<gtk::ListBox>,
         #[template_child]
@@ -202,15 +203,17 @@ mod imp {
         #[template_child]
         pub controllers: TemplateChild<gtk::ListBox>,
         #[template_child]
-        pub prompts: TemplateChild<gtk::ListBox>,
+        pub controller_choices: TemplateChild<gtk::ListBox>,
         #[template_child]
-        pub swap: TemplateChild<gtk::ListBox>,
+        pub prompts_row: TemplateChild<ChoiceRow>,
         #[template_child]
-        pub repeat_delay: TemplateChild<gtk::ListBox>,
+        pub swap_row: TemplateChild<ChoiceRow>,
         #[template_child]
-        pub repeat_rate: TemplateChild<gtk::ListBox>,
+        pub repeat_delay_row: TemplateChild<ChoiceRow>,
         #[template_child]
-        pub dead_zone: TemplateChild<gtk::ListBox>,
+        pub repeat_rate_row: TemplateChild<ChoiceRow>,
+        #[template_child]
+        pub dead_zone_row: TemplateChild<ChoiceRow>,
         #[template_child]
         pub controller_list: TemplateChild<gtk::ListBox>,
         #[template_child]
@@ -222,13 +225,9 @@ mod imp {
         #[template_child]
         pub manage_list: TemplateChild<gtk::ListBox>,
         #[template_child]
-        pub tile_small: TemplateChild<gtk::CheckButton>,
-        #[template_child]
-        pub tile_medium: TemplateChild<gtk::CheckButton>,
-        #[template_child]
-        pub tile_large: TemplateChild<gtk::CheckButton>,
-        #[template_child]
         pub sizes: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub cover_size_row: TemplateChild<ChoiceRow>,
         #[template_child]
         pub switches: TemplateChild<gtk::ListBox>,
         #[template_child]
@@ -244,7 +243,7 @@ mod imp {
         #[template_child]
         pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
-        pub text_sizes: TemplateChild<gtk::ListBox>,
+        pub text_size_row: TemplateChild<ChoiceRow>,
         #[template_child]
         pub hold_to_confirm_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
@@ -404,6 +403,7 @@ mod imp {
             PinduProtonLevel::ensure_type();
             PinduSoundOutputLevel::ensure_type();
             PinduQuickSection::ensure_type();
+            ChoiceRow::ensure_type();
             klass.bind_template();
         }
 
@@ -491,7 +491,7 @@ impl PinduQuickAccess {
             &imp.proton_builds,
         ));
         self.add_level_actions(actions);
-        actions.add_action(&self.settings().create_action(TEXT_SIZE_KEY));
+        self.setup_sizes(actions);
         self.setup_designs(application, actions);
         self.setup_status(application);
         self.setup_playing_cards(application);
@@ -633,9 +633,7 @@ impl PinduQuickAccess {
                 .entry(left, section)
                 .or_else(|| self.first_item(section)),
             (Some(QuickAccessLevel::Main), None) => self.first_item(section),
-            (Some(QuickAccessLevel::Settings), _) => {
-                imp.tile_small.ancestor(gtk::ListBoxRow::static_type())
-            }
+            (Some(QuickAccessLevel::Settings), _) => Some(imp.cover_size_row.get().upcast()),
             (Some(QuickAccessLevel::Filters), _) => first_row(&imp.filters),
             // The first switch that works: MangoHud's cannot when it is not installed.
             (Some(QuickAccessLevel::Performance), _) => {
@@ -1129,7 +1127,7 @@ impl PinduQuickAccess {
             QuickAccessSection::Controller => {
                 std::iter::successors(imp.controllers.first_child(), |row| row.next_sibling())
                     .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
-                    .or_else(|| first_shown_row(&imp.prompts))
+                    .or_else(|| first_shown_row(&imp.controller_choices))
             }
             QuickAccessSection::System => first_shown_row(&imp.system_list),
             QuickAccessSection::Manage => first_shown_row(&imp.manage_list),
@@ -1237,23 +1235,16 @@ impl PinduQuickAccess {
             imp.notifications.get(),
             imp.designs.get(),
             imp.variants.get(),
-            imp.backgrounds.get(),
-            imp.blur.get(),
-            imp.dim.get(),
+            imp.design_choices.get(),
             imp.custom_style.get(),
             imp.controllers.get(),
-            imp.prompts.get(),
-            imp.swap.get(),
-            imp.repeat_delay.get(),
-            imp.repeat_rate.get(),
-            imp.dead_zone.get(),
+            imp.controller_choices.get(),
             imp.sizes.get(),
             imp.switches.get(),
             imp.accessibility.get(),
             imp.sources.get(),
             imp.source_order.get(),
             imp.duplicates.get(),
-            imp.text_sizes.get(),
             imp.artwork.get(),
             imp.metadata.get(),
             imp.filters.get(),
@@ -1316,10 +1307,9 @@ impl PinduQuickAccess {
         });
     }
 
-    /// Settings: cover size, navigation sounds and their volume, exiting after a launch,
-    /// Reduce Motion and Hold to Confirm, the same settings Preferences changes, applied as
-    /// they change. Text Size chooses through its setting's action. Design's My Stylesheet
-    /// is bound to its setting too.
+    /// Settings: navigation sounds and their volume, exiting after a launch, Reduce Motion
+    /// and Hold to Confirm, the same settings Preferences changes, applied as they change.
+    /// Design's My Stylesheet is bound to its setting too.
     fn setup_settings(&self) {
         let imp = self.imp();
         let settings = self.settings();
@@ -1359,31 +1349,6 @@ impl PinduQuickAccess {
             self,
             move |_| quick_access.ask_steamgriddb_key()
         ));
-        let toggles = [
-            imp.tile_small.get(),
-            imp.tile_medium.get(),
-            imp.tile_large.get(),
-        ];
-        for (toggle, size) in toggles.iter().zip(TILE_SIZES) {
-            toggle.connect_toggled(glib::clone!(
-                #[weak(rename_to = quick_access)]
-                self,
-                move |toggle| {
-                    let settings = quick_access.settings();
-                    if toggle.is_active() && settings.string("tile-size") != size {
-                        let _ = settings.set_string("tile-size", size);
-                    }
-                }
-            ));
-        }
-        let show_size = move |settings: &gio::Settings| {
-            let size = settings.string("tile-size");
-            for (toggle, name) in toggles.iter().zip(TILE_SIZES) {
-                toggle.set_active(size == name);
-            }
-        };
-        show_size(settings);
-        settings.connect_changed(Some("tile-size"), move |settings, _| show_size(settings));
         settings
             .bind(CUSTOM_STYLE_KEY, &*imp.custom_style_row, "active")
             .build();
@@ -1397,10 +1362,43 @@ impl PinduQuickAccess {
         );
     }
 
+    /// Settings' Cover Size and Text Size: choice rows on their settings' actions, added to
+    /// `actions` as `win.tile-size` and `win.fullscreen-text-size`.
+    fn setup_sizes(&self, actions: &impl IsA<gio::ActionMap>) {
+        let imp = self.imp();
+        let cover_sizes = TILE_SIZES
+            .into_iter()
+            .zip([gettext("Small"), gettext("Medium"), gettext("Large")])
+            .map(|(size, label)| ChoiceOption::new(size, label))
+            .collect();
+        self.add_choice(actions, "tile-size", &imp.cover_size_row, cover_sizes);
+        let text_sizes = vec![
+            ChoiceOption::new("default", gettext("Default")),
+            ChoiceOption::new("large", gettext("Large")),
+            ChoiceOption::new("larger", gettext("Larger")),
+            ChoiceOption::new("largest", gettext("Largest")),
+        ];
+        self.add_choice(actions, TEXT_SIZE_KEY, &imp.text_size_row, text_sizes);
+    }
+
+    /// Adds the action of the setting `key` to `actions`, `win.<key>`, and binds `row` to
+    /// it with `options`.
+    pub(crate) fn add_choice(
+        &self,
+        actions: &impl IsA<gio::ActionMap>,
+        key: &str,
+        row: &ChoiceRow,
+        options: Vec<ChoiceOption>,
+    ) {
+        let action = self.settings().create_action(key);
+        actions.add_action(&action);
+        row.bind(&action, options);
+    }
+
     /// Design chooses through `win.design`, whose state is the design in force: it checks
     /// the matching row, and follows the setting, which Preferences can change too. Its
-    /// variants do the same through `win.design-variant`, and Blur and Dim through their
-    /// settings' actions.
+    /// variants do the same through `win.design-variant`. Background, Background Blur and
+    /// Background Dim are choice rows on their settings' actions.
     fn setup_designs(&self, application: &PinduApplication, actions: &impl IsA<gio::ActionMap>) {
         let imp = self.imp();
         let design = gio::SimpleAction::new_stateful(
@@ -1435,10 +1433,24 @@ impl PinduQuickAccess {
         actions.add_action(&variant);
         let _ = imp.design_action.set(design.clone());
         let _ = imp.variant_action.set(variant.clone());
-        let settings = self.settings();
-        actions.add_action(&settings.create_action(BACKGROUND_KEY));
-        actions.add_action(&settings.create_action(BLUR_KEY));
-        actions.add_action(&settings.create_action(DIM_KEY));
+        self.add_choice(
+            actions,
+            BACKGROUND_KEY,
+            &imp.background_row,
+            vec![
+                ChoiceOption::new("red-ribbons", gettext("Red Ribbons")),
+                ChoiceOption::new("blue-station", gettext("Blue Station")),
+            ],
+        );
+        let levels = || {
+            vec![
+                ChoiceOption::new("off", gettext("Off")),
+                ChoiceOption::new("low", gettext("Low")),
+                ChoiceOption::new("high", gettext("High")),
+            ]
+        };
+        self.add_choice(actions, BLUR_KEY, &imp.blur_row, levels());
+        self.add_choice(actions, DIM_KEY, &imp.dim_row, levels());
         let service = application.style_service();
         // Another design has other variants, and may or may not offer the choice of
         // background: the lists follow while they show.
@@ -1539,16 +1551,15 @@ impl PinduQuickAccess {
         imp.variants.set_visible(!choices.is_empty());
     }
 
-    /// The Background heading and its list: shown only while the design in force offers
-    /// the choice (`ThemeLayout::home_background_choice`). Hidden, Up and Down pass them
-    /// by, and Home shows the default background whatever the setting holds.
+    /// The Background row: shown only while the design in force offers the choice
+    /// (`ThemeLayout::home_background_choice`). Hidden, Up and Down pass it by, and Home
+    /// shows the default background whatever the setting holds.
     fn show_background_choice(&self) {
         let imp = self.imp();
         let offered = self
             .application()
             .is_some_and(|application| application.style_service().layout().home_background_choice);
-        imp.background_title.set_visible(offered);
-        imp.backgrounds.set_visible(offered);
+        imp.background_row.set_visible(offered);
     }
 
     /// My Stylesheet: it can be turned on once there is a `fullscreen.css`, and its

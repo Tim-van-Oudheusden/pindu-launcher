@@ -24,8 +24,8 @@ What each section lists, top to bottom. "→" leads to the level of that name; "
 |---|---|
 | **Quick** | The Playing Now cards · the page cards: Filters → (when the library is under the panel) and Performance → (when the focused game is one Pindu runs) · the tiles: Sound Output →, Bluetooth →, Network → (each when available), Surprise Me, Refresh Library, Add a Game · the activity strip (while something runs) |
 | **Notifications** | A **Running** heading and the background tasks, each with its progress and Cancel, while something runs · then the notifications, newest first, or the line that says there are none |
-| **Design** | The designs, Variant, Background, Background Blur, Background Dim, My Stylesheet |
-| **Controller** | The controllers, Button Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate, Stick Dead Zone and its note · then Controls → |
+| **Design** | The designs, Variant · then one list of choice rows: Background (when the design offers the choice), Background Blur, Background Dim · My Stylesheet |
+| **Controller** | The controllers · then one list of choice rows: Button Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate, Stick Dead Zone · their note · then Controls → |
 | **System** | Network → · Bluetooth → · Sound Output → · System Update → (each when available) · Settings → · Diagnostics Report → |
 | **Manage** | Sources → · Duplicates → · Library Health → · Proton → · Add a Store → · Add a Game · Refresh Library · Refresh Metadata (when Wikidata metadata is on) |
 
@@ -73,6 +73,30 @@ in one or two presses. Top to bottom:
 Over a running game Quick shows the Playing Now cards, the page cards and the tiles that apply there (Surprise Me and
 Add a Game are left out).
 
+## Choice rows
+
+A setting with a few fixed options is one row that changes in place (`PinduChoiceRow`,
+`crates/pindu-ui/src/widgets/choice_row.rs`; the steps are `pindu_core::choice`): the setting's name at the start, the
+chosen option between two arrows at the end, and under the name the option's second line where it has one (Repeat
+Delay's "After 0.3 seconds"). The option's place is as wide as the widest option, so the arrows stay put; a long option
+wraps rather than be cut. The row is bound to its setting's stateful action (`win.fullscreen-background-blur` and the
+others) with a target per option, so choosing an option writes the setting at once, as Preferences does.
+
+- Up and Down pass the row in one step.
+- Left and Right choose the option before or after, with the move sound. They stop at the first and the last option,
+  where the arrow that leads nowhere is dimmed and nothing sounds; focus never leaves the row sideways. In
+  right-to-left text they swap, as they do for a slider.
+- A chooses the next option, wrapping from the last to the first.
+- The keyboard's Left, Right and Enter do the same as the D-pad and A, and a click on the row as A. The pointer and
+  touch can press either arrow; the arrows are never focus stops.
+- The hint bar shows the Left and Right pair with **Adjust** on a focused row, as on a slider.
+- A screen reader hears the setting's name, the chosen option as its value, and the new option after a change.
+
+The choice rows are Design's Background, Background Blur and Background Dim; Controller's Button Prompts, Swap Confirm
+and Back, Repeat Delay, Repeat Rate and Stick Dead Zone; and Settings' Cover Size and Text Size, in one list of their
+own at the top. Lists whose length varies or whose names are long stay lists of rows: the
+designs, Variant, Genre, the Proton builds and the sound outputs.
+
 ## The buttons
 
 | Button | On a section | At a level |
@@ -95,7 +119,7 @@ unread count.
 - A section shown for the first time since Quick Access opened focuses its first item: in Quick the first page card,
   or else the first Playing Now card's Return, or else the first tile (`pindu_core::panels::quick_first_focus`); in
   Notifications the first task, or else the first notification; in Design the design in force; in Controller the
-  first controller that can rumble, or else the first button prompt.
+  first controller that can rumble, or else Button Prompts.
 - In Quick, Up and Down from a row of tiles to the next keep the column, or land on the nearest tile of a shorter row.
   Down from the last row lands on the activity strip; Up from the first row on the last page card, or else the last
   Playing Now card's Return. Moving into the tiles from above lands on the first tile, from the strip on the first tile

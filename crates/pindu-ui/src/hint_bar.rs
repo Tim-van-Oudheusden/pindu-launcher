@@ -16,6 +16,7 @@ use pindu_core::panels::{DrawerLevel, Panel, sections};
 use crate::application::PinduApplication;
 use crate::artwork_dialog::ArtworkDialog;
 use crate::fullscreen_add_game::PinduFullscreenAddGame;
+use crate::widgets::ChoiceRow;
 use crate::window::PinduWindow;
 
 /// How large glyphs draw, to read from across the room.
@@ -158,6 +159,9 @@ pub(crate) fn focus_kind(focus: &gtk::Widget) -> Focus {
     }
     if focus.is::<gtk::Range>() {
         return Focus::Slider;
+    }
+    if focus.is::<ChoiceRow>() {
+        return Focus::Choice;
     }
     if let Some(button) = focus.downcast_ref::<gtk::Button>() {
         match button.action_name().as_deref() {

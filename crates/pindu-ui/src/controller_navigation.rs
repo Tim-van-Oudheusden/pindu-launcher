@@ -1,7 +1,8 @@
 //! Controller navigation in the main window: directions move focus the way the arrow keys
-//! do (`move-focus` on the window), except that left and right turn a focused slider, the
-//! cover grid steps through its covers with `scroll_to`, A activates the focused widget, B
-//! closes a menu or dialog or goes back, Y searches from Home or the library (with the
+//! do (`move-focus` on the window), except that left and right turn a focused slider or
+//! step a focused choice row (`adjust_slider`), the cover grid steps through its covers
+//! with `scroll_to`, A activates the focused widget, B closes a menu or dialog or goes back,
+//! Y searches from Home or the library (with the
 //! search keyboard in fullscreen mode, which takes the buttons while it is open), LB/RB and
 //! LT/RT switch the fullscreen library's tabs and sort order (LB/RB turn the diagnostics
 //! report's pages while Quick Access shows it), and Guide, let go without
@@ -38,6 +39,7 @@ use crate::fullscreen_add_game::PinduFullscreenAddGame;
 use crate::hold_progress::destructive_action;
 use crate::models::GameObject;
 use crate::save_snapshots_dialog::SaveSnapshotsDialog;
+use crate::widgets::ChoiceRow;
 use crate::window::PinduWindow;
 
 impl PinduWindow {
@@ -189,14 +191,16 @@ impl PinduWindow {
             return;
         }
         match intent {
-            Intent::Navigate(direction) => {
-                // A focused slider turns instead, and plays its own sound, at its new
-                // volume, once it rests.
-                if !self.adjust_slider(direction) {
+            Intent::Navigate(direction) => match adjust_slider(self.upcast_ref(), direction) {
+                Adjusted::Nothing => {
                     self.navigate(direction);
                     self.play_sound(Sound::Move);
                 }
-            }
+                Adjusted::Choice(true) => self.play_sound(Sound::Move),
+                // A slider plays its own sound, at its new volume, once it rests; a choice
+                // row at an end plays none.
+                Adjusted::Slider | Adjusted::Choice(false) => {}
+            },
             Intent::Activate => {
                 self.activate_focus();
                 self.play_sound(Sound::Select);
@@ -247,22 +251,6 @@ impl PinduWindow {
             keyboard_focused: self.is_active(),
         }
         .takes_controller()
-    }
-
-    /// Left and right turn the focused slider a step down or up, as the arrow keys do,
-    /// rather than move focus off it; says whether they did.
-    fn adjust_slider(&self, direction: Direction) -> bool {
-        let step = match direction {
-            Direction::Left => gtk::ScrollType::StepLeft,
-            Direction::Right => gtk::ScrollType::StepRight,
-            Direction::Up | Direction::Down => return false,
-        };
-        let Some(slider) = gtk::prelude::GtkWindowExt::focus(self).and_downcast::<gtk::Range>()
-        else {
-            return false;
-        };
-        slider.emit_move_slider(step);
-        true
     }
 
     /// Moves through the open menu, scrolls through a game's focused description, moves
@@ -477,6 +465,42 @@ fn activate_widget(widget: &gtk::Widget) {
         // Covers are grid items, which activate through their list item action.
         let _ = widget.activate_action("listitem.activate", None);
     }
+}
+
+/// What Left or Right did to the focused widget (`adjust_slider`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Adjusted {
+    /// The focused widget does not adjust: the direction moves focus.
+    Nothing,
+    /// A slider turned a step.
+    Slider,
+    /// A choice row chose another option, or stopped at an end (`false`).
+    Choice(bool),
+}
+
+/// Left and Right adjust the focused widget of `window` rather than move focus off it: a
+/// slider turns a step down or up, as the arrow keys turn it, and a choice row steps to the
+/// option before or after (`ChoiceRow::adjust`, which swaps them in right-to-left text).
+/// Up and Down adjust nothing.
+pub(crate) fn adjust_slider(window: &gtk::Window, direction: Direction) -> Adjusted {
+    let right = match direction {
+        Direction::Left => false,
+        Direction::Right => true,
+        Direction::Up | Direction::Down => return Adjusted::Nothing,
+    };
+    let focus = gtk::prelude::GtkWindowExt::focus(window);
+    if let Some(row) = focus.and_downcast_ref::<ChoiceRow>() {
+        return Adjusted::Choice(row.adjust(right));
+    }
+    let Some(slider) = focus.and_downcast::<gtk::Range>() else {
+        return Adjusted::Nothing;
+    };
+    slider.emit_move_slider(if right {
+        gtk::ScrollType::StepRight
+    } else {
+        gtk::ScrollType::StepLeft
+    });
+    Adjusted::Slider
 }
 
 /// Opens the button's menu without a grab and gives it focus. The compositor lets a menu

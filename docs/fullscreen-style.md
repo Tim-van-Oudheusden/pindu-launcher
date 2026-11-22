@@ -345,6 +345,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.notification` | A row of Quick Access's notifications; `.unread` while it is new, with an `.unread-dot` |
 | `.task` | A row of the Running tasks in Quick Access's Notifications section, which lists what runs in the background: a label, what it is doing, a progress bar and, while it can be cancelled, a Cancel button |
 | `.control` | A row of Quick Access's Controls: the button's `.control-glyph` (after a Hold label for a held one) and the keys that do the same in `.control-keys` |
+| `.choice-row` | A row of Quick Access that changes one setting in place with Left and Right (Background, Background Blur, Background Dim, Button Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate, Stick Dead Zone, Cover Size, Text Size): the setting's name, under it the chosen option's second line where it has one, and at the end the `.choice-value` (the chosen option) between two `.choice-arrow` buttons, the one at an end insensitive |
 | `.options-sheet` | A game's options at the bottom |
 | `.navigation-sidebar > row` | A row in any of the three |
 | `.hint-bar` | The controller hints at the bottom; each `.hint` has `.hint-glyph`s and a `.hint-label` |
