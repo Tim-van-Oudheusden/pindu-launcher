@@ -301,6 +301,10 @@ icon too. It opens on Quick, or on Notifications while one is unread, and each s
 while Quick Access stays open. [Fullscreen menus](docs/fullscreen-menus.md) lists what each section holds:
 
 - **Status:** the time, the battery, whether you are offline, and the game you are playing with how long it has run.
+- **Quick:** the Playing Now cards, a card for what the page underneath offers (**Filters** on the library, naming
+  the filters that are on, and **Performance** for a game Pindu runs), tiles for Sound Output, Bluetooth, Network,
+  Surprise Me, Refresh Library and Add a Game, and while something runs in the background a strip with its progress
+  that leads to Notifications.
 - **Notifications** from this session: games a sync added or found missing, artwork fetched or not, Proton downloads,
   games that need a permission, a Bluetooth device that did not pair, connect, disconnect or go, a rollback or restart
   the system refused, a network that could not be joined, and a program that kept the machine from suspending,

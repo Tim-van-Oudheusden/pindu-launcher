@@ -18,14 +18,24 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   in Lobby, Adwaita, Marquee and Shelves at every Text Size: "Notifications" ellipsizes in the strip at Larger and
   Largest (tooltip and accessible name keep it whole). Not seen: the panel over a running game, the pointer on the
   strip, a screen reader.
+- 2026-11-22, #718 (stacked on #717): Quick's page cards (Filters with the filters that are on,
+  `library::Filters::names_on`; Performance for the focused game), the six tiles (`panels::quick_tiles`, laid out
+  three to a row from the start by `quick_section.rs`'s `PinduQuickSection`, whose `focus` vfunc takes both the arrow
+  keys and the controller's moves through `panels::step_tile`) and the activity strip. Tile names wrap without a line
+  limit, so "Refresh Library" takes three lines at Largest rather than being cut. Not seen: the Playing Now focus
+  paths, Quick over a running game, the Sound Output tile and the Flatpak's single row (no running game or system
+  services in the harness).
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,
   a fake Faugus library, a uinput pad (`pad:r3`, `pad:rb`, `pad:guide+a`, `pad:down*3`, `pad:a@1.5`), keys
   (`key:ctrl+Page_Down`) and `shot:PATH.png`. The host's own desktop games and Flatpaks show up in its library, and
   its first notification is "Added 20 games", so Quick Access opens on Notifications there. The pad is a real host
-  device while it runs.
-- Gotchas: `/tmp` is a tmpfs with a per-user quota; keep cargo targets and prefixes in `~/.cache/pindu-work/`. This
+  device while it runs. Pass `--env GTK_A11Y=none`: without an accessibility bus the first `announce()` crashes the
+  app (#729, also on `main` with the search keyboard).
+- Gotchas: `/tmp` is a tmpfs with a per-user quota; keep cargo targets and prefixes in `~/.cache/pindu-work/`, and
+  run cargo-mutants (installed in the SDK cargo home) with `TMPDIR` there and `--gitignore true`, or it copies
+  `_build/` into `/tmp` and fills the quota. CI's mutants check covers every changed pindu-core line. This
   host has no meson, blueprint-compiler, GTK headers or sqlite3 dev library: host `cargo check -p pindu-core --tests`
   works, everything else runs in the SDK. Give parallel agents their own `CARGO_TARGET_DIR`. GTK measures an
   ellipsizing label with `letter-spacing` too narrow (`widgets/spaced_label.rs`); a wrapping label asked for its width

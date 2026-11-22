@@ -336,6 +336,11 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.quick-access-status` | The header at the top of Quick Access: `.clock` (the time), `.offline` (shown while there is no network) and `.battery` (the machine's battery, absent without one) |
 | `.panel-sections` | The strip under Quick Access's header that switches its sections (Quick, Notifications, Design, Controller, System and Manage) |
 | `.panel-section` | A button of that strip, `:checked` for the section shown; it holds the section's icon, and the checked one its name too |
+| `.page-card` | A card at the top of Quick Access's Quick section for what the page under the panel offers (Filters, Performance), a button at least 64px tall: its icon in a round chip (`.page-card-icon`), the "For This Page" eyebrow (`.page-card-eyebrow`) over its name, and at its end a second line (`.page-card-state`, the filters that are on) and an arrow |
+| `.quick-tiles` | The grid of tiles in Quick Access's Quick section: three equal columns, 10px apart, filled from the start |
+| `.quick-tile` | A tile of that grid, a button about 100px tall that grows taller at larger text sizes: its icon (`.quick-tile-icon`) at the top, a small arrow (`.quick-tile-arrow`) on a tile that leads to a level, and its name (`.quick-tile-name`) at the bottom; insensitive (`:disabled`) when it cannot be used now |
+| `.quick-tile-state` | A tile's second line under its name: the sound output, the Bluetooth devices or the network connection in use |
+| `.activity-strip` | The button at the bottom of Quick Access's Quick section while something runs in the background: the oldest task's label, its progress bar and its percentage; it shows the Notifications section |
 | `.notification-count` | The unread count on Quick Access's Notifications section button |
 | `.notification` | A row of Quick Access's notifications; `.unread` while it is new, with an `.unread-dot` |
 | `.task` | A row of the Running tasks in Quick Access's Notifications section, which lists what runs in the background: a label, what it is doing, a progress bar and, while it can be cancelled, a Cancel button |

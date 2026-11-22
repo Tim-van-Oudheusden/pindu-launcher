@@ -80,6 +80,7 @@ pub mod proton_download_service;
 pub mod proton_downloads_page;
 pub mod proton_launch;
 pub mod quick_access;
+pub mod quick_section;
 pub mod save_service;
 pub mod save_snapshots_dialog;
 pub mod search_keyboard;

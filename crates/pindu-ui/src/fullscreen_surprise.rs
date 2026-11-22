@@ -69,10 +69,10 @@ impl PinduQuickAccess {
             .counts()
             .get(View::Installed)
             > 0;
-        let had_focus = imp.surprise_row.has_focus();
+        let had_focus = imp.surprise_tile.has_focus();
         surprise.set_enabled(installed);
         if had_focus && !installed {
-            self.focus_beside(&imp.surprise_row);
+            self.focus_beside(&imp.surprise_tile.get());
         }
     }
 }

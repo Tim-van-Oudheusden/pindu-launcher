@@ -8,11 +8,14 @@
 //! The main level is a strip of six toggles (`.panel-sections`, tabs to a screen reader)
 //! over the shown section's page: Quick, Notifications, Design, Controller, System and
 //! Manage. What each lists, and in which order, is `pindu_core::panels::section_entries`
-//! for the facts the panel follows ([`PinduQuickAccess::shown`]); Sound Output, Bluetooth,
-//! Network, Refresh Library and Add a Game have a row in two sections, with one action and
-//! one second line. The pointer and touch press the strip's toggles
-//! (`win.quick-access-section`); the controller's focus never lands on them, LB and RB
-//! switch section. A section remembers the item it had focused while the panel stays open.
+//! for the facts the panel follows ([`PinduQuickAccess::shown`]). Quick holds the Playing
+//! Now cards, a page card per entry the page under the panel offers, a grid of tiles and
+//! the activity strip, and moves focus through them itself (`quick_section`); Sound
+//! Output, Bluetooth, Network, Refresh Library and Add a Game have a tile in Quick and a
+//! row where they belong, with one action and one second line. The pointer and touch
+//! press the strip's toggles (`win.quick-access-section`); the controller's focus never
+//! lands on them, LB and RB switch section. A section remembers the item it had focused
+//! while the panel stays open.
 //!
 //! Which level and section show is the host's (`pindu_core::panels::Panels`, which also
 //! holds the host's other panels): the host shows them with
@@ -59,8 +62,8 @@ use pindu_core::keys;
 use pindu_core::model::GameId;
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{
-    PageEntry, QuickAccessEntry, QuickAccessLevel, QuickAccessSection, Shown, design_choices,
-    section_entries, sections, variant_choices,
+    PageEntry, QuickAccessEntry, QuickAccessLevel, QuickAccessSection, QuickFocus, Shown,
+    design_choices, quick_first_focus, quick_tiles, section_entries, sections, variant_choices,
 };
 use pindu_core::paths;
 use pindu_core::tasks::Task;
@@ -82,6 +85,7 @@ use crate::fullscreen_sound_output::PinduSoundOutputLevel;
 use crate::fullscreen_system_update::PinduSystemUpdateLevel;
 use crate::models::GameObject;
 use crate::preferences::TILE_SIZES;
+use crate::quick_section::{Parts, PinduQuickSection};
 use crate::secret_dialog::ask_secret;
 use crate::steamgriddb_service;
 use crate::wikidata_service;
@@ -120,19 +124,37 @@ mod imp {
         #[template_child]
         pub sections: TemplateChild<gtk::Stack>,
         #[template_child]
+        pub quick_section: TemplateChild<PinduQuickSection>,
+        #[template_child]
         pub playing_cards: TemplateChild<gtk::Box>,
         #[template_child]
-        pub list: TemplateChild<gtk::ListBox>,
+        pub filters_card: TemplateChild<gtk::Button>,
         #[template_child]
-        pub quick_sound_output_row: TemplateChild<gtk::ListBoxRow>,
+        pub filters_card_state: TemplateChild<gtk::Label>,
         #[template_child]
-        pub quick_bluetooth_row: TemplateChild<gtk::ListBoxRow>,
+        pub performance_card: TemplateChild<gtk::Button>,
         #[template_child]
-        pub quick_network_row: TemplateChild<gtk::ListBoxRow>,
+        pub quick_tiles: TemplateChild<gtk::Grid>,
         #[template_child]
-        pub quick_refresh_row: TemplateChild<gtk::ListBoxRow>,
+        pub quick_sound_output_tile: TemplateChild<gtk::Button>,
         #[template_child]
-        pub quick_add_game_row: TemplateChild<gtk::ListBoxRow>,
+        pub quick_bluetooth_tile: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub quick_network_tile: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub surprise_tile: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub quick_refresh_tile: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub quick_add_game_tile: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub activity_strip: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub activity_strip_label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub activity_strip_percent: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub activity_strip_bar: TemplateChild<gtk::ProgressBar>,
         #[template_child]
         pub unread: TemplateChild<gtk::Label>,
         #[template_child]
@@ -143,8 +165,6 @@ mod imp {
         pub refresh_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub refresh_metadata_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
-        pub surprise_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub activity: TemplateChild<gtk::ListBox>,
         #[template_child]
@@ -238,8 +258,6 @@ mod imp {
         #[template_child]
         pub wikidata_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
-        pub filters_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
         pub filters: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub installed_row: TemplateChild<adw::SwitchRow>,
@@ -259,8 +277,6 @@ mod imp {
         pub clear_filters: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub save_filters: TemplateChild<gtk::ListBox>,
-        #[template_child]
-        pub performance_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub performance_title: TemplateChild<gtk::Label>,
         #[template_child]
@@ -363,6 +379,9 @@ mod imp {
         /// bars of those with no telling how far they are.
         pub activity_shown: RefCell<Vec<(Task, gtk::ProgressBar)>>,
         pub activity_pulse: RefCell<Option<glib::SourceId>>,
+        /// Whether the activity strip's task has no telling how far it is, so its bar
+        /// moves.
+        pub activity_strip_pulses: Cell<bool>,
         /// The game Surprise Me picked last, which it does not pick again next time.
         pub surprise_previous: RefCell<Option<GameId>>,
         /// Whether the panel is hosted over a running game.
@@ -384,6 +403,7 @@ mod imp {
             PinduReportLevel::ensure_type();
             PinduProtonLevel::ensure_type();
             PinduSoundOutputLevel::ensure_type();
+            PinduQuickSection::ensure_type();
             klass.bind_template();
         }
 
@@ -397,9 +417,8 @@ mod imp {
             self.parent_constructed();
             let obj = self.obj();
             let _ = self.time.set(Clock::new(&self.clock));
-            let _ = self
-                .playing
-                .set(PlayingCards::new(&self.playing_cards, &self.list));
+            let _ = self.playing.set(PlayingCards::new(&self.playing_cards));
+            obj.setup_quick_section();
             obj.setup_settings();
             obj.setup_navigation();
         }
@@ -504,8 +523,9 @@ impl PinduQuickAccess {
     }
 
     /// Shows what Quick Access adds for the page under it, as it opens: `entries` from
-    /// `pindu_core::panels::page_entries`, and `game`, the focused game or the one in
-    /// front, whose switches Performance shows.
+    /// `pindu_core::panels::page_entries`, each a page card in Quick, and `game`, the
+    /// focused game or the one in front, whose switches Performance shows and whose title
+    /// names it.
     pub fn set_page(&self, entries: &[PageEntry], game: Option<&GameObject>) {
         let imp = self.imp();
         let performance = entries.contains(&PageEntry::Performance);
@@ -513,6 +533,7 @@ impl PinduQuickAccess {
             shown.filters = entries.contains(&PageEntry::Filters);
             shown.performance = performance;
         });
+        self.show_filters_card();
         if performance && let Some(game) = game {
             self.performance_switches().show_for(game);
             if let Some(proton) = imp.game_proton.get() {
@@ -865,9 +886,9 @@ impl PinduQuickAccess {
     }
 
     /// The widgets that make `entry` in `section`, which show and hide together. Sound
-    /// Output, Bluetooth, Network, Refresh Library and Add a Game have a row in two
-    /// sections, each with the same action and second line. Design's and Controller's
-    /// own lists always show, so they have none to show and hide.
+    /// Output, Bluetooth, Network, Refresh Library and Add a Game have a tile in Quick and
+    /// a row where they belong, each with the same action and second line. Design's and
+    /// Controller's own lists always show, so they have none to show and hide.
     fn entry_widgets(
         &self,
         section: QuickAccessSection,
@@ -877,16 +898,17 @@ impl PinduQuickAccess {
         use QuickAccessSection as Section;
         let imp = self.imp();
         let row = |row: &gtk::ListBoxRow| vec![row.clone().upcast::<gtk::Widget>()];
+        let button = |button: &gtk::Button| vec![button.clone().upcast::<gtk::Widget>()];
         match (section, entry) {
             (Section::Quick, Entry::PlayingNow) => vec![imp.playing_cards.get().upcast()],
-            (Section::Quick, Entry::Filters) => row(&imp.filters_row),
-            (Section::Quick, Entry::Performance) => row(&imp.performance_row),
-            (Section::Quick, Entry::SoundOutput) => row(&imp.quick_sound_output_row),
-            (Section::Quick, Entry::Bluetooth) => row(&imp.quick_bluetooth_row),
-            (Section::Quick, Entry::Network) => row(&imp.quick_network_row),
-            (Section::Quick, Entry::SurpriseMe) => row(&imp.surprise_row),
-            (Section::Quick, Entry::RefreshLibrary) => row(&imp.quick_refresh_row),
-            (Section::Quick, Entry::AddGame) => row(&imp.quick_add_game_row),
+            (Section::Quick, Entry::Filters) => button(&imp.filters_card),
+            (Section::Quick, Entry::Performance) => button(&imp.performance_card),
+            (Section::Quick, Entry::SoundOutput) => button(&imp.quick_sound_output_tile),
+            (Section::Quick, Entry::Bluetooth) => button(&imp.quick_bluetooth_tile),
+            (Section::Quick, Entry::Network) => button(&imp.quick_network_tile),
+            (Section::Quick, Entry::SurpriseMe) => button(&imp.surprise_tile),
+            (Section::Quick, Entry::RefreshLibrary) => button(&imp.quick_refresh_tile),
+            (Section::Quick, Entry::AddGame) => button(&imp.quick_add_game_tile),
             (Section::Notifications, Entry::Running) => vec![
                 imp.running_title.get().upcast(),
                 imp.activity.get().upcast(),
@@ -924,8 +946,10 @@ impl PinduQuickAccess {
     }
 
     /// Shows each section's entries that `pindu_core::panels::section_entries` lists for
-    /// `shown`, and hides the others, and the strip's toggles of the sections that have
-    /// anything to show (`pindu_core::panels::sections`).
+    /// `shown`, and hides the others, with Quick's tiles laid out from the grid's start
+    /// (`pindu_core::panels::quick_tiles`) and its activity strip while something runs, and
+    /// the strip's toggles of the sections that have anything to show
+    /// (`pindu_core::panels::sections`).
     fn apply_shown(&self, shown: Shown) {
         let every = Shown {
             playing: true,
@@ -947,6 +971,13 @@ impl PinduQuickAccess {
                 }
             }
         }
+        let tiles = quick_tiles(shown)
+            .into_iter()
+            .flat_map(|tile| self.entry_widgets(QuickAccessSection::Quick, tile.entry()))
+            .collect();
+        let imp = self.imp();
+        imp.quick_section.set_tiles(tiles);
+        imp.activity_strip.set_visible(shown.running);
         let listed = sections(shown);
         for section in QuickAccessSection::ALL {
             self.tab(section).set_visible(listed.contains(&section));
@@ -971,10 +1002,10 @@ impl PinduQuickAccess {
         self.level() == Some(QuickAccessLevel::Main) && self.imp().section.get() == section
     }
 
-    /// Shows `section` under the strip, filled as things now are: Notifications lists
-    /// what runs and marks the notifications read, and Design and Controller read their
-    /// choices again. From another section (`switched`) it crossfades, unless Pindu moves
-    /// less.
+    /// Shows `section` under the strip, filled as things now are: Quick its activity
+    /// strip, Notifications lists what runs and marks the notifications read, and Design
+    /// and Controller read their choices again. From another section (`switched`) it
+    /// crossfades, unless Pindu moves less.
     fn fill_section(&self, section: QuickAccessSection, switched: bool) {
         let imp = self.imp();
         if let Some(action) = imp.section_action.get() {
@@ -992,14 +1023,14 @@ impl PinduQuickAccess {
             });
         imp.sections.set_visible_child_name(section.name());
         match section {
+            QuickAccessSection::Quick => self.show_activity_strip(),
             QuickAccessSection::Notifications => {
                 self.show_activity();
                 self.show_notifications();
             }
             QuickAccessSection::Design => self.fill_designs(),
             QuickAccessSection::Controller => self.fill_controllers(),
-            QuickAccessSection::Quick | QuickAccessSection::System | QuickAccessSection::Manage => {
-            }
+            QuickAccessSection::System | QuickAccessSection::Manage => {}
         }
     }
 
@@ -1058,20 +1089,27 @@ impl PinduQuickAccess {
     }
 
     /// The item focus goes to in `section` when it shows for the first time since the
-    /// panel opened: in Quick the first Playing Now card's Return, or else its first entry;
-    /// in Notifications the first task while something runs, or else the first
+    /// panel opened: in Quick the first page card, or else the first Playing Now card's
+    /// Return, or else the first tile (`pindu_core::panels::quick_first_focus`); in
+    /// Notifications the first task while something runs, or else the first
     /// notification; in Design the design in force; in Controller the first controller
     /// that can rumble, or else the first button prompt; and in System and Manage their
     /// first entry.
     fn first_item(&self, section: QuickAccessSection) -> Option<gtk::Widget> {
         let imp = self.imp();
         match section {
-            QuickAccessSection::Quick if imp.playing_cards.is_visible() => imp
-                .playing_cards
-                .first_child()
-                .as_ref()
-                .and_then(card_return),
-            QuickAccessSection::Quick => first_shown_row(&imp.list),
+            QuickAccessSection::Quick => match quick_first_focus(imp.shown.get()) {
+                QuickFocus::PageCard => [imp.filters_card.get(), imp.performance_card.get()]
+                    .into_iter()
+                    .find(|card| card.is_visible() && card.is_sensitive())
+                    .map(Cast::upcast),
+                QuickFocus::PlayingNowReturn => imp
+                    .playing_cards
+                    .first_child()
+                    .as_ref()
+                    .and_then(card_return),
+                QuickFocus::Tile => imp.quick_section.first_tile(),
+            },
             QuickAccessSection::Notifications => {
                 first_shown_row(&imp.activity).or_else(|| first_shown_row(&imp.notifications))
             }
@@ -1098,18 +1136,17 @@ impl PinduQuickAccess {
         }
     }
 
-    /// Moves focus off `row`, which is going or can no longer be activated, to the nearest
-    /// row after it that shows and can take focus, or else the nearest before it.
-    pub(crate) fn focus_beside(&self, row: &gtk::ListBoxRow) {
-        let takes = |widget: &gtk::Widget| {
-            widget != row.upcast_ref::<gtk::Widget>()
-                && widget.is_visible()
-                && widget.is_sensitive()
-        };
-        let target = std::iter::successors(row.next_sibling(), |widget| widget.next_sibling())
+    /// Moves focus off `entry`, a row or tile which is going or can no longer be
+    /// activated, to the nearest one after it that shows and can take focus, or else the
+    /// nearest before it.
+    pub(crate) fn focus_beside(&self, entry: &impl IsA<gtk::Widget>) {
+        let entry = entry.upcast_ref::<gtk::Widget>();
+        let takes =
+            |widget: &gtk::Widget| widget != entry && widget.is_visible() && widget.is_sensitive();
+        let target = std::iter::successors(entry.next_sibling(), |widget| widget.next_sibling())
             .find(|widget| takes(widget))
             .or_else(|| {
-                std::iter::successors(row.prev_sibling(), |widget| widget.prev_sibling())
+                std::iter::successors(entry.prev_sibling(), |widget| widget.prev_sibling())
                     .find(|widget| takes(widget))
             });
         if let Some(target) = target {
@@ -1151,8 +1188,28 @@ impl PinduQuickAccess {
         let _ = self.imp().section_action.set(section);
     }
 
+    /// Quick's parts, which its section moves focus between itself, and the activity
+    /// strip, which shows the Notifications section.
+    fn setup_quick_section(&self) {
+        let imp = self.imp();
+        imp.quick_section.set_parts(Parts {
+            playing_cards: imp.playing_cards.get(),
+            page_cards: vec![
+                imp.filters_card.get().upcast(),
+                imp.performance_card.get().upcast(),
+            ],
+            tiles: imp.quick_tiles.get(),
+            strip: imp.activity_strip.get().upcast(),
+        });
+        imp.activity_strip.connect_clicked(glib::clone!(
+            #[weak(rename_to = quick_access)]
+            self,
+            move |_| quick_access.request_section(QuickAccessSection::Notifications)
+        ));
+    }
+
     /// Up and Down stop at a list's ends; in the levels with more than one list they go on
-    /// to the next one (the Playing Now cards take the main list's Up). Escape asks to
+    /// to the next one. Quick moves through itself (`PinduQuickSection`). Escape asks to
     /// close the panel rather than leave fullscreen mode.
     fn setup_navigation(&self) {
         let imp = self.imp();

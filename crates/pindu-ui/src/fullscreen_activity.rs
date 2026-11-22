@@ -1,8 +1,9 @@
-//! Notifications' Running tasks and Quick Access's Refresh Library. While anything runs in
-//! the background (see `task_service`) the Notifications section lists each task, under a
-//! Running heading, with its progress and, where the user can cancel it, Cancel; the
-//! heading and the list go once nothing runs. Refresh Library runs the same sync as
-//! `app.import` and is unavailable while a sync runs.
+//! Notifications' Running tasks, Quick's activity strip and Quick Access's Refresh
+//! Library. While anything runs in the background (see `task_service`) the Notifications
+//! section lists each task, under a Running heading, with its progress and, where the user
+//! can cancel it, Cancel; the heading and the list go once nothing runs. Quick meanwhile
+//! shows the oldest task in its activity strip, with its progress and percentage. Refresh
+//! Library runs the same sync as `app.import` and is unavailable while a sync runs.
 
 use std::time::Duration;
 
@@ -95,9 +96,10 @@ impl PinduQuickAccess {
         self.pulse_activity();
     }
 
-    /// A task started, moved on, was cancelled or ended: the Running tasks show while any
-    /// runs, and follow them while Notifications shows. Once nothing runs, focus on a task
-    /// moves to the first notification.
+    /// A task started, moved on, was cancelled or ended: Quick's activity strip and the
+    /// Running tasks show while any runs, and follow them while their section shows. Once
+    /// nothing runs, focus on a task moves to the first notification, and focus on the
+    /// strip to the tiles above it.
     fn tasks_changed(&self) {
         let Some(application) = self.application() else {
             return;
@@ -108,6 +110,7 @@ impl PinduQuickAccess {
         let had_focus = self
             .focus_widget()
             .is_some_and(|focus| focus.is_ancestor(&list));
+        let strip_had_focus = imp.activity_strip.has_focus();
         let running = !tasks.is_empty();
         self.update_shown(|shown| shown.running = running);
         if !running {
@@ -116,7 +119,13 @@ impl PinduQuickAccess {
             if had_focus && let Some(row) = imp.notifications.row_at_index(0) {
                 row.grab_focus();
             }
+            if strip_had_focus {
+                self.focus_beside(&imp.activity_strip.get());
+            }
             return;
+        }
+        if self.shows_section(QuickAccessSection::Quick) {
+            self.show_activity_strip();
         }
         if !self.shows_section(QuickAccessSection::Notifications) {
             return;
@@ -143,25 +152,57 @@ impl PinduQuickAccess {
         }
     }
 
-    /// Refresh Library is unavailable while a sync runs; focus on either of its rows moves
-    /// to the row beside it.
+    /// Quick's activity strip: the oldest task's label, its progress bar and percentage,
+    /// or a moving bar while there is no telling how far it is.
+    pub(crate) fn show_activity_strip(&self) {
+        let Some(application) = self.application() else {
+            return;
+        };
+        let imp = self.imp();
+        let Some(task) = application.task_service().tasks().into_iter().next() else {
+            return;
+        };
+        imp.activity_strip_label.set_label(&task.label);
+        let working = task.progress == Progress::Working;
+        if let Progress::Fraction(fraction) = task.progress {
+            imp.activity_strip_bar.set_fraction(fraction);
+            let percent = (fraction.clamp(0.0, 1.0) * 100.0).round();
+            // Translators: how far a background task is; {percent} is a number from 0 to
+            // 100.
+            imp.activity_strip_percent
+                .set_label(&gettext("{percent} %").replace("{percent}", &percent.to_string()));
+        }
+        imp.activity_strip_percent.set_visible(!working);
+        imp.activity_strip_pulses.set(working);
+        if working {
+            imp.activity_strip_bar.pulse();
+            self.pulse_activity();
+        }
+    }
+
+    /// Refresh Library is unavailable while a sync runs; focus on its row or tile moves
+    /// to the entry beside it.
     fn show_refresh(&self, syncing: bool) {
         let imp = self.imp();
-        let focused = [imp.refresh_row.get(), imp.quick_refresh_row.get()]
-            .into_iter()
-            .find(|row| row.has_focus());
-        // Quick's row follows Manage's (`data/ui/quick_access.blp`).
+        let focused = [
+            imp.refresh_row.get().upcast::<gtk::Widget>(),
+            imp.quick_refresh_tile.get().upcast(),
+        ]
+        .into_iter()
+        .find(|entry| entry.has_focus());
+        // Quick's tile follows Manage's row (`data/ui/quick_access.blp`).
         imp.refresh_row.set_sensitive(!syncing);
-        if let Some(row) = focused.filter(|_| syncing) {
+        if let Some(entry) = focused.filter(|_| syncing) {
             glib::idle_add_local_once(glib::clone!(
                 #[weak(rename_to = quick_access)]
                 self,
-                move || quick_access.focus_beside(&row)
+                move || quick_access.focus_beside(&entry)
             ));
         }
     }
 
-    /// Moves the bars of tasks with no telling how far they are while Notifications shows.
+    /// Moves the bars of tasks with no telling how far they are while Notifications
+    /// shows, and the activity strip's while Quick shows it so.
     fn pulse_activity(&self) {
         let imp = self.imp();
         if imp.activity_pulse.borrow().is_some() {
@@ -176,16 +217,23 @@ impl PinduQuickAccess {
                 glib::ControlFlow::Break,
                 move || {
                     let imp = quick_access.imp();
-                    if !quick_access.shows_section(QuickAccessSection::Notifications) {
-                        imp.activity_pulse.take();
-                        return glib::ControlFlow::Break;
-                    }
-                    for (task, bar) in imp.activity_shown.borrow().iter() {
-                        if task.progress == Progress::Working {
-                            bar.pulse();
+                    if quick_access.shows_section(QuickAccessSection::Notifications) {
+                        for (task, bar) in imp.activity_shown.borrow().iter() {
+                            if task.progress == Progress::Working {
+                                bar.pulse();
+                            }
                         }
+                        return glib::ControlFlow::Continue;
                     }
-                    glib::ControlFlow::Continue
+                    if quick_access.shows_section(QuickAccessSection::Quick)
+                        && imp.activity_strip.is_visible()
+                        && imp.activity_strip_pulses.get()
+                    {
+                        imp.activity_strip_bar.pulse();
+                        return glib::ControlFlow::Continue;
+                    }
+                    imp.activity_pulse.take();
+                    glib::ControlFlow::Break
                 }
             ),
         );
