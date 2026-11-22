@@ -600,10 +600,48 @@ pub struct Filters {
     pub hidden: bool,
 }
 
+/// A filter that is on, as fullscreen mode's Filters level names it; the shell turns each
+/// into its translated label.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FilterName {
+    /// Installed.
+    Installed,
+    /// Not Installed.
+    NotInstalled,
+    /// Windows.
+    Windows,
+    /// Native.
+    Native,
+    /// Never Played.
+    NeverPlayed,
+    /// Show Hidden Games.
+    HiddenGames,
+    /// The genre chosen, as the library spells it.
+    Genre(String),
+}
+
 impl Filters {
     /// Whether any filter is on.
     pub fn any(&self) -> bool {
         *self != Self::default()
+    }
+
+    /// The filters that are on, in the order fullscreen mode's Filters level lists them:
+    /// its switches, then the genre. That level has no Favourites (fullscreen mode has a
+    /// Favourites tab instead), so Favourites is not named.
+    pub fn names_on(&self) -> Vec<FilterName> {
+        [
+            (self.installed, FilterName::Installed),
+            (self.not_installed, FilterName::NotInstalled),
+            (self.windows, FilterName::Windows),
+            (self.native, FilterName::Native),
+            (self.never_played, FilterName::NeverPlayed),
+            (self.hidden, FilterName::HiddenGames),
+        ]
+        .into_iter()
+        .filter_map(|(on, name)| on.then_some(name))
+        .chain(self.genre.clone().map(FilterName::Genre))
+        .collect()
     }
 
     fn includes(&self, game: &Game) -> bool {
@@ -1415,6 +1453,38 @@ mod tests {
             .any()
         );
         assert_eq!(shown_with(Filters::default(), &platform_games()).len(), 3);
+    }
+
+    #[test]
+    fn the_filters_on_are_named_in_the_filters_level_s_order() {
+        assert_eq!(Filters::default().names_on(), []);
+        let native = Filters {
+            native: true,
+            ..Filters::default()
+        };
+        assert_eq!(native.names_on(), [FilterName::Native]);
+        let several = Filters {
+            hidden: true,
+            genre: Some("RPG".to_owned()),
+            never_played: true,
+            windows: true,
+            not_installed: true,
+            installed: true,
+            native: true,
+            ..Filters::default()
+        };
+        assert_eq!(
+            several.names_on(),
+            [
+                FilterName::Installed,
+                FilterName::NotInstalled,
+                FilterName::Windows,
+                FilterName::Native,
+                FilterName::NeverPlayed,
+                FilterName::HiddenGames,
+                FilterName::Genre("RPG".to_owned()),
+            ]
+        );
     }
 
     #[test]

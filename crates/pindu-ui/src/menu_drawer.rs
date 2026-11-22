@@ -109,9 +109,9 @@ mod imp {
                     }
                 }
             ));
-            let _ = self
-                .cards
-                .set(PlayingCards::new(&self.playing_cards, &self.list));
+            let cards = PlayingCards::new(&self.playing_cards);
+            cards.lead_up_from(&self.list);
+            let _ = self.cards.set(cards);
             // Up from the first window goes to the nearest card's Return, Down from the last
             // to the entries.
             self.windows.connect_keynav_failed(glib::clone!(

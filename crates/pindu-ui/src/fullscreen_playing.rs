@@ -24,8 +24,8 @@ use crate::quick_access::PinduQuickAccess;
 use crate::session_service;
 use crate::window::PinduWindow;
 
-/// A panel's Playing Now cards: a card per game we started that runs, in a box over the
-/// panel's list, with their times moving while the panel shows.
+/// A panel's Playing Now cards: a card per game we started that runs, in a box at the top
+/// of the panel, with their times moving while the panel shows.
 #[derive(Debug, Clone)]
 pub(crate) struct PlayingCards(Rc<Inner>);
 
@@ -40,12 +40,22 @@ struct Inner {
 }
 
 impl PlayingCards {
-    /// The cards in `cards`, over `list`: Up from the top of the list goes to the nearest
-    /// card's Return (rather than the Stop beside it).
-    pub(crate) fn new(cards: &gtk::Box, list: &gtk::ListBox) -> Self {
+    /// The cards in `cards`.
+    pub(crate) fn new(cards: &gtk::Box) -> Self {
+        Self(Rc::new(Inner {
+            cards: cards.clone(),
+            times: RefCell::new(Vec::new()),
+            tick: RefCell::new(None),
+            shown: Cell::new(false),
+        }))
+    }
+
+    /// Up from the top of `list`, under the cards, goes to the nearest card's Return
+    /// (rather than the Stop beside it).
+    pub(crate) fn lead_up_from(&self, list: &gtk::ListBox) {
         list.connect_keynav_failed(glib::clone!(
-            #[weak]
-            cards,
+            #[weak(rename_to = cards)]
+            self.0.cards,
             #[upgrade_or]
             glib::Propagation::Stop,
             move |_, direction| {
@@ -58,12 +68,6 @@ impl PlayingCards {
                 glib::Propagation::Stop
             }
         ));
-        Self(Rc::new(Inner {
-            cards: cards.clone(),
-            times: RefCell::new(Vec::new()),
-            tick: RefCell::new(None),
-            shown: Cell::new(false),
-        }))
     }
 
     /// Shows a card for each of `playing`, the first started first, and hides the cards

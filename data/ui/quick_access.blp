@@ -347,7 +347,9 @@ template $PinduQuickAccess: Box {
                 labelled-by: quick_tab;
               }
 
-              child: Box {
+              // How Up, Down, Left and Right move through the section is the section's own
+              // (`PinduQuickSection`), not GTK's.
+              child: $PinduQuickSection quick_section {
                 orientation: vertical;
                 spacing: 12;
 
@@ -358,257 +360,520 @@ template $PinduQuickAccess: Box {
                   visible: false;
                 }
 
-                ListBox list {
-                  selection-mode: none;
+                // Shown while fullscreen mode's library is under the panel; its second
+                // line names the filters that are on.
+                Button filters_card {
+                  action-name: "win.quick-access-filters";
+                  visible: false;
 
                   styles [
-                    "navigation-sidebar",
+                    "page-card",
                   ]
 
-                  // Shown while fullscreen mode's library is under the panel.
-                  ListBoxRow filters_row {
-                    action-name: "win.quick-access-filters";
-                    visible: false;
+                  child: Box {
+                    spacing: 12;
 
-                    child: Box {
-                      spacing: 16;
+                    Image {
+                      icon-name: "checkbox-checked-symbolic";
+                      valign: center;
+                      accessible-role: presentation;
 
-                      Image {
-                        icon-name: "checkbox-checked-symbolic";
-                        accessible-role: presentation;
+                      styles [
+                        "page-card-icon",
+                      ]
+                    }
+
+                    Box {
+                      orientation: vertical;
+                      valign: center;
+                      hexpand: true;
+
+                      Label {
+                        label: _("For This Page");
+                        xalign: 0;
+                        ellipsize: end;
+
+                        styles [
+                          "page-card-eyebrow",
+                          "caption",
+                          "dim-label",
+                        ]
                       }
 
                       Label {
                         label: _("Filters");
                         xalign: 0;
-                        hexpand: true;
+                        wrap: true;
+                        wrap-mode: word_char;
+                        lines: 2;
+                        ellipsize: end;
+
+                        styles [
+                          "heading",
+                        ]
                       }
+                    }
 
-                      Image {
-                        icon-name: "go-next-symbolic";
-                        accessible-role: presentation;
-                      }
-                    };
-                  }
+                    Label filters_card_state {
+                      visible: false;
+                      xalign: 1;
+                      ellipsize: end;
+                      max-width-chars: 24;
 
-                  // Shown while a game we run ourselves has focus under the panel, or
-                  // the page is its own.
-                  ListBoxRow performance_row {
-                    action-name: "win.quick-access-performance";
-                    visible: false;
+                      styles [
+                        "page-card-state",
+                        "dim-label",
+                      ]
+                    }
 
-                    child: Box {
-                      spacing: 16;
+                    Image {
+                      icon-name: "go-next-symbolic";
+                      accessible-role: presentation;
+                    }
+                  };
+                }
 
-                      Image {
-                        icon-name: "power-profile-performance-symbolic";
-                        accessible-role: presentation;
+                // Shown while a game we run ourselves has focus under the panel, or the page is its
+                // own; named as the level is.
+                Button performance_card {
+                  action-name: "win.quick-access-performance";
+                  visible: false;
+
+                  styles [
+                    "page-card",
+                  ]
+
+                  child: Box {
+                    spacing: 12;
+
+                    Image {
+                      icon-name: "power-profile-performance-symbolic";
+                      valign: center;
+                      accessible-role: presentation;
+
+                      styles [
+                        "page-card-icon",
+                      ]
+                    }
+
+                    Box {
+                      orientation: vertical;
+                      valign: center;
+                      hexpand: true;
+
+                      Label {
+                        label: _("For This Page");
+                        xalign: 0;
+                        ellipsize: end;
+
+                        styles [
+                          "page-card-eyebrow",
+                          "caption",
+                          "dim-label",
+                        ]
                       }
 
                       Label {
-                        label: _("Performance");
+                        label: bind performance_title.label;
                         xalign: 0;
-                        hexpand: true;
-                      }
+                        wrap: true;
+                        wrap-mode: word_char;
+                        lines: 2;
+                        ellipsize: end;
 
-                      Image {
-                        icon-name: "go-next-symbolic";
-                        accessible-role: presentation;
+                        styles [
+                          "heading",
+                        ]
                       }
-                    };
-                  }
+                    }
+
+                    Image {
+                      icon-name: "go-next-symbolic";
+                      accessible-role: presentation;
+                    }
+                  };
+                }
+
+                // Three equal columns, filled from the start with the tiles that show
+                // (`pindu_core::panels::quick_tiles`), placed in code. A tile's top
+                // expands inside it, not the grid inside the page.
+                Grid quick_tiles {
+                  column-spacing: 10;
+                  row-spacing: 10;
+                  column-homogeneous: true;
+                  vexpand: false;
+
+                  styles [
+                    "quick-tiles",
+                  ]
 
                   // As System's Sound Output row: the same level and second line.
-                  ListBoxRow quick_sound_output_row {
+                  Button quick_sound_output_tile {
                     action-name: "win.quick-access-sound-output";
                     visible: false;
                     sensitive: bind sound_output_row.sensitive;
 
-                    child: Box {
-                      spacing: 16;
+                    styles [
+                      "quick-tile",
+                    ]
 
-                      Image {
-                        icon-name: "audio-volume-high-symbolic";
-                        accessible-role: presentation;
-                      }
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 4;
 
                       Box {
-                        orientation: vertical;
-                        valign: center;
-                        hexpand: true;
+                        valign: start;
+                        vexpand: true;
 
-                        Label {
-                          label: _("Sound Output");
-                          xalign: 0;
-                        }
-
-                        Label {
-                          label: bind sound_output_subtitle.label;
-                          visible: bind sound_output_subtitle.visible;
-                          xalign: 0;
-                          ellipsize: end;
+                        Image {
+                          icon-name: "audio-volume-high-symbolic";
+                          halign: start;
+                          hexpand: true;
+                          accessible-role: presentation;
 
                           styles [
-                            "caption",
-                            "dim-label",
+                            "quick-tile-icon",
+                          ]
+                        }
+
+                        Image {
+                          icon-name: "go-next-symbolic";
+                          valign: start;
+                          accessible-role: presentation;
+
+                          styles [
+                            "quick-tile-arrow",
                           ]
                         }
                       }
 
-                      Image {
-                        icon-name: "go-next-symbolic";
-                        accessible-role: presentation;
+                      Label {
+                        label: _("Sound Output");
+                        xalign: 0;
+                        wrap: true;
+                        wrap-mode: word_char;
+                        max-width-chars: 10;
+
+                        styles [
+                          "quick-tile-name",
+                        ]
+                      }
+
+                      Label {
+                        label: bind sound_output_subtitle.label;
+                        visible: bind sound_output_subtitle.visible;
+                        xalign: 0;
+                        ellipsize: end;
+                        max-width-chars: 10;
+
+                        styles [
+                          "quick-tile-state",
+                          "caption",
+                          "dim-label",
+                        ]
                       }
                     };
                   }
 
                   // As System's Bluetooth row: the same level and second line.
-                  ListBoxRow quick_bluetooth_row {
+                  Button quick_bluetooth_tile {
                     action-name: "win.quick-access-bluetooth";
                     visible: false;
                     sensitive: bind bluetooth_row.sensitive;
 
-                    child: Box {
-                      spacing: 16;
+                    styles [
+                      "quick-tile",
+                    ]
 
-                      Image {
-                        icon-name: "bluetooth-active-symbolic";
-                        accessible-role: presentation;
-                      }
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 4;
 
                       Box {
-                        orientation: vertical;
-                        valign: center;
-                        hexpand: true;
+                        valign: start;
+                        vexpand: true;
 
-                        Label {
-                          label: _("Bluetooth");
-                          xalign: 0;
-                        }
-
-                        Label {
-                          label: bind bluetooth_subtitle.label;
-                          xalign: 0;
-                          ellipsize: end;
+                        Image {
+                          icon-name: "bluetooth-active-symbolic";
+                          halign: start;
+                          hexpand: true;
+                          accessible-role: presentation;
 
                           styles [
-                            "caption",
-                            "dim-label",
+                            "quick-tile-icon",
+                          ]
+                        }
+
+                        Image {
+                          icon-name: "go-next-symbolic";
+                          valign: start;
+                          accessible-role: presentation;
+
+                          styles [
+                            "quick-tile-arrow",
                           ]
                         }
                       }
 
-                      Image {
-                        icon-name: "go-next-symbolic";
-                        accessible-role: presentation;
+                      Label {
+                        label: _("Bluetooth");
+                        xalign: 0;
+                        wrap: true;
+                        wrap-mode: word_char;
+                        max-width-chars: 10;
+
+                        styles [
+                          "quick-tile-name",
+                        ]
+                      }
+
+                      Label {
+                        label: bind bluetooth_subtitle.label;
+                        xalign: 0;
+                        ellipsize: end;
+                        max-width-chars: 10;
+
+                        styles [
+                          "quick-tile-state",
+                          "caption",
+                          "dim-label",
+                        ]
                       }
                     };
                   }
 
                   // As System's Network row: the same level and second line.
-                  ListBoxRow quick_network_row {
+                  Button quick_network_tile {
                     action-name: "win.quick-access-network";
                     visible: false;
                     sensitive: bind network_row.sensitive;
 
-                    child: Box {
-                      spacing: 16;
+                    styles [
+                      "quick-tile",
+                    ]
 
-                      Image {
-                        icon-name: bind network_icon.icon-name;
-                        accessible-role: presentation;
-                      }
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 4;
 
                       Box {
-                        orientation: vertical;
-                        valign: center;
-                        hexpand: true;
+                        valign: start;
+                        vexpand: true;
 
-                        Label {
-                          label: _("Network");
-                          xalign: 0;
-                        }
-
-                        Label {
-                          label: bind network_subtitle.label;
-                          xalign: 0;
-                          ellipsize: end;
+                        Image {
+                          icon-name: bind network_icon.icon-name;
+                          halign: start;
+                          hexpand: true;
+                          accessible-role: presentation;
 
                           styles [
-                            "caption",
-                            "dim-label",
+                            "quick-tile-icon",
+                          ]
+                        }
+
+                        Image {
+                          icon-name: "go-next-symbolic";
+                          valign: start;
+                          accessible-role: presentation;
+
+                          styles [
+                            "quick-tile-arrow",
                           ]
                         }
                       }
 
-                      Image {
-                        icon-name: "go-next-symbolic";
-                        accessible-role: presentation;
+                      Label {
+                        label: _("Network");
+                        xalign: 0;
+                        wrap: true;
+                        wrap-mode: word_char;
+                        max-width-chars: 10;
+
+                        styles [
+                          "quick-tile-name",
+                        ]
+                      }
+
+                      Label {
+                        label: bind network_subtitle.label;
+                        xalign: 0;
+                        ellipsize: end;
+                        max-width-chars: 10;
+
+                        styles [
+                          "quick-tile-state",
+                          "caption",
+                          "dim-label",
+                        ]
                       }
                     };
                   }
 
-                  // Opens a random installed game's page; unavailable while none is
-                  // installed.
-                  ListBoxRow surprise_row {
+                  // Opens a random installed game's page; unavailable while none is installed.
+                  Button surprise_tile {
                     action-name: "win.surprise-me";
 
-                    child: Box {
-                      spacing: 16;
+                    styles [
+                      "quick-tile",
+                    ]
 
-                      Image {
-                        icon-name: "media-playlist-shuffle-symbolic";
-                        accessible-role: presentation;
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 4;
+
+                      Box {
+                        valign: start;
+                        vexpand: true;
+
+                        Image {
+                          icon-name: "media-playlist-shuffle-symbolic";
+                          halign: start;
+                          hexpand: true;
+                          accessible-role: presentation;
+
+                          styles [
+                            "quick-tile-icon",
+                          ]
+                        }
                       }
 
                       Label {
                         label: _("Surprise Me");
                         xalign: 0;
-                        hexpand: true;
+                        wrap: true;
+                        wrap-mode: word_char;
+                        max-width-chars: 10;
+
+                        styles [
+                          "quick-tile-name",
+                        ]
                       }
                     };
                   }
 
                   // As Manage's Refresh Library, unavailable while a sync runs.
-                  ListBoxRow quick_refresh_row {
+                  Button quick_refresh_tile {
                     action-name: "app.import";
                     sensitive: bind refresh_row.sensitive;
 
-                    child: Box {
-                      spacing: 16;
+                    styles [
+                      "quick-tile",
+                    ]
 
-                      Image {
-                        icon-name: "view-refresh-symbolic";
-                        accessible-role: presentation;
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 4;
+
+                      Box {
+                        valign: start;
+                        vexpand: true;
+
+                        Image {
+                          icon-name: "view-refresh-symbolic";
+                          halign: start;
+                          hexpand: true;
+                          accessible-role: presentation;
+
+                          styles [
+                            "quick-tile-icon",
+                          ]
+                        }
                       }
 
                       Label {
                         label: _("Refresh Library");
                         xalign: 0;
-                        hexpand: true;
+                        wrap: true;
+                        wrap-mode: word_char;
+                        max-width-chars: 10;
+
+                        styles [
+                          "quick-tile-name",
+                        ]
                       }
                     };
                   }
 
                   // As Manage's Add a Game.
-                  ListBoxRow quick_add_game_row {
+                  Button quick_add_game_tile {
                     action-name: "win.add-game-fullscreen";
 
-                    child: Box {
-                      spacing: 16;
+                    styles [
+                      "quick-tile",
+                    ]
 
-                      Image {
-                        icon-name: "applications-games-symbolic";
-                        accessible-role: presentation;
+                    child: Box {
+                      orientation: vertical;
+                      spacing: 4;
+
+                      Box {
+                        valign: start;
+                        vexpand: true;
+
+                        Image {
+                          icon-name: "applications-games-symbolic";
+                          halign: start;
+                          hexpand: true;
+                          accessible-role: presentation;
+
+                          styles [
+                            "quick-tile-icon",
+                          ]
+                        }
                       }
 
                       Label {
                         label: _("Add a Game");
                         xalign: 0;
-                        hexpand: true;
+                        wrap: true;
+                        wrap-mode: word_char;
+                        max-width-chars: 10;
+
+                        styles [
+                          "quick-tile-name",
+                        ]
                       }
                     };
                   }
+                }
+
+                // While something runs in the background: the oldest task, its progress and
+                // percentage; it shows the Notifications section, which lists the tasks with
+                // Cancel.
+                Button activity_strip {
+                  visible: false;
+
+                  styles [
+                    "activity-strip",
+                  ]
+
+                  child: Box {
+                    orientation: vertical;
+                    spacing: 8;
+
+                    Box {
+                      spacing: 12;
+
+                      Label activity_strip_label {
+                        xalign: 0;
+                        hexpand: true;
+                        ellipsize: end;
+                      }
+
+                      Label activity_strip_percent {
+                        visible: false;
+
+                        styles [
+                          "numeric",
+                          "dim-label",
+                        ]
+                      }
+                    }
+
+                    ProgressBar activity_strip_bar {
+                      pulse-step: 0.1;
+                    }
+                  };
                 }
               };
             };

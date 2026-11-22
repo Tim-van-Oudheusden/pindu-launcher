@@ -10,7 +10,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
-use pindu_core::library::{self, Filters, SortMode, View};
+use pindu_core::library::{self, FilterName, Filters, SortMode, View};
 
 use crate::application::PinduApplication;
 use crate::quick_access::{PinduQuickAccess, radio_row};
@@ -126,6 +126,29 @@ impl PinduQuickAccess {
         }
         self.filters_changed();
         self.show_filters();
+        self.show_filters_card();
+    }
+
+    /// Quick's Filters card names the filters that are on as the Filters level does, in
+    /// its order and joined with commas (`Filters::names_on`); nothing while none is on.
+    pub(crate) fn show_filters_card(&self) {
+        let imp = self.imp();
+        let names: Vec<String> = self
+            .fullscreen_filters()
+            .names_on()
+            .into_iter()
+            .map(|name| match name {
+                FilterName::Installed => imp.installed_row.title().into(),
+                FilterName::NotInstalled => imp.not_installed_row.title().into(),
+                FilterName::Windows => imp.windows_row.title().into(),
+                FilterName::Native => imp.native_row.title().into(),
+                FilterName::NeverPlayed => imp.never_played_row.title().into(),
+                FilterName::HiddenGames => imp.hidden_row.title().into(),
+                FilterName::Genre(genre) => genre,
+            })
+            .collect();
+        imp.filters_card_state.set_label(&names.join(", "));
+        imp.filters_card_state.set_visible(!names.is_empty());
     }
 
     /// Sets the switches and the genre check to fullscreen mode's filters: each switch then

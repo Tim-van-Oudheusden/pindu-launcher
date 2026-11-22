@@ -6,7 +6,8 @@
 //! This decides which one is open, at which level and section, what Start, Guide, R3,
 //! View or X, LB, RB and B do to them, and what each lists.
 
-use crate::gamepad::Intent;
+use crate::gamepad::{Direction, Intent};
+use crate::grid;
 use crate::launch::{self, WebPage};
 use crate::model::Game;
 use crate::saves;
@@ -204,9 +205,9 @@ pub struct Shown {
     pub over_game: bool,
 }
 
-/// What `section` lists while `shown` holds, top to bottom. Sound Output, Bluetooth,
-/// Network, Refresh Library and Add a Game are listed twice, once in Quick and once where
-/// they belong.
+/// What `section` lists while `shown` holds, top to bottom. Quick's tiles
+/// ([`quick_tiles`]) Sound Output, Bluetooth, Network, Refresh Library and Add a Game are
+/// listed twice, once in Quick and once where they belong.
 pub fn section_entries(section: QuickAccessSection, shown: Shown) -> Vec<QuickAccessEntry> {
     use QuickAccessEntry::*;
     let main_window = !shown.over_game;
@@ -215,12 +216,6 @@ pub fn section_entries(section: QuickAccessSection, shown: Shown) -> Vec<QuickAc
             (PlayingNow, shown.playing),
             (Filters, shown.filters),
             (Performance, shown.performance),
-            (SoundOutput, shown.sound_output),
-            (Bluetooth, shown.bluetooth),
-            (Network, shown.network),
-            (SurpriseMe, main_window),
-            (RefreshLibrary, true),
-            (AddGame, main_window),
         ],
         QuickAccessSection::Notifications => &[(Running, shown.running), (Notifications, true)],
         QuickAccessSection::Design => &[(Designs, true)],
@@ -244,10 +239,131 @@ pub fn section_entries(section: QuickAccessSection, shown: Shown) -> Vec<QuickAc
             (RefreshMetadata, shown.metadata),
         ],
     };
+    let tiles = if section == QuickAccessSection::Quick {
+        quick_tiles(shown)
+    } else {
+        Vec::new()
+    };
     entries
         .iter()
         .filter_map(|&(entry, show)| show.then_some(entry))
+        .chain(tiles.into_iter().map(QuickTile::entry))
         .collect()
+}
+
+/// A tile of Quick's grid, under its cards: one leads to a level, the others act.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QuickTile {
+    /// Leads to the sound outputs, naming the one in use.
+    SoundOutput,
+    /// Leads to Bluetooth, naming the connected devices or how the radio is.
+    Bluetooth,
+    /// Leads to the network, naming the connection in use.
+    Network,
+    /// Shows a random installed game (`win.surprise-me`).
+    SurpriseMe,
+    /// Imports the sources again (`app.import`).
+    RefreshLibrary,
+    /// Opens Add a Game (`win.add-game-fullscreen`).
+    AddGame,
+}
+
+impl QuickTile {
+    /// The entry the tile stands for, which acts or leads where the tile does.
+    pub fn entry(self) -> QuickAccessEntry {
+        match self {
+            Self::SoundOutput => QuickAccessEntry::SoundOutput,
+            Self::Bluetooth => QuickAccessEntry::Bluetooth,
+            Self::Network => QuickAccessEntry::Network,
+            Self::SurpriseMe => QuickAccessEntry::SurpriseMe,
+            Self::RefreshLibrary => QuickAccessEntry::RefreshLibrary,
+            Self::AddGame => QuickAccessEntry::AddGame,
+        }
+    }
+
+    /// The level the tile leads to, so it carries an arrow; `None` for a tile that acts.
+    pub fn level(self) -> Option<QuickAccessLevel> {
+        match self {
+            Self::SoundOutput => Some(QuickAccessLevel::SoundOutput),
+            Self::Bluetooth => Some(QuickAccessLevel::Bluetooth),
+            Self::Network => Some(QuickAccessLevel::Network),
+            Self::SurpriseMe | Self::RefreshLibrary | Self::AddGame => None,
+        }
+    }
+}
+
+/// Quick's tiles while `shown` holds, in the grid's order: Sound Output, Bluetooth and
+/// Network where the system offers them, then Surprise Me, Refresh Library and Add a Game,
+/// Surprise Me and Add a Game only in the main window. The tiles that show fill the grid
+/// from its start.
+pub fn quick_tiles(shown: Shown) -> Vec<QuickTile> {
+    let main_window = !shown.over_game;
+    [
+        (QuickTile::SoundOutput, shown.sound_output),
+        (QuickTile::Bluetooth, shown.bluetooth),
+        (QuickTile::Network, shown.network),
+        (QuickTile::SurpriseMe, main_window),
+        (QuickTile::RefreshLibrary, true),
+        (QuickTile::AddGame, main_window),
+    ]
+    .into_iter()
+    .filter_map(|(tile, show)| show.then_some(tile))
+    .collect()
+}
+
+/// Where focus goes first as Quick shows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QuickFocus {
+    /// The first page card: what the player most likely opened the panel for.
+    PageCard,
+    /// The first Playing Now card's Return.
+    PlayingNowReturn,
+    /// The first tile.
+    Tile,
+}
+
+/// Where focus goes first as Quick shows while `shown` holds: the first page card, without
+/// one the first Playing Now card's Return, without one the first tile (Refresh Library
+/// always shows).
+pub fn quick_first_focus(shown: Shown) -> QuickFocus {
+    if shown.filters || shown.performance {
+        QuickFocus::PageCard
+    } else if shown.playing {
+        QuickFocus::PlayingNowReturn
+    } else {
+        QuickFocus::Tile
+    }
+}
+
+/// The columns of Quick's tile grid.
+pub const QUICK_TILE_COLUMNS: u32 = 3;
+
+/// Where a direction moves focus from a tile of Quick's grid.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TileStep {
+    /// To the tile at this index, the same one where a row ends.
+    Tile(u32),
+    /// Out of the grid above its first row: to the last page card, or the last Playing
+    /// Now card.
+    Above,
+    /// Out of the grid below its last row: to the activity strip.
+    Below,
+}
+
+/// Where `direction` moves focus from the tile at `index` of Quick's `count` tiles, laid
+/// out [`QUICK_TILE_COLUMNS`] to a row: Left and Right along the row, stopping at its ends;
+/// Up and Down to the row above or below in the same column, into a shorter row its
+/// nearest tile, and out of the grid past its first or last row.
+pub fn step_tile(index: u32, direction: Direction, count: u32) -> TileStep {
+    match (
+        grid::step(index, direction, count, QUICK_TILE_COLUMNS),
+        direction,
+    ) {
+        (Some(tile), _) => TileStep::Tile(tile),
+        (None, Direction::Left | Direction::Right) => TileStep::Tile(index),
+        (None, Direction::Up) => TileStep::Above,
+        (None, Direction::Down) => TileStep::Below,
+    }
 }
 
 /// The sections that have anything to show while `shown` holds, in their order.
@@ -973,6 +1089,143 @@ mod tests {
             ],
             "Surprise Me and Add a Game need the main window"
         );
+    }
+
+    #[test]
+    fn quick_s_tiles_are_the_system_s_entries_then_the_quick_actions_as_they_show() {
+        use QuickTile::*;
+        assert_eq!(
+            quick_tiles(FULL),
+            [
+                SoundOutput,
+                Bluetooth,
+                Network,
+                SurpriseMe,
+                RefreshLibrary,
+                AddGame
+            ]
+        );
+        assert_eq!(
+            quick_tiles(BARE),
+            [SurpriseMe, RefreshLibrary, AddGame],
+            "the Flatpak, with no system entries, shows one row of three"
+        );
+        let some = Shown {
+            network: true,
+            ..BARE
+        };
+        assert_eq!(
+            quick_tiles(some),
+            [Network, SurpriseMe, RefreshLibrary, AddGame]
+        );
+        let over_game = Shown {
+            over_game: true,
+            ..FULL
+        };
+        assert_eq!(
+            quick_tiles(over_game),
+            [SoundOutput, Bluetooth, Network, RefreshLibrary],
+            "Surprise Me and Add a Game need the main window"
+        );
+        let over_game_bare = Shown {
+            over_game: true,
+            ..BARE
+        };
+        assert_eq!(quick_tiles(over_game_bare), [RefreshLibrary]);
+    }
+
+    #[test]
+    fn a_tile_names_its_entry_and_the_level_it_leads_to() {
+        use QuickTile::*;
+        let tiles = [
+            (
+                SoundOutput,
+                QuickAccessEntry::SoundOutput,
+                Some(QuickAccessLevel::SoundOutput),
+            ),
+            (
+                Bluetooth,
+                QuickAccessEntry::Bluetooth,
+                Some(QuickAccessLevel::Bluetooth),
+            ),
+            (
+                Network,
+                QuickAccessEntry::Network,
+                Some(QuickAccessLevel::Network),
+            ),
+            (SurpriseMe, QuickAccessEntry::SurpriseMe, None),
+            (RefreshLibrary, QuickAccessEntry::RefreshLibrary, None),
+            (AddGame, QuickAccessEntry::AddGame, None),
+        ];
+        for (tile, entry, level) in tiles {
+            assert_eq!(tile.entry(), entry, "{tile:?}");
+            assert_eq!(tile.level(), level, "{tile:?}");
+        }
+    }
+
+    #[test]
+    fn quick_s_focus_starts_on_the_page_card_then_return_then_the_first_tile() {
+        let page_card = Shown {
+            filters: true,
+            playing: true,
+            ..BARE
+        };
+        assert_eq!(quick_first_focus(page_card), QuickFocus::PageCard);
+        let performance = Shown {
+            performance: true,
+            ..BARE
+        };
+        assert_eq!(quick_first_focus(performance), QuickFocus::PageCard);
+        let playing = Shown {
+            playing: true,
+            sound_output: true,
+            ..BARE
+        };
+        assert_eq!(quick_first_focus(playing), QuickFocus::PlayingNowReturn);
+        assert_eq!(quick_first_focus(BARE), QuickFocus::Tile);
+        let over_game = Shown {
+            over_game: true,
+            ..BARE
+        };
+        assert_eq!(quick_first_focus(over_game), QuickFocus::Tile);
+    }
+
+    #[test]
+    fn left_and_right_move_along_a_row_of_tiles_and_stop_at_its_ends() {
+        use Direction::{Left, Right};
+        // Two rows: 0 1 2 / 3 4 5.
+        assert_eq!(step_tile(0, Right, 6), TileStep::Tile(1));
+        assert_eq!(step_tile(1, Left, 6), TileStep::Tile(0));
+        assert_eq!(step_tile(0, Left, 6), TileStep::Tile(0));
+        assert_eq!(
+            step_tile(2, Right, 6),
+            TileStep::Tile(2),
+            "not on to the next row"
+        );
+        assert_eq!(
+            step_tile(3, Left, 6),
+            TileStep::Tile(3),
+            "not back to the row above"
+        );
+        // A short last row ends at its last tile: 0 1 2 / 3.
+        assert_eq!(step_tile(3, Right, 4), TileStep::Tile(3));
+    }
+
+    #[test]
+    fn up_and_down_keep_the_column_and_leave_the_grid_past_its_rows() {
+        use Direction::{Down, Up};
+        assert_eq!(step_tile(1, Down, 6), TileStep::Tile(4));
+        assert_eq!(step_tile(5, Up, 6), TileStep::Tile(2));
+        assert_eq!(step_tile(1, Up, 6), TileStep::Above);
+        assert_eq!(step_tile(4, Down, 6), TileStep::Below);
+        // One row: both leave.
+        assert_eq!(step_tile(0, Up, 3), TileStep::Above);
+        assert_eq!(step_tile(2, Down, 3), TileStep::Below);
+        // Into a shorter row, the nearest tile: 0 1 2 / 3 4.
+        assert_eq!(step_tile(0, Down, 5), TileStep::Tile(3));
+        assert_eq!(step_tile(2, Down, 5), TileStep::Tile(4));
+        assert_eq!(step_tile(2, Down, 4), TileStep::Tile(3));
+        assert_eq!(step_tile(4, Up, 5), TileStep::Tile(1));
     }
 
     #[test]
