@@ -85,7 +85,7 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Your details.** **Edit…** in a game's page menu sets its developer, genres, release year and description; what
   you change is kept when the library is imported again, and clearing a field goes back to the launcher's.
 - **Metadata from Wikidata, if you want it.** Turn on **Get Metadata From Wikidata** in Preferences (or in Quick
-  Access's settings), then **Refresh Metadata** in the main menu or in Quick Access looks your games up on
+  Access's Manage section), then **Refresh Metadata** in the main menu or under that switch looks your games up on
   [Wikidata](https://www.wikidata.org) by their Steam app ID and keeps their developer and genres, labelled in your
   language where Wikidata has it. It is off by default, runs only when you ask, never during an import, and can be
   cancelled in Activity. Details your launchers give stay underneath, and details you enter yourself come first. A
@@ -320,16 +320,21 @@ while Quick Access stays open. [Fullscreen menus](docs/fullscreen-menus.md) list
   snapshot, with its progress. Artwork fetches, metadata refreshes and Proton downloads can be cancelled; a cancelled
   download leaves nothing behind, and a cancelled refresh keeps what it had stored.
 - **Refresh Library** reads your launchers again, offline like every sync.
-- **Refresh Metadata**, while Wikidata metadata is on, asks Wikidata for your games' developer and genres.
 - **Surprise Me** opens the page of an installed game picked at random, never the same one twice in a row, so you
   still choose whether to play.
-- **Design** switches the fullscreen design (see [Styling fullscreen mode](#styling-fullscreen-mode)).
-- **Quick settings:** cover size, navigation sounds with a volume slider (left and right turn it, here or in
-  Preferences), and exiting after a launch.
-- **Accessibility:**
+- **Design** switches the fullscreen design (see [Styling fullscreen mode](#styling-fullscreen-mode)), and holds:
+  - **Cover Size:** small, medium or large covers.
+  - **Text Size:** fullscreen text at its default size or Large, Larger or Largest, each step about a quarter of
+    the default larger. Preferences has the same choice; an install that had the former Larger Text on starts at
+    Large.
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
-  - **Larger Text:** fullscreen text about a quarter larger.
+- **Controller** holds **Hold to Confirm** (off by default), after Swap Confirm and Back: Power Off, Restart, Forget
+  and Stop then need the controller's confirm button held down for a second. A popover over the entry fills as you
+  hold, and letting go early or pressing another button does nothing; the hint bar says **Hold to Confirm** on them.
+  The keyboard and the pointer still act at once.
+- **System** ends with **Navigation Sounds** with a volume slider (left and right turn it, here or in Preferences)
+  and **Exit After Launching**, in a list of their own, then **Diagnostics Report**.
 - **Duplicates** lists the copies that look like one game, with why and how sure that is. A on one opens to **Group**
   and **Not the Same Game**; a pair said not to be the same game is never suggested again. Groups the sync made from a
   Lutris store link show there too, with **Undo Grouping**. The desktop window has the same list under **Duplicates**
@@ -339,16 +344,12 @@ while Quick Access stays open. [Fullscreen menus](docs/fullscreen-menus.md) list
   switch syncs the library as it does there. A source's folder and its sidebar row stay in Preferences. Below them,
   **Copy Order** lists the sources in the order a game's copies follow: Right on a source reaches its **Move Up** and
   **Move Down**.
-  - **Text Size:** fullscreen text at its default size or Large, Larger or Largest, each step about a quarter of
-    the default larger. Preferences has the same choice; an install that had the former Larger Text on starts at
-    Large.
-  - **Hold to Confirm** (off by default): Power Off, Restart, Forget and Stop then need the controller's confirm button
-    held down for a second. A popover over the entry fills as you hold, and letting go early or pressing another
-    button does nothing; the hint bar says **Hold to Confirm** on them. The keyboard and the pointer still act at once.
-- **Artwork:** your SteamGridDB key, typed hidden with the on-screen keyboard (Show reveals it) and kept in the system
-  keyring, never in settings or files; the row says whether a key is stored, or that the keyring cannot be used and
-  why. Missing art is fetched once a key is saved. **Prefer SteamGridDB Art** is here too.
-- **Metadata:** **Get Metadata From Wikidata**, the same switch as in Preferences, which shows **Refresh Metadata**.
+- **Manage**, after its entries:
+  - **Artwork:** your SteamGridDB key, typed hidden with the on-screen keyboard (Show reveals it) and kept in the
+    system keyring, never in settings or files; the row says whether a key is stored, or that the keyring cannot be
+    used and why. Missing art is fetched once a key is saved. **Prefer SteamGridDB Art** is here too.
+  - **Metadata:** **Get Metadata From Wikidata**, the same switch as in Preferences, with **Refresh Metadata** right
+    under it while it is on; that asks Wikidata for your games' developer and genres.
 - **Sound Output**, subtitled with the output in use, lists the outputs PipeWire has (speakers, a television over
   HDMI, a receiver, a Bluetooth headset) with a check on the one in use. Choose one to make it the default; WirePlumber
   keeps the choice after a restart, and games that follow the default move to it. It reads the outputs with `pw-dump`

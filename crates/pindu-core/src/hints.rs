@@ -756,13 +756,13 @@ mod tests {
                 (Button::East, Action::Close)
             ]
         );
-        let settings = Context {
+        let sources = Context {
             focus: Focus::Toggle,
-            panel: Some(Panel::QuickAccess(QuickAccessLevel::Settings)),
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Sources)),
             ..library
         };
         assert_eq!(
-            actions(settings, DeviceKind::Nintendo),
+            actions(sources, DeviceKind::Nintendo),
             [
                 (Button::East, Action::Toggle),
                 (Button::South, Action::Back)
@@ -848,13 +848,13 @@ mod tests {
 
     #[test]
     fn a_focused_slider_adjusts_with_left_and_right_and_a_does_nothing() {
-        let settings = Context {
+        let volume = Context {
             menu: true,
-            panel: Some(Panel::QuickAccess(QuickAccessLevel::Settings)),
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Main)),
             ..context(Focus::Slider)
         };
         assert_eq!(
-            hints(settings, Layout::detected(DeviceKind::Xbox)),
+            hints(volume, Layout::detected(DeviceKind::Xbox)),
             [
                 Hint {
                     button: Button::DpadLeft,
@@ -864,7 +864,7 @@ mod tests {
                 Hint {
                     button: Button::East,
                     pair: None,
-                    action: Action::Back,
+                    action: Action::Close,
                 },
             ]
         );

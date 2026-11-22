@@ -23,7 +23,7 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   - Play with Logs and the other Preferences pages.
 - **Game details.** Developer, genres and description show on the fullscreen game page in every shipped design, as
   they do on the desktop page; a long description can be scrolled with a controller.
-- **The SteamGridDB key.** Quick Access → System → Settings → Artwork. It is typed hidden with the on-screen
+- **The SteamGridDB key.** Quick Access → Manage → Artwork. It is typed hidden with the on-screen
   keyboard's hidden-text dialog (the one Wi-Fi passphrases and Bluetooth PINs use) and stored in the keyring through
   oo7, never in GSettings, files or logs. Without a working keyring the entry says so in place and cannot be chosen.
   The Prefer SteamGridDB Art switch sits beside it, as #520 decided.

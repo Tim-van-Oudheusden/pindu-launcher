@@ -167,8 +167,8 @@ their `-fg-` partners. Use `--accent-color`, `--accent-bg-color` and `--accent-f
 
 `@media (prefers-color-scheme: dark)` follows the system style, and `@media (prefers-reduced-motion: reduce)`
 matches while the window is `reduced-motion`: the system's reduced-motion or animations setting, or Pindu's
-own **Reduce Motion** switch. Turn off your transitions and animations under the latter, including the
-`.home-hero` crossfade:
+own **Reduce Motion** switch (Quick Access → Design). Turn off your transitions and animations under the
+latter, including the `.home-hero` crossfade:
 
 ```css
 @media (prefers-reduced-motion: reduce) {
@@ -179,12 +179,12 @@ own **Reduce Motion** switch. Turn off your transitions and animations under the
 
 ### Text size
 
-**Text Size** has four steps, Default, Large, Larger and Largest; each step past Default adds about a quarter of
-fullscreen mode's own type size. Above Default the window is `large-text` and `text-large`, `text-larger` or
-`text-largest`, and Pindu sets `font-size` on `window.fullscreen-mode.text-large` and the others. Size your text
-in `em` so it follows, and give rows and tiles that hold text room to grow (or no fixed height) so nothing is cut
-off. A design can set its own scale under the size classes, or restyle anything at every larger size under
-`window.fullscreen-mode.large-text`.
+**Text Size** (Quick Access → Design, or Preferences) has four steps, Default, Large, Larger and Largest; each
+step past Default adds about a quarter of fullscreen mode's own type size. Above Default the window is
+`large-text` and `text-large`, `text-larger` or `text-largest`, and Pindu sets `font-size` on
+`window.fullscreen-mode.text-large` and the others. Size your text in `em` so it follows, and give rows and tiles
+that hold text room to grow (or no fixed height) so nothing is cut off. A design can set its own scale under the
+size classes, or restyle anything at every larger size under `window.fullscreen-mode.large-text`.
 
 ## Names
 
@@ -345,7 +345,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.notification` | A row of Quick Access's notifications; `.unread` while it is new, with an `.unread-dot` |
 | `.task` | A row of the Running tasks in Quick Access's Notifications section, which lists what runs in the background: a label, what it is doing, a progress bar and, while it can be cancelled, a Cancel button |
 | `.control` | A row of Quick Access's Controls: the button's `.control-glyph` (after a Hold label for a held one) and the keys that do the same in `.control-keys` |
-| `.choice-row` | A row of Quick Access that changes one setting in place with Left and Right (Background, Background Blur, Background Dim, Button Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate, Stick Dead Zone, Cover Size, Text Size): the setting's name, under it the chosen option's second line where it has one, and at the end the `.choice-value` (the chosen option) between two `.choice-arrow` buttons, the one at an end insensitive |
+| `.choice-row` | A row of Quick Access that changes one setting in place with Left and Right (Design's Background, Background Blur, Background Dim, Cover Size and Text Size; Controller's Button Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate and Stick Dead Zone): the setting's name, under it the chosen option's second line where it has one, and at the end the `.choice-value` (the chosen option) between two `.choice-arrow` buttons, the one at an end insensitive |
 | `.options-sheet` | A game's options at the bottom |
 | `.navigation-sidebar > row` | A row in any of the three |
 | `.hint-bar` | The controller hints at the bottom; each `.hint` has `.hint-glyph`s and a `.hint-label` |

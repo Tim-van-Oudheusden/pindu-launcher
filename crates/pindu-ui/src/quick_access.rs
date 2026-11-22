@@ -39,11 +39,12 @@
 //! `fullscreen_health`, Diagnostics Report `fullscreen_report`, Add a Store `add_store`,
 //! Proton `fullscreen_proton_downloads`, Sources `fullscreen_sources` and Duplicates
 //! `fullscreen_duplicates`; Add a Game opens the window's `fullscreen_add_game`. Design
-//! and Settings are this module's: the design, its variant, Home's background blur and dim
-//! and the user's own stylesheet, then cover size, navigation sounds and their volume,
-//! exiting after a launch, Reduce Motion and Larger Text, the SteamGridDB key (typed
-//! hidden with the on-screen keyboard of `secret_dialog` and kept in the keyring) and
-//! Prefer SteamGridDB Art, the same settings Preferences changes.
+//! is this module's: the design, its variant, Home's background blur and dim, cover size,
+//! text size, Reduce Motion and the user's own stylesheet. So are System's navigation
+//! sounds, their volume and exiting after a launch, and Manage's SteamGridDB key (typed
+//! hidden with the on-screen keyboard of `secret_dialog` and kept in the keyring), Prefer
+//! SteamGridDB Art and Wikidata metadata, with Refresh Metadata under its switch while it
+//! is on: the same settings Preferences changes.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::sync::LazyLock;
@@ -56,7 +57,6 @@ use gtk::{gio, glib};
 use pindu_core::accessibility::{Accessibility, TEXT_SIZE_KEY, TextSize};
 use pindu_core::gamepad::Intent;
 use pindu_core::gamescope::prompts::{PromptHost, prompt_host};
-use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
 use pindu_core::home::{BACKGROUND_KEY, BLUR_KEY, DIM_KEY};
 use pindu_core::keys;
 use pindu_core::model::GameId;
@@ -165,8 +165,6 @@ mod imp {
         #[template_child]
         pub refresh_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
-        pub refresh_metadata_row: TemplateChild<gtk::ListBoxRow>,
-        #[template_child]
         pub activity: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub designs: TemplateChild<gtk::ListBox>,
@@ -186,8 +184,6 @@ mod imp {
         pub custom_style: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub custom_style_row: TemplateChild<adw::SwitchRow>,
-        #[template_child]
-        pub settings_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
         pub sources_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
@@ -225,8 +221,6 @@ mod imp {
         #[template_child]
         pub manage_list: TemplateChild<gtk::ListBox>,
         #[template_child]
-        pub sizes: TemplateChild<gtk::ListBox>,
-        #[template_child]
         pub cover_size_row: TemplateChild<ChoiceRow>,
         #[template_child]
         pub switches: TemplateChild<gtk::ListBox>,
@@ -239,7 +233,7 @@ mod imp {
         #[template_child]
         pub exit_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
-        pub accessibility: TemplateChild<gtk::ListBox>,
+        pub report_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub reduce_motion_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
@@ -247,11 +241,15 @@ mod imp {
         #[template_child]
         pub hold_to_confirm_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
+        pub artwork_title: TemplateChild<gtk::Label>,
+        #[template_child]
         pub artwork: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub steamgriddb_key_row: TemplateChild<adw::ActionRow>,
         #[template_child]
         pub prefer_steamgriddb_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub metadata_title: TemplateChild<gtk::Label>,
         #[template_child]
         pub metadata: TemplateChild<gtk::ListBox>,
         #[template_child]
@@ -419,7 +417,6 @@ mod imp {
             let _ = self.time.set(Clock::new(&self.clock));
             let _ = self.playing.set(PlayingCards::new(&self.playing_cards));
             obj.setup_quick_section();
-            obj.setup_settings();
             obj.setup_navigation();
         }
 
@@ -491,7 +488,9 @@ impl PinduQuickAccess {
             &imp.proton_builds,
         ));
         self.add_level_actions(actions);
-        self.setup_sizes(actions);
+        self.setup_design_settings(actions);
+        self.setup_system_settings();
+        self.setup_manage_settings();
         self.setup_designs(application, actions);
         self.setup_status(application);
         self.setup_playing_cards(application);
@@ -589,7 +588,6 @@ impl PinduQuickAccess {
             Some(QuickAccessLevel::Network) => self.show_network(),
             Some(QuickAccessLevel::Sources) => self.show_sources(),
             Some(QuickAccessLevel::Duplicates) => self.show_duplicates(),
-            Some(QuickAccessLevel::Settings) => self.show_steamgriddb_key(),
             _ => {}
         }
         if let Some(level) = level {
@@ -633,7 +631,6 @@ impl PinduQuickAccess {
                 .entry(left, section)
                 .or_else(|| self.first_item(section)),
             (Some(QuickAccessLevel::Main), None) => self.first_item(section),
-            (Some(QuickAccessLevel::Settings), _) => Some(imp.cover_size_row.get().upcast()),
             (Some(QuickAccessLevel::Filters), _) => first_row(&imp.filters),
             // The first switch that works: MangoHud's cannot when it is not installed.
             (Some(QuickAccessLevel::Performance), _) => {
@@ -864,7 +861,6 @@ impl PinduQuickAccess {
             QuickAccessLevel::Filters => QuickAccessEntry::Filters,
             QuickAccessLevel::Performance => QuickAccessEntry::Performance,
             QuickAccessLevel::Controls => QuickAccessEntry::Controls,
-            QuickAccessLevel::Settings => QuickAccessEntry::Settings,
             QuickAccessLevel::Sources => QuickAccessEntry::Sources,
             QuickAccessLevel::Duplicates => QuickAccessEntry::Duplicates,
             QuickAccessLevel::Bluetooth => QuickAccessEntry::Bluetooth,
@@ -919,8 +915,11 @@ impl PinduQuickAccess {
             (Section::System, Entry::Bluetooth) => row(&imp.bluetooth_row),
             (Section::System, Entry::SoundOutput) => row(&imp.sound_output_row),
             (Section::System, Entry::SystemUpdate) => row(&imp.system_update_row),
-            (Section::System, Entry::Settings) => row(&imp.settings_row),
-            (Section::System, Entry::DiagnosticsReport) => row(&imp.report_row),
+            (Section::System, Entry::NavigationSounds) => vec![imp.switches.get().upcast()],
+            (Section::System, Entry::DiagnosticsReport) => vec![
+                imp.report_row.get().upcast(),
+                imp.report_list.get().upcast(),
+            ],
             (Section::Manage, Entry::Sources) => row(&imp.sources_row),
             (Section::Manage, Entry::Duplicates) => row(&imp.duplicates_row),
             (Section::Manage, Entry::LibraryHealth) => row(&imp.health_row),
@@ -928,7 +927,13 @@ impl PinduQuickAccess {
             (Section::Manage, Entry::AddStore) => row(&imp.add_store_row),
             (Section::Manage, Entry::AddGame) => row(&imp.add_game_row),
             (Section::Manage, Entry::RefreshLibrary) => row(&imp.refresh_row),
-            (Section::Manage, Entry::RefreshMetadata) => row(&imp.refresh_metadata_row),
+            (Section::Manage, Entry::Artwork) => {
+                vec![imp.artwork_title.get().upcast(), imp.artwork.get().upcast()]
+            }
+            (Section::Manage, Entry::Metadata) => vec![
+                imp.metadata_title.get().upcast(),
+                imp.metadata.get().upcast(),
+            ],
             _ => Vec::new(),
         }
     }
@@ -954,7 +959,6 @@ impl PinduQuickAccess {
             filters: true,
             performance: true,
             running: true,
-            metadata: true,
             network: true,
             bluetooth: true,
             sound_output: true,
@@ -976,6 +980,21 @@ impl PinduQuickAccess {
         let imp = self.imp();
         imp.quick_section.set_tiles(tiles);
         imp.activity_strip.set_visible(shown.running);
+        // System's first list hides while none of its entries is available, so its gap
+        // goes with it.
+        imp.system_list.set_visible(
+            section_entries(QuickAccessSection::System, shown)
+                .iter()
+                .any(|entry| {
+                    matches!(
+                        entry,
+                        QuickAccessEntry::Network
+                            | QuickAccessEntry::Bluetooth
+                            | QuickAccessEntry::SoundOutput
+                            | QuickAccessEntry::SystemUpdate
+                    )
+                }),
+        );
         let listed = sections(shown);
         for section in QuickAccessSection::ALL {
             self.tab(section).set_visible(listed.contains(&section));
@@ -1001,9 +1020,9 @@ impl PinduQuickAccess {
     }
 
     /// Shows `section` under the strip, filled as things now are: Quick its activity
-    /// strip, Notifications lists what runs and marks the notifications read, and Design
-    /// and Controller read their choices again. From another section (`switched`) it
-    /// crossfades, unless Pindu moves less.
+    /// strip, Notifications lists what runs and marks the notifications read, Design and
+    /// Controller read their choices again, and Manage reads whether a SteamGridDB key is
+    /// stored. From another section (`switched`) it crossfades, unless Pindu moves less.
     fn fill_section(&self, section: QuickAccessSection, switched: bool) {
         let imp = self.imp();
         if let Some(action) = imp.section_action.get() {
@@ -1028,7 +1047,8 @@ impl PinduQuickAccess {
             }
             QuickAccessSection::Design => self.fill_designs(),
             QuickAccessSection::Controller => self.fill_controllers(),
-            QuickAccessSection::System | QuickAccessSection::Manage => {}
+            QuickAccessSection::Manage => self.show_steamgriddb_key(),
+            QuickAccessSection::System => {}
         }
     }
 
@@ -1129,7 +1149,9 @@ impl PinduQuickAccess {
                     .find(|row| row.is::<gtk::ListBoxRow>() && row.is_sensitive())
                     .or_else(|| first_shown_row(&imp.controller_choices))
             }
-            QuickAccessSection::System => first_shown_row(&imp.system_list),
+            QuickAccessSection::System => {
+                first_shown_row(&imp.system_list).or_else(|| first_shown_row(&imp.switches))
+            }
             QuickAccessSection::Manage => first_shown_row(&imp.manage_list),
         }
     }
@@ -1239,9 +1261,7 @@ impl PinduQuickAccess {
             imp.custom_style.get(),
             imp.controllers.get(),
             imp.controller_choices.get(),
-            imp.sizes.get(),
             imp.switches.get(),
-            imp.accessibility.get(),
             imp.sources.get(),
             imp.source_order.get(),
             imp.duplicates.get(),
@@ -1277,6 +1297,7 @@ impl PinduQuickAccess {
             wifi_networks,
             imp.controller_list.get(),
             imp.system_list.get(),
+            imp.report_list.get(),
             imp.manage_list.get(),
         ] {
             list.connect_keynav_failed(|list, direction| {
@@ -1307,10 +1328,9 @@ impl PinduQuickAccess {
         });
     }
 
-    /// Settings: navigation sounds and their volume, exiting after a launch, Reduce Motion
-    /// and Hold to Confirm, the same settings Preferences changes, applied as they change.
-    /// Design's My Stylesheet is bound to its setting too.
-    fn setup_settings(&self) {
+    /// System's Navigation Sounds, their Volume and Exit After Launching, bound to the
+    /// same settings Preferences changes and applied as they change.
+    fn setup_system_settings(&self) {
         let imp = self.imp();
         let settings = self.settings();
         settings
@@ -1320,51 +1340,32 @@ impl PinduQuickAccess {
         settings
             .bind("exit-after-launch", &*imp.exit_row, "active")
             .build();
-        settings
-            .bind(REDUCE_MOTION_KEY, &*imp.reduce_motion_row, "active")
-            .build();
-        settings
-            .bind(HOLD_TO_CONFIRM_KEY, &*imp.hold_to_confirm_row, "active")
-            .build();
+    }
+
+    /// Manage's Artwork and Metadata: the SteamGridDB key, typed with the on-screen
+    /// keyboard, and Prefer SteamGridDB Art and Get Metadata From Wikidata bound to the
+    /// same settings Preferences changes. Refresh Metadata follows the Wikidata switch in
+    /// the Blueprint.
+    fn setup_manage_settings(&self) {
+        let imp = self.imp();
+        let settings = self.settings();
         settings
             .bind("prefer-steamgriddb", &*imp.prefer_steamgriddb_row, "active")
             .build();
         settings
             .bind(wikidata_service::SETTINGS_KEY, &*imp.wikidata_row, "active")
             .build();
-        let show_metadata = glib::clone!(
-            #[weak(rename_to = quick_access)]
-            self,
-            move |settings: &gio::Settings| {
-                let on = settings.boolean(wikidata_service::SETTINGS_KEY);
-                quick_access.update_shown(|shown| shown.metadata = on);
-            }
-        );
-        show_metadata(settings);
-        settings.connect_changed(Some(wikidata_service::SETTINGS_KEY), move |settings, _| {
-            show_metadata(settings);
-        });
         imp.steamgriddb_key_row.connect_activated(glib::clone!(
             #[weak(rename_to = quick_access)]
             self,
             move |_| quick_access.ask_steamgriddb_key()
         ));
-        settings
-            .bind(CUSTOM_STYLE_KEY, &*imp.custom_style_row, "active")
-            .build();
-        settings.connect_changed(
-            Some(CUSTOM_STYLE_KEY),
-            glib::clone!(
-                #[weak(rename_to = quick_access)]
-                self,
-                move |_, _| quick_access.show_custom_style()
-            ),
-        );
     }
 
-    /// Settings' Cover Size and Text Size: choice rows on their settings' actions, added to
-    /// `actions` as `win.tile-size` and `win.fullscreen-text-size`.
-    fn setup_sizes(&self, actions: &impl IsA<gio::ActionMap>) {
+    /// Design's Cover Size and Text Size, choice rows on their settings' actions added to
+    /// `actions` as `win.tile-size` and `win.fullscreen-text-size`, then Reduce Motion and
+    /// My Stylesheet bound to their settings.
+    fn setup_design_settings(&self, actions: &impl IsA<gio::ActionMap>) {
         let imp = self.imp();
         let cover_sizes = TILE_SIZES
             .into_iter()
@@ -1379,6 +1380,21 @@ impl PinduQuickAccess {
             ChoiceOption::new("largest", gettext("Largest")),
         ];
         self.add_choice(actions, TEXT_SIZE_KEY, &imp.text_size_row, text_sizes);
+        let settings = self.settings();
+        settings
+            .bind(REDUCE_MOTION_KEY, &*imp.reduce_motion_row, "active")
+            .build();
+        settings
+            .bind(CUSTOM_STYLE_KEY, &*imp.custom_style_row, "active")
+            .build();
+        settings.connect_changed(
+            Some(CUSTOM_STYLE_KEY),
+            glib::clone!(
+                #[weak(rename_to = quick_access)]
+                self,
+                move |_, _| quick_access.show_custom_style()
+            ),
+        );
     }
 
     /// Adds the action of the setting `key` to `actions`, `win.<key>`, and binds `row` to
