@@ -54,6 +54,12 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   focus and its label says why. Checked with a fake logind on a private system bus (`DBUS_SYSTEM_BUS_ADDRESS`), so
   nothing reached the host. Not seen: anything with a running game (asking first, an inhibitor refusal), the Flatpak's
   `needs_host_access` reason. libadwaita's `.dimmed` barely fades under high contrast.
+- 2026-11-22, #725 (stacked on #723): four layout options in `theme.json` (`panel-sections`, `quick-tiles`,
+  `menu-entries`, `playing-card`; `themes::{PanelSections, QuickTiles, MenuEntries, PlayingCard}`) arrange the menus
+  per design: Adwaita pills, Lobby the defaults, Marquee a side rail, list tiles and a Playing Now banner, Shelves
+  tile shelves and menu shelves. Focus goes through `panels::step_arranged_tile` and `step_shelves`; the panels follow
+  `connect_layout_changed`. At Largest a tile name wider than its tile still breaks inside a word (the panel's width is
+  fixed); menu cards never do (their shelves scroll sideways). Not seen: the banner (no running game in the harness).
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,

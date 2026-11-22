@@ -126,6 +126,7 @@ impl PinduGameOverlay {
         imp.quick_access.set_over_game();
         imp.quick_access.setup(application, &actions);
         imp.drawer.set_over_game();
+        imp.drawer.follow_layout(application);
         imp.drawer.follow_playing(
             application,
             glib::clone!(

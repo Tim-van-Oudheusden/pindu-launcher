@@ -102,11 +102,25 @@ CSS restyles widgets but cannot move, add or remove them. These options change w
 | `top-bar` | `false`, `true` | A bar at the top of Home and the library with Home and Library tabs and a clock. |
 | `top-bar-tabs` | `"start"`, `"center"` | Where the top bar's Home and Library tabs sit: at its start, or in its middle whatever the clock's width. |
 | `home-details` | `false`, `true` | A row under Home's title: the focused section's number of games, or the focused game's playtime, when it was last played and its source. |
+| `panel-sections` | `"top"`, `"side"` | Where Quick Access's section strip sits: across the top, or as a rail of icons down the panel's inner edge, with the shown section's name over its content. |
+| `quick-tiles` | `"grid"`, `"pills"`, `"list"`, `"shelf"` | Quick's tiles as a grid of three columns with the icon over the name; as two columns of wide pills with the icon beside the name; as full-width rows with the second line at the row's end; or as shelves, each a heading over a row that Left and Right move along: Devices (Sound Output, Bluetooth and Network) and Library (Surprise Me, Refresh Library and Add a Game), a shelf with no tile left out. |
+| `menu-entries` | `"list"`, `"shelves"` | The menu's places, collections and ways out as rows with the power dock under them; or as three shelves of cards, each card with its icon and name: Go To (Home, Library and Search), Collections (every collection, the row scrolling, so there is no All Collections) and Leave (the dock's entries, with their names shown). |
+| `playing-card` | `"compact"`, `"banner"` | The Playing Now card as it has been: "Playing Now" and how long the game has run, its title, then Return and Stop; or as a banner of the game's hero art, else its cover (the card colour without either), across the panel's top with the title over a scrim and Return and Stop on it. |
+
+The last four arrange the menu drawer and Quick Access, in the main window and over a running game; they
+never change what the menus hold. In every arrangement a menu and each section hold the same entries in
+the same order, and every button does the same thing. What changes is where things sit, and so whether two
+neighbours are a Left/Right or an Up/Down apart. In a grid, pills and rows, Left and Right move along a row
+and stop at its ends, and Up and Down keep the column, into a shorter row its nearest tile. On shelves,
+Left and Right move along a shelf and stop at its ends, and Up and Down change shelf, to the card that shelf
+last had focused, as on Home's shelves. Up from the top of the menu still lands on Suspend with
+`"menu-entries": "shelves"`.
 
 Adwaita, fullscreen mode with no design (and what shows under high contrast), has a layout of its own:
 `"home": "explore"`, `"home-tile": "portrait"` at 116 pixels, `"top-bar": true` with `"top-bar-tabs":
-"center"`, `"home-details": true` and `"home-section-tile": "label"`. What a `theme.json` leaves out still
-takes the defaults in the table above, not Adwaita's.
+"center"`, `"home-details": true`, `"home-section-tile": "label"` and `"quick-tiles": "pills"`, GNOME's
+quick settings' two columns. What a `theme.json` leaves out still takes the defaults in the table above,
+not Adwaita's.
 
 ### Variants
 
@@ -325,7 +339,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.game-page` | The page |
 | `.game-hero` | The art at the top, with its `.hero-gradient` |
 | `.game-actions` | The row of buttons; `.game-play` is Play |
-| `.playing-card` | The Playing Now card while the game runs; the menu drawer and the top of Quick Access show it too, with `.session-time`, how long the game has run |
+| `.playing-card` | The Playing Now card while the game runs; the menu drawer and the top of Quick Access show it too, with `.session-time`, how long the game has run. As a banner (a panel with `.playing-card-banner`) it holds the game's art (`.playing-card-art`) under its text in a `.playing-card-scrim`, and is `.no-art` while it has none |
 | `.game-about` | The About group: the developer, genres, release year, controller support and a Steam game's Steam Deck rating, in a `.boxed-list` whose rows take focus |
 | `.game-description` | The description; it takes focus, and Up and Down scroll through it while it has it |
 | `.launch-overlay` | The overlay while a game starts |
@@ -334,18 +348,21 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 
 | Name | What |
 |---|---|
-| `.menu-drawer` | The menu drawer on the left: the Playing Now cards, Home, Library, Search, the first collections under a Collections heading, then their levels. Each row's number of games is `.numeric` and `.dim-label` |
+| `.menu-drawer` | The menu drawer on the left: the Playing Now cards, Home, Library, Search, the first collections under a Collections heading, then their levels. Each row's number of games is `.numeric` and `.dim-label`. Also `.menu-shelves` with `"menu-entries": "shelves"`, and `.playing-card-banner` with `"playing-card": "banner"` |
 | `.power-dock` | The menu drawer's power dock, under its main level's list: Exit Fullscreen Mode, Switch to Desktop and Exit Pindu Launcher at its start, Suspend, Restart and Power Off at its end |
 | `.dock-button` | A round button of the dock (also `.circular`), at least 52px across, holding only its icon; one the system does not offer has a `.dimmed` icon and still takes focus |
 | `.dock-label` | The line over the dock that names the focused button, and says why a dimmed one is unavailable; empty while focus is elsewhere |
-| `.quick-access` | The Quick Access panel on the right |
+| `.menu-shelf-heading` | With `.menu-shelves`, the heading of a shelf of the menu's main level: Go To, Collections or Leave, over its row of cards (`.menu-shelf`), which scrolls sideways |
+| `.menu-card` | A card on one of the menu's shelves, at least 96px square: its icon (`.menu-card-icon`) over its name (`.menu-card-name`) and, under it, a number of games or why it does nothing (`.menu-card-detail`). A card of the Leave shelf is also `.leave-card`; one the system does not offer has a `.dimmed` icon and still takes focus |
+| `.quick-access` | The Quick Access panel on the right; also `.panel-sections-side` with `"panel-sections": "side"`, `.quick-tiles-pills`, `.quick-tiles-list` or `.quick-tiles-shelf` as `quick-tiles` says (none for `"grid"`), and `.playing-card-banner` with `"playing-card": "banner"` |
 | `.quick-access-status` | The header at the top of Quick Access: `.clock` (the time), `.offline` (shown while there is no network) and `.battery` (the machine's battery, absent without one) |
-| `.panel-sections` | The strip under Quick Access's header that switches its sections (Quick, Notifications, Design, Controller, System and Manage) |
-| `.panel-section` | A button of that strip, `:checked` for the section shown; it holds the section's icon, and the checked one its name too |
+| `.panel-sections` | The strip under Quick Access's header that switches its sections (Quick, Notifications, Design, Controller, System and Manage); a rail down the panel's inner edge, about 60px wide, with `.panel-sections-side` |
+| `.panel-section` | A button of that strip, `:checked` for the section shown; it holds the section's icon, and across the top the checked one its name too |
+| `.panel-section-title` | With `.panel-sections-side`, the shown section's name over its page |
 | `.page-card` | A card at the top of Quick Access's Quick section for what the page under the panel offers (Filters, Performance), a button at least 64px tall: its icon in a round chip (`.page-card-icon`), the "For This Page" eyebrow (`.page-card-eyebrow`) over its name, and at its end a second line (`.page-card-state`, the filters that are on) and an arrow |
-| `.quick-tiles` | The grid of tiles in Quick Access's Quick section: three equal columns, 10px apart, filled from the start |
-| `.quick-tile` | A tile of that grid, a button about 100px tall that grows taller at larger text sizes: its icon (`.quick-tile-icon`) at the top, a small arrow (`.quick-tile-arrow`) on a tile that leads to a level, and its name (`.quick-tile-name`) at the bottom; insensitive (`:disabled`) when it cannot be used now |
-| `.quick-tile-state` | A tile's second line under its name: the sound output, the Bluetooth devices or the network connection in use |
+| `.quick-tiles` | The tiles in Quick Access's Quick section, 10px apart, filled from the start: three equal columns; two with `.quick-tiles-pills`; one with `.quick-tiles-list`; and with `.quick-tiles-shelf` each shelf's heading (`.quick-tiles-heading`, Devices or Library) over a row of its tiles |
+| `.quick-tile` | A tile, a button about 100px tall that grows taller at larger text sizes: its icon (`.quick-tile-icon`) at the top, a small arrow (`.quick-tile-arrow`) on a tile that leads to a level, and its name (`.quick-tile-name`) at the bottom; insensitive (`:disabled`) when it cannot be used now. As a pill, at least 56px tall, and as a row, at least 48px, its icon sits at its start, its name and second line (`.quick-tile-text`) beside it and the arrow at its end |
+| `.quick-tile-state` | A tile's second line under its name, or at a row's end: the sound output, the Bluetooth devices or the network connection in use |
 | `.activity-strip` | The button at the bottom of Quick Access's Quick section while something runs in the background: the oldest task's label, its progress bar and its percentage; it shows the Notifications section |
 | `.notification-count` | The unread count on Quick Access's Notifications section button |
 | `.notification` | A row of Quick Access's notifications; `.unread` while it is new, with an `.unread-dot` |

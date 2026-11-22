@@ -1726,7 +1726,7 @@ impl PinduWindow {
 }
 
 /// Adds `class` to `widget` when `on`, and takes it off otherwise.
-fn set_css_class(widget: &impl IsA<gtk::Widget>, class: &str, on: bool) {
+pub(crate) fn set_css_class(widget: &impl IsA<gtk::Widget>, class: &str, on: bool) {
     if on {
         widget.add_css_class(class);
     } else {

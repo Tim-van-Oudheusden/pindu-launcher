@@ -4,13 +4,63 @@ Fullscreen mode has two menus: the menu drawer on the left (Start or Guide) and 
 a right stick click, the Steam Deck's "…" button, or <kbd>Ctrl</kbd>+<kbd>2</kbd>). The menu drawer is where to go;
 Quick Access is the state of things and the settings. This page says how both are arranged and what each part holds.
 The maintainer chose this arrangement, design A of the fullscreen menus design pass, on 2026-11-22; it is built in the
-issues of that series, starting with #717, and each one extends this page.
+issues of that series, starting with #717, and each one extends this page. It is the default; a design may arrange
+the menus its own way (#725, [Arrangements by design](#arrangements-by-design)), never what they hold.
 
 Which panel is open, at which level and section, and what the buttons do to them is `pindu_core::panels` (`Panels`);
 what the drawer's main level lists is `pindu_core::panels::drawer_entries`, and what each Quick Access section lists,
 and in which order, `pindu_core::panels::section_entries`. The drawer is `PinduMenuDrawer`
 (`crates/pindu-ui/src/menu_drawer.rs`, `data/ui/menu_drawer.blp`), Quick Access `PinduQuickAccess`
 (`crates/pindu-ui/src/quick_access.rs`, `data/ui/quick_access.blp`).
+
+## Arrangements by design
+
+Each design arranges the menus the way its own Home arranges games, through four layout options of its `theme.json`
+(`panel-sections`, `quick-tiles`, `menu-entries` and `playing-card`, see
+[`fullscreen-style.md`](fullscreen-style.md#layout-options)). The panels follow the design in force at once: switching
+design in Quick Access's Design section rearranges the open panel, with focus staying on the design's card.
+
+| | The same in every design | Differs |
+|---|---|---|
+| Entries | Which entries a menu and each section hold, and their order | — |
+| Buttons | Start, Guide, R3, Guide + A, A, B, View or X, LB and RB | — |
+| Directions | Up and Down always lead through a section in the entries' order | Whether two neighbouring tiles are a Left/Right or an Up/Down apart |
+| Shape | — | Where the section strip sits, how the tiles and the menu's entries are laid out, how the game that runs is drawn |
+
+| Design | `panel-sections` | `quick-tiles` | `menu-entries` | `playing-card` |
+|---|---|---|---|---|
+| Adwaita (and high contrast) | `"top"` | `"pills"` | `"list"` | `"compact"` |
+| Lobby | `"top"` | `"grid"` | `"list"` | `"compact"` |
+| Marquee | `"side"` | `"list"` | `"list"` | `"banner"` |
+| Shelves | `"top"` | `"shelf"` | `"shelves"` | `"compact"` |
+
+A user's design that names none of the options gets the first column of each: the arrangement this page describes
+below. The arrangements apply in the main window and over a running game alike.
+
+- **Sections at the side** (`"side"`): the strip is a rail of icons, about 60 px wide, down Quick Access's inner edge,
+  and the shown section's name heads its page. The controller's focus never lands on the rail; LB and RB switch
+  section as before.
+- **Tiles** (`pindu_core::panels::step_arranged_tile`): as pills, two equal columns, each pill at least 56 px tall
+  with its icon at its start, its name and second line beside it, and the small arrow at its end on a tile that leads
+  to a level; as a list, one tile per row in the tiles' order, the second line at the row's end; as shelves, the
+  system tiles (Sound Output, Bluetooth, Network) under **Devices** and the other three under **Library**, a shelf
+  with no tile left out. In columns Left and Right move along a row and Up and Down keep the column; on shelves Left
+  and Right move along a shelf and Up and Down change shelf, landing on the tile that shelf last had focused, as
+  Home's shelves do. Tiles still lead or act; they never switch, and pills take no accent fill for "on".
+- **The menu as shelves** (`"shelves"`, `pindu_core::panels::menu_shelves`): in place of the rows and the dock,
+  three shelves of cards, each card its icon and name: **Go To** (Home, Library with its number of games, Search),
+  **Collections** (every collection with its number of games, the row scrolling sideways, so there is no All
+  Collections) and **Leave** (the dock's entries, with their names; one the system does not offer is dimmed and says
+  why under its name). Left and Right move along a shelf, Up and Down change shelf as on Quick's shelves. Up from the
+  main level's first item (a Playing Now card, else Home) still wraps to Suspend, now its card on Leave. View or X on
+  a collection's card leads to its actions, and B back to that card. The Leave cards run the dock's actions, so Hold
+  to Confirm, asking first while a game runs and the hint bar work on them as on the dock.
+- **The Playing Now card as a banner** (`"banner"`): the game's hero art, else its cover, loaded as Home loads a
+  game's hero, across the top of the drawer's main level and of Quick, with "Playing Now", the time, the title, Return
+  and Stop over a scrim at its foot. Without art the banner is the card colour.
+
+Every Text Size, Reduce Motion and high contrast keep each arrangement usable: tiles and cards grow with their text,
+and high contrast shows Adwaita's arrangement, as it shows Adwaita for everything else.
 
 ## The menu drawer's main level
 

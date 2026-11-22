@@ -728,6 +728,122 @@ window.game-overlay {
   font-weight: bold;
 }
 
+/* The menus as a design arranges them (`theme.json`'s `panel-sections`, `quick-tiles`,
+   `menu-entries` and `playing-card`): what each arrangement needs to be usable in any
+   design. The designs' own look for them is their stylesheets'. */
+
+/* The section strip as a rail down Quick Access's inner edge, about 60px wide: each
+   toggle its icon, 48px square, the shown one filled and marked on the edge facing its
+   page. */
+.quick-access.panel-sections-side .panel-sections {
+  margin-bottom: 0;
+  min-width: 60px;
+}
+
+.quick-access.panel-sections-side .panel-section {
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
+}
+
+.quick-access.panel-sections-side .panel-section:checked {
+  padding: 0;
+  box-shadow: inset -3px 0 currentColor;
+}
+
+.quick-access.panel-sections-side .panel-section:checked:dir(rtl) {
+  box-shadow: inset 3px 0 currentColor;
+}
+
+/* Quick's tiles as pills, two to a row, at least 56px tall, or as rows a tile each, at
+   least 48px (the heights take in the padding); the pills take no accent fill. */
+.quick-access.quick-tiles-pills .quick-tile {
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 999px;
+}
+
+.quick-access.quick-tiles-list .quick-tile {
+  min-height: 32px;
+  padding: 8px 14px;
+}
+
+/* Quick's tiles on shelves: each shelf's heading over its row. */
+.quick-access .quick-tiles-heading {
+  margin-top: 6px;
+}
+
+/* The Playing Now card as a banner of the game's art: the card's text over a scrim at its
+   foot, light on the art; without art the card colour shows and the text is the card's. */
+.playing-card-banner .playing-card,
+window.fullscreen-mode.no-design .playing-card-banner .playing-card {
+  padding: 0;
+}
+
+.playing-card-banner .playing-card-scrim {
+  padding: 48px 20px 16px;
+  background-image: linear-gradient(to bottom, transparent, rgb(0 0 0 / 80%) 60%);
+  color: white;
+}
+
+.playing-card-banner .playing-card-scrim .accent {
+  color: inherit;
+}
+
+.playing-card-banner .no-art .playing-card-scrim {
+  padding-top: 16px;
+  background-image: none;
+  color: inherit;
+}
+
+/* The menu's entries on shelves: each shelf's heading over a row of cards at least 96px
+   square, the focused one ringed inside it so its row never cuts the ring, one the system
+   does not offer dimmed but its ring as clear. */
+.menu-drawer .menu-shelf-heading {
+  margin: 12px 4px 0;
+}
+
+.menu-drawer .menu-shelf {
+  padding: 2px 0;
+}
+
+.menu-drawer .menu-card {
+  min-width: 96px;
+  min-height: 96px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  background-color: var(--card-bg-color);
+  color: var(--card-fg-color);
+  font-weight: normal;
+}
+
+.menu-drawer .menu-card:hover {
+  background-image: image(alpha(currentColor, 0.05));
+}
+
+.menu-drawer .menu-card:active {
+  background-image: image(alpha(currentColor, 0.1));
+}
+
+.menu-drawer .menu-card:focus-visible {
+  outline: 3px solid var(--accent-color);
+  outline-offset: -3px;
+}
+
+.menu-drawer .menu-card-icon {
+  -gtk-icon-size: 24px;
+}
+
+.menu-drawer .menu-card-name {
+  font-weight: bold;
+}
+
+@media (prefers-contrast: more) {
+  .menu-drawer .menu-card {
+    box-shadow: inset 0 0 0 1px alpha(currentColor, 0.5);
+  }
+}
+
 .options-sheet {
   padding: 24px 24px 36px;
 }

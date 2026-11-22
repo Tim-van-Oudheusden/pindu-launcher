@@ -8,11 +8,12 @@
 //! View or X, LB, RB and B do to them, and what each lists.
 
 use crate::gamepad::{Direction, Intent};
+use crate::gamescope::session::DockEntry;
 use crate::grid;
 use crate::launch::{self, WebPage};
 use crate::model::Game;
 use crate::saves;
-use crate::themes::Theme;
+use crate::themes::{QuickTiles, Theme};
 
 /// A panel over the page, at one of its levels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -341,18 +342,21 @@ pub fn quick_first_focus(shown: Shown) -> QuickFocus {
     }
 }
 
-/// The columns of Quick's tile grid.
+/// The columns of Quick's tile grid ([`QuickTiles::Grid`]).
 pub const QUICK_TILE_COLUMNS: u32 = 3;
 
-/// Where a direction moves focus from a tile of Quick's grid.
+/// The columns of Quick's tiles as pills ([`QuickTiles::Pills`]).
+pub const QUICK_PILL_COLUMNS: u32 = 2;
+
+/// Where a direction moves focus from one of Quick's tiles.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TileStep {
-    /// To the tile at this index, the same one where a row ends.
+    /// To the tile at this index, the same one where a row or shelf ends.
     Tile(u32),
-    /// Out of the grid above its first row: to the last page card, or the last Playing
-    /// Now card.
+    /// Out of the tiles above their first row or shelf: to the last page card, or the last
+    /// Playing Now card.
     Above,
-    /// Out of the grid below its last row: to the activity strip.
+    /// Out of the tiles below their last row or shelf: to the activity strip.
     Below,
 }
 
@@ -361,14 +365,130 @@ pub enum TileStep {
 /// Up and Down to the row above or below in the same column, into a shorter row its
 /// nearest tile, and out of the grid past its first or last row.
 pub fn step_tile(index: u32, direction: Direction, count: u32) -> TileStep {
-    match (
-        grid::step(index, direction, count, QUICK_TILE_COLUMNS),
-        direction,
-    ) {
+    step_in_columns(index, direction, count, QUICK_TILE_COLUMNS)
+}
+
+/// [`step_tile`] for tiles laid out `columns` to a row.
+fn step_in_columns(index: u32, direction: Direction, count: u32, columns: u32) -> TileStep {
+    match (grid::step(index, direction, count, columns), direction) {
         (Some(tile), _) => TileStep::Tile(tile),
         (None, Direction::Left | Direction::Right) => TileStep::Tile(index),
         (None, Direction::Up) => TileStep::Above,
         (None, Direction::Down) => TileStep::Below,
+    }
+}
+
+/// The shelf a tile sits on when Quick's tiles are shelves ([`QuickTiles::Shelf`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TileShelf {
+    /// Devices: Sound Output, Bluetooth and Network.
+    Devices,
+    /// Library: Surprise Me, Refresh Library and Add a Game.
+    Library,
+}
+
+impl QuickTile {
+    /// The shelf the tile sits on: the system's tiles on Devices, the others on Library.
+    pub fn shelf(self) -> TileShelf {
+        match self {
+            Self::SoundOutput | Self::Bluetooth | Self::Network => TileShelf::Devices,
+            Self::SurpriseMe | Self::RefreshLibrary | Self::AddGame => TileShelf::Library,
+        }
+    }
+}
+
+/// Quick's `tiles` on their shelves, Devices then Library, each in the tiles' order; a
+/// shelf with no tile is left out.
+pub fn tile_shelves(tiles: &[QuickTile]) -> Vec<(TileShelf, Vec<QuickTile>)> {
+    [TileShelf::Devices, TileShelf::Library]
+        .into_iter()
+        .map(|shelf| {
+            let on = tiles.iter().copied().filter(|tile| tile.shelf() == shelf);
+            (shelf, on.collect::<Vec<_>>())
+        })
+        .filter(|(_, on)| !on.is_empty())
+        .collect()
+}
+
+/// Where focus goes on shelves ([`step_shelves`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShelfStep<T> {
+    /// To this item, the same one where a shelf ends.
+    To(T),
+    /// Out of the shelves above the first.
+    Above,
+    /// Out of the shelves below the last.
+    Below,
+}
+
+/// Where `direction` moves focus from `at` on `shelves`, top to bottom, as Home's shelves
+/// do: Left and Right along `at`'s shelf, stopping at its ends; Up and Down to the shelf
+/// above or below, landing on the item of it in `last`, the items that last had focus on
+/// their shelves, else on its first; out of the shelves past the first or the last. An
+/// empty shelf is passed over, and an `at` on no shelf stays where it is.
+pub fn step_shelves<K, T: Copy + PartialEq>(
+    shelves: &[(K, Vec<T>)],
+    at: T,
+    direction: Direction,
+    last: &[T],
+) -> ShelfStep<T> {
+    let Some((shelf, along)) = shelves.iter().enumerate().find_map(|(shelf, (_, items))| {
+        let along = items.iter().position(|&item| item == at)?;
+        Some((shelf, along))
+    }) else {
+        return ShelfStep::To(at);
+    };
+    let items = &shelves[shelf].1;
+    let land = |(_, items): &(K, Vec<T>)| {
+        let remembered = items.iter().copied().find(|item| last.contains(item));
+        remembered.or_else(|| items.first().copied())
+    };
+    match direction {
+        Direction::Left => ShelfStep::To(items[along.saturating_sub(1)]),
+        Direction::Right => ShelfStep::To(items[(along + 1).min(items.len() - 1)]),
+        Direction::Up => shelves[..shelf]
+            .iter()
+            .rev()
+            .find_map(land)
+            .map_or(ShelfStep::Above, ShelfStep::To),
+        Direction::Down => shelves[shelf + 1..]
+            .iter()
+            .find_map(land)
+            .map_or(ShelfStep::Below, ShelfStep::To),
+    }
+}
+
+/// Where `direction` moves focus from the tile at `index` of Quick's `tiles`
+/// ([`quick_tiles`]) laid out as `arrangement` says. A grid as [`step_tile`] has it; pills
+/// the same in [`QUICK_PILL_COLUMNS`]; a list one tile to a row, so Left and Right stay;
+/// shelves ([`tile_shelves`]) as [`step_shelves`] has it, landing on the tile in `last`,
+/// the tiles that last had focus on their shelves, else on the shelf's first. `last`
+/// matters only on shelves.
+pub fn step_arranged_tile(
+    arrangement: QuickTiles,
+    tiles: &[QuickTile],
+    index: u32,
+    direction: Direction,
+    last: &[QuickTile],
+) -> TileStep {
+    let count = tiles.len() as u32;
+    match arrangement {
+        QuickTiles::Grid => step_tile(index, direction, count),
+        QuickTiles::Pills => step_in_columns(index, direction, count, QUICK_PILL_COLUMNS),
+        QuickTiles::List => step_in_columns(index, direction, count, 1),
+        QuickTiles::Shelf => {
+            let Some(&at) = tiles.get(index as usize) else {
+                return TileStep::Tile(index);
+            };
+            match step_shelves(&tile_shelves(tiles), at, direction, last) {
+                ShelfStep::To(tile) => {
+                    let to = tiles.iter().position(|&shown| shown == tile);
+                    TileStep::Tile(to.map_or(index, |to| to as u32))
+                }
+                ShelfStep::Above => TileStep::Above,
+                ShelfStep::Below => TileStep::Below,
+            }
+        }
     }
 }
 
@@ -724,6 +844,56 @@ pub fn drawer_entries(playing: bool, collections: usize, over_game: bool) -> Vec
         entries.push(AllCollections);
     }
     entries
+}
+
+/// A shelf of the menu drawer's entries when they are shelves
+/// ([`crate::themes::MenuEntries::Shelves`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MenuShelf {
+    /// Go To: Home, Library and Search.
+    GoTo,
+    /// Collections: every collection, the row scrolling.
+    Collections,
+    /// Leave: the power dock's entries, with their names shown.
+    Leave,
+}
+
+/// A card on one of the menu's shelves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MenuCard {
+    /// A place or a collection, as the drawer's entry does it.
+    Place(DrawerEntry),
+    /// A way out or the machine's power, as the dock's entry does it.
+    Leave(DockEntry),
+}
+
+/// The menu's shelves, top to bottom, when its entries are shelves: Go To with Home,
+/// Library and Search as [`drawer_entries`] has them, Collections with every one of the
+/// `collections` (so All Collections is not needed), then Leave with the `dock`
+/// ([`crate::gamescope::session::power_dock`]). A shelf with nothing on it is left out.
+/// The Playing Now card sits over the shelves. Focus moves through them as
+/// [`step_shelves`] has it.
+pub fn menu_shelves(
+    collections: usize,
+    over_game: bool,
+    dock: &[DockEntry],
+) -> Vec<(MenuShelf, Vec<MenuCard>)> {
+    let go_to = drawer_entries(false, 0, over_game)
+        .into_iter()
+        .map(MenuCard::Place)
+        .collect();
+    let collections = (0..collections)
+        .map(|index| MenuCard::Place(DrawerEntry::Collection(index)))
+        .collect();
+    let leave = dock.iter().copied().map(MenuCard::Leave).collect();
+    [
+        (MenuShelf::GoTo, go_to),
+        (MenuShelf::Collections, collections),
+        (MenuShelf::Leave, leave),
+    ]
+    .into_iter()
+    .filter(|(_, cards): &(MenuShelf, Vec<MenuCard>)| !cards.is_empty())
+    .collect()
 }
 
 /// An action of the drawer's level for one collection ([`DrawerLevel::Collection`]), as
@@ -1257,6 +1427,401 @@ mod tests {
         assert_eq!(step_tile(2, Down, 5), TileStep::Tile(4));
         assert_eq!(step_tile(2, Down, 4), TileStep::Tile(3));
         assert_eq!(step_tile(4, Up, 5), TileStep::Tile(1));
+    }
+
+    const DIRECTIONS: [Direction; 4] = [
+        Direction::Up,
+        Direction::Down,
+        Direction::Left,
+        Direction::Right,
+    ];
+
+    /// Every set of Quick tiles that can show: each system tile there or not, in the main
+    /// window and over a running game.
+    fn every_tile_set() -> Vec<Vec<QuickTile>> {
+        (0..16u8)
+            .map(|bits| {
+                quick_tiles(Shown {
+                    sound_output: bits & 1 != 0,
+                    bluetooth: bits & 2 != 0,
+                    network: bits & 4 != 0,
+                    over_game: bits & 8 != 0,
+                    ..BARE
+                })
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_grid_arrangement_steps_as_quick_s_grid_of_three() {
+        for tiles in every_tile_set() {
+            let count = tiles.len() as u32;
+            for index in 0..count {
+                for direction in DIRECTIONS {
+                    assert_eq!(
+                        step_arranged_tile(QuickTiles::Grid, &tiles, index, direction, &[]),
+                        step_tile(index, direction, count),
+                        "{tiles:?} {index} {direction:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn pills_are_two_columns() {
+        use Direction::{Down, Left, Right, Up};
+        let tiles = quick_tiles(FULL);
+        let step = |tiles: &[QuickTile], index, direction| {
+            step_arranged_tile(QuickTiles::Pills, tiles, index, direction, &[])
+        };
+        // Three rows: 0 1 / 2 3 / 4 5.
+        assert_eq!(step(&tiles, 0, Right), TileStep::Tile(1));
+        assert_eq!(step(&tiles, 1, Right), TileStep::Tile(1), "the row ends");
+        assert_eq!(step(&tiles, 2, Left), TileStep::Tile(2), "the row starts");
+        assert_eq!(step(&tiles, 3, Left), TileStep::Tile(2));
+        assert_eq!(step(&tiles, 1, Down), TileStep::Tile(3));
+        assert_eq!(step(&tiles, 3, Down), TileStep::Tile(5));
+        assert_eq!(step(&tiles, 4, Up), TileStep::Tile(2));
+        assert_eq!(step(&tiles, 0, Up), TileStep::Above);
+        assert_eq!(step(&tiles, 1, Up), TileStep::Above);
+        assert_eq!(step(&tiles, 4, Down), TileStep::Below);
+        assert_eq!(step(&tiles, 5, Down), TileStep::Below);
+        // A short last row: 0 1 / 2.
+        let three = quick_tiles(BARE);
+        assert_eq!(step(&three, 1, Down), TileStep::Tile(2));
+        assert_eq!(step(&three, 2, Right), TileStep::Tile(2));
+        assert_eq!(step(&three, 2, Up), TileStep::Tile(0));
+        // One tile: every direction stays or leaves.
+        let one = quick_tiles(Shown {
+            over_game: true,
+            ..BARE
+        });
+        assert_eq!(step(&one, 0, Left), TileStep::Tile(0));
+        assert_eq!(step(&one, 0, Right), TileStep::Tile(0));
+        assert_eq!(step(&one, 0, Up), TileStep::Above);
+        assert_eq!(step(&one, 0, Down), TileStep::Below);
+    }
+
+    #[test]
+    fn a_list_of_tiles_is_one_column_in_the_tiles_order() {
+        use Direction::{Down, Left, Right, Up};
+        for tiles in every_tile_set() {
+            let count = tiles.len() as u32;
+            for index in 0..count {
+                let step =
+                    |direction| step_arranged_tile(QuickTiles::List, &tiles, index, direction, &[]);
+                let above = index.checked_sub(1).map_or(TileStep::Above, TileStep::Tile);
+                let below = if index + 1 < count {
+                    TileStep::Tile(index + 1)
+                } else {
+                    TileStep::Below
+                };
+                assert_eq!(step(Up), above, "{tiles:?} {index}");
+                assert_eq!(step(Down), below, "{tiles:?} {index}");
+                assert_eq!(step(Left), TileStep::Tile(index), "{tiles:?} {index}");
+                assert_eq!(step(Right), TileStep::Tile(index), "{tiles:?} {index}");
+            }
+        }
+    }
+
+    #[test]
+    fn the_system_tiles_sit_on_devices_and_the_others_on_library() {
+        use QuickTile::*;
+        for tile in [SoundOutput, Bluetooth, Network] {
+            assert_eq!(tile.shelf(), TileShelf::Devices, "{tile:?}");
+        }
+        for tile in [SurpriseMe, RefreshLibrary, AddGame] {
+            assert_eq!(tile.shelf(), TileShelf::Library, "{tile:?}");
+        }
+        assert_eq!(
+            tile_shelves(&quick_tiles(FULL)),
+            [
+                (TileShelf::Devices, vec![SoundOutput, Bluetooth, Network]),
+                (
+                    TileShelf::Library,
+                    vec![SurpriseMe, RefreshLibrary, AddGame]
+                ),
+            ]
+        );
+        assert_eq!(
+            tile_shelves(&quick_tiles(BARE)),
+            [(
+                TileShelf::Library,
+                vec![SurpriseMe, RefreshLibrary, AddGame]
+            )],
+            "a shelf with no tile is left out"
+        );
+        let over_game = Shown {
+            over_game: true,
+            bluetooth: true,
+            ..BARE
+        };
+        assert_eq!(
+            tile_shelves(&quick_tiles(over_game)),
+            [
+                (TileShelf::Devices, vec![Bluetooth]),
+                (TileShelf::Library, vec![RefreshLibrary]),
+            ]
+        );
+    }
+
+    #[test]
+    fn on_shelves_left_and_right_move_along_one_and_up_and_down_change_shelf() {
+        use Direction::{Down, Left, Right, Up};
+        use QuickTile::*;
+        let tiles = quick_tiles(FULL);
+        let step = |index, direction, last: &[QuickTile]| {
+            step_arranged_tile(QuickTiles::Shelf, &tiles, index, direction, last)
+        };
+        // Devices: 0 1 2; Library: 3 4 5.
+        assert_eq!(step(0, Right, &[]), TileStep::Tile(1));
+        assert_eq!(step(2, Right, &[]), TileStep::Tile(2), "the shelf ends");
+        assert_eq!(step(3, Left, &[]), TileStep::Tile(3), "the shelf starts");
+        assert_eq!(step(4, Left, &[]), TileStep::Tile(3));
+        // Up and Down land on the tile the shelf last had focused, else its first.
+        assert_eq!(step(2, Down, &[]), TileStep::Tile(3));
+        assert_eq!(step(0, Down, &[RefreshLibrary]), TileStep::Tile(4));
+        assert_eq!(step(5, Up, &[Bluetooth]), TileStep::Tile(1));
+        assert_eq!(
+            step(5, Up, &[Bluetooth, AddGame]),
+            TileStep::Tile(1),
+            "the other shelf's memory does not matter"
+        );
+        assert_eq!(step(0, Up, &[]), TileStep::Above);
+        assert_eq!(step(4, Down, &[]), TileStep::Below);
+
+        // Over a running game with only Network: Devices 0, Library 1.
+        let over_game = quick_tiles(Shown {
+            over_game: true,
+            network: true,
+            ..BARE
+        });
+        let step = |index, direction, last: &[QuickTile]| {
+            step_arranged_tile(QuickTiles::Shelf, &over_game, index, direction, last)
+        };
+        assert_eq!(step(0, Down, &[AddGame]), TileStep::Tile(1), "not shown");
+        assert_eq!(step(1, Up, &[]), TileStep::Tile(0));
+        assert_eq!(step(1, Right, &[]), TileStep::Tile(1));
+    }
+
+    #[test]
+    fn on_shelves_every_set_of_tiles_keeps_left_and_right_on_a_shelf() {
+        for tiles in every_tile_set() {
+            let count = tiles.len() as u32;
+            let shelves = tile_shelves(&tiles);
+            let shelf_of = |index: u32| {
+                shelves
+                    .iter()
+                    .position(|(_, shelf)| shelf.contains(&tiles[index as usize]))
+                    .unwrap()
+            };
+            for index in 0..count {
+                for direction in DIRECTIONS {
+                    let step = step_arranged_tile(QuickTiles::Shelf, &tiles, index, direction, &[]);
+                    let from = shelf_of(index);
+                    match (direction, step) {
+                        (Direction::Left | Direction::Right, TileStep::Tile(to)) => {
+                            assert!(to < count);
+                            assert_eq!(shelf_of(to), from, "{tiles:?} {index} {direction:?}");
+                        }
+                        (Direction::Up, TileStep::Tile(to)) => {
+                            assert_eq!(shelf_of(to) + 1, from, "{tiles:?} {index}")
+                        }
+                        (Direction::Down, TileStep::Tile(to)) => {
+                            assert_eq!(shelf_of(to), from + 1, "{tiles:?} {index}")
+                        }
+                        (Direction::Up, TileStep::Above) => assert_eq!(from, 0),
+                        (Direction::Down, TileStep::Below) => {
+                            assert_eq!(from + 1, shelves.len())
+                        }
+                        other => panic!("{tiles:?} {index}: {other:?}"),
+                    }
+                }
+            }
+        }
+    }
+
+    fn dock() -> Vec<DockEntry> {
+        use crate::system::power::{PowerAction, PowerEntry};
+        let power = |action| {
+            DockEntry::Power(PowerEntry {
+                action,
+                allowed: true,
+            })
+        };
+        vec![
+            DockEntry::ExitFullscreen,
+            DockEntry::Exit,
+            power(PowerAction::Suspend),
+            power(PowerAction::Restart),
+            power(PowerAction::PowerOff),
+        ]
+    }
+
+    #[test]
+    fn the_menu_s_shelves_are_go_to_every_collection_and_the_ways_out() {
+        use DrawerEntry::*;
+        let dock = dock();
+        let leave: Vec<_> = dock.iter().copied().map(MenuCard::Leave).collect();
+        assert_eq!(
+            menu_shelves(2, false, &dock),
+            [
+                (
+                    MenuShelf::GoTo,
+                    vec![
+                        MenuCard::Place(Home),
+                        MenuCard::Place(Library),
+                        MenuCard::Place(Search)
+                    ]
+                ),
+                (
+                    MenuShelf::Collections,
+                    vec![
+                        MenuCard::Place(Collection(0)),
+                        MenuCard::Place(Collection(1))
+                    ]
+                ),
+                (MenuShelf::Leave, leave.clone()),
+            ]
+        );
+        // Every collection is a card, so All Collections is not needed.
+        let many = INLINE_COLLECTIONS + 3;
+        let shelves = menu_shelves(many, false, &dock);
+        assert_eq!(
+            shelves[1],
+            (
+                MenuShelf::Collections,
+                (0..many)
+                    .map(|index| MenuCard::Place(Collection(index)))
+                    .collect()
+            )
+        );
+        // A shelf with nothing on it is left out.
+        let kinds = |shelves: Vec<(MenuShelf, Vec<MenuCard>)>| {
+            shelves
+                .into_iter()
+                .map(|(kind, _)| kind)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            kinds(menu_shelves(0, false, &dock)),
+            [MenuShelf::GoTo, MenuShelf::Leave]
+        );
+        // Over a running game: no Search, and no dock.
+        assert_eq!(
+            menu_shelves(1, true, &[]),
+            [
+                (
+                    MenuShelf::GoTo,
+                    vec![MenuCard::Place(Home), MenuCard::Place(Library)]
+                ),
+                (MenuShelf::Collections, vec![MenuCard::Place(Collection(0))]),
+            ]
+        );
+    }
+
+    #[test]
+    fn the_menu_s_shelves_step_as_quick_s_do() {
+        use Direction::{Down, Left, Right, Up};
+        use DrawerEntry::*;
+        let dock = dock();
+        let shelves = menu_shelves(3, false, &dock);
+        let suspend = MenuCard::Leave(dock[2]);
+        let step = |at, direction, last: &[MenuCard]| step_shelves(&shelves, at, direction, last);
+        let place = MenuCard::Place;
+
+        assert_eq!(step(place(Home), Right, &[]), ShelfStep::To(place(Library)));
+        assert_eq!(
+            step(place(Search), Right, &[]),
+            ShelfStep::To(place(Search)),
+            "the shelf ends"
+        );
+        assert_eq!(
+            step(place(Collection(0)), Left, &[]),
+            ShelfStep::To(place(Collection(0))),
+            "the shelf starts"
+        );
+        assert_eq!(
+            step(place(Library), Down, &[]),
+            ShelfStep::To(place(Collection(0)))
+        );
+        assert_eq!(
+            step(place(Library), Down, &[place(Collection(2))]),
+            ShelfStep::To(place(Collection(2)))
+        );
+        assert_eq!(
+            step(place(Collection(1)), Down, &[suspend]),
+            ShelfStep::To(suspend)
+        );
+        assert_eq!(
+            step(suspend, Up, &[place(Collection(1)), place(Search)]),
+            ShelfStep::To(place(Collection(1)))
+        );
+        assert_eq!(step(place(Home), Up, &[]), ShelfStep::Above);
+        assert_eq!(step(suspend, Down, &[]), ShelfStep::Below);
+        assert_eq!(
+            step(MenuCard::Place(PlayingNow), Right, &[]),
+            ShelfStep::To(MenuCard::Place(PlayingNow)),
+            "a card on no shelf stays where it is"
+        );
+    }
+
+    #[test]
+    fn what_the_menus_hold_does_not_depend_on_the_layout() {
+        use crate::themes::{MenuEntries, PanelSections, PlayingCard, ThemeLayout};
+        let baseline = |shown: Shown| {
+            (
+                QuickAccessSection::ALL.map(|section| section_entries(section, shown)),
+                quick_tiles(shown),
+                sections(shown),
+                drawer_entries(shown.playing, 7, shown.over_game),
+            )
+        };
+        let shown_sets = [
+            BARE,
+            FULL,
+            Shown {
+                over_game: true,
+                ..FULL
+            },
+        ];
+        let expected: Vec<_> = shown_sets.map(baseline).into();
+        for panel_sections in PanelSections::ALL {
+            for tiles in QuickTiles::ALL {
+                for menu_entries in MenuEntries::ALL {
+                    for playing_card in PlayingCard::ALL {
+                        let layout = ThemeLayout {
+                            panel_sections,
+                            quick_tiles: tiles,
+                            menu_entries,
+                            playing_card,
+                            ..ThemeLayout::default()
+                        };
+                        // The entries take no layout: whatever it is, they are the same.
+                        let held: Vec<_> = shown_sets.map(baseline).into();
+                        assert_eq!(held, expected, "{layout:?}");
+                        // And every arrangement steps only between the tiles that show.
+                        for shown in shown_sets {
+                            let quick = quick_tiles(shown);
+                            for index in 0..quick.len() as u32 {
+                                for direction in DIRECTIONS {
+                                    if let TileStep::Tile(to) = step_arranged_tile(
+                                        layout.quick_tiles,
+                                        &quick,
+                                        index,
+                                        direction,
+                                        &[],
+                                    ) {
+                                        assert!((to as usize) < quick.len(), "{layout:?}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]
