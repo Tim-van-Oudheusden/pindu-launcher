@@ -28,6 +28,9 @@ pub enum Focus {
     Toggle,
     /// A slider, which left and right adjust and A leaves alone.
     Slider,
+    /// A choice row, whose value left and right step through in place and A steps on to
+    /// the next option, wrapping from the last to the first (`pindu_core::choice`).
+    Choice,
     /// Any other widget that activates.
     Other,
 }
@@ -129,7 +132,7 @@ pub enum Action {
     Pages,
     /// Cycle the sort order back or forward.
     Sort,
-    /// Turn a slider down or up.
+    /// Turn a slider down or up, or step a choice row's value back or on.
     Adjust,
     /// Open the options for the page's game.
     Options,
@@ -232,10 +235,12 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
         Focus::Hold => Some(Action::HoldToConfirm),
         Focus::Cancel => Some(Action::Cancel),
         Focus::Toggle => Some(Action::Toggle),
-        Focus::Other => Some(Action::Select),
+        // A steps a choice row on to its next option, which is what A selects there.
+        Focus::Other | Focus::Choice => Some(Action::Select),
     };
-    // Left and right turn a focused slider rather than move focus off it.
-    let adjust = (context.focus == Focus::Slider).then(|| Hint {
+    // Left and right turn a focused slider, or step a choice row's value, rather than
+    // move focus off it.
+    let adjust = matches!(context.focus, Focus::Slider | Focus::Choice).then(|| Hint {
         button: layout.button(Intent::Navigate(Direction::Left)),
         pair: Some(layout.button(Intent::Navigate(Direction::Right))),
         action: Action::Adjust,
@@ -862,6 +867,40 @@ mod tests {
                     action: Action::Back,
                 },
             ]
+        );
+    }
+
+    #[test]
+    fn a_focused_choice_row_adjusts_with_left_and_right_and_a_chooses_the_next_option() {
+        let design = Context {
+            menu: true,
+            panel: Some(Panel::QuickAccess(QuickAccessLevel::Main)),
+            ..context(Focus::Choice)
+        };
+        assert_eq!(
+            hints(design, Layout::detected(DeviceKind::Xbox)),
+            [
+                Hint {
+                    button: Button::DpadLeft,
+                    pair: Some(Button::DpadRight),
+                    action: Action::Adjust,
+                },
+                Hint {
+                    button: Button::South,
+                    pair: None,
+                    action: Action::Select,
+                },
+                Hint {
+                    button: Button::East,
+                    pair: None,
+                    action: Action::Close,
+                },
+            ]
+        );
+        assert_eq!(
+            actions(design, DeviceKind::Nintendo)[1],
+            (Button::East, Action::Select),
+            "A is the confirm button of the controller in use"
         );
     }
 

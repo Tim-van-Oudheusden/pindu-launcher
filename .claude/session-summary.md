@@ -25,6 +25,12 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   limit, so "Refresh Library" takes three lines at Largest rather than being cut. Not seen: the Playing Now focus
   paths, Quick over a running game, the Sound Output tile and the Flatpak's single row (no running game or system
   services in the harness).
+- 2026-11-22, #719 (stacked on #718): `widgets/choice_row.rs`'s `PinduChoiceRow` replaces the ten radio groups
+  (Background, Background Blur, Background Dim; Button Prompts, Swap Confirm and Back, Repeat Delay, Repeat Rate, Stick
+  Dead Zone; Settings' Cover Size and Text Size), bound to the same stateful actions (`win.tile-size` is new, same
+  key). `controller_navigation::adjust_slider` turns sliders and choice rows for both hosts (`Adjusted`); steps are
+  `pindu_core::choice`. Seen in the harness at Largest and in Hebrew under high contrast. Not seen: the pointer on the
+  arrows, a screen reader. Right sent within a second of changing Swap Confirm and Back was once lost.
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,

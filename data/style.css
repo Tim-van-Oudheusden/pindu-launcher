@@ -547,6 +547,17 @@ window.game-overlay {
   font-size: 1.25em;
 }
 
+/* Choice rows (`PinduChoiceRow`): the chosen option in bold between its arrows, each at
+   least 44px for the pointer and touch. The arrow at an end is insensitive, which dims it. */
+.choice-row .choice-value {
+  font-weight: bold;
+}
+
+.choice-row .choice-arrow {
+  min-width: 44px;
+  min-height: 44px;
+}
+
 .menu-drawer button:focus-visible,
 .quick-access .playing-card button:focus-visible {
   outline: 3px solid var(--window-fg-color);
