@@ -56,6 +56,15 @@ class ReleaseNotesTest(unittest.TestCase):
                 self.assertIn(f"pindu-launcher-{version}-{distro}-{arch}.deb", result.stdout)
         self.assertIn(f"pindu-launcher-{version}.tar.xz", result.stdout)
 
+    def test_tells_bundle_users_how_to_update(self) -> None:
+        # A bundle never updates itself (#677): every release's notes say how to move to it
+        # from an earlier bundle, and how to hear of the next release.
+        result = run(newest_release().get("version"))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("A bundle does not update itself", result.stdout)
+        self.assertIn("earlier bundle", result.stdout)
+        self.assertIn("Watch", result.stdout)
+
     def test_fails_for_an_unknown_version(self) -> None:
         result = run("99.0.0")
         self.assertNotEqual(result.returncode, 0)
