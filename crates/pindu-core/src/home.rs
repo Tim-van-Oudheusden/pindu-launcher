@@ -5,6 +5,7 @@
 //! of the focused section, and what Home's animated background does.
 
 use std::path::PathBuf;
+use std::time::Duration;
 
 use crate::gamepad::Direction;
 use crate::library::{ArtSet, HistoryGroup, history_group};
@@ -438,30 +439,22 @@ pub struct BackgroundContext {
     /// first game's), or the layout is one screen of rows
     /// (`themes::HomeLayout::one_screen`: Shelves and Explore), which never shows it.
     pub covered: bool,
-    /// Quick Access, the menu drawer or the options sheet is open over the page.
+    /// A fullscreen panel is open over the page: Quick Access, the menu drawer or the
+    /// options sheet, whose blurred backdrop would redraw with every frame of the video.
     pub panel_open: bool,
-    /// GStreamer was asked and has no hardware VP9 decoder (`has_hardware_decoder`), so
-    /// the video would be decoded on the CPU.
-    pub software_decoding: bool,
-}
-
-/// Whether one of GStreamer's decoders, given by their classes (`Codec/Decoder/Video`,
-/// with a `Hardware` part for those that decode on the GPU or a media engine), decodes in
-/// hardware.
-pub fn has_hardware_decoder<'a>(classes: impl IntoIterator<Item = &'a str>) -> bool {
-    classes
-        .into_iter()
-        .any(|class| class.split('/').any(|part| part == "Hardware"))
+    /// Playback stepped down for the rest of the session: the frame rate fell well short
+    /// of what the background needs while it played (`FrameRateWatch::stepped_down`).
+    pub stepped_down: bool,
 }
 
 /// What Home's background does in `context`: it shows nothing under high contrast, holds
-/// its first frame outside fullscreen mode, under reduced motion and where only the CPU
-/// can decode it, pauses behind a section's games, art that covers it, an open panel, a
+/// its first frame outside fullscreen mode, under reduced motion and once playback
+/// stepped down, pauses behind a section's games, art that covers it, an open panel, a
 /// running game or a hidden window, and plays behind the first screen.
 pub fn background_playback(context: BackgroundContext) -> Playback {
     if context.high_contrast {
         Playback::Hidden
-    } else if !context.fullscreen || context.reduced_motion || context.software_decoding {
+    } else if !context.fullscreen || context.reduced_motion || context.stepped_down {
         Playback::FirstFrame
     } else if !context.first_screen
         || context.covered
@@ -472,6 +465,86 @@ pub fn background_playback(context: BackgroundContext) -> Playback {
         Playback::Pause
     } else {
         Playback::Play
+    }
+}
+
+/// How often the shell samples the frame rate while Home's background plays.
+pub const FRAME_RATE_SAMPLE_INTERVAL: Duration = Duration::from_millis(500);
+
+/// How long after the background starts or resumes playing its frame rate counts for
+/// nothing: the decoder starts, the first frames upload, and a page or panel may still be
+/// moving away.
+pub const FRAME_RATE_WARM_UP: Duration = Duration::from_secs(3);
+
+/// How long the frame rate has to stay short, sample after sample, before the background
+/// steps down: long enough that a hitch (a loop's seek, art loading, a busy moment) never
+/// does it.
+pub const FRAME_RATE_SUSTAINED: Duration = Duration::from_secs(5);
+
+/// The share of the frame rate the background needs below which a sample is short: under
+/// 45 frames a second for Red Ribbons on a 60 Hz screen. A smooth player misses a frame
+/// now and then; one this far behind stutters.
+pub const FRAME_RATE_SHORTFALL: f64 = 0.75;
+
+/// The refresh rate, in millihertz, taken for a monitor that does not say (0).
+pub const FALLBACK_REFRESH_RATE: i32 = 60_000;
+
+/// Whether the machine keeps up with Home's background. While the background plays the
+/// shell samples the window's frame rate (`gdk::FrameClock::fps`) every
+/// [`FRAME_RATE_SAMPLE_INTERVAL`]; once it stays well under what the background needs
+/// for [`FRAME_RATE_SUSTAINED`] after the warm-up, the background steps down and holds
+/// its first frame for the rest of the session.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct FrameRateWatch {
+    /// How long the background has played since it started or last resumed.
+    playing_for: Duration,
+    /// How long the frame rate has been short since the warm-up.
+    short_for: Duration,
+    stepped_down: bool,
+}
+
+impl FrameRateWatch {
+    /// A watch that has seen no samples.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The background starts or resumes playing: the samples of the next
+    /// [`FRAME_RATE_WARM_UP`] count for nothing, and a shortfall starts over.
+    pub fn resume(&mut self) {
+        self.playing_for = Duration::ZERO;
+        self.short_for = Duration::ZERO;
+    }
+
+    /// Takes a sample: the window drew `fps` frames a second on a monitor refreshing at
+    /// `refresh_rate` millihertz (0 when the monitor does not say) while `background`
+    /// played. An `fps` of 0, as the frame clock gives with no frame timings to go on,
+    /// counts for nothing. Says whether the background stepped down.
+    pub fn sample(&mut self, fps: f64, refresh_rate: i32, background: Background) -> bool {
+        self.playing_for += FRAME_RATE_SAMPLE_INTERVAL;
+        if self.playing_for <= FRAME_RATE_WARM_UP || fps.is_nan() || fps <= 0.0 {
+            return self.stepped_down;
+        }
+        let refresh_rate = if refresh_rate > 0 {
+            refresh_rate
+        } else {
+            FALLBACK_REFRESH_RATE
+        };
+        let needed = (f64::from(refresh_rate) / 1000.0).min(background.frame_rate());
+        if fps < needed * FRAME_RATE_SHORTFALL {
+            self.short_for += FRAME_RATE_SAMPLE_INTERVAL;
+        } else {
+            self.short_for = Duration::ZERO;
+        }
+        if self.short_for >= FRAME_RATE_SUSTAINED {
+            self.stepped_down = true;
+        }
+        self.stepped_down
+    }
+
+    /// Whether the background stepped down for the rest of the session.
+    pub fn stepped_down(&self) -> bool {
+        self.stepped_down
     }
 }
 
@@ -511,6 +584,14 @@ impl Background {
         match value {
             "blue-station" => Self::BlueStation,
             _ => Self::default(),
+        }
+    }
+
+    /// The frames a second its videos play at.
+    pub fn frame_rate(self) -> f64 {
+        match self {
+            Self::RedRibbons => 60.0,
+            Self::BlueStation => 30.0,
         }
     }
 
@@ -622,7 +703,7 @@ mod tests {
         high_contrast: false,
         covered: false,
         panel_open: false,
-        software_decoding: false,
+        stepped_down: false,
     };
 
     #[test]
@@ -722,6 +803,190 @@ mod tests {
     }
 
     #[test]
+    fn a_stepped_down_background_holds_its_first_frame_but_still_hides_under_high_contrast() {
+        let stepped_down = BackgroundContext {
+            stepped_down: true,
+            ..ON_FIRST_SCREEN
+        };
+
+        assert_eq!(background_playback(stepped_down), Playback::FirstFrame);
+        assert_eq!(
+            background_playback(BackgroundContext {
+                high_contrast: true,
+                ..stepped_down
+            }),
+            Playback::Hidden
+        );
+    }
+
+    #[test]
+    fn the_background_pauses_while_a_panel_covers_the_first_screen() {
+        let under_panel = BackgroundContext {
+            panel_open: true,
+            ..ON_FIRST_SCREEN
+        };
+
+        assert_eq!(background_playback(under_panel), Playback::Pause);
+    }
+
+    /// A 60 Hz monitor, in millihertz.
+    const HZ_60: i32 = 60_000;
+    /// A frame rate well short of Red Ribbons on a 60 Hz monitor.
+    const SLOW: f64 = 20.0;
+    /// A frame rate that keeps up with Red Ribbons on a 60 Hz monitor.
+    const SMOOTH: f64 = 59.0;
+
+    /// How many samples `span` takes.
+    fn samples(span: Duration) -> usize {
+        usize::try_from(span.as_millis() / FRAME_RATE_SAMPLE_INTERVAL.as_millis())
+            .expect("a few samples")
+    }
+
+    /// Feeds `watch` `count` samples of `fps` while Red Ribbons plays on a 60 Hz monitor,
+    /// and says whether the background stepped down.
+    fn feed(watch: &mut FrameRateWatch, count: usize, fps: f64) -> bool {
+        for _ in 0..count {
+            watch.sample(fps, HZ_60, Background::RedRibbons);
+        }
+        watch.stepped_down()
+    }
+
+    #[test]
+    fn a_sustained_shortfall_after_the_warm_up_steps_the_background_down() {
+        let mut watch = FrameRateWatch::new();
+        watch.resume();
+        let warm_up = samples(FRAME_RATE_WARM_UP);
+        let sustained = samples(FRAME_RATE_SUSTAINED);
+
+        assert!(!feed(&mut watch, warm_up + sustained - 1, SLOW));
+        assert!(watch.sample(SLOW, HZ_60, Background::RedRibbons));
+        assert!(watch.stepped_down());
+    }
+
+    #[test]
+    fn a_shortfall_broken_by_a_smooth_sample_starts_over() {
+        let mut watch = FrameRateWatch::new();
+        watch.resume();
+        let sustained = samples(FRAME_RATE_SUSTAINED);
+        feed(&mut watch, samples(FRAME_RATE_WARM_UP), SMOOTH);
+
+        // A single slow sample between smooth ones does nothing.
+        assert!(!feed(&mut watch, 1, SLOW));
+        assert!(!feed(&mut watch, 1, SMOOTH));
+        // Nor do two runs that are each a sample short of sustained.
+        assert!(!feed(&mut watch, sustained - 1, SLOW));
+        assert!(!feed(&mut watch, 1, SMOOTH));
+        assert!(!feed(&mut watch, sustained - 1, SLOW));
+    }
+
+    #[test]
+    fn resuming_playback_restarts_the_warm_up_and_the_shortfall() {
+        let mut watch = FrameRateWatch::new();
+        watch.resume();
+        let warm_up = samples(FRAME_RATE_WARM_UP);
+        let sustained = samples(FRAME_RATE_SUSTAINED);
+        assert!(!feed(&mut watch, warm_up + sustained - 1, SLOW));
+
+        watch.resume();
+
+        // The slow samples of the warm-up count for nothing, nor do those from before.
+        assert!(!feed(&mut watch, warm_up + sustained - 1, SLOW));
+        assert!(feed(&mut watch, 1, SLOW));
+    }
+
+    #[test]
+    fn once_stepped_down_the_background_stays_down() {
+        let mut watch = FrameRateWatch::new();
+        watch.resume();
+        let warm_up = samples(FRAME_RATE_WARM_UP);
+        assert!(feed(
+            &mut watch,
+            warm_up + samples(FRAME_RATE_SUSTAINED),
+            SLOW
+        ));
+
+        assert!(feed(&mut watch, warm_up * 4, SMOOTH));
+        watch.resume();
+        assert!(feed(&mut watch, warm_up * 4, SMOOTH));
+    }
+
+    #[test]
+    fn a_monitor_that_does_not_say_its_refresh_rate_counts_as_60_hz() {
+        let span = samples(FRAME_RATE_WARM_UP + FRAME_RATE_SUSTAINED);
+        for (fps, expected) in [(SLOW, true), (SMOOTH, false)] {
+            let mut watch = FrameRateWatch::new();
+            watch.resume();
+            for _ in 0..span {
+                watch.sample(fps, 0, Background::RedRibbons);
+            }
+            assert_eq!(watch.stepped_down(), expected, "{fps} fps");
+        }
+    }
+
+    #[test]
+    fn the_background_needs_no_more_frames_than_its_video_or_the_monitor_has() {
+        let span = samples(FRAME_RATE_WARM_UP + FRAME_RATE_SUSTAINED);
+        for (background, refresh_rate, fps, expected) in [
+            // Red Ribbons is 60 fps: on a 144 Hz monitor it needs 60, not 144.
+            (Background::RedRibbons, 144_000, SMOOTH, false),
+            (Background::RedRibbons, 144_000, SLOW, true),
+            // Blue Station is 30 fps.
+            (Background::BlueStation, HZ_60, 29.0, false),
+            (Background::BlueStation, HZ_60, 20.0, true),
+            // A 50 Hz monitor shows at most 50 of Red Ribbons' 60.
+            (Background::RedRibbons, 50_000, 49.0, false),
+        ] {
+            let mut watch = FrameRateWatch::new();
+            watch.resume();
+            for _ in 0..span {
+                watch.sample(fps, refresh_rate, background);
+            }
+            assert_eq!(
+                watch.stepped_down(),
+                expected,
+                "{background:?} at {fps} fps on {refresh_rate} mHz"
+            );
+        }
+    }
+
+    #[test]
+    fn a_slower_monitor_needs_fewer_frames_and_the_shortfall_starts_below_its_share() {
+        let span = samples(FRAME_RATE_WARM_UP + FRAME_RATE_SUSTAINED);
+        for (refresh_rate, fps, expected) in [
+            // A 30 Hz monitor shows at most 30 of Red Ribbons' 60: 25 keeps up.
+            (30_000, 25.0, false),
+            (30_000, 20.0, true),
+            // Exactly three quarters of 60 is not short yet.
+            (HZ_60, 45.0, false),
+            (HZ_60, 44.9, true),
+        ] {
+            let mut watch = FrameRateWatch::new();
+            watch.resume();
+            for _ in 0..span {
+                watch.sample(fps, refresh_rate, Background::RedRibbons);
+            }
+            assert_eq!(
+                watch.stepped_down(),
+                expected,
+                "{fps} fps on {refresh_rate} mHz"
+            );
+        }
+    }
+
+    #[test]
+    fn a_sample_without_a_frame_rate_counts_for_nothing() {
+        let mut watch = FrameRateWatch::new();
+        watch.resume();
+        let sustained = samples(FRAME_RATE_SUSTAINED);
+        feed(&mut watch, samples(FRAME_RATE_WARM_UP), SMOOTH);
+
+        // The frame clock has no frame timings to go on: neither short nor smooth.
+        assert!(!feed(&mut watch, sustained - 1, SLOW));
+        assert!(!feed(&mut watch, sustained * 2, 0.0));
+        assert!(feed(&mut watch, 1, SLOW));
+    }
+
+    #[test]
     fn the_background_pauses_behind_a_section_a_game_or_a_hidden_window() {
         for context in [
             BackgroundContext {
@@ -739,72 +1004,6 @@ mod tests {
         ] {
             assert_eq!(background_playback(context), Playback::Pause, "{context:?}");
         }
-    }
-
-    #[test]
-    fn the_background_pauses_while_a_panel_covers_home() {
-        let panel_open = BackgroundContext {
-            panel_open: true,
-            ..ON_FIRST_SCREEN
-        };
-
-        assert_eq!(background_playback(panel_open), Playback::Pause);
-        // The rules before it still hold.
-        for (context, expected) in [
-            (
-                BackgroundContext {
-                    reduced_motion: true,
-                    ..panel_open
-                },
-                Playback::FirstFrame,
-            ),
-            (
-                BackgroundContext {
-                    high_contrast: true,
-                    ..panel_open
-                },
-                Playback::Hidden,
-            ),
-        ] {
-            assert_eq!(background_playback(context), expected, "{context:?}");
-        }
-    }
-
-    #[test]
-    fn without_a_hardware_decoder_the_background_holds_its_first_frame() {
-        let software = BackgroundContext {
-            software_decoding: true,
-            ..ON_FIRST_SCREEN
-        };
-
-        assert_eq!(background_playback(software), Playback::FirstFrame);
-        assert_eq!(
-            background_playback(BackgroundContext {
-                high_contrast: true,
-                ..software
-            }),
-            Playback::Hidden
-        );
-    }
-
-    #[test]
-    fn only_a_decoder_classed_hardware_decodes_in_hardware() {
-        // GStreamer's own VP9 decoders: libvpx's and FFmpeg's in software, VA-API's,
-        // NVIDIA's and the V4L2 stateless one in hardware.
-        let software = ["Codec/Decoder/Video", "Codec/Decoder/Video"];
-        assert!(!has_hardware_decoder(software));
-        assert!(!has_hardware_decoder(Vec::<&str>::new()));
-        for hardware in [
-            "Codec/Decoder/Video/Hardware",
-            "Codec/Hardware/Decoder/Video",
-        ] {
-            assert!(
-                has_hardware_decoder(software.into_iter().chain([hardware])),
-                "{hardware}"
-            );
-        }
-        // A word is not a class: only a whole `Hardware` part counts.
-        assert!(!has_hardware_decoder(["Codec/Decoder/Video/HardwareLike"]));
     }
 
     #[test]
