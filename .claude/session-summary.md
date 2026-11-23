@@ -8,12 +8,10 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-23 (evening), #786 (this commit): `CONTRIBUTING.md` prose rewrite, docs only, after the README's (#783,
-  merged as #784). Rules, code blocks and link targets kept; bold labels in Conventions and Flatpak and Flathub
-  dropped; Making a change now says the maintainer or the merge queue merges, as `AGENTS.md` does. README anchors
-  other files link to (`#installing`, `#building-from-source`, `#development-flatpak`, `#translating`,
-  `#starting-games-on-the-host`) must survive heading edits.
-- Earlier today: #767–#773 (M5–M8 closed), #775 (search pill width), #774/#776 (devel Flatpak `debugoptimized`).
+- 2026-11-23 (evening), #788 (this commit): 0.7.0-rc.1, the first pre-release of 0.7.0. Then tag `v0.7.0-rc.1` on
+  the merge commit and open a Pindu OS pull request that pins it for a device test. The tag is `vX.Y.Z-rc.N`; a
+  user's "rc1" means `rc.1`. Bump the RPM spec's `Version:` as well as its `%changelog`: `check-version.sh` catches
+  a missed one. Earlier today: #783/#786 README and CONTRIBUTING prose, #767–#775, #774/#776.
 - Harness gained `--gnome-buttons` (close-only title buttons through `gtk-4.0/settings.ini`): without it the
   desktop window at 360 px always logs `exceeds … width` (minimize and maximize add ~70 px), as CI's
   `ui-smoke-narrow` pins the same layout. Measure widget widths from shots with Pillow (header bar at y≈22).
