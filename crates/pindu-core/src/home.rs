@@ -438,18 +438,37 @@ pub struct BackgroundContext {
     /// first game's), or the layout is one screen of rows
     /// (`themes::HomeLayout::one_screen`: Shelves and Explore), which never shows it.
     pub covered: bool,
+    /// Quick Access, the menu drawer or the options sheet is open over the page.
+    pub panel_open: bool,
+    /// GStreamer was asked and has no hardware VP9 decoder (`has_hardware_decoder`), so
+    /// the video would be decoded on the CPU.
+    pub software_decoding: bool,
+}
+
+/// Whether one of GStreamer's decoders, given by their classes (`Codec/Decoder/Video`,
+/// with a `Hardware` part for those that decode on the GPU or a media engine), decodes in
+/// hardware.
+pub fn has_hardware_decoder<'a>(classes: impl IntoIterator<Item = &'a str>) -> bool {
+    classes
+        .into_iter()
+        .any(|class| class.split('/').any(|part| part == "Hardware"))
 }
 
 /// What Home's background does in `context`: it shows nothing under high contrast, holds
-/// its first frame outside fullscreen mode and under reduced motion, pauses behind a
-/// section's games, art that covers it, a running game or a hidden window, and plays
-/// behind the first screen.
+/// its first frame outside fullscreen mode, under reduced motion and where only the CPU
+/// can decode it, pauses behind a section's games, art that covers it, an open panel, a
+/// running game or a hidden window, and plays behind the first screen.
 pub fn background_playback(context: BackgroundContext) -> Playback {
     if context.high_contrast {
         Playback::Hidden
-    } else if !context.fullscreen || context.reduced_motion {
+    } else if !context.fullscreen || context.reduced_motion || context.software_decoding {
         Playback::FirstFrame
-    } else if !context.first_screen || context.covered || context.game_running || context.hidden {
+    } else if !context.first_screen
+        || context.covered
+        || context.panel_open
+        || context.game_running
+        || context.hidden
+    {
         Playback::Pause
     } else {
         Playback::Play
@@ -602,6 +621,8 @@ mod tests {
         reduced_motion: false,
         high_contrast: false,
         covered: false,
+        panel_open: false,
+        software_decoding: false,
     };
 
     #[test]
@@ -718,6 +739,72 @@ mod tests {
         ] {
             assert_eq!(background_playback(context), Playback::Pause, "{context:?}");
         }
+    }
+
+    #[test]
+    fn the_background_pauses_while_a_panel_covers_home() {
+        let panel_open = BackgroundContext {
+            panel_open: true,
+            ..ON_FIRST_SCREEN
+        };
+
+        assert_eq!(background_playback(panel_open), Playback::Pause);
+        // The rules before it still hold.
+        for (context, expected) in [
+            (
+                BackgroundContext {
+                    reduced_motion: true,
+                    ..panel_open
+                },
+                Playback::FirstFrame,
+            ),
+            (
+                BackgroundContext {
+                    high_contrast: true,
+                    ..panel_open
+                },
+                Playback::Hidden,
+            ),
+        ] {
+            assert_eq!(background_playback(context), expected, "{context:?}");
+        }
+    }
+
+    #[test]
+    fn without_a_hardware_decoder_the_background_holds_its_first_frame() {
+        let software = BackgroundContext {
+            software_decoding: true,
+            ..ON_FIRST_SCREEN
+        };
+
+        assert_eq!(background_playback(software), Playback::FirstFrame);
+        assert_eq!(
+            background_playback(BackgroundContext {
+                high_contrast: true,
+                ..software
+            }),
+            Playback::Hidden
+        );
+    }
+
+    #[test]
+    fn only_a_decoder_classed_hardware_decodes_in_hardware() {
+        // GStreamer's own VP9 decoders: libvpx's and FFmpeg's in software, VA-API's,
+        // NVIDIA's and the V4L2 stateless one in hardware.
+        let software = ["Codec/Decoder/Video", "Codec/Decoder/Video"];
+        assert!(!has_hardware_decoder(software));
+        assert!(!has_hardware_decoder(Vec::<&str>::new()));
+        for hardware in [
+            "Codec/Decoder/Video/Hardware",
+            "Codec/Hardware/Decoder/Video",
+        ] {
+            assert!(
+                has_hardware_decoder(software.into_iter().chain([hardware])),
+                "{hardware}"
+            );
+        }
+        // A word is not a class: only a whole `Hardware` part counts.
+        assert!(!has_hardware_decoder(["Codec/Decoder/Video/HardwareLike"]));
     }
 
     #[test]
