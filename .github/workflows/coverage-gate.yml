@@ -85,9 +85,11 @@ jobs:
   # survives the tests on a changed line fails the job; survivors already on main block nothing.
   # A pull request without a pindu-core change passes at once. No `paths:` filter: a
   # filtered-out run of a required check would block the merge instead of skipping.
+  # On a push to main it mutates nothing: it fills the cache that every pull request restores.
+  # A pull request's own cache entry is readable by that pull request alone.
   mutants:
     name: Mutants in changed pindu-core code
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
@@ -104,6 +106,7 @@ jobs:
 
       # Under the ignored _build/, so cargo-mutants' copy of the tree leaves them out.
       - uses: actions/cache@v6
+        id: mutants-cache
         with:
           path: |
             _build/cargo-home
@@ -111,9 +114,29 @@ jobs:
           key: mutants-${{ hashFiles('Cargo.lock') }}
           restore-keys: mutants-
 
+      # Only on a Cargo.lock main has no entry for yet: an exact hit is not saved again. The build is
+      # cargo-mutants' own build step (`cargo test --no-run`, no extra RUSTFLAGS without
+      # --cap-lints), so a pull request reuses these dependency builds. A cache restored from another
+      # Cargo.lock holds workspace crates built against it; cleaning them keeps the entry small.
+      - name: Fill the cache for pull requests
+        if: github.event_name == 'push' && steps.mutants-cache.outputs.cache-hit != 'true'
+        run: |
+          chown -R "$(id -u):$(id -g)" "$PWD"
+          flatpak run --share=network --filesystem="$PWD" --cwd="$PWD" \
+            --env=CARGO_HOME="$PWD/_build/cargo-home" \
+            --env=CARGO_TARGET_DIR="$PWD/_build/cargo-target" \
+            --env=PATH="$PWD/_build/cargo-home/bin:/usr/lib/sdk/rust-stable/bin:/usr/bin" \
+            --command=sh org.gnome.Sdk//51 -c '
+              set -e
+              cargo clean --workspace
+              cargo install --locked cargo-mutants --version 27.1.0
+              cargo test --package pindu-core --no-run
+            '
+
       # The checkout is the pull request merged into its base, so the diff from the base is the
       # pull request's own change.
       - name: Mutate the changed pindu-core lines
+        if: github.event_name == 'pull_request'
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
@@ -136,7 +159,7 @@ jobs:
             '
 
       - name: Upload mutants report
-        if: always()
+        if: always() && github.event_name == 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: mutants-report
