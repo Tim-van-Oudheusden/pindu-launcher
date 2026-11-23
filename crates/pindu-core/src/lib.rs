@@ -59,6 +59,7 @@ pub mod saves;
 pub mod search;
 pub mod sections;
 pub mod session_time;
+pub mod setup;
 pub mod sound;
 pub mod sources;
 pub mod steamgriddb;

@@ -338,6 +338,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 | `.home-divider` | The line between the game cards and the section tiles of a row that starts with games |
 | `.jump-card` | A game's card (a button); `.jump-title` is its title on the art, `.badge` its pin. `.no-art` once its art has loaded none: the game has no art for the card's shape, or it failed to load; it goes once art loads. A design that hides `.jump-title` should show it on such a card, where nothing else says which game it is, for example with `.jump-card:not(.no-art) .jump-title { opacity: 0; }`. Not to be confused with `.home.no-art` on the page |
 | `.library-tile` | The Library tile at the end of the first screen's row, and the Steam Big Picture tile, which is also `.big-picture-tile` |
+| `.home-setup` | The Get Started checklist over Home's background, in place of its content while a new console has nothing set up: a title, a line under it, a `.boxed-list` of rows and the Hide This List pill |
 | `.home-shelves` | The list of rows of the Shelves layout |
 | `.home-shelf` | A row of it: `.shelf-header`, with `.shelf-title` (the section's name) and `.shelf-count` (its number of games, which Jump Back In does not show), over its `.home-carousel`; `:focus-within` on the row with focus. The last row is also `.shelf-library` |
 | `.shelf-more` | **See All** (a button), the last tile of a row whose section holds more games than the row shows |

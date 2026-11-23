@@ -312,6 +312,9 @@ pub struct AddStoreState {
     pub step: Step,
     /// The machine has no network, so nothing can install until it has one.
     pub offline: bool,
+    /// The installed stores have been looked for at least once, so `installed` says
+    /// which are there.
+    pub detected: bool,
 }
 
 impl AddStoreState {
@@ -419,8 +422,9 @@ impl AddStore {
             if let Some(flow) = upgrade(&weak) {
                 let changed = {
                     let mut state = flow.inner.state.borrow_mut();
-                    let changed = state.installed != stores;
+                    let changed = state.installed != stores || !state.detected;
                     state.installed = stores;
+                    state.detected = true;
                     changed
                 };
                 if changed {
@@ -1004,6 +1008,26 @@ mod tests {
         fake.end(Err("killed"));
         assert_eq!(flow.state().step, Step::Choose);
         assert_eq!(fake.ran.borrow().len(), ran, "nothing more runs");
+    }
+
+    #[test]
+    fn the_flow_says_once_it_has_looked_for_the_stores_even_when_there_are_none() {
+        let (flow, fake) = flow(Method::Flatpak);
+        let heard = Rc::new(Cell::new(0));
+        flow.connect_changed({
+            let heard = heard.clone();
+            move |_| heard.set(heard.get() + 1)
+        });
+        assert!(!flow.state().detected);
+        flow.refresh();
+        let detect = fake.detected.borrow_mut().pop().expect("it looks");
+        detect(Vec::new());
+        assert!(flow.state().detected);
+        assert_eq!(heard.get(), 1, "none installed is news the first time");
+        flow.refresh();
+        let detect = fake.detected.borrow_mut().pop().expect("it looks again");
+        detect(Vec::new());
+        assert_eq!(heard.get(), 1, "and not again");
     }
 
     #[test]

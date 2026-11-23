@@ -338,6 +338,8 @@ mod imp {
         #[template_child]
         pub add_store_row: TemplateChild<gtk::ListBoxRow>,
         #[template_child]
+        pub setup_row: TemplateChild<gtk::ListBoxRow>,
+        #[template_child]
         pub add_store_level: TemplateChild<PinduAddStoreLevel>,
         #[template_child]
         pub report_row: TemplateChild<gtk::ListBoxRow>,
@@ -975,6 +977,7 @@ impl PinduQuickAccess {
             (Section::Manage, Entry::LibraryHealth) => row(&imp.health_row),
             (Section::Manage, Entry::Proton) => row(&imp.proton_row),
             (Section::Manage, Entry::AddStore) => row(&imp.add_store_row),
+            (Section::Manage, Entry::SetUp) => row(&imp.setup_row),
             (Section::Manage, Entry::AddGame) => row(&imp.add_game_row),
             (Section::Manage, Entry::RefreshLibrary) => row(&imp.refresh_row),
             (Section::Manage, Entry::Artwork) => {
@@ -1014,6 +1017,7 @@ impl PinduQuickAccess {
             sound_output: true,
             system_update: true,
             over_game: false,
+            setup: true,
         };
         for section in QuickAccessSection::ALL {
             let listed = section_entries(section, shown);

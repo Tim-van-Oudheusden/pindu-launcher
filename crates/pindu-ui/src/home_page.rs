@@ -48,6 +48,7 @@ use pindu_core::sections::{self, Section, SectionId};
 use pindu_core::themes::{HomeLayout, HomeStart, SectionTile, ThemeLayout, TileShape};
 
 use crate::config::{PKGDATADIR, RESOURCE_BASE_PATH};
+use crate::fullscreen_panels::step_out_of_list;
 use crate::game_page::{date, playtime};
 use crate::genres::genre_label;
 use crate::models::GameObject;
@@ -628,6 +629,14 @@ mod imp {
         #[template_child]
         pub content: TemplateChild<gtk::Box>,
         #[template_child]
+        pub setup: TemplateChild<adw::Clamp>,
+        #[template_child]
+        pub setup_list: TemplateChild<gtk::ListBox>,
+        #[template_child]
+        pub setup_hide: TemplateChild<gtk::Button>,
+        /// The checklist's row last chosen, which focus goes back to.
+        pub setup_focus: Cell<i32>,
+        #[template_child]
         pub info: TemplateChild<gtk::Box>,
         #[template_child]
         pub details: TemplateChild<gtk::Box>,
@@ -751,6 +760,21 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
             let page = self.obj();
+            self.setup_list.connect_row_activated(glib::clone!(
+                #[weak]
+                page,
+                move |_, row| page.imp().setup_focus.set(row.index())
+            ));
+            // Down from the last row goes on to Hide This List; Up from the first goes on
+            // to the top bar, as from Home's tiles.
+            self.setup_list.connect_keynav_failed(|list, direction| {
+                if direction == gtk::DirectionType::Down {
+                    step_out_of_list(list, direction);
+                    glib::Propagation::Stop
+                } else {
+                    glib::Propagation::Proceed
+                }
+            });
             self.library_tile.connect_has_focus_notify(glib::clone!(
                 #[weak]
                 page,
@@ -1457,6 +1481,39 @@ impl HomePage {
         imp.big_picture_offered.set(offered);
         imp.big_picture_tile
             .set_visible(offered && imp.open.get().is_none());
+    }
+
+    /// Shows the set-up checklist's `rows` in place of Home's content, or with `None`
+    /// takes it away. Focus on a row stays on the row at its place once they are built
+    /// again, and goes back to the tiles as the checklist goes. As it first shows, the row
+    /// at `first`, the first not done, is where Home's focus goes (`focus_remembered`);
+    /// `true` then.
+    pub(crate) fn set_setup(&self, rows: Option<Vec<gtk::Widget>>, first: usize) -> bool {
+        let imp = self.imp();
+        let list = &imp.setup_list;
+        let row_at = |index: usize| list.row_at_index(i32::try_from(index).ok()?);
+        let focused = (0..)
+            .map_while(row_at)
+            .position(|row| row.has_focus() || row.focus_child().is_some());
+        let in_setup = focused.is_some() || imp.setup_hide.has_focus();
+        let was_shown = imp.setup.is_visible();
+        list.remove_all();
+        let shown = rows.is_some();
+        for row in rows.into_iter().flatten() {
+            list.append(&row);
+        }
+        imp.setup.set_visible(shown);
+        imp.content.set_visible(!shown);
+        if shown && !was_shown {
+            imp.setup_focus
+                .set(i32::try_from(first).unwrap_or_default());
+        }
+        if let Some(row) = focused.filter(|_| shown).and_then(row_at) {
+            row.grab_focus();
+        } else if !shown && was_shown && in_setup {
+            self.show_sections();
+        }
+        shown && !was_shown
     }
 
     /// Shows on the Steam Big Picture tile whether Big Picture is `opening`, while the
@@ -2680,6 +2737,17 @@ impl HomePage {
     /// moved to, or the first one when it is gone, and scrolls its row to it: a card that
     /// has focus already does not say so again.
     pub fn focus_remembered(&self) {
+        let imp = self.imp();
+        if imp.setup.is_visible() {
+            let list = &imp.setup_list;
+            if let Some(row) = list
+                .row_at_index(imp.setup_focus.get())
+                .or_else(|| list.row_at_index(0))
+            {
+                row.grab_focus();
+            }
+            return;
+        }
         if let Some((card, focused)) = self.remembered() {
             card.grab_focus();
             keep_in_view(&card, true);

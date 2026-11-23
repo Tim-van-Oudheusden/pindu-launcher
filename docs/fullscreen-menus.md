@@ -136,12 +136,12 @@ What each section lists, top to bottom. "→" leads to the level of that name; "
 | **Design** | The designs, as a row of cards · Variant · then one list: the choice rows Background (when the design offers the choice), Background Blur, Background Dim, Cover Size, Text Size, then the Reduce Motion, Button Hints and Categories on Home switches · My Stylesheet |
 | **Controller** | The controllers · then one list: the choice rows Button Prompts and Swap Confirm and Back, the Hold to Confirm switch, the choice rows Repeat Delay, Repeat Rate and Stick Dead Zone · their note · then What Each Button Does → · Change Buttons → (not over a running game) |
 | **System** | Network → · Bluetooth → · Sound Output → · System Update → (each when available) · then a list of their own: Navigation Sounds, Volume (insensitive while the sounds are off; Left and Right turn it), Exit After Launching · Diagnostics Report → |
-| **Manage** | Sources → · Duplicates → · Library Health → · Proton → · Add a Store → · Add a Game · Refresh Library · an **Artwork** heading: SteamGridDB Key (A types it with the on-screen keyboard; its second line says whether a key is stored, or why the keyring cannot be used), Prefer SteamGridDB Art · a **Metadata** heading: Get Metadata From Wikidata, with Refresh Metadata right under it while it is on |
+| **Manage** | Sources → · Duplicates → · Library Health → · Proton → · Add a Store → · Set-Up Checklist (while Home's Get Started checklist is hidden; it brings it back) · Add a Game · Refresh Library · an **Artwork** heading: SteamGridDB Key (A types it with the on-screen keyboard; its second line says whether a key is stored, or why the keyring cannot be used), Prefer SteamGridDB Art · a **Metadata** heading: Get Metadata From Wikidata, with Refresh Metadata right under it while it is on |
 
 - Sound Output, Bluetooth, Network, Refresh Library and Add a Game are listed twice on purpose: once where they are
   quick to reach, once where they belong. The tile and the row do the same and show the same second line.
-- Over a running game (`game_overlay`), Surprise Me, Add a Store, Add a Game, Diagnostics Report and Change Buttons are
-  left out.
+- Over a running game (`game_overlay`), Surprise Me, Add a Store, Set-Up Checklist, Add a Game, Diagnostics Report and
+  Change Buttons are left out.
 - A section with nothing to show is left out of the strip and of LB and RB's steps.
 - Notifications marks the notifications read once it shows. When the last background task ends, the Running heading
   and its list go, and focus on a task moves to the first notification.
