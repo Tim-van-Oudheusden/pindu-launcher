@@ -40,6 +40,14 @@ impl AddStoreService {
             Method::Flatpak
         };
         let flow = AddStore::new(method, Box::new(FlatpakBackend::new()));
+        let monitor = gio::NetworkMonitor::default();
+        flow.set_online(monitor.is_network_available());
+        let weak = flow.downgrade();
+        monitor.connect_network_changed(move |_, online| {
+            if let Some(flow) = weak.upgrade() {
+                flow.set_online(online);
+            }
+        });
         flow.connect_installed(glib::clone!(
             #[weak]
             sync,
@@ -145,11 +153,19 @@ fn notify(state: &AddStoreState, notifications: &NotificationService) {
             &next_step(*app),
             None,
         ),
-        Step::Failed { app, error } if state.method == Method::Flatpak => notifications.post(
+        Step::Failed {
+            app,
+            error,
+            network,
+        } if state.method == Method::Flatpak => notifications.post(
             Kind::StoreFailed,
             // Translators: {store} is a store's name, such as Steam.
             &gettext("{store} Did Not Install").replace("{store}", store_name(*app)),
-            error,
+            &if *network {
+                network_failure(*app)
+            } else {
+                error.clone()
+            },
             None,
         ),
         _ => {}
@@ -178,5 +194,12 @@ pub fn store_description(app: StoreApp) -> String {
 pub fn next_step(app: StoreApp) -> String {
     // Translators: {store} is a store's name, such as Steam.
     gettext("Open {store} and sign in to your account. Its games then show in your library.")
+        .replace("{store}", store_name(app))
+}
+
+/// Why `app` did not install when the network failed it.
+pub fn network_failure(app: StoreApp) -> String {
+    // Translators: {store} is a store's name, such as Steam.
+    gettext("{store} could not be downloaded, because the internet could not be reached. Check the network connection, then try again.")
         .replace("{store}", store_name(app))
 }

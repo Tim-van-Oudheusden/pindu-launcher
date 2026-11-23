@@ -501,6 +501,10 @@ with a controller alone.
   installation, after adding Flathub to it. The install shows its progress here and in Activity, and can be cancelled.
 - The Flatpak cannot install apps and gets no permission to, so it opens the store's page in your software centre and
   says so.
+- Stores install from the internet. While the machine is offline, Add a Store says so and the stores wait; in fullscreen
+  mode on Pindu OS its **Network** action opens Quick Access's Network level, and B from there leads back to Add a
+  Store, where the stores are ready once the machine is online. An install that fails because Flathub cannot be
+  reached says that, rather than `flatpak`'s own error, and offers Network next to Try Again.
 - Once a store is installed, the library refreshes. Sign in to the store and its games appear.
 
 ### Proton

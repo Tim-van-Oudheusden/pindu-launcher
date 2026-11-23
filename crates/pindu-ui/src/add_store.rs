@@ -15,14 +15,17 @@ use gtk::{gio, glib};
 use pindu_core::add_store::{AddStoreState, Method, Step, StoreApp};
 use pindu_core::panels::{Panel, QuickAccessLevel};
 
-use crate::add_store_service::{AddStoreService, next_step, store_description, store_name};
+use crate::add_store_service::{
+    AddStoreService, network_failure, next_step, store_description, store_name,
+};
 use crate::application::PinduApplication;
 use crate::quick_access::PinduQuickAccess;
 use crate::window::PinduWindow;
 
 /// What the level's rows show, apart from how far an install is: rows are built again
-/// only when this changes, so focus stays on Cancel while the bar moves.
-type Shape = (Method, Vec<StoreApp>, Step);
+/// only when this changes, so focus stays on Cancel while the bar moves. The last two are
+/// whether the machine is offline and whether the level offers Network.
+type Shape = (Method, Vec<StoreApp>, Step, bool, bool);
 
 mod imp {
     use super::*;
@@ -48,6 +51,9 @@ mod imp {
         pub add_store_actions: TemplateChild<gtk::ListBox>,
         /// What the rows show now.
         pub shape: RefCell<Option<Shape>>,
+        /// Whether a Network action leads to Quick Access's Network level: fullscreen
+        /// mode, where the system panel offers it.
+        pub network_action: std::cell::Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -235,7 +241,9 @@ impl PinduQuickAccess {
             return;
         };
         let service = application.add_store_service();
-        self.imp().add_store_level.fill(&service.state());
+        let level = &self.imp().add_store_level;
+        level.set_network_action(self.imp().shown.get().network);
+        level.fill(&service.state());
         service.refresh();
     }
 
@@ -246,6 +254,7 @@ impl PinduQuickAccess {
             return;
         }
         let level = &self.imp().add_store_level;
+        level.set_network_action(self.imp().shown.get().network);
         let had_focus = level.has_focus();
         if level.fill(state) && had_focus {
             self.focus_level(None);
@@ -263,6 +272,12 @@ impl PinduAddStoreLevel {
     /// Shows or hides the level's own title: the dialog has it in its header bar.
     pub(crate) fn set_title_visible(&self, visible: bool) {
         self.imp().add_store_title.set_visible(visible);
+    }
+
+    /// Offers a Network action, which leads to Quick Access's Network level, while the
+    /// machine is offline or the network failed an install; it shows from the next fill.
+    pub(crate) fn set_network_action(&self, offered: bool) {
+        self.imp().network_action.set(offered);
     }
 
     /// Where focus goes: the first action, such as Cancel or Show Library, or else the
@@ -304,6 +319,8 @@ impl PinduAddStoreLevel {
             state.method,
             state.installed.clone(),
             shape_step(&state.step),
+            state.offline,
+            imp.network_action.get(),
         );
         if imp.shape.borrow().as_ref() == Some(&shape) {
             return false;
@@ -326,6 +343,17 @@ impl PinduAddStoreLevel {
         let actions = &imp.add_store_actions;
         actions.remove_all();
         let (title, detail) = match &state.step {
+            Step::Choose if state.offline => {
+                if imp.network_action.get() {
+                    actions.append(&network_row());
+                }
+                (
+                    Some(gettext("No Network Connection")),
+                    Some(gettext(
+                        "Stores install from the internet. Connect to a network, then choose a store.",
+                    )),
+                )
+            }
             Step::Choose => (None, None),
             Step::Installing {
                 app, cancelling, ..
@@ -389,14 +417,23 @@ impl PinduAddStoreLevel {
                     ),
                 )
             }
-            Step::Failed { app, error } => {
-                let id = app.app_id().to_variant();
-                actions.append(&action_row(
-                    &gettext("Try Again"),
-                    "win.add-store-choose",
-                    Some(&id),
-                    "view-refresh-symbolic",
-                ));
+            Step::Failed {
+                app,
+                error,
+                network,
+            } => {
+                if state.can_choose(*app) {
+                    let id = app.app_id().to_variant();
+                    actions.append(&action_row(
+                        &gettext("Try Again"),
+                        "win.add-store-choose",
+                        Some(&id),
+                        "view-refresh-symbolic",
+                    ));
+                }
+                if (*network || state.offline) && imp.network_action.get() {
+                    actions.append(&network_row());
+                }
                 actions.append(&action_row(
                     &gettext("Back to the Stores"),
                     "win.add-store-back",
@@ -411,9 +448,14 @@ impl PinduAddStoreLevel {
                         gettext("Could Not Open {store} in Your Software Centre")
                     }
                 };
+                let detail = if *network {
+                    network_failure(*app)
+                } else {
+                    error.clone()
+                };
                 (
                     Some(title.replace("{store}", store_name(*app))),
-                    Some(error.clone()),
+                    Some(detail),
                 )
             }
         };
@@ -440,6 +482,16 @@ fn shape_step(step: &Step) -> Step {
         },
         step => step.clone(),
     }
+}
+
+/// The row that leads to Quick Access's Network level.
+fn network_row() -> adw::ButtonRow {
+    action_row(
+        &gettext("Network"),
+        "win.quick-access-network",
+        None,
+        "network-wireless-symbolic",
+    )
 }
 
 /// A store's row: its name and what it is for, chosen with A, or marked installed.
