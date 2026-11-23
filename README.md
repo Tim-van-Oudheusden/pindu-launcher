@@ -154,7 +154,8 @@ Pick one:
   ```
 
   A bundle does not update itself: install the next release's bundle the same way, from a folder that holds only that
-  bundle.
+  bundle. Each release's notes say so too. To hear of a new release, use **Watch → Custom → Releases** at the top of
+  this repository's page.
 - **Install a native package** on Fedora 45, Debian testing or Ubuntu 26.10, the distros with GTK 4.24 and
   libadwaita 1.10. Each release has `pindu-launcher-<version>-1.fc45.<arch>.rpm` (`x86_64` or `aarch64`),
   `pindu-launcher-<version>-debian-testing-<arch>.deb` and `pindu-launcher-<version>-ubuntu-26.10-<arch>.deb` (`amd64`
