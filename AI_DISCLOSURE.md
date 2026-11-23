@@ -82,6 +82,7 @@ come from the same CLI-agent sessions and are counted as AI-assisted. The 26 com
 | `data/screenshots/*.png`, the store screenshots (#58) | A person, without AI |
 | `docs/*.pdf`, the main spec and the research documents | AI-assisted (deep research and drafting) |
 | `docs/screenshots/`, the README's screenshots (#360, #760) | AI-assisted: captured from the running app in an agent session. The demo library they show (#760) was made by an agent's scripts: covers and banners cropped from the games' Flathub screenshots (one title screen's menu buttons painted over with its own repeating background), the game names set on the covers in Adwaita Sans, and the games' own icons and official logos, only trimmed to their edges; no art is AI-generated ([`CREDITS.md`](docs/screenshots/CREDITS.md)) |
+| `docs/brand/`, the README banner and the social preview (#781) | AI-made: an agent drew the page that lays them out (`docs/brand/source/`) to the design the maintainer chose from five variants, after the Pindu OS artwork, and rendered them from the app icon and two of the README's screenshots |
 
 ## Written by a person without AI
 

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/brand/readme-banner.svg" alt="Pindu launcher: play all your games. Every PC game on your machine in one GNOME library.">
+<img src="docs/brand/readme-banner.webp" alt="Pindu launcher: play all your games. Every PC game on your machine in one library, at your desk or from the couch. Beside the name, the desktop window shows the library, and a television in front of it shows fullscreen mode.">
 
 [Install](#installing) · [Features](#features) · [Fullscreen mode](#fullscreen-mode) ·
 [Report a bug](https://github.com/Tim-van-Oudheusden/pindu-launcher/issues/new) ·
@@ -826,6 +826,7 @@ so the fullscreen mode is a second presentation of the same library.
 | [`docs/multi-agent.md`](docs/multi-agent.md) | Who works on the repository, how work moves between agents, and how changes merge |
 | [`data/screenshots/CREDITS.md`](data/screenshots/CREDITS.md) | Where the store screenshots' game art comes from, and its licences |
 | [`docs/screenshots/CREDITS.md`](docs/screenshots/CREDITS.md) | Where the README screenshots' game art comes from, and its licences |
+| [`docs/brand/README.md`](docs/brand/README.md) | The README banner and the social preview image, and how to render them |
 | [`docs/metrics/README.md`](docs/metrics/README.md) | The gates every change passes, what each measures and how to run it |
 | [`docs/reflections/README.md`](docs/reflections/README.md) | Lessons from past sessions and incidents, and how to write one |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to build, find work and get a change merged |
@@ -905,6 +906,6 @@ Corporation in the U.S. and/or other countries.
 | `data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in` | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `data/home/` (fullscreen Home's art) | [GPL-3.0-or-later](data/home/LICENSE) |
 | `data/icons/sources/` (launcher icons) | Each icon's own terms, listed in [`LICENSE`](data/icons/sources/LICENSE): the Steam logo (Simple Icons, CC0 1.0, used under Valve's branding guidelines), Cartridges' Lutris, Bottles and Legendary icons (GPL-3.0-or-later), Faugus Launcher's logo (MIT) and the itch.io logo (itch.io press kit) |
-| `docs/brand/readme-banner.svg` | [GPL-3.0-or-later](LICENSE); the outlined text is [Adwaita Sans](https://gitlab.gnome.org/GNOME/adwaita-fonts), SIL Open Font License 1.1 |
+| `docs/brand/` | [GPL-3.0-or-later](LICENSE); the text in the images is set in [Inter](https://github.com/rsms/inter), SIL Open Font License 1.1, and the game art in the screenshots they show keeps each game's own licence ([`CREDITS.md`](docs/screenshots/CREDITS.md)) |
 | Game art in `data/screenshots/` | Each game's own licence, listed in [`CREDITS.md`](data/screenshots/CREDITS.md) |
 | Game art in `docs/screenshots/` | Each game's own licence, listed in [`CREDITS.md`](docs/screenshots/CREDITS.md) |
