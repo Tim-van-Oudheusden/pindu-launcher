@@ -176,7 +176,8 @@ default value or a changed operator, must make a test fail. A mutant that surviv
 check; survivors already on `main` block nothing, and a pull request that changes no `pindu-core` code passes at once.
 A failure means no test catches that change to the code: add a test that fails for the listed mutant
 ([Testing](../../AGENTS.md#testing)). The `mutants-report` artifact holds `mutants.out/`, whose `missed.txt` lists the
-survivors. It runs on pull requests only; changes to test code alone produce no mutants.
+survivors. It mutates on pull requests only; on a push to `main` it builds `pindu-core`'s tests and `cargo-mutants`
+into the cache that pull requests restore. Changes to test code alone produce no mutants.
 
 From the branch, against an up-to-date `origin/main`:
 
