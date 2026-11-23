@@ -659,6 +659,43 @@ mod tests {
     }
 
     #[test]
+    fn every_background_video_ships_and_is_installed() {
+        let data = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data");
+        let meson = std::fs::read_to_string(data.join("meson.build")).unwrap();
+
+        for (_, red, blue) in BACKGROUND_VIDEOS {
+            for file in [red, blue] {
+                assert!(data.join("home").join(file).is_file(), "{file} is missing");
+                assert!(
+                    meson.contains(&format!("'home' / '{file}'")),
+                    "{file} is not installed"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn each_background_choice_in_the_schema_picks_its_own_background() {
+        let schema = std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in"),
+        )
+        .unwrap();
+        let key = &schema[schema
+            .find(&format!("<key name=\"{BACKGROUND_KEY}\""))
+            .expect("the schema has the background key")..];
+        let choices = &key[..key.find("</choices>").unwrap()];
+
+        let picked: Vec<_> = choices
+            .split("<choice value=\"")
+            .skip(1)
+            .map(|choice| Background::from_setting(&choice[..choice.find('"').unwrap()]))
+            .collect();
+
+        assert_eq!(picked, [Background::RedRibbons, Background::BlueStation]);
+    }
+
+    #[test]
     fn the_background_plays_behind_the_first_screen() {
         assert_eq!(background_playback(ON_FIRST_SCREEN), Playback::Play);
     }
