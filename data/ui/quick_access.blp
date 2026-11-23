@@ -1821,6 +1821,27 @@ template $PinduQuickAccess: Box {
                     };
                   }
 
+                  // Brings the hidden set-up checklist back to Home, while it is hidden.
+                  ListBoxRow setup_row {
+                    action-name: "win.setup-restore";
+                    visible: false;
+
+                    child: Box {
+                      spacing: 16;
+
+                      Image {
+                        icon-name: "checkbox-checked-symbolic";
+                        accessible-role: presentation;
+                      }
+
+                      Label {
+                        label: _("Set-Up Checklist");
+                        xalign: 0;
+                        hexpand: true;
+                      }
+                    };
+                  }
+
                   // Fullscreen mode's Add Game, a dialog over the main window.
                   ListBoxRow add_game_row {
                     action-name: "win.add-game-fullscreen";

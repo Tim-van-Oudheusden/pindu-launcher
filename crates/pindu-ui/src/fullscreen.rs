@@ -377,6 +377,7 @@ impl PinduWindow {
         ));
         if let Some(application) = self.application().and_downcast::<PinduApplication>() {
             self.setup_big_picture(&application);
+            self.setup_checklist(&application);
             application
                 .session_service()
                 .connect_any_playing_changed(glib::clone!(

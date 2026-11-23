@@ -313,5 +313,66 @@ template $PinduHomePage: Adw.NavigationPage {
         };
       }
     }
+
+    // The set-up checklist (`pindu_core::setup`), in place of Home's content while a new
+    // console has nothing set up; its rows are filled in code.
+    [overlay]
+    Adw.Clamp setup {
+      visible: false;
+      maximum-size: 640;
+      valign: center;
+      margin-start: 48;
+      margin-end: 48;
+
+      styles [
+        "home-setup",
+      ]
+
+      child: Box {
+        orientation: vertical;
+        spacing: 12;
+
+        Label {
+          label: _("Get Started");
+          xalign: 0;
+          wrap: true;
+
+          styles [
+            "title-1",
+          ]
+        }
+
+        Label {
+          label: _("A few steps before your first game, in any order. Each one opens where it is done.");
+          xalign: 0;
+          wrap: true;
+
+          styles [
+            "dimmed",
+          ]
+        }
+
+        ListBox setup_list {
+          selection-mode: none;
+          margin-top: 12;
+
+          styles [
+            "boxed-list",
+          ]
+        }
+
+        Button setup_hide {
+          label: _("Hide This List");
+          action-name: "win.setup-hide";
+          halign: start;
+          margin-top: 12;
+          tooltip-text: _("Quick Access → Manage brings it back");
+
+          styles [
+            "pill",
+          ]
+        }
+      };
+    }
   };
 }

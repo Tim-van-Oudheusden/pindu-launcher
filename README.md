@@ -489,6 +489,24 @@ imported and what needs attention. **Open Library Health** opens the Library Hea
 Access at Library Health in fullscreen mode, where you can read and close the summary with a controller alone. The
 summary shows only once; after you close it, it never comes back.
 
+### Get Started
+
+When fullscreen mode starts with no games and no store installed, as on a fresh Pindu OS install, Home shows a
+**Get Started** checklist in place of its tiles, in the order a new console needs:
+
+- **Connect a Controller**: opens Quick Access's Bluetooth to pair one, or its Controller section where the system has
+  no Bluetooth to offer. Plug a first controller in with a cable, or use a keyboard, to get this far.
+- **Join a Network**: opens Quick Access's Network, where the system offers it.
+- **Choose a Design**: opens Quick Access's Design section; gone once a design was picked.
+- **Add a Store**: opens Add a Store.
+- **Sign In**: opens the installed store, Steam in Big Picture, to sign in. Opening Heroic or Lutris from here comes
+  with #797.
+
+Each step is marked done from what is true now: a controller connected, the machine online, a store installed. None is
+forced, and they go in any order; closing Quick Access comes back to the list. **Hide This List** hides it, and Quick
+Access → Manage → **Set-Up Checklist** brings it back. Once a game is in the library, it is gone for good. The desktop
+window does not show it.
+
 ### Add a Store
 
 A library with no games, such as a fresh Pindu OS install, offers **Add a Store** on its empty page, both in

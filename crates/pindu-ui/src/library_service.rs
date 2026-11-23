@@ -59,6 +59,11 @@ impl LibraryService {
         self.imp().model.clone()
     }
 
+    /// Whether the library was read once, so its counts say what it holds.
+    pub fn is_loaded(&self) -> bool {
+        self.imp().loaded.get()
+    }
+
     /// Waits until the library was read once (at most a few seconds).
     pub async fn wait_loaded(&self) {
         for _ in 0..100 {

@@ -287,6 +287,11 @@ mod imp {
         pub(crate) top_bar_clock: OnceCell<Clock>,
         /// The level of the desktop's Add a Store dialog, while it shows.
         pub add_store_dialog: RefCell<Option<PinduAddStoreLevel>>,
+        /// Whether fullscreen mode's start has been weighed for the set-up checklist
+        /// (`setup::SetupState::started`) since the app started.
+        pub setup_started: Cell<bool>,
+        /// The set-up checklist's entries Home shows, or `None` while it shows none.
+        pub setup_items: RefCell<Option<Vec<pindu_core::setup::SetupItem>>>,
     }
 
     #[glib::object_subclass]

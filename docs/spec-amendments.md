@@ -30,6 +30,16 @@ Pindu OS needs last. That last layer grows only through a Pindu OS work package 
 panel did. TDP, performance tuning and other hardware control remain out of scope unless such a work package asks for
 them.
 
+### First run on a console, revised
+
+The product analysis (section 8.2) turned down a set-up sequence on first start in favour of empty states and prompts in
+place, and [`docs/library-health.md`](library-health.md#out-of-scope) listed it as out of scope. That reasoning was about
+the desktop app. On Pindu OS fullscreen mode is the whole interface, and the first run on real hardware (pindu-os#51)
+showed a new owner finding each step by hand, in the wrong order. Since #794 fullscreen mode shows a set-up checklist in
+place of an empty Home when it starts with no games and no store installed: controller, network, design, store, sign
+in, each opening the screen that already does it. The desktop keeps empty states and prompts in place. The details are
+in [`docs/library-health.md`](library-health.md#decisions).
+
 ## Gamescope and handhelds (spec, page 10)
 
 The spec put gamescope focus atoms, overlays, TDP and controller remapping out of scope for v1, pending a spike. The

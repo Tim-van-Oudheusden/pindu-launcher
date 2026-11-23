@@ -57,8 +57,8 @@ with a controller alone. No permission is added.
 - Repairing anything automatically: the view reports and points, the user acts. The app cannot grant itself host
   access; by design the user runs the command.
 - Signing in to stores, which stays with the stores.
-- A multi-step setup sequence on first start: empty states and prompts in place stay the pattern, and the first-run
-  summary replaces it.
+- A multi-step setup sequence on first start **on the desktop**: empty states and prompts in place stay the pattern
+  there, and the first-run summary replaces it. Fullscreen mode now has a set-up checklist (#794), see Decisions.
 
 ## Issues
 
@@ -78,3 +78,15 @@ Decided by the maintainer on 2026-11-19 (analysis [section 14](product-analysis.
 - Library Health is a **page of its own**, opened from the main menu, in the desktop window; in fullscreen mode it is a
   Quick Access level.
 - There is a **one-time first-run summary** after the first sync.
+
+Changed by the maintainer on 2026-11-23 for consoles (#794): the reasoning against a set-up sequence was about the
+desktop app, where the desktop provides the network, Bluetooth and a way to open a store. A console has none of those
+outside the launcher, so **fullscreen mode shows a set-up checklist** in place of an empty Home when it starts with no
+games and no store installed (`pindu_core::setup`, `setup_checklist.rs`): Connect a Controller (Quick Access's
+Bluetooth, or its Controller section without one), Join a Network where the system panel offers it, Choose a Design
+until the design was changed, Add a Store, and Sign In to the installed store (Steam through Big Picture; Heroic and
+Lutris with #797). Each entry opens the screen that already does the step and is marked done from the live state; none
+is forced. It is gone for good once a game is in the library. Hide This List keeps it hidden (the `fullscreen-setup`
+GSettings key), and Quick Access → Manage → Set-Up Checklist brings it back. It shows for any fullscreen start with
+nothing set up, not only on Pindu OS; the desktop window shows nothing of it. A first controller connects by cable, or
+the keyboard drives the list, before a wireless one pairs over Bluetooth.

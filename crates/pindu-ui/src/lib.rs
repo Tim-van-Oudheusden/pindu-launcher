@@ -89,6 +89,7 @@ pub mod search_provider;
 pub mod secret_dialog;
 pub mod selection_mode;
 pub mod session_service;
+pub mod setup_checklist;
 pub mod sources;
 pub mod steamgriddb_service;
 pub mod style_service;

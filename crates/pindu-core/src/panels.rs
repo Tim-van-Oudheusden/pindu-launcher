@@ -176,6 +176,8 @@ pub enum QuickAccessEntry {
     Proton,
     /// Leads to the stores to install ([`QuickAccessLevel::AddStore`]).
     AddStore,
+    /// Brings the hidden set-up checklist back to Home ([`crate::setup`]).
+    SetUp,
     /// The Artwork heading: the SteamGridDB key and Prefer SteamGridDB Art.
     Artwork,
     /// The Metadata heading: the Get Metadata From Wikidata switch, and Refresh Metadata
@@ -203,9 +205,12 @@ pub struct Shown {
     /// The system offers OS updates (Pindu OS).
     pub system_update: bool,
     /// The panel is over a running game (`game_overlay`), which leaves out what needs the
-    /// main window: Surprise Me, Add a Store, Add a Game and Diagnostics Report; and
-    /// Change Buttons, which would change the controls under the game.
+    /// main window: Surprise Me, Add a Store, Set-Up Checklist, Add a Game and Diagnostics
+    /// Report; and Change Buttons, which would change the controls under the game.
     pub over_game: bool,
+    /// The set-up checklist was hidden, and Quick Access offers it back
+    /// (`setup::SetupState::restorable`).
+    pub setup: bool,
 }
 
 /// What `section` lists while `shown` holds, top to bottom. Quick's tiles
@@ -241,6 +246,7 @@ pub fn section_entries(section: QuickAccessSection, shown: Shown) -> Vec<QuickAc
             (LibraryHealth, true),
             (Proton, true),
             (AddStore, main_window),
+            (SetUp, main_window && shown.setup),
             (AddGame, main_window),
             (RefreshLibrary, true),
             (Artwork, true),
@@ -1272,6 +1278,7 @@ mod tests {
         sound_output: false,
         system_update: false,
         over_game: false,
+        setup: false,
     };
     /// Everything optional shows.
     const FULL: Shown = Shown {
@@ -1284,6 +1291,7 @@ mod tests {
         sound_output: true,
         system_update: true,
         over_game: false,
+        setup: true,
     };
 
     #[test]
@@ -1991,7 +1999,16 @@ mod tests {
             Artwork,
             Metadata,
         ];
-        assert_eq!(section_entries(QuickAccessSection::Manage, FULL), upkeep);
+        assert_eq!(
+            section_entries(
+                QuickAccessSection::Manage,
+                Shown {
+                    setup: false,
+                    ..FULL
+                }
+            ),
+            upkeep
+        );
         assert_eq!(section_entries(QuickAccessSection::Manage, BARE), upkeep);
         let over_game = Shown {
             over_game: true,
@@ -2009,6 +2026,41 @@ mod tests {
                 Metadata
             ],
             "Add a Store and Add a Game need the main window"
+        );
+    }
+
+    #[test]
+    fn manage_offers_the_hidden_set_up_checklist_back_in_the_main_window() {
+        use QuickAccessEntry::*;
+        let hidden = Shown {
+            setup: true,
+            ..BARE
+        };
+        assert_eq!(
+            section_entries(QuickAccessSection::Manage, hidden),
+            [
+                Sources,
+                Duplicates,
+                LibraryHealth,
+                Proton,
+                AddStore,
+                SetUp,
+                AddGame,
+                RefreshLibrary,
+                Artwork,
+                Metadata,
+            ]
+        );
+        assert!(
+            !section_entries(
+                QuickAccessSection::Manage,
+                Shown {
+                    over_game: true,
+                    ..hidden
+                }
+            )
+            .contains(&SetUp),
+            "the checklist shows on Home, under the game"
         );
     }
 
