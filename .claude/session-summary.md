@@ -8,16 +8,12 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-23 (morning), #676–#763 worked and merged: #767 (#678), #768 (#677, option C), #769 (#681), #762 (#750),
-  #771 (#759, closed category set + `category/mappings.json`), #773 (#758, `gamepad::FOCUS_REST`, cancellable hero
-  decodes). M5–M8 closed; #763 option B.
-- 2026-11-23 (afternoon), #775 (this commit): the desktop search pill follows the window
-  (`search::field_width`: 159 px up to a 1024 px window, evenly to 477 px at 2560, capped); `PinduWindow`
-  overrides `size_allocate` and re-shapes the field from an idle; the desktop entry asks for 80 characters, as
-  `AdwClamp` gives no more than the child's natural width. #774 (#776): the devel Flatpak builds with
-  `--buildtype=debugoptimized` (cargo profile `debugoptimized`), and `check-manifests.sh` fails an unoptimised
-  manifest. #770 was merged as #777 by a parallel session with the same `ScrolledWindow` change; this session's
-  duplicate branch was dropped and its harness results posted on #770.
+- 2026-11-23 (evening), #783 (this commit): README prose rewrite, docs only. Facts, code blocks, tables, HTML and
+  link targets kept; Installing split into subsections, tech stack a table, "Reporting a bug" under Contributing.
+  Hold to Confirm moved from a non-existent "Quick Access's Accessibility" to Quick Access → Controller. Anchors
+  other files link to (`#installing`, `#building-from-source`, `#development-flatpak`, `#translating`,
+  `#starting-games-on-the-host`) unchanged; keep them when editing headings.
+- Earlier today: #767–#773 (M5–M8 closed), #775 (search pill width), #774/#776 (devel Flatpak `debugoptimized`).
 - Harness gained `--gnome-buttons` (close-only title buttons through `gtk-4.0/settings.ini`): without it the
   desktop window at 360 px always logs `exceeds … width` (minimize and maximize add ~70 px), as CI's
   `ui-smoke-narrow` pins the same layout. Measure widget widths from shots with Pillow (header bar at y≈22).
