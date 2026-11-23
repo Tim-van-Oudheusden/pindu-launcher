@@ -180,6 +180,8 @@ modules:
     buildsystem: meson
     run-tests: true
     config-opts:
+      # flatpak-builder passes no build type, and Meson's default is debug: unoptimised Rust
+      - --buildtype=debugoptimized
       - -Dprofile=development
     sources:
       - type: dir

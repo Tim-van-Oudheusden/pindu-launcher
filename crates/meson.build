@@ -10,9 +10,13 @@ if import('fs').is_dir(meson.project_source_root() / 'vendor')
   cargo_options += ['--offline', '--locked', '--config', vendor_config]
 endif
 
-if get_option('buildtype') == 'release'
+buildtype = get_option('buildtype')
+if buildtype == 'release'
   cargo_options += ['--release']
   rust_target = 'release'
+elif buildtype == 'debugoptimized'
+  cargo_options += ['--profile', 'debugoptimized']
+  rust_target = 'debugoptimized'
 else
   rust_target = 'debug'
 endif

@@ -15,6 +15,12 @@ pindu-core = { path = "crates/pindu-core" }
 [profile.release]
 lto = "thin"
 
+# Meson's `debugoptimized` build type (the development Flatpak, crates/meson.build): as fast
+# as a release, with line tables so a backtrace names its lines.
+[profile.debugoptimized]
+inherits = "release"
+debug = "line-tables-only"
+
 # The Rust for Linux lint set: the kernel's `rust_common_flags` (top-level Makefile), its
 # `.clippy.toml` and the rules of Documentation/rust/coding-guidelines.rst that a lint can
 # check. CI runs clippy and rustdoc with `-D warnings`, so every warning here fails a build.

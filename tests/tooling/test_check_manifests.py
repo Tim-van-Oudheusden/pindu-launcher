@@ -61,6 +61,22 @@ class CheckManifestsTest(unittest.TestCase):
         result = run(str(self.copy))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_fails_when_a_manifest_builds_the_app_unoptimised(self) -> None:
+        # Meson's default build type is debug, which builds cargo's unoptimised dev
+        # profile, so a manifest without a build type ships a slow app (#774).
+        for manifest in (DEVEL, RELEASE):
+            with self.subTest(manifest=manifest):
+                shutil.rmtree(self.copy)
+                shutil.copytree(MANIFESTS, self.copy)
+                file = self.copy / manifest
+                lines = file.read_text().splitlines(keepends=True)
+                file.write_text(
+                    "".join(line for line in lines if not line.startswith("      - --buildtype="))
+                )
+                result = run(str(self.copy))
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn(f"{manifest} builds the app unoptimised", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
