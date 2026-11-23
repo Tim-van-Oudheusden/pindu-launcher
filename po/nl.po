@@ -5725,6 +5725,12 @@ msgstr ""
 msgid "Grid"
 msgstr ""
 
+#: data/ui/window.blp:273 data/ui/window.blp:277
+#, fuzzy
+#| msgid "New Collection"
+msgid "View Options"
+msgstr "Nieuwe Collectie"
+
 #: data/ui/window.blp:256
 msgid "List"
 msgstr ""
@@ -5856,6 +5862,18 @@ msgstr ""
 
 #: data/ui/window.blp:910
 msgid "_Playtime"
+msgstr ""
+
+#: data/ui/window.blp:952
+msgid "_Grid"
+msgstr ""
+
+#: data/ui/window.blp:958
+msgid "L_ist"
+msgstr ""
+
+#: data/ui/window.blp:1000
+msgid "_Fullscreen Mode"
 msgstr ""
 
 #: data/ui/window.blp:920
