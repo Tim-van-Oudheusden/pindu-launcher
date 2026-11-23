@@ -235,7 +235,7 @@ picture, and its card is `:checked`.
 | Button | On a section | At a level |
 |---|---|---|
 | LB, RB, <kbd>Ctrl</kbd>+<kbd>Page Up</kbd>, <kbd>Ctrl</kbd>+<kbd>Page Down</kbd> | The section before or after, wrapping from the last to the first, with the move sound | Nothing, except that the diagnostics report turns its pages |
-| B | Closes Quick Access | Back to the section that holds the level's entry: the one it was opened from, or else the one it belongs to (the games with a log lead back to the report) |
+| B | Closes Quick Access | Back to the section that holds the level's entry: the one it was opened from, or else the one it belongs to (the games with a log lead back to the report, and Network opened from Add a Store leads back to Add a Store) |
 | Up, Down | Move through the section; Up from its first item stops there. In Quick, between the cards, the rows of tiles and the activity strip | Move through the level |
 | Left, Right | In Quick, along a row of tiles, stopping at its ends, and between a Playing Now card's Return and Stop | Turn a slider |
 | A | Activates the focused item | Activates the focused item |

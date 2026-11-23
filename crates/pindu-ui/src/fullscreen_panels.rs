@@ -554,6 +554,10 @@ impl PinduWindow {
                 move || window.focus_panel(before)
             ));
         }
+        if before.is_some() != open.is_some() {
+            // A panel over Home pauses its background (`home::background_playback`).
+            self.update_home_background();
+        }
         self.update_hints();
     }
 

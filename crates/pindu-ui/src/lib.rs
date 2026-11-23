@@ -96,6 +96,7 @@ pub mod sync_service;
 pub mod system_power_service;
 pub mod system_update_service;
 pub mod task_service;
+pub mod video_decoding;
 pub mod watch_service;
 pub mod widgets;
 pub mod wikidata_service;

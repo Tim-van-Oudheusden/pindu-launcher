@@ -194,6 +194,29 @@ pub fn error_message(stderr: &str) -> Option<String> {
     error.or_else(|| lines().next_back()).map(str::to_owned)
 }
 
+/// What `flatpak` (through libostree, libcurl and GLib) prints when it cannot reach
+/// Flathub: the host's name does not resolve, no connection is made, or it times out.
+/// They are matched without case, in English: words the user's language translated fall
+/// back on whether the machine is still online.
+const NETWORK_ERRORS: [&str; 9] = [
+    "resolve host",
+    "name resolution",
+    "name or service not known",
+    "couldn't connect",
+    "could not connect",
+    "network is unreachable",
+    "no route to host",
+    "timeout was reached",
+    "connection timed out",
+];
+
+/// Whether what `flatpak` printed on standard error says that Flathub could not be
+/// reached ([`NETWORK_ERRORS`]).
+fn network_failure(stderr: &str) -> bool {
+    let stderr = stderr.to_lowercase();
+    NETWORK_ERRORS.iter().any(|words| stderr.contains(words))
+}
+
 /// The stores installed on this machine, natively or as Flatpaks, that `dirs` show: a
 /// store counts when the desktop shows its app ([`desktop::application_dirs`]) or the
 /// library's importers find its data folder ([`Location`]).
@@ -292,6 +315,9 @@ pub enum Step {
         app: StoreApp,
         /// What went wrong, in `flatpak`'s words.
         error: String,
+        /// The network failed it: Flathub could not be reached, or the machine went
+        /// offline while it ran.
+        network: bool,
     },
 }
 
@@ -304,12 +330,17 @@ pub struct AddStoreState {
     pub installed: Vec<StoreApp>,
     /// Where it is.
     pub step: Step,
+    /// The machine has no network, so nothing can install until it has one.
+    pub offline: bool,
 }
 
 impl AddStoreState {
-    /// Whether `app` can be chosen: it is not installed, and no install runs.
+    /// Whether `app` can be chosen: it is not installed, no install runs, and the machine
+    /// is online.
     pub fn can_choose(&self, app: StoreApp) -> bool {
-        !self.installed.contains(&app) && !matches!(self.step, Step::Installing { .. })
+        !self.offline
+            && !self.installed.contains(&app)
+            && !matches!(self.step, Step::Installing { .. })
     }
 }
 
@@ -419,6 +450,18 @@ impl AddStore {
         }));
     }
 
+    /// The machine went online or offline.
+    pub fn set_online(&self, online: bool) {
+        {
+            let mut state = self.inner.state.borrow_mut();
+            if state.offline != online {
+                return;
+            }
+            state.offline = !online;
+        }
+        self.changed();
+    }
+
     /// Installs `app`, or opens its page in the software centre.
     pub fn choose(&self, app: StoreApp) {
         let (method, can) = {
@@ -444,7 +487,11 @@ impl AddStore {
                 if let Some(flow) = upgrade(&weak) {
                     flow.set_step(match result {
                         Ok(()) => Step::Opened(app),
-                        Err(error) => Step::Failed { app, error },
+                        Err(error) => Step::Failed {
+                            app,
+                            error,
+                            network: false,
+                        },
                     });
                 }
             }),
@@ -516,10 +563,14 @@ impl AddStore {
                 match result {
                     Ok(()) => flow.run_commands(app, commands),
                     Err(_) if flow.cancelling() => flow.set_step(Step::Choose),
-                    Err(text) => flow.set_step(Step::Failed {
-                        app,
-                        error: error_message(&text).unwrap_or(text),
-                    }),
+                    Err(text) => {
+                        let network = network_failure(&text) || flow.inner.state.borrow().offline;
+                        flow.set_step(Step::Failed {
+                            app,
+                            error: error_message(&text).unwrap_or(text),
+                            network,
+                        });
+                    }
                 }
             }),
         );
@@ -981,6 +1032,7 @@ mod tests {
             Step::Failed {
                 app: StoreApp::Steam,
                 error: "Flatpak system operation Deploy not allowed for user".to_owned(),
+                network: false,
             }
         );
     }
@@ -1032,5 +1084,82 @@ mod tests {
         fake.end(Err("error: no network"));
         flow.dismiss();
         assert_eq!(flow.state().step, Step::Choose);
+    }
+
+    #[test]
+    fn offline_no_store_can_be_chosen_until_the_network_is_back() {
+        let (flow, fake) = flow(Method::Flatpak);
+        let heard = Rc::new(Cell::new(0));
+        flow.connect_changed({
+            let heard = heard.clone();
+            move |_| heard.set(heard.get() + 1)
+        });
+        flow.set_online(false);
+        assert!(flow.state().offline);
+        assert_eq!(heard.get(), 1);
+        assert!(!flow.state().can_choose(StoreApp::Steam));
+        flow.choose(StoreApp::Steam);
+        assert_eq!(flow.state().step, Step::Choose);
+        assert!(fake.ran.borrow().is_empty(), "nothing installs offline");
+        flow.set_online(false);
+        assert_eq!(heard.get(), 1, "no change, no news");
+        flow.set_online(true);
+        assert!(!flow.state().offline);
+        flow.choose(StoreApp::Steam);
+        assert!(matches!(flow.state().step, Step::Installing { .. }));
+    }
+
+    #[test]
+    fn a_failed_install_that_could_not_reach_flathub_is_a_network_failure() {
+        for (stderr, network) in [
+            (
+                "error: Unable to load summary from remote flathub: While fetching https://dl.flathub.org/repo/summary.idx: [6] Couldn't resolve host name",
+                true,
+            ),
+            (
+                "error: Unable to load summary from remote flathub: Could not resolve hostname",
+                true,
+            ),
+            ("error: [7] Couldn't connect to server", true),
+            ("error: Timeout was reached", true),
+            (
+                "error: Error resolving “dl.flathub.org”: Name or service not known",
+                true,
+            ),
+            (
+                "error: Error resolving “dl.flathub.org”: Temporary failure in name resolution",
+                true,
+            ),
+            ("error: Network is unreachable", true),
+            (
+                "error: Flatpak system operation Deploy not allowed for user",
+                false,
+            ),
+            ("error: No space left on device", false),
+        ] {
+            let (flow, fake) = flow(Method::Flatpak);
+            flow.choose(StoreApp::Steam);
+            fake.print(&["flathub"]);
+            fake.end(Ok(()));
+            fake.end(Err(stderr));
+            let Step::Failed { network: found, .. } = flow.state().step else {
+                panic!("{stderr}: the install failed");
+            };
+            assert_eq!(found, network, "{stderr}");
+        }
+    }
+
+    #[test]
+    fn an_install_that_fails_after_the_network_went_away_is_a_network_failure() {
+        let (flow, fake) = flow(Method::Flatpak);
+        flow.choose(StoreApp::Heroic);
+        fake.print(&["flathub"]);
+        fake.end(Ok(()));
+        flow.set_online(false);
+        fake.end(Err("error: something flatpak words in another language"));
+        assert!(matches!(
+            flow.state().step,
+            Step::Failed { network: true, .. }
+        ));
     }
 }
