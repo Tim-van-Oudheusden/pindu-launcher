@@ -8,21 +8,21 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-23, the open issues in #676–#763, one PR each, merged at the end (maintainer's call on the form):
-  #678 README duplicate line (#767); #677 option C, every release's notes tell bundle users how to update
-  (`build-aux/release-notes.py`, #768); #681 the scanner's two `home.rs` tests cherry-picked (#769; the hive's stale
-  `test/681-home-background-data` branch exists, so it went as `test/681-background-data-tests`); #750 the hive's
-  #762 plus a fix for its open review thread (the options sheet keeps its content while `sheet-height > 0`); #759
-  closed category set `pindu_core::category` + `category/mappings.json`, union precedence, migration 0012 (#771);
-  #758 this commit. #676: M6–M8 closed, M5 waits for #664. #763: option B, closed. Filed #770 (options sheet
-  needs 741 px at 720 px high, on `main` too).
-- #758 (this commit): `gamepad::FOCUS_REST` (150 ms, longer than the Slow repeat interval) before uncached art
-  loads, hero kept while a direction is held, heroes decoded at screen size and cancellable through glycin, Move
-  sound at most every 100 ms (`sound::MoveSounds`), held arrow keys' repeats dropped until drawn (`keys::HeldKey`),
-  repeat timer at the input events' priority. The lag only shows with the CPU limited: compare with
-  `taskset -c 0` (`~/.cache/pindu-work/harness-758/compare.sh`, 72 categories with 4K heroes). Not seen: sounds,
-  real hardware, light/high contrast/RTL. The devel Flatpak builds Rust unoptimised (Meson's default buildtype; the
-  release manifest sets `release`), so such lag likely shows more there than in a release.
+- 2026-11-23 (morning), #676–#763 worked and merged: #767 (#678), #768 (#677, option C), #769 (#681), #762 (#750),
+  #771 (#759, closed category set + `category/mappings.json`), #773 (#758, `gamepad::FOCUS_REST`, cancellable hero
+  decodes). M5–M8 closed; #763 option B.
+- 2026-11-23 (afternoon), #775 (this commit): the desktop search pill follows the window
+  (`search::field_width`: 159 px up to a 1024 px window, evenly to 477 px at 2560, capped); `PinduWindow`
+  overrides `size_allocate` and re-shapes the field from an idle; the desktop entry asks for 80 characters, as
+  `AdwClamp` gives no more than the child's natural width. #774 (#776): the devel Flatpak builds with
+  `--buildtype=debugoptimized` (cargo profile `debugoptimized`), and `check-manifests.sh` fails an unoptimised
+  manifest. #770 was merged as #777 by a parallel session with the same `ScrolledWindow` change; this session's
+  duplicate branch was dropped and its harness results posted on #770.
+- Harness gained `--gnome-buttons` (close-only title buttons through `gtk-4.0/settings.ini`): without it the
+  desktop window at 360 px always logs `exceeds … width` (minimize and maximize add ~70 px), as CI's
+  `ui-smoke-narrow` pins the same layout. Measure widget widths from shots with Pillow (header bar at y≈22).
+- /var/home filled up (ENOSPC mid-build): each `target-<N>`/`prefix-<N>.build` is 4–9 GB. Delete them once an
+  issue merges.
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,
