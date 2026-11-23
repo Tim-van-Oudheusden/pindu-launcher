@@ -20,12 +20,14 @@
 //! carries `.home-sections` or `.home-games` for designs, which can choose the tiles'
 //! shape and size (`pindu_core::home`) and crossfade the hero (`.shown`, `.no-art`).
 //! Behind the first screen plays Home's background (`.home-background`), as
-//! `home::background_playback` says for where the window is. Quick Access's Blur and Dim
-//! name their strength on the page (`blur-*`, `dim-*`, `home::background_classes`), which
-//! blurs the background and the hero and darkens them under `.home-dim`. Art that has to
-//! load waits for focus to rest (`pindu_core::gamepad::FOCUS_REST`), and focus held moving
-//! through the items keeps the hero shown until then, so a held direction or arrow key
-//! keeps its pace and stops where it is let go.
+//! `home::background_playback` says for where the window is; it holds its first frame for
+//! good once the window's frame rate falls well short of it (`home::FrameRateWatch`).
+//! Quick Access's Blur and Dim name their strength on the page (`blur-*`, `dim-*`,
+//! `home::background_classes`), which blurs the background and the hero and darkens them
+//! under `.home-dim`. Art that has to load waits for focus to rest
+//! (`pindu_core::gamepad::FOCUS_REST`), and focus held moving through the items keeps the
+//! hero shown until then, so a held direction or arrow key keeps its pace and stops where
+//! it is let go.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
@@ -38,8 +40,8 @@ use gtk::{gio, glib};
 use pindu_core::focus::FocusMemory;
 use pindu_core::gamepad::{Direction, FOCUS_REST};
 use pindu_core::home::{
-    self, Background, BackgroundContext, CardArt, Detail, ExploreRow, FeaturedButton, Playback,
-    RowItem, ShelfStep, Strength,
+    self, Background, BackgroundContext, CardArt, Detail, ExploreRow, FRAME_RATE_SAMPLE_INTERVAL,
+    FeaturedButton, FrameRateWatch, Playback, RowItem, ShelfStep, Strength,
 };
 use pindu_core::keys::HeldKey;
 use pindu_core::library::{ArtSet, HistoryGroup};
@@ -53,26 +55,8 @@ use crate::game_page::{date, playtime};
 use crate::genres::genre_label;
 use crate::models::GameObject;
 use crate::sources::{source_icon, source_name};
-use crate::video_decoding;
 use crate::widgets::{CoverArt, SpacedLabel, TileFrame, textures};
 use crate::window::{bind_play_button, jump_card_frame, show_art_class, show_jump_art};
-
-/// Whether the GStreamer GTK plays Home's background through has no hardware VP9
-/// decoder (`home::has_hardware_decoder`). `false` when GStreamer cannot be asked: the
-/// background then plays, as it did before Pindu asked.
-fn software_decoding() -> bool {
-    let Some(classes) = video_decoding::vp9_decoder_classes() else {
-        return false;
-    };
-    let software = !home::has_hardware_decoder(classes.iter().map(String::as_str));
-    if software {
-        glib::g_info!(
-            "pindu",
-            "GStreamer has no hardware VP9 decoder; Home's background holds its first frame"
-        );
-    }
-    software
-}
 
 /// Fills `row`, a `.home-details` row, with `details` as `.detail` items, in place of
 /// those it held.
@@ -597,6 +581,10 @@ mod imp {
         pub background_choice: Cell<Background>,
         /// Where the window is, as the window last said (`set_background_context`).
         pub background_context: Cell<BackgroundContext>,
+        /// Whether the machine keeps up with the background while it plays.
+        pub frame_rate_watch: Cell<FrameRateWatch>,
+        /// Samples the frame rate into `frame_rate_watch` while the background plays.
+        pub frame_rate_sampler: RefCell<Option<glib::SourceId>>,
         #[template_child]
         pub hero_a: TemplateChild<gtk::Picture>,
         #[template_child]
@@ -609,9 +597,6 @@ mod imp {
         pub hero_b_latest: Cell<bool>,
         /// Whether hero art shows, over Home's background: the page is not `.no-art`.
         pub art_shown: Cell<bool>,
-        /// Whether GStreamer has no hardware VP9 decoder, asked once the first background
-        /// video is prepared (`video_decoding::vp9_decoder_classes`).
-        pub software_decoding: OnceCell<bool>,
         #[template_child]
         pub eyebrow: TemplateChild<gtk::Label>,
         #[template_child]
@@ -1253,6 +1238,8 @@ impl HomePage {
     /// Loads the chosen Home background, muted and looped. A file that is missing or
     /// does not play is logged and leaves the black of `.home-background`.
     fn load_background(&self) {
+        // A new stream warms up again once it plays.
+        self.stop_frame_rate_sampler();
         let media = gtk::MediaFile::new();
         // Looped by hand: with `loop` set, GTK's GStreamer player on GNOME 51 stops on the
         // last frame instead of starting again, and never says it ended.
@@ -1279,16 +1266,10 @@ impl HomePage {
             }
         ));
         // Holding the first frame needs a stream that can seek, which it is once prepared.
-        // By then GTK has loaded GStreamer, which says whether it decodes in hardware.
         media.connect_prepared_notify(glib::clone!(
             #[weak(rename_to = page)]
             self,
-            move |media| {
-                if media.is_prepared() {
-                    page.imp().software_decoding.get_or_init(software_decoding);
-                }
-                page.show_background_playback();
-            }
+            move |_| page.show_background_playback()
         ));
         let imp = self.imp();
         if let Some(previous) = imp.background_media.replace(Some(media.clone())) {
@@ -1326,10 +1307,15 @@ impl HomePage {
         media.set_muted(true);
     }
 
+    /// The monitor the window is on, once it is shown.
+    fn monitor(&self) -> Option<gtk::gdk::Monitor> {
+        let surface = self.native()?.surface()?;
+        surface.display().monitor_at_surface(&surface)
+    }
+
     /// The size in device pixels of the screen the window is on, once it is shown.
     fn screen_pixels(&self) -> Option<(i32, i32)> {
-        let surface = self.native()?.surface()?;
-        let monitor = surface.display().monitor_at_surface(&surface)?;
+        let monitor = self.monitor()?;
         let geometry = monitor.geometry();
         let scale = monitor.scale();
         Some((
@@ -1339,8 +1325,9 @@ impl HomePage {
     }
 
     /// Plays, pauses, holds Home's background on its first frame or takes it off the page,
-    /// as `home::background_playback` says for where the window is, the screen shown and
-    /// the art over it. Taken off, `.home-background`'s plain black shows in its place.
+    /// as `home::background_playback` says for where the window is, the screen shown, the
+    /// art over it and whether playback stepped down. Taken off, `.home-background`'s
+    /// plain black shows in its place.
     fn show_background_playback(&self) {
         let imp = self.imp();
         let Some(media) = imp.background_media.borrow().clone() else {
@@ -1351,7 +1338,7 @@ impl HomePage {
             first_screen: context.first_screen
                 && matches!(imp.open.get(), None | Some(SectionId::Categories)),
             covered: context.covered || imp.art_shown.get(),
-            software_decoding: imp.software_decoding.get() == Some(&true),
+            stepped_down: imp.frame_rate_watch.get().stepped_down(),
             ..context
         };
         let playback = home::background_playback(context);
@@ -1370,6 +1357,67 @@ impl HomePage {
                 }
             }
         }
+        self.watch_frame_rate(playback == Playback::Play && shown);
+    }
+
+    /// Samples the window's frame rate while the background plays (`playing`), every
+    /// `home::FRAME_RATE_SAMPLE_INTERVAL`, and stops when it does not. Starting again
+    /// starts the watch's warm-up over.
+    fn watch_frame_rate(&self, playing: bool) {
+        let imp = self.imp();
+        if playing == imp.frame_rate_sampler.borrow().is_some() {
+            return;
+        }
+        if !playing {
+            self.stop_frame_rate_sampler();
+            return;
+        }
+        let mut watch = imp.frame_rate_watch.get();
+        watch.resume();
+        imp.frame_rate_watch.set(watch);
+        let sampler = glib::timeout_add_local(
+            FRAME_RATE_SAMPLE_INTERVAL,
+            glib::clone!(
+                #[weak(rename_to = page)]
+                self,
+                #[upgrade_or]
+                glib::ControlFlow::Break,
+                move || page.sample_frame_rate()
+            ),
+        );
+        imp.frame_rate_sampler.replace(Some(sampler));
+    }
+
+    /// Stops sampling the frame rate, if it was.
+    fn stop_frame_rate_sampler(&self) {
+        if let Some(sampler) = self.imp().frame_rate_sampler.take() {
+            sampler.remove();
+        }
+    }
+
+    /// Feeds the frame clock's frame rate and the monitor's refresh rate to the watch, and
+    /// holds the background on its first frame once the watch steps it down.
+    fn sample_frame_rate(&self) -> glib::ControlFlow {
+        let imp = self.imp();
+        let Some(clock) = self.frame_clock() else {
+            return glib::ControlFlow::Continue;
+        };
+        let refresh_rate = self.monitor().map_or(0, |monitor| monitor.refresh_rate());
+        let mut watch = imp.frame_rate_watch.get();
+        let stepped_down = watch.sample(clock.fps(), refresh_rate, imp.background_choice.get());
+        imp.frame_rate_watch.set(watch);
+        if !stepped_down {
+            return glib::ControlFlow::Continue;
+        }
+        glib::g_info!(
+            "pindu",
+            "Home's background holds its first frame: the window drew {:.0} frames a second",
+            clock.fps()
+        );
+        // The source ends with `Break`: forget it rather than remove it.
+        imp.frame_rate_sampler.take();
+        self.show_background_playback();
+        glib::ControlFlow::Break
     }
 
     /// Takes Home's sections and its categories, each with its games, and shows them on
