@@ -950,6 +950,30 @@ mod tests {
     }
 
     #[test]
+    fn a_slower_monitor_needs_fewer_frames_and_the_shortfall_starts_below_its_share() {
+        let span = samples(FRAME_RATE_WARM_UP + FRAME_RATE_SUSTAINED);
+        for (refresh_rate, fps, expected) in [
+            // A 30 Hz monitor shows at most 30 of Red Ribbons' 60: 25 keeps up.
+            (30_000, 25.0, false),
+            (30_000, 20.0, true),
+            // Exactly three quarters of 60 is not short yet.
+            (HZ_60, 45.0, false),
+            (HZ_60, 44.9, true),
+        ] {
+            let mut watch = FrameRateWatch::new();
+            watch.resume();
+            for _ in 0..span {
+                watch.sample(fps, refresh_rate, Background::RedRibbons);
+            }
+            assert_eq!(
+                watch.stepped_down(),
+                expected,
+                "{fps} fps on {refresh_rate} mHz"
+            );
+        }
+    }
+
+    #[test]
     fn a_sample_without_a_frame_rate_counts_for_nothing() {
         let mut watch = FrameRateWatch::new();
         watch.resume();
