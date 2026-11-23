@@ -157,6 +157,10 @@ one. The weekly `Quality report` workflow runs `scripts/auto-qa-tuner.sh`, which
 coverage minus the config's `margin` and never lowers one; the maintainer commits the tuned file through a pull
 request. `sh scripts/coverage-check.test.sh` tests the floor check.
 
+The `coverage-report` artifact holds `coverage.json`, the per-file summary the floor check and the tuner read, and
+`lcov.info`, which `cargo llvm-cov report --lcov` writes from the same test run: its `DA:` records say which lines of
+each file the tests never run, so finding them needs no rerun of the suite.
+
 CI runs this in the GNOME 51 SDK, whose Rust extension ships the LLVM tools. With rustup, add them first; the check
 needs `jq`:
 
@@ -165,6 +169,7 @@ rustup component add llvm-tools-preview
 cargo install --locked cargo-llvm-cov --version 0.9.1
 mkdir -p _build
 cargo llvm-cov --package pindu-core --json --summary-only --output-path _build/coverage.json
+cargo llvm-cov report --package pindu-core --lcov --output-path _build/lcov.info
 scripts/coverage-check.sh _build/coverage.json .github/auto-qa-tuning.json
 ```
 
