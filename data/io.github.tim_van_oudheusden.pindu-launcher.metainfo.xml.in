@@ -87,7 +87,7 @@
   </supports>
 
   <releases>
-    <release version="0.7.0~rc2" type="development" date="2026-11-23">
+    <release version="0.7.0~rc3" type="development" date="2026-11-23">
       <description>
         <p>Quick Access is split into six sections, the menu drawer has a power dock, fullscreen Home shows your games by category, and a new console is led through its first set-up.</p>
         <ul>
@@ -108,6 +108,7 @@
           <li>Once Add a Store installed Steam, Heroic or Lutris, fullscreen mode opens it for its first sign-in, and the library picks up its games without a refresh</li>
           <li>Home's Big Picture tile shows wherever Steam is installed, even before Steam's first start</li>
           <li>Home's animated background pauses behind Quick Access, the menu and the options sheet, and holds still for the session on a machine that cannot keep up with it</li>
+          <li>A new console starts on the Get Started checklist with no summary over it; Your Library Is Ready waits for its first games</li>
           <li>Fixed a crash in sessions without an accessibility bus</li>
           <li>Updated translations</li>
         </ul>
