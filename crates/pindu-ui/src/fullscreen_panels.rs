@@ -236,6 +236,23 @@ impl PinduWindow {
         self.setup_fullscreen_add_game();
         self.setup_power();
         self.fill_drawer();
+        self.fit_panels_to_shell();
+        self.connect_fullscreened_notify(|window| window.fit_panels_to_shell());
+    }
+
+    /// Fullscreen mode's panels count in the desktop window only while one is open there.
+    /// Closed, the drawer, Quick Access and the sheet still ask for their full width, more
+    /// than a narrow window has.
+    fn fit_panels_to_shell(&self) {
+        let imp = self.imp();
+        let fullscreen = self.is_fullscreen();
+        let open = imp.panels.get().open();
+        imp.drawer_panel
+            .set_visible(fullscreen || matches!(open, Some(Panel::Drawer(_))));
+        imp.quick_access_panel
+            .set_visible(fullscreen || matches!(open, Some(Panel::QuickAccess(_))));
+        imp.options_panel
+            .set_visible(fullscreen || matches!(open, Some(Panel::Options(_))));
     }
 
     /// Hosts Quick Access: it takes its services from `application` and adds its rows'
@@ -461,6 +478,8 @@ impl PinduWindow {
         if before == open && same_section {
             return;
         }
+        // Before the panel shows, so a panel opened in the desktop window is there to show.
+        self.fit_panels_to_shell();
         if before.is_none() {
             imp.focus_before_panel
                 .set(gtk::prelude::GtkWindowExt::focus(self).as_ref());
