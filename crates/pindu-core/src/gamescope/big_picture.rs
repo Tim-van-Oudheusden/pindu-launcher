@@ -14,9 +14,10 @@ use super::{
 /// How long the launcher waits for Big Picture's window before it gives up on it.
 pub const BIG_PICTURE_TIMEOUT: Duration = STORE_LAUNCH_TIMEOUT;
 
-/// How long the launcher waits for the window of a Steam that has never run: its first
-/// start downloads the client's update before it shows a window, which can take minutes.
-pub const BIG_PICTURE_FIRST_START_TIMEOUT: Duration = Duration::from_secs(10 * 60);
+/// How long the launcher waits for the window of a Steam that has never run, 10 minutes:
+/// its first start downloads the client's update before it shows a window, which can take
+/// minutes.
+pub const BIG_PICTURE_FIRST_START_TIMEOUT: Duration = Duration::from_secs(600);
 
 /// How long the session outlives the Steam client's last window, for a window that closes
 /// a while before another opens: on a cold start, Steam's update or sign-in window before
