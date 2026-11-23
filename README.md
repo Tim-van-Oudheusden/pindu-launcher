@@ -768,9 +768,11 @@ To run, the app also needs GStreamer's good plug-ins (`gstreamer1-plugins-good` 
 navigation sounds are WAV, and GTK plays both through its GStreamer backend. Without the plug-ins the background stays
 black and the sounds are silent. The Flatpak runtime and the native packages include them.
 
-Home's background plays only where GStreamer can decode VP9 in hardware, for example through its VA plug-in (in the
-bad plug-ins) and a VA-API driver for the GPU, such as Mesa's. Without a hardware decoder it holds its first frame, so
-older machines do not spend their CPU decoding it.
+Home's background is VP9, which GStreamer decodes in hardware where it has a decoder for the GPU (its VA plug-in, in
+the bad plug-ins, with a VA-API driver such as Mesa's) and on the CPU otherwise. While it plays, the app watches the
+window's frame rate: when it stays well under what the video needs for a few seconds, the background holds its first
+frame for the rest of the session, so an older machine stays responsive. It also pauses while a panel is open over
+Home.
 
 ```sh
 git clone https://github.com/Tim-van-Oudheusden/pindu-launcher.git
