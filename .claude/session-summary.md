@@ -8,14 +8,22 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-23 (evening), #788 (this commit): 0.7.0-rc.1, the first pre-release of 0.7.0. Then tag `v0.7.0-rc.1` on
-  the merge commit and open a Pindu OS pull request that pins it for a device test. The tag is `vX.Y.Z-rc.N`; a
-  user's "rc1" means `rc.1`. Bump the RPM spec's `Version:` as well as its `%changelog`: `check-version.sh` catches
-  a missed one. Earlier today: #783/#786 README and CONTRIBUTING prose, #767–#775, #774/#776.
-- Harness gained `--gnome-buttons` (close-only title buttons through `gtk-4.0/settings.ini`): without it the
-  desktop window at 360 px always logs `exceeds … width` (minimize and maximize add ~70 px), as CI's
-  `ui-smoke-narrow` pins the same layout. Measure widget widths from shots with Pillow (header bar at y≈22).
-- /var/home filled up (ENOSPC mid-build): each `target-<N>`/`prefix-<N>.build` is 4–9 GB. Delete them once an
+- 2026-11-23 (night), #788 (this commit): 0.7.0-rc.2, after #793 (#796), #791 (#798), #792 (#802, replacing #795's
+  decoder probe with a frame-rate step-down, the maintainer's call), #794 (#804) and #797 (#805). #792 stays open
+  for the laptop measurement; #791, #794 and #797 each end in a person's Pindu OS device check. Filed pindu-os#54
+  (VA-API packages).
+- Other agents work this repo at the same time (a "hive": issue comments trigger them, and the merge queue merges
+  their PRs). An early decision comment on #792 was implemented as #795 and merged before the maintainer's later
+  choice; #803 duplicated #791. Post a decision comment only once it is final, and check `gh pr list` before
+  opening a PR. cargo-mutants in CI misses `10 * 60` style constants and untested edges: write literals, and test
+  thresholds at their boundary.
+- Harness gained `--offline` (the app in a network namespace with no network, `unshare -rn`) and `--bare`
+  (`harness/bare.sh`: the host's application folders bind-mounted empty, so with `--empty` the app sees a new
+  console with no games and no store). No rust-analyzer on this host: `lsp rename` fails, use `ast_edit` (it only
+  rewrites expression paths; fix type positions by hand).
+- Harness `--gnome-buttons` (close-only title buttons through `gtk-4.0/settings.ini`): without it the desktop window
+  at 360 px always logs `exceeds … width`, as CI's `ui-smoke-narrow` pins the same layout.
+- /var/home filled up once (ENOSPC mid-build): each `target-<N>`/`prefix-<N>.build` is 4–9 GB. Delete them once an
   issue merges.
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
