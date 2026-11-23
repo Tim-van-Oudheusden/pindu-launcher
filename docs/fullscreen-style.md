@@ -295,10 +295,16 @@ animations ship at 720p, 1080p and 1440p, with Red Ribbons at 60 fps. Home uses 
 fills the display, or the largest if none does.
 
 The background plays muted and looped behind the first screen. It pauses on the second screen, under art
-that covers it on the first, in the Shelves layout, while a game we started runs and while the window is
-hidden, and holds its first frame outside fullscreen mode and while the window is `reduced-motion`. While
-the system asks for high contrast it is not shown at all: `.home-background`'s plain black stands in for
-it.
+that covers it on the first, in the Shelves layout, while Quick Access, the menu drawer or the options
+sheet is open, while a game we started runs and while the window is hidden, and holds its first frame
+outside fullscreen mode and while the window is `reduced-motion`. While the system asks for high
+contrast it is not shown at all: `.home-background`'s plain black stands in for it.
+
+On hardware that cannot keep up, the background stops playing by itself. While it plays, Pindu compares
+the frame rate the window draws at with what the video needs: its own rate (60 fps for Red Ribbons,
+30 for Blue Station) or the display's refresh rate, whichever is lower. If the window stays under three
+quarters of that for five seconds, not counting the first three after the background starts or resumes,
+the background holds its first frame until Pindu restarts.
 
 Quick Access's **Background Blur** and **Background Dim** (each Off, Low or High) put `blur-low` or
 `blur-high` and `dim-low` or `dim-high` on `.home`. Pindu blurs `.home-background` and `.home-hero` with

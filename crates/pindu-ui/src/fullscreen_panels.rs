@@ -555,6 +555,9 @@ impl PinduWindow {
             ));
         }
         self.update_hints();
+        if before.is_some() != open.is_some() {
+            self.update_home_background();
+        }
     }
 
     /// Focuses the open panel: the entry that led to the list being left, or else its
