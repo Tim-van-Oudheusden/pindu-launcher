@@ -53,7 +53,8 @@ jobs:
       # In the GNOME 51 SDK, as the checks job in ci.yml. cargo-llvm-cov finds llvm-cov and
       # llvm-profdata in the rust-stable extension's sysroot (lib/rustlib/<host>/bin). Branch
       # coverage needs a nightly compiler, so lines, regions and functions are measured.
-      # pindu-ui is GTK code, covered by the UI smoke test instead.
+      # pindu-ui is GTK code, covered by the UI smoke test instead. `cargo llvm-cov report` writes
+      # the line-level lcov.info from the same run's profile data, without running the tests again.
       - name: Measure pindu-core coverage
         run: |
           chown -R "$(id -u):$(id -g)" "$PWD"
@@ -65,6 +66,7 @@ jobs:
               set -e
               cargo install --locked cargo-llvm-cov --version 0.9.1
               cargo llvm-cov --package pindu-core --json --summary-only --output-path coverage.json
+              cargo llvm-cov report --package pindu-core --lcov --output-path lcov.info
             '
 
       # The floors and the tuner's margin live in .github/auto-qa-tuning.json.
@@ -76,7 +78,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report
-          path: coverage.json
+          path: |
+            coverage.json
+            lcov.info
           if-no-files-found: ignore
           retention-days: 14
 
