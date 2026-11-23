@@ -651,14 +651,16 @@ pub struct Under {
     pub shown: Shown,
 }
 
-/// The panel that is open, if any, the section Quick Access shows at its main level, and
+/// The panel that is open, if any, the section Quick Access shows at its main level,
 /// whether a collection's actions were opened from the drawer's entries rather than its
-/// Collections level, for B to lead back there.
+/// Collections level, for B to lead back there, and whether the network was reached from
+/// Add a Store, for B to lead back to it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Panels {
     open: Option<Panel>,
     section: QuickAccessSection,
     collection_from_main: bool,
+    network_from_add_store: bool,
 }
 
 impl Panels {
@@ -755,6 +757,12 @@ impl Panels {
             (Intent::Back, Some(Panel::QuickAccess(QuickAccessLevel::ReportLog))) => {
                 self.open = Some(Panel::QuickAccess(QuickAccessLevel::DiagnosticsReport));
             }
+            (Intent::Back, Some(Panel::QuickAccess(QuickAccessLevel::Network)))
+                if self.network_from_add_store =>
+            {
+                self.section = QuickAccessLevel::AddStore.section();
+                self.open = Some(Panel::QuickAccess(QuickAccessLevel::AddStore));
+            }
             (Intent::Back, Some(Panel::QuickAccess(_))) => {
                 self.open = Some(Panel::QuickAccess(QuickAccessLevel::Main));
             }
@@ -767,9 +775,12 @@ impl Panels {
     /// Shows `panel` at its level: opened by a button rather than a controller, or one of
     /// its entries leading to a list. A Quick Access level reached from a section that
     /// leads to it keeps that section for B to lead back to; any other takes its own
-    /// ([`QuickAccessLevel::section`]). A collection's actions shown from the drawer's
-    /// entries lead back to them, as they do when View or X led there.
+    /// ([`QuickAccessLevel::section`]), and the network reached from Add a Store leads
+    /// back there. A collection's actions shown from the drawer's entries lead back to
+    /// them, as they do when View or X led there.
     pub fn show(&mut self, panel: Panel) {
+        self.network_from_add_store = panel == Panel::QuickAccess(QuickAccessLevel::Network)
+            && self.open == Some(Panel::QuickAccess(QuickAccessLevel::AddStore));
         if panel == Panel::Drawer(DrawerLevel::Collection)
             && let Some(Panel::Drawer(from @ (DrawerLevel::Main | DrawerLevel::Collections))) =
                 self.open
@@ -2249,6 +2260,25 @@ mod tests {
             QuickAccessSection::System,
             "shown without a section, its own"
         );
+    }
+
+    #[test]
+    fn b_from_the_network_reached_from_add_a_store_leads_back_to_add_a_store() {
+        let mut panels = Panels::new();
+        panels.show(Panel::QuickAccess(QuickAccessLevel::AddStore));
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Network));
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(
+            panels.open(),
+            Some(Panel::QuickAccess(QuickAccessLevel::AddStore))
+        );
+        assert!(panels.handle(Intent::Back, PAGE));
+        assert_eq!(panels.open(), quick_access());
+        assert_eq!(panels.section(), QuickAccessSection::Manage);
+        panels.show_section(QuickAccessSection::System);
+        panels.show(Panel::QuickAccess(QuickAccessLevel::Network));
+        panels.handle(Intent::Back, PAGE);
+        assert_eq!(panels.open(), quick_access(), "from its section, to it");
     }
 
     #[test]
