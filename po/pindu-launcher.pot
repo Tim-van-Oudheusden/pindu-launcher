@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 14:38+0100\n"
+"POT-Creation-Date: 2026-11-23 14:40+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -4313,34 +4313,35 @@ msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:92
 msgid ""
-"A reorganised Quick Access with a power dock, categories on fullscreen Home, "
-"and smoother controller navigation."
+"Quick Access is split into six sections, the menu drawer has a power dock, "
+"and fullscreen Home shows your games by category."
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:94
 msgid ""
-"Quick Access has six sections, Quick, Notifications, Design, Controller, "
-"System and Manage, switched with LB and RB, and each setting sits in its own "
-"section"
+"Quick Access has six sections that LB and RB switch between: Quick, "
+"Notifications, Design, Controller, System and Manage. Each setting now sits "
+"in the section it belongs to"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:95
 msgid ""
 "Quick Access's Quick section has tiles for Sound Output, Bluetooth, Network, "
-"Surprise Me, Refresh Library and Add a Game, and a card for what the page "
+"Surprise Me, Refresh Library and Add a Game, plus a card for what the page "
 "underneath offers"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:96
 msgid ""
-"Left and Right change a setting in place in Quick Access, and Design shows "
-"each fullscreen design as a preview card"
+"Left and Right change a setting in Quick Access without opening it, and "
+"Design shows each fullscreen design as a preview card"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:97
 msgid ""
-"The menu drawer ends in a power dock with Suspend, Restart and Power Off "
-"always in view, and Search and your collections sit on its main level"
+"The menu drawer ends in a row of power buttons that is always in view, with "
+"Suspend, Restart and Power Off. Search and your collections are on the "
+"drawer's first level"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:98
@@ -4350,12 +4351,13 @@ msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:99
 msgid ""
-"Categories, called genres before, are on fullscreen Home, and every "
-"provider's genres map onto one set of categories"
+"Genres are now called categories everywhere. Fullscreen Home shows them, and "
+"genres from every launcher and from Wikidata map onto one set of categories"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:100
-msgid "Button Hints, in Quick Access and Preferences, hides the hint bar"
+msgid ""
+"A Button Hints switch, in Quick Access and Preferences, hides the hint bar"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:101
@@ -4374,13 +4376,13 @@ msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:104
 msgid ""
-"Holding a direction keeps pace with the repeat rate and stops where you let "
-"go"
+"Holding a direction moves focus at the repeat rate and stops where you let "
+"go, instead of falling behind"
 msgstr ""
 
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:105
 msgid ""
-"Fixed the library page in a 360 px window and the options sheet on a 720 px "
+"The library page fits a 360 px window, and the options sheet fits a 720 px "
 "screen"
 msgstr ""
 

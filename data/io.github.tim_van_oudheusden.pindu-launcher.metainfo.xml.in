@@ -89,20 +89,20 @@
   <releases>
     <release version="0.7.0~rc1" type="development" date="2026-11-23">
       <description>
-        <p>A reorganised Quick Access with a power dock, categories on fullscreen Home, and smoother controller navigation.</p>
+        <p>Quick Access is split into six sections, the menu drawer has a power dock, and fullscreen Home shows your games by category.</p>
         <ul>
-          <li>Quick Access has six sections, Quick, Notifications, Design, Controller, System and Manage, switched with LB and RB, and each setting sits in its own section</li>
-          <li>Quick Access's Quick section has tiles for Sound Output, Bluetooth, Network, Surprise Me, Refresh Library and Add a Game, and a card for what the page underneath offers</li>
-          <li>Left and Right change a setting in place in Quick Access, and Design shows each fullscreen design as a preview card</li>
-          <li>The menu drawer ends in a power dock with Suspend, Restart and Power Off always in view, and Search and your collections sit on its main level</li>
+          <li>Quick Access has six sections that LB and RB switch between: Quick, Notifications, Design, Controller, System and Manage. Each setting now sits in the section it belongs to</li>
+          <li>Quick Access's Quick section has tiles for Sound Output, Bluetooth, Network, Surprise Me, Refresh Library and Add a Game, plus a card for what the page underneath offers</li>
+          <li>Left and Right change a setting in Quick Access without opening it, and Design shows each fullscreen design as a preview card</li>
+          <li>The menu drawer ends in a row of power buttons that is always in view, with Suspend, Restart and Power Off. Search and your collections are on the drawer's first level</li>
           <li>Each fullscreen design has its own look for the menu drawer and Quick Access</li>
-          <li>Categories, called genres before, are on fullscreen Home, and every provider's genres map onto one set of categories</li>
-          <li>Button Hints, in Quick Access and Preferences, hides the hint bar</li>
+          <li>Genres are now called categories everywhere. Fullscreen Home shows them, and genres from every launcher and from Wikidata map onto one set of categories</li>
+          <li>A Button Hints switch, in Quick Access and Preferences, hides the hint bar</li>
           <li>Change Buttons moved to Quick Access → Controller</li>
           <li>The starting screen shows the game's logo</li>
           <li>The desktop header bar has a Fullscreen Mode button, and the search field is a pill that widens with the window</li>
-          <li>Holding a direction keeps pace with the repeat rate and stops where you let go</li>
-          <li>Fixed the library page in a 360 px window and the options sheet on a 720 px screen</li>
+          <li>Holding a direction moves focus at the repeat rate and stops where you let go, instead of falling behind</li>
+          <li>The library page fits a 360 px window, and the options sheet fits a 720 px screen</li>
           <li>Fixed a crash in sessions without an accessibility bus</li>
           <li>Updated translations</li>
         </ul>
