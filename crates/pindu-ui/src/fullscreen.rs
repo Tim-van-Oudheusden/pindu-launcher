@@ -390,8 +390,9 @@ impl PinduWindow {
     /// Tells Home where the window is, for its background (`home::background_playback`):
     /// fullscreen, Home shown, a game we started running, the window hidden or suspended
     /// (minimized, or covered whole), Pindu moving less (`Accessibility::reduces_motion`),
-    /// the system asking for high contrast, and the one-screen layouts, Shelves and
-    /// Explore, which never show it. Home itself adds the art that covers it.
+    /// the system asking for high contrast, the one-screen layouts, Shelves and Explore,
+    /// which never show it, and a panel open over the page. Home itself adds the art that
+    /// covers it and whether GStreamer can decode it in hardware.
     pub(crate) fn update_home_background(&self) {
         let imp = self.imp();
         let game_running = self
@@ -407,6 +408,8 @@ impl PinduWindow {
             reduced_motion: self.has_css_class(REDUCED_MOTION_CLASS),
             high_contrast: adw::StyleManager::default().is_high_contrast(),
             covered: self.layout_in_force().home.one_screen(),
+            panel_open: self.open_panel().is_some(),
+            software_decoding: false,
         });
     }
 

@@ -295,10 +295,11 @@ animations ship at 720p, 1080p and 1440p, with Red Ribbons at 60 fps. Home uses 
 fills the display, or the largest if none does.
 
 The background plays muted and looped behind the first screen. It pauses on the second screen, under art
-that covers it on the first, in the Shelves layout, while a game we started runs and while the window is
-hidden, and holds its first frame outside fullscreen mode and while the window is `reduced-motion`. While
-the system asks for high contrast it is not shown at all: `.home-background`'s plain black stands in for
-it.
+that covers it on the first, in the Shelves layout, while Quick Access, the menu drawer or the options
+sheet is open, while a game we started runs and while the window is hidden. It holds its first frame
+outside fullscreen mode, while the window is `reduced-motion` and when GStreamer has no hardware VP9
+decoder. While the system asks for high contrast it is not shown at all: `.home-background`'s plain
+black stands in for it.
 
 Quick Access's **Background Blur** and **Background Dim** (each Off, Low or High) put `blur-low` or
 `blur-high` and `dim-low` or `dim-high` on `.home`. Pindu blurs `.home-background` and `.home-hero` with

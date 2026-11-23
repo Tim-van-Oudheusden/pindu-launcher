@@ -52,8 +52,26 @@ use crate::game_page::{date, playtime};
 use crate::genres::genre_label;
 use crate::models::GameObject;
 use crate::sources::{source_icon, source_name};
+use crate::video_decoding;
 use crate::widgets::{CoverArt, SpacedLabel, TileFrame, textures};
 use crate::window::{bind_play_button, jump_card_frame, show_art_class, show_jump_art};
+
+/// Whether the GStreamer GTK plays Home's background through has no hardware VP9
+/// decoder (`home::has_hardware_decoder`). `false` when GStreamer cannot be asked: the
+/// background then plays, as it did before Pindu asked.
+fn software_decoding() -> bool {
+    let Some(classes) = video_decoding::vp9_decoder_classes() else {
+        return false;
+    };
+    let software = !home::has_hardware_decoder(classes.iter().map(String::as_str));
+    if software {
+        glib::g_info!(
+            "pindu",
+            "GStreamer has no hardware VP9 decoder; Home's background holds its first frame"
+        );
+    }
+    software
+}
 
 /// Fills `row`, a `.home-details` row, with `details` as `.detail` items, in place of
 /// those it held.
@@ -590,6 +608,9 @@ mod imp {
         pub hero_b_latest: Cell<bool>,
         /// Whether hero art shows, over Home's background: the page is not `.no-art`.
         pub art_shown: Cell<bool>,
+        /// Whether GStreamer has no hardware VP9 decoder, asked once the first background
+        /// video is prepared (`video_decoding::vp9_decoder_classes`).
+        pub software_decoding: OnceCell<bool>,
         #[template_child]
         pub eyebrow: TemplateChild<gtk::Label>,
         #[template_child]
@@ -1234,10 +1255,16 @@ impl HomePage {
             }
         ));
         // Holding the first frame needs a stream that can seek, which it is once prepared.
+        // By then GTK has loaded GStreamer, which says whether it decodes in hardware.
         media.connect_prepared_notify(glib::clone!(
             #[weak(rename_to = page)]
             self,
-            move |_| page.show_background_playback()
+            move |media| {
+                if media.is_prepared() {
+                    page.imp().software_decoding.get_or_init(software_decoding);
+                }
+                page.show_background_playback();
+            }
         ));
         let imp = self.imp();
         if let Some(previous) = imp.background_media.replace(Some(media.clone())) {
@@ -1300,6 +1327,7 @@ impl HomePage {
             first_screen: context.first_screen
                 && matches!(imp.open.get(), None | Some(SectionId::Categories)),
             covered: context.covered || imp.art_shown.get(),
+            software_decoding: imp.software_decoding.get() == Some(&true),
             ..context
         };
         let playback = home::background_playback(context);
