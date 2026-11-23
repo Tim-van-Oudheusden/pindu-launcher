@@ -9,8 +9,12 @@ template $PinduWindow: Adw.ApplicationWindow {
   Adw.Breakpoint {
     condition ("max-width: 730sp")
 
+    // The library's header bar gives way too: the layout, the sort order and Fullscreen
+    // Mode move into the View Options menu, so the page fits the window at its narrowest.
     setters {
       split_view.collapsed: true;
+      view_buttons.visible: false;
+      view_menu_button.visible: true;
     }
   }
 
@@ -224,36 +228,53 @@ template $PinduWindow: Adw.ApplicationWindow {
                           menu-model: primary_menu;
                         }
 
+                        // In a narrow window these give way to the View Options menu below.
                         [end]
-                        Button {
-                          icon-name: "view-fullscreen-symbolic";
-                          tooltip-text: _("Fullscreen Mode");
-                          action-name: "win.fullscreen-mode";
+                        Box view_buttons {
+                          spacing: 6;
+
+                          Adw.ToggleGroup layout_switch {
+                            Adw.Toggle {
+                              name: "grid";
+                              icon-name: "view-grid-symbolic";
+                              tooltip: _("Grid");
+                            }
+
+                            Adw.Toggle {
+                              name: "list";
+                              icon-name: "view-list-symbolic";
+                              tooltip: _("List");
+                            }
+                          }
+
+                          MenuButton {
+                            icon-name: "view-sort-descending-symbolic";
+                            tooltip-text: _("Sort");
+                            menu-model: sort_menu;
+                          }
+
+                          Button {
+                            icon-name: "view-fullscreen-symbolic";
+                            tooltip-text: _("Fullscreen Mode");
+                            action-name: "win.fullscreen-mode";
+
+                            accessibility {
+                              label: _("Fullscreen Mode");
+                            }
+                          }
+                        }
+
+                        // The layout, the sort order and Fullscreen Mode in one menu, shown
+                        // in a narrow window only.
+                        [end]
+                        MenuButton view_menu_button {
+                          visible: false;
+                          icon-name: "view-more-symbolic";
+                          tooltip-text: _("View Options");
+                          menu-model: view_menu;
 
                           accessibility {
-                            label: _("Fullscreen Mode");
-                          }
-                        }
-
-                        [end]
-                        MenuButton {
-                          icon-name: "view-sort-descending-symbolic";
-                          tooltip-text: _("Sort");
-                          menu-model: sort_menu;
-                        }
-
-                        [end]
-                        Adw.ToggleGroup layout_switch {
-                          Adw.Toggle {
-                            name: "grid";
-                            icon-name: "view-grid-symbolic";
-                            tooltip: _("Grid");
-                          }
-
-                          Adw.Toggle {
-                            name: "list";
-                            icon-name: "view-list-symbolic";
-                            tooltip: _("List");
+                            label: _("View Options");
                           }
                         }
 
@@ -596,34 +617,41 @@ template $PinduWindow: Adw.ApplicationWindow {
 
                         [center]
                         Label selection_count {
+                          ellipsize: end;
+
                           styles [
                             "numeric",
                           ]
                         }
 
+                        // The buttons wrap onto more lines in a narrow window.
                         [end]
-                        MenuButton collection_button {
-                          label: _("_Collections");
-                          use-underline: true;
-                          direction: up;
-                        }
+                        Adw.WrapBox {
+                          child-spacing: 6;
+                          line-spacing: 6;
+                          align: 1.0;
+                          valign: center;
 
-                        [end]
-                        Button hide_button {
-                          use-underline: true;
-                        }
+                          // Two or more selected games become copies of one game.
+                          Button merge_selection_button {
+                            label: _("_Merge");
+                            use-underline: true;
+                            tooltip-text: _("Merge into one game with several copies");
+                          }
 
-                        [end]
-                        Button favourite_button {
-                          use-underline: true;
-                        }
+                          Button favourite_button {
+                            use-underline: true;
+                          }
 
-                        // Two or more selected games become copies of one game.
-                        [end]
-                        Button merge_selection_button {
-                          label: _("_Merge");
-                          use-underline: true;
-                          tooltip-text: _("Merge into one game with several copies");
+                          Button hide_button {
+                            use-underline: true;
+                          }
+
+                          MenuButton collection_button {
+                            label: _("_Collections");
+                            use-underline: true;
+                            direction: up;
+                          }
                         }
                       }
                     };
@@ -788,7 +816,9 @@ template $PinduWindow: Adw.ApplicationWindow {
 
     // Fullscreen mode's search keyboard, which Y opens over the hint bar.
     [bottom]
+    // Shown in fullscreen mode only: closed, it still asks for its full width.
     Revealer keyboard_revealer {
+      visible: false;
       transition-type: slide_up;
 
       child: Grid keyboard_grid {
@@ -910,6 +940,65 @@ menu sort_menu {
       label: _("_Playtime");
       action: "win.sort-mode";
       target: "playtime";
+    }
+  }
+}
+
+// The View Options menu of a narrow window: what the header bar's layout switch, Sort
+// button and Fullscreen Mode button do there.
+menu view_menu {
+  section {
+    item {
+      label: _("_Grid");
+      action: "win.library-layout";
+      target: "grid";
+    }
+
+    item {
+      label: _("L_ist");
+      action: "win.library-layout";
+      target: "list";
+    }
+  }
+
+  section {
+    label: _("Sort");
+
+    item {
+      label: _("_Last Played");
+      action: "win.sort-mode";
+      target: "last-played";
+    }
+
+    item {
+      label: _("Name _A–Z");
+      action: "win.sort-mode";
+      target: "name-ascending";
+    }
+
+    item {
+      label: _("Name _Z–A");
+      action: "win.sort-mode";
+      target: "name-descending";
+    }
+
+    item {
+      label: _("_Recently Added");
+      action: "win.sort-mode";
+      target: "recently-added";
+    }
+
+    item {
+      label: _("_Playtime");
+      action: "win.sort-mode";
+      target: "playtime";
+    }
+  }
+
+  section {
+    item {
+      label: _("_Fullscreen Mode");
+      action: "win.fullscreen-mode";
     }
   }
 }

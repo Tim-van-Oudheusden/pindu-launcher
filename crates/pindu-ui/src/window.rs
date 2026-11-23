@@ -1588,6 +1588,9 @@ impl PinduWindow {
         self.settings()
             .bind("library-layout", &*imp.layout_switch, "active-name")
             .build();
+        // Grid and List in the View Options menu, which stands in for the layout switch
+        // in a narrow window.
+        self.add_action(&self.settings().create_action("library-layout"));
         self.settings().connect_changed(
             Some("library-layout"),
             glib::clone!(
