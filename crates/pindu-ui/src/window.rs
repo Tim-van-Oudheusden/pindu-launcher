@@ -20,7 +20,7 @@ use pindu_core::library::{
 use pindu_core::model::{GameId, Source};
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{GameOption, Panels};
-use pindu_core::search::ResultCount;
+use pindu_core::search::{ResultCount, field_width};
 
 use crate::add_store::PinduAddStoreLevel;
 use crate::application::PinduApplication;
@@ -45,10 +45,6 @@ use crate::widgets::{CoverArt, CoverTile, GameListCell, ListColumn, TileSize};
 
 /// The filter row's genre: a stateful string action, empty for any genre.
 const GENRE_FILTER_ACTION: &str = "genre-filter";
-
-/// The desktop search field's width, in `sp`: half the 318 px it had at the default window
-/// size, 1024 px wide.
-const SEARCH_PILL_WIDTH: i32 = 159;
 
 /// The desktop search field's style class: round ends (`data/style.css`).
 const SEARCH_PILL_CLASS: &str = "search-pill";
@@ -234,6 +230,9 @@ mod imp {
         pub views: RefCell<Vec<(adw::SidebarItem, View, gtk::Label)>>,
         /// The collection whose sidebar menu is open.
         pub menu_collection: Cell<Option<i64>>,
+        /// The window's width at its last allocation, which the desktop search field's
+        /// width follows.
+        pub allocated_width: Cell<i32>,
         /// Whether the grid was scrolled to the top when the current re-sort began.
         pub grid_at_top: Cell<bool>,
         /// The cover the controller was last on, where it comes back into the grid.
@@ -317,7 +316,19 @@ mod imp {
         }
     }
 
-    impl WidgetImpl for PinduWindow {}
+    impl WidgetImpl for PinduWindow {
+        fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+            self.parent_size_allocate(width, height, baseline);
+            if self.allocated_width.replace(width) != width {
+                // Not while allocating: the new width asks for another layout.
+                glib::idle_add_local_once(glib::clone!(
+                    #[weak(rename_to = window)]
+                    self.obj(),
+                    move || window.shape_search_entry()
+                ));
+            }
+        }
+    }
 
     impl WindowImpl for PinduWindow {
         fn close_request(&self) -> glib::Propagation {
@@ -733,9 +744,10 @@ impl PinduWindow {
         self.update_content_page();
     }
 
-    /// The search field is a short pill in the desktop window: half as wide as it was at
-    /// the default window size, centred as the header bar's title, and no wider in a wider
-    /// window. Fullscreen mode's search grows with the bar, as it did.
+    /// The search field is a pill in the desktop window, centred as the header bar's title:
+    /// a short one in a default-sized window, growing with the window to three times that
+    /// in a 2560 px wide one (`search::field_width`). Fullscreen mode's search grows with
+    /// the bar, as it did.
     fn shape_search_entry(&self) {
         let imp = self.imp();
         let fullscreen = self.is_fullscreen();
@@ -743,11 +755,15 @@ impl PinduWindow {
         let width = if fullscreen {
             100_000
         } else {
-            SEARCH_PILL_WIDTH
+            field_width(imp.allocated_width.get())
         };
         imp.search_clamp.set_maximum_size(width);
         imp.search_clamp.set_tightening_threshold(width);
         imp.search_entry.set_hexpand(fullscreen);
+        // The clamp gives the entry no more than it asks for, and 32 characters ask for less
+        // than the widest pill.
+        imp.search_entry
+            .set_max_width_chars(if fullscreen { 32 } else { 80 });
         if fullscreen {
             imp.search_entry.remove_css_class(SEARCH_PILL_CLASS);
         } else {
