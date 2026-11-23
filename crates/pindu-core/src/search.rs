@@ -31,6 +31,18 @@ pub fn sort_name(title: &str) -> String {
     normalize(title)
 }
 
+/// The desktop search field's width for a window `window_width` wide, both in logical
+/// pixels: the short pill of a default 1024 px window or a narrower one, growing evenly with
+/// the window to three times that in a maximised 2560 px (1440p) window, and no wider
+/// beyond. A window too narrow for it shrinks the field further.
+pub fn field_width(window_width: i32) -> i32 {
+    const NARROW: (i32, i32) = (1024, 159);
+    const WIDE: (i32, i32) = (2560, 3 * 159);
+    let past = window_width.clamp(NARROW.0, WIDE.0) - NARROW.0;
+    let (span, growth) = (WIDE.0 - NARROW.0, WIDE.1 - NARROW.1);
+    NARROW.1 + (past * growth + span / 2) / span
+}
+
 /// A search as typed, prepared once and matched against many normalised titles.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Query {
@@ -140,6 +152,18 @@ mod tests {
 
     fn matches(query: &str, title: &str) -> bool {
         Query::new(query).matches(&normalize(title))
+    }
+
+    #[test]
+    fn the_desktop_field_grows_with_the_window_from_a_short_pill_to_three_times_its_width() {
+        // #745's pill at the default 1024 px window and below; three times as wide in a
+        // maximised 2560 px window (1440p); no wider beyond.
+        assert_eq!(field_width(360), 159);
+        assert_eq!(field_width(1024), 159);
+        assert_eq!(field_width(1280), 212);
+        assert_eq!(field_width(1920), 345);
+        assert_eq!(field_width(2560), 477);
+        assert_eq!(field_width(3840), 477);
     }
 
     #[test]
