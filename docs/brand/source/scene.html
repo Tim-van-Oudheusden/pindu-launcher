@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --w: 1280px; --h: 640px;
+    --navy-0: #00021a; --navy-2: #0a1c66; --blue: #0a6cf0; --cyan: #49f0fd; --sky: #82bffc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: transparent; }
+  body { width: var(--w); height: var(--h); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+  .card { position: relative; width: var(--w); height: var(--h); overflow: hidden; isolation: isolate; }
+  .card.rounded { border-radius: 28px; }
+  .card.rounded::after { content: ''; position: absolute; inset: 0; border-radius: 28px; border: 1.5px solid rgba(10,19,64,.14); pointer-events: none; z-index: 20; }
+
+  /* background: the light one Pindu OS's banner and social preview use */
+  .bg { position: absolute; inset: 0;
+    background:
+      radial-gradient(100% 140% at 100% 100%, rgba(73,170,255,.50) 0%, rgba(73,170,255,0) 60%),
+      radial-gradient(80% 120% at 0% 0%, rgba(255,255,255,.9) 0%, rgba(255,255,255,0) 60%),
+      linear-gradient(135deg, #f6fbff 0%, #e2f0ff 50%, #c4dfff 100%); }
+  .swoosh { position: absolute; border-radius: 50%;
+    background: linear-gradient(160deg, rgba(10,108,240,.08), rgba(10,108,240,.03) 45%, rgba(10,108,240,0) 70%); }
+  .swoosh::before { content: ''; position: absolute; inset: 0; border-radius: 50%; padding: 1.5px;
+    background: linear-gradient(150deg, rgba(10,108,240,.55), rgba(10,108,240,.18) 35%, rgba(10,108,240,0) 62%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+
+  /* icon: the app icon's artwork fills 104 of its 128 units, so the picture is scaled up to fill the box */
+  .icon { position: relative; flex: none; width: var(--is); height: var(--is); z-index: 5; }
+  .icon img { position: absolute; left: calc(var(--is) * -12 / 104); top: calc(var(--is) * -12 / 104);
+    width: calc(var(--is) * 128 / 104); height: calc(var(--is) * 128 / 104); display: block;
+    filter: drop-shadow(0 calc(var(--is) * .07) calc(var(--is) * .12) rgba(10,60,160,.38)); }
+
+  /* name, tagline and the line under it */
+  .lockup-box { position: absolute; z-index: 6; display: flex; }
+  .text { display: flex; flex-direction: column; }
+  .title { font-family: 'Inter Display', 'Inter', sans-serif; font-weight: 700; letter-spacing: -0.028em; line-height: 1; white-space: nowrap; color: #0a1340; }
+  .title b { font-weight: 700; background: linear-gradient(180deg, #1aa6ff 0%, #0a6cf0 60%, #0a45c8 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { font-weight: 600; color: #0a5fd8; letter-spacing: -0.012em; line-height: 1.2; white-space: nowrap; }
+  .line { font-weight: 400; color: rgba(10,19,64,.72); white-space: pre-line; line-height: 1.4; }
+
+  /* the desktop window (docs/screenshots/desktop-1-library.webp); the radius hides the screenshot's black corners */
+  .window { position: absolute; z-index: 3; aspect-ratio: 1280 / 900; overflow: hidden; border-radius: var(--wr, 7px);
+    background: url(../../screenshots/desktop-1-library.webp) center / 100% 100% no-repeat;
+    box-shadow: 0 0 0 1px rgba(10,19,64,.16), 0 30px 60px rgba(10,60,160,.28), 0 8px 20px rgba(10,19,64,.2); }
+
+  /* the television showing fullscreen mode (docs/screenshots/fullscreen-marquee-home.webp) */
+  .tv { position: absolute; z-index: 4; padding: 7px; border-radius: 12px; background: linear-gradient(180deg, #23273c, #070812);
+    box-shadow: 0 0 0 1px rgba(10,19,64,.25), 0 40px 80px rgba(10,60,160,.4), 0 10px 24px rgba(10,19,64,.3); }
+  .tv .shot { width: 100%; aspect-ratio: 16 / 9; border-radius: 5px; background: url(../../screenshots/fullscreen-marquee-home.webp) center / cover no-repeat; }
+  .tv .neck { position: absolute; left: 50%; top: 100%; width: 8%; height: 20px; transform: translateX(-50%); background: linear-gradient(180deg, #080914, #1c2036); }
+  .tv .foot { position: absolute; left: 50%; top: calc(100% + 20px); width: 32%; height: 8px; border-radius: 8px 8px 3px 3px; transform: translateX(-50%);
+    background: linear-gradient(180deg, #2c3250, #10132a); box-shadow: 0 14px 22px rgba(10,19,64,.25); }
+
+  /* ---------- layouts ---------- */
+  /* social preview 1280x640: the name stacked on the left, the window behind the television on the right */
+  .social .s1 { left: -300px; top: -620px; width: 1700px; height: 980px; transform: rotate(-9deg); }
+  .social .s2 { left: 240px; top: 452px; width: 1700px; height: 980px; transform: rotate(-14deg); opacity: .8; }
+  .social .lockup-box { left: 64px; top: 0; height: 100%; flex-direction: column; justify-content: center; align-items: flex-start; }
+  .social .icon { --is: 104px; }
+  .social .title { font-size: 64px; margin-top: 28px; }
+  .social .sub { font-size: 30px; margin-top: 14px; }
+  .social .line { font-size: 18px; margin-top: 16px; }
+  .social .window { left: 540px; top: 100px; width: 520px; --wr: 7px; }
+  .social .tv { left: 800px; top: 258px; width: 430px; }
+
+  /* link-preview image 1200x630 */
+  .og .lockup-box { left: 56px; }
+  .og .title { font-size: 60px; }
+  .og .sub { font-size: 28px; }
+  .og .line { font-size: 17px; }
+  .og .window { left: 500px; top: 98px; width: 492px; }
+  .og .tv { left: 746px; top: 250px; width: 404px; }
+
+  /* article cover: the social layout on a 16:9 card, rendered at 1.5x for 1920x1080 */
+  .cover .s2 { top: 492px; }
+  .cover .window { top: 140px; }
+  .cover .tv { top: 298px; }
+
+  /* README banner 1280x400: icon beside the name, the two screens smaller */
+  .banner .s1 { left: -260px; top: -520px; width: 1500px; height: 760px; transform: rotate(-9deg); }
+  .banner .s2 { left: 300px; top: 262px; width: 1500px; height: 760px; transform: rotate(-14deg); opacity: .8; }
+  .banner .lockup-box { left: 52px; top: 0; height: 100%; flex-direction: row; align-items: center; gap: 30px; }
+  .banner .icon { --is: 148px; }
+  .banner .title { font-size: 60px; }
+  .banner .sub { font-size: 27px; margin-top: 12px; }
+  .banner .line { font-size: 16.5px; margin-top: 14px; }
+  .banner .window { left: 716px; top: 40px; width: 372px; --wr: 5px; }
+  .banner .tv { left: 914px; top: 150px; width: 318px; }
+  .banner .tv .neck { height: 16px; }
+  .banner .tv .foot { top: calc(100% + 16px); height: 7px; }
+
+  /* transparent lockups: icon and name only */
+  .lockup .lockup-box { left: 40px; top: 0; height: 100%; flex-direction: row; align-items: center; gap: 40px; }
+  .lockup .icon { --is: 240px; }
+  .lockup .icon img { filter: none; }
+  .lockup .title { font-size: 120px; }
+  .lockup.dark .title { color: #fff; }
+  .lockup.dark .title b { background: linear-gradient(180deg, #9ff3ff 0%, #49c8ff 55%, #2b8dff 100%); -webkit-background-clip: text; background-clip: text; }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="bg"></div>
+  <div class="swoosh s1"></div>
+  <div class="swoosh s2"></div>
+  <div class="window" id="window"></div>
+  <div class="tv" id="tv"><div class="shot"></div><div class="neck"></div><div class="foot"></div></div>
+  <div class="lockup-box">
+    <div class="icon"><img src="../../../data/icons/io.github.tim_van_oudheusden.pindu-launcher.svg" alt=""></div>
+    <div class="text">
+      <div class="title">Pindu <b>launcher</b></div>
+      <div class="sub" id="sub"></div>
+      <div class="line" id="line"></div>
+    </div>
+  </div>
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  const card = document.getElementById('card');
+  (q.get('cls') || 'social').split(' ').forEach(c => card.classList.add(c));
+  document.documentElement.style.setProperty('--w', (q.get('w') || 1280) + 'px');
+  document.documentElement.style.setProperty('--h', (q.get('h') || 640) + 'px');
+  const sub = q.get('sub'), line = q.get('line');
+  if (sub) document.getElementById('sub').textContent = sub; else document.getElementById('sub').remove();
+  if (line) document.getElementById('line').textContent = line; else document.getElementById('line').remove();
+  if (!q.get('screens')) ['window', 'tv'].forEach(id => document.getElementById(id).remove());
+  if (q.get('nobg')) ['.bg', '.swoosh.s1', '.swoosh.s2'].forEach(s => document.querySelector(s).remove());
+</script>
+</body>
+</html>
