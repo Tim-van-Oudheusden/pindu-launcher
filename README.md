@@ -499,8 +499,7 @@ When fullscreen mode starts with no games and no store installed, as on a fresh 
 - **Join a Network**: opens Quick Access's Network, where the system offers it.
 - **Choose a Design**: opens Quick Access's Design section; gone once a design was picked.
 - **Add a Store**: opens Add a Store.
-- **Sign In**: opens the installed store, Steam in Big Picture, to sign in. Opening Heroic or Lutris from here comes
-  with #797.
+- **Sign In**: opens the installed store to sign in: Steam in Big Picture, Heroic or Lutris in their own window.
 
 Each step is marked done from what is true now: a controller connected, the machine online, a store installed. None is
 forced, and they go in any order; closing Quick Access comes back to the list. **Hide This List** hides it, and Quick
@@ -525,9 +524,11 @@ with a controller alone.
   reached says that, rather than `flatpak`'s own error, and offers Network next to Try Again.
 - Once a store is installed, the library refreshes. Sign in to the store and its games appear: the library watches
   where each store it has not found yet keeps its library, so a store's first sign-in brings its games in without
-  Refresh Library. In fullscreen mode, **Open Steam** comes first once Steam is installed, and so does the Steam
-  Installed notification: they close Quick Access and open Steam in Big Picture, as Home's tile does, so its sign-in
-  happens with a controller. Heroic and Lutris have no such action yet (#797).
+  Refresh Library. In fullscreen mode, **Open Steam** (or Heroic, or Lutris) comes first once the store is installed,
+  and so does its Installed notification: they close Quick Access and open the store, so its sign-in happens with a
+  controller. Steam opens in Big Picture, as Home's tile does. Heroic and Lutris open their own window through their
+  Flatpak or the host's package, whichever is installed; in a `gamescope --steam` session it takes the app's place, as
+  a game handed to its store does, until its last window closes.
 
 ### Proton
 

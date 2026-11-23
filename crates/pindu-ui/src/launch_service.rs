@@ -5,18 +5,20 @@
 //! Windows games and native games in the Steam Linux Runtime run through umu in the
 //! sandbox (see `proton_launch`).
 
+use std::collections::BTreeMap;
 use std::rc::Rc;
 
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
-use pindu_core::add_store;
+use pindu_core::add_store::{self, StoreApp};
 use pindu_core::launch::{self, Command, Route, Start, SteamSession, WebPage};
 use pindu_core::launch_outcome::{Ending, SIGTERM};
 use pindu_core::model::{Game, LaunchRoute, Source};
 use pindu_core::notifications::{Kind, Target};
 use pindu_core::sources::location::HostDirs;
 
+use crate::add_store_service::store_name;
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
 use crate::library_service::LibraryService;
@@ -444,10 +446,11 @@ pub async fn big_picture_route(
         .downcast_ref::<PinduApplication>()
         .is_some_and(|application| application.gamescope_service().is_active());
     let steam_root = library.source_location(Source::Steam).await;
-    let steam_client = gio::spawn_blocking(|| add_store::steam_client(&HostDirs::from_env()))
-        .await
-        .ok()
-        .flatten();
+    let steam_client =
+        gio::spawn_blocking(|| add_store::store_client(StoreApp::Steam, &HostDirs::from_env()))
+            .await
+            .ok()
+            .flatten();
     let session = SteamSession {
         steam_gamescope,
         host_spawn: permission_service::host_spawn_allowed(),
@@ -506,6 +509,48 @@ pub fn open_big_picture(
                 );
             }
             _ => {}
+        }
+    });
+}
+
+/// Opens `store`'s client on the host for its first sign-in (`add_store::open_command`):
+/// the Flatpak or the host's package, whichever the desktop shows. In a `gamescope
+/// --steam` session its windows then take the launcher's place until they close, as a game
+/// handed to its store does (`GamescopeService::store_launch_started`); elsewhere its
+/// window takes focus, and with it the controller.
+pub fn open_store(app: &gtk::Application, store: StoreApp, toast: impl Fn(adw::Toast) + 'static) {
+    let app = app.clone();
+    glib::spawn_future_local(async move {
+        let client =
+            gio::spawn_blocking(move || add_store::store_client(store, &HostDirs::from_env()))
+                .await
+                .ok()
+                .flatten();
+        let opened = client.map(|client| {
+            let command = Command {
+                argv: add_store::open_command(store, client),
+                environment: BTreeMap::new(),
+                working_dir: None,
+            };
+            glib::g_debug!("pindu", "Opening a store: {:?}", command.argv);
+            session_service::spawn(&command, None)
+        });
+        match opened {
+            Some(Ok(_)) => {
+                if let Some(application) = app.downcast_ref::<PinduApplication>() {
+                    application
+                        .gamescope_service()
+                        .store_launch_started(&add_store::opened_id(store));
+                }
+            }
+            failed => {
+                if let Some(Err(error)) = failed {
+                    glib::g_warning!("pindu", "Could not open a store: {error}");
+                }
+                toast(adw::Toast::new(
+                    &gettext("Could not open {launcher}").replace("{launcher}", store_name(store)),
+                ));
+            }
         }
     });
 }

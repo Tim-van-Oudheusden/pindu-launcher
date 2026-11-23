@@ -5,8 +5,8 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::{Rc, Weak};
 
-use crate::launch::SteamClient;
-use crate::model::Source;
+use crate::launch::StoreClient;
+use crate::model::{GameId, Source};
 use crate::sources::desktop;
 use crate::sources::location::{HostDirs, Location};
 
@@ -238,24 +238,48 @@ pub fn installed_stores(dirs: &HostDirs) -> Vec<StoreApp> {
         .collect()
 }
 
-/// The Steam client the desktop shows ([`desktop::application_dirs`]): the Flatpak when
-/// its entry is there, else the host's `steam` when its own is; `None` without either.
-/// Unlike the library's Steam folder, this is known before Steam's first start.
-pub fn steam_client(dirs: &HostDirs) -> Option<SteamClient> {
+/// The install of `app`'s client the desktop shows ([`desktop::application_dirs`]): the
+/// Flatpak when its entry is there, else the host's package when its own is; `None`
+/// without either. Unlike the library's data folder, this is known before the store's
+/// first start.
+pub fn store_client(app: StoreApp, dirs: &HostDirs) -> Option<StoreClient> {
     let applications = desktop::application_dirs(dirs);
     let shown = |file: &str| {
         applications
             .iter()
             .any(|folder| folder.join(file).is_file())
     };
-    let [flatpak, host] = StoreApp::Steam.desktop_files();
+    let [flatpak, host] = app.desktop_files();
     if shown(flatpak) {
-        Some(SteamClient::Flatpak)
+        Some(StoreClient::Flatpak)
     } else if shown(host) {
-        Some(SteamClient::Host)
+        Some(StoreClient::Host)
     } else {
         None
     }
+}
+
+/// The command that opens `app`'s `client` with its own window, for its first sign-in:
+/// `flatpak run` with its app ID, or its command on the host's `PATH`.
+pub fn open_command(app: StoreApp, client: StoreClient) -> Vec<String> {
+    match client {
+        StoreClient::Flatpak => ["flatpak", "run", app.app_id()].map(str::to_owned).to_vec(),
+        StoreClient::Host => vec![
+            match app {
+                StoreApp::Steam => "steam",
+                StoreApp::Heroic => "heroic",
+                StoreApp::Lutris => "lutris",
+            }
+            .to_owned(),
+        ],
+    }
+}
+
+/// The ID a `gamescope --steam` session follows `app` under once it is opened, as it
+/// follows a game handed to its store launcher (`gamescope::StoreLaunch`): the store's own
+/// desktop entry, which the library never imports as a game.
+pub fn opened_id(app: StoreApp) -> GameId {
+    GameId::new(Source::Desktop, app.app_id())
 }
 
 /// How the flow installs a store.
@@ -893,7 +917,7 @@ mod tests {
     }
 
     #[test]
-    fn the_installed_steam_is_the_flatpak_by_its_entry_else_the_hosts() {
+    fn the_installed_client_is_the_flatpak_by_its_entry_else_the_hosts() {
         let flatpak = tempfile::tempdir().unwrap();
         touch(
             &flatpak
@@ -902,14 +926,66 @@ mod tests {
         );
         touch(&flatpak.path().join("usr/share/applications/steam.desktop"));
         assert_eq!(
-            steam_client(&dirs(flatpak.path())),
-            Some(SteamClient::Flatpak)
+            store_client(StoreApp::Steam, &dirs(flatpak.path())),
+            Some(StoreClient::Flatpak)
         );
         let host = tempfile::tempdir().unwrap();
         touch(&host.path().join("usr/share/applications/steam.desktop"));
-        assert_eq!(steam_client(&dirs(host.path())), Some(SteamClient::Host));
+        touch(&host.path().join("usr/share/applications/lutris.desktop"));
+        touch(&host.path().join(
+            ".local/share/flatpak/exports/share/applications/com.heroicgameslauncher.hgl.desktop",
+        ));
+        let dirs = dirs(host.path());
+        assert_eq!(
+            store_client(StoreApp::Steam, &dirs),
+            Some(StoreClient::Host)
+        );
+        assert_eq!(
+            store_client(StoreApp::Lutris, &dirs),
+            Some(StoreClient::Host)
+        );
+        assert_eq!(
+            store_client(StoreApp::Heroic, &dirs),
+            Some(StoreClient::Flatpak)
+        );
         let none = tempfile::tempdir().unwrap();
-        assert_eq!(steam_client(&dirs(none.path())), None);
+        assert_eq!(
+            store_client(StoreApp::Steam, &self::dirs(none.path())),
+            None
+        );
+    }
+
+    #[test]
+    fn a_store_opens_through_flatpak_run_or_its_host_command() {
+        assert_eq!(
+            open_command(StoreApp::Heroic, StoreClient::Flatpak),
+            argv(&["flatpak", "run", "com.heroicgameslauncher.hgl"])
+        );
+        assert_eq!(
+            open_command(StoreApp::Lutris, StoreClient::Flatpak),
+            argv(&["flatpak", "run", "net.lutris.Lutris"])
+        );
+        assert_eq!(
+            open_command(StoreApp::Heroic, StoreClient::Host),
+            argv(&["heroic"])
+        );
+        assert_eq!(
+            open_command(StoreApp::Lutris, StoreClient::Host),
+            argv(&["lutris"])
+        );
+        assert_eq!(
+            open_command(StoreApp::Steam, StoreClient::Host),
+            argv(&["steam"])
+        );
+    }
+
+    #[test]
+    fn each_store_opens_as_a_session_of_its_own() {
+        let ids: Vec<_> = StoreApp::ALL.into_iter().map(opened_id).collect();
+        assert_ne!(ids[0], ids[1]);
+        assert_ne!(ids[1], ids[2]);
+        assert_ne!(ids[0], ids[2]);
+        assert_eq!(opened_id(StoreApp::Heroic), opened_id(StoreApp::Heroic));
     }
 
     #[test]

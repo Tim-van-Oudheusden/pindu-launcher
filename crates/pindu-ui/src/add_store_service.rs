@@ -151,7 +151,7 @@ fn notify(state: &AddStoreState, notifications: &NotificationService) {
             // Translators: {store} is a store's name, such as Steam.
             &gettext("{store} Installed").replace("{store}", store_name(*app)),
             &next_step(*app),
-            (*app == StoreApp::Steam).then_some(Target::SteamBigPicture),
+            Some(Target::OpenStore(*app)),
         ),
         Step::Failed {
             app,

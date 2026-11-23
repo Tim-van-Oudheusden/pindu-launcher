@@ -289,9 +289,9 @@ pub struct SteamSession<'a> {
     /// The Steam folder the library was imported from, if one was found.
     pub steam_root: Option<&'a Path>,
     /// The Steam client installed on the machine, from its desktop entry
-    /// ([`crate::add_store::steam_client`]), which has a library folder only once it has
+    /// ([`crate::add_store::store_client`]), which has a library folder only once it has
     /// run.
-    pub steam_client: Option<SteamClient>,
+    pub steam_client: Option<StoreClient>,
 }
 
 impl SteamSession<'_> {
@@ -302,12 +302,12 @@ impl SteamSession<'_> {
     }
 }
 
-/// Which Steam client is installed.
+/// Which install of a store's client is there.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SteamClient {
-    /// The Steam Flatpak, which `flatpak run` starts.
+pub enum StoreClient {
+    /// The store's Flatpak, which `flatpak run` starts.
     Flatpak,
-    /// The host's `steam`.
+    /// The host's own package, which its command on `PATH` starts.
     Host,
 }
 
@@ -343,17 +343,17 @@ pub fn big_picture(session: &SteamSession<'_>) -> Option<Route> {
 
 /// The command that hands `uri` to `client` with `-silent` in a `gamescope --steam`
 /// session where the launcher may run commands on the host.
-fn steam_command(uri: &str, session: &SteamSession<'_>, client: SteamClient) -> Option<Command> {
+fn steam_command(uri: &str, session: &SteamSession<'_>, client: StoreClient) -> Option<Command> {
     if !(session.steam_gamescope && session.host_spawn) {
         return None;
     }
     let mut argv = match client {
-        SteamClient::Flatpak => vec![
+        StoreClient::Flatpak => vec![
             "flatpak".to_owned(),
             "run".to_owned(),
             STEAM_FLATPAK.to_owned(),
         ],
-        SteamClient::Host => vec!["steam".to_owned()],
+        StoreClient::Host => vec!["steam".to_owned()],
     };
     argv.extend(["-silent".to_owned(), uri.to_owned()]);
     Some(Command {
@@ -365,15 +365,15 @@ fn steam_command(uri: &str, session: &SteamSession<'_>, client: SteamClient) -> 
 
 /// The Steam client whose folder `root` is: the Flatpak's when it lies in the Steam
 /// Flatpak's data, `.var/app/<id>`, the host's otherwise.
-fn client_of(root: &Path) -> SteamClient {
+fn client_of(root: &Path) -> StoreClient {
     let parts: Vec<_> = root.components().map(|part| part.as_os_str()).collect();
     let flatpak = parts
         .windows(3)
         .any(|window| window == [".var", "app", STEAM_FLATPAK]);
     if flatpak {
-        SteamClient::Flatpak
+        StoreClient::Flatpak
     } else {
-        SteamClient::Host
+        StoreClient::Host
     }
 }
 
@@ -1351,7 +1351,7 @@ mod tests {
     fn an_installed_steam_that_has_not_run_yet_opens_big_picture_through_its_own_command() {
         for (client, argv) in [
             (
-                SteamClient::Flatpak,
+                StoreClient::Flatpak,
                 vec![
                     "flatpak",
                     "run",
@@ -1361,7 +1361,7 @@ mod tests {
                 ],
             ),
             (
-                SteamClient::Host,
+                StoreClient::Host,
                 vec!["steam", "-silent", "steam://open/bigpicture"],
             ),
         ] {
@@ -1391,7 +1391,7 @@ mod tests {
     #[test]
     fn the_library_folder_decides_which_steam_opens_over_the_installed_client() {
         let session = SteamSession {
-            steam_client: Some(SteamClient::Host),
+            steam_client: Some(StoreClient::Host),
             ..steam_session(Path::new(
                 "/home/me/.var/app/com.valvesoftware.Steam/data/Steam",
             ))
