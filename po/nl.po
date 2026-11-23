@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 14:40+0100\n"
+"POT-Creation-Date: 2026-11-23 18:24+0100\n"
 "PO-Revision-Date: 2026-11-07 18:15+0000\n"
 "Last-Translator: Tim <tim-van-oudheusden@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/pindu-launcher/"
@@ -19,82 +19,98 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 "X-Generator: Weblate 2026.11.2.dev0\n"
 
-#: crates/pindu-ui/src/add_store.rs:158 data/ui/add_store.blp:17
+#: crates/pindu-ui/src/add_store.rs:164 data/ui/add_store.blp:17
 #: data/ui/quick_access.blp:1812
 msgid "Add a Store"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:334
+#: crates/pindu-ui/src/add_store.rs:351
+#, fuzzy
+#| msgid "New Collection"
+msgid "No Network Connection"
+msgstr "Nieuwe Collectie"
+
+#: crates/pindu-ui/src/add_store.rs:353
+msgid ""
+"Stores install from the internet. Connect to a network, then choose a store."
+msgstr ""
+
+#: crates/pindu-ui/src/add_store.rs:362
 #: crates/pindu-ui/src/fullscreen_activity.rs:331
 msgid "Cancelling…"
 msgstr "Aan het annuleren…"
 
-#: crates/pindu-ui/src/add_store.rs:337 crates/pindu-ui/src/application.rs:882
+#: crates/pindu-ui/src/add_store.rs:365 crates/pindu-ui/src/application.rs:882
 #: crates/pindu-ui/src/fullscreen_activity.rs:290
 #: crates/pindu-ui/src/hint_bar.rs:253
 msgid "Cancel"
 msgstr "Annuleren"
 
 #. Translators: {store} is a store's name, such as Steam.
-#: crates/pindu-ui/src/add_store.rs:345
+#: crates/pindu-ui/src/add_store.rs:373
 #, fuzzy
 #| msgid "Installing"
 msgid "Installing {store}…"
 msgstr "Installeren"
 
-#: crates/pindu-ui/src/add_store.rs:347
+#: crates/pindu-ui/src/add_store.rs:375
 msgid ""
 "This can take a while. You can leave this page: the install goes on, and "
 "shows in Activity."
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:353 crates/pindu-ui/src/add_store.rs:372
+#: crates/pindu-ui/src/add_store.rs:381 crates/pindu-ui/src/add_store.rs:400
 #, fuzzy
 #| msgid "Export Library"
 msgid "Show Library"
 msgstr "Bibliotheek Exporteren"
 
 #. Translators: {store} is a store's name, such as Steam.
-#: crates/pindu-ui/src/add_store.rs:360
+#: crates/pindu-ui/src/add_store.rs:388
 msgid "{store} Is Installed"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:366 data/ui/quick_access.blp:933
+#: crates/pindu-ui/src/add_store.rs:394 data/ui/quick_access.blp:933
 #: data/ui/quick_access.blp:1857
 msgid "Refresh Library"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:380
+#: crates/pindu-ui/src/add_store.rs:408
 msgid "Install {store} in Your Software Centre"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:386
+#: crates/pindu-ui/src/add_store.rs:414
 msgid ""
 "Once {store} is installed, open it and sign in to your account, then refresh "
 "the library."
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:395
+#: crates/pindu-ui/src/add_store.rs:428
 msgid "Try Again"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:401
+#: crates/pindu-ui/src/add_store.rs:438
 #, fuzzy
 #| msgid "Backup restored"
 msgid "Back to the Stores"
 msgstr "Backup hersteld"
 
 #. Translators: {store} is a store's name, such as Steam.
-#: crates/pindu-ui/src/add_store.rs:408
-#: crates/pindu-ui/src/add_store_service.rs:151
+#: crates/pindu-ui/src/add_store.rs:445
+#: crates/pindu-ui/src/add_store_service.rs:163
 msgid "{store} Did Not Install"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:411
+#: crates/pindu-ui/src/add_store.rs:448
 msgid "Could Not Open {store} in Your Software Centre"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:454
+#: crates/pindu-ui/src/add_store.rs:490 data/ui/fullscreen_network.blp:15
+#: data/ui/quick_access.blp:799 data/ui/quick_access.blp:1430
+msgid "Network"
+msgstr ""
+
+#: crates/pindu-ui/src/add_store.rs:506
 #: crates/pindu-ui/src/collection_actions.rs:248
 #: crates/pindu-ui/src/collection_actions.rs:256
 #: crates/pindu-ui/src/fullscreen_health.rs:251
@@ -110,35 +126,43 @@ msgid "Installed"
 msgstr ""
 
 #. Translators: {store} is a store's name, such as Steam.
-#: crates/pindu-ui/src/add_store_service.rs:108
+#: crates/pindu-ui/src/add_store_service.rs:116
 #, fuzzy
 #| msgid "Installing"
 msgid "Installing {store}"
 msgstr "Installeren"
 
 #. Translators: {store} is a store's name, such as Steam.
-#: crates/pindu-ui/src/add_store_service.rs:144
+#: crates/pindu-ui/src/add_store_service.rs:152
 msgid "{store} Installed"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store_service.rs:171
+#: crates/pindu-ui/src/add_store_service.rs:187
 msgid "Valve’s store, with Proton for Windows games"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store_service.rs:172
+#: crates/pindu-ui/src/add_store_service.rs:188
 msgid "Your Epic Games, GOG and Amazon games"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store_service.rs:173
+#: crates/pindu-ui/src/add_store_service.rs:189
 msgid "Games from many sources, set up by install scripts"
 msgstr ""
 
 #. / What to do once `app` is installed: sign in to it.
 #. Translators: {store} is a store's name, such as Steam.
-#: crates/pindu-ui/src/add_store_service.rs:180
+#: crates/pindu-ui/src/add_store_service.rs:196
 msgid ""
 "Open {store} and sign in to your account. Its games then show in your "
 "library."
+msgstr ""
+
+#. / Why `app` did not install when the network failed it.
+#. Translators: {store} is a store's name, such as Steam.
+#: crates/pindu-ui/src/add_store_service.rs:203
+msgid ""
+"{store} could not be downloaded, because the internet could not be reached. "
+"Check the network connection, then try again."
 msgstr ""
 
 #: crates/pindu-ui/src/application.rs:153
@@ -4943,11 +4967,6 @@ msgstr ""
 #| msgid "Library Backups"
 msgid "Library Data"
 msgstr "Bibliotheek Backups"
-
-#: data/ui/fullscreen_network.blp:15 data/ui/quick_access.blp:799
-#: data/ui/quick_access.blp:1430
-msgid "Network"
-msgstr ""
 
 #: data/ui/fullscreen_network.blp:48
 msgid "Turned off by a hardware switch"
