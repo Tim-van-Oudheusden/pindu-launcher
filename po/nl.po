@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 23:56+0100\n"
+"POT-Creation-Date: 2026-11-23 11:29+0100\n"
 "PO-Revision-Date: 2026-11-07 18:15+0000\n"
 "Last-Translator: Tim <tim-van-oudheusden@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/pindu-launcher/"
@@ -2362,44 +2362,60 @@ msgstr ""
 msgid "{rating}, tested {date}"
 msgstr ""
 
-#: crates/pindu-ui/src/genres.rs:10
+#: crates/pindu-ui/src/genres.rs:11
 msgid "Action"
 msgstr ""
 
-#: crates/pindu-ui/src/genres.rs:11
+#: crates/pindu-ui/src/genres.rs:12
 msgid "Strategy"
 msgstr ""
 
-#: crates/pindu-ui/src/genres.rs:12
+#: crates/pindu-ui/src/genres.rs:13
 msgid "RPG"
 msgstr ""
 
-#: crates/pindu-ui/src/genres.rs:13
+#: crates/pindu-ui/src/genres.rs:14
 msgid "Casual"
 msgstr ""
 
-#: crates/pindu-ui/src/genres.rs:14
+#: crates/pindu-ui/src/genres.rs:15
 msgid "Racing"
 msgstr ""
 
-#: crates/pindu-ui/src/genres.rs:15
+#: crates/pindu-ui/src/genres.rs:16
 msgid "Sports"
 msgstr ""
 
-#: crates/pindu-ui/src/genres.rs:16
+#: crates/pindu-ui/src/genres.rs:17
 msgid "Indie"
 msgstr ""
 
-#: crates/pindu-ui/src/genres.rs:17
+#: crates/pindu-ui/src/genres.rs:18
 msgid "Adventure"
 msgstr ""
 
-#: crates/pindu-ui/src/genres.rs:18
+#: crates/pindu-ui/src/genres.rs:19
 msgid "Simulation"
 msgstr ""
 
-#: crates/pindu-ui/src/genres.rs:19
+#: crates/pindu-ui/src/genres.rs:20
 msgid "Massively Multiplayer"
+msgstr ""
+
+#: crates/pindu-ui/src/genres.rs:21
+msgid "Shooter"
+msgstr ""
+
+#: crates/pindu-ui/src/genres.rs:22
+msgid "Platformer"
+msgstr ""
+
+#: crates/pindu-ui/src/genres.rs:23
+msgid "Puzzle"
+msgstr ""
+
+#: crates/pindu-ui/src/genres.rs:24
+msgid "Fighting"
 msgstr ""
 
 #: crates/pindu-ui/src/group_actions.rs:24
