@@ -165,8 +165,9 @@ impl PinduQuickAccess {
                 Target::Permissions => {
                     row.set_action_name(Some("win.notification-permissions"));
                 }
-                Target::SteamBigPicture => {
-                    row.set_action_name(Some("win.add-store-open-steam"));
+                Target::OpenStore(app) => {
+                    row.set_action_name(Some("win.add-store-open"));
+                    row.set_action_target_value(Some(&app.app_id().to_variant()));
                 }
             }
         }

@@ -19,6 +19,7 @@ use crate::add_store_service::{
     AddStoreService, network_failure, next_step, store_description, store_name,
 };
 use crate::application::PinduApplication;
+use crate::launch_service;
 use crate::quick_access::PinduQuickAccess;
 use crate::window::PinduWindow;
 
@@ -33,8 +34,8 @@ pub(crate) struct Offers {
     /// Network, while the machine is offline or the network failed an install, which
     /// leads to Quick Access's Network level where the system panel has one.
     pub(crate) network: bool,
-    /// Open Steam once it installed, which opens it in Big Picture for its first sign-in.
-    pub(crate) open_steam: bool,
+    /// Open once a store installed, which opens it for its first sign-in.
+    pub(crate) open: bool,
 }
 
 mod imp {
@@ -136,10 +137,18 @@ impl PinduWindow {
         let done = gio::ActionEntry::builder("add-store-done")
             .activate(|window: &Self, _, _| window.leave_add_store())
             .build();
-        let open_steam = gio::ActionEntry::builder("add-store-open-steam")
-            .activate(|window: &Self, _, _| window.open_installed_steam())
+        let open_store = gio::ActionEntry::builder("add-store-open")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate(|window: &Self, _, target| {
+                let app = target
+                    .and_then(|target| target.str())
+                    .and_then(|id| StoreApp::ALL.into_iter().find(|app| app.app_id() == id));
+                if let Some(app) = app {
+                    window.open_installed_store(app);
+                }
+            })
             .build();
-        self.add_action_entries([open, choose, cancel, back, done, open_steam]);
+        self.add_action_entries([open, choose, cancel, back, done, open_store]);
         let Some(service) = self.add_store_service() else {
             return;
         };
@@ -213,16 +222,28 @@ impl PinduWindow {
         }
     }
 
-    /// Open Steam, once Add a Store installed it: the flow goes back to its stores, Quick
-    /// Access closes, and Steam opens in Big Picture, as Home's tile opens it, for its
-    /// first sign-in.
-    fn open_installed_steam(&self) {
+    /// Open, once Add a Store installed `app`: the flow goes back to its stores, Quick
+    /// Access closes, and the store opens for its first sign-in: Steam in Big Picture, as
+    /// Home's tile opens it, Heroic and Lutris in their own window
+    /// (`launch_service::open_store`).
+    fn open_installed_store(&self, app: StoreApp) {
         if let Some(service) = self.add_store_service() {
             service.dismiss();
         }
         self.close_panel();
-        if let Err(error) = WidgetExt::activate_action(self, "win.steam-big-picture", None) {
-            glib::g_warning!("pindu", "Could not open Steam: {error}");
+        if app == StoreApp::Steam {
+            if let Err(error) = WidgetExt::activate_action(self, "win.steam-big-picture", None) {
+                glib::g_warning!("pindu", "Could not open Steam: {error}");
+            }
+            return;
+        }
+        if let Some(application) = self.application() {
+            let window = self.downgrade();
+            launch_service::open_store(application.upcast_ref(), app, move |toast| {
+                if let Some(window) = window.upgrade() {
+                    window.add_toast(toast);
+                }
+            });
         }
     }
 
@@ -286,12 +307,12 @@ impl PinduQuickAccess {
         }
     }
 
-    /// What fullscreen mode's level offers: Open Steam, and Network where the system
-    /// panel has it.
+    /// What fullscreen mode's level offers: Open once a store installed, and Network where
+    /// the system panel has it.
     fn add_store_offers(&self) -> Offers {
         Offers {
             network: self.imp().shown.get().network,
-            open_steam: true,
+            open: true,
         }
     }
 }
@@ -410,12 +431,13 @@ impl PinduAddStoreLevel {
                 )
             }
             Step::Installed(app) => {
-                if *app == StoreApp::Steam && imp.offers.get().open_steam {
+                if imp.offers.get().open {
+                    let id = app.app_id().to_variant();
                     actions.append(&action_row(
                         // Translators: {store} is a store's name, such as Steam.
                         &gettext("Open {store}").replace("{store}", store_name(*app)),
-                        "win.add-store-open-steam",
-                        None,
+                        "win.add-store-open",
+                        Some(&id),
                         "go-next-symbolic",
                     ));
                 }

@@ -9,6 +9,7 @@
 
 use std::collections::VecDeque;
 
+use crate::add_store::StoreApp;
 use crate::model::{GameId, Timestamp};
 
 /// The most notifications the log keeps; adding one more drops the oldest.
@@ -60,9 +61,9 @@ pub enum Target {
     Game(GameId),
     /// Preferences, at its Permissions group.
     Permissions,
-    /// Steam, opened in Big Picture as Home's tile opens it: a Steam that Add a Store has
-    /// just installed, for its first sign-in.
-    SteamBigPicture,
+    /// A store Add a Store has just installed, opened for its first sign-in: Steam in Big
+    /// Picture as Home's tile opens it, Heroic or Lutris in their own window.
+    OpenStore(StoreApp),
 }
 
 /// One entry of the log.

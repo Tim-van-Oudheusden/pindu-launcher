@@ -2,9 +2,9 @@
 //! fullscreen mode starts with no games and no store installed, shows in place of Home's
 //! content until a game is in the library, and leads each step to the screen that does
 //! it: Quick Access's Bluetooth or Controller section, Network and Design section, Add a
-//! Store, and Steam's Big Picture to sign in. Its state is kept in GSettings
-//! (`fullscreen-setup`): hidden, Quick Access → Manage brings it back. The desktop window
-//! shows nothing of it.
+//! Store, and the installed store to sign in (`win.add-store-open`). Its state is kept in
+//! GSettings (`fullscreen-setup`): hidden, Quick Access → Manage brings it back. The
+//! desktop window shows nothing of it.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -17,6 +17,7 @@ use pindu_core::system::network::Availability;
 
 use crate::add_store_service::store_name;
 use crate::application::PinduApplication;
+use crate::permission_service;
 use crate::window::PinduWindow;
 
 /// The GSettings key the checklist's state is kept under.
@@ -145,9 +146,13 @@ impl PinduWindow {
             .flatten()
             .position(|item| !item.done)
             .unwrap_or_default();
-        let rows = items
-            .as_ref()
-            .map(|items| items.iter().map(setup_row).collect());
+        let host_spawn = permission_service::host_spawn_allowed();
+        let rows = items.as_ref().map(|items| {
+            items
+                .iter()
+                .map(|item| setup_row(item, host_spawn))
+                .collect()
+        });
         imp.setup_items.replace(items);
         let home_shown = imp.navigation_view.visible_page().as_ref()
             == Some(imp.home_page.upcast_ref::<adw::NavigationPage>());
@@ -166,9 +171,10 @@ impl PinduWindow {
     }
 }
 
-/// The row for `item`: what to do and whether it is done, leading where it is done.
-fn setup_row(item: &SetupItem) -> gtk::Widget {
-    let (title, subtitle, icon) = text(item);
+/// The row for `item`: what to do and whether it is done, leading where it is done, with
+/// `host_spawn` saying whether the launcher may open a store on the host.
+fn setup_row(item: &SetupItem, host_spawn: bool) -> gtk::Widget {
+    let (title, subtitle, icon) = text(item, host_spawn);
     let row = adw::ActionRow::builder()
         .title(title)
         .subtitle(subtitle)
@@ -186,7 +192,7 @@ fn setup_row(item: &SetupItem) -> gtk::Widget {
         mark.set_accessible_role(gtk::AccessibleRole::Presentation);
     }
     row.add_prefix(&mark);
-    match action(item.entry) {
+    match action(item.entry, host_spawn) {
         Some((name, target)) => {
             row.set_activatable(true);
             row.set_action_name(Some(name));
@@ -202,7 +208,7 @@ fn setup_row(item: &SetupItem) -> gtk::Widget {
 }
 
 /// The action a row runs and its target: the screen where its step is done.
-fn action(entry: SetupEntry) -> Option<(&'static str, Option<glib::Variant>)> {
+fn action(entry: SetupEntry, host_spawn: bool) -> Option<(&'static str, Option<glib::Variant>)> {
     let section = |name: &str| Some(("win.quick-access-section", Some(name.to_variant())));
     match entry {
         SetupEntry::Controller { bluetooth: true } => Some(("win.quick-access-bluetooth", None)),
@@ -210,14 +216,16 @@ fn action(entry: SetupEntry) -> Option<(&'static str, Option<glib::Variant>)> {
         SetupEntry::Network => Some(("win.quick-access-network", None)),
         SetupEntry::Design => section("design"),
         SetupEntry::Store => Some(("win.quick-access-add-store", None)),
-        SetupEntry::SignIn(Some(StoreApp::Steam)) => Some(("win.add-store-open-steam", None)),
-        // Heroic and Lutris cannot be opened from fullscreen mode yet (#797).
+        // Steam opens through Big Picture's route; Heroic and Lutris need host spawn.
+        SetupEntry::SignIn(Some(store)) if store == StoreApp::Steam || host_spawn => {
+            Some(("win.add-store-open", Some(store.app_id().to_variant())))
+        }
         SetupEntry::SignIn(_) => None,
     }
 }
 
 /// A row's title, its line under it, and its icon while it is not done.
-fn text(item: &SetupItem) -> (String, String, &'static str) {
+fn text(item: &SetupItem, host_spawn: bool) -> (String, String, &'static str) {
     let done = item.done;
     match item.entry {
         SetupEntry::Controller { bluetooth } => (
@@ -262,8 +270,10 @@ fn text(item: &SetupItem) -> (String, String, &'static str) {
             },
             match store {
                 None => gettext("Add a store first"),
-                Some(StoreApp::Steam) => {
-                    gettext("Open Steam and sign in. Its games then show here.")
+                // Translators: {store} is a store's name, such as Steam.
+                Some(store) if action(item.entry, host_spawn).is_some() => {
+                    gettext("Open {store} and sign in. Its games then show here.")
+                        .replace("{store}", store_name(store))
                 }
                 // Translators: {store} is a store's name, such as Heroic.
                 Some(store) => {
