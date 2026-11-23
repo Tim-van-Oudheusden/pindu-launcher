@@ -487,7 +487,8 @@ install instructions.
 When the library's first sync finishes, **Your Library Is Ready** sums up what it found: the launchers, the games
 imported and what needs attention. **Open Library Health** opens the Library Health page on the desktop, or Quick
 Access at Library Health in fullscreen mode, where you can read and close the summary with a controller alone. The
-summary shows only once; after you close it, it never comes back.
+summary shows only once; after you close it, it never comes back. A sync that finds no launcher and no game shows
+nothing, so a new console starts on the Get Started checklist alone; its summary waits for its first games.
 
 ### Get Started
 
