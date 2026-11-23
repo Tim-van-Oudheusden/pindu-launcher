@@ -15,10 +15,18 @@
 # GStreamer plays both through GTK, so a missing GStreamer plug-in shows here: the test
 # fails when the log says the background or a sound could not play.
 #
-# Usage: tests/e2e/ui-smoke.sh [--fullscreen APP_ID] APP RESOURCES [COVER]
+# With --narrow APP_ID the desktop window starts at its narrowest, 360 px wide, and the
+# library page must fit it: libadwaita logs "… exceeds PinduWindow width" when the page
+# asks for more width than the window has.
+#
+# Usage: tests/e2e/ui-smoke.sh [--fullscreen APP_ID | --narrow APP_ID] APP RESOURCES [COVER]
 app_id=
+narrow=
 if [ "${1-}" = --fullscreen ]; then
   app_id=$2
+  shift 2
+elif [ "${1-}" = --narrow ]; then
+  narrow=$2
   shift 2
 fi
 app=$1
@@ -57,6 +65,17 @@ if [ -n "$app_id" ]; then
   mkdir -p "$XDG_CONFIG_HOME/glib-2.0/settings"
   printf '[%s]\nnavigation-sounds=true\n' "$(echo "$app_id" | tr . /)" \
     > "$XDG_CONFIG_HOME/glib-2.0/settings/keyfile"
+elif [ -n "$narrow" ]; then
+  # The window's minimum width (`width-request` in window.blp), remembered as its size.
+  export GSETTINGS_BACKEND=keyfile
+  mkdir -p "$XDG_CONFIG_HOME/glib-2.0/settings"
+  printf '[%s]\nwindow-width=360\nwindow-height=640\n' "$(echo "$narrow" | tr . /)" \
+    > "$XDG_CONFIG_HOME/glib-2.0/settings/keyfile"
+  # GNOME's window buttons, a close button only. Without a desktop GTK adds minimize and
+  # maximize, which take more of the header bar than the 360 px a GNOME app plans for.
+  mkdir -p "$XDG_CONFIG_HOME/gtk-4.0"
+  printf '[Settings]\ngtk-decoration-layout=appmenu:close\n' \
+    > "$XDG_CONFIG_HOME/gtk-4.0/settings.ini"
 fi
 
 # The app is a GApplication and needs a session bus of its own, so a running copy of
@@ -127,6 +146,10 @@ if [ -n "$app_id" ]; then
     echo "The app did not take win.preview-navigation-sound"
     exit 1
   fi
+fi
+if [ -n "$narrow" ] && grep -E -q "exceeds [A-Za-z]+ (width|size)" "$tmp/log"; then
+  echo "The window does not fit its 360 px minimum width"
+  exit 1
 fi
 # GStreamer plays Home's background and the navigation sounds; a missing plug-in shows up
 # as one of these.

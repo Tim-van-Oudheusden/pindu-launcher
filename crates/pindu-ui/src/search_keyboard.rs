@@ -53,10 +53,15 @@ impl PinduWindow {
                 window.close_search_keyboard();
             }
         });
+        // The keyboard is fullscreen mode's: closed, its revealer still asks for the
+        // keyboard's full width (704 px), more than a narrow desktop window has.
+        imp.keyboard_revealer.set_visible(self.is_fullscreen());
         self.connect_fullscreened_notify(|window| {
-            if !window.is_fullscreen() {
+            let fullscreen = window.is_fullscreen();
+            if !fullscreen {
                 window.close_search_keyboard();
             }
+            window.imp().keyboard_revealer.set_visible(fullscreen);
         });
         // B's hint turns from Delete into Close as the field empties, however it does.
         imp.search_entry.connect_changed(glib::clone!(

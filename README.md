@@ -205,7 +205,8 @@ For the development build, use `io.github.tim_van_oudheusden.pindu-launcher-deve
 
 A controller-first view of the same library, for the couch, a TV or a Steam Deck.
 
-**To open it:** click the **Fullscreen Mode** button in the header bar, press <kbd>F11</kbd>, start the app with
+**To open it:** click the **Fullscreen Mode** button in the header bar (in a narrow window, it is in the **View Options**
+menu there, with the grid and list layouts and the sort order), press <kbd>F11</kbd>, start the app with
 `--fullscreen`, or turn on **Start in Fullscreen Mode** in Preferences.
 
 Fullscreen mode comes in four looks, picked in **Quick Access → Design**: three designs that ship with the app and

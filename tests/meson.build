@@ -8,6 +8,15 @@ test(
   suite: 'ui',
 )
 
+# The same, in the desktop window at its narrowest (360 px), which the library page must fit.
+test(
+  'ui-smoke-narrow',
+  find_program('e2e/ui-smoke.sh'),
+  args: ['--narrow', application_id, app_binary, pkgdatadir / 'resources.gresource'],
+  timeout: 60,
+  suite: 'ui',
+)
+
 # The repository's tooling in build-aux/, on the tree and on broken copies of it
 python = find_program('python3')
 foreach tool : ['check_version', 'check_manifests', 'release_notes']
