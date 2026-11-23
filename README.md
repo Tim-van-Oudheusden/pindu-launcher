@@ -17,15 +17,15 @@
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/desktop-1-library.webp" width="820" alt="Desktop library with a sidebar for library views, sources with their launcher icons and the Racing and Roguelikes collections, a header bar with search, view, sort, Fullscreen Mode and main menu buttons, filter chips above the cover grid, and a Jump Back In row with Aurora Drift, Ember Hollow, Glass Cathedral and Orbit Tailor">
+  <img src="docs/screenshots/desktop-1-library.webp" width="820" alt="Desktop library of free and open-source games, with a sidebar for library views, the Steam, Heroic, Lutris, Faugus and Desktop sources with their launcher icons and the Racing, Strategy Nights and LAN Party collections, a header bar with search, view, sort, Fullscreen Mode and main menu buttons, filter chips above the cover grid, and a Jump Back In row with SuperTuxKart, Mindustry, Luanti and Battle for Wesnoth">
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/desktop-2-game-page.webp" width="405" alt="Slay the Spire 2's game page with its banner art, a Play button, 129 hours of Steam playtime and About details from Steam">
-  <img src="docs/screenshots/desktop-3-play-history.webp" width="405" alt="Play History with the games played today, this week and earlier, each with its last-played date and playtime">
+  <img src="docs/screenshots/desktop-2-game-page.webp" width="405" alt="Mindustry's game page with its logo over the banner art, a Play button, 129 hours of Steam playtime and About details from Steam">
+  <img src="docs/screenshots/desktop-3-play-history.webp" width="405" alt="Play History with the games played today, this week and earlier, each with its last-played date, playtime and launcher">
   <br>
-  <img src="docs/screenshots/desktop-4-collection.webp" width="405" alt="The Roguelikes collection with covers for Ember Hollow and Moss &amp; Machine">
-  <img src="docs/screenshots/desktop-5-game-page-dark.webp" width="405" alt="Balatro's game page in dark style, with its logo over the banner art and its game details">
+  <img src="docs/screenshots/desktop-4-collection.webp" width="405" alt="The Strategy Nights collection with covers for Mindustry, Battle for Wesnoth, 0 A.D., Warzone 2100, OpenTTD and MegaGlest, which is not installed">
+  <img src="docs/screenshots/desktop-5-game-page-dark.webp" width="405" alt="Battle for Wesnoth's game page in dark style, with its logo over the banner art and its game details">
 </p>
 
 ## Status
@@ -216,33 +216,33 @@ Adwaita, the look with no design ([Styling fullscreen mode](#styling-fullscreen-
     <th colspan="2">Lobby, the default design</th>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/fullscreen-lobby-home.webp" width="405" alt="Lobby's Home: labelled section tiles across the top over the red animated background, with Recently Played focused and its covers previewed below"><br><sub>Home</sub></td>
-    <td align="center"><img src="docs/screenshots/fullscreen-lobby-library.webp" width="405" alt="Lobby's Library: All, Installed and Favourites tabs over a grid of covers sorted by Last Played, with Play on Balatro"><br><sub>Library</sub></td>
+    <td align="center"><img src="docs/screenshots/fullscreen-lobby-home.webp" width="405" alt="Lobby's Home: labelled section tiles across the top over the red animated background, among them Favourites, Installed, Categories and the Steam, Heroic, Lutris and Faugus sources, with Recently Played focused and its six covers previewed below"><br><sub>Home</sub></td>
+    <td align="center"><img src="docs/screenshots/fullscreen-lobby-library.webp" width="405" alt="Lobby's Library: All, Installed and Favourites tabs and a tab per collection over a grid of covers sorted by Last Played, with Play on SuperTuxKart"><br><sub>Library</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/fullscreen-lobby-menu.webp" width="405" alt="The menu drawer open over Lobby's Home: Home (focused, the page under the menu), Library with its 20 games and Search, the Racing and Roguelikes collections under a Collections heading, and at the foot the power dock's round buttons: Exit Fullscreen Mode and Exit Pindu Launcher, then Suspend, Restart and Power Off"><br><sub>Menu (Start)</sub></td>
+    <td align="center"><img src="docs/screenshots/fullscreen-lobby-menu.webp" width="405" alt="The menu drawer open over Lobby's Home: Home (focused, the page under the menu), Library with its 20 games and Search, the Racing, Strategy Nights and LAN Party collections under a Collections heading, and at the foot the power dock's round buttons: Exit Fullscreen Mode and Exit Pindu Launcher, then Suspend, Restart and Power Off"><br><sub>Menu (Start)</sub></td>
     <td align="center"><img src="docs/screenshots/fullscreen-lobby-quick-access.webp" width="405" alt="Quick Access open over Lobby's Home on its Quick section: the clock, the strip of six sections with Quick shown, and Lobby's tiles in three columns, Bluetooth (focused, Blocked), Network (Wired), Surprise Me, Refresh Library and Add a Game"><br><sub>Quick Access (R3, or Guide + A)</sub></td>
   </tr>
   <tr>
     <th colspan="2">Marquee</th>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/fullscreen-marquee-home.webp" width="405" alt="Marquee's Home: Balatro's art across the screen under Jump Back In, its logo and details, and a row of recent games then section tiles"><br><sub>Home</sub></td>
-    <td align="center"><img src="docs/screenshots/fullscreen-marquee-library.webp" width="405" alt="Marquee's Library: a grid of covers sorted by Last Played, with Play on Balatro"><br><sub>Library</sub></td>
+    <td align="center"><img src="docs/screenshots/fullscreen-marquee-home.webp" width="405" alt="Marquee's Home: SuperTuxKart's art across the screen under Jump Back In, its logo and details, and a row of recent games then section tiles"><br><sub>Home</sub></td>
+    <td align="center"><img src="docs/screenshots/fullscreen-marquee-library.webp" width="405" alt="Marquee's Library: a grid of covers sorted by Last Played, with Play on SuperTuxKart"><br><sub>Library</sub></td>
   </tr>
   <tr>
     <th colspan="2">Shelves</th>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/fullscreen-shelves-home.webp" width="405" alt="Shelves' Home: Balatro's logo and details at the top, then a Jump Back In row of wide cards and an Installed row of covers"><br><sub>Home</sub></td>
-    <td align="center"><img src="docs/screenshots/fullscreen-shelves-library.webp" width="405" alt="Shelves' Library: a grid of covers sorted by Last Played, with Play on Balatro"><br><sub>Library</sub></td>
+    <td align="center"><img src="docs/screenshots/fullscreen-shelves-home.webp" width="405" alt="Shelves' Home: SuperTuxKart's logo and details at the top, then a Jump Back In row of wide cards and a Favourites row of covers"><br><sub>Home</sub></td>
+    <td align="center"><img src="docs/screenshots/fullscreen-shelves-library.webp" width="405" alt="Shelves' Library: a grid of covers sorted by Last Played, with Play on SuperTuxKart"><br><sub>Library</sub></td>
   </tr>
   <tr>
     <th colspan="2">Adwaita (no design)</th>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/fullscreen-adwaita-home.webp" width="405" alt="Adwaita's Home: Home and Library tabs in the middle of the top bar, a banner for Balatro with Play focused, a row of section tiles and an Installed row of covers"><br><sub>Home</sub></td>
-    <td align="center"><img src="docs/screenshots/fullscreen-adwaita-library.webp" width="405" alt="Adwaita's Library: pill tabs for All, Installed and Favourites over a grid of covers, with Play on Balatro"><br><sub>Library</sub></td>
+    <td align="center"><img src="docs/screenshots/fullscreen-adwaita-home.webp" width="405" alt="Adwaita's Home: Home and Library tabs in the middle of the top bar, a banner for SuperTuxKart with Play, a row of section and collection tiles and a Favourites row of covers"><br><sub>Home</sub></td>
+    <td align="center"><img src="docs/screenshots/fullscreen-adwaita-library.webp" width="405" alt="Adwaita's Library: pill tabs for All, Installed, Favourites and each collection over a grid of covers, with Play on SuperTuxKart"><br><sub>Library</sub></td>
   </tr>
 </table>
 
@@ -820,7 +820,8 @@ so the fullscreen mode is a second presentation of the same library.
 | [`docs/translating.md`](docs/translating.md) | How translations are laid out, the Weblate settings, and translating without Weblate |
 | [`docs/agent-tasks/README.md`](docs/agent-tasks/README.md) | How each change traces to its issue: branch, commit, pull request and merge |
 | [`docs/multi-agent.md`](docs/multi-agent.md) | Who works on the repository, how work moves between agents, and how changes merge |
-| [`data/screenshots/CREDITS.md`](data/screenshots/CREDITS.md) | Where the demo library's game art comes from, and its licences |
+| [`data/screenshots/CREDITS.md`](data/screenshots/CREDITS.md) | Where the store screenshots' game art comes from, and its licences |
+| [`docs/screenshots/CREDITS.md`](docs/screenshots/CREDITS.md) | Where the README screenshots' game art comes from, and its licences |
 | [`docs/metrics/README.md`](docs/metrics/README.md) | The gates every change passes, what each measures and how to run it |
 | [`docs/reflections/README.md`](docs/reflections/README.md) | Lessons from past sessions and incidents, and how to write one |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to build, find work and get a change merged |
@@ -902,4 +903,4 @@ Corporation in the U.S. and/or other countries.
 | `data/icons/sources/` (launcher icons) | Each icon's own terms, listed in [`LICENSE`](data/icons/sources/LICENSE): the Steam logo (Simple Icons, CC0 1.0, used under Valve's branding guidelines), Cartridges' Lutris, Bottles and Legendary icons (GPL-3.0-or-later), Faugus Launcher's logo (MIT) and the itch.io logo (itch.io press kit) |
 | `docs/brand/readme-banner.svg` | [GPL-3.0-or-later](LICENSE); the outlined text is [Adwaita Sans](https://gitlab.gnome.org/GNOME/adwaita-fonts), SIL Open Font License 1.1 |
 | Game art in `data/screenshots/` | Each game's own licence, listed in [`CREDITS.md`](data/screenshots/CREDITS.md) |
-| Game art in `docs/screenshots/` | Belongs to each game's publisher; shown as Pindu launcher displays a real library |
+| Game art in `docs/screenshots/` | Each game's own licence, listed in [`CREDITS.md`](docs/screenshots/CREDITS.md) |
