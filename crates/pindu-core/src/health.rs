@@ -13,6 +13,7 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::model::{Game, Source, SourceState, Timestamp};
 use crate::permissions;
+use crate::setup::SetupState;
 use crate::sources::sync::IMPORTED_SOURCES;
 
 /// What the services found out about one source.
@@ -437,25 +438,41 @@ pub struct FirstSyncSummary {
     pub problems: Vec<Problem>,
 }
 
-/// The summary to show after a sync with `report`: only after the library's first sync
-/// (`first_sync`, from [`is_first_sync`] before it ran), and only when it was not `shown`
-/// before.
+/// Whether a sync still owes the summary: it is the library's `first_sync` (from
+/// [`is_first_sync`] before it ran), or the library had no game before it
+/// (`games_before`), so a new console whose first syncs find nothing gets the summary
+/// once its first games come in. A library that had games, as after an upgrade, owes none.
+pub fn summary_owed(first_sync: bool, games_before: u32) -> bool {
+    first_sync || games_before == 0
+}
+
+/// The summary to show after a sync with `report`: only when the sync owes it
+/// ([`summary_owed`]) and it was not `shown` before, and only once there is something to
+/// summarise: a launcher found or a game imported. While the set-up checklist shows in
+/// fullscreen mode (`setup`), it waits for the first games, which end the checklist, so
+/// a store that has run but holds nothing yet never covers it.
 pub fn first_sync_summary(
     report: &HealthReport,
-    first_sync: bool,
+    owed: bool,
     shown: bool,
+    setup: SetupState,
 ) -> Option<FirstSyncSummary> {
-    if !first_sync || shown {
+    if !owed || shown {
+        return None;
+    }
+    let launchers: Vec<Source> = report
+        .sources
+        .iter()
+        .filter(|source| source.folder.is_some())
+        .map(|source| source.source)
+        .collect();
+    let games = report.sources.iter().map(|source| source.games).sum();
+    if games == 0 && (launchers.is_empty() || setup.shows()) {
         return None;
     }
     Some(FirstSyncSummary {
-        launchers: report
-            .sources
-            .iter()
-            .filter(|source| source.folder.is_some())
-            .map(|source| source.source)
-            .collect(),
-        games: report.sources.iter().map(|source| source.games).sum(),
+        launchers,
+        games,
         problems: report.problems().cloned().collect(),
     })
 }
@@ -888,8 +905,8 @@ mod tests {
     fn the_first_sync_s_summary_names_launchers_found_games_and_problems() {
         let report = report(&flatpak_without_host_access());
 
-        let summary =
-            first_sync_summary(&report, true, false).expect("the first sync, not shown yet");
+        let summary = first_sync_summary(&report, true, false, SetupState::Unseen)
+            .expect("the first sync, not shown yet");
 
         assert_eq!(summary.launchers, [Source::Steam], "Lutris was not found");
         assert_eq!(summary.games, 40);
@@ -901,15 +918,87 @@ mod tests {
         let report = report(&native_install());
 
         assert_eq!(
-            first_sync_summary(&report, false, false),
+            first_sync_summary(&report, false, false, SetupState::Unseen),
             None,
             "a later sync"
         );
         assert_eq!(
-            first_sync_summary(&report, true, true),
+            first_sync_summary(&report, true, true, SetupState::Unseen),
             None,
             "dismissed before"
         );
-        assert_eq!(first_sync_summary(&report, false, true), None);
+        assert_eq!(
+            first_sync_summary(&report, false, true, SetupState::Unseen),
+            None
+        );
+    }
+
+    /// A new console: no launcher found, no game imported, umu-launcher missing.
+    fn new_console() -> HealthFacts {
+        HealthFacts {
+            sources: vec![missing(Source::Steam), missing(Source::Lutris)],
+            ..native_install()
+        }
+    }
+
+    #[test]
+    fn a_new_console_whose_sync_found_nothing_gets_no_summary_over_its_checklist() {
+        let report = report(&new_console());
+        for setup in [
+            SetupState::Unseen,
+            SetupState::Active,
+            SetupState::Dismissed,
+        ] {
+            assert_eq!(
+                first_sync_summary(&report, true, false, setup),
+                None,
+                "{setup:?}: nothing to summarise, whatever needs attention"
+            );
+        }
+    }
+
+    #[test]
+    fn a_store_found_without_games_waits_while_the_set_up_checklist_shows() {
+        let facts = HealthFacts {
+            sources: vec![
+                found(Source::Steam, "/home/u/.local/share/Steam", 0),
+                missing(Source::Lutris),
+            ],
+            ..native_install()
+        };
+        let no_games = report(&facts);
+        assert_eq!(
+            first_sync_summary(&no_games, true, false, SetupState::Active),
+            None,
+            "Steam has run, but nothing is signed in yet"
+        );
+        assert!(
+            first_sync_summary(&no_games, true, false, SetupState::Unseen).is_some(),
+            "a desktop install that found a launcher still gets it"
+        );
+        let signed_in = report(&HealthFacts {
+            sources: vec![found(Source::Steam, "/home/u/.local/share/Steam", 12)],
+            ..native_install()
+        });
+        assert_eq!(
+            first_sync_summary(&signed_in, true, false, SetupState::Active)
+                .map(|summary| summary.games),
+            Some(12),
+            "the first games end the checklist, and the library is ready"
+        );
+    }
+
+    #[test]
+    fn the_summary_is_owed_until_a_sync_brings_games_in() {
+        assert!(summary_owed(true, 0), "the library's first sync");
+        assert!(
+            summary_owed(false, 0),
+            "a later sync of a library that has no games yet"
+        );
+        assert!(
+            !summary_owed(false, 3),
+            "a library that had games before, as after an upgrade"
+        );
+        assert!(summary_owed(true, 3));
     }
 }

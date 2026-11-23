@@ -29,6 +29,7 @@ use crate::preferences::PreferencesDialog;
 use crate::proton_launch::UMU_INSTALL_URI;
 use crate::search_provider;
 use crate::session_service::SessionService;
+use crate::setup_checklist;
 use crate::sources::source_list;
 use crate::steamgriddb_service;
 use crate::style_service::StyleService;
@@ -45,10 +46,11 @@ use pindu_core::gamescope::session::{Session, has_os_session_select, runs_as_own
 use pindu_core::health;
 use pindu_core::keys;
 use pindu_core::launch::{Start, WebPage};
-use pindu_core::library::Filters;
+use pindu_core::library::{Filters, View};
 use pindu_core::model::GameId;
 use pindu_core::notifications::{Kind, Target};
 use pindu_core::panels::Playing;
+use pindu_core::setup::SetupState;
 use pindu_core::sources::location::HostDirs;
 use pindu_core::steamgriddb::{self, RunNotice};
 use pindu_core::wikidata::{self, RunNotice as WikidataNotice};
@@ -97,8 +99,8 @@ mod imp {
         pub gamescope_service: OnceCell<GamescopeService>,
         /// The Library Health report, for both shells.
         pub health_service: OnceCell<HealthService>,
-        /// Whether the library's first sync finished and its summary waits for the report
-        /// gathered after it.
+        /// Whether a finished sync owes the summary of what the library found
+        /// (`health::summary_owed`), which waits for the report gathered after it.
         pub first_sync_pending: std::cell::Cell<bool>,
         /// The user's own stylesheet for fullscreen mode.
         pub style_service: OnceCell<StyleService>,
@@ -205,11 +207,13 @@ mod imp {
                 #[weak]
                 library,
                 move |sync| {
+                    // Before the reload: the games the library had before this sync.
+                    let games_before = library.model().counts().get(View::All);
                     library.reload();
                     app.notify_sync(sync);
                     app.fetch_missing_art(false);
                     // Before Library Health gathers again, which it connected after this.
-                    if sync.was_first() {
+                    if health::summary_owed(sync.was_first(), games_before) {
                         app.imp().first_sync_pending.set(true);
                     }
                 }
@@ -966,10 +970,12 @@ impl PinduApplication {
         }
     }
 
-    /// Once the report gathered after the library's first sync is in, shows what that
-    /// sync found in the active window, unless the summary was dismissed before.
+    /// Once the report gathered after a sync that owes the summary is in
+    /// (`health::summary_owed`), shows what the library found in the active window,
+    /// unless the summary was dismissed before, the sync found nothing, or the set-up
+    /// checklist shows and no game came in (`health::first_sync_summary`).
     fn show_first_sync_summary(&self, service: &HealthService) {
-        let first_sync = self.imp().first_sync_pending.replace(false);
+        let owed = self.imp().first_sync_pending.replace(false);
         let (Some(report), Some(window)) = (
             service.report(),
             self.active_window().and_downcast::<PinduWindow>(),
@@ -977,7 +983,9 @@ impl PinduApplication {
             return;
         };
         let shown = window.settings().boolean(first_sync_summary::SHOWN_KEY);
-        if let Some(summary) = health::first_sync_summary(&report, first_sync, shown) {
+        let setup = SetupState::from_name(&window.settings().string(setup_checklist::STATE_KEY))
+            .unwrap_or_default();
+        if let Some(summary) = health::first_sync_summary(&report, owed, shown, setup) {
             window.show_first_sync_summary(&summary);
         }
     }

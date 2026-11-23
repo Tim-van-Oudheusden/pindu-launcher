@@ -21,7 +21,7 @@ use crate::permission_service;
 use crate::window::PinduWindow;
 
 /// The GSettings key the checklist's state is kept under.
-const STATE_KEY: &str = "fullscreen-setup";
+pub(crate) const STATE_KEY: &str = "fullscreen-setup";
 
 /// The GSettings key of the fullscreen design, which counts as changed once the owner
 /// picked one.
