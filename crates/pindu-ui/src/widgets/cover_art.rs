@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{gdk, glib, graphene, gsk};
+use gtk::{gdk, gio, glib, graphene, gsk};
 use pindu_core::art::{ICON_SCALE, Placement, Rect, crop, needs_mipmaps, place};
 
 use super::textures;
@@ -27,6 +27,8 @@ mod imp {
         pub crop: Cell<bool>,
         /// Bumped on every new source, so a late load for an old source is dropped.
         pub generation: Cell<u64>,
+        /// Cancels the cover's load under way, once another source replaces it.
+        pub loading: RefCell<Option<gio::Cancellable>>,
     }
 
     #[glib::object_subclass]
@@ -155,10 +157,7 @@ impl CoverArt {
         on_loaded: impl FnOnce(&Self) + 'static,
     ) {
         let imp = self.imp();
-        let generation = imp.generation.get() + 1;
-        imp.generation.set(generation);
-        imp.texture.replace(None);
-        self.queue_draw();
+        let generation = self.forget();
         let (path, is_icon) = match (cover, icon) {
             (Some(cover), _) => (cover, false),
             (None, Some(icon)) => (icon, true),
@@ -179,12 +178,14 @@ impl CoverArt {
             on_loaded(self);
             return;
         }
+        let cancellable = gio::Cancellable::new();
+        imp.loading.replace(Some(cancellable.clone()));
         let art = self.downgrade();
         glib::spawn_future_local(async move {
             let texture = if is_icon {
                 textures::load(&path).await
             } else {
-                textures::load_cover(&path, width, height).await
+                textures::load_cover(&path, width, height, &cancellable).await
             };
             let Some(art) = art.upgrade() else { return };
             let imp = art.imp();
@@ -201,10 +202,21 @@ impl CoverArt {
 
     /// Forgets the shown art and any load in progress.
     pub fn clear(&self) {
+        self.forget();
+    }
+
+    /// Forgets the shown art and cancels its load if it is under way; the art's new
+    /// generation.
+    fn forget(&self) -> u64 {
         let imp = self.imp();
-        imp.generation.set(imp.generation.get() + 1);
+        let generation = imp.generation.get() + 1;
+        imp.generation.set(generation);
+        if let Some(loading) = imp.loading.take() {
+            loading.cancel();
+        }
         imp.texture.replace(None);
         self.queue_draw();
+        generation
     }
 }
 

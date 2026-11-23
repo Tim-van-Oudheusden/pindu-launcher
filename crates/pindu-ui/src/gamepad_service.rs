@@ -409,7 +409,11 @@ impl GamepadService {
         }
     }
 
-    /// Sets the repeat timer to the held direction's next repeat, or clears it.
+    /// Sets the repeat timer to the held direction's next repeat, or clears it. The timer
+    /// runs below GTK's redraws and at the priority of the controller's queued events: a
+    /// step that took longer than the repeat interval lets its frame draw and the release
+    /// of the direction arrive before the next repeat, rather than repeats queuing up
+    /// ahead of them, and the repeats it missed come as one (`Intents::repeat`).
     fn schedule_repeat(&self) {
         if let Some(source) = self.inner.repeat.take() {
             source.remove();
@@ -418,19 +422,24 @@ impl GamepadService {
             return;
         };
         let service = Rc::downgrade(&self.inner);
-        let source = glib::timeout_add_local_once(due.saturating_sub(now()), move || {
-            let Some(inner) = service.upgrade() else {
-                return;
-            };
-            // This timer has fired; the next one is set below.
-            inner.repeat.take();
-            let service = GamepadService { inner };
-            let intent = service.inner.intents.borrow_mut().repeat(now());
-            if let Some(intent) = intent {
-                service.emit(intent);
-            }
-            service.schedule_repeat();
-        });
+        let source = glib::timeout_add_local_full(
+            due.saturating_sub(now()),
+            glib::Priority::DEFAULT_IDLE,
+            move || {
+                let Some(inner) = service.upgrade() else {
+                    return glib::ControlFlow::Break;
+                };
+                // This timer has fired; the next one is set below.
+                inner.repeat.take();
+                let service = GamepadService { inner };
+                let intent = service.inner.intents.borrow_mut().repeat(now());
+                if let Some(intent) = intent {
+                    service.emit(intent);
+                }
+                service.schedule_repeat();
+                glib::ControlFlow::Break
+            },
+        );
         *self.inner.repeat.borrow_mut() = Some(source);
     }
 }

@@ -5,6 +5,7 @@
 //! library's tabs like LB and RB, and with Shift held too they cycle its sort order like
 //! LT and RT. Alongside them, the keys GTK and the window handle themselves (the arrows,
 //! Enter, Esc and Ctrl+F) stand in for the rest, which Quick Access's Controls lists.
+//! [`HeldKey`] tells a held arrow's repeats from presses, as Home's rows need.
 
 use crate::gamepad::{Direction, Intent};
 
@@ -150,6 +151,26 @@ pub fn escape(shows_home_section: bool) -> Escape {
     }
 }
 
+/// The key held down, by its GDK key value, to tell the keyboard's own repeats of a held
+/// arrow from fresh presses: GTK reports each repeat as one more press, with no release
+/// between.
+#[derive(Debug, Default)]
+pub struct HeldKey(Option<u32>);
+
+impl HeldKey {
+    /// Notes `key` going down; `true` when it already was, so the keyboard repeats it.
+    pub fn press(&mut self, key: u32) -> bool {
+        self.0.replace(key) == Some(key)
+    }
+
+    /// Notes `key` coming up; another key going up leaves the one held as it is.
+    pub fn release(&mut self, key: u32) {
+        if self.0 == Some(key) {
+            self.0 = None;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -159,6 +180,10 @@ mod tests {
         shift: false,
         alt: false,
     };
+    /// GDK's key value for Right.
+    const RIGHT: u32 = 0xff53;
+    /// GDK's key value for Left.
+    const LEFT: u32 = 0xff51;
 
     #[test]
     fn f10_opens_the_menu_drawer() {
@@ -288,5 +313,27 @@ mod tests {
     #[test]
     fn escape_anywhere_else_leaves_fullscreen_mode() {
         assert_eq!(escape(false), Escape::LeaveFullscreen);
+    }
+
+    #[test]
+    fn a_key_pressed_again_before_it_comes_up_is_the_keyboard_repeating_it() {
+        let mut held = HeldKey::default();
+
+        assert!(!held.press(RIGHT));
+        assert!(held.press(RIGHT));
+        assert!(held.press(RIGHT));
+        held.release(RIGHT);
+        assert!(!held.press(RIGHT));
+    }
+
+    #[test]
+    fn the_last_key_pressed_is_the_one_held_and_letting_go_of_another_keeps_it() {
+        let mut held = HeldKey::default();
+
+        held.press(LEFT);
+        assert!(!held.press(RIGHT));
+        held.release(LEFT);
+        assert!(held.press(RIGHT));
+        assert!(!held.press(LEFT));
     }
 }

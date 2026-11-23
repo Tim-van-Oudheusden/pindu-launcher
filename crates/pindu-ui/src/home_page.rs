@@ -22,21 +22,26 @@
 //! Behind the first screen plays Home's background (`.home-background`), as
 //! `home::background_playback` says for where the window is. Quick Access's Blur and Dim
 //! name their strength on the page (`blur-*`, `dim-*`, `home::background_classes`), which
-//! blurs the background and the hero and darkens them under `.home-dim`.
+//! blurs the background and the hero and darkens them under `.home-dim`. Art that has to
+//! load waits for focus to rest (`pindu_core::gamepad::FOCUS_REST`), and focus held moving
+//! through the items keeps the hero shown until then, so a held direction or arrow key
+//! keeps its pace and stops where it is let go.
 
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
-use gtk::glib;
+use gtk::glib::translate::IntoGlib;
+use gtk::{gio, glib};
 use pindu_core::focus::FocusMemory;
-use pindu_core::gamepad::Direction;
+use pindu_core::gamepad::{Direction, FOCUS_REST};
 use pindu_core::home::{
     self, Background, BackgroundContext, CardArt, Detail, ExploreRow, FeaturedButton, Playback,
     RowItem, ShelfStep, Strength,
 };
+use pindu_core::keys::HeldKey;
 use pindu_core::library::{ArtSet, HistoryGroup};
 use pindu_core::model::GameId;
 use pindu_core::sections::{self, Section, SectionId};
@@ -547,6 +552,17 @@ struct Shelf {
     pending: RefCell<Vec<(CoverArt, GameObject)>>,
 }
 
+/// What waits for focus to rest (`FOCUS_REST`) before it loads, so focus held through
+/// many items does not load art for each one it passes.
+#[derive(Debug, Default)]
+struct Waiting {
+    /// The hero art and logo `show_art` was given, for the hero of the generation given.
+    hero: Option<(Option<PathBuf>, Option<PathBuf>, u64)>,
+    /// The preview strip's covers whose art is not in memory, each with its art and size
+    /// in pixels.
+    covers: Vec<(CoverArt, PathBuf, (u32, u32))>,
+}
+
 mod imp {
     use super::*;
 
@@ -672,6 +688,24 @@ mod imp {
         pub shelves_settle: Cell<Option<bool>>,
         /// Bumped for every hero shown, so art that loads late for an earlier one is dropped.
         pub hero_generation: Cell<u64>,
+        /// Cancels the decode of the hero art loading, once another hero is asked for.
+        pub hero_loading: RefCell<Option<gio::Cancellable>>,
+        /// The wait for focus to rest where it moved to (`FOCUS_REST`).
+        pub rest: RefCell<Option<glib::SourceId>>,
+        /// The tile or card focus is to rest on.
+        pub(super) rest_item: RefCell<Option<Item>>,
+        /// Whether focus is moving through items, held: it moved again before it rested.
+        /// Hero art waits for it to rest then, even art in memory.
+        pub moving: Cell<bool>,
+        /// The art that waits for focus to rest before it loads.
+        pub(super) waiting: RefCell<Waiting>,
+        /// The preview strip's covers and its `+N`, made once and filled for each section.
+        pub preview_items: OnceCell<(Vec<CoverArt>, gtk::Label)>,
+        /// The arrow key held down, to tell the keyboard's repeats of it from presses.
+        pub held_key: RefCell<HeldKey>,
+        /// Whether a step the arrow keys made has yet to be drawn: their repeats are
+        /// dropped until it has, so they never queue up ahead of the frames.
+        pub step_pending: Cell<bool>,
         /// The layout of the design in force.
         pub layout: Cell<ThemeLayout>,
     }
@@ -755,25 +789,12 @@ mod imp {
                     page,
                     #[upgrade_or]
                     glib::Propagation::Proceed,
-                    move |_, key, _, state| {
-                        let direction = match key {
-                            gtk::gdk::Key::Up | gtk::gdk::Key::KP_Up => Direction::Up,
-                            gtk::gdk::Key::Down | gtk::gdk::Key::KP_Down => Direction::Down,
-                            gtk::gdk::Key::Left | gtk::gdk::Key::KP_Left => Direction::Left,
-                            gtk::gdk::Key::Right | gtk::gdk::Key::KP_Right => Direction::Right,
-                            _ => return glib::Propagation::Proceed,
-                        };
-                        let modified = state.intersects(
-                            gtk::gdk::ModifierType::CONTROL_MASK
-                                | gtk::gdk::ModifierType::SHIFT_MASK
-                                | gtk::gdk::ModifierType::ALT_MASK,
-                        );
-                        if !modified && page.navigate(direction) {
-                            glib::Propagation::Stop
-                        } else {
-                            glib::Propagation::Proceed
-                        }
-                    }
+                    move |_, key, _, state| page.arrow_pressed(key, state)
+                ));
+                arrows.connect_key_released(glib::clone!(
+                    #[weak]
+                    page,
+                    move |_, key, _, _| page.imp().held_key.borrow_mut().release(key.into_glib())
                 ));
                 rows.add_controller(arrows);
             }
@@ -2382,14 +2403,18 @@ impl HomePage {
                 if imp.shelves_settle.take() == Some(true) {
                     page.scroll_to_shelf();
                 }
-                page.load_shelf_art();
+                // Focus held through the rows loads the art near where it stops.
+                if !imp.moving.get() {
+                    page.load_shelf_art();
+                }
                 glib::ControlFlow::Break
             }
         ));
     }
 
     /// Loads the art of the rows of the Shelves layout that show or are within a page of
-    /// showing; the rows further off load theirs once the list scrolls near them.
+    /// showing; the rows further off load theirs once the list scrolls near them, and
+    /// once focus rests there when it moved there held.
     fn load_shelf_art(&self) {
         let imp = self.imp();
         let adjustment = imp.shelves_scroller.vadjustment();
@@ -2437,6 +2462,54 @@ impl HomePage {
                 .vadjustment()
                 .set_value(f64::from(bounds.y()));
         }
+    }
+
+    /// An arrow key pressed in the rows moves through them as the controller does
+    /// (`navigate`). The keyboard's repeats of a held arrow are dropped while the step
+    /// before is still to be drawn, so a step slower than the repeat rate does not queue
+    /// up repeats that go on moving focus once the key is let go.
+    fn arrow_pressed(
+        &self,
+        key: gtk::gdk::Key,
+        state: gtk::gdk::ModifierType,
+    ) -> glib::Propagation {
+        let direction = match key {
+            gtk::gdk::Key::Up | gtk::gdk::Key::KP_Up => Direction::Up,
+            gtk::gdk::Key::Down | gtk::gdk::Key::KP_Down => Direction::Down,
+            gtk::gdk::Key::Left | gtk::gdk::Key::KP_Left => Direction::Left,
+            gtk::gdk::Key::Right | gtk::gdk::Key::KP_Right => Direction::Right,
+            _ => return glib::Propagation::Proceed,
+        };
+        let imp = self.imp();
+        let repeat = imp.held_key.borrow_mut().press(key.into_glib());
+        let modified = state.intersects(
+            gtk::gdk::ModifierType::CONTROL_MASK
+                | gtk::gdk::ModifierType::SHIFT_MASK
+                | gtk::gdk::ModifierType::ALT_MASK,
+        );
+        if modified {
+            return glib::Propagation::Proceed;
+        }
+        if repeat && imp.step_pending.get() {
+            return glib::Propagation::Stop;
+        }
+        if !self.navigate(direction) {
+            return glib::Propagation::Proceed;
+        }
+        if !imp.step_pending.replace(true) {
+            // A frame's tick comes before its layout and drawing: the second tick comes
+            // once the step has been drawn.
+            let ticks = Cell::new(0);
+            self.add_tick_callback(move |page, _| {
+                ticks.set(ticks.get() + 1);
+                if ticks.get() < 2 {
+                    return glib::ControlFlow::Continue;
+                }
+                page.imp().step_pending.set(false);
+                glib::ControlFlow::Break
+            });
+        }
+        glib::Propagation::Stop
     }
 
     /// Moves focus along and between Home's rows as the controller or the arrow keys ask:
@@ -2721,6 +2794,7 @@ impl HomePage {
     /// the Explore layout, whose rows say it all themselves.
     fn show_focused(&self, focused: &Focused) {
         let imp = self.imp();
+        self.focus_moved(focused.item());
         let layout = imp.layout.get();
         if layout.home == HomeLayout::Explore {
             return;
@@ -2772,10 +2846,22 @@ impl HomePage {
         }
     }
 
+    /// The generation of a new hero: art that loads late for an earlier one is dropped,
+    /// and its decode cancelled if it is still under way.
+    fn next_hero(&self) -> u64 {
+        let imp = self.imp();
+        let generation = imp.hero_generation.get() + 1;
+        imp.hero_generation.set(generation);
+        if let Some(loading) = imp.hero_loading.take() {
+            loading.cancel();
+        }
+        generation
+    }
+
     /// Shows `title` alone: no logo, art or details.
     fn show_title(&self, title: &str) {
         let imp = self.imp();
-        imp.hero_generation.set(imp.hero_generation.get() + 1);
+        self.next_hero();
         self.hide_hero_art();
         imp.logo.set_paintable(gtk::gdk::Paintable::NONE);
         imp.logo.set_visible(false);
@@ -2787,8 +2873,7 @@ impl HomePage {
     /// Shows a section's `title` with its `details`, over `art` if it is given some.
     fn show_info(&self, title: &str, details: &[Detail], art: Option<PathBuf>) {
         let imp = self.imp();
-        let generation = imp.hero_generation.get() + 1;
-        imp.hero_generation.set(generation);
+        let generation = self.next_hero();
         imp.logo.set_paintable(gtk::gdk::Paintable::NONE);
         imp.logo.set_visible(false);
         imp.title.set_visible(true);
@@ -2799,46 +2884,67 @@ impl HomePage {
 
     /// Fills the strip of the focused section's first covers (`.home-preview`,
     /// `home::preview`): a cover each, then `+N` (`.preview-more`) for the games beyond
-    /// them. Without a section the strip hides. Art in memory shows at once.
+    /// them. Without a section the strip hides. Art in memory shows at once; other art
+    /// loads once focus rests. The strip's covers are made once and refilled.
     fn show_preview(&self, section: Option<(&Section, &[GameObject])>) {
-        let strip = &self.imp().preview;
-        while let Some(cover) = strip.first_child() {
-            strip.remove(&cover);
-        }
+        let imp = self.imp();
+        let strip = &imp.preview;
+        let (width, height) = PREVIEW_COVER;
+        let (covers, more) = imp.preview_items.get_or_init(|| {
+            let covers: Vec<CoverArt> = (0..home::PREVIEW_SIZE)
+                .map(|_| {
+                    let cover = CoverArt::new();
+                    cover.set_size_request(width, height);
+                    strip.append(&cover);
+                    cover
+                })
+                .collect();
+            let more = gtk::Label::builder()
+                .width_request(width)
+                .height_request(height)
+                .css_classes(["preview-more"])
+                .build();
+            strip.append(&more);
+            (covers, more)
+        });
+        let mut waiting = imp.waiting.borrow_mut();
+        waiting.covers.clear();
         let Some((section, games)) = section else {
             strip.set_visible(false);
             return;
         };
         let preview = home::preview(section);
-        let (width, height) = PREVIEW_COVER;
         let scale = self.scale_factor().max(1);
         let pixels = ((width * scale) as u32, (height * scale) as u32);
-        for id in &preview.games {
-            let Some(game) = games.iter().find(|game| game.id() == *id) else {
-                continue;
-            };
+        let shown = preview
+            .games
+            .iter()
+            .filter_map(|id| games.iter().find(|game| game.id() == *id));
+        let mut covers = covers.iter();
+        for (game, cover) in shown.zip(covers.by_ref()) {
             let entry = game.entry();
             let art = home::card_art(TileShape::Portrait, &entry.art);
-            let cover = CoverArt::new();
-            cover.set_size_request(width, height);
             cover.set_alternative_text(&entry.game.title);
             cover.set_crop(art.crop);
-            cover.show(art.art, None, pixels, |_| {});
-            strip.append(&cover);
+            cover.set_visible(true);
+            match art.art {
+                Some(path) if textures::cached_cover(&path, pixels.0, pixels.1).is_none() => {
+                    cover.clear();
+                    waiting.covers.push((cover.clone(), path, pixels));
+                }
+                art => cover.show(art, None, pixels, |_| {}),
+            }
+        }
+        for cover in covers {
+            cover.clear();
+            cover.set_visible(false);
         }
         if preview.more > 0 {
             // Translators: how many more games a section holds than the covers shown
             // beside this, as in "+6".
-            let more = gettext("+{count}").replace("{count}", &preview.more.to_string());
-            strip.append(
-                &gtk::Label::builder()
-                    .label(&more)
-                    .width_request(width)
-                    .height_request(height)
-                    .css_classes(["preview-more"])
-                    .build(),
-            );
+            more.set_label(&gettext("+{count}").replace("{count}", &preview.more.to_string()));
         }
+        more.set_visible(preview.more > 0);
         strip.set_visible(true);
     }
 
@@ -2899,8 +3005,7 @@ impl HomePage {
     /// details when the design asks for them.
     fn show_game(&self, game: &GameObject) {
         let imp = self.imp();
-        let generation = imp.hero_generation.get() + 1;
-        imp.hero_generation.set(generation);
+        let generation = self.next_hero();
         imp.logo.set_paintable(gtk::gdk::Paintable::NONE);
         imp.logo.set_visible(false);
         imp.title.set_visible(true);
@@ -2917,20 +3022,25 @@ impl HomePage {
 
     /// Shows `art` as the hero and `logo` in the title's place, for the hero of
     /// `generation`. The page carries `.no-art` while no hero art shows. Art in memory
-    /// shows at once, so moving along the carousel does not flicker; art that still has
-    /// to load replaces the hero shown once it has, so a design fades straight from one
-    /// to the other, and is dropped if another hero was asked for meanwhile.
+    /// shows at once, so moving along the carousel does not flicker, unless focus is held
+    /// moving through the items; other art loads once focus rests (`FOCUS_REST`) and
+    /// replaces the hero shown once it has, so a design fades straight from one to the
+    /// other.
     fn show_art(&self, art: Option<PathBuf>, logo: Option<PathBuf>, generation: u64) {
-        let art = match art.as_deref().and_then(textures::cached) {
-            Some(texture) => {
-                self.show_hero_art(&texture);
-                None
-            }
-            None if art.is_none() => {
+        let imp = self.imp();
+        let art = match art {
+            None => {
                 self.hide_hero_art();
                 None
             }
-            None => art,
+            Some(path) if imp.moving.get() => Some(path),
+            Some(path) => match self.cached_hero(&path) {
+                Some(texture) => {
+                    self.show_hero_art(&texture);
+                    None
+                }
+                None => Some(path),
+            },
         };
         let logo = logo.filter(|path| match textures::cached(path) {
             Some(texture) => {
@@ -2939,16 +3049,83 @@ impl HomePage {
             }
             None => true,
         });
+        imp.waiting.borrow_mut().hero =
+            (art.is_some() || logo.is_some()).then_some((art, logo, generation));
+    }
+
+    /// Notes that `item` has focus and waits for focus to rest there (`FOCUS_REST`): what
+    /// has to load waits until then. Focus that moves to another item before it rests is
+    /// held moving through the items (`moving`).
+    fn focus_moved(&self, item: Item) {
+        let imp = self.imp();
+        let moved = imp.rest_item.replace(Some(item.clone())) != Some(item);
+        if let Some(source) = imp.rest.take() {
+            source.remove();
+            if moved {
+                imp.moving.set(true);
+            }
+        }
+        let page = self.downgrade();
+        let source = glib::timeout_add_local_once(FOCUS_REST, move || {
+            if let Some(page) = page.upgrade() {
+                // This timer has fired.
+                page.imp().rest.take();
+                page.rested();
+            }
+        });
+        imp.rest.replace(Some(source));
+    }
+
+    /// Focus rests: loads the hero, logo and preview covers that waited for it, and the
+    /// art of the rows near it in the Shelves layout.
+    fn rested(&self) {
+        let imp = self.imp();
+        let moved = imp.moving.replace(false);
+        let waiting = imp.waiting.take();
+        if let Some((art, logo, generation)) = waiting.hero
+            && generation == imp.hero_generation.get()
+        {
+            self.load_art(art, logo, generation);
+        }
+        for (cover, path, pixels) in waiting.covers {
+            cover.show(Some(path), None, pixels, |_| {});
+        }
+        if moved {
+            self.load_shelf_art();
+        }
+    }
+
+    /// Loads `art` as the hero, sized for the screen, and `logo` in the title's place, for
+    /// the hero of `generation`; art already in memory shows at once. Art that loads once
+    /// another hero was asked for is dropped, and its decode cancelled.
+    fn load_art(&self, art: Option<PathBuf>, logo: Option<PathBuf>, generation: u64) {
+        let art = art.filter(|path| match self.cached_hero(path) {
+            Some(texture) => {
+                self.show_hero_art(&texture);
+                false
+            }
+            None => true,
+        });
         if art.is_none() && logo.is_none() {
             return;
         }
+        let size = self.hero_pixels();
+        let cancellable = gio::Cancellable::new();
+        self.imp().hero_loading.replace(Some(cancellable.clone()));
         let page = self.downgrade();
+        let current = move |page: &glib::WeakRef<Self>| {
+            page.upgrade()
+                .filter(|page| page.imp().hero_generation.get() == generation)
+        };
         glib::spawn_future_local(async move {
             if let Some(path) = art {
-                let texture = textures::load(&path).await;
-                if let Some(page) = page.upgrade()
-                    && page.imp().hero_generation.get() == generation
-                {
+                let texture = match size {
+                    Some((width, height)) => {
+                        textures::load_hero(&path, width, height, &cancellable).await
+                    }
+                    None => textures::load(&path).await,
+                };
+                if let Some(page) = current(&page) {
                     match texture {
                         Ok(texture) => page.show_hero_art(&texture),
                         Err(_) => page.hide_hero_art(),
@@ -2956,13 +3133,27 @@ impl HomePage {
                 }
             }
             if let Some(path) = logo
+                && current(&page).is_some()
                 && let Ok(texture) = textures::load(&path).await
-                && let Some(page) = page.upgrade()
-                && page.imp().hero_generation.get() == generation
+                && let Some(page) = current(&page)
             {
                 page.show_logo(&texture);
             }
         });
+    }
+
+    /// The hero art at `path` if it is in memory, at the screen's size or at its own.
+    fn cached_hero(&self, path: &Path) -> Option<gtk::gdk::Texture> {
+        self.hero_pixels()
+            .and_then(|(width, height)| textures::cached_cover(path, width, height))
+            .or_else(|| textures::cached(path))
+    }
+
+    /// The size in device pixels hero art is decoded at: the screen's, which the hero
+    /// covers. `None` before the window shows.
+    fn hero_pixels(&self) -> Option<(u32, u32)> {
+        let (width, height) = self.screen_pixels()?;
+        Some((u32::try_from(width).ok()?, u32::try_from(height).ok()?))
     }
 
     fn show_logo(&self, texture: &gtk::gdk::Texture) {

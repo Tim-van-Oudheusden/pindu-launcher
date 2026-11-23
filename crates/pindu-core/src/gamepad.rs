@@ -463,6 +463,10 @@ pub enum GamepadEvent {
 pub const REPEAT_DELAY: Duration = Duration::from_millis(300);
 /// How often a held direction repeats after that by default.
 pub const REPEAT_INTERVAL: Duration = Duration::from_millis(50);
+/// How long focus stays on an item before the item's slow work starts, such as art that
+/// still has to load: focus moved by a held direction never rests that long between two
+/// steps, at any repeat rate, so that work is done once, where focus stops.
+pub const FOCUS_REST: Duration = Duration::from_millis(150);
 /// How long Back is held to cancel a launch.
 pub const HOLD_DURATION: Duration = Duration::from_secs(1);
 /// How far a stick must move before it navigates by default.
@@ -1512,6 +1516,19 @@ mod tests {
     }
 
     #[test]
+    fn repeats_missed_while_a_step_was_slow_coalesce_into_one() {
+        let mut intents = Intents::new();
+        let down = Intent::Navigate(Direction::Down);
+
+        intents.handle(&press(Button::DpadDown), ms(1000));
+        // The main loop was busy for four intervals past the first repeat: one repeat,
+        // and the next a whole interval after it, not four to catch up.
+        assert_eq!(intents.repeat(ms(1500)), Some(down));
+        assert_eq!(intents.repeat(ms(1500)), None);
+        assert_eq!(intents.next_repeat(), Some(ms(1550)));
+    }
+
+    #[test]
     fn a_longer_repeat_delay_and_a_slower_rate_space_the_repeats_out() {
         let mut intents = Intents::new();
         intents.set_navigation(Navigation {
@@ -1588,6 +1605,13 @@ mod tests {
         // Back inside the dead zone lets go of the direction.
         assert_eq!(small.handle(&stick(Axis::LeftX, 0.2), ms(20)), None);
         assert_eq!(small.next_repeat(), None);
+    }
+
+    #[test]
+    fn focus_held_through_items_at_any_repeat_rate_never_rests() {
+        for rate in RepeatRate::ALL {
+            assert!(FOCUS_REST > rate.interval(), "{rate:?}");
+        }
     }
 
     #[test]

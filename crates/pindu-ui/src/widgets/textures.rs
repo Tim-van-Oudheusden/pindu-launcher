@@ -1,7 +1,8 @@
 //! Game art decoded by glycin's sandboxed loaders, with the last few hundred images kept
 //! in memory so tiles that rebind or scroll back, and pages that reopen, draw at once.
-//! Covers are also stored resized per tile size in the art cache, so a big library does
-//! not decode full-size art on every start.
+//! Covers and Home's heroes are also stored resized per tile or screen size in the art
+//! cache, so a big library does not decode full-size art on every start, and a decode
+//! whose art is no longer wanted can be cancelled.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
@@ -29,7 +30,7 @@ pub async fn load(path: &Path) -> Result<gdk::Texture, String> {
     if let Some(texture) = cached(path) {
         return Ok(texture);
     }
-    let decoded = decode(path).await;
+    let decoded = decode(path, None).await;
     match &decoded {
         Ok(texture) => remember(path.to_owned(), texture.clone()),
         Err(error) => glib::g_debug!("pindu", "Could not load {}: {error}", path.display()),
@@ -37,8 +38,16 @@ pub async fn load(path: &Path) -> Result<gdk::Texture, String> {
     decoded
 }
 
-async fn decode(path: &Path) -> Result<gdk::Texture, String> {
-    first_frame(glycin::Loader::new(gio::File::for_path(path))).await
+/// Decodes an image file, until `cancellable` is cancelled.
+async fn decode(
+    path: &Path,
+    cancellable: Option<&gio::Cancellable>,
+) -> Result<gdk::Texture, String> {
+    let mut loader = glycin::Loader::new(gio::File::for_path(path));
+    if let Some(cancellable) = cancellable {
+        loader.cancellable(cancellable.clone());
+    }
+    first_frame(loader).await
 }
 
 /// Decodes an image held in memory, such as a program's icon; not kept.
@@ -65,8 +74,40 @@ fn cover_key(path: &Path, width: u32, height: u32) -> PathBuf {
 }
 
 /// The cover at `path`, shrunk to cover a `width`×`height` tile: from memory, from the
-/// art cache, or decoded and then stored resized in the art cache.
-pub async fn load_cover(path: &Path, width: u32, height: u32) -> Result<gdk::Texture, String> {
+/// art cache, or decoded and then stored resized in the art cache. Cancelling
+/// `cancellable` stops a decode under way, or keeps one from starting.
+pub async fn load_cover(
+    path: &Path,
+    width: u32,
+    height: u32,
+    cancellable: &gio::Cancellable,
+) -> Result<gdk::Texture, String> {
+    load_resized(path, width, height, cancellable, true).await
+}
+
+/// Hero art at `path`, shrunk to cover a `width`×`height` screen, as [`load_cover`]
+/// loads covers, except that art not in the art cache yet is given at its own size as
+/// soon as it is decoded, as fast as before it was ever stored, while its shrunk copy is
+/// made and stored for the next time.
+pub async fn load_hero(
+    path: &Path,
+    width: u32,
+    height: u32,
+    cancellable: &gio::Cancellable,
+) -> Result<gdk::Texture, String> {
+    load_resized(path, width, height, cancellable, false).await
+}
+
+/// The image at `path` shrunk to cover `width`×`height`, from memory or the art cache;
+/// else decoded, then shrunk and stored, before it is given with `wait_for_shrink`, or
+/// given at once without.
+async fn load_resized(
+    path: &Path,
+    width: u32,
+    height: u32,
+    cancellable: &gio::Cancellable,
+    wait_for_shrink: bool,
+) -> Result<gdk::Texture, String> {
     let key = cover_key(path, width, height);
     if let Some(texture) = cached(&key) {
         return Ok(texture);
@@ -85,15 +126,27 @@ pub async fn load_cover(path: &Path, width: u32, height: u32) -> Result<gdk::Tex
     })
     .await
     .map_err(|_| "the art cache lookup stopped".to_owned())?;
-    let texture = match cached_file {
-        (_, Some(texture)) => texture,
+    let (file, texture) = match cached_file {
+        (_, Some(texture)) => {
+            remember(key, texture.clone());
+            return Ok(texture);
+        }
+        (_, None) if cancellable.is_cancelled() => return Err("cancelled".to_owned()),
         (file, None) => {
-            let full = decode(path).await.inspect_err(|error| {
+            let full = decode(path, Some(cancellable)).await.inspect_err(|error| {
                 glib::g_debug!("pindu", "Could not load {}: {error}", path.display());
             })?;
-            shrink_and_store(full, width, height, file).await
+            (file, full)
         }
     };
+    if !wait_for_shrink {
+        let full = texture.clone();
+        glib::spawn_future_local(async move {
+            remember(key, shrink_and_store(full, width, height, file).await);
+        });
+        return Ok(texture);
+    }
+    let texture = shrink_and_store(texture, width, height, file).await;
     remember(key, texture.clone());
     Ok(texture)
 }

@@ -315,7 +315,7 @@ window.fullscreen-mode .home.dim-low .home-dim { background-color: rgb(20 0 40 /
 |---|---|
 | `.home` | The page; also `.home-sections` on the first screen or `.home-games` on the second and in the Shelves layout (neither in the Explore layout), `.home-layout-hero-bottom`, `.home-layout-row-top`, `.home-layout-shelves` or `.home-layout-explore`, `.home-start-games` while the first screen's row starts with games, `.no-art` while no art is shown, on either screen, and `.blur-low` or `.blur-high` and `.dim-low` or `.dim-high` as Quick Access's Background Blur and Dim say |
 | `.home-background` | Home's animated background, filling the page under the art; black where there is no video, hidden (`opacity: 0`) on the second screen. Blurred with `filter` under `.blur-*`; a `filter` of your own replaces Pindu's blur |
-| `.home-hero` | The focused game's art filling the page; the one showing the current art also has `.shown`, so `transition: opacity` crossfades. Blurred like `.home-background` |
+| `.home-hero` | The focused game's art filling the page; the one showing the current art also has `.shown`, so `transition: opacity` crossfades. While a held direction moves focus through the items, the art shown stays until focus stops, so the crossfade runs once. Blurred like `.home-background` |
 | `.home-dim` | A layer over the background and the art, under the shade and the text; transparent until `.dim-low` or `.dim-high` darkens it |
 | `.hero-gradient` | The shade over the art |
 | `.home-eyebrow` | "Jump Back In", over the title while one of the Recently Played games has focus on the first screen (with `"home-start": "games"`) |

@@ -327,16 +327,23 @@ impl PinduWindow {
         );
     }
 
-    /// The model position of the cover with focus, if a cover has it.
+    /// The model position of the cover with focus, if a cover has it: the cover the
+    /// controller last moved to, as a rule, so a held direction does not search the whole
+    /// model on every step.
     fn focused_grid_position(&self) -> Option<u32> {
         let game = self.focused_tile()?.game()?;
         let model = self.imp().grid.model()?;
-        (0..model.n_items()).find(|&position| {
+        let is_focused = |position: u32| {
             model
                 .item(position)
                 .and_downcast::<GameObject>()
                 .is_some_and(|item| item == game)
-        })
+        };
+        let cursor = self.imp().grid_cursor.get();
+        if is_focused(cursor) {
+            return Some(cursor);
+        }
+        (0..model.n_items()).find(|&position| is_focused(position))
     }
 
     /// Activates the focused widget as Enter or Space would: a cover opens its game, a
