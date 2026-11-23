@@ -44,7 +44,8 @@ In this order, local data first:
    collections, and a **More Categories** row for the rest; the designs with two screens (Lobby, Marquee) get a
    **Categories** tile after Installed that opens a screen of category tiles. A category opens the library at All
    Games filtered to it (`Filters::genre`). **Categories on Home** (`fullscreen-home-categories`) turns them off.
-   Nothing new is stored: the code and the stored data keep "genre".
+   Nothing new is stored: the code and the stored data keep "genre". Since #759 the categories are a closed set
+   ([Categories](#categories)), so Home has at most fourteen plus any the user typed.
 
    Backups (#600) carry each saved filter as a collection entry with no games and a `filter` beside it: its view,
    toggles and search, with a view of a collection naming that collection, since IDs differ between libraries.
@@ -60,23 +61,27 @@ In this order, local data first:
    As built (#527), following #523's write-up: Steam's `appinfo.vdf` gives the release year (the UTC year of
    `original_release_date`, else `steam_release_date`; 0 means unknown), categories (Steam's `genres` IDs named from a
    fixed table: 1 Action, 2 Strategy, 3 RPG, 4 Casual, 9 Racing, 18 Sports, 23 Indie, 25 Adventure, 28 Simulation, 29
-   Massively Multiplayer; Free To Play, Early Access and unknown IDs are dropped) and controller support (`full` or
+   Massively Multiplayer; Free To Play, Early Access and unknown IDs are dropped; since #759 the table is the `steam`
+   one in [Categories](#categories)) and controller support (`full` or
    `partial`; absent means not declared, not none). Lutris gives `year` and Heroic's Amazon library the year of
    `extra.releaseDate`. All of them become source values in `game_metadata` (fields `release-year` and
    `controller-support` join the three below, with no migration), and both game pages show them in the About group,
-   Steam's genre names translated. The year also stays in the source details, where grouping copies compares it.
+   the categories translated.
 3. **Metadata with its origin.** A table holds values by field with their origin (source, provider, user) and time.
-   Reading prefers the user's value, then a provider's, then the source's; a sync changes source values only. The user
-   can edit developer, categories, description and release year from the desktop game page (and from fullscreen mode if
-   #520 says a console needs it), and that value survives syncs and refreshes.
+   Reading prefers the user's value, then a provider's, then the source's; a sync changes source values only. Since
+   #759 categories are the exception: a provider's add to the source's instead of replacing them, and the user's
+   still replace both. The user can edit developer, categories, description and release year from the desktop game
+   page (and from fullscreen mode if #520 says a console needs it), and that value survives syncs and refreshes.
 
    As built (#526): `game_metadata` (migration 0008) holds one row per game, field (`developer`, `genres`,
    `description`, and since #534 `deck-compatibility`, Steam's Steam Deck rating) and origin (`source`, `provider`,
    `user`) with the value and when that origin last changed it. The migration moved the `games` columns of the first
    three names into source rows and dropped the columns, so nothing reads a
    stale copy. `pindu_core::metadata` resolves the rows (`shown` picks one field's winning value with its origin and
-   time, `resolve` all of them), and the store hands every `Game` out with resolved `developer`, `genres` and
-   `description`, so both shells and the filters show the winning value without knowing about origins. Writes
+   time, `resolve` all of them, with a game's categories the user's if any, else the source's followed by the
+   provider's it lacks, compared ignoring case), and the store hands every `Game` out with resolved `developer`,
+   `genres` and `description`, so both shells and the filters show the resolved value without knowing about origins.
+   Writes
    go through `Store::set_metadata(game, origin, metadata, now)`, which replaces one origin's values, keeps the time
    of a value that did not change and drops a field left empty. A sync calls it for the source only; `insert_game`
    records a new game's values as its source's; `update_game` never touches metadata, so saving a game read with a
@@ -88,7 +93,9 @@ In this order, local data first:
    source's values are left out, as the next sync writes them. A restore adds a value only where that origin has none
    for the field in this library, keeps the time it was set and counts it, so it never overwrites a value already
    there; a value for a game the library lacks is skipped and the game counted as missing. This extends backup format
-   2 (#509), unreleased until then, so format 1 and 2 backups still import.
+   2 (#509), unreleased until then, so format 1 and 2 backups still import. Since #759 a provider's categories are
+   restored only where they are in the category set, so a backup from before it, which holds Wikidata's labels, adds
+   none of them; the user's are restored as written.
 
    As built (#530): the desktop **Edit…** dialog (a game page's ⋮ menu) has a Details group with Developer, Categories
    (separated by commas) and Description, filled with what the game shows; as #520 decided, fullscreen mode has no
@@ -124,9 +131,10 @@ In this order, local data first:
    Wikidata's `P1733`), one after another, to `query.wikidata.org` through the app's soup3 stack, with a User-Agent
    naming the project's address and the SteamGridDB client's 429 back-off (`steamgriddb::retry_delay`, following
    `Retry-After`).
-   Each answer gives developers (`P178`) and Wikidata's genres (`P136`), labelled in the UI's languages, then `en`,
-   then `mul`; a value with no label in those is left out. Developers become one value, joined with commas,
-   categories a sorted list, both stored with origin `provider` through `Store::set_metadata`, timed when they were
+   Each answer gives developers (`P178`), labelled in the UI's languages, then `en`, then `mul` (a developer with no
+   label in those is left out), and Wikidata's genres (`P136`) by their item IDs. Developers become one value, joined
+   with commas, and the genres the categories they map to ([Categories](#categories)), both stored with origin
+   `provider` through `Store::set_metadata`, timed when they were
    fetched (a refresh that
    finds the same value keeps its earlier time), so a user's value still wins and a sync leaves them alone. The
    origin `provider` means Wikidata, the only provider. A game Wikidata has no item for keeps what it had. The run
@@ -147,6 +155,45 @@ In this order, local data first:
 
    Not done: publisher and series have no `game_metadata` field, and Lutris slugs are not kept, so Lutris games
    without a Steam link are not looked up.
+
+## Categories
+
+As built (#759): a game's categories (stored as `genres`) come from a closed set based on Steam's genres, so a
+provider adds games to a category rather than new categories. `pindu_core::category::CATEGORIES` holds it, in the
+order Pindu lists it: Steam's ten, **Action**, **Strategy**, **RPG**, **Casual**, **Racing**, **Sports**, **Indie**,
+**Adventure**, **Simulation** and **Massively Multiplayer**, then **Shooter**, **Platformer**, **Puzzle** and
+**Fighting**, added for games Steam has no genre for (an emulation provider's, for one). Each is translated where
+it is shown (`genre_label` in the UI crate). Adding a category is a deliberate change to that list, `genre_label` and
+the translation template.
+
+Each provider's genres reach the set through one data file,
+[`crates/pindu-core/src/category/mappings.json`](../crates/pindu-core/src/category/mappings.json), with one table
+per provider. An entry names a genre by the provider's ID, its English name for review, and the categories it maps
+to: one, several (Wikidata's action-adventure game is both Action and Adventure) or none (Steam's Free To Play, or a
+theme such as science fiction). A genre no entry lists maps to none, so a provider never adds a category of its own.
+`category::categories(provider, ids)` gives the categories once each, in the set's order; tests check that every
+entry names only categories of the set and every ID once.
+
+| Table | Keyed by | What maps where |
+| --- | --- | --- |
+| `steam` | `appinfo.vdf` genre ID | Each of the ten IDs to its own category; 37 Free To Play and 70 Early Access to none |
+| `wikidata` | the genre's item ID (QID), never its label, so the language of the labels changes nothing | The most used video game genres of Steam games on Wikidata: 4X, real-time, turn-based and grand strategy, tactics, tower defense, wargames and card and deck-building games to Strategy; action-adventure to Action and Adventure; shooters of every kind to Action and Shooter; platform games to Action and Platformer; fighting games to Action and Fighting; action RPGs and soulslikes to Action and RPG; city builders and god games to Simulation and Strategy; visual novels, point-and-click and walking simulators to Adventure; themes and structures (science fiction, horror, roguelike, sandbox, survival, rhythm) to none |
+| `heroic` | the store's genre name (`extra.genres`), ignoring case | GOG's (IGDB's) names, such as Role-playing (RPG), Real Time Strategy (RTS), Platform and Point-and-click, and the plain names Amazon and Epic use, to the category they name; Arcade, Card & Board Game and Music to none |
+
+Steam's and Heroic's genres are mapped at import and stored as the source's; Wikidata's are mapped when a refresh
+stores them as the provider's. A game shows the source's categories with the provider's added; categories the user
+types in **Edit…** replace both and may be any text, so the set does not bind them.
+
+**A new provider** (an emulation one such as IGDB or ScreenScraper, or another launcher) adds its own table to the
+data file under its own key, a `category::Provider` variant for that key (and its place in `Provider::ALL`), and a
+call to `category::categories` where its importer or refresh reads genres; it maps onto the set rather than adding
+categories. A genre that fits none of the fourteen maps to none until the maintainer decides to add a category.
+
+Migration 0012 drops every stored provider category (Wikidata's labels, which can't be mapped without their IDs) and
+Heroic's stored store genres; the next **Refresh Metadata** and the next sync store mapped ones. The user's
+categories stay. A saved filter or a backup's saved filter naming a category that no longer exists, such as "4X",
+is kept as it is and matches no game until the user picks another category; it is not remapped, since a label alone
+does not say which genre it was.
 
 ## Flatpak, native and Pindu OS
 
@@ -174,6 +221,7 @@ a controller alone.
 | #528 Choose an online metadata provider | Spike: candidates compared, one or none recommended | |
 | #529 Fetch metadata on request and cache it | The recommended provider, off by default, as a task in Activity | #526, #528 |
 | #530 Edit a game's details by hand | User values that win over syncs and refreshes | #526 |
+| #759 Map Wikidata's genres onto Steam's categories instead of adding new ones | The closed category set, the per-provider mapping file, categories added rather than replaced, migration 0012 | #529, #744 |
 
 #524 and #526 each add a migration, after #504's and in that order, so the chain stays linear.
 

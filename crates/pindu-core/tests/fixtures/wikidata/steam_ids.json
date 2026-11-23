@@ -1,6 +1,6 @@
 {
   "head" : {
-    "vars" : [ "steam", "item", "field", "valueLabel" ]
+    "vars" : [ "steam", "item", "field", "value", "valueLabel" ]
   },
   "results" : {
     "bindings" : [ {
@@ -70,6 +70,10 @@
         "type" : "literal",
         "value" : "genre"
       },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q185029"
+      },
       "valueLabel" : {
         "xml:lang" : "de",
         "type" : "literal",
@@ -88,6 +92,10 @@
         "type" : "literal",
         "value" : "genre"
       },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q27670585"
+      },
       "valueLabel" : {
         "xml:lang" : "de",
         "type" : "literal",
@@ -105,6 +113,10 @@
       "field" : {
         "type" : "literal",
         "value" : "genre"
+      },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q115101598"
       },
       "valueLabel" : {
         "xml:lang" : "de",
@@ -124,6 +136,10 @@
         "type" : "literal",
         "value" : "genre"
       },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q129722891"
+      },
       "valueLabel" : {
         "xml:lang" : "en",
         "type" : "literal",
@@ -141,6 +157,10 @@
       "field" : {
         "type" : "literal",
         "value" : "genre"
+      },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q54767"
       },
       "valueLabel" : {
         "xml:lang" : "de",
@@ -160,6 +180,10 @@
         "type" : "literal",
         "value" : "genre"
       },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q185029"
+      },
       "valueLabel" : {
         "xml:lang" : "de",
         "type" : "literal",
@@ -177,6 +201,10 @@
       "field" : {
         "type" : "literal",
         "value" : "genre"
+      },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q27670585"
       },
       "valueLabel" : {
         "xml:lang" : "de",
@@ -196,6 +224,10 @@
         "type" : "literal",
         "value" : "genre"
       },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q1422746"
+      },
       "valueLabel" : {
         "xml:lang" : "de",
         "type" : "literal",
@@ -214,6 +246,10 @@
         "type" : "literal",
         "value" : "genre"
       },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q105475134"
+      },
       "valueLabel" : {
         "xml:lang" : "de",
         "type" : "literal",
@@ -231,6 +267,10 @@
       "field" : {
         "type" : "literal",
         "value" : "genre"
+      },
+      "value" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q111184276"
       },
       "valueLabel" : {
         "xml:lang" : "en",

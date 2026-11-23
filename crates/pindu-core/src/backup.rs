@@ -17,6 +17,7 @@ use std::path::PathBuf;
 
 use serde_json::{Map, Value, json};
 
+use crate::category;
 use crate::library::{Filters, View};
 use crate::metadata::{self, FieldValue, MetadataValue};
 use crate::model::{
@@ -593,7 +594,8 @@ fn metadata_value_json(id: &GameId, value: &MetadataValue) -> Value {
 
 /// A metadata value from a backup (see [`metadata_value_json`]), without its game; `None`
 /// for an empty value, a source's (a sync writes those) or a field or origin this version
-/// does not know.
+/// does not know. A provider's genres keep only Pindu's categories ([`category`]): a
+/// backup from before #759 holds Wikidata's labels, which a refresh maps again.
 fn metadata_value_from(entry: &Value) -> Option<MetadataValue> {
     let origin: MetadataOrigin = entry["origin"].as_str()?.parse().ok()?;
     if origin == MetadataOrigin::Source {
@@ -611,7 +613,9 @@ fn metadata_value_from(entry: &Value) -> Option<MetadataValue> {
         MetadataField::Description => FieldValue::Description(text()?),
         MetadataField::Genres => {
             let genres: Vec<String> = list(&entry["value"])
-                .filter_map(|genre| genre.as_str().map(str::to_owned))
+                .filter_map(Value::as_str)
+                .filter(|genre| origin != MetadataOrigin::Provider || category::is_category(genre))
+                .map(str::to_owned)
                 .collect();
             if genres.is_empty() {
                 return None;
@@ -1354,5 +1358,47 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn a_providers_genres_restore_only_as_categories_and_the_users_as_written() {
+        let (_dir, store) = synced_store();
+        let portal = GameId::new(Source::Steam, "400");
+        let portal2 = GameId::new(Source::Steam, "620");
+        // A backup from before #759: Wikidata's genres were its labels.
+        let backup = r#"{
+            "format": "pindu-launcher-backup",
+            "version": 2,
+            "metadata": [
+                {"game": "steam:400", "field": "genres", "origin": "provider",
+                 "value": ["Puzzle-Computerspiel", "Puzzle", "Ego-Shooter"], "updated_at": 900},
+                {"game": "steam:400", "field": "genres", "origin": "user",
+                 "value": ["Portal-like"], "updated_at": 900},
+                {"game": "steam:620", "field": "genres", "origin": "provider",
+                 "value": ["Ego-Shooter"], "updated_at": 900}
+            ]
+        }"#;
+
+        let summary = import(&store, backup).unwrap();
+
+        assert_eq!((summary.metadata, summary.missing_games), (2, 0));
+        let genres = |id: &GameId, origin| {
+            store
+                .metadata_values(id)
+                .unwrap()
+                .into_iter()
+                .filter(|value| value.origin == origin)
+                .map(|value| value.value)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            genres(&portal, MetadataOrigin::Provider),
+            [FieldValue::Genres(vec!["Puzzle".to_owned()])]
+        );
+        assert_eq!(
+            genres(&portal, MetadataOrigin::User),
+            [FieldValue::Genres(vec!["Portal-like".to_owned()])]
+        );
+        assert!(genres(&portal2, MetadataOrigin::Provider).is_empty());
     }
 }

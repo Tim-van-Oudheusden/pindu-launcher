@@ -12,6 +12,7 @@ pub mod art_cache;
 pub mod art_picker;
 pub mod backup;
 pub mod bulk;
+pub mod category;
 pub mod choice;
 pub mod clock;
 pub mod controllers;

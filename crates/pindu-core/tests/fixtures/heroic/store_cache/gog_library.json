@@ -18,6 +18,7 @@
       "title": "The Witcher 3: Wild Hunt",
       "art_square": "https://images.gog-statics.com/witcher3_square.jpg",
       "art_cover": "",
+      "extra": { "genres": ["Role-playing (RPG)", "Adventure", "Open World"] },
       "install": {},
       "is_installed": false,
       "canRunOffline": true

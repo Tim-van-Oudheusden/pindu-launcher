@@ -1120,3 +1120,47 @@ fn a_games_metadata_columns_move_into_source_values_when_migrated() {
     let tf2 = GameId::new(Source::Steam, "440");
     assert!(store.metadata_values(&tf2).unwrap().is_empty());
 }
+
+#[test]
+fn a_providers_raw_genres_and_heroics_go_when_migrated_and_the_users_stay() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("library.db");
+    let conn = rusqlite::Connection::open(&path).unwrap();
+    for migration in &MIGRATIONS[..11] {
+        conn.execute_batch(migration).unwrap();
+    }
+    conn.pragma_update(None, "user_version", 11).unwrap();
+    conn.execute_batch(
+        "INSERT INTO games (id, source, native_id, title, sort_title, added_at, launch_kind)
+         VALUES ('steam:281990', 'steam', '281990', 'Stellaris', 'Stellaris', 1, 'store-uri'),
+                ('steam:220', 'steam', '220', 'Half-Life 2', 'Half-Life 2', 1, 'store-uri'),
+                ('heroic-gog:1', 'heroic-gog', '1', 'Witcher', 'Witcher', 1, 'store-uri');
+         INSERT INTO game_metadata (game_id, field, origin, value, updated_at) VALUES
+             ('steam:281990', 'genres', 'source', '[\"Strategy\"]', 1),
+             ('steam:281990', 'genres', 'provider', '[\"4X\",\"grand strategy wargame\"]', 2),
+             ('steam:281990', 'developer', 'provider', 'Paradox Development Studio', 2),
+             ('steam:220', 'genres', 'provider', '[\"Ego-Shooter\"]', 2),
+             ('steam:220', 'genres', 'user', '[\"Immersive sim\"]', 3),
+             ('heroic-gog:1', 'genres', 'source', '[\"Role-playing (RPG)\"]', 1);",
+    )
+    .unwrap();
+    drop(conn);
+
+    let store = Store::open(&path).unwrap();
+
+    let stellaris = GameId::new(Source::Steam, "281990");
+    let game = store.game(&stellaris).unwrap().unwrap();
+    assert_eq!(game.genres, ["Strategy"]);
+    assert_eq!(
+        game.developer.as_deref(),
+        Some("Paradox Development Studio")
+    );
+    let hl2 = store
+        .game(&GameId::new(Source::Steam, "220"))
+        .unwrap()
+        .unwrap();
+    assert_eq!(hl2.genres, ["Immersive sim"]);
+    assert_eq!(store.metadata_values(&hl2.id).unwrap().len(), 1);
+    let witcher = GameId::new(Source::HeroicGog, "1");
+    assert!(store.game(&witcher).unwrap().unwrap().genres.is_empty());
+}
