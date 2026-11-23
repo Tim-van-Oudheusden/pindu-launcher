@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use super::desktop;
-use super::location::HostDirs;
+use super::location::{HostDirs, Location};
 use crate::model::Source;
 
 /// The files (and for Steam, the manifest folder) whose changes mean a source changed,
@@ -48,6 +48,13 @@ pub fn key_paths(source: Source, root: &Path) -> Vec<PathBuf> {
         Source::Legendary => vec![root.join("installed.json")],
         Source::Desktop | Source::Manual => Vec::new(),
     }
+}
+
+/// Where a source the last sync did not find would appear: the files that complete each
+/// of its candidate folders ([`Location::required_paths`]), so a launcher's first start,
+/// which writes them, resyncs the library. Nothing for sources without one data folder.
+pub fn appear_paths(source: Source, dirs: &HostDirs) -> Vec<PathBuf> {
+    Location::of(source, dirs).map_or_else(Vec::new, |location| location.required_paths())
 }
 
 /// The folders desktop entries come from.
@@ -124,6 +131,29 @@ mod tests {
             key_paths(Source::Itch, root),
             [root.join("db/butler.db"), root.join("db/butler.db-wal")]
         );
+    }
+
+    #[test]
+    fn a_source_not_found_yet_watches_where_its_files_would_appear() {
+        let dirs = HostDirs {
+            home: "/home/me".into(),
+            data_home: "/home/me/.local/share".into(),
+            config_home: "/home/me/.config".into(),
+            host_usr: "/usr".into(),
+            system_flatpak: "/var/lib/flatpak".into(),
+        };
+
+        assert_eq!(
+            appear_paths(Source::Steam, &dirs),
+            [
+                PathBuf::from("/home/me/.steam/steam/steamapps/libraryfolders.vdf"),
+                PathBuf::from("/home/me/.local/share/Steam/steamapps/libraryfolders.vdf"),
+                PathBuf::from(
+                    "/home/me/.var/app/com.valvesoftware.Steam/data/Steam/steamapps/libraryfolders.vdf"
+                ),
+            ]
+        );
+        assert_eq!(appear_paths(Source::Desktop, &dirs), [] as [PathBuf; 0]);
     }
 
     #[test]

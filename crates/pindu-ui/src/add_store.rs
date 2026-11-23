@@ -24,8 +24,18 @@ use crate::window::PinduWindow;
 
 /// What the level's rows show, apart from how far an install is: rows are built again
 /// only when this changes, so focus stays on Cancel while the bar moves. The last two are
-/// whether the machine is offline and whether the level offers Network.
-type Shape = (Method, Vec<StoreApp>, Step, bool, bool);
+/// whether the machine is offline and what the level offers.
+type Shape = (Method, Vec<StoreApp>, Step, bool, Offers);
+
+/// The actions only fullscreen mode's level offers, which lead on from the flow.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct Offers {
+    /// Network, while the machine is offline or the network failed an install, which
+    /// leads to Quick Access's Network level where the system panel has one.
+    pub(crate) network: bool,
+    /// Open Steam once it installed, which opens it in Big Picture for its first sign-in.
+    pub(crate) open_steam: bool,
+}
 
 mod imp {
     use super::*;
@@ -50,10 +60,9 @@ mod imp {
         #[template_child]
         pub add_store_actions: TemplateChild<gtk::ListBox>,
         /// What the rows show now.
-        pub shape: RefCell<Option<Shape>>,
-        /// Whether a Network action leads to Quick Access's Network level: fullscreen
-        /// mode, where the system panel offers it.
-        pub network_action: std::cell::Cell<bool>,
+        pub(super) shape: RefCell<Option<Shape>>,
+        /// The actions it offers besides the flow's own.
+        pub(super) offers: std::cell::Cell<Offers>,
     }
 
     #[glib::object_subclass]
@@ -127,7 +136,10 @@ impl PinduWindow {
         let done = gio::ActionEntry::builder("add-store-done")
             .activate(|window: &Self, _, _| window.leave_add_store())
             .build();
-        self.add_action_entries([open, choose, cancel, back, done]);
+        let open_steam = gio::ActionEntry::builder("add-store-open-steam")
+            .activate(|window: &Self, _, _| window.open_installed_steam())
+            .build();
+        self.add_action_entries([open, choose, cancel, back, done, open_steam]);
         let Some(service) = self.add_store_service() else {
             return;
         };
@@ -201,6 +213,19 @@ impl PinduWindow {
         }
     }
 
+    /// Open Steam, once Add a Store installed it: the flow goes back to its stores, Quick
+    /// Access closes, and Steam opens in Big Picture, as Home's tile opens it, for its
+    /// first sign-in.
+    fn open_installed_steam(&self) {
+        if let Some(service) = self.add_store_service() {
+            service.dismiss();
+        }
+        self.close_panel();
+        if let Err(error) = WidgetExt::activate_action(self, "win.steam-big-picture", None) {
+            glib::g_warning!("pindu", "Could not open Steam: {error}");
+        }
+    }
+
     fn add_store_service(&self) -> Option<AddStoreService> {
         self.application()
             .and_downcast::<PinduApplication>()
@@ -242,7 +267,7 @@ impl PinduQuickAccess {
         };
         let service = application.add_store_service();
         let level = &self.imp().add_store_level;
-        level.set_network_action(self.imp().shown.get().network);
+        level.set_offers(self.add_store_offers());
         level.fill(&service.state());
         service.refresh();
     }
@@ -254,10 +279,19 @@ impl PinduQuickAccess {
             return;
         }
         let level = &self.imp().add_store_level;
-        level.set_network_action(self.imp().shown.get().network);
+        level.set_offers(self.add_store_offers());
         let had_focus = level.has_focus();
         if level.fill(state) && had_focus {
             self.focus_level(None);
+        }
+    }
+
+    /// What fullscreen mode's level offers: Open Steam, and Network where the system
+    /// panel has it.
+    fn add_store_offers(&self) -> Offers {
+        Offers {
+            network: self.imp().shown.get().network,
+            open_steam: true,
         }
     }
 }
@@ -274,10 +308,9 @@ impl PinduAddStoreLevel {
         self.imp().add_store_title.set_visible(visible);
     }
 
-    /// Offers a Network action, which leads to Quick Access's Network level, while the
-    /// machine is offline or the network failed an install; it shows from the next fill.
-    pub(crate) fn set_network_action(&self, offered: bool) {
-        self.imp().network_action.set(offered);
+    /// Offers the actions in `offers` from the next fill.
+    pub(crate) fn set_offers(&self, offers: Offers) {
+        self.imp().offers.set(offers);
     }
 
     /// Where focus goes: the first action, such as Cancel or Show Library, or else the
@@ -320,7 +353,7 @@ impl PinduAddStoreLevel {
             state.installed.clone(),
             shape_step(&state.step),
             state.offline,
-            imp.network_action.get(),
+            imp.offers.get(),
         );
         if imp.shape.borrow().as_ref() == Some(&shape) {
             return false;
@@ -344,7 +377,7 @@ impl PinduAddStoreLevel {
         actions.remove_all();
         let (title, detail) = match &state.step {
             Step::Choose if state.offline => {
-                if imp.network_action.get() {
+                if imp.offers.get().network {
                     actions.append(&network_row());
                 }
                 (
@@ -377,6 +410,15 @@ impl PinduAddStoreLevel {
                 )
             }
             Step::Installed(app) => {
+                if *app == StoreApp::Steam && imp.offers.get().open_steam {
+                    actions.append(&action_row(
+                        // Translators: {store} is a store's name, such as Steam.
+                        &gettext("Open {store}").replace("{store}", store_name(*app)),
+                        "win.add-store-open-steam",
+                        None,
+                        "go-next-symbolic",
+                    ));
+                }
                 actions.append(&action_row(
                     &gettext("Show Library"),
                     "win.add-store-done",
@@ -431,7 +473,7 @@ impl PinduAddStoreLevel {
                         "view-refresh-symbolic",
                     ));
                 }
-                if (*network || state.offline) && imp.network_action.get() {
+                if (*network || state.offline) && imp.offers.get().network {
                     actions.append(&network_row());
                 }
                 actions.append(&action_row(

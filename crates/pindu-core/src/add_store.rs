@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::{Rc, Weak};
 
+use crate::launch::SteamClient;
 use crate::model::Source;
 use crate::sources::desktop;
 use crate::sources::location::{HostDirs, Location};
@@ -41,11 +42,11 @@ impl StoreApp {
 
     /// The desktop entries that show the app installed: its Flatpak's, then a native
     /// package's.
-    fn desktop_files(self) -> &'static [&'static str] {
+    fn desktop_files(self) -> [&'static str; 2] {
         match self {
-            Self::Steam => &["com.valvesoftware.Steam.desktop", "steam.desktop"],
-            Self::Heroic => &["com.heroicgameslauncher.hgl.desktop", "heroic.desktop"],
-            Self::Lutris => &["net.lutris.Lutris.desktop", "lutris.desktop"],
+            Self::Steam => ["com.valvesoftware.Steam.desktop", "steam.desktop"],
+            Self::Heroic => ["com.heroicgameslauncher.hgl.desktop", "heroic.desktop"],
+            Self::Lutris => ["net.lutris.Lutris.desktop", "lutris.desktop"],
         }
     }
 
@@ -235,6 +236,26 @@ pub fn installed_stores(dirs: &HostDirs) -> Vec<StoreApp> {
                 })
         })
         .collect()
+}
+
+/// The Steam client the desktop shows ([`desktop::application_dirs`]): the Flatpak when
+/// its entry is there, else the host's `steam` when its own is; `None` without either.
+/// Unlike the library's Steam folder, this is known before Steam's first start.
+pub fn steam_client(dirs: &HostDirs) -> Option<SteamClient> {
+    let applications = desktop::application_dirs(dirs);
+    let shown = |file: &str| {
+        applications
+            .iter()
+            .any(|folder| folder.join(file).is_file())
+    };
+    let [flatpak, host] = StoreApp::Steam.desktop_files();
+    if shown(flatpak) {
+        Some(SteamClient::Flatpak)
+    } else if shown(host) {
+        Some(SteamClient::Host)
+    } else {
+        None
+    }
 }
 
 /// How the flow installs a store.
@@ -865,6 +886,26 @@ mod tests {
         assert_eq!(installed_stores(&dirs(home.path())), [StoreApp::Heroic]);
         let empty = tempfile::tempdir().unwrap();
         assert_eq!(installed_stores(&dirs(empty.path())), []);
+    }
+
+    #[test]
+    fn the_installed_steam_is_the_flatpak_by_its_entry_else_the_hosts() {
+        let flatpak = tempfile::tempdir().unwrap();
+        touch(
+            &flatpak
+                .path()
+                .join("var/lib/flatpak/exports/share/applications/com.valvesoftware.Steam.desktop"),
+        );
+        touch(&flatpak.path().join("usr/share/applications/steam.desktop"));
+        assert_eq!(
+            steam_client(&dirs(flatpak.path())),
+            Some(SteamClient::Flatpak)
+        );
+        let host = tempfile::tempdir().unwrap();
+        touch(&host.path().join("usr/share/applications/steam.desktop"));
+        assert_eq!(steam_client(&dirs(host.path())), Some(SteamClient::Host));
+        let none = tempfile::tempdir().unwrap();
+        assert_eq!(steam_client(&dirs(none.path())), None);
     }
 
     #[test]

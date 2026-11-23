@@ -1,5 +1,6 @@
-//! Watches each source's key files and resyncs the library when a launcher changes them,
-//! two seconds after the last change. The sync itself runs off the main thread.
+//! Watches each source's key files, and where each source not found yet would appear, and
+//! resyncs the library when a launcher changes or first writes them, two seconds after the
+//! last change. The sync itself runs off the main thread.
 
 use std::cell::RefCell;
 use std::path::PathBuf;
@@ -93,15 +94,19 @@ impl WatchService {
     }
 }
 
-/// The key files of each source where the last sync found it, and the desktop folders.
+/// The key files of each source where the last sync found it, where each source it did
+/// not find would appear (`watch::appear_paths`: a store installed but never run, such
+/// as Steam before its first sign-in), and the desktop folders.
 fn watched_paths() -> Vec<PathBuf> {
-    let mut paths = watch::desktop_paths(&HostDirs::from_env());
+    let dirs = HostDirs::from_env();
+    let mut paths = watch::desktop_paths(&dirs);
     if let Ok(store) = Store::open(&default_library_db_path())
         && let Ok(states) = store.source_states()
     {
         for state in states.into_iter().filter(|state| state.enabled) {
-            if let Some(root) = &state.resolved_location {
-                paths.extend(watch::key_paths(state.source, root));
+            match &state.resolved_location {
+                Some(root) => paths.extend(watch::key_paths(state.source, root)),
+                None => paths.extend(watch::appear_paths(state.source, &dirs)),
             }
         }
     }

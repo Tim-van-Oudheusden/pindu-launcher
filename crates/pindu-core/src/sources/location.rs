@@ -170,6 +170,15 @@ impl Location {
         &self.candidates
     }
 
+    /// The files a candidate needs to be complete, under each candidate in the order they
+    /// are tried: where the source appears once its launcher has run.
+    pub fn required_paths(&self) -> Vec<PathBuf> {
+        self.candidates
+            .iter()
+            .flat_map(|candidate| self.required.iter().map(|path| candidate.join(path)))
+            .collect()
+    }
+
     /// The folder to read: the override when given, else the first complete candidate.
     pub fn resolve(&self, user_override: Option<&Path>) -> Result<PathBuf, ResolveError> {
         if let Some(path) = user_override {
