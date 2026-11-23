@@ -697,58 +697,66 @@ template $PinduWindow: Adw.ApplicationWindow {
               vhomogeneous: false;
               interpolate-size: true;
 
+              // Scrolls when the sheet is taller than the screen has room for (seven or
+              // more actions and the performance switches at 720 px, or larger text);
+              // the viewport keeps the focused row in view.
               StackPage {
                 name: "main";
 
-                child: Box {
-                  orientation: vertical;
-                  spacing: 12;
+                child: ScrolledWindow {
+                  hscrollbar-policy: never;
+                  propagate-natural-height: true;
 
-                  // Why the game's last launch failed, and the next steps that exist
-                  // for it; Up from the first action reaches them.
-                  Label options_failure {
-                    visible: false;
-                    wrap: true;
-                    xalign: 0;
-                  }
+                  child: Box {
+                    orientation: vertical;
+                    spacing: 12;
 
-                  ListBox options_steps {
-                    selection-mode: none;
-                    visible: false;
-
-                    styles [
-                      "navigation-sidebar",
-                    ]
-                  }
-
-                  ListBox options_list {
-                    selection-mode: none;
-
-                    styles [
-                      "navigation-sidebar",
-                    ]
-                  }
-
-                  // A game we run ourselves: the same switches as Quick Access's
-                  // Performance.
-                  ListBox options_performance {
-                    selection-mode: none;
-                    visible: false;
-
-                    styles [
-                      "boxed-list",
-                    ]
-
-                    Adw.SwitchRow options_overlay_row {
-                      title: _("Performance Overlay");
-                      subtitle: _("MangoHud");
+                    // Why the game's last launch failed, and the next steps that exist
+                    // for it; Up from the first action reaches them.
+                    Label options_failure {
+                      visible: false;
+                      wrap: true;
+                      xalign: 0;
                     }
 
-                    Adw.SwitchRow options_gamemode_row {
-                      title: _("GameMode");
-                      subtitle: _("Asks the system to favour the game while it runs");
+                    ListBox options_steps {
+                      selection-mode: none;
+                      visible: false;
+
+                      styles [
+                        "navigation-sidebar",
+                      ]
                     }
-                  }
+
+                    ListBox options_list {
+                      selection-mode: none;
+
+                      styles [
+                        "navigation-sidebar",
+                      ]
+                    }
+
+                    // A game we run ourselves: the same switches as Quick Access's
+                    // Performance.
+                    ListBox options_performance {
+                      selection-mode: none;
+                      visible: false;
+
+                      styles [
+                        "boxed-list",
+                      ]
+
+                      Adw.SwitchRow options_overlay_row {
+                        title: _("Performance Overlay");
+                        subtitle: _("MangoHud");
+                      }
+
+                      Adw.SwitchRow options_gamemode_row {
+                        title: _("GameMode");
+                        subtitle: _("Asks the system to favour the game while it runs");
+                      }
+                    }
+                  };
                 };
               }
 
