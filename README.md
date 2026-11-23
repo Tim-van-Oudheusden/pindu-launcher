@@ -505,7 +505,11 @@ with a controller alone.
   mode on Pindu OS its **Network** action opens Quick Access's Network level, and B from there leads back to Add a
   Store, where the stores are ready once the machine is online. An install that fails because Flathub cannot be
   reached says that, rather than `flatpak`'s own error, and offers Network next to Try Again.
-- Once a store is installed, the library refreshes. Sign in to the store and its games appear.
+- Once a store is installed, the library refreshes. Sign in to the store and its games appear: the library watches
+  where each store it has not found yet keeps its library, so a store's first sign-in brings its games in without
+  Refresh Library. In fullscreen mode, **Open Steam** comes first once Steam is installed, and so does the Steam
+  Installed notification: they close Quick Access and open Steam in Big Picture, as Home's tile does, so its sign-in
+  happens with a controller. Heroic and Lutris have no such action yet (#797).
 
 ### Proton
 
@@ -657,14 +661,16 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   therefore pins its own window (`GAMESCOPECTRL_BASELAYER_WINDOW`) whenever it should be in front, including while a
   game it wants in front has no window yet. When another client changes the focus list or the pin, the app writes its
   own back, at most ten times in 10 seconds. Its games come to the front as usual.
-- Where a Steam folder was found, Home has a **Big Picture** tile that hands `steam://open/bigpicture` to Steam the way
-  Play hands it a Steam game. In this session Big Picture then takes the app's place: the Steam client's newest window
-  is pinned, a game Steam starts comes to the front, and the app leaves the controller to Steam while Steam's window or
-  that game is in front, including after Steam hides its window for the game. Once Big Picture's last window has
-  closed and no game Steam started is running, the app is back in front with the controller at once. A Steam window
-  that opens in the next 10 seconds, such as Big Picture's after an update window on a cold start, takes its place
-  again. Until Steam's first window shows, the app keeps the controller and the tile says Opening…. Choosing the tile
-  again gives up, and so does a minute with no window.
+- Where Steam is installed, or a Steam folder was found, Home has a **Big Picture** tile that hands
+  `steam://open/bigpicture` to Steam the way Play hands it a Steam game: to the Steam Flatpak or the host's `steam`,
+  whichever has the library, or else whichever the desktop shows, so the tile is there before Steam's first start. In
+  this session Big Picture then takes the app's place: the Steam client's newest window is pinned, a game Steam starts
+  comes to the front, and the app leaves the controller to Steam while Steam's window or that game is in front,
+  including after Steam hides its window for the game. Once Big Picture's last window has closed and no game Steam
+  started is running, the app is back in front with the controller at once. A Steam window that opens in the next 10
+  seconds, such as Big Picture's after an update window on a cold start, takes its place again. Until Steam's first
+  window shows, the app keeps the controller and the tile says Opening…. Choosing the tile again gives up, and so does
+  a minute with no window, or 10 minutes on Steam's first start, which downloads the client's update first.
 - While a Steam store launch waits for the game's window, the Steam client's windows are pinned in the app's place,
   newest first, so you can answer what Steam asks. Big Picture shows sign-in, install, launch option and cloud conflict
   prompts inside its window. The launch does not time out while one of these windows is open; once the last one

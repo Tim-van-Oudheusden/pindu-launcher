@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 18:24+0100\n"
+"POT-Creation-Date: 2026-11-23 18:32+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,96 +18,102 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: crates/pindu-ui/src/add_store.rs:164 data/ui/add_store.blp:17
+#: crates/pindu-ui/src/add_store.rs:176 data/ui/add_store.blp:17
 #: data/ui/quick_access.blp:1812
 msgid "Add a Store"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:351
+#: crates/pindu-ui/src/add_store.rs:384
 msgid "No Network Connection"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:353
+#: crates/pindu-ui/src/add_store.rs:386
 msgid ""
 "Stores install from the internet. Connect to a network, then choose a store."
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:362
+#: crates/pindu-ui/src/add_store.rs:395
 #: crates/pindu-ui/src/fullscreen_activity.rs:331
 msgid "Cancelling…"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:365 crates/pindu-ui/src/application.rs:882
+#: crates/pindu-ui/src/add_store.rs:398 crates/pindu-ui/src/application.rs:882
 #: crates/pindu-ui/src/fullscreen_activity.rs:290
 #: crates/pindu-ui/src/hint_bar.rs:253
 msgid "Cancel"
 msgstr ""
 
 #. Translators: {store} is a store's name, such as Steam.
-#: crates/pindu-ui/src/add_store.rs:373
+#: crates/pindu-ui/src/add_store.rs:406
 #, rust-format
 msgid "Installing {store}…"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:375
+#: crates/pindu-ui/src/add_store.rs:408
 msgid ""
 "This can take a while. You can leave this page: the install goes on, and "
 "shows in Activity."
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:381 crates/pindu-ui/src/add_store.rs:400
+#. Translators: {store} is a store's name, such as Steam.
+#: crates/pindu-ui/src/add_store.rs:416
+#, rust-format
+msgid "Open {store}"
+msgstr ""
+
+#: crates/pindu-ui/src/add_store.rs:423 crates/pindu-ui/src/add_store.rs:442
 msgid "Show Library"
 msgstr ""
 
 #. Translators: {store} is a store's name, such as Steam.
-#: crates/pindu-ui/src/add_store.rs:388
+#: crates/pindu-ui/src/add_store.rs:430
 #, rust-format
 msgid "{store} Is Installed"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:394 data/ui/quick_access.blp:933
+#: crates/pindu-ui/src/add_store.rs:436 data/ui/quick_access.blp:933
 #: data/ui/quick_access.blp:1857
 msgid "Refresh Library"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:408
+#: crates/pindu-ui/src/add_store.rs:450
 #, rust-format
 msgid "Install {store} in Your Software Centre"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:414
+#: crates/pindu-ui/src/add_store.rs:456
 #, rust-format
 msgid ""
 "Once {store} is installed, open it and sign in to your account, then refresh "
 "the library."
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:428
+#: crates/pindu-ui/src/add_store.rs:470
 msgid "Try Again"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:438
+#: crates/pindu-ui/src/add_store.rs:480
 msgid "Back to the Stores"
 msgstr ""
 
 #. Translators: {store} is a store's name, such as Steam.
-#: crates/pindu-ui/src/add_store.rs:445
+#: crates/pindu-ui/src/add_store.rs:487
 #: crates/pindu-ui/src/add_store_service.rs:163
 #, rust-format
 msgid "{store} Did Not Install"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:448
+#: crates/pindu-ui/src/add_store.rs:490
 #, rust-format
 msgid "Could Not Open {store} in Your Software Centre"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:490 data/ui/fullscreen_network.blp:15
+#: crates/pindu-ui/src/add_store.rs:532 data/ui/fullscreen_network.blp:15
 #: data/ui/quick_access.blp:799 data/ui/quick_access.blp:1430
 msgid "Network"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:506
+#: crates/pindu-ui/src/add_store.rs:548
 #: crates/pindu-ui/src/collection_actions.rs:248
 #: crates/pindu-ui/src/collection_actions.rs:256
 #: crates/pindu-ui/src/fullscreen_health.rs:251
@@ -817,7 +823,7 @@ msgid "Your Library Is Ready"
 msgstr ""
 
 #: crates/pindu-ui/src/first_sync_summary.rs:33
-#: crates/pindu-ui/src/launch_service.rs:363
+#: crates/pindu-ui/src/launch_service.rs:366
 #: crates/pindu-ui/src/proton_launch.rs:446
 #: crates/pindu-ui/src/proton_launch.rs:695 crates/pindu-ui/src/window.rs:1785
 msgid "_Close"
@@ -2386,7 +2392,7 @@ msgid "Open the Wikidata Item"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:1119
-#: crates/pindu-ui/src/launch_service.rs:428
+#: crates/pindu-ui/src/launch_service.rs:431
 msgid "Could not open the web page"
 msgstr ""
 
@@ -2818,49 +2824,49 @@ msgstr ""
 msgid "+{count}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:182
+#: crates/pindu-ui/src/launch_service.rs:184
 #: crates/pindu-ui/src/proton_launch.rs:596
 #, rust-format
 msgid "Could not start “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:201
+#: crates/pindu-ui/src/launch_service.rs:203
 msgid "This game cannot be started yet"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:227
+#: crates/pindu-ui/src/launch_service.rs:229
 #, rust-format
 msgid "Starting “{title}” safely"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:228
+#: crates/pindu-ui/src/launch_service.rs:230
 #, rust-format
 msgid "Starting “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:312
+#: crates/pindu-ui/src/launch_service.rs:315
 #, rust-format
 msgid "Starting “{title}” in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:318
-#: crates/pindu-ui/src/launch_service.rs:408
-#: crates/pindu-ui/src/launch_service.rs:469
+#: crates/pindu-ui/src/launch_service.rs:321
+#: crates/pindu-ui/src/launch_service.rs:411
+#: crates/pindu-ui/src/launch_service.rs:485
 #, rust-format
 msgid "Could not open {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:364
+#: crates/pindu-ui/src/launch_service.rs:367
 msgid "_How to Enable"
 msgstr ""
 
 #. / The heading of the explanation that a game needs a permission.
 
-#: crates/pindu-ui/src/launch_service.rs:378
+#: crates/pindu-ui/src/launch_service.rs:381
 msgid "Permission Needed"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:384
+#: crates/pindu-ui/src/launch_service.rs:387
 #, rust-format
 msgid ""
 "“{title}” starts on this computer, outside the sandbox. Allow that in "

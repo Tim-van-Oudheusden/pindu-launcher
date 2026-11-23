@@ -10,10 +10,12 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use pindu_core::add_store;
 use pindu_core::launch::{self, Command, Route, Start, SteamSession, WebPage};
 use pindu_core::launch_outcome::{Ending, SIGTERM};
 use pindu_core::model::{Game, LaunchRoute, Source};
 use pindu_core::notifications::{Kind, Target};
+use pindu_core::sources::location::HostDirs;
 
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
@@ -263,6 +265,7 @@ async fn store_hand_off(
         steam_gamescope,
         host_spawn,
         steam_root: steam_root.as_deref(),
+        steam_client: None,
     };
     match launch::silent_steam(game, &uri, &session) {
         Some(command) => {
@@ -431,17 +434,27 @@ pub fn open_web_page(
 }
 
 /// How Steam Big Picture opens from Home, as [`launch::big_picture`] decides it for this
-/// session; `None` where no Steam folder was found, so Home does not offer it.
-pub async fn big_picture_route(app: &gtk::Application, library: &LibraryService) -> Option<Route> {
+/// session, and whether it is Steam's first start (`SteamSession::first_start`); `None`
+/// where Steam is neither imported nor installed, so Home does not offer it.
+pub async fn big_picture_route(
+    app: &gtk::Application,
+    library: &LibraryService,
+) -> Option<(Route, bool)> {
     let steam_gamescope = app
         .downcast_ref::<PinduApplication>()
         .is_some_and(|application| application.gamescope_service().is_active());
     let steam_root = library.source_location(Source::Steam).await;
-    launch::big_picture(&SteamSession {
+    let steam_client = gio::spawn_blocking(|| add_store::steam_client(&HostDirs::from_env()))
+        .await
+        .ok()
+        .flatten();
+    let session = SteamSession {
         steam_gamescope,
         host_spawn: permission_service::host_spawn_allowed(),
         steam_root: steam_root.as_deref(),
-    })
+        steam_client,
+    };
+    launch::big_picture(&session).map(|route| (route, session.first_start()))
 }
 
 /// Hands Steam Big Picture to Steam, the way Play hands a Steam game over. In a
@@ -457,10 +470,13 @@ pub fn open_big_picture(
     let (app, window, library) = (app.clone(), window.clone(), library.clone());
     glib::spawn_future_local(async move {
         let route = big_picture_route(&app, &library).await;
+        let first_start = route.as_ref().is_some_and(|&(_, first_start)| first_start);
         let opened = move |result: Result<(), String>| match result {
             Ok(()) => {
                 if let Some(application) = app.downcast_ref::<PinduApplication>() {
-                    application.gamescope_service().big_picture_started();
+                    application
+                        .gamescope_service()
+                        .big_picture_started(first_start);
                 }
             }
             Err(error) => {
@@ -470,7 +486,7 @@ pub fn open_big_picture(
                 ));
             }
         };
-        match route {
+        match route.map(|(route, _)| route) {
             Some(Route::HostSpawn(command)) => {
                 glib::g_debug!("pindu", "Opening Big Picture: {:?}", command.argv);
                 opened(
