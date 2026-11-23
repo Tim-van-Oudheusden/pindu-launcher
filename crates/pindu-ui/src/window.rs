@@ -20,7 +20,7 @@ use pindu_core::library::{
 use pindu_core::model::{GameId, Source};
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{GameOption, Panels};
-use pindu_core::search::ResultCount;
+use pindu_core::search::{self, ResultCount};
 
 use crate::add_store::PinduAddStoreLevel;
 use crate::application::PinduApplication;
@@ -45,10 +45,6 @@ use crate::widgets::{CoverArt, CoverTile, GameListCell, ListColumn, TileSize};
 
 /// The filter row's genre: a stateful string action, empty for any genre.
 const GENRE_FILTER_ACTION: &str = "genre-filter";
-
-/// The desktop search field's width, in `sp`: half the 318 px it had at the default window
-/// size, 1024 px wide.
-const SEARCH_PILL_WIDTH: i32 = 159;
 
 /// The desktop search field's style class: round ends (`data/style.css`).
 const SEARCH_PILL_CLASS: &str = "search-pill";
@@ -317,7 +313,12 @@ mod imp {
         }
     }
 
-    impl WidgetImpl for PinduWindow {}
+    impl WidgetImpl for PinduWindow {
+        fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+            self.parent_size_allocate(width, height, baseline);
+            self.obj().follow_window_width(width);
+        }
+    }
 
     impl WindowImpl for PinduWindow {
         fn close_request(&self) -> glib::Propagation {
@@ -733,26 +734,49 @@ impl PinduWindow {
         self.update_content_page();
     }
 
-    /// The search field is a short pill in the desktop window: half as wide as it was at
-    /// the default window size, centred as the header bar's title, and no wider in a wider
-    /// window. Fullscreen mode's search grows with the bar, as it did.
+    /// The search field is a pill in the desktop window, centred as the header bar's title,
+    /// and widens with the window ([`search::field_width`]). Fullscreen mode's search grows
+    /// with the bar, as it did.
     fn shape_search_entry(&self) {
         let imp = self.imp();
-        let fullscreen = self.is_fullscreen();
-        // Wider than any screen, yet clear of overflow when the clamp scales it to pixels.
-        let width = if fullscreen {
-            100_000
-        } else {
-            SEARCH_PILL_WIDTH
-        };
-        imp.search_clamp.set_maximum_size(width);
-        imp.search_clamp.set_tightening_threshold(width);
-        imp.search_entry.set_hexpand(fullscreen);
-        if fullscreen {
+        self.size_search_entry();
+        if self.is_fullscreen() {
             imp.search_entry.remove_css_class(SEARCH_PILL_CLASS);
         } else {
             imp.search_entry.add_css_class(SEARCH_PILL_CLASS);
         }
+    }
+
+    /// The search field's greatest width, in `sp`, in a window `window_width` px wide.
+    fn search_entry_width(&self, window_width: i32) -> i32 {
+        if self.is_fullscreen() {
+            // Wider than any screen, yet clear of overflow when the clamp scales it to pixels.
+            100_000
+        } else {
+            search::field_width(window_width)
+        }
+    }
+
+    /// Sizes the search field for the window's width.
+    fn size_search_entry(&self) {
+        let width = self.search_entry_width(self.width());
+        let clamp = &self.imp().search_clamp;
+        clamp.set_maximum_size(width);
+        clamp.set_tightening_threshold(width);
+    }
+
+    /// The window was laid out `width` px wide: the search field follows if its width
+    /// changes, once the layout is over, as GTK drops a resize asked for while the window
+    /// allocates.
+    fn follow_window_width(&self, width: i32) {
+        if self.search_entry_width(width) == self.imp().search_clamp.maximum_size() {
+            return;
+        }
+        glib::idle_add_local_once(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move || window.size_search_entry()
+        ));
     }
 
     /// A click or tap outside the desktop search field takes keyboard focus off it. The

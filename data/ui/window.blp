@@ -207,11 +207,13 @@ template $PinduWindow: Adw.ApplicationWindow {
                           tooltip-text: _("Importing Games…");
                         }
 
-                        // A short pill in the desktop window; fullscreen mode's search is as
-                        // wide as before. `shape_search_entry` sets both.
+                        // A pill in the desktop window that widens with the window, up to
+                        // its clamp; fullscreen mode's search is as wide as the bar lets it.
+                        // `shape_search_entry` and `size_search_entry` set both.
                         title-widget: Adw.Clamp search_clamp {
                           child: SearchEntry search_entry {
                             placeholder-text: _("Search games");
+                            hexpand: true;
                             max-width-chars: 32;
 
                             accessibility {

@@ -1,5 +1,5 @@
 //! Title matching for library search: case- and accent-insensitive, on substrings and
-//! word prefixes, ignoring a leading "The".
+//! word prefixes, ignoring a leading "The". Also the desktop search field's width.
 
 /// Lowercases, folds Latin accents to plain letters, turns punctuation into spaces,
 /// collapses spaces, and drops a leading "the ".
@@ -134,12 +134,28 @@ impl ResultCount {
     }
 }
 
+/// The desktop search field's width, in `sp`, in a window `window_width` px wide: 159 up
+/// to the default window size, 1024 px wide, then growing in step with the window to about
+/// three times that, 480, at 2560 px, and no wider beyond.
+pub fn field_width(window_width: i32) -> i32 {
+    const NARROW: (i32, i32) = (1024, 159);
+    const WIDE: (i32, i32) = (2560, 480);
+    let window_width = window_width.clamp(NARROW.0, WIDE.0);
+    NARROW.1 + (window_width - NARROW.0) * (WIDE.1 - NARROW.1) / (WIDE.0 - NARROW.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn matches(query: &str, title: &str) -> bool {
         Query::new(query).matches(&normalize(title))
+    }
+
+    #[test]
+    fn the_search_field_widens_with_the_window() {
+        let widths = [360, 1024, 1280, 1920, 2560, 3840].map(field_width);
+        assert_eq!(widths, [159, 159, 212, 346, 480, 480]);
     }
 
     #[test]
