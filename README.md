@@ -51,7 +51,6 @@ widgets so it looks and behaves like the rest of GNOME.
 - **Windows games too.** Add a Windows game, or its installer, by hand and it runs with Proton through
   [umu](https://github.com/Open-Wine-Components/umu-launcher) in a prefix of its own. Download GE-Proton and
   Proton-CachyOS builds from Preferences or fullscreen mode's Quick Access, and turn on MangoHud or GameMode per game.
-  Proton-CachyOS builds from Preferences, and turn on MangoHud or GameMode per game.
 - **Start Safely.** When a game Pindu runs itself breaks, **Start Safely** in its page's menu, or in fullscreen's
   options, starts it once without its wrappers, MangoHud, GameMode or its own environment variables, and keeps a log
   as **Play with Logs** does, so a broken overlay or wrapper tells itself apart from a broken game. Its saved settings
