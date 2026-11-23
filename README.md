@@ -317,19 +317,13 @@ while Quick Access stays open. [Fullscreen menus](docs/fullscreen-menus.md) list
   the filters that are on, and **Performance** for a game Pindu runs), tiles for Sound Output, Bluetooth, Network,
   Surprise Me, Refresh Library and Add a Game, and while something runs in the background a strip with its progress
   that leads to Notifications.
-- **Notifications** from this session: games a sync added or found missing, artwork fetched or not, Proton downloads,
-  games that need a permission, a Bluetooth device that did not pair, connect, disconnect or go, a rollback or restart
-  the system refused, a network that could not be joined, and a program that kept the machine from suspending,
-  restarting or powering off. Quick Access opens on them while one is unread.
-- **Running** (at the top of Notifications, while something runs): a running library sync, SteamGridDB artwork
-  fetch, Proton download, or save snapshot or restore, with its progress. Artwork fetches and Proton downloads can be
-  cancelled; a cancelled download leaves nothing behind.
 - **Notifications** from this session: games a sync added or found missing, artwork fetched or not, metadata refreshed
   or not, Proton downloads, games that need a permission, a Bluetooth device that did not pair, connect, disconnect or
   go, a rollback or restart the system refused, a network that could not be joined, and a program that kept the
   machine from suspending, restarting or powering off. Quick Access opens on them while one is unread.
-- **Running:** a running library sync, SteamGridDB artwork fetch, Wikidata metadata refresh, Proton download or save
-  snapshot, with its progress. Artwork fetches, metadata refreshes and Proton downloads can be cancelled; a cancelled
+- **Running** (at the top of Notifications, while something runs): a running library sync, SteamGridDB artwork fetch,
+  Wikidata metadata refresh, Proton download, store install from Add a Store, or save snapshot or restore, with its
+  progress. Artwork fetches, metadata refreshes, Proton downloads and store installs can be cancelled; a cancelled
   download leaves nothing behind, and a cancelled refresh keeps what it had stored.
 - **Refresh Library** reads your launchers again, offline like every sync.
 - **Surprise Me** opens the page of an installed game picked at random, never the same one twice in a row, so you
@@ -341,6 +335,8 @@ while Quick Access stays open. [Fullscreen menus](docs/fullscreen-menus.md) list
     Large.
   - **Reduce Motion:** Home's background holds still and art changes without a fade, as it also does when the
     system's animations are off.
+  - **Button Hints:** the hint bar at the bottom of fullscreen mode, on by default. Off, it hides the bar, also over a
+    running game, and changes nothing the buttons do. Preferences → Fullscreen has the same switch.
 - **Controller** holds **Hold to Confirm** (off by default), after Swap Confirm and Back: Power Off, Restart, Forget
   and Stop then need the controller's confirm button held down for a second. A popover over the entry fills as you
   hold, and letting go early or pressing another button does nothing; the hint bar says **Hold to Confirm** on them.
