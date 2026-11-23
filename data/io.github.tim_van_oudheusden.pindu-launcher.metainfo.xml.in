@@ -87,9 +87,9 @@
   </supports>
 
   <releases>
-    <release version="0.7.0~rc1" type="development" date="2026-11-23">
+    <release version="0.7.0~rc2" type="development" date="2026-11-23">
       <description>
-        <p>Quick Access is split into six sections, the menu drawer has a power dock, and fullscreen Home shows your games by category.</p>
+        <p>Quick Access is split into six sections, the menu drawer has a power dock, fullscreen Home shows your games by category, and a new console is led through its first set-up.</p>
         <ul>
           <li>Quick Access has six sections that LB and RB switch between: Quick, Notifications, Design, Controller, System and Manage. Each setting now sits in the section it belongs to</li>
           <li>Quick Access's Quick section has tiles for Sound Output, Bluetooth, Network, Surprise Me, Refresh Library and Add a Game, plus a card for what the page underneath offers</li>
@@ -103,6 +103,11 @@
           <li>The desktop header bar has a Fullscreen Mode button, and the search field is a pill that widens with the window</li>
           <li>Holding a direction moves focus at the repeat rate and stops where you let go, instead of falling behind</li>
           <li>The library page fits a 360 px window, and the options sheet fits a 720 px screen</li>
+          <li>A new console starts on a Get Started checklist in fullscreen mode: connect a controller, join a network, choose a design, add a store and sign in to it, each opening the screen that does it</li>
+          <li>Add a Store says when there is no network, and leads to the Network section; an install that fails because Flathub cannot be reached says so</li>
+          <li>Once Add a Store installed Steam, Heroic or Lutris, fullscreen mode opens it for its first sign-in, and the library picks up its games without a refresh</li>
+          <li>Home's Big Picture tile shows wherever Steam is installed, even before Steam's first start</li>
+          <li>Home's animated background pauses behind Quick Access, the menu and the options sheet, and holds still for the session on a machine that cannot keep up with it</li>
           <li>Fixed a crash in sessions without an accessibility bus</li>
           <li>Updated translations</li>
         </ul>
