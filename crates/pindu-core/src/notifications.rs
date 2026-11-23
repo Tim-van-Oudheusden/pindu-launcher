@@ -60,6 +60,9 @@ pub enum Target {
     Game(GameId),
     /// Preferences, at its Permissions group.
     Permissions,
+    /// Steam, opened as Home's Big Picture tile opens it, to sign in once Add a Store has
+    /// installed it.
+    Steam,
 }
 
 /// One entry of the log.

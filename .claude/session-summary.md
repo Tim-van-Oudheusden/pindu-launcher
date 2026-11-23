@@ -8,10 +8,12 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-23 (evening), #788 (this commit): 0.7.0-rc.1, the first pre-release of 0.7.0. Then tag `v0.7.0-rc.1` on
-  the merge commit and open a Pindu OS pull request that pins it for a device test. The tag is `vX.Y.Z-rc.N`; a
-  user's "rc1" means `rc.1`. Bump the RPM spec's `Version:` as well as its `%changelog`: `check-version.sh` catches
-  a missed one. Earlier today: #783/#786 README and CONTRIBUTING prose, #767–#775, #774/#776.
+- 2026-11-23 (night), #791 (this commit): Add a Store's Steam Installed step and notification open Steam (Big
+  Picture), and Home's tile shows wherever Steam's desktop entry is installed (`add_store::installed_steam`,
+  `launch::SteamClient`), before its first start. A first start waits 10 minutes for Steam's window
+  (`BigPicture::first_start`), and the watch service watches an installed store's unresolved folders
+  (`add_store::first_run_paths`). Not run on a device: whether Steam's first-start update window is tagged 769 in a
+  `--steam` gamescope, and whether `-silent` still shows its sign-in, need the Pindu OS check. Heroic and Lutris: #797.
 - Harness gained `--gnome-buttons` (close-only title buttons through `gtk-4.0/settings.ini`): without it the
   desktop window at 360 px always logs `exceeds … width` (minimize and maximize add ~70 px), as CI's
   `ui-smoke-narrow` pins the same layout. Measure widget widths from shots with Pillow (header bar at y≈22).

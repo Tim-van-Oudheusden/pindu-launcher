@@ -11,7 +11,7 @@ use gettextrs::gettext;
 use gtk::prelude::*;
 use gtk::{gio, glib};
 use pindu_core::add_store::{AddStore, AddStoreState, Method, Step, StoreApp};
-use pindu_core::notifications::Kind;
+use pindu_core::notifications::{Kind, Target};
 use pindu_core::tasks::{Progress, TaskId, TaskKind};
 
 use crate::add_store_backend::FlatpakBackend;
@@ -136,6 +136,7 @@ fn follow_task(
 }
 
 /// Posts a notification once an install ends, so it is there after its level closed.
+/// Steam's opens Steam, as the level's Open Steam does.
 fn notify(state: &AddStoreState, notifications: &NotificationService) {
     match &state.step {
         Step::Installed(app) => notifications.post(
@@ -143,7 +144,7 @@ fn notify(state: &AddStoreState, notifications: &NotificationService) {
             // Translators: {store} is a store's name, such as Steam.
             &gettext("{store} Installed").replace("{store}", store_name(*app)),
             &next_step(*app),
-            None,
+            (*app == StoreApp::Steam).then_some(Target::Steam),
         ),
         Step::Failed { app, error } if state.method == Method::Flatpak => notifications.post(
             Kind::StoreFailed,

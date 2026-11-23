@@ -3,11 +3,13 @@
 
 use std::cell::RefCell;
 use std::fmt;
+use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 
+use crate::launch::SteamClient;
 use crate::model::Source;
-use crate::sources::desktop;
 use crate::sources::location::{HostDirs, Location};
+use crate::sources::{desktop, watch};
 
 /// The name of the Flathub remote.
 pub const FLATHUB: &str = "flathub";
@@ -200,16 +202,55 @@ pub fn installed_stores(dirs: &HostDirs) -> Vec<StoreApp> {
     StoreApp::ALL
         .into_iter()
         .filter(|app| {
-            let shown = app.desktop_files().iter().any(|file| {
-                applications
-                    .iter()
-                    .any(|folder| folder.join(file).is_file())
-            });
+            let shown = app
+                .desktop_files()
+                .iter()
+                .any(|file| shows(&applications, file));
             shown
                 || app.sources().iter().any(|source| {
                     Location::of(*source, dirs)
                         .is_some_and(|location| location.resolve(None).is_ok())
                 })
+        })
+        .collect()
+}
+
+/// Whether one of the desktop's `applications` folders has the desktop entry `file`.
+fn shows(applications: &[PathBuf], file: &str) -> bool {
+    applications
+        .iter()
+        .any(|folder| folder.join(file).is_file())
+}
+
+/// The Steam client the desktop shows installed, by its desktop entry, so Steam opens
+/// before it has a folder of its own: the Flatpak, which the flow installs, before a
+/// native package's `steam`.
+pub fn installed_steam(dirs: &HostDirs) -> Option<SteamClient> {
+    let applications = desktop::application_dirs(dirs);
+    StoreApp::Steam
+        .desktop_files()
+        .iter()
+        .zip([SteamClient::Flatpak, SteamClient::Host])
+        .find(|(file, _)| shows(&applications, file))
+        .map(|(_, client)| client)
+}
+
+/// The key files ([`watch::key_paths`]) of the installed stores' sources in every folder
+/// the importers look in, so a store's first run, which makes its folder, refreshes the
+/// library. `settled` says which sources to leave out: those whose folder was found,
+/// which are watched there, and those switched off.
+pub fn first_run_paths(dirs: &HostDirs, settled: impl Fn(Source) -> bool) -> Vec<PathBuf> {
+    installed_stores(dirs)
+        .into_iter()
+        .flat_map(|app| app.sources().iter().copied())
+        .filter(|source| !settled(*source))
+        .filter_map(|source| Some((source, Location::of(source, dirs)?)))
+        .flat_map(|(source, location)| {
+            location
+                .candidates()
+                .iter()
+                .flat_map(|root| watch::key_paths(source, root))
+                .collect::<Vec<_>>()
         })
         .collect()
 }
@@ -814,6 +855,59 @@ mod tests {
         assert_eq!(installed_stores(&dirs(home.path())), [StoreApp::Heroic]);
         let empty = tempfile::tempdir().unwrap();
         assert_eq!(installed_stores(&dirs(empty.path())), []);
+    }
+
+    #[test]
+    fn the_steam_installed_is_the_flatpak_or_the_hosts_by_its_desktop_entry() {
+        let flatpak =
+            ".local/share/flatpak/exports/share/applications/com.valvesoftware.Steam.desktop";
+        let native = "usr/share/applications/steam.desktop";
+        for (entries, client) in [
+            (&[flatpak][..], Some(SteamClient::Flatpak)),
+            (&[native][..], Some(SteamClient::Host)),
+            // The flow installs the Flatpak.
+            (&[native, flatpak][..], Some(SteamClient::Flatpak)),
+            (&[][..], None),
+        ] {
+            let home = tempfile::tempdir().unwrap();
+            for entry in entries {
+                touch(&home.path().join(entry));
+            }
+            assert_eq!(installed_steam(&dirs(home.path())), client, "{entries:?}");
+        }
+    }
+
+    #[test]
+    fn an_installed_store_without_its_folder_is_watched_where_its_first_run_puts_it() {
+        let home = tempfile::tempdir().unwrap();
+        touch(&home.path().join(
+            ".local/share/flatpak/exports/share/applications/com.valvesoftware.Steam.desktop",
+        ));
+        let dirs = dirs(home.path());
+        let paths = first_run_paths(&dirs, |_| false);
+        for path in [
+            ".var/app/com.valvesoftware.Steam/data/Steam/steamapps/libraryfolders.vdf",
+            ".var/app/com.valvesoftware.Steam/data/Steam/steamapps",
+            ".steam/steam/steamapps/libraryfolders.vdf",
+        ] {
+            assert!(
+                paths.contains(&home.path().join(path)),
+                "{path} in {paths:?}"
+            );
+        }
+        let stranger = |path: &std::path::PathBuf| {
+            let path = path.to_string_lossy().to_lowercase();
+            path.contains("heroic") || path.contains("lutris")
+        };
+        assert!(
+            !paths.iter().any(stranger),
+            "only Steam is installed: {paths:?}"
+        );
+        assert_eq!(
+            first_run_paths(&dirs, |source| source == Source::Steam),
+            Vec::<std::path::PathBuf>::new(),
+            "a Steam whose folder was found, or that is switched off, is watched as a source"
+        );
     }
 
     #[test]

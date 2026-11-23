@@ -10,10 +10,12 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
+use pindu_core::add_store;
 use pindu_core::launch::{self, Command, Route, Start, SteamSession, WebPage};
 use pindu_core::launch_outcome::{Ending, SIGTERM};
 use pindu_core::model::{Game, LaunchRoute, Source};
 use pindu_core::notifications::{Kind, Target};
+use pindu_core::sources::location::HostDirs;
 
 use crate::application::PinduApplication;
 use crate::config::APP_ID;
@@ -263,6 +265,7 @@ async fn store_hand_off(
         steam_gamescope,
         host_spawn,
         steam_root: steam_root.as_deref(),
+        installed_steam: None,
     };
     match launch::silent_steam(game, &uri, &session) {
         Some(command) => {
@@ -430,17 +433,43 @@ pub fn open_web_page(
     });
 }
 
-/// How Steam Big Picture opens from Home, as [`launch::big_picture`] decides it for this
-/// session; `None` where no Steam folder was found, so Home does not offer it.
-pub async fn big_picture_route(app: &gtk::Application, library: &LibraryService) -> Option<Route> {
+/// How Steam Big Picture opens from Home.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BigPictureRoute {
+    /// The hand-off, as [`launch::big_picture`] decides it for this session.
+    pub route: Route,
+    /// Whether Steam has not run yet ([`SteamSession::first_start`]), so its first window
+    /// takes a while.
+    pub first_start: bool,
+}
+
+/// How Steam Big Picture opens from Home in this session; `None` where Steam is neither
+/// installed nor was its folder found, so Home does not offer it.
+pub async fn big_picture_route(
+    app: &gtk::Application,
+    library: &LibraryService,
+) -> Option<BigPictureRoute> {
     let steam_gamescope = app
         .downcast_ref::<PinduApplication>()
         .is_some_and(|application| application.gamescope_service().is_active());
     let steam_root = library.source_location(Source::Steam).await;
-    launch::big_picture(&SteamSession {
+    // A Steam that has not run yet has no folder; its desktop entry says which it is.
+    let installed_steam = match steam_root {
+        Some(_) => None,
+        None => gio::spawn_blocking(|| add_store::installed_steam(&HostDirs::from_env()))
+            .await
+            .ok()
+            .flatten(),
+    };
+    let session = SteamSession {
         steam_gamescope,
         host_spawn: permission_service::host_spawn_allowed(),
         steam_root: steam_root.as_deref(),
+        installed_steam,
+    };
+    Some(BigPictureRoute {
+        route: launch::big_picture(&session)?,
+        first_start: session.first_start(),
     })
 }
 
@@ -457,10 +486,13 @@ pub fn open_big_picture(
     let (app, window, library) = (app.clone(), window.clone(), library.clone());
     glib::spawn_future_local(async move {
         let route = big_picture_route(&app, &library).await;
+        let first_start = route.as_ref().is_some_and(|route| route.first_start);
         let opened = move |result: Result<(), String>| match result {
             Ok(()) => {
                 if let Some(application) = app.downcast_ref::<PinduApplication>() {
-                    application.gamescope_service().big_picture_started();
+                    application
+                        .gamescope_service()
+                        .big_picture_started(first_start);
                 }
             }
             Err(error) => {
@@ -470,7 +502,7 @@ pub fn open_big_picture(
                 ));
             }
         };
-        match route {
+        match route.map(|route| route.route) {
             Some(Route::HostSpawn(command)) => {
                 glib::g_debug!("pindu", "Opening Big Picture: {:?}", command.argv);
                 opened(
@@ -489,7 +521,8 @@ pub fn open_big_picture(
                     },
                 );
             }
-            _ => {}
+            Some(_) => {}
+            None => opened(Err("Steam is not installed".to_owned())),
         }
     });
 }

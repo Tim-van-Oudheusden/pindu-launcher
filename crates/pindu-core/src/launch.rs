@@ -288,6 +288,59 @@ pub struct SteamSession<'a> {
     pub host_spawn: bool,
     /// The Steam folder the library was imported from, if one was found.
     pub steam_root: Option<&'a Path>,
+    /// The Steam client installed on the machine
+    /// ([`installed_steam`](crate::add_store::installed_steam)), which counts where no
+    /// Steam folder was found: a Steam that has not run yet has none.
+    pub installed_steam: Option<SteamClient>,
+}
+
+impl SteamSession<'_> {
+    /// The Steam client a hand-off goes to: the one whose folder the library came from,
+    /// else the one installed.
+    fn client(&self) -> Option<SteamClient> {
+        self.steam_root
+            .map(SteamClient::of_folder)
+            .or(self.installed_steam)
+    }
+
+    /// Whether Steam is installed but has not run yet, as no Steam folder was found. Its
+    /// first start downloads the client's update before it shows a window.
+    pub fn first_start(&self) -> bool {
+        self.steam_root.is_none() && self.installed_steam.is_some()
+    }
+}
+
+/// A Steam client on the machine.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SteamClient {
+    /// The Steam Flatpak, which `flatpak run com.valvesoftware.Steam` starts.
+    Flatpak,
+    /// The host's `steam`, from a native package.
+    Host,
+}
+
+impl SteamClient {
+    /// The client that a Steam folder, `root`, belongs to: one in the Steam Flatpak's data,
+    /// `.var/app/com.valvesoftware.Steam`, is the Flatpak's; any other the host's.
+    pub fn of_folder(root: &Path) -> Self {
+        let parts: Vec<_> = root.components().map(|part| part.as_os_str()).collect();
+        let flatpak = parts
+            .windows(3)
+            .any(|window| window == [".var", "app", STEAM_FLATPAK]);
+        if flatpak { Self::Flatpak } else { Self::Host }
+    }
+
+    /// The program that starts the client, as the start of an argv list.
+    fn program(self) -> Vec<String> {
+        match self {
+            Self::Flatpak => vec![
+                "flatpak".to_owned(),
+                "run".to_owned(),
+                STEAM_FLATPAK.to_owned(),
+            ],
+            Self::Host => vec!["steam".to_owned()],
+        }
+    }
 }
 
 /// The Steam Flatpak's app ID, whose data lives under `~/.var/app/<id>`.
@@ -309,9 +362,11 @@ pub const BIG_PICTURE_URI: &str = "steam://open/bigpicture";
 
 /// How Home opens Steam Big Picture, the way Play hands a Steam game to Steam (see
 /// [`silent_steam`]): the `steam` command with `-silent` where that is how a game goes,
-/// its URI otherwise. `None` where no Steam folder was found, so Home does not offer it.
+/// its URI otherwise. A Steam that has not run yet goes through the client installed.
+/// `None` where Steam is neither installed nor was its folder found, so Home does not
+/// offer it.
 pub fn big_picture(session: &SteamSession<'_>) -> Option<Route> {
-    session.steam_root?;
+    session.client()?;
     Some(match steam_command(BIG_PICTURE_URI, session) {
         Some(command) => Route::HostSpawn(command),
         None => Route::StoreUri(BIG_PICTURE_URI.to_owned()),
@@ -319,35 +374,18 @@ pub fn big_picture(session: &SteamSession<'_>) -> Option<Route> {
 }
 
 /// The command that hands `uri` to Steam with `-silent` in a `gamescope --steam` session
-/// where the launcher may run commands on the host and knows which Steam has the library.
+/// where the launcher may run commands on the host and knows which Steam client to start.
 fn steam_command(uri: &str, session: &SteamSession<'_>) -> Option<Command> {
     if !(session.steam_gamescope && session.host_spawn) {
         return None;
     }
-    let root = session.steam_root?;
-    let mut argv = if in_steam_flatpak(root) {
-        vec![
-            "flatpak".to_owned(),
-            "run".to_owned(),
-            STEAM_FLATPAK.to_owned(),
-        ]
-    } else {
-        vec!["steam".to_owned()]
-    };
+    let mut argv = session.client()?.program();
     argv.extend(["-silent".to_owned(), uri.to_owned()]);
     Some(Command {
         argv,
         environment: BTreeMap::new(),
         working_dir: None,
     })
-}
-
-/// Whether a Steam folder lies in the Steam Flatpak's data, `.var/app/<id>`.
-fn in_steam_flatpak(root: &Path) -> bool {
-    let parts: Vec<_> = root.components().map(|part| part.as_os_str()).collect();
-    parts
-        .windows(3)
-        .any(|window| window == [".var", "app", STEAM_FLATPAK])
 }
 
 fn store_uri(game: &Game) -> Option<String> {
@@ -1146,6 +1184,7 @@ mod tests {
             steam_gamescope: true,
             host_spawn: true,
             steam_root: Some(root),
+            installed_steam: None,
         }
     }
 
@@ -1291,7 +1330,7 @@ mod tests {
     }
 
     #[test]
-    fn big_picture_is_offered_only_where_a_steam_folder_was_found() {
+    fn big_picture_is_offered_only_where_steam_was_found() {
         let found = SteamSession {
             steam_gamescope: false,
             ..steam_session(Path::new("/home/me/.steam/steam"))
@@ -1313,8 +1352,57 @@ mod tests {
                 steam_gamescope,
                 host_spawn: true,
                 steam_root: None,
+                installed_steam: None,
             };
             assert_eq!(big_picture(&none), None);
         }
+    }
+
+    #[test]
+    fn a_steam_that_has_not_run_yet_opens_big_picture_through_the_installed_client() {
+        for (client, program) in [
+            (
+                SteamClient::Flatpak,
+                &["flatpak", "run", "com.valvesoftware.Steam"][..],
+            ),
+            (SteamClient::Host, &["steam"][..]),
+        ] {
+            let session = SteamSession {
+                steam_gamescope: true,
+                host_spawn: true,
+                steam_root: None,
+                installed_steam: Some(client),
+            };
+            let Some(Route::HostSpawn(command)) = big_picture(&session) else {
+                panic!("{client:?} opens Big Picture through its command");
+            };
+            let mut argv = program.to_vec();
+            argv.extend(["-silent", "steam://open/bigpicture"]);
+            assert_eq!(command.argv, argv, "{client:?}");
+            assert!(session.first_start(), "{client:?} has not run yet");
+            let elsewhere = SteamSession {
+                steam_gamescope: false,
+                ..session
+            };
+            assert_eq!(
+                big_picture(&elsewhere),
+                Some(Route::StoreUri("steam://open/bigpicture".to_owned())),
+                "{client:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_steam_folder_picks_the_client_over_the_one_installed() {
+        // The library came from the host's Steam, and the Steam Flatpak is installed too.
+        let session = SteamSession {
+            installed_steam: Some(SteamClient::Flatpak),
+            ..steam_session(Path::new("/home/me/.local/share/Steam"))
+        };
+        let Some(Route::HostSpawn(command)) = big_picture(&session) else {
+            panic!("the host's Steam opens Big Picture through its command");
+        };
+        assert_eq!(command.argv[0], "steam");
+        assert!(!session.first_start(), "this Steam has run");
     }
 }

@@ -189,7 +189,8 @@ impl PinduGameOverlay {
 
     /// Playing Now's Return and Stop and the volume preview are the main window's; Return
     /// to the game in front just closes the panel. A notification's Permissions link opens
-    /// in the main window, which comes to the front.
+    /// in the main window, which comes to the front, and its Steam link opens Steam as the
+    /// main window's Home does.
     fn add_main_window_actions(&self, actions: &gio::SimpleActionGroup) {
         let main_action = |name: &'static str, parameter: Option<&glib::VariantTy>| {
             let action = gio::SimpleAction::new(name, parameter);
@@ -210,6 +211,7 @@ impl PinduGameOverlay {
         main_action("playing-return", Some(glib::VariantTy::STRING));
         main_action("playing-stop", Some(glib::VariantTy::STRING));
         main_action("preview-navigation-sound", None);
+        main_action("steam-big-picture", None);
         let permissions = gio::SimpleAction::new("notification-permissions", None);
         permissions.connect_activate(glib::clone!(
             #[weak(rename_to = overlay)]

@@ -1,5 +1,6 @@
-//! Watches each source's key files and resyncs the library when a launcher changes them,
-//! two seconds after the last change. The sync itself runs off the main thread.
+//! Watches each source's key files, and where an installed store's first run puts them,
+//! and resyncs the library when a launcher changes them, two seconds after the last
+//! change. The sync itself runs off the main thread.
 
 use std::cell::RefCell;
 use std::path::PathBuf;
@@ -8,6 +9,7 @@ use std::time::Duration;
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
+use pindu_core::add_store;
 use pindu_core::paths::default_library_db_path;
 use pindu_core::sources::location::HostDirs;
 use pindu_core::sources::watch;
@@ -93,17 +95,25 @@ impl WatchService {
     }
 }
 
-/// The key files of each source where the last sync found it, and the desktop folders.
+/// The key files of each source where the last sync found it, the desktop folders, and
+/// the key files of an installed store's sources that were not found, wherever the
+/// store's first run puts them (`add_store::first_run_paths`): signing in to a store Add a
+/// Store installed then refreshes the library.
 fn watched_paths() -> Vec<PathBuf> {
-    let mut paths = watch::desktop_paths(&HostDirs::from_env());
-    if let Ok(store) = Store::open(&default_library_db_path())
-        && let Ok(states) = store.source_states()
-    {
-        for state in states.into_iter().filter(|state| state.enabled) {
-            if let Some(root) = &state.resolved_location {
-                paths.extend(watch::key_paths(state.source, root));
-            }
+    let dirs = HostDirs::from_env();
+    let mut paths = watch::desktop_paths(&dirs);
+    let states = Store::open(&default_library_db_path())
+        .and_then(|store| store.source_states())
+        .unwrap_or_default();
+    for state in states.iter().filter(|state| state.enabled) {
+        if let Some(root) = &state.resolved_location {
+            paths.extend(watch::key_paths(state.source, root));
         }
     }
+    paths.extend(add_store::first_run_paths(&dirs, |source| {
+        states.iter().any(|state| {
+            state.source == source && (!state.enabled || state.resolved_location.is_some())
+        })
+    }));
     paths
 }

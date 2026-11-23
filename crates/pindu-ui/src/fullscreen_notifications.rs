@@ -1,7 +1,8 @@
 //! Quick Access's notifications: the unread count on the Notifications section's toggle,
 //! and the section's list of what happened in the background this session (see
 //! `notification_service`), newest first, marked read once shown. An entry with a target
-//! opens it on A: a game's page, or Preferences at its Permissions group.
+//! opens it on A: a game's page, Preferences at its Permissions group, or Steam, as Home's
+//! Big Picture tile opens it.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -164,6 +165,9 @@ impl PinduQuickAccess {
                 }
                 Target::Permissions => {
                     row.set_action_name(Some("win.notification-permissions"));
+                }
+                Target::Steam => {
+                    row.set_action_name(Some("win.steam-big-picture"));
                 }
             }
         }

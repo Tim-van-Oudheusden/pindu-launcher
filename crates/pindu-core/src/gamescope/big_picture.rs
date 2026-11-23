@@ -14,6 +14,11 @@ use super::{
 /// How long the launcher waits for Big Picture's window before it gives up on it.
 pub const BIG_PICTURE_TIMEOUT: Duration = STORE_LAUNCH_TIMEOUT;
 
+/// How long the launcher waits for the Steam client's first window when Steam has not run
+/// yet: its first start downloads the client's update, a few hundred megabytes, before
+/// it shows a window, and the user signs in once it has.
+pub const BIG_PICTURE_FIRST_START_TIMEOUT: Duration = Duration::from_secs(10 * 60);
+
 /// How long the session outlives the Steam client's last window, for a window that closes
 /// a while before another opens: on a cold start, Steam's update or sign-in window before
 /// Big Picture's, as for a store launch.
@@ -23,6 +28,8 @@ pub const BIG_PICTURE_GRACE: Duration = STORE_LAUNCH_GRACE;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BigPicture {
     phase: Phase,
+    /// How long it waits for the Steam client's first window.
+    timeout: Duration,
     /// The Steam client's windows that are open, in the order they mapped.
     steam: SteamPrompts,
     /// The app ID of a game the Steam client started, while gamescope could show it.
@@ -49,9 +56,19 @@ impl BigPicture {
     pub fn new(now: Instant, before: &[u32]) -> Self {
         Self {
             phase: Phase::Waiting(now),
+            timeout: BIG_PICTURE_TIMEOUT,
             steam: SteamPrompts::default(),
             game: None,
             before: before.to_vec(),
+        }
+    }
+
+    /// The session of a Steam that has not run yet, as [`Self::new`] has it, which waits
+    /// [`BIG_PICTURE_FIRST_START_TIMEOUT`] for the Steam client's first window.
+    pub fn first_start(now: Instant, before: &[u32]) -> Self {
+        Self {
+            timeout: BIG_PICTURE_FIRST_START_TIMEOUT,
+            ..Self::new(now, before)
         }
     }
 
@@ -65,7 +82,7 @@ impl BigPicture {
     /// started.
     pub fn deadline(&self) -> Option<Instant> {
         match self.phase {
-            Phase::Waiting(since) => Some(since + BIG_PICTURE_TIMEOUT),
+            Phase::Waiting(since) => Some(since + self.timeout),
             Phase::Shown => None,
             Phase::Left(_) if self.game.is_some() => None,
             Phase::Left(since) => Some(since + BIG_PICTURE_GRACE),
@@ -161,6 +178,16 @@ mod tests {
         let session = BigPicture::new(start, &[]);
         assert!(!session.is_over(start + BIG_PICTURE_TIMEOUT - Duration::from_secs(1)));
         assert!(session.is_over(start + BIG_PICTURE_TIMEOUT));
+    }
+
+    #[test]
+    fn a_first_start_waits_for_steams_update_before_it_gives_up() {
+        let start = Instant::now();
+        let session = BigPicture::first_start(start, &[]);
+        assert!(!session.is_over(start + BIG_PICTURE_TIMEOUT));
+        assert!(!session.is_over(start + BIG_PICTURE_FIRST_START_TIMEOUT - Duration::from_secs(1)));
+        assert!(session.is_over(start + BIG_PICTURE_FIRST_START_TIMEOUT));
+        assert!(session.is_opening());
     }
 
     #[test]

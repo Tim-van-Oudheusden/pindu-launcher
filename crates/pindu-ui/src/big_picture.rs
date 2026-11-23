@@ -1,14 +1,19 @@
 //! Steam Big Picture from fullscreen mode's Home: the tile shows where Steam is present,
-//! and activating it hands Big Picture to Steam (`launch_service::open_big_picture`). In a
-//! `gamescope --steam` session Big Picture then takes the launcher's place
-//! (`GamescopeService`): the tile says it is opening until Steam's window shows, and
+//! installed or with a folder the library came from, and activating it hands Big Picture
+//! to Steam (`launch_service::open_big_picture`). Add a Store's Open Steam and the Steam
+//! Installed notification activate it too, so a Steam that has not run yet opens for its
+//! first sign-in. In a `gamescope --steam` session Big Picture then takes the launcher's
+//! place (`GamescopeService`): the tile says it is opening until Steam's window shows, and
 //! activating it again gives up. Steam keeps the controller while its window is visible or
 //! a game it started is still active. The launcher takes the controller back once Steam's
 //! window is gone and no game it started is active.
 
+use std::cell::Cell;
+
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gio, glib};
+use pindu_core::add_store::StoreApp;
 
 use crate::application::PinduApplication;
 use crate::launch_service;
@@ -35,6 +40,20 @@ impl PinduWindow {
             self,
             move |_| window.update_big_picture_offered()
         ));
+        // Add a Store installs Steam, or finds it installed or gone.
+        let steam_installed = Cell::new(false);
+        application
+            .add_store_service()
+            .connect_changed(glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |state| {
+                    let installed = state.installed.contains(&StoreApp::Steam);
+                    if steam_installed.replace(installed) != installed {
+                        window.update_big_picture_offered();
+                    }
+                }
+            ));
         self.update_big_picture_offered();
     }
 
@@ -64,11 +83,15 @@ impl PinduWindow {
         });
     }
 
-    /// Hands Big Picture to Steam, or gives up on it while it is still opening.
+    /// Hands Big Picture to Steam, or gives up on it while it is still opening. A panel
+    /// it was activated from, such as Quick Access, closes first.
     fn open_big_picture(&self) {
         let Some(application) = self.application().and_downcast::<PinduApplication>() else {
             return;
         };
+        if self.is_fullscreen() {
+            self.close_panel();
+        }
         let gamescope = application.gamescope_service();
         if gamescope.in_big_picture() {
             gamescope.end_big_picture();

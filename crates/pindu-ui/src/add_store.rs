@@ -349,6 +349,17 @@ impl PinduAddStoreLevel {
                 )
             }
             Step::Installed(app) => {
+                // Steam opens for its first sign-in the way Home's Big Picture tile opens
+                // it (`big_picture`).
+                if *app == StoreApp::Steam {
+                    actions.append(&action_row(
+                        // Translators: {store} is a store's name, such as Steam.
+                        &gettext("Open {store}").replace("{store}", store_name(*app)),
+                        "win.steam-big-picture",
+                        None,
+                        "adw-external-link-symbolic",
+                    ));
+                }
                 actions.append(&action_row(
                     &gettext("Show Library"),
                     "win.add-store-done",

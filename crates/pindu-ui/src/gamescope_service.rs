@@ -645,8 +645,9 @@ impl GamescopeService {
     /// client's window shows instead of the launcher's once it is there, a game it starts
     /// comes to the front, and the launcher leaves the base layer and the controller to
     /// Steam until Big Picture's window has closed, or gives up when none comes for a
-    /// while. It ends a store launch.
-    pub fn big_picture_started(&self) {
+    /// while, longer on Steam's `first_start` (`BigPicture::first_start`). It ends a store
+    /// launch.
+    pub fn big_picture_started(&self, first_start: bool) {
         let Some(x11) = &self.inner.x11 else {
             return;
         };
@@ -658,7 +659,11 @@ impl GamescopeService {
         let now = Instant::now();
         let apps = x11.cardinals(x11.root, FOCUSABLE_APPS).unwrap_or_default();
         before.extend_from_slice(&apps);
-        let mut session = BigPicture::new(now, &before);
+        let mut session = if first_start {
+            BigPicture::first_start(now, &before)
+        } else {
+            BigPicture::new(now, &before)
+        };
         session.focusable_apps_changed(&apps, now);
         // A Steam client that already runs may show Big Picture in the window it has open.
         let own = own_windows();
