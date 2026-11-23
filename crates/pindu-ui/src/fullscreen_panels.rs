@@ -238,11 +238,26 @@ impl PinduWindow {
         self.fill_drawer();
         self.fit_panels_to_shell();
         self.connect_fullscreened_notify(|window| window.fit_panels_to_shell());
+        // The sheet's content stays while it slides away, and goes once it has.
+        imp.options_sheet.connect_sheet_height_notify(glib::clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |sheet| {
+                if sheet.sheet_height() == 0 {
+                    // Not while the sheet allocates, which is when the height changes.
+                    glib::idle_add_local_once(glib::clone!(
+                        #[weak]
+                        window,
+                        move || window.fit_panels_to_shell()
+                    ));
+                }
+            }
+        ));
     }
 
     /// Fullscreen mode's panels count in the desktop window only while one is open there.
     /// Closed, the drawer, Quick Access and the sheet still ask for their full width, more
-    /// than a narrow window has.
+    /// than a narrow window has. The sheet keeps its content until it has slid away.
     fn fit_panels_to_shell(&self) {
         let imp = self.imp();
         let fullscreen = self.is_fullscreen();
@@ -251,8 +266,11 @@ impl PinduWindow {
             .set_visible(fullscreen || matches!(open, Some(Panel::Drawer(_))));
         imp.quick_access_panel
             .set_visible(fullscreen || matches!(open, Some(Panel::QuickAccess(_))));
-        imp.options_panel
-            .set_visible(fullscreen || matches!(open, Some(Panel::Options(_))));
+        imp.options_panel.set_visible(
+            fullscreen
+                || matches!(open, Some(Panel::Options(_)))
+                || imp.options_sheet.sheet_height() > 0,
+        );
     }
 
     /// Hosts Quick Access: it takes its services from `application` and adds its rows'
