@@ -524,7 +524,9 @@ spawn, a prefix of your choice and art are set in the desktop's Add Game and Edi
 - **Repeat Delay**, **Repeat Rate** and **Stick Dead Zone**, also in Quick Access → Controller, set how soon and how
   fast a held direction keeps moving focus, and how far the left stick moves before it does: a long delay for a hand
   that lets go late, a large dead zone for a stick that drifts. They change only how the launcher moves its own focus; a
-  game receives the controller unchanged.
+  game receives the controller unchanged. Held through many items, focus keeps that pace and stops where you let go:
+  Home's art and covers for what focus passes wait until it stops, and the navigation sound plays every so often
+  instead of on every step. A held arrow key does the same.
 - **Change Buttons** in Quick Access → Controller lists what the buttons can do (Select, Back, Search, Game Options,
   Menu, Quick Access and the tab and sort switches) with the button for each. Choose one and press the button to give
   it; the function that had that button takes the old one. Guide, or five seconds without a press, leaves it as it was.

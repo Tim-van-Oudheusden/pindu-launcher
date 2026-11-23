@@ -9,6 +9,7 @@
 //! Keys stand in for the controller's other buttons (`pindu_core::keys`).
 
 use std::cell::RefCell;
+use std::time::Duration;
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -20,7 +21,7 @@ use pindu_core::home::{
 use pindu_core::keys::{self, Escape, Modifiers};
 use pindu_core::library::{Filters, View};
 use pindu_core::sections::SectionId;
-use pindu_core::sound::{media_volume, tone_wav};
+use pindu_core::sound::{MoveSounds, media_volume, tone_wav};
 use pindu_core::themes::ThemeLayout;
 
 use crate::application::PinduApplication;
@@ -746,6 +747,8 @@ pub struct NavigationSounds {
     tones: [glib::Bytes; 3],
     /// The sound playing, kept alive until the next one.
     playing: RefCell<Option<gtk::MediaFile>>,
+    /// When Move last played, so a held direction plays it every so often.
+    moves: RefCell<MoveSounds>,
 }
 
 impl Default for NavigationSounds {
@@ -759,13 +762,19 @@ impl Default for NavigationSounds {
             // An empty stream loads GTK's media backend now: loading it on the first
             // sound stalls input for a moment.
             playing: RefCell::new(Some(gtk::MediaFile::new())),
+            moves: RefCell::default(),
         }
     }
 }
 
 impl NavigationSounds {
-    /// Plays `sound` at `volume`, 0 to 1 (`pindu_core::sound::media_volume`).
+    /// Plays `sound` at `volume`, 0 to 1 (`pindu_core::sound::media_volume`); Move no
+    /// closer to the last one than `MOVE_SOUND_GAP`.
     fn play(&self, sound: Sound, volume: f64) {
+        let now = Duration::from_micros(glib::monotonic_time().max(0) as u64);
+        if matches!(sound, Sound::Move) && !self.moves.borrow_mut().plays(now) {
+            return;
+        }
         let tone = &self.tones[sound as usize];
         let stream = gio::MemoryInputStream::from_bytes(tone);
         let media = gtk::MediaFile::for_input_stream(&stream);

@@ -8,40 +8,21 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-22, #747 (first of a stack, #747 → … → #744; six issues worked by parallel agents in worktrees
-  `~/.cache/pindu-work/wt-<N>` and stacked at the end so the summaries, the .pot and shared docs do not conflict):
-  the starting screen shows the game's logo (`launch_logo`, `.launch-logo`, 480×160 contained) from the header's
-  texture, the title hidden while it shows; no banner. Without a design the overlay stays dark in the light style
-  (a white logo vanished on the light one). Seen in the harness with a seeded `library.db` of hand-added games that
-  run `sleep 40` (`~/.cache/pindu-work/harness-747/`). Not seen: a screen reader, `--steam` gamescope, held B.
-- 2026-11-22, #742 (stacked on #747): Shelves' menu is Go To and Collections over the power dock; `MenuCard` and
-  `MenuShelf::Leave` went, shelves hold `DrawerEntry`; `panels::{MenuSpot, step_menu_shelves}` move focus between
-  shelves and dock. Seen in the harness at Largest and 1280×480 (shelves scroll, dock stays). Not seen: activating a
-  dock action (no fake logind), dimmed actions, the menu over a running game, more than two collections.
-- 2026-11-22, #746 (after #742): a Fullscreen Mode button before the main menu, the menu item gone; README's three
-  library pictures retaken with the harness (`--desktop`, 1280×900, light, `cwebp -q 80`). gamescope ignores
-  fullscreen requests once the window shows, so entering and leaving fullscreen mode can't be seen in the harness.
-  The window already needs 704 px wide on `main` (`AdwToolbarView exceeds PinduWindow width`), so it does not fit
-  at its 360 px minimum (#750). RTL needs `--env LANG=he_IL.UTF-8` (`LANGUAGE` alone does nothing under `C.UTF-8`).
-  A follow-up after #744 fixed Preferences → Fullscreen's description, which still said "from the main menu".
-- 2026-11-22, #745 (stacked on #746): a capture-phase `GestureClick` on the desktop window blurs the search after a
-  click outside it (`setup_search_blur`, `blur_search`), never claiming the click; typing in the library refocuses
-  the field (`connect_changed` while `content_stack` has focus). The field is a 159 sp `Adw.Clamp`ed pill
-  (`.search-pill`), 318 px before. The harness gained `click:X,Y` and `move:X,Y` (xdotool). Not seen: window drag,
-  touch.
-- 2026-11-22, #743 (stacked on #745): Button Hints (`fullscreen-hint-bar`, `hint_bar::HINT_BAR_KEY`) hides only
-  the hint bar, not the bottom area, so the search keyboard still works; the overlay's two bars follow it through
-  the window's settings. Seen in all four designs at default and Largest. Not seen: the starting screen (with no
-  bar its hold-B-to-cancel is unannounced until Cancel shows after 5 s), the overlay over a running game. When the
-  bar comes back, the focused Button Hints row sits partly under it until focus moves.
-- 2026-11-22, #744 (after #743, the last of the six; two agents, Parts A/B and Part C's wording, squashed into one
-  commit): categories on fullscreen Home by the design's `home` option. `sections::{CategoryId, categories}` (a
-  process-wide interner keeps a category's ID by name, case-blind, so `SectionId` stays `Copy`);
-  `home::{HOME_CATEGORIES, more_categories, categories_row, CATEGORIES_KEY}`: eight rows by game count, then More
-  Categories by name; the Categories tile after Installed and its screen, B steps back one screen
-  (`HomePage::go_back`). `genre_label` moved to `genres.rs`. Users read "category"; code and stored data keep
-  "genre". Seen with a seeded harness copy (`harness-744/`, 12 genres). Not seen: light, high contrast, Reduce
-  Motion, toggling the switch by hand, a screen reader.
+- 2026-11-23, the open issues in #676–#763, one PR each, merged at the end (maintainer's call on the form):
+  #678 README duplicate line (#767); #677 option C, every release's notes tell bundle users how to update
+  (`build-aux/release-notes.py`, #768); #681 the scanner's two `home.rs` tests cherry-picked (#769; the hive's stale
+  `test/681-home-background-data` branch exists, so it went as `test/681-background-data-tests`); #750 the hive's
+  #762 plus a fix for its open review thread (the options sheet keeps its content while `sheet-height > 0`); #759
+  closed category set `pindu_core::category` + `category/mappings.json`, union precedence, migration 0012 (#771);
+  #758 this commit. #676: M6–M8 closed, M5 waits for #664. #763: option B, closed. Filed #770 (options sheet
+  needs 741 px at 720 px high, on `main` too).
+- #758 (this commit): `gamepad::FOCUS_REST` (150 ms, longer than the Slow repeat interval) before uncached art
+  loads, hero kept while a direction is held, heroes decoded at screen size and cancellable through glycin, Move
+  sound at most every 100 ms (`sound::MoveSounds`), held arrow keys' repeats dropped until drawn (`keys::HeldKey`),
+  repeat timer at the input events' priority. The lag only shows with the CPU limited: compare with
+  `taskset -c 0` (`~/.cache/pindu-work/harness-758/compare.sh`, 72 categories with 4K heroes). Not seen: sounds,
+  real hardware, light/high contrast/RTL. The devel Flatpak builds Rust unoptimised (Meson's default buildtype; the
+  release manifest sets `release`), so such lag likely shows more there than in a release.
 - Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
   installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
   `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,

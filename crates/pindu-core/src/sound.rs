@@ -1,6 +1,8 @@
 //! Navigation sounds for the fullscreen shell: short soft tones made here, so no sound
 //! files ship with the app.
 
+use std::time::Duration;
+
 /// Samples per second of the tones.
 pub const SAMPLE_RATE: u32 = 44_100;
 
@@ -41,6 +43,32 @@ pub fn media_volume(percent: i32) -> f64 {
     f64::from(percent.clamp(0, 100)) / 100.0
 }
 
+/// The shortest time between two Move sounds. A held direction moves focus faster than
+/// that and plays one every so often rather than one per step, each of which costs a new
+/// media stream.
+pub const MOVE_SOUND_GAP: Duration = Duration::from_millis(100);
+
+/// When the last Move sound played, to space them [`MOVE_SOUND_GAP`] apart.
+#[derive(Debug, Default)]
+pub struct MoveSounds {
+    last: Option<Duration>,
+}
+
+impl MoveSounds {
+    /// Whether a Move sound asked for at `now`, a monotonic time, plays: not when the last
+    /// one played less than [`MOVE_SOUND_GAP`] before.
+    pub fn plays(&mut self, now: Duration) -> bool {
+        if self
+            .last
+            .is_some_and(|last| now.saturating_sub(last) < MOVE_SOUND_GAP)
+        {
+            return false;
+        }
+        self.last = Some(now);
+        true
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -79,5 +107,15 @@ mod tests {
     fn a_volume_outside_the_setting_s_range_is_clamped() {
         assert_eq!(media_volume(-5), 0.0);
         assert_eq!(media_volume(250), 1.0);
+    }
+
+    #[test]
+    fn move_sounds_closer_than_the_gap_are_skipped() {
+        let ms = std::time::Duration::from_millis;
+        let mut sounds = MoveSounds::default();
+
+        assert!(sounds.plays(ms(1000)));
+        assert!(!sounds.plays(ms(1050)));
+        assert!(sounds.plays(ms(1000) + MOVE_SOUND_GAP));
     }
 }
