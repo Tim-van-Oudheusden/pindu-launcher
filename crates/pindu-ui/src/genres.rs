@@ -3,8 +3,9 @@
 
 use gettextrs::gettext;
 
-/// A genre as Pindu shows it: the genres Steam's importer names, translated; any other as
-/// its source wrote it.
+/// A genre as Pindu shows it: each of the categories providers map onto
+/// (`pindu_core::category::CATEGORIES`), translated; any other, such as one the user
+/// typed, as it was written.
 pub fn genre_label(genre: &str) -> String {
     match genre {
         "Action" => gettext("Action"),
@@ -17,6 +18,10 @@ pub fn genre_label(genre: &str) -> String {
         "Adventure" => gettext("Adventure"),
         "Simulation" => gettext("Simulation"),
         "Massively Multiplayer" => gettext("Massively Multiplayer"),
+        "Shooter" => gettext("Shooter"),
+        "Platformer" => gettext("Platformer"),
+        "Puzzle" => gettext("Puzzle"),
+        "Fighting" => gettext("Fighting"),
         other => other.to_owned(),
     }
 }

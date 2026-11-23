@@ -11,6 +11,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use serde_json::Value as Json;
 
+use crate::category::{self, Provider};
 use crate::launch::percent_encode;
 use crate::metadata::{self, Metadata, MetadataValue};
 use crate::model::{
@@ -179,8 +180,8 @@ impl CrossId {
 }
 
 /// The SPARQL query for one batch: each item with one of the Steam app IDs (`P1733`),
-/// with one row per developer (`P178`), per genre (`P136`), labelled in `languages`, and
-/// per cross-ID ([`CrossId`]), named by its property.
+/// with one row per developer (`P178`), labelled in `languages`, per genre (`P136`), whose
+/// item ID is what counts, and per cross-ID ([`CrossId`]), named by its property.
 fn query(app_ids: &[u32], languages: &str) -> String {
     let ids = app_ids
         .iter()
@@ -213,26 +214,29 @@ pub struct Item {
     pub qid: String,
     /// Who made the game, sorted.
     pub developers: Vec<String>,
-    /// The game's genres, sorted.
+    /// The item IDs (QIDs) of the game's genres, sorted.
     pub genres: Vec<String>,
     /// The store and database IDs the item keeps, each property's sorted.
     pub cross_ids: BTreeMap<CrossId, Vec<String>>,
 }
 
 impl Item {
-    /// The values the provider gives the game: its developers as one, and its genres.
+    /// The values the provider gives the game: its developers as one, and the categories
+    /// its genres map to ([`category::categories`]), so a genre no category takes adds
+    /// none.
     pub fn metadata(&self) -> Metadata {
         Metadata {
             developer: (!self.developers.is_empty()).then(|| self.developers.join(", ")),
-            genres: self.genres.clone(),
+            genres: category::categories(Provider::Wikidata, &self.genres),
             ..Metadata::default()
         }
     }
 }
 
 /// The items of an answer, by the Steam app ID they were found by. A Steam ID that
-/// Wikidata has no item for is not there. A label Wikidata has in none of the languages
-/// asked for comes back as the value's ID, and is left out.
+/// Wikidata has no item for is not there. A developer's label Wikidata has in none of the
+/// languages asked for comes back as the value's ID, and is left out; a genre is kept by
+/// its ID, whatever its label.
 pub fn parse(answer: &str) -> Result<HashMap<u32, Item>, String> {
     let json: Json = serde_json::from_str(answer).map_err(|error| error.to_string())?;
     let rows = json
@@ -263,14 +267,18 @@ pub fn parse(answer: &str) -> Result<HashMap<u32, Item>, String> {
             }
             continue;
         }
+        if field == "genre" {
+            if let Some(qid) = text("value").and_then(|uri| uri.rsplit('/').next()) {
+                found.genres.insert(qid.to_owned());
+            }
+            continue;
+        }
         let Some(label) = text("valueLabel").filter(|label| !is_item_id(label)) else {
             continue;
         };
-        match field {
-            "developer" => found.developers.insert(label.to_owned()),
-            "genre" => found.genres.insert(label.to_owned()),
-            _ => false,
-        };
+        if field == "developer" {
+            found.developers.insert(label.to_owned());
+        }
     }
     Ok(found
         .into_iter()
@@ -569,16 +577,31 @@ mod tests {
                 qid: "Q193581".into(),
                 developers: vec!["Valve Corporation".into()],
                 genres: vec![
-                    "Ego-Shooter".into(),
-                    "Science-Fiction-Computerspiel".into(),
-                    "postapokalyptisches Videospiel".into(),
-                    "science fiction horror".into(),
+                    "Q115101598".into(),
+                    "Q129722891".into(),
+                    "Q185029".into(),
+                    "Q27670585".into(),
                 ],
                 cross_ids: BTreeMap::new(),
             }
         );
         assert_eq!(items[&1_245_620].qid, "Q64826862");
         assert_eq!(items[&1_245_620].developers, ["FromSoftware"]);
+    }
+
+    #[test]
+    fn an_items_genres_become_categories_whatever_language_their_labels_are_in() {
+        // Half-Life 2's genres labelled in German, then in English.
+        let german = parse(include_str!("../tests/fixtures/wikidata/steam_ids.json")).unwrap();
+        let english = parse(include_str!("../tests/fixtures/wikidata/cross_ids.json")).unwrap();
+
+        assert_eq!(german[&220].metadata().genres, ["Action", "Shooter"]);
+        assert_eq!(english[&220].metadata().genres, ["Action", "Shooter"]);
+        assert_eq!(
+            german[&400].metadata().genres,
+            ["Action", "Shooter", "Puzzle"]
+        );
+        assert_eq!(german[&1_245_620].metadata().genres, ["Action", "RPG"]);
     }
 
     #[test]
@@ -634,17 +657,33 @@ mod tests {
     }
 
     #[test]
-    fn a_label_wikidata_lacks_in_every_language_asked_is_left_out() {
+    fn a_developer_label_wikidata_lacks_in_every_language_asked_is_left_out() {
         let answer = r#"{"results": {"bindings": [
             {"steam": {"value": "10"}, "item": {"value": "http://www.wikidata.org/entity/Q1"},
-             "field": {"value": "genre"}, "valueLabel": {"value": "Q999"}},
+             "field": {"value": "developer"}, "valueLabel": {"value": "Q999"}},
             {"steam": {"value": "10"}, "item": {"value": "http://www.wikidata.org/entity/Q1"},
-             "field": {"value": "genre"}, "valueLabel": {"value": "platform game"}},
+             "field": {"value": "developer"}, "valueLabel": {"value": "Nintendo"}},
             {"steam": {"value": "10"}, "item": {"value": "http://www.wikidata.org/entity/Q1"},
-             "field": {"value": "genre"}, "valueLabel": {"value": "platform game"}}
+             "field": {"value": "developer"}, "valueLabel": {"value": "Nintendo"}}
         ]}}"#;
 
-        assert_eq!(parse(answer).unwrap()[&10].genres, ["platform game"]);
+        assert_eq!(parse(answer).unwrap()[&10].developers, ["Nintendo"]);
+    }
+
+    #[test]
+    fn a_genre_is_kept_by_its_id_even_without_a_label() {
+        let answer = r#"{"results": {"bindings": [
+            {"steam": {"value": "10"}, "item": {"value": "http://www.wikidata.org/entity/Q1"},
+             "field": {"value": "genre"}, "value": {"value": "http://www.wikidata.org/entity/Q828322"},
+             "valueLabel": {"value": "Q828322"}},
+            {"steam": {"value": "10"}, "item": {"value": "http://www.wikidata.org/entity/Q1"},
+             "field": {"value": "genre"}, "value": {"value": "http://www.wikidata.org/entity/Q828322"},
+             "valueLabel": {"value": "platform game"}},
+            {"steam": {"value": "10"}, "item": {"value": "http://www.wikidata.org/entity/Q1"},
+             "field": {"value": "genre"}, "valueLabel": {"value": "no item ID"}}
+        ]}}"#;
+
+        assert_eq!(parse(answer).unwrap()[&10].genres, ["Q828322"]);
     }
 
     #[test]
@@ -654,11 +693,12 @@ mod tests {
     }
 
     #[test]
-    fn an_items_developers_are_one_value_and_its_genres_another() {
+    fn an_items_developers_are_one_value_and_its_genres_categories_another() {
+        // Action-adventure game, then immersive sim, which no category takes.
         let item = Item {
             qid: "Q1".into(),
             developers: vec!["Arkane Studios".into(), "Bethesda Game Studios".into()],
-            genres: vec!["immersive sim".into()],
+            genres: vec!["Q343568".into(), "Q30680823".into()],
             cross_ids: BTreeMap::new(),
         };
 
@@ -666,7 +706,7 @@ mod tests {
             item.metadata(),
             Metadata {
                 developer: Some("Arkane Studios, Bethesda Game Studios".into()),
-                genres: vec!["immersive sim".into()],
+                genres: vec!["Action".into(), "Adventure".into()],
                 ..Metadata::default()
             }
         );
@@ -762,6 +802,46 @@ mod tests {
             store.game(&unknown.id).unwrap().unwrap().genres,
             ["Indie"],
             "no item, nothing changes"
+        );
+    }
+
+    #[test]
+    fn a_refresh_adds_categories_to_a_steam_games_own_and_never_wikidatas_genres() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::open(&dir.path().join("library.db")).unwrap();
+        let mut stellaris = game(Source::Steam, "281990");
+        stellaris.genres = vec!["Strategy".into()];
+        let mut half_life = game(Source::Steam, "220");
+        half_life.genres = vec!["Action".into()];
+        let no_steam_genres = game(Source::Steam, "1245620");
+        for game in [&stellaris, &half_life, &no_steam_genres] {
+            store.insert_game(game).unwrap();
+        }
+        // Stellaris: real-time strategy, 4X, grand strategy wargame, science fiction.
+        let row = |qid: &str| {
+            format!(
+                r#"{{"steam": {{"value": "281990"}},
+                    "item": {{"value": "http://www.wikidata.org/entity/Q19953484"}},
+                    "field": {{"value": "genre"}},
+                    "value": {{"value": "http://www.wikidata.org/entity/{qid}"}}}}"#
+            )
+        };
+        let rows = ["Q208189", "Q603555", "Q3139142", "Q27670585"].map(row);
+        let answer = format!(r#"{{"results": {{"bindings": [{}]}}}}"#, rows.join(","));
+        let mut items = parse(&answer).unwrap();
+        items.extend(parse(include_str!("../tests/fixtures/wikidata/steam_ids.json")).unwrap());
+
+        let app_ids = games_to_look_up(&store).unwrap();
+        assert_eq!(store_items(&store, &app_ids, &items, 500).unwrap(), 3);
+
+        let genres_of = |game: &Game| store.game(&game.id).unwrap().unwrap().genres;
+        assert_eq!(genres_of(&stellaris), ["Strategy"]);
+        assert_eq!(genres_of(&half_life), ["Action", "Shooter"]);
+        assert_eq!(genres_of(&no_steam_genres), ["Action", "RPG"]);
+        let games = store.games().unwrap();
+        assert_eq!(
+            crate::library::genres(&games),
+            ["Action", "RPG", "Shooter", "Strategy"]
         );
     }
 

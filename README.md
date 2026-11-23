@@ -86,9 +86,10 @@ widgets so it looks and behaves like the rest of GNOME.
   what you change is kept when the library is imported again, and clearing a field goes back to the launcher's.
 - **Metadata from Wikidata, if you want it.** Turn on **Get Metadata From Wikidata** in Preferences (or in Quick
   Access's Manage section), then **Refresh Metadata** in the main menu or under that switch looks your games up on
-  [Wikidata](https://www.wikidata.org) by their Steam app ID and keeps their developer and categories, labelled in
-  your language where Wikidata has it. It is off by default, runs only when you ask, never during an import, and can be
-  cancelled in Activity. Details your launchers give stay underneath, and details you enter yourself come first. A
+  [Wikidata](https://www.wikidata.org) by their Steam app ID and keeps their developer, labelled in your language where
+  Wikidata has it, and the categories their genres fit, such as Strategy for a 4X game. It is off by default, runs only
+  when you ask, never during an import, and can be cancelled in Activity. Details your launchers give stay underneath,
+  Wikidata's categories join your launcher's rather than replace them, and details you enter yourself come first. A
   game's page marks each detail that came from Wikidata with **Wikidata** and the date it was fetched, and on the
   desktop a button beside it opens the game's Wikidata page.
 - **Search from GNOME Shell.** Type a game's name in the Activities overview to start it.
@@ -133,6 +134,10 @@ highest in the list, native copies still before Windows ones. **Move Up** and **
 A game's page shows the details its launcher keeps offline: its developer, categories (the launchers and Wikidata call
 them genres) and description from Heroic; its developer, release year, categories and whether it has full or partial
 controller support from Steam's own app cache; and its release year from Lutris and from Heroic's Amazon library.
+Categories come from one set based on Steam's (Action, Strategy, RPG, Casual, Racing, Sports, Indie, Adventure,
+Simulation and Massively Multiplayer, plus Shooter, Platformer, Puzzle and Fighting): Heroic's store genres and
+Wikidata's are mapped onto it, so they never add categories of their own. Categories you type in **Edit…** may be
+anything.
 
 The Flatpak has no permission for Legendary's `~/.config/legendary` or the itch app's folder (`~/.config/itch`, or
 `~/.var/app/io.itch.itch/config/itch` for the itch Flatpak), and does not ask for one: Preferences → Sources says so,

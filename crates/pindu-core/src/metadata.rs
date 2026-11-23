@@ -197,8 +197,9 @@ pub struct MetadataValue {
     pub updated_at: Timestamp,
 }
 
-/// The value a game shows for `field`: the one from the origin that wins, the user's
-/// before a provider's before the source's. `None` when no origin has one.
+/// The value that wins for `field`: the user's before a provider's before the source's.
+/// `None` when no origin has one. For genres a provider's adds to the source's rather than
+/// replacing it ([`resolve`]); this is still the value that ranks highest.
 pub fn shown(values: &[MetadataValue], field: MetadataField) -> Option<&MetadataValue> {
     values
         .iter()
@@ -206,12 +207,35 @@ pub fn shown(values: &[MetadataValue], field: MetadataField) -> Option<&Metadata
         .max_by_key(|value| value.origin)
 }
 
-/// The metadata a game shows, each field [`shown`] from its values.
+/// The metadata a game shows, each field [`shown`] from its values, except genres: the
+/// user's when they set some, otherwise the source's with a provider's added (#759), each
+/// once, ignoring case. A provider's genres are already Pindu's categories
+/// ([`crate::category`]), so they fill gaps in the source's rather than replace them.
 pub fn resolve(values: &[MetadataValue]) -> Metadata {
     let mut metadata = Metadata::default();
     for field in MetadataField::ALL {
         if let Some(shown) = shown(values, *field) {
             metadata.set(shown.value.clone());
+        }
+    }
+    if !values.iter().any(|value| {
+        value.origin == MetadataOrigin::User && value.value.field() == MetadataField::Genres
+    }) {
+        metadata.genres = Vec::new();
+        for origin in [MetadataOrigin::Source, MetadataOrigin::Provider] {
+            for value in values.iter().filter(|value| value.origin == origin) {
+                if let FieldValue::Genres(genres) = &value.value {
+                    for genre in genres {
+                        if !metadata
+                            .genres
+                            .iter()
+                            .any(|g| g.to_lowercase() == genre.to_lowercase())
+                        {
+                            metadata.genres.push(genre.clone());
+                        }
+                    }
+                }
+            }
         }
     }
     metadata
@@ -393,14 +417,29 @@ mod tests {
                 updated_at: 2_000,
             });
             let after = resolve(&values);
+            // A provider's genres add to the source's (#759), so only the user's override
+            // them; every other field is overridden by any origin above the source.
+            let overrides = |origin| {
+                origin == MetadataOrigin::User
+                    || (origin == MetadataOrigin::Provider && field != MetadataField::Genres)
+            };
             let overridden = values
                 .iter()
-                .any(|v| v.origin != MetadataOrigin::Source && v.value.field() == field);
+                .any(|v| overrides(v.origin) && v.value.field() == field);
             if overridden {
                 assert_eq!(after, before, "seed {seed}");
             } else {
                 let mut expected = before.clone();
                 expected.set(value_of(field, "synced".into()));
+                if field == MetadataField::Genres {
+                    let provider = values.iter().filter_map(|v| match &v.value {
+                        FieldValue::Genres(genres) if v.origin == MetadataOrigin::Provider => {
+                            Some(genres.clone())
+                        }
+                        _ => None,
+                    });
+                    expected.genres.extend(provider.flatten());
+                }
                 assert_eq!(after, expected, "seed {seed}");
             }
         }
@@ -409,6 +448,36 @@ mod tests {
     #[test]
     fn metadata_without_values_resolves_to_none() {
         assert_eq!(resolve(&[]), Metadata::default());
+    }
+
+    fn genres(origin: MetadataOrigin, genres: &[&str]) -> MetadataValue {
+        MetadataValue {
+            value: FieldValue::Genres(genres.iter().map(|&genre| genre.to_owned()).collect()),
+            origin,
+            updated_at: 0,
+        }
+    }
+
+    #[test]
+    fn a_providers_genres_add_to_the_sources_and_the_users_replace_both() {
+        let source = genres(MetadataOrigin::Source, &["Strategy", "Indie"]);
+        let provider = genres(MetadataOrigin::Provider, &["Action", "strategy"]);
+        let user = genres(MetadataOrigin::User, &["4X"]);
+
+        assert_eq!(
+            resolve(&[provider.clone(), source.clone()]).genres,
+            ["Strategy", "Indie", "Action"],
+            "the source's first, then the provider's it lacks, ignoring case"
+        );
+        assert_eq!(
+            resolve(std::slice::from_ref(&provider)).genres,
+            ["Action", "strategy"]
+        );
+        assert_eq!(
+            resolve(std::slice::from_ref(&source)).genres,
+            ["Strategy", "Indie"]
+        );
+        assert_eq!(resolve(&[source, provider, user]).genres, ["4X"]);
     }
 
     #[test]

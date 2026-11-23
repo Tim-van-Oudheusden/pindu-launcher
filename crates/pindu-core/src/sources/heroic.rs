@@ -16,6 +16,7 @@ use serde_json::Value as Json;
 use super::iso_time::parse_iso_timestamp;
 use super::sha256::sha256_hex;
 use super::{ImportError, ImportedGame, Snapshot, SourceFlags};
+use crate::category::{self, Provider};
 use crate::model::{ArtLayout, LaunchKind, Platform, Source};
 
 /// URL parameters Heroic's frontend adds to Epic art before caching it.
@@ -98,14 +99,15 @@ pub fn import(root: &Path, source: Source) -> Result<Snapshot, ImportError> {
             .unwrap_or(app_name);
         let mut game = ImportedGame::new(app_name, title, LaunchKind::StoreUri);
         game.developer = text(info, "developer").map(str::to_owned);
-        game.genres = info
-            .pointer("/extra/genres")
-            .and_then(Json::as_array)
-            .into_iter()
-            .flatten()
-            .filter_map(Json::as_str)
-            .map(str::to_owned)
-            .collect();
+        // The store's genres, mapped onto Pindu's categories by name.
+        game.genres = category::categories(
+            Provider::Heroic,
+            info.pointer("/extra/genres")
+                .and_then(Json::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(Json::as_str),
+        );
         game.description = [
             "/extra/about/description",
             "/extra/about/shortDescription",

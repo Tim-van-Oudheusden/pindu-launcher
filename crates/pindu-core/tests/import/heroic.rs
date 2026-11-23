@@ -202,6 +202,16 @@ fn metadata_comes_from_game_info() {
 }
 
 #[test]
+fn store_genres_become_categories_through_the_heroic_aliases() {
+    let (_dir, _home, root) = heroic_home(".config/heroic");
+
+    let snapshot = import(&root, Source::HeroicGog);
+
+    // GOG's "Role-playing (RPG)", "Adventure" and "Open World", which maps to none.
+    assert_eq!(game(&snapshot, "1495134320").genres, ["RPG", "Adventure"]);
+}
+
+#[test]
 fn hidden_favourite_and_category_flags_come_from_store_config() {
     let (_dir, _home, root) = heroic_home(".config/heroic");
 

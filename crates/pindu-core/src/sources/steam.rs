@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 
 use super::vdf::{self, Value};
 use super::{ImportError, ImportedGame, Snapshot};
+use crate::category::{self, Provider};
 use crate::model::{ArtLayout, DeckCompatibility, DeckRating, LaunchKind, Platform, Source};
 
 /// `StateFlags` bit for a fully installed app.
@@ -306,35 +307,18 @@ fn release_year(common: &Value) -> Option<i32> {
         .and_then(|secs| i32::try_from(crate::saves::civil_from_days(secs / 86_400).0).ok())
 }
 
-/// The app's genres, named from Steam's genre IDs. Free To Play (37) and Early Access
-/// (70) are a price model and a release state, not genres, so they are left out with any
-/// ID the table does not know.
+/// The app's categories, from Steam's genre IDs through [`category`]'s Steam table. Free
+/// To Play (37) and Early Access (70) are a price model and a release state, not genres,
+/// so they map to none, as does any ID the table does not know.
 fn genres(common: &Value) -> Vec<String> {
-    common
+    let ids = common
         .get("genres")
         .map(Value::entries)
         .unwrap_or_default()
         .iter()
-        .filter_map(|(_, id)| id.as_i64().and_then(genre_name))
-        .map(str::to_owned)
-        .collect()
-}
-
-/// Steam's name for a genre ID, in English; the shells translate it for display.
-fn genre_name(id: i64) -> Option<&'static str> {
-    Some(match id {
-        1 => "Action",
-        2 => "Strategy",
-        3 => "RPG",
-        4 => "Casual",
-        9 => "Racing",
-        18 => "Sports",
-        23 => "Indie",
-        25 => "Adventure",
-        28 => "Simulation",
-        29 => "Massively Multiplayer",
-        _ => return None,
-    })
+        .filter_map(|(_, id)| id.as_i64())
+        .map(|id| id.to_string());
+    category::categories(Provider::Steam, ids)
 }
 
 /// Steam's Deck rating from `common.steam_deck_compatibility`: its `category` 0 to 3, and

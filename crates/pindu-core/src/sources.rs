@@ -76,7 +76,8 @@ pub struct ImportedGame {
     pub launch_uri: Option<String>,
     /// The command the source gives for starting the game ourselves.
     pub launch_config: Option<LaunchConfig>,
-    /// The game's genres, as the source names them.
+    /// The game's categories: its source's genres mapped onto
+    /// [`crate::category::CATEGORIES`] (Steam and Heroic are the only sources with genres).
     pub genres: Vec<String>,
     /// The game's description, when the source has one.
     pub description: Option<String>,
