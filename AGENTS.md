@@ -57,7 +57,8 @@ gh pr create --title "type(scope): summary (#<number>)" --body-file <file>   # L
   research link, plus depends-on when there is one.
 - Labels: `area:core`, `area:import`, `area:ui`, `area:launch`, `area:art`, `area:gamepad`, `area:packaging`;
   `type:feature`, `type:spike`, `type:chore`; `human-only`; `hardware-check:passed`, which only the maintainer adds,
-  to a "Release X.Y.Z" issue whose hardware checklist passed (`docs/releasing.md`).
+  to a "Release X.Y.Z" issue whose hardware checklist passed (`docs/releasing.md`); `hardware-report`, which the
+  Hardware report form adds to a voluntary report for the matrix in `docs/hardware.md`: data, not work to pick up.
 
 ## Sessions with GitHub Issues
 
