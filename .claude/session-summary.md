@@ -8,14 +8,20 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-24, #834 XP-4 (this commit; the stack is #831 XP-2 ← #832 XP-3 ← #833 XP-5 ← #834 XP-4): Bottles runs
-  as the bundled helper `pindu-import-bottles` (`<libexecdir>/pindu-launcher/importers/bottles/`), keeping
-  `Source::Bottles`; without it installed (plain cargo builds) Bottles imports in-process. `external::BUILT_IN`
-  keeps such helpers out of the importer list and sync. Built in a worktree (`~/.cache/pindu-work/wt-834`); the
-  devel Flatpak was built with `flatpak run org.flatpak.Builder` (no host `flatpak-builder`). XP-5: install from
-  Preferences (`external::install`, `tar --list --absolute-names` before unpacking). Harness: GTK's own file
-  chooser takes `ctrl+l`, the folder, Return, then `ctrl+l ctrl+a`, one letter and End; `run.sh --seed DIR` copies
-  DIR into the run's XDG data home. Pre-existing: a Sources switch's sync loses fullscreen focus.
+- 2026-11-24, 0.7.0-rc.4 (this commit, under #788): one session worked #823–#837 plus the follow-ups they filed,
+  ten subagents at once, each in `~/.cache/pindu-work/wt-<N>` with its own `target-<N>`/`prefix-<N>`, PRs labelled
+  `hold` and merged by the parent with `~/.cache/pindu-work/land.sh PR N` (waits for CLEAN + green, merges, then
+  deletes the branch, the worktree and every `*-<N>` folder). Merged: #845 (#834, re-landed: #841 had merged into
+  the `feat/833` branch 8 s after #840 merged that branch, so its commits never reached `main`; a stacked PR's base
+  must be retargeted to `main` before the base merges), #844, #849, #851, #853, #855, #856, #857, #858, #861, #862,
+  #864, #865, #867, #869, #871, #872, #876, #880, hive's #847 and #870, Weblate's #866 and #877. Maintainer
+  decisions: the hardware set is "HP laptop" with no other details yet (#827); #863 (Steam's log in the Flatpak)
+  closed, left as documented; Apps hidden in the desktop window by default with a switch (#868). Every device-only
+  acceptance item became a row of the hardware checklist in `docs/releasing.md` and the Release form. The harness
+  cannot leave fullscreen mode within a run (no window manager): remove `_NET_WM_STATE_FULLSCREEN` with `xprop`.
+- Merge friction: `po/pindu-launcher.pot` conflicts on nearly every merge; regenerate it, never hand-merge. Hive's
+  reviewer leaves review threads (required resolution blocks the merge: `BLOCKED` with green checks) and its sentinel
+  labels PRs touching `.github/ISSUE_TEMPLATE/release.yml` `sentinel-alert`; read, then resolve or remove.
 - Other agents work this repo at the same time (a "hive": issue comments trigger them, and the merge queue merges
   their PRs). An early decision comment on #792 was implemented as #795 and merged before the maintainer's later
   choice; #803 duplicated #791. Post a decision comment only once it is final, and check `gh pr list` before
