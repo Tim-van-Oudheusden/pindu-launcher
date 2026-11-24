@@ -435,7 +435,11 @@ impl ChoiceRow {
         let before = imp.shown.replace(shown);
         let changed = before.is_some() && before != shown;
         if changed && !value.is_empty() && (imp.choosing.get() || self.has_focus()) {
-            self.announce(&value, gtk::AccessibleAnnouncementPriority::Medium);
+            crate::announcement::announce(
+                self,
+                &value,
+                gtk::AccessibleAnnouncementPriority::Medium,
+            );
         }
     }
 

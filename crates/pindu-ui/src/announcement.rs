@@ -20,6 +20,10 @@ pub(crate) fn announce(
     priority: gtk::AccessibleAnnouncementPriority,
 ) {
     if context_type(accessible.upcast_ref()).is_some_and(announces_with) {
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "the one sanctioned call: the context was checked to announce just above"
+        )]
         accessible.announce(message, priority);
     }
 }
