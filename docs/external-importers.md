@@ -201,14 +201,89 @@ Only the kinds that already exist, never a shell string:
 Proton and Steam Linux Runtime launches inside Pindu's sandbox (`proton`, `runtime-native`) are not offered: they would
 let a helper point Pindu's own runner at any program in a folder Pindu can see.
 
-### Versioning
+## Compatibility
 
-- `protocol` is one integer, in the manifest, every request and every answer. Pindu speaks a set of versions and
-  refuses a helper whose version it does not speak, saying which it needs. Within a version, fields are only added;
-  unknown fields are ignored on both sides. Removing or changing a field is a new version.
-- **No stability is promised until two integrations from outside exist** (the analysis's rollout). Until then the
-  version is `0`, the documentation says it can change in any release, and Preferences marks helpers as experimental.
-  The first stable version is `1`.
+Section [9.5](product-analysis.md#95-what-10-should-promise) of the analysis asks that a contract helpers depend on has
+its compatibility policy written down. This is that policy (#826). It holds for helpers from outside and for the
+bundled ones; where the two differ, it says so.
+
+### Versions
+
+- **One integer.** `protocol` is in the manifest, every request and every answer. A manifest names exactly one
+  version, and Pindu sends that helper requests in it and accepts answers only in it.
+- **Additions keep the version.** A new optional field in the manifest, a request or an answer; a new launch kind
+  (such as `none`); a new value where this page says unknown values are ignored. Both sides ignore fields they do not
+  know. A helper that uses an addition needs the release that added it, which the [changelog](#changelog) names: an
+  older Pindu ignores a field it does not know, and leaves out an entry whose launch kind it does not know with a
+  problem naming it, so the rest still import.
+- **Anything else is a new version:** removing or renaming a field, changing its type or meaning, a new required
+  field, a rule that refuses an answer that used to pass, or a change to how Pindu runs a helper (standard input and
+  output, exit codes, lower limits).
+
+### Protocol 0 is experimental
+
+- **No stability is promised until two integrations from outside exist** and work unchanged across a release
+  ([Rollout](#rollout)); the first stable version is `1`. Until then any part of protocol `0` may change in any
+  release, incompatibly too, without a new number, and both shells' Sources lists mark a helper on protocol `0` as
+  experimental.
+- **Even in protocol `0`**, every change is announced as [below](#announcing-a-change), the version check below does
+  not change, and an outside helper's game IDs stay `external:<helper ID>/<native ID>`, so a change to the protocol
+  never costs the user their play history.
+
+### Which versions a release accepts
+
+- **The newest version and, during its deprecation, the one before it**, never more. The set is `PROTOCOLS` in
+  `crates/pindu-core/src/sources/external.rs`; today it is protocol `0` alone.
+- **From protocol `1` on**, when a release first speaks version N+1, version N is deprecated and keeps working for at
+  least six months and at least two minor releases after that release, whichever is longer. It is dropped only in a
+  minor or major release, never a patch release, and only after a release whose notes named that release as the one
+  that drops it.
+- **Protocol `0`** keeps working in the release that first speaks `1` and in the next minor release, still marked
+  experimental, and is dropped after that: a shorter period, since `0` promised nothing.
+- **Bundled helpers** (Bottles' `pindu-import-bottles`, #834) are built and installed with the release, so they always
+  speak its newest version. A change to the protocol updates them in the same pull request, and their tests, the
+  built-in Bottles importer's tests run against the helper, show the change still imports the same games. They are
+  never deprecated, and a user's folder with a bundled helper's ID never runs, so a user cannot pair a bundled helper
+  with another release.
+
+### How a helper finds out
+
+- **Before it runs.** Pindu reads the manifest's `protocol` when it finds the helper and when the user installs it. A
+  version the release does not speak means the helper is never run: no probe, no import.
+- **In each request.** A request names the version; a helper that gets one it does not speak writes why to standard
+  error and exits non-zero, which the source shows as its importer not answering. Since Pindu sends the manifest's
+  version, this only happens when a helper's manifest and program disagree.
+- **In each answer.** An answer in another version than the manifest's is refused, as a problem of the source: "it
+  answered in protocol 1, and its manifest says 0".
+- **Ahead of time.** A helper's author learns of a new version, a deprecation and the release that drops a version
+  from the [changelog](#changelog) and the release notes, before that release ships. A helper speaks one version at a
+  time; to support releases on both sides of a new version, its author ships one archive for each.
+
+### What the user sees
+
+The wording of the reasons is `check_protocol`'s in `crates/pindu-core/src/sources/external/manifest.rs`, which its
+tests pin. Preferences shows a reason under the helper, and as the alert "Cannot Install the Importer" when the user
+installs it; fullscreen mode's Sources says "Cannot run".
+
+| Case | Sources lists | Installing from Preferences | The helper's games |
+| --- | --- | --- | --- |
+| Protocol `0` | Runs; marked "Experimental" | Installs after the confirmation | Imported |
+| A stable version the release speaks | Runs, unmarked; a deprecated version is marked from #850 on | Installs after the confirmation | Imported |
+| Too new | Cannot run: "it speaks protocol 2, which needs a newer version of Pindu; this version speaks 0 and 1" | Refused with the same reason | Stay as they were, with their play history, and sync again once Pindu is updated |
+| Too old | Cannot run: "it speaks protocol 0, which this version of Pindu no longer speaks; ask its author for an update that speaks 1 or 2" | Refused with the same reason | Stay as they were, and sync again once the helper is updated |
+| An answer in another version | The source's problem: "it answered in protocol 1, and its manifest says 0" | | Stay as they were |
+
+A bundled helper is always in the second row, or, as Bottles is, a built-in source that shows no protocol at all.
+
+### Announcing a change
+
+- **The [changelog](#changelog) below**, in the same pull request as the change: each addition, new version,
+  deprecation and dropped version, with its issue, its protocol version and the release that ships it. A change to
+  this policy is recorded there too, and is the maintainer's decision.
+- **The release notes** (the MetaInfo `<release>` text, which becomes the notes on GitHub and in software centres;
+  [Releasing](releasing.md)) of every release that changes the protocol have a sentence for helper authors. The
+  release that first speaks a new version also names the version it deprecates and the earliest release that may drop
+  it; the release that drops a version says so. Changes to protocol `0` are announced the same way.
 
 ## Game IDs and the `Source` set
 
@@ -279,7 +354,7 @@ Filed in M9 Breadth after the decision, each labelled `hold` for the maintainer'
 | #834 XP-4 Move the Bottles importer behind the protocol | `pindu-import-bottles` as a bundled helper, packaging in the RPM, DEB and Flatpak, the existing Bottles tests against the helper | XP-2 |
 
 Order: XP-2, then XP-3 and XP-5. XP-4 can start any time after XP-2. The compatibility policy that 1.0 asks for is
-#826 (milestone M10 1.0).
+the [Compatibility](#compatibility) section above (#826, milestone M10 1.0).
 
 ## Recommendation
 
@@ -310,3 +385,13 @@ adopted as recommended above.
 
 One addition: a helper is installed from Preferences, from a local `.tar.gz`, by the ten rules under
 [Installing a helper from Preferences](#installing-a-helper-from-preferences).
+
+## Changelog
+
+Each change to the protocol or to its [compatibility policy](#compatibility), newest first. "Unreleased" entries get
+their release when it is tagged ([Releasing](releasing.md)).
+
+| Release | Protocol | Change |
+| --- | --- | --- |
+| Unreleased | `0` | The compatibility policy (#826). A helper Pindu cannot run because of its version is told whether it needs a newer Pindu or an update from its author |
+| Unreleased | `0` | Protocol `0` adopted (#547): manifests, probe and import (#831), the Sources lists (#832), installing from Preferences (#833) |
