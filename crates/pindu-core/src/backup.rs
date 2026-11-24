@@ -1236,6 +1236,8 @@ mod tests {
         let desktop = GameId::new(Source::Desktop, "portal-2.desktop");
         let only_a_command = LaunchConfig {
             executable: PathBuf::from("/usr/bin/portal2"),
+            arguments: vec!["-novid".into()],
+            working_dir: Some(PathBuf::from("/usr/share/portal2")),
             ..LaunchConfig::default()
         };
         let synced = |store: &Store, id: &GameId| {
