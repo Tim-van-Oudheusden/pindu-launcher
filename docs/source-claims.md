@@ -39,6 +39,9 @@ External importers are left out: their protocol has its own contract (#547).
 
 ## Bottles
 
+Bottles is read by the bundled `pindu-import-bottles` helper. `crates/pindu-import-bottles/tests/import/` runs the same
+`import/bottles.rs` against the built helper, so the tests below cover the helper and the in-process importer alike.
+
 | Claim | Covered by |
 | --- | --- |
 | Native or Flatpak | Test: `import/bottles.rs` `native_and_flatpak_bottles_import_the_same_programs` |
