@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use super::Helper;
+use super::manifest::Manifest;
 use super::runner::{self, Place, Tier};
 use crate::model::{ExternalImporterState, Timestamp};
 
@@ -86,11 +87,7 @@ pub fn listing(
                 Ok(manifest) => {
                     listed.name.clone_from(&manifest.name);
                     listed.version = Some(manifest.version.clone());
-                    listed.running = match runner::tier(manifest.runs, place) {
-                        Ok(Tier::SubSandbox) => Running::InItsSandbox,
-                        Ok(Tier::Host | Tier::Native) => Running::WithYourPermissions,
-                        Err(_) => Running::NeedsHostAccess,
-                    };
+                    listed.running = running(manifest, place);
                     listed.reads = runner::reads(manifest, home);
                     listed.uri_schemes.clone_from(&manifest.uri_schemes);
                     // Protocol 0 may change in any release, until it is promised as 1.
@@ -101,6 +98,15 @@ pub fn listing(
             listed
         })
         .collect()
+}
+
+/// Where the helper of `manifest` runs where Pindu runs at `place`, as the user is told.
+pub fn running(manifest: &Manifest, place: Place) -> Running {
+    match runner::tier(manifest.runs, place) {
+        Ok(Tier::SubSandbox) => Running::InItsSandbox,
+        Ok(Tier::Host | Tier::Native) => Running::WithYourPermissions,
+        Err(_) => Running::NeedsHostAccess,
+    }
 }
 
 #[cfg(test)]

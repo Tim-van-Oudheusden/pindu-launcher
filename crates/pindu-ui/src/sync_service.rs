@@ -12,7 +12,8 @@ use gtk::subclass::prelude::*;
 use pindu_core::health::is_first_sync;
 use pindu_core::model::{ExternalImporterState, Source, SourceState};
 use pindu_core::paths::{default_importers_dir, default_library_db_path};
-use pindu_core::sources::external::listing::{Listed, listing};
+use pindu_core::sources::external::install::{self, InstallLimits, Prepared};
+use pindu_core::sources::external::listing::{Listed, Running, listing, running};
 use pindu_core::sources::external::{self, runner};
 use pindu_core::sources::location::{self, HostDirs};
 use pindu_core::sources::sync::{SyncSummary, Tally, sync_all};
@@ -149,6 +150,74 @@ impl SyncService {
         });
     }
 
+    /// Unpacks and checks the external importer in `archive` for the user to confirm; the
+    /// reason it is refused, for the user, otherwise.
+    pub async fn prepare_install(&self, archive: PathBuf) -> Result<PendingInstall, String> {
+        gtk::gio::spawn_blocking(move || {
+            let helpers = helper_environment(&HostDirs::from_env());
+            let bundled: Vec<String> =
+                external::discover(&helpers.installed, helpers.bundled.as_deref())
+                    .into_iter()
+                    .filter(|helper| helper.bundled)
+                    .map(|helper| helper.id)
+                    .collect();
+            let prepared = install::prepare(
+                &archive,
+                &helpers.installed,
+                &bundled,
+                InstallLimits::DEFAULT,
+            )?;
+            Ok(PendingInstall {
+                running: running(&prepared.manifest, helpers.place),
+                reads: runner::reads(&prepared.manifest, &helpers.home),
+                prepared,
+            })
+        })
+        .await
+        .unwrap_or_else(|_| Err(gettext("The importer could not be checked")))
+    }
+
+    /// Installs a confirmed external importer, then syncs.
+    pub async fn install(&self, pending: PendingInstall) -> Result<(), String> {
+        let installed = gtk::gio::spawn_blocking(move || {
+            let store =
+                Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
+            install::install(pending.prepared, &default_importers_dir(), &store)
+        })
+        .await
+        .unwrap_or_else(|_| Err(gettext("The importer could not be installed")));
+        if installed.is_ok() {
+            self.sync();
+        }
+        installed
+    }
+
+    /// Forgets an external importer the user cancelled installing, off the main thread,
+    /// where its unpacked folder is deleted.
+    pub fn cancel_install(&self, pending: PendingInstall) {
+        gtk::gio::spawn_blocking(move || drop(pending));
+    }
+
+    /// Removes an installed external importer, whose games leave the library, then syncs.
+    pub async fn remove_helper(&self, helper_id: String) -> Result<(), String> {
+        let removed = gtk::gio::spawn_blocking(move || {
+            let store =
+                Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
+            install::remove(
+                &store,
+                &default_importers_dir(),
+                &helper_id,
+                session_service::now(),
+            )
+        })
+        .await
+        .unwrap_or_else(|_| Err(gettext("The importer could not be removed")));
+        if removed.is_ok() {
+            self.sync();
+        }
+        removed
+    }
+
     fn change_source(
         &self,
         change: impl FnOnce(&Store) -> pindu_core::store::Result<()> + Send + 'static,
@@ -258,6 +327,18 @@ fn run_sync() -> Result<(SyncSummary, bool), String> {
     sync_all(&store, &dirs, &helpers, now, utc_offset)
         .map(|summary| (summary, first))
         .map_err(|error| error.to_string())
+}
+
+/// An external importer unpacked and checked, waiting for the user to confirm it, with
+/// what the confirmation tells them.
+#[derive(Debug)]
+pub struct PendingInstall {
+    /// The checked helper; dropping it deletes its unpacked folder.
+    pub prepared: Prepared,
+    /// Where it would run here.
+    pub running: Running,
+    /// The folders it would read.
+    pub reads: Vec<PathBuf>,
 }
 
 /// Where the external importers live, and what this instance can offer them.

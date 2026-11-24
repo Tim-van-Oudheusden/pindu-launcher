@@ -8,7 +8,7 @@
 //! each source's import switch and folder, which live with the library's other source state,
 //! and the Proton builds, which are folders in our tools folder.
 
-use std::cell::OnceCell;
+use std::cell::{OnceCell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -41,7 +41,7 @@ use crate::session_service;
 use crate::sources::{bind_source_order, running_text, source_icon, source_name, sync_age_text};
 use crate::steamgriddb_service;
 use crate::style_service::StyleService;
-use crate::sync_service::SyncService;
+use crate::sync_service::{PendingInstall, SyncService};
 use crate::wikidata_service;
 
 /// Tile sizes in the order of the cover size row (and the menu drawer's toggles).
@@ -148,6 +148,9 @@ mod imp {
         pub sync: OnceCell<SyncService>,
         pub default_proton: OnceCell<Rc<ProtonChoice>>,
         pub proton_downloads: OnceCell<Rc<ProtonDownloadsPage>>,
+        /// The external importers' rows in the Sources group and its install row, which a
+        /// change to the importers replaces.
+        pub helper_rows: RefCell<Vec<gtk::Widget>>,
     }
 
     #[glib::object_subclass]
@@ -453,9 +456,7 @@ impl PreferencesDialog {
             for state in imported_source_states(&states) {
                 dialog.imp().sources_group.add(&dialog.source_row(&state));
             }
-            for helper in &helpers {
-                dialog.imp().sources_group.add(&dialog.helper_row(helper));
-            }
+            dialog.show_helpers(&helpers);
         });
     }
 
@@ -626,7 +627,224 @@ impl PreferencesDialog {
             row.add_row(&property(gettext("Version"), version.clone()));
         }
         add_sync_rows(&row, helper.last_sync, &helper.problems);
+        if !helper.bundled {
+            let remove = adw::ButtonRow::builder()
+                .title(gettext("_Remove…"))
+                .use_underline(true)
+                .css_classes(["destructive-action"])
+                .build();
+            let (id, name) = (helper.id.clone(), helper.name.clone());
+            remove.connect_activated(glib::clone!(
+                #[weak(rename_to = dialog)]
+                self,
+                move |_| dialog.confirm_remove(id.clone(), name.clone())
+            ));
+            row.add_row(&remove);
+        }
         row
+    }
+
+    /// Puts `helpers` in the Sources group after the built-in sources, replacing the rows
+    /// shown before, and the row that installs one at the end.
+    fn show_helpers(&self, helpers: &[Listed]) {
+        let imp = self.imp();
+        for row in imp.helper_rows.take() {
+            imp.sources_group.remove(&row);
+        }
+        let mut rows: Vec<gtk::Widget> = helpers
+            .iter()
+            .map(|helper| self.helper_row(helper).upcast())
+            .collect();
+        let install = adw::ButtonRow::builder()
+            .title(gettext("_Install External Importer…"))
+            .use_underline(true)
+            .start_icon_name("list-add-symbolic")
+            .build();
+        install.connect_activated(glib::clone!(
+            #[weak(rename_to = dialog)]
+            self,
+            move |_| dialog.choose_helper_archive()
+        ));
+        rows.push(install.upcast());
+        for row in &rows {
+            imp.sources_group.add(row);
+        }
+        imp.helper_rows.replace(rows);
+    }
+
+    /// Reads the external importers again and shows them, after one was installed or
+    /// removed.
+    fn refresh_helpers(&self) {
+        let dialog = self.downgrade();
+        glib::spawn_future_local(async move {
+            let Some(sync) = dialog
+                .upgrade()
+                .map(|dialog| dialog.imp().sync.get().expect("set").clone())
+            else {
+                return;
+            };
+            let (_, helpers) = sync.sources().await;
+            if let Some(dialog) = dialog.upgrade() {
+                dialog.show_helpers(&helpers);
+            }
+        });
+    }
+
+    /// Picks an external importer's `.tar.gz` through the portal, checks it and asks the
+    /// user to confirm, or says why it is refused.
+    fn choose_helper_archive(&self) {
+        let filter = gtk::FileFilter::new();
+        filter.set_name(Some(&gettext("Importer Archives")));
+        filter.add_suffix("tar.gz");
+        filter.add_mime_type("application/x-compressed-tar");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&filter);
+        let chooser = gtk::FileDialog::builder()
+            .title(gettext("Choose an External Importer"))
+            .filters(&filters)
+            .default_filter(&filter)
+            .modal(true)
+            .build();
+        let root = self.root().and_downcast::<gtk::Window>();
+        let dialog = self.downgrade();
+        glib::spawn_future_local(async move {
+            let Ok(file) = chooser.open_future(root.as_ref()).await else {
+                return;
+            };
+            let (Some(dialog), Some(path)) = (dialog.upgrade(), file.path()) else {
+                return;
+            };
+            let sync = dialog.imp().sync.get().expect("set").clone();
+            match sync.prepare_install(path).await {
+                Ok(pending) => dialog.confirm_install(pending),
+                Err(reason) => dialog.alert(&gettext("Cannot Install the Importer"), &reason),
+            }
+        });
+    }
+
+    /// Asks the user to confirm installing `pending`: its name and version, where it runs,
+    /// the folders it reads and the URI schemes it opens games through.
+    fn confirm_install(&self, pending: PendingInstall) {
+        let manifest = &pending.prepared.manifest;
+        let name = format!("{} {}", manifest.name, manifest.version);
+        let heading = if pending.prepared.replaces.is_some() {
+            gettext("Replace {name}?")
+        } else {
+            gettext("Install {name}?")
+        }
+        .replace("{name}", &name);
+        let mut body = Vec::new();
+        if let Some(running) = running_text(pending.running) {
+            body.push(running);
+        }
+        if !pending.reads.is_empty() {
+            let reads: Vec<String> = pending
+                .reads
+                .iter()
+                .map(|path| path.display().to_string())
+                .collect();
+            body.push(format!("{}\n{}", gettext("It reads:"), reads.join("\n")));
+        }
+        if !manifest.uri_schemes.is_empty() {
+            let schemes: Vec<String> = manifest
+                .uri_schemes
+                .iter()
+                .map(|scheme| format!("{scheme}:"))
+                .collect();
+            body.push(
+                gettext("It opens games through {schemes}")
+                    .replace("{schemes}", &schemes.join(&gettext(", "))),
+            );
+        }
+        if pending.prepared.replaces.is_some() && !pending.prepared.stays_on() {
+            body.push(gettext(
+                "It runs, reads or opens games differently from the installed one, so it is turned off until you turn it on again.",
+            ));
+        }
+        let alert = adw::AlertDialog::builder()
+            .heading(heading)
+            .body(body.join("\n\n"))
+            .close_response("cancel")
+            .default_response("install")
+            .build();
+        alert.add_response("cancel", &gettext("_Cancel"));
+        alert.add_response(
+            "install",
+            &if pending.prepared.replaces.is_some() {
+                gettext("_Replace")
+            } else {
+                gettext("_Install")
+            },
+        );
+        alert.set_response_appearance("install", adw::ResponseAppearance::Suggested);
+        let sync = self.imp().sync.get().expect("set").clone();
+        let dialog = self.downgrade();
+        let pending = RefCell::new(Some(pending));
+        alert.connect_response(None, move |_, response| {
+            let Some(pending) = pending.take() else {
+                return;
+            };
+            if response != "install" {
+                sync.cancel_install(pending);
+                return;
+            }
+            let (sync, dialog) = (sync.clone(), dialog.clone());
+            glib::spawn_future_local(async move {
+                let installed = sync.install(pending).await;
+                let Some(dialog) = dialog.upgrade() else {
+                    return;
+                };
+                match installed {
+                    Ok(()) => dialog.refresh_helpers(),
+                    Err(reason) => dialog.alert(&gettext("Cannot Install the Importer"), &reason),
+                }
+            });
+        });
+        alert.present(Some(self));
+    }
+
+    /// Asks the user to confirm removing the external importer `id`, then removes it.
+    fn confirm_remove(&self, id: String, name: String) {
+        let alert = adw::AlertDialog::builder()
+            .heading(gettext("Remove {name}?").replace("{name}", &name))
+            .body(gettext(
+                "Its games leave the library. Installing it again brings them back with their play history.",
+            ))
+            .close_response("cancel")
+            .default_response("cancel")
+            .build();
+        alert.add_response("cancel", &gettext("_Cancel"));
+        alert.add_response("remove", &gettext("_Remove"));
+        alert.set_response_appearance("remove", adw::ResponseAppearance::Destructive);
+        let sync = self.imp().sync.get().expect("set").clone();
+        let dialog = self.downgrade();
+        alert.connect_response(None, move |_, response| {
+            if response != "remove" {
+                return;
+            }
+            let (sync, dialog, id) = (sync.clone(), dialog.clone(), id.clone());
+            glib::spawn_future_local(async move {
+                let removed = sync.remove_helper(id).await;
+                let Some(dialog) = dialog.upgrade() else {
+                    return;
+                };
+                match removed {
+                    Ok(()) => dialog.refresh_helpers(),
+                    Err(reason) => dialog.alert(&gettext("Cannot Remove the Importer"), &reason),
+                }
+            });
+        });
+        alert.present(Some(self));
+    }
+
+    /// Tells the user what went wrong, in a dialog with one button.
+    fn alert(&self, heading: &str, reason: &str) {
+        let alert = adw::AlertDialog::builder()
+            .heading(heading)
+            .body(reason)
+            .build();
+        alert.add_response("close", &gettext("_Close"));
+        alert.present(Some(self));
     }
 
     /// Picks a source's folder through the portal; the picked path is what the sandbox

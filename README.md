@@ -157,6 +157,14 @@ importer runs in a sandbox of its own, without network, and sees only those fold
 and every importer of a native package, **runs with your permissions**, like any program you install. Their games are
 listed under **External Importers**, and their problems show as a built-in source's do.
 
+**Install External Importer…** at the end of Preferences → Sources installs one from a `.tar.gz` you choose: Pindu
+checks the archive (only plain files and folders, at most 16 MiB, unpacking to at most 64 MiB and 1,000 files) and
+its `importer.json`, then shows its name and version, where it runs, the folders it reads and the links it opens games
+through, and installs it only once you confirm. Pindu never downloads or updates an importer. An archive with the ID of
+an installed importer replaces it; the replacement is turned off again if it runs, reads or opens games differently.
+**Remove…** in an importer's row deletes it; its games leave the library and come back, with their play history, if
+you install it again. A folder copied into the importers folder by hand works the same, which helps while writing one.
+
 ## Installing
 
 ### Flatpak bundle from a release

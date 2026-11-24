@@ -186,7 +186,10 @@ pub fn run(command: &Command, request: &str, limits: Limits) -> Result<Vec<u8>, 
         Ok(Ok(answer)) if answer.len() <= limit => answer,
         Ok(Ok(_)) => {
             kill(&mut child);
-            return Err(format!("its answer is larger than {}", size(limit)));
+            return Err(format!(
+                "its answer is larger than {}",
+                size(u64::try_from(limit).unwrap_or(u64::MAX))
+            ));
         }
         Ok(Err(error)) => {
             kill(&mut child);
@@ -240,8 +243,8 @@ fn kill(child: &mut Child) {
 }
 
 /// A byte count as the user reads it: whole MiB where it is one.
-fn size(bytes: usize) -> String {
-    const MIB: usize = 1024 * 1024;
+pub(super) fn size(bytes: u64) -> String {
+    const MIB: u64 = 1_048_576;
     if bytes >= MIB && bytes.is_multiple_of(MIB) {
         format!("{} MiB", bytes / MIB)
     } else {
