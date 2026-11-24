@@ -202,7 +202,9 @@ launcher from `:testing` to `:stable` ([pindu-os#30](https://github.com/Tim-van-
 
 **The machine** runs Pindu OS with the build under test installed, because the system panel's Network, Bluetooth,
 Power and System Update sections only show there (see [System panel](system-panel.md)). It needs a Bluetooth adapter,
-Wi-Fi, a Bluetooth controller, and a Steam library with one native game and one Windows game set to run through Proton.
+Wi-Fi, a Bluetooth controller, a Steam library with one native game and one Windows game set to run through Proton, one
+game in another launcher (Heroic, Lutris, Bottles or itch), one game installed as an app, and a Windows game to add by
+hand.
 
 | Check | Passes when |
 | --- | --- |
@@ -212,6 +214,8 @@ Wi-Fi, a Bluetooth controller, and a Steam library with one native game and one 
 | Suspend and resume | **Power → Suspend** puts the machine to sleep; after waking, the launcher, the controller and the network work again |
 | Steam game | A native Steam game starts from the launcher, and its playtime counts once it quits |
 | Proton game | A Windows game through Proton starts from the launcher, and its playtime counts once it quits |
+| Game from another launcher | The game in the other launcher starts through that launcher, and the game installed as an app starts on the host (in the Flatpak, once [host access](../README.md#starting-games-on-the-host) is granted) |
+| Game added by hand | The Windows game, added with **Add a Game**, starts through Proton, and its playtime counts once it quits |
 | System Update | **Quick Access → System Update** shows the installed version, and the update state and actions it offers work |
 
 **Record it on the "Release X.Y.Z" issue**, which the [Release issue form](../.github/ISSUE_TEMPLATE/release.yml)
