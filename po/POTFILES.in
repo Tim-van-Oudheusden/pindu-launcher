@@ -46,6 +46,7 @@ crates/pindu-ui/src/log_service.rs
 crates/pindu-ui/src/menu_drawer.rs
 crates/pindu-ui/src/merge_dialog.rs
 crates/pindu-ui/src/network_service.rs
+crates/pindu-ui/src/newer_library.rs
 crates/pindu-ui/src/preferences.rs
 crates/pindu-ui/src/proton_choice.rs
 crates/pindu-ui/src/proton_download_service.rs

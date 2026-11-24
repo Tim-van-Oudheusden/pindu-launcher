@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use crate::config::APP_ID;
 use gtk::glib;
+use gtk::glib::prelude::ObjectExt;
 use gtk::subclass::prelude::*;
 use pindu_core::backup::{self, BackupError, ImportSummary};
 use pindu_core::bulk::{self, BulkAction};
@@ -18,7 +19,7 @@ use pindu_core::model::{
 };
 use pindu_core::paths::{default_library_db_path, default_user_art_dir};
 use pindu_core::saved_filters::SavedFilter;
-use pindu_core::store::{self, Store};
+use pindu_core::store::{self, KeptCopy, Store, StoreError};
 use pindu_core::wikidata::{self, Provenance};
 
 use crate::file_service::PickedImage;
@@ -32,6 +33,8 @@ mod imp {
         pub model: LibraryModel,
         /// Whether the library was read once.
         pub loaded: std::cell::Cell<bool>,
+        /// The library a newer version saved, when the last read found one.
+        pub newer: std::cell::RefCell<Option<NewerLibrary>>,
     }
 
     #[glib::object_subclass]
@@ -40,7 +43,26 @@ mod imp {
         type Type = super::LibraryService;
     }
 
-    impl ObjectImpl for LibraryService {}
+    impl ObjectImpl for LibraryService {
+        fn signals() -> &'static [glib::subclass::Signal] {
+            static SIGNALS: std::sync::LazyLock<Vec<glib::subclass::Signal>> =
+                std::sync::LazyLock::new(|| vec![glib::subclass::Signal::builder(NEWER).build()]);
+            SIGNALS.as_ref()
+        }
+    }
+}
+
+/// Emitted when reading the library found it saved by a newer version.
+const NEWER: &str = "newer-library";
+
+/// A library a newer version of the app saved, which this version leaves as it is.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewerLibrary {
+    /// The library's schema version.
+    pub version: u32,
+    /// The copy kept before the last upgrade that this version can start from, if any
+    /// (`store::kept_copy_to_open`).
+    pub kept_copy: Option<KeptCopy>,
 }
 
 glib::wrapper! {
@@ -83,7 +105,7 @@ impl LibraryService {
 
     /// Reads every game from the store on a worker thread and updates the model, groups
     /// starting the copy the user's source order puts first; done once the model shows
-    /// them.
+    /// them. A library a newer version saved is left as it is, and noted.
     async fn load(&self) {
         let settings = gtk::gio::Settings::new(APP_ID);
         let prefer_steamgriddb =
@@ -95,11 +117,58 @@ impl LibraryService {
                 let model = &self.imp().model;
                 model.set_collections(collections, saved_filters);
                 model.set_games(games);
+                self.imp().newer.replace(None);
                 self.imp().loaded.set(true);
             }
-            Ok(Err(error)) => glib::g_warning!("pindu", "Could not read the library: {error}"),
+            Ok(Err(ReadFailure::Newer(newer))) => {
+                glib::g_warning!(
+                    "pindu",
+                    "Could not read the library: {}",
+                    StoreError::TooNew {
+                        version: newer.version
+                    }
+                );
+                self.imp().newer.replace(Some(newer));
+                self.emit_by_name::<()>(NEWER, &[]);
+            }
+            Ok(Err(ReadFailure::Other(error))) => {
+                glib::g_warning!("pindu", "Could not read the library: {error}");
+            }
             Err(_) => glib::g_warning!("pindu", "Reading the library stopped unexpectedly"),
         }
+    }
+
+    /// The library a newer version saved, when the last read found one.
+    pub fn newer_library(&self) -> Option<NewerLibrary> {
+        self.imp().newer.borrow().clone()
+    }
+
+    /// Calls `callback` whenever reading the library finds it saved by a newer version.
+    pub fn connect_newer_library<F: Fn(&Self) + 'static>(
+        &self,
+        callback: F,
+    ) -> glib::SignalHandlerId {
+        self.connect_local(NEWER, false, move |values| {
+            let service = values[0]
+                .get::<Self>()
+                .expect("newer-library is emitted by the service");
+            callback(&service);
+            None
+        })
+    }
+
+    /// Starts the library over from `copy`, setting the newer library aside
+    /// (`store::start_from_kept_copy`), then reads it. Returns where the newer library
+    /// went.
+    pub async fn start_from_kept_copy(&self, copy: KeptCopy) -> Result<PathBuf, String> {
+        let aside = gtk::gio::spawn_blocking(move || {
+            store::start_from_kept_copy(&default_library_db_path(), &copy)
+                .map_err(|error| error.to_string())
+        })
+        .await
+        .unwrap_or_else(|_| Err("starting from the kept copy stopped unexpectedly".into()))?;
+        self.load().await;
+        Ok(aside)
     }
 
     /// Hides or shows a game, and every copy of its group, in the library views.
@@ -674,12 +743,30 @@ type Library = (
     HashMap<i64, SavedFilter>,
 );
 
-fn read_games(prefer_steamgriddb: bool, source_order: &[Source]) -> Result<Library, String> {
-    let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
-    let games = library::load(&store, prefer_steamgriddb, source_order)
-        .map_err(|error| error.to_string())?;
-    let collections = store.collections().map_err(|error| error.to_string())?;
-    let saved_filters = store.saved_filters().map_err(|error| error.to_string())?;
+/// Why the library could not be read.
+enum ReadFailure {
+    /// A newer version saved it; nothing was changed.
+    Newer(NewerLibrary),
+    /// Anything else, said in the message.
+    Other(String),
+}
+
+fn read_games(prefer_steamgriddb: bool, source_order: &[Source]) -> Result<Library, ReadFailure> {
+    let path = default_library_db_path();
+    let store = Store::open(&path).map_err(|error| match error {
+        StoreError::TooNew { version } => ReadFailure::Newer(NewerLibrary {
+            version,
+            kept_copy: store::kept_copy_to_open(&path).unwrap_or_else(|error| {
+                glib::g_warning!("pindu", "Could not look for a kept copy: {error}");
+                None
+            }),
+        }),
+        error => ReadFailure::Other(error.to_string()),
+    })?;
+    let other = |error: StoreError| ReadFailure::Other(error.to_string());
+    let games = library::load(&store, prefer_steamgriddb, source_order).map_err(other)?;
+    let collections = store.collections().map_err(other)?;
+    let saved_filters = store.saved_filters().map_err(other)?;
     Ok((games, collections, saved_filters))
 }
 

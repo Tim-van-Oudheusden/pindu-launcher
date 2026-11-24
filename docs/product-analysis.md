@@ -795,7 +795,13 @@ Where each condition stands, from the repository as of 0.7.0-rc.3:
 | Desktop and fullscreen flows are checked on a small, published set of hardware | The hardware checklist in `docs/releasing.md`, on one machine | The published set of machines, and a matrix of voluntary reports (sections 4.7 and 12) |
 | The support policy for the Flatpak, the native packages and Pindu OS is stated | Install instructions per type in the README | A stated policy: which versions get fixes, and how each type updates |
 | The app is on Flathub | #63, human-only | The submission, which stays the maintainer's |
-| No known defect loses data, breaks a group or leaves a launch stuck | Bug reports in issues | A label or query that lists such defects, so the gate can be read |
+| No known defect loses data, breaks a group or leaves a launch stuck | Bug reports in issues; the `blocks-1.0` label, which triage adds to such a bug, and the bug form's question that asks the reporter (#829) | Nothing, while the query below lists no open issue; the first triage, on 2026-11-24, labelled none of the open bugs |
+
+The last condition is read with one query. It holds when the query lists no issue:
+
+```sh
+gh issue list --label blocks-1.0 --state open
+```
 
 # 10. Architecture notes for implementers
 
