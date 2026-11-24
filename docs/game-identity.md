@@ -33,6 +33,8 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
   groups show with an undo.
 - **A copy before every migration.** Opening an older database first writes a copy beside it, named for its schema
   version (for example `library.db.v5.bak`); the newest two copies are kept, and a failed copy stops the migration.
+  A database from a newer schema is refused without being written; both shells say so and offer to start from the
+  newest kept copy this version opens, which sets the newer database aside unchanged as `library.db.v<N>.newer`.
 - **Backups.** Backup format 2 carries groups, preferred copies and remembered splits, naming games by their
   per-source IDs. Format 1 still imports; a group whose games are absent is skipped and counted.
 
