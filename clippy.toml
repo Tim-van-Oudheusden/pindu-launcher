@@ -1,2 +1,7 @@
 # The kernel's .clippy.toml: the doc lints (`missing_safety_doc`, ...) cover private items too.
 check-private-items = true
+
+# GTK crashes announcing without an accessibility bus (#729); `announcement::announce` checks first.
+disallowed-methods = [
+    { path = "gtk4::prelude::AccessibleExt::announce", reason = "crashes without an accessibility bus (#729): use `crate::announcement::announce`" },
+]
