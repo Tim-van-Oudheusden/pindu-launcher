@@ -63,7 +63,7 @@ use pindu_core::gamepad::Intent;
 use pindu_core::gamescope::prompts::{PromptHost, prompt_host};
 use pindu_core::home::{BACKGROUND_KEY, BLUR_KEY, CATEGORIES_KEY, DIM_KEY};
 use pindu_core::keys;
-use pindu_core::model::GameId;
+use pindu_core::model::{GameId, Source};
 use pindu_core::osk::Keyboard;
 use pindu_core::panels::{
     DesignChoice, PageEntry, QuickAccessEntry, QuickAccessLevel, QuickAccessSection, QuickFocus,
@@ -408,6 +408,9 @@ mod imp {
         /// Whether the activity strip's task has no telling how far it is, so its bar
         /// moves.
         pub activity_strip_pulses: Cell<bool>,
+        /// The rows Sources shows, each with its source and its Import switch's handler,
+        /// which a refill blocks while it sets the switch to the stored state.
+        pub source_rows: RefCell<Vec<(Source, adw::SwitchRow, glib::SignalHandlerId)>>,
         /// The game Surprise Me picked last, which it does not pick again next time.
         pub surprise_previous: RefCell<Option<GameId>>,
         /// Whether the panel is hosted over a running game.
