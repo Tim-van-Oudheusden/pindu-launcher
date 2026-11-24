@@ -645,7 +645,9 @@ impl GamescopeService {
     /// client's window shows instead of the launcher's once it is there, a game it starts
     /// comes to the front, and the launcher leaves the base layer and the controller to
     /// Steam until Big Picture's window has closed, or gives up when none comes for a
-    /// while, longer on Steam's `first_start`. It ends a store launch.
+    /// while. On Steam's `first_start` the Setting Up Steam screen does the waiting
+    /// (`BigPicture::first_start`), with Steam's update windows behind it, until Steam's
+    /// sign-in shows. It ends a store launch.
     pub fn big_picture_started(&self, first_start: bool) {
         let Some(x11) = &self.inner.x11 else {
             return;

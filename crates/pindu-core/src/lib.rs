@@ -62,6 +62,7 @@ pub mod session_time;
 pub mod setup;
 pub mod sound;
 pub mod sources;
+pub mod steam_setup;
 pub mod steamgriddb;
 pub mod store;
 pub mod sync_age;

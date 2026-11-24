@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 14:05+0100\n"
+"POT-Creation-Date: 2026-11-24 17:27+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -630,8 +630,8 @@ msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:349
 #: crates/pindu-ui/src/collection_actions.rs:403
-#: crates/pindu-ui/src/selection_mode.rs:247 crates/pindu-ui/src/window.rs:1145
-#: crates/pindu-ui/src/window.rs:1184
+#: crates/pindu-ui/src/selection_mode.rs:247 crates/pindu-ui/src/window.rs:1147
+#: crates/pindu-ui/src/window.rs:1186
 msgid "_Undo"
 msgstr ""
 
@@ -659,6 +659,7 @@ msgstr ""
 #: crates/pindu-ui/src/proton_launch.rs:721
 #: crates/pindu-ui/src/save_snapshots_dialog.rs:475 data/ui/game_dialog.blp:16
 #: data/ui/game_page.blp:457 data/ui/secret_dialog.blp:19
+#: data/ui/steam_setup_dialog.blp:53
 msgid "_Cancel"
 msgstr ""
 
@@ -833,7 +834,7 @@ msgstr ""
 #: crates/pindu-ui/src/launch_service.rs:372
 #: crates/pindu-ui/src/preferences.rs:846
 #: crates/pindu-ui/src/proton_launch.rs:446
-#: crates/pindu-ui/src/proton_launch.rs:695 crates/pindu-ui/src/window.rs:1790
+#: crates/pindu-ui/src/proton_launch.rs:695 crates/pindu-ui/src/window.rs:1792
 msgid "_Close"
 msgstr ""
 
@@ -1591,7 +1592,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_health.rs:356
 #: crates/pindu-ui/src/health_page.rs:307 crates/pindu-ui/src/home_page.rs:123
-#: crates/pindu-ui/src/menu_drawer.rs:1095 crates/pindu-ui/src/window.rs:1916
+#: crates/pindu-ui/src/menu_drawer.rs:1095 crates/pindu-ui/src/window.rs:1918
 #, rust-format
 msgid "{count} game"
 msgid_plural "{count} games"
@@ -1633,7 +1634,7 @@ msgid "Read how to install it on another device: {address}"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_library.rs:105
-#: crates/pindu-ui/src/window.rs:889
+#: crates/pindu-ui/src/window.rs:891
 msgid "Any Category"
 msgstr ""
 
@@ -1769,14 +1770,14 @@ msgstr ""
 #: crates/pindu-ui/src/fullscreen_panels.rs:840
 #: crates/pindu-ui/src/hint_bar.rs:251
 #: crates/pindu-ui/src/widgets/cover_tile.rs:284
-#: crates/pindu-ui/src/window.rs:2004 data/ui/cover_tile.blp:65
+#: crates/pindu-ui/src/window.rs:2006 data/ui/cover_tile.blp:65
 msgid "Play"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_panels.rs:842
 #: crates/pindu-ui/src/hint_bar.rs:252
 #: crates/pindu-ui/src/widgets/cover_tile.rs:282
-#: crates/pindu-ui/src/window.rs:2002
+#: crates/pindu-ui/src/window.rs:2004
 msgid "Stop"
 msgstr ""
 
@@ -2774,11 +2775,11 @@ msgstr ""
 msgid "Hold to Stop"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:83 crates/pindu-ui/src/window.rs:1039
+#: crates/pindu-ui/src/home_page.rs:83 crates/pindu-ui/src/window.rs:1041
 msgid "Today"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:84 crates/pindu-ui/src/window.rs:1040
+#: crates/pindu-ui/src/home_page.rs:84 crates/pindu-ui/src/window.rs:1042
 msgid "This Week"
 msgstr ""
 
@@ -2821,7 +2822,7 @@ msgstr ""
 msgid "More Categories"
 msgstr ""
 
-#: crates/pindu-ui/src/home_page.rs:2374 crates/pindu-ui/src/window.rs:1772
+#: crates/pindu-ui/src/home_page.rs:2374 crates/pindu-ui/src/window.rs:1774
 #: data/ui/game_dialog.blp:167
 msgid "Details"
 msgstr ""
@@ -2864,8 +2865,8 @@ msgstr ""
 
 #: crates/pindu-ui/src/launch_service.rs:327
 #: crates/pindu-ui/src/launch_service.rs:417
-#: crates/pindu-ui/src/launch_service.rs:492
-#: crates/pindu-ui/src/launch_service.rs:555
+#: crates/pindu-ui/src/launch_service.rs:503
+#: crates/pindu-ui/src/launch_service.rs:567
 #, rust-format
 msgid "Could not open {launcher}"
 msgstr ""
@@ -3287,6 +3288,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/proton_downloads_page.rs:397
 #: crates/pindu-ui/src/proton_launch.rs:765
+#: crates/pindu-ui/src/steam_setup_dialog.rs:167
 msgid "Unpacking…"
 msgstr ""
 
@@ -3332,6 +3334,7 @@ msgid "Could not start “{title}”: {proton} is not installed"
 msgstr ""
 
 #: crates/pindu-ui/src/proton_launch.rs:655
+#: crates/pindu-ui/src/steam_setup_dialog.rs:106
 msgid "No Internet Connection"
 msgstr ""
 
@@ -3366,6 +3369,7 @@ msgid "Downloading… {size}"
 msgstr ""
 
 #: crates/pindu-ui/src/proton_launch.rs:763
+#: crates/pindu-ui/src/steam_setup_dialog.rs:166
 msgid "Downloading…"
 msgstr ""
 
@@ -3858,6 +3862,62 @@ msgstr ""
 msgid " · "
 msgstr ""
 
+#: crates/pindu-ui/src/steam_setup_dialog.rs:98
+#: data/ui/steam_setup_dialog.blp:9 data/ui/steam_setup_dialog.blp:21
+msgid "Setting Up Steam"
+msgstr ""
+
+#: crates/pindu-ui/src/steam_setup_dialog.rs:100
+msgid ""
+"Steam downloads its own update before you can sign in. This can take several "
+"minutes."
+msgstr ""
+
+#: crates/pindu-ui/src/steam_setup_dialog.rs:108
+msgid ""
+"Steam needs the internet to download its update. Connect to the internet, "
+"then try again."
+msgstr ""
+
+#: crates/pindu-ui/src/steam_setup_dialog.rs:114
+msgid "Steam Could Not Update"
+msgstr ""
+
+#: crates/pindu-ui/src/steam_setup_dialog.rs:115
+msgid "Steam could not download its update. Try again in a while."
+msgstr ""
+
+#: crates/pindu-ui/src/steam_setup_dialog.rs:119
+msgid "Steam Is Not Responding"
+msgstr ""
+
+#: crates/pindu-ui/src/steam_setup_dialog.rs:121
+msgid ""
+"Steam has shown no progress for several minutes. Try again, or cancel and "
+"come back later."
+msgstr ""
+
+#: crates/pindu-ui/src/steam_setup_dialog.rs:161
+msgid "Starting Steam…"
+msgstr ""
+
+#: crates/pindu-ui/src/steam_setup_dialog.rs:162
+msgid "Looking for Steam’s update…"
+msgstr ""
+
+#: crates/pindu-ui/src/steam_setup_dialog.rs:163
+#, rust-format
+msgid "Downloading… {done} of {total}"
+msgstr ""
+
+#: crates/pindu-ui/src/steam_setup_dialog.rs:168
+msgid "Installing…"
+msgstr ""
+
+#: crates/pindu-ui/src/steam_setup_dialog.rs:169
+msgid "Opening the sign-in…"
+msgstr ""
+
 #: crates/pindu-ui/src/steamgriddb_service.rs:69
 msgid "A key is stored in your keyring"
 msgstr ""
@@ -3976,56 +4036,56 @@ msgstr ""
 msgid "Metadata From Wikidata"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:613
+#: crates/pindu-ui/src/window.rs:615
 msgid "No logs yet: start the game with Play with Logs"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:633
+#: crates/pindu-ui/src/window.rs:635
 msgid "The log is gone"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1041
+#: crates/pindu-ui/src/window.rs:1043
 msgid "Earlier"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1109
+#: crates/pindu-ui/src/window.rs:1111
 msgid "Three games are pinned already; unpin one first"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1123
+#: crates/pindu-ui/src/window.rs:1125
 msgid "Hidden Games"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1144
+#: crates/pindu-ui/src/window.rs:1146
 #, rust-format
 msgid "“{title}” removed"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1183
+#: crates/pindu-ui/src/window.rs:1185
 #, rust-format
 msgid "“{title}” hidden"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1769
+#: crates/pindu-ui/src/window.rs:1771
 #, rust-format
 msgid "One import problem"
 msgid_plural "{count} import problems"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/window.rs:1787
+#: crates/pindu-ui/src/window.rs:1789
 msgid "Some Games Could Not Be Imported"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:1914
+#: crates/pindu-ui/src/window.rs:1916
 msgid "No games found"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:2044
+#: crates/pindu-ui/src/window.rs:2046
 msgid "Pinned"
 msgstr ""
 
-#: crates/pindu-ui/src/window.rs:2064
+#: crates/pindu-ui/src/window.rs:2066
 #, rust-format
 msgid "{title}, pinned"
 msgstr ""
@@ -6160,6 +6220,10 @@ msgstr ""
 
 #: data/ui/shortcuts-dialog.blp:99
 msgid "Previous or Next Sort Order"
+msgstr ""
+
+#: data/ui/steam_setup_dialog.blp:41
+msgid "_Try Again"
 msgstr ""
 
 #: data/ui/window.blp:69 data/ui/window.blp:184

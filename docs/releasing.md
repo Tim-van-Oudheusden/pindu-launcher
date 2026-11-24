@@ -213,6 +213,7 @@ Wi-Fi, a Bluetooth controller, and a Steam library with one native game and one 
 | Steam game | A native Steam game starts from the launcher, and its playtime counts once it quits |
 | Proton game | A Windows game through Proton starts from the launcher, and its playtime counts once it quits |
 | System Update | **Quick Access → System Update** shows the installed version, and the update state and actions it offers work |
+| Steam's first start | On a user account that has never run Steam, Home's **Big Picture** shows **Setting Up Steam** with the download moving until Steam's sign-in window is there, Steam's own update windows do not cover it in a `gamescope --steam` session, and **Cancel** returns to Home |
 
 **Record it on the "Release X.Y.Z" issue**, which the [Release issue form](../.github/ISSUE_TEMPLATE/release.yml)
 creates with the checklist in it. The title is exactly `Release X.Y.Z`, the final version without `v` or `-rc.N`, so
