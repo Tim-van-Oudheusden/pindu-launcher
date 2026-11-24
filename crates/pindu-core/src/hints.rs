@@ -1,7 +1,9 @@
 //! The fullscreen hint bar: what each button does right now for the focused page and
 //! widget, with the glyph that shows the button on the active controller.
 
-use crate::gamepad::{Button, Direction, Glyphs, Intent, Layout, QUICK_ACCESS_CHORD};
+use crate::gamepad::{
+    Button, Direction, Glyphs, Intent, LEAVE_BIG_PICTURE_CHORD, Layout, QUICK_ACCESS_CHORD,
+};
 use crate::osk::Key;
 use crate::panels::{DrawerLevel, OptionsLevel, Panel, QuickAccessLevel};
 
@@ -334,6 +336,17 @@ pub fn playing_hints(layout: Layout) -> Vec<Hint> {
     vec![Hint {
         button: layout.button(Intent::Home),
         pair: None,
+        action: Action::BackToLauncher,
+    }]
+}
+
+/// The hint the launcher's overlay shows over Steam Big Picture as it opens: the chord that
+/// leaves it for the launcher ([`LEAVE_BIG_PICTURE_CHORD`]), by position whatever the layout.
+pub fn big_picture_hints() -> Vec<Hint> {
+    let (held, pressed) = LEAVE_BIG_PICTURE_CHORD;
+    vec![Hint {
+        button: held,
+        pair: Some(pressed),
         action: Action::BackToLauncher,
     }]
 }
@@ -953,6 +966,18 @@ mod tests {
             [Hint {
                 button: Button::Guide,
                 pair: None,
+                action: Action::BackToLauncher,
+            }]
+        );
+    }
+
+    #[test]
+    fn over_big_picture_guide_and_the_top_face_button_go_back_to_the_launcher() {
+        assert_eq!(
+            big_picture_hints(),
+            [Hint {
+                button: Button::Guide,
+                pair: Some(Button::North),
                 action: Action::BackToLauncher,
             }]
         );

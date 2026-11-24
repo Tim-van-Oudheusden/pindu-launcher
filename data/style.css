@@ -498,6 +498,11 @@ window.game-overlay {
   background-color: transparent;
 }
 
+/* Over Steam Big Picture, how to leave it: the hint on Adwaita's OSD, as a pill. */
+window.game-overlay .big-picture-notice {
+  border-radius: 9999px;
+}
+
 /* Fullscreen mode's menu drawer, Quick Access and options sheet: roomy rows to read from
    across the room, and a ring around the Playing Now card's focused button. */
 .menu-drawer,

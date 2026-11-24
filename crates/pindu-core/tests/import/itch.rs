@@ -182,6 +182,21 @@ fn the_live_database_is_left_untouched() {
 }
 
 #[test]
+fn the_profiles_that_hold_the_itch_key_are_never_read() {
+    let (_dir, root) = itch_home(NATIVE);
+    // A view over a table that does not exist: the database opens and every other table
+    // reads, but any query that touches `profiles` fails.
+    rusqlite::Connection::open(root.join("db/butler.db"))
+        .unwrap()
+        .execute_batch("DROP TABLE profiles; CREATE VIEW profiles AS SELECT api_key FROM gone;")
+        .unwrap();
+
+    let snapshot = itch::import(&root).unwrap();
+
+    assert_eq!(game(&snapshot, "1001").title, "Lighthouse Keeper");
+}
+
+#[test]
 fn a_missing_database_is_an_import_error() {
     let (_dir, root) = itch_home(NATIVE);
     std::fs::remove_file(root.join("db/butler.db")).unwrap();

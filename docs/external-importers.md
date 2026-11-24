@@ -80,7 +80,8 @@ updates a helper.
 an argv list, never a shell string: its first entry is a file inside the helper's folder, relative to it, and the
 rest are its arguments. `runs` is `sub-sandbox` or `host`; natively both run as a child process. `reads` lists the
 candidate folders, each absolute or under `~/`, in the order `Location::of` tries them for a built-in source; the
-probe picks one. A user's folder with the ID of a bundled helper never runs.
+probe picks one. A user's folder with the ID of a bundled helper, or of a built-in source's helper (`bottles`) even
+where that helper is not installed, never runs.
 
 The sub-sandbox cannot see Pindu's data folder, so Pindu exposes an installed helper's own folder read-only beside the
 folders it declares. A bundled helper needs nothing exposed: the sub-sandbox sees `/app`. Both were checked with
@@ -197,18 +198,97 @@ Only the kinds that already exist, never a shell string:
 | `uri` | `uri` | `store-uri` with `launch_uri`, opened through the OpenURI portal | Every tier, for the schemes in `uri_schemes`; never `file`, `http` or `https` |
 | `flatpak` | `app_id`, `args` (list), `command` (optional) | `host-command` running `flatpak run [--command=<command>] <app_id> <args…>`, as Faugus's Flatpak launch does | Every tier; needs host spawn in the Flatpak, like any host launch |
 | `host` | `argv` (list, first entry absolute), `working_dir`, `env` | `host-command` with a `LaunchConfig` | `host` helpers, and every helper natively |
+| `none` | | `store-uri` without a URI: the game is listed and cannot be started, as a built-in importer keeps a game whose launch it cannot build; the helper says why among its `problems` | Every tier |
 
 Proton and Steam Linux Runtime launches inside Pindu's sandbox (`proton`, `runtime-native`) are not offered: they would
 let a helper point Pindu's own runner at any program in a folder Pindu can see.
 
-### Versioning
+## Compatibility
 
-- `protocol` is one integer, in the manifest, every request and every answer. Pindu speaks a set of versions and
-  refuses a helper whose version it does not speak, saying which it needs. Within a version, fields are only added;
-  unknown fields are ignored on both sides. Removing or changing a field is a new version.
-- **No stability is promised until two integrations from outside exist** (the analysis's rollout). Until then the
-  version is `0`, the documentation says it can change in any release, and Preferences marks helpers as experimental.
-  The first stable version is `1`.
+Section [9.5](product-analysis.md#95-what-10-should-promise) of the analysis asks that a contract helpers depend on has
+its compatibility policy written down. This is that policy (#826). It holds for helpers from outside and for the
+bundled ones; where the two differ, it says so.
+
+### Versions
+
+- **One integer.** `protocol` is in the manifest, every request and every answer. A manifest names exactly one
+  version, and Pindu sends that helper requests in it and accepts answers only in it.
+- **Additions keep the version.** A new optional field in the manifest, a request or an answer; a new launch kind
+  (such as `none`); a new value where this page says unknown values are ignored. Both sides ignore fields they do not
+  know. A helper that uses an addition needs the release that added it, which the [changelog](#changelog) names: an
+  older Pindu ignores a field it does not know, and leaves out an entry whose launch kind it does not know with a
+  problem naming it, so the rest still import.
+- **Anything else is a new version:** removing or renaming a field, changing its type or meaning, a new required
+  field, a rule that refuses an answer that used to pass, or a change to how Pindu runs a helper (standard input and
+  output, exit codes, lower limits).
+
+### Protocol 0 is experimental
+
+- **No stability is promised until two integrations from outside exist** and work unchanged across a release
+  ([Rollout](#rollout)); the first stable version is `1`. Until then any part of protocol `0` may change in any
+  release, incompatibly too, without a new number, and both shells' Sources lists mark a helper on protocol `0` as
+  experimental.
+- **Even in protocol `0`**, every change is announced as [below](#announcing-a-change), the version check below does
+  not change, and an outside helper's game IDs stay `external:<helper ID>/<native ID>`, so a change to the protocol
+  never costs the user their play history.
+
+### Which versions a release accepts
+
+- **The newest version and, during its deprecation, the one before it**, never more. The set is `PROTOCOLS` in
+  `crates/pindu-core/src/sources/external.rs`; today it is protocol `0` alone.
+- **From protocol `1` on**, when a release first speaks version N+1, version N is deprecated and keeps working for at
+  least six months and at least two minor releases after that release, whichever is longer. It is dropped only in a
+  minor or major release, never a patch release, and only after a release whose notes named that release as the one
+  that drops it.
+- **Protocol `0`** keeps working in the release that first speaks `1` and in the next minor release, still marked
+  experimental, and is dropped after that: a shorter period, since `0` promised nothing.
+- **Bundled helpers** (Bottles' `pindu-import-bottles`, #834) are built and installed with the release, so they always
+  speak its newest version. A change to the protocol updates them in the same pull request, and their tests, the
+  built-in Bottles importer's tests run against the helper, show the change still imports the same games. They are
+  never deprecated, and a user's folder with a bundled helper's ID never runs, so a user cannot pair a bundled helper
+  with another release.
+
+### How a helper finds out
+
+- **Before it runs.** Pindu reads the manifest's `protocol` when it finds the helper and when the user installs it. A
+  version the release does not speak means the helper is never run: no probe, no import.
+- **In each request.** A request names the version; a helper that gets one it does not speak writes why to standard
+  error and exits non-zero, which the source shows as its importer not answering. Since Pindu sends the manifest's
+  version, this only happens when a helper's manifest and program disagree. The bundled helpers do this through
+  `external::server::serve`.
+- **In each answer.** An answer in another version than the manifest's is refused, as a problem of the source: "it
+  answered in protocol 1, and its manifest says 0".
+- **Ahead of time.** A helper's author learns of a new version, a deprecation and the release that drops a version
+  from the [changelog](#changelog) and the release notes, before that release ships. A helper speaks one version at a
+  time; to support releases on both sides of a new version, its author ships one archive for each.
+
+### What the user sees
+
+The wording of the reasons is `check_protocol`'s in `crates/pindu-core/src/sources/external/manifest.rs`, which its
+tests pin. Preferences shows a reason under the helper, and as the alert "Cannot Install the Importer" when the user
+installs it; fullscreen mode's Sources says "Cannot run".
+
+| Case | Sources lists | Installing from Preferences | The helper's games |
+| --- | --- | --- | --- |
+| Protocol `0` | Runs; marked "Experimental" | Installs after the confirmation | Imported |
+| A stable version the release speaks | Runs, unmarked; a deprecated version is marked from #850 on | Installs after the confirmation | Imported |
+| Too new | Cannot run: "it speaks protocol 2, which needs a newer version of Pindu; this version speaks 0 and 1" | Refused with the same reason | Stay as they were, with their play history, and sync again once Pindu is updated |
+| Too old | Cannot run: "it speaks protocol 0, which this version of Pindu no longer speaks; ask its author for an update that speaks 1 or 2" | Refused with the same reason | Stay as they were, and sync again once the helper is updated |
+| An answer in another version | The source's problem: "it answered in protocol 1, and its manifest says 0" | | Stay as they were |
+
+A bundled helper that serves a built-in source, as Bottles' does, is never listed as a helper: its source shows as a
+built-in row, neither experimental nor removable. Any other bundled helper speaks the release's newest version, so it
+is in one of the first two rows.
+
+### Announcing a change
+
+- **The [changelog](#changelog) below**, in the same pull request as the change: each addition, new version,
+  deprecation and dropped version, with its issue, its protocol version and the release that ships it. A change to
+  this policy is recorded there too, and is the maintainer's decision.
+- **The release notes** (the MetaInfo `<release>` text, which becomes the notes on GitHub and in software centres;
+  [Releasing](releasing.md)) of every release that changes the protocol have a sentence for helper authors. The
+  release that first speaks a new version also names the version it deprecates and the earliest release that may drop
+  it; the release that drops a version says so. Changes to protocol `0` are announced the same way.
 
 ## Game IDs and the `Source` set
 
@@ -242,9 +322,38 @@ automatic group, since a helper's claim is not checked. The `service` names it m
    run in the sub-sandbox in the Flatpak, and keeping `Source::Bottles`. Bottles is the lowest-risk built-in: it reads
    one file (`library.yml`, plus `data.yml` for a custom path), launches only through `bottles:run/…` URIs, so a mistake
    cannot start a command on the host, and has few users. The built-in importer's tests (`tests/import/bottles.rs`)
-   run against the helper unchanged, which proves the snapshot written down is the snapshot.
+   run against the helper unchanged, which proves the snapshot written down is the snapshot. **Done in #834**, as
+   [The Bottles helper](#the-bottles-helper) describes.
 3. **Promise stability (protocol `1`)** once two integrations from outside exist and work unchanged across a release.
 4. Only then consider moving more built-ins, starting with those Pindu's users use least.
+
+### The Bottles helper
+
+- **The program.** `crates/pindu-import-bottles` is a thin `main` over the core: `external::server::serve` answers one
+  request with `bottles::probe` (the first candidate holding `library.yml`, watching it) and `bottles::import`, and
+  `server::import_answer` writes the snapshot down as the exact inverse of `protocol::parse_import_as`. When it cannot
+  answer (a broken `library.yml`, say) it writes the importer's error to standard error, which goes to Pindu's log,
+  and exits with 1; the source then shows that its importer could not answer, and its games stay as they were.
+- **Where it is.** Meson's one cargo build makes it beside the app and installs it with its `importer.json` (protocol
+  `0`, `runs: sub-sandbox`, the two Bottles folders `Location::of` tries, the `bottles` URI scheme, the package's
+  version) in `<libexecdir>/pindu-launcher/importers/bottles/`. The RPM, the DEB, the AUR and Nix recipes and both
+  Flatpak manifests install what Meson installs, so none needed a new module or permission.
+- **Still a built-in source.** `external::BUILT_IN` names the bundled helpers that serve a built-in source. Such a
+  helper is never listed, stored or synced as an external importer, and a user's helper with its ID never runs.
+  `sync_source` resolves Bottles as before, honouring the folder the user chose and watching the same files, then
+  sends the helper only the import request for that folder and reads its answer as `Source::Bottles` games with their
+  own native IDs: `bottles:` IDs, play history and groups stay as they are, and Bottles stays a built-in row in
+  Sources, neither experimental nor removable.
+- **What the sub-sandbox sees.** Its own folder under `/app`, the Bottles folders of its manifest that exist, and the
+  resolved folder when it lies outside them: a folder the user chose through the file chooser's document portal.
+  Checked from inside the development Flatpak: run as `runner::command` runs it, the helper answered a probe and an
+  import of a Bottles library in `~/.var/app/com.usebottles.bottles/data/bottles`, and could not write to it.
+- **Without the helper.** A build that installs no bundled helpers (a plain `cargo` build, the tests) imports Bottles
+  in-process with the same `bottles::import`, so development and the core's tests need no install step.
+- **Its tests.** `pindu-core`'s Bottles tests run the importer in-process; `pindu-import-bottles`'s tests include the
+  same file and run it against the built program, sending each import as a probe and an import request and reading
+  the answers back as from a sub-sandboxed helper. Only the file's `use` line for the importer changed, to take it from
+  each crate's test support.
 
 ## Flatpak, native and Pindu OS
 
@@ -276,10 +385,10 @@ Filed in M9 Breadth after the decision, each labelled `hold` for the maintainer'
 | #831 XP-2 Run external importers through the protocol | Manifest discovery, probe and import over stdin and stdout, validation, the timeout and size limits, the sub-sandbox and host runners, the no-escalation rule, `Source::External`, the `external_importers` table | #547 |
 | #832 XP-3 List external importers in both shells | Preferences and fullscreen mode's Sources: off by default, where it runs, what it reads, experimental | XP-2 |
 | #833 XP-5 Install, replace and remove an external importer from Preferences | The ten rules under [Installing a helper from Preferences](#installing-a-helper-from-preferences), tested against fixture archives | XP-2, XP-3 |
-| #834 XP-4 Move the Bottles importer behind the protocol | `pindu-import-bottles` as a bundled helper, packaging in the RPM, DEB and Flatpak, the existing Bottles tests against the helper | XP-2 |
+| #834 XP-4 Move the Bottles importer behind the protocol | `pindu-import-bottles` as a bundled helper, packaging in the RPM, DEB and Flatpak, the existing Bottles tests against the helper ([done](#the-bottles-helper)) | XP-2 |
 
 Order: XP-2, then XP-3 and XP-5. XP-4 can start any time after XP-2. The compatibility policy that 1.0 asks for is
-#826 (milestone M10 1.0).
+the [Compatibility](#compatibility) section above (#826, milestone M10 1.0).
 
 ## Recommendation
 
@@ -310,3 +419,14 @@ adopted as recommended above.
 
 One addition: a helper is installed from Preferences, from a local `.tar.gz`, by the ten rules under
 [Installing a helper from Preferences](#installing-a-helper-from-preferences).
+
+## Changelog
+
+Each change to the protocol or to its [compatibility policy](#compatibility), newest first. "Unreleased" entries get
+their release when it is tagged ([Releasing](releasing.md)).
+
+| Release | Protocol | Change |
+| --- | --- | --- |
+| Unreleased | `0` | The compatibility policy (#826). A helper Pindu cannot run because of its version is told whether it needs a newer Pindu or an update from its author |
+| Unreleased | `0` | Addition: launch kind `none`, a game that is listed and cannot be started. The first bundled helper, Bottles' `pindu-import-bottles` (#834) |
+| Unreleased | `0` | Protocol `0` adopted (#547): manifests, probe and import (#831), the Sources lists (#832), installing from Preferences (#833) |

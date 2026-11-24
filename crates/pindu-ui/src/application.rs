@@ -783,6 +783,13 @@ impl PinduApplication {
         let refresh_metadata_action = gio::ActionEntry::builder("refresh-metadata")
             .activate(move |app: &Self, _, _| app.refresh_metadata())
             .build();
+        // Leaves Steam Big Picture for the launcher, with Steam left running, for a
+        // distribution's `steamos-session-select` behind Steam's Switch to Desktop over the
+        // session bus. It succeeds and changes nothing outside a Big Picture session, and
+        // its name is a promise to those scripts: keep it.
+        let leave_big_picture_action = gio::ActionEntry::builder("leave-big-picture")
+            .activate(move |app: &Self, _, _| app.gamescope_service().leave_big_picture())
+            .build();
         self.add_action_entries([
             quit_action,
             about_action,
@@ -807,6 +814,7 @@ impl PinduApplication {
             fullscreen_action,
             fetch_art_action,
             refresh_metadata_action,
+            leave_big_picture_action,
         ]);
         // Refresh Metadata is there only while Wikidata metadata is on.
         if let Some(action) = self

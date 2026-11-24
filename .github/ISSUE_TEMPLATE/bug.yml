@@ -40,6 +40,19 @@ body:
     validations:
       required: true
   - type: dropdown
+    id: impact
+    attributes:
+      label: Did it do any of these?
+      description: >-
+        Helps triage spot the bugs that must be fixed before 1.0. Pick every one that happened, or None of these.
+      multiple: true
+      options:
+        - Lost data (games, collections, playtime, settings or saves are gone or wrong)
+        - Broke a group (copies of one game are no longer grouped, or different games were grouped)
+        - Left a game launching with no way out (stuck on starting, or the launcher cannot be reached)
+        - None of these
+        - Not sure
+  - type: dropdown
     id: install
     attributes:
       label: How you installed it
@@ -48,6 +61,8 @@ body:
         - Flatpak from a GitHub release
         - RPM package
         - DEB package
+        - Pindu OS
+        - AUR or nixpkgs package
         - Built from source
         - Other
     validations:
