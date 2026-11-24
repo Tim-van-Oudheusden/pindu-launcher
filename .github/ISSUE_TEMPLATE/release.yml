@@ -65,7 +65,7 @@ body:
         - label: "System Update: Quick Access, System Update shows the installed version, and the update state and actions it offers work"
         - label: "Leaving Steam Big Picture: in Steam mode, the notice shows Guide + Y over Big Picture; Guide + Y and Steam's Switch to Desktop each bring the launcher back while Steam keeps running, the tile shows Steam's window again at once, and a Steam game started there gets a Playing Now card"
         - label: "Rollback after a migration: after this build migrated the library, rolling back to the previous release says Library From a Newer Version, leaves library.db unchanged, and Start From Kept Copy opens the library from before the update (a release that did not change the library's format passes with a note)"
-        - label: "Steam's first start: on a user account that has never run Steam, Home's Big Picture shows Setting Up Steam with the download moving until Steam's sign-in window is there, and Cancel returns to Home"
+        - label: "Steam's first start: on a user account that has never run Steam, Home's Big Picture shows Setting Up Steam with the download moving until Steam's sign-in window is there, and Cancel returns to Home (record the gamescope version the session ran, from gamescope --version)"
   - type: textarea
     id: notes
     attributes:
