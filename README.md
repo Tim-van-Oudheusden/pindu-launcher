@@ -145,6 +145,18 @@ The Flatpak has no permission for Legendary's `~/.config/legendary` or the itch 
 and **Choose…** in the source's row imports a folder you pick in the file chooser. Native packages find these folders
 themselves.
 
+### External importers (experimental)
+
+An external importer is a small program, kept outside Pindu, that reads a launcher Pindu has no importer for. It
+speaks the protocol in [`docs/external-importers.md`](docs/external-importers.md), which may still change in any
+release. Pindu finds importers in its own data folder, under `pindu-launcher/importers/` (in the Flatpak,
+`~/.var/app/io.github.tim_van_oudheusden.pindu-launcher/data/pindu-launcher/importers/`), one folder each. Preferences →
+Sources and fullscreen mode's Sources list them after the built-in sources, each **off** until you turn it on, marked
+Experimental, with where it runs, the folders it reads and the links it opens games through. In the Flatpak an
+importer runs in a sandbox of its own, without network, and sees only those folders; one that asks to run on the host,
+and every importer of a native package, **runs with your permissions**, like any program you install. Their games are
+listed under **External Importers**, and their problems show as a built-in source's do.
+
 ## Installing
 
 ### Flatpak bundle from a release

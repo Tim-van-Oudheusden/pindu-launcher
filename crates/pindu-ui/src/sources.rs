@@ -1,5 +1,5 @@
-//! User-facing names of game sources, when they last synced, and the source order a
-//! game's copies follow.
+//! User-facing names of game sources, when they last synced, how an external importer runs,
+//! and the source order a game's copies follow.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -10,6 +10,7 @@ use gtk::gio;
 use pindu_core::game_groups;
 use pindu_core::model::Source;
 use pindu_core::sections;
+use pindu_core::sources::external::listing::{Listed, Running};
 use pindu_core::sync_age::SyncAge;
 
 /// The setting that stores the source order (see [`game_groups::source_order`]).
@@ -162,4 +163,38 @@ pub fn sync_age_text(age: SyncAge) -> String {
         SyncAge::Hours(n) => count(ngettext("{count} hour ago", "{count} hours ago", n), n),
         SyncAge::Days(n) => count(ngettext("{count} day ago", "{count} days ago", n), n),
     }
+}
+
+/// Where an external importer runs, as both shells say it; `None` when its manifest
+/// cannot be read.
+pub fn running_text(running: Running) -> Option<String> {
+    match running {
+        Running::InItsSandbox => Some(gettext("In its own sandbox, without network")),
+        Running::WithYourPermissions => Some(gettext("Runs with your permissions")),
+        Running::NeedsHostAccess => Some(gettext("Needs host access to run")),
+        Running::Unknown => None,
+    }
+}
+
+/// An external importer in one line, as fullscreen mode's Sources shows it: whether it is
+/// experimental, where it runs, and whether its source is on this computer or it cannot
+/// run.
+pub fn helper_summary(helper: &Listed) -> String {
+    let mut parts = Vec::new();
+    if helper.experimental {
+        parts.push(gettext("Experimental"));
+    }
+    match running_text(helper.running) {
+        Some(running) => parts.push(running),
+        None => parts.push(gettext("Cannot run")),
+    }
+    if helper.running != Running::Unknown {
+        parts.push(if helper.found.is_some() {
+            gettext("Found on this computer")
+        } else {
+            gettext("Not found on this computer")
+        });
+    }
+    // Translators: the separator between the facts about one source.
+    parts.join(&gettext(" · "))
 }

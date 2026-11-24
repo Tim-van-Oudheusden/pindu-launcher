@@ -8,13 +8,13 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-24, #831 XP-2 (this commit): external importers run through the protocol in `pindu-core`
-  (`sources/external.rs`: `manifest`, `protocol`, `runner`; `Source::External`, migration `0013`
-  `external_importers`). Helpers run as `std::process` children of the core (sub-sandbox through
-  `flatpak-spawn --sandbox`, host through `--host`, wrapped in `timeout --signal=KILL`); runner tests exec real
-  scripts, and a just-written script can hit ETXTBSY under parallel tests, so `runner::run` retries that. No UI
-  yet (XP-3 #832), so nothing can turn a helper on. Stacked follow-ups: XP-3 #832, XP-5 #833, XP-4 #834. Before
-  that: #547 decision recorded (#835), #820 M10 milestone and issues #823 to #829.
+- 2026-11-24, #832 XP-3 (this commit, stacked on #831 XP-2): both Sources lists show external importers
+  (`external::listing`, `SyncService::sources` reads states and helpers in one blocking call: two awaits let the
+  Quick Access level focus the copy order before the list filled). Checked in the harness with a seeded helper
+  (`run.sh --seed DIR` copies DIR into the run's XDG data home; helpers go in `pindu-launcher/importers/`).
+  Pre-existing: after a Sources switch's sync rebuilds the fullscreen list, focus is lost (also on 0.7.0-rc).
+  XP-2 #831: the protocol in `pindu-core` (`sources/external`), helpers run as `std::process` children of the
+  core, `runner::run` retries ETXTBSY. Next: XP-5 #833, XP-4 #834.
 - Other agents work this repo at the same time (a "hive": issue comments trigger them, and the merge queue merges
   their PRs). An early decision comment on #792 was implemented as #795 and merged before the maintainer's later
   choice; #803 duplicated #791. Post a decision comment only once it is final, and check `gh pr list` before

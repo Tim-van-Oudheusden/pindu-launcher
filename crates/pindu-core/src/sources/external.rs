@@ -8,6 +8,7 @@
 //! data and is checked entry by entry; its games are [`Source::External`] games with
 //! native IDs `<helper ID>/<the helper's own ID>`.
 
+pub mod listing;
 pub mod manifest;
 pub mod protocol;
 pub mod runner;

@@ -22,6 +22,7 @@ use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
 use pindu_core::home::CATEGORIES_KEY;
 use pindu_core::model::{Source, SourceState};
 use pindu_core::paths;
+use pindu_core::sources::external::listing::{Listed, Running};
 use pindu_core::sources::location::sandbox_hides;
 use pindu_core::sources::sync::imported_source_states;
 use pindu_core::sync_age::sync_age;
@@ -37,7 +38,7 @@ use crate::proton_downloads_page::ProtonDownloadsPage;
 use crate::proton_launch;
 use crate::save_service;
 use crate::session_service;
-use crate::sources::{bind_source_order, source_icon, source_name, sync_age_text};
+use crate::sources::{bind_source_order, running_text, source_icon, source_name, sync_age_text};
 use crate::steamgriddb_service;
 use crate::style_service::StyleService;
 use crate::sync_service::SyncService;
@@ -440,7 +441,7 @@ impl PreferencesDialog {
     }
 
     /// One expander per source: import on or off, its folder, its sidebar row, and when it
-    /// last synced with the problems that sync ran into.
+    /// last synced with the problems that sync ran into; then one per external importer.
     fn show_sources(&self) {
         let dialog = self.downgrade();
         glib::spawn_future_local(async move {
@@ -448,9 +449,12 @@ impl PreferencesDialog {
                 return;
             };
             let sync = dialog.imp().sync.get().expect("set").clone();
-            let states = sync.source_states().await;
+            let (states, helpers) = sync.sources().await;
             for state in imported_source_states(&states) {
                 dialog.imp().sources_group.add(&dialog.source_row(&state));
+            }
+            for helper in &helpers {
+                dialog.imp().sources_group.add(&dialog.helper_row(helper));
             }
         });
     }
@@ -546,45 +550,82 @@ impl PreferencesDialog {
         ));
         row.add_row(&in_sidebar);
 
-        let last_sync = adw::ActionRow::builder()
-            .title(gettext("Last Synced"))
-            .subtitle(sync_age_text(sync_age(
-                state.last_sync,
-                session_service::now(),
-            )))
-            .css_classes(["property"])
+        add_sync_rows(&row, state.last_sync, &state.errors);
+        row
+    }
+
+    /// An external importer's expander: whether it is experimental, where its source was
+    /// found, its switch (off until the user turns it on), where it runs, the folders it
+    /// reads, the URI schemes it launches through, its version, and its last sync with that
+    /// sync's problems, or why it cannot run. A name and folders from a helper are data,
+    /// never markup.
+    fn helper_row(&self, helper: &Listed) -> adw::ExpanderRow {
+        let found = match (&helper.found, helper.running) {
+            (_, Running::Unknown) => gettext("Cannot run"),
+            (Some(path), _) => path.display().to_string(),
+            (None, _) => gettext("Not found on this computer"),
+        };
+        let row = adw::ExpanderRow::builder()
+            .title(&helper.name)
+            .subtitle(&found)
+            .use_markup(false)
             .build();
-        row.add_row(&last_sync);
-        if !state.errors.is_empty() {
-            let count = u32::try_from(state.errors.len()).unwrap_or(u32::MAX);
-            let warning = gtk::Image::builder()
-                .icon_name("dialog-warning-symbolic")
-                .tooltip_text(
-                    ngettext(
-                        "The last sync ran into {count} problem",
-                        "The last sync ran into {count} problems",
-                        count,
-                    )
-                    .replace("{count}", &count.to_string()),
-                )
-                .css_classes(["warning"])
-                .build();
-            row.add_suffix(&warning);
-        }
-        for problem in &state.errors {
-            let problem_row = adw::ActionRow::builder()
-                .title(problem)
-                .use_markup(false)
-                .title_selectable(true)
-                .build();
-            problem_row.add_prefix(
-                &gtk::Image::builder()
-                    .icon_name("dialog-warning-symbolic")
-                    .css_classes(["warning"])
+        row.add_prefix(&gtk::Image::from_icon_name(source_icon(Source::External)));
+        if helper.experimental {
+            row.add_suffix(
+                &gtk::Label::builder()
+                    .label(gettext("Experimental"))
+                    .valign(gtk::Align::Center)
+                    .css_classes(["dimmed", "caption"])
                     .build(),
             );
-            row.add_row(&problem_row);
         }
+        let sync = self.imp().sync.get().expect("set").clone();
+
+        let enabled = adw::SwitchRow::builder()
+            .title(gettext("Import"))
+            .active(helper.enabled)
+            .build();
+        let id = helper.id.clone();
+        enabled
+            .connect_active_notify(move |row| sync.set_helper_enabled(id.clone(), row.is_active()));
+        row.add_row(&enabled);
+
+        let property = |title: String, value: String| {
+            adw::ActionRow::builder()
+                .title(title)
+                .subtitle(value)
+                .subtitle_selectable(true)
+                .use_markup(false)
+                .css_classes(["property"])
+                .build()
+        };
+        if let Some(running) = running_text(helper.running) {
+            row.add_row(&property(gettext("Where It Runs"), running));
+        }
+        if !helper.reads.is_empty() {
+            let reads: Vec<String> = helper
+                .reads
+                .iter()
+                .map(|path| path.display().to_string())
+                .collect();
+            row.add_row(&property(gettext("Reads"), reads.join("\n")));
+        }
+        if !helper.uri_schemes.is_empty() {
+            let schemes: Vec<String> = helper
+                .uri_schemes
+                .iter()
+                .map(|scheme| format!("{scheme}:"))
+                .collect();
+            row.add_row(&property(
+                gettext("Launches Through"),
+                schemes.join(&gettext(", ")),
+            ));
+        }
+        if let Some(version) = &helper.version {
+            row.add_row(&property(gettext("Version"), version.clone()));
+        }
+        add_sync_rows(&row, helper.last_sync, &helper.problems);
         row
     }
 
@@ -902,4 +943,45 @@ fn bind_choice(
             values.get(index as usize).map(|value| value.to_variant())
         })
         .build();
+}
+
+/// A source's or external importer's Last Synced row, and a row per problem its last sync
+/// ran into, with a warning on the expander when there are any.
+fn add_sync_rows(row: &adw::ExpanderRow, last_sync: Option<i64>, problems: &[String]) {
+    let last_synced = adw::ActionRow::builder()
+        .title(gettext("Last Synced"))
+        .subtitle(sync_age_text(sync_age(last_sync, session_service::now())))
+        .css_classes(["property"])
+        .build();
+    row.add_row(&last_synced);
+    if !problems.is_empty() {
+        let count = u32::try_from(problems.len()).unwrap_or(u32::MAX);
+        let warning = gtk::Image::builder()
+            .icon_name("dialog-warning-symbolic")
+            .tooltip_text(
+                ngettext(
+                    "The last sync ran into {count} problem",
+                    "The last sync ran into {count} problems",
+                    count,
+                )
+                .replace("{count}", &count.to_string()),
+            )
+            .css_classes(["warning"])
+            .build();
+        row.add_suffix(&warning);
+    }
+    for problem in problems {
+        let problem_row = adw::ActionRow::builder()
+            .title(problem)
+            .use_markup(false)
+            .title_selectable(true)
+            .build();
+        problem_row.add_prefix(
+            &gtk::Image::builder()
+                .icon_name("dialog-warning-symbolic")
+                .css_classes(["warning"])
+                .build(),
+        );
+        row.add_row(&problem_row);
+    }
 }
