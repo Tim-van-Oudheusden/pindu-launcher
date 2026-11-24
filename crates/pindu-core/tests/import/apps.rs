@@ -168,6 +168,22 @@ fn the_launchers_the_library_imports_from_are_apps_and_pindu_itself_is_not() {
 }
 
 #[test]
+fn the_desktop_source_imports_neither_the_launchers_nor_pindu_whatever_their_exec_line() {
+    let (_dir, dirs) = apps_dirs();
+
+    let games = pindu_core::sources::desktop::import(&dirs);
+
+    // The development build's entry is a game by its category and runs no launcher
+    // command: only its app ID keeps it out.
+    let ids: Vec<&str> = games
+        .games
+        .iter()
+        .map(|game| game.native_id.as_str())
+        .collect();
+    assert_eq!(ids, ["celeste"]);
+}
+
+#[test]
 fn an_app_opens_with_its_exec_line_as_an_argument_list_without_field_codes() {
     let (_dir, dirs) = apps_dirs();
 

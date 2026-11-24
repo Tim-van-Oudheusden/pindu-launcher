@@ -47,11 +47,6 @@ pub struct Session {
 }
 
 impl Session {
-    /// The session this process runs in.
-    pub fn from_env() -> Self {
-        Self::from_vars(|name| std::env::var(name).ok())
-    }
-
     /// The session `vars` describe: `XDG_CURRENT_DESKTOP`, a list split on `:`, and the
     /// first of `LC_ALL`, `LC_MESSAGES` and `LANG` that is set, unless it is the `C` or
     /// `POSIX` locale, which names no language.

@@ -113,7 +113,8 @@ impl AppsService {
         let service = self.clone();
         glib::spawn_future_local(async move {
             let Ok(apps) = gio::spawn_blocking(|| {
-                apps::installed(&HostDirs::from_env(), &Session::from_env())
+                let session = Session::from_vars(|name| std::env::var(name).ok());
+                apps::installed(&HostDirs::from_env(), &session)
             })
             .await
             else {
