@@ -92,6 +92,8 @@ pub mod selection_mode;
 pub mod session_service;
 pub mod setup_checklist;
 pub mod sources;
+pub mod steam_setup_dialog;
+pub mod steam_setup_service;
 pub mod steamgriddb_service;
 pub mod style_service;
 pub mod sync_service;

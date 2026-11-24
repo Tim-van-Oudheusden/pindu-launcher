@@ -17,10 +17,9 @@ use crate::model::{GameId, Source};
 /// How long the launcher waits for Big Picture's window before it gives up on it.
 pub const BIG_PICTURE_TIMEOUT: Duration = STORE_LAUNCH_TIMEOUT;
 
-/// How long the launcher waits for the window of a Steam that has never run, 10 minutes:
-/// its first start downloads the client's update before it shows a window, which can take
-/// minutes.
-pub const BIG_PICTURE_FIRST_START_TIMEOUT: Duration = Duration::from_secs(600);
+/// The class of the Steam client's web helper, whose windows show Steam's sign-in and Big
+/// Picture; the small windows Steam's updater shows before them are of another.
+const STEAM_WEB_HELPER: &str = "steamwebhelper";
 
 /// How long the session outlives the Steam client's last window, for a window that closes
 /// a while before another opens: on a cold start, Steam's update or sign-in window before
@@ -41,8 +40,9 @@ pub struct BigPicture {
     game: Option<u32>,
     /// The app IDs that are never Steam's game (see [`Self::new`]).
     before: Vec<u32>,
-    /// How long it waits for the Steam client's first window.
-    timeout: Duration,
+    /// Whether Steam has never run: its set-up screen does the waiting, and Steam's
+    /// updater's windows stay behind it (see [`Self::first_start`]).
+    first_start: bool,
     /// When the Steam client's first window showed, which starts the notice of how to
     /// leave.
     shown_at: Option<Instant>,
@@ -69,17 +69,20 @@ impl BigPicture {
             steam: SteamPrompts::default(),
             game: None,
             before: before.to_vec(),
-            timeout: BIG_PICTURE_TIMEOUT,
+            first_start: false,
             shown_at: None,
         }
     }
 
-    /// The session waits [`BIG_PICTURE_FIRST_START_TIMEOUT`] for the Steam client's first
-    /// window: Steam has never run (`launch::SteamSession::first_start`).
+    /// The session of a Steam that has never run (`launch::SteamSession::first_start`):
+    /// it sets itself up for minutes before it shows its sign-in. The Setting Up Steam
+    /// screen waits in front meanwhile, so the session has no time-out of its own until a
+    /// window shows, and only the web helper's window, the sign-in, takes the launcher's
+    /// place: the updater's small windows stay behind the screen.
     #[must_use]
     pub fn first_start(self) -> Self {
         Self {
-            timeout: BIG_PICTURE_FIRST_START_TIMEOUT,
+            first_start: true,
             ..self
         }
     }
@@ -94,7 +97,8 @@ impl BigPicture {
     /// started.
     pub fn deadline(&self) -> Option<Instant> {
         match self.phase {
-            Phase::Waiting(since) => Some(since + self.timeout),
+            Phase::Waiting(_) if self.first_start => None,
+            Phase::Waiting(since) => Some(since + BIG_PICTURE_TIMEOUT),
             Phase::Shown => None,
             Phase::Left(_) if self.game.is_some() => None,
             Phase::Left(since) => Some(since + BIG_PICTURE_GRACE),
@@ -128,8 +132,15 @@ impl BigPicture {
 
     /// Follows a top-level window another client mapped at `now`, or that was there when
     /// the session started (`own` holds the launcher's windows): one of the Steam client's
-    /// shows Big Picture.
+    /// shows Big Picture, or on a first start its web helper's shows the sign-in.
     pub fn window_mapped(&mut self, window: &WindowFacts, own: &[Xid], now: Instant) {
+        let updater = !window
+            .wm_class
+            .iter()
+            .any(|class| class == STEAM_WEB_HELPER);
+        if self.first_start && self.is_opening() && updater {
+            return;
+        }
         self.steam.mapped(window, own, now);
         if self.steam.latest().is_some() {
             self.phase = Phase::Shown;
@@ -244,12 +255,35 @@ mod tests {
     }
 
     #[test]
-    fn steams_first_start_gets_longer_to_show_a_window() {
+    fn steams_first_start_waits_as_long_as_its_set_up_screen() {
         let start = Instant::now();
         let session = BigPicture::new(start, &[]).first_start();
-        assert!(!session.is_over(start + BIG_PICTURE_TIMEOUT));
-        assert!(!session.is_over(start + BIG_PICTURE_FIRST_START_TIMEOUT - Duration::from_secs(1)));
-        assert!(session.is_over(start + BIG_PICTURE_FIRST_START_TIMEOUT));
+        // The Setting Up Steam screen times out, or the user cancels it.
+        assert_eq!(session.deadline(), None);
+        assert!(!session.is_over(start + Duration::from_secs(3600)));
+    }
+
+    #[test]
+    fn steams_own_windows_stay_behind_the_set_up_screen_until_its_sign_in() {
+        let start = Instant::now();
+        let mut session = BigPicture::new(start, &[]).first_start();
+        // Steam's updater shows its progress in a small window of its own.
+        let updater = WindowFacts {
+            wm_class: vec!["steam".to_owned(), "Steam".to_owned()],
+            width: 400,
+            height: 100,
+            ..steam_window(0x220_0010)
+        };
+        session.window_mapped(&updater, &[MAIN], start);
+        assert!(session.is_opening());
+        assert_eq!(session.claim(Some(MAIN)).window, Some(MAIN));
+        // The sign-in is Steam's web helper's.
+        session.window_mapped(&steam_window(0x220_0035), &[MAIN], start);
+        assert!(!session.is_opening());
+        assert_eq!(session.claim(Some(MAIN)).window, Some(0x220_0035));
+        // Once Steam is there, its other windows show as in any session.
+        session.window_mapped(&updater, &[MAIN], start);
+        assert_eq!(session.claim(Some(MAIN)).window, Some(0x220_0010));
     }
 
     #[test]

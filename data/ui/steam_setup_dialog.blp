@@ -1,0 +1,66 @@
+using Gtk 4.0;
+using Adw 1;
+
+// The Setting Up Steam screen: while a Steam that has never run downloads and installs its
+// own update, what it is doing and how far it is, with Cancel; once the set-up failed or
+// stopped, why, with Try Again. steam_setup_dialog.rs fills the texts from
+// pindu_core::steam_setup's state, and steam_setup_service.rs follows Steam.
+template $PinduSteamSetupDialog: Adw.Dialog {
+  title: _("Setting Up Steam");
+  content-width: 720;
+  focus-widget: cancel_button;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-title: false;
+    }
+
+    content: Adw.StatusPage status {
+      icon-name: "pindu-source-steam-symbolic";
+      title: _("Setting Up Steam");
+
+      child: Adw.Clamp {
+        maximum-size: 480;
+
+        child: Box {
+          orientation: vertical;
+          spacing: 24;
+
+          // What Steam is doing, and how far its download is; filled in code.
+          ProgressBar progress {
+            show-text: true;
+          }
+
+          Box {
+            halign: center;
+            spacing: 12;
+            homogeneous: true;
+
+            Button try_again_button {
+              label: _("_Try Again");
+              use-underline: true;
+              visible: false;
+              clicked => $try_again() swapped;
+
+              styles [
+                "pill",
+                "suggested-action",
+              ]
+            }
+
+            Button cancel_button {
+              label: _("_Cancel");
+              use-underline: true;
+              action-name: "window.close";
+
+              styles [
+                "pill",
+              ]
+            }
+          }
+        };
+      };
+    };
+  };
+}

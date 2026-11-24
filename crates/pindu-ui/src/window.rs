@@ -292,6 +292,8 @@ mod imp {
         pub setup_started: Cell<bool>,
         /// The set-up checklist's entries Home shows, or `None` while it shows none.
         pub setup_items: RefCell<Option<Vec<pindu_core::setup::SetupItem>>>,
+        /// Steam's first start behind the Setting Up Steam screen, while it shows.
+        pub(crate) steam_setup: RefCell<Option<crate::steam_setup_service::SteamSetupFlow>>,
     }
 
     #[glib::object_subclass]

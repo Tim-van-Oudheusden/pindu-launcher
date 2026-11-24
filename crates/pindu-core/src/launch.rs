@@ -300,6 +300,12 @@ impl SteamSession<'_> {
     pub fn first_start(&self) -> bool {
         self.steam_root.is_none()
     }
+
+    /// The installed Steam client whose first start this is, which sets itself up before
+    /// it shows its sign-in; `None` once Steam has run.
+    pub fn first_start_client(&self) -> Option<StoreClient> {
+        self.steam_client.filter(|_| self.first_start())
+    }
 }
 
 /// Which install of a store's client is there.
@@ -1404,5 +1410,21 @@ mod tests {
             ["flatpak", "run", "com.valvesoftware.Steam"]
         );
         assert!(!session.first_start());
+    }
+
+    #[test]
+    fn a_first_start_names_the_steam_that_sets_itself_up() {
+        let session = SteamSession {
+            steam_gamescope: true,
+            host_spawn: true,
+            steam_root: None,
+            steam_client: Some(StoreClient::Flatpak),
+        };
+        assert_eq!(session.first_start_client(), Some(StoreClient::Flatpak));
+        let has_run = SteamSession {
+            steam_client: Some(StoreClient::Host),
+            ..steam_session(Path::new("/home/me/.local/share/Steam"))
+        };
+        assert_eq!(has_run.first_start_client(), None);
     }
 }
