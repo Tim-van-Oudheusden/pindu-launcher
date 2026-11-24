@@ -8,12 +8,13 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-24, #820 (this commit): the maintainer took the recommendation, so the agent created milestone 12 "M10 1.0"
-  (gate: every condition in `docs/product-analysis.md` section 9.5, plan in section 9.6) and added M10 to the
-  milestone lists in `AGENTS.md`, `.github/ISSUE_TEMPLATE/issue.yml` and `docs/spec-amendments.md`. No issue was
-  moved; the "what is missing" cells of section 9.6 are candidate M10 issues, and #63 (Flathub, `human-only`) still
-  sits in Nice to have although it is an M10 condition. Before that, #788: 0.7.0-rc.3 (#811); #792 stays open for
-  the laptop measurement, and #791, #794, #797 and #810 each end in a person's Pindu OS device check.
+- 2026-11-24, #547 (this commit): recorded the maintainer's 2026-11-23 decision in `docs/external-importers.md`
+  (contract adopted at protocol `0`; install a helper from Preferences from a local `.tar.gz`, ten rules; helper
+  folder exposed read-only in the sub-sandbox; bundled helpers in `<libexecdir>/pindu-launcher/importers/`). Filed
+  XP-2 #831, XP-3 #832, XP-5 #833, XP-4 #834 in M9 with `hold`. Sub-sandbox facts were checked in the devel
+  Flatpak (`flatpak run --command=sh <app> -c 'flatpak-spawn --sandbox …'`): the data folder is invisible without
+  `--sandbox-expose-path-ro`, `/app` is visible. Earlier today, #820: milestone 12 "M10 1.0", #63 moved to it, and
+  M10 issues #823 to #829 filed, all on `hold`.
 - Other agents work this repo at the same time (a "hive": issue comments trigger them, and the merge queue merges
   their PRs). An early decision comment on #792 was implemented as #795 and merged before the maintainer's later
   choice; #803 duplicated #791. Post a decision comment only once it is final, and check `gh pr list` before
