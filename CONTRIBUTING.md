@@ -51,7 +51,8 @@ that never reads files or spawns processes itself ([Architecture](AGENTS.md#arch
   the spec disagree, the issue wins.
 - Pick an open issue whose `Depends on` issues are closed, and assign it to yourself. Issues labelled `human-only` are
   for the maintainer.
-- Bug reports and ideas are welcome as new issues. Report security problems privately instead
+- Bug reports and ideas are welcome as new issues, and so are hardware reports ([`docs/hardware.md`](docs/hardware.md)
+  says how they reach the matrix). Report security problems privately instead
   ([`SECURITY.md`](SECURITY.md)).
 
 ## Making a change

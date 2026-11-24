@@ -1,0 +1,125 @@
+name: Hardware report
+description: Tell us how Pindu launcher runs on your machine, for the hardware matrix (docs/hardware.md)
+title: "Hardware report: "
+labels: ["hardware-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Finish the title with the machine, e.g. "Hardware report: Steam Deck OLED".
+        Each report becomes one row of the matrix in
+        [docs/hardware.md](https://github.com/Tim-van-Oudheusden/pindu-launcher/blob/main/docs/hardware.md), which
+        says what each check means. You do not need to run every check; one that passes on hardware nobody has
+        reported yet is worth filing. Please leave out personal data such as serial numbers, account names or network
+        names. If a check fails, please also file a bug report for it with the "Bug report" form.
+  - type: dropdown
+    id: class
+    attributes:
+      label: Class
+      multiple: false
+      options:
+        - Handheld
+        - Television PC
+        - Desktop
+        - Laptop
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: machine
+    attributes:
+      label: Machine
+      description: The maker and model, or for a self-built PC its CPU and mainboard.
+      placeholder: "Steam Deck OLED, or Lenovo Legion Go, or Ryzen 5 7600 on a B650 board"
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU
+      description: The graphics card or chip, and its driver if you know it (Mesa or NVIDIA, and the version).
+      placeholder: "Radeon RX 7600, Mesa 25.2"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS or Pindu OS image
+      description: >-
+        On Pindu OS, the image and its version or date. Elsewhere, the distribution and its version, and the desktop
+        or session you ran the launcher in (GNOME, a gamescope session, ...).
+      placeholder: "Pindu OS, pindu-os:stable from 2026-11-20; or Fedora 43, GNOME 49"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Launcher version
+      description: As About Pindu launcher shows it, or the release tag you installed.
+      placeholder: "0.7.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How you installed it
+      multiple: false
+      options:
+        - Part of the Pindu OS image
+        - Flatpak from a GitHub release
+        - RPM package
+        - DEB package
+        - Built from source
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: controller
+    attributes:
+      label: Controller
+      description: The controller's make and model, and how it was connected (USB, Bluetooth, a dongle, built in).
+      placeholder: "DualSense over Bluetooth"
+    validations:
+      required: true
+  - type: textarea
+    id: fullscreen
+    attributes:
+      label: Fullscreen mode checks
+      description: >-
+        For each row of the
+        [hardware checklist](https://github.com/Tim-van-Oudheusden/pindu-launcher/blob/main/docs/releasing.md#hardware-checklist),
+        replace "not run" with "passed" or "failed". Network, Bluetooth, Power and System Update only show on Pindu OS.
+      value: |
+        - Fullscreen mode in gamescope: not run
+        - Controller over Bluetooth: not run
+        - Wi-Fi with the on-screen keyboard: not run
+        - Suspend and resume: not run
+        - Steam game: not run
+        - Proton game: not run
+        - System Update: not run
+    validations:
+      required: true
+  - type: textarea
+    id: desktop
+    attributes:
+      label: Desktop window checks
+      description: >-
+        For each row of the
+        [desktop list](https://github.com/Tim-van-Oudheusden/pindu-launcher/blob/main/docs/hardware.md#desktop-window),
+        replace "not run" with "passed" or "failed".
+      value: |
+        - First sync: not run
+        - Browse and search: not run
+        - Game page: not run
+        - Steam game: not run
+        - Fullscreen mode and back: not run
+        - Debugging Information: not run
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: What failed, and anything else
+      description: >-
+        Optional. What happened in each check that failed, with a link to its bug report, and anything else worth
+        knowing about this machine.
