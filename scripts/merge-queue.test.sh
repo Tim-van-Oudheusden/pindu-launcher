@@ -587,7 +587,7 @@ check 'land does not merge when main moved after verification, and queues a reru
   'workflow run merge-queue.yml --ref main' "$calls"
 
 for change in '"labels":["hold"]' '"labels":["blocked"]' '"labels":["sentinel-alert"]' \
-  '"labels":["automated"]' '"isDraft":true' '"mergeStateStatus":"BLOCKED"'; do
+  '"labels":["automated"]' '"isDraft":true' '"mergeStateStatus":"BLOCKED"' '"state":"CLOSED"'; do
   new_queue land-not-ready
   add_pr 7
   listing "[{\"number\":7,\"closingIssues\":[12],$change}]"
