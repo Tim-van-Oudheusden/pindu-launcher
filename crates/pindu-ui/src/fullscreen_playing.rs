@@ -5,8 +5,10 @@
 //! panel shows. The window has the cards' `win.playing-return` and `win.playing-stop`. In
 //! a `--steam` gamescope, Return also brings the game back to the front, the drawer and
 //! Quick Access over a game hold the same cards, and a store-launched game that plays gets
-//! a card too, whose Stop closes its windows. A design draws the cards compact or as banners
-//! of the game's art (`pindu_core::themes::PlayingCard`), in both panels and over a game.
+//! a card too, whose Stop closes its windows, as does an app opened from Apps
+//! (`pindu_core::apps`), whose card offers Return and Exit. A design draws the cards
+//! compact or as banners of the game's art (`pindu_core::themes::PlayingCard`), in both
+//! panels and over a game.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -15,7 +17,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
-use pindu_core::model::Timestamp;
+use pindu_core::model::{GameId, Source, Timestamp};
 use pindu_core::session_time::{SessionTimeWords, session_time_text, until_next_minute};
 use pindu_core::themes::PlayingCard;
 
@@ -27,6 +29,35 @@ use crate::quick_access::PinduQuickAccess;
 use crate::session_service;
 use crate::window::PinduWindow;
 
+/// What a Playing Now card stands for: a game that runs, or an app opened from Apps
+/// (`pindu_core::apps`), whose windows a `--steam` gamescope follows as a store's.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum Running {
+    /// A game of the library.
+    Game(GameObject),
+    /// An installed app, by the ID gamescope follows it under (`apps::opened_id`) and its
+    /// name.
+    App { id: GameId, name: String },
+}
+
+impl Running {
+    /// The ID the card's buttons act on.
+    fn id(&self) -> GameId {
+        match self {
+            Self::Game(game) => game.id(),
+            Self::App { id, .. } => id.clone(),
+        }
+    }
+
+    /// The game's title, or the app's name.
+    fn title(&self) -> String {
+        match self {
+            Self::Game(game) => game.game().title.clone(),
+            Self::App { name, .. } => name.clone(),
+        }
+    }
+}
+
 /// A panel's Playing Now cards: a card per game we started that runs, in a box at the top
 /// of the panel, with their times moving while the panel shows.
 #[derive(Debug, Clone)]
@@ -35,8 +66,8 @@ pub(crate) struct PlayingCards(Rc<Inner>);
 #[derive(Debug)]
 struct Inner {
     cards: gtk::Box,
-    /// The games the cards show, each with when its session began.
-    playing: RefCell<Vec<(GameObject, Timestamp)>>,
+    /// The games and apps the cards show, each with when its session began.
+    playing: RefCell<Vec<(Running, Timestamp)>>,
     /// How the design draws the cards.
     arrangement: Cell<PlayingCard>,
     /// The cards' time labels, each with when its session began.
@@ -96,7 +127,7 @@ impl PlayingCards {
     /// Shows a card for each of `playing`, the first started first, drawn as the design
     /// says, and hides the cards without one. Says whether a card had focus, which the
     /// panel then takes back.
-    pub(crate) fn fill(&self, playing: &[(GameObject, Timestamp)]) -> bool {
+    pub(crate) fn fill(&self, playing: &[(Running, Timestamp)]) -> bool {
         let cards = &self.0.cards;
         let had_focus = cards
             .root()
@@ -108,11 +139,11 @@ impl PlayingCards {
         let now = session_service::now();
         let arrangement = self.0.arrangement.get();
         let mut times = Vec::new();
-        for (game, started_at) in playing {
+        for (running, started_at) in playing {
             let time = session_time(*started_at, now);
             let (card, time) = match arrangement {
-                PlayingCard::Compact => playing_card(game, time),
-                PlayingCard::Banner => playing_banner(game, time),
+                PlayingCard::Compact => playing_card(running, time),
+                PlayingCard::Banner => playing_banner(running, time),
             };
             cards.append(&card);
             times.push((time, *started_at));
@@ -165,15 +196,27 @@ fn tick_times(inner: &Rc<Inner>) {
 }
 
 /// The games that run, each with when it began: the games we started, the first started
-/// first, then the store-launched game that plays.
-fn playing_games(application: &PinduApplication) -> Vec<(GameObject, Timestamp)> {
+/// first, then the store-launched game that plays, or the app opened from Apps that is
+/// open.
+fn playing_games(application: &PinduApplication) -> Vec<(Running, Timestamp)> {
     let library = application.library_service().model();
+    let apps = application.apps_service();
     application
         .session_service()
         .sessions()
         .into_iter()
         .chain(application.gamescope_service().store_playing())
-        .filter_map(|(id, started_at)| Some((library.game_object(&id)?, started_at)))
+        .filter_map(|(id, started_at)| {
+            let running = match library.game_object(&id) {
+                Some(game) => Running::Game(game),
+                None if id.source() == Source::Desktop => {
+                    let app = apps.app(id.native_id())?;
+                    Running::App { id, name: app.name }
+                }
+                None => return None,
+            };
+            Some((running, started_at))
+        })
         .collect()
 }
 
@@ -184,7 +227,10 @@ impl PinduWindow {
         let imp = self.imp();
         self.add_game_action("playing-return", |window, id| {
             window.close_panel();
-            window.return_to_game(id);
+            // An app has no page to return to.
+            if window.library().game_object(id).is_some() {
+                window.return_to_game(id);
+            }
             if let Some(application) = window.application().and_downcast::<PinduApplication>() {
                 application.gamescope_service().bring_to_front(id);
             }
@@ -314,8 +360,8 @@ fn session_time(started_at: Timestamp, now: Timestamp) -> String {
 /// A compact Playing Now card for a game that runs (`.playing-card`): its title, `time` it
 /// has run, and Return to its page, or Stop it when we started it. Also gives the label of
 /// its time, to move it on.
-fn playing_card(game: &GameObject, time: String) -> (gtk::Widget, gtk::Label) {
-    let (card, time) = card_content(game, time);
+fn playing_card(running: &Running, time: String) -> (gtk::Widget, gtk::Label) {
+    let (card, time) = card_content(running, time);
     card.add_css_class("card");
     card.add_css_class("playing-card");
     (card.upcast(), time)
@@ -325,8 +371,8 @@ fn playing_card(game: &GameObject, time: String) -> (gtk::Widget, gtk::Label) {
 /// game's art (`.playing-card-art`), its hero or else its cover, loaded as Home loads a
 /// game's hero, filling the card, with what the compact card holds over a scrim at its foot
 /// (`.playing-card-scrim`). Without art, or until it loads, the card is `.no-art`, in the
-/// card colour. The card grows with its text at a larger text size.
-fn playing_banner(game: &GameObject, time: String) -> (gtk::Widget, gtk::Label) {
+/// card colour, as an app's always is. The card grows with its text at a larger text size.
+fn playing_banner(running: &Running, time: String) -> (gtk::Widget, gtk::Label) {
     let art = gtk::Picture::builder()
         .content_fit(gtk::ContentFit::Cover)
         .can_shrink(true)
@@ -339,12 +385,14 @@ fn playing_banner(game: &GameObject, time: String) -> (gtk::Widget, gtk::Label) 
         .overflow(gtk::Overflow::Hidden)
         .css_classes(["card", "playing-card", "no-art"])
         .build();
-    let (scrim, time) = card_content(game, time);
+    let (scrim, time) = card_content(running, time);
     scrim.set_valign(gtk::Align::End);
     scrim.add_css_class("playing-card-scrim");
     card.add_overlay(&scrim);
     card.set_measure_overlay(&scrim, true);
-    if let Some(path) = hero_art(game) {
+    if let Running::Game(game) = running
+        && let Some(path) = hero_art(game)
+    {
         let card = card.downgrade();
         load_picture(&art, path, move |_| {
             if let Some(card) = card.upgrade() {
@@ -359,8 +407,10 @@ fn playing_banner(game: &GameObject, time: String) -> (gtk::Widget, gtk::Label) 
 const BANNER_HEIGHT: i32 = 168;
 
 /// What a Playing Now card holds, top to bottom: "Playing Now" and `time` the game has run,
-/// its title, then Return and Stop. Also gives the label of its time.
-fn card_content(game: &GameObject, time: String) -> (gtk::Box, gtk::Label) {
+/// its title, then Return and Stop; for an app, "Open Now", its name, Return and Exit.
+/// Also gives the label of its time.
+fn card_content(running: &Running, time: String) -> (gtk::Box, gtk::Label) {
+    let app = matches!(running, Running::App { .. });
     let card = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(12)
@@ -368,7 +418,11 @@ fn card_content(game: &GameObject, time: String) -> (gtk::Box, gtk::Label) {
     let heading = gtk::Box::builder().spacing(12).build();
     heading.append(
         &gtk::Label::builder()
-            .label(gettext("Playing Now"))
+            .label(if app {
+                gettext("Open Now")
+            } else {
+                gettext("Playing Now")
+            })
             .xalign(0.0)
             .hexpand(true)
             .css_classes(["heading", "accent"])
@@ -383,17 +437,22 @@ fn card_content(game: &GameObject, time: String) -> (gtk::Box, gtk::Label) {
     card.append(&heading);
     card.append(
         &gtk::Label::builder()
-            .label(game.game().title.as_str())
+            .label(running.title())
             .xalign(0.0)
             .wrap(true)
             .css_classes(["title-3"])
             .build(),
     );
     let buttons = gtk::Box::builder().spacing(12).homogeneous(true).build();
-    let target = game.id().as_str().to_variant();
+    let target = running.id().as_str().to_variant();
+    let stop = if app {
+        gettext("_Exit")
+    } else {
+        gettext("_Stop")
+    };
     for (label, action, style) in [
         (gettext("_Return"), "win.playing-return", "suggested-action"),
-        (gettext("_Stop"), "win.playing-stop", "destructive-action"),
+        (stop, "win.playing-stop", "destructive-action"),
     ] {
         let button = gtk::Button::builder()
             .label(label)

@@ -81,6 +81,9 @@ pub enum SectionId {
     Categories,
     /// A category: the games of one genre.
     Category(CategoryId),
+    /// The Apps tile, which leads to the installed applications that are not games
+    /// (`crate::apps`); it holds no games.
+    Apps,
 }
 
 impl SectionId {
@@ -95,6 +98,7 @@ impl SectionId {
             Self::Collection(id) => format!("{COLLECTION_PREFIX}{id}"),
             Self::Categories => CATEGORIES_NAME.to_owned(),
             Self::Category(id) => format!("{CATEGORY_PREFIX}{}", id.genre()),
+            Self::Apps => APPS.to_owned(),
         }
     }
 
@@ -105,6 +109,7 @@ impl SectionId {
             FAVOURITES => Some(Self::Favourites),
             INSTALLED => Some(Self::Installed),
             CATEGORIES_NAME => Some(Self::Categories),
+            APPS => Some(Self::Apps),
             _ => {
                 if let Some(id) = name.strip_prefix(COLLECTION_PREFIX) {
                     id.parse().ok().map(Self::Collection)
@@ -130,7 +135,8 @@ impl SectionId {
 
     /// The library view that shows all of the section's games, where its See All goes:
     /// All Games for a category, which the library narrows to its genre
-    /// ([`Self::genre`]), and for the Categories tile.
+    /// ([`Self::genre`]), for the Categories tile, and for the Apps tile, which holds no
+    /// games and never opens the library.
     pub fn view(self) -> View {
         match self {
             Self::RecentlyPlayed => View::PlayHistory,
@@ -138,7 +144,7 @@ impl SectionId {
             Self::Installed => View::Installed,
             Self::Source(source) => View::Source(source),
             Self::Collection(id) => View::Collection(id),
-            Self::Categories | Self::Category(_) => View::All,
+            Self::Categories | Self::Category(_) | Self::Apps => View::All,
         }
     }
 
@@ -158,6 +164,7 @@ const INSTALLED: &str = "installed";
 const COLLECTION_PREFIX: &str = "collection-";
 const CATEGORIES_NAME: &str = "categories";
 const CATEGORY_PREFIX: &str = "category-";
+const APPS: &str = "apps";
 
 /// The two letters a launcher's section tile shows where a design labels its tiles;
 /// `None` for a source that is not a launcher, which shows an icon. Not translated.
@@ -447,6 +454,23 @@ mod tests {
             "{art} is not a resource"
         );
         assert!(provenance.contains("The section tiles (*.svg)"));
+    }
+
+    #[test]
+    fn the_apps_tile_is_named_classed_and_ships_its_art_as_a_resource() {
+        let data = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data");
+        let resources = std::fs::read_to_string(data.join("resources.gresource.xml")).unwrap();
+        let art = format!("home/{}.svg", SectionId::Apps.name());
+
+        assert_eq!(SectionId::Apps.name(), "apps");
+        assert_eq!(SectionId::from_name("apps"), Some(SectionId::Apps));
+        assert_eq!(SectionId::Apps.css_class(), "section-apps");
+        assert_eq!(SectionId::Apps.genre(), None);
+        assert!(data.join(&art).is_file(), "{art} is missing");
+        assert!(
+            resources.contains(&format!(">{art}</file>")),
+            "{art} is not a resource"
+        );
     }
 
     #[test]

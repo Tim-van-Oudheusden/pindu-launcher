@@ -297,12 +297,12 @@ impl PinduWindow {
     }
 
     /// Home: its first screen follows the sections (`pindu_core::sections`), a section
-    /// tile opens its games (`win.home-section` with the section's name), the Library
-    /// tile goes to the library (`win.show-library`), the Steam Big Picture tile opens
-    /// Big Picture (`big_picture`), and See All in a row of the Shelves layout goes to the
-    /// library at that section's view (`win.home-section-library` with its name), as does
-    /// a tile of the More Categories row. Home's categories show while Categories on Home
-    /// (`CATEGORIES_KEY`) is on.
+    /// tile opens its games (`win.home-section` with the section's name), the Apps tile
+    /// the Apps page, the Library tile goes to the library (`win.show-library`), the Steam
+    /// Big Picture tile opens Big Picture (`big_picture`), and See All in a row of the
+    /// Shelves layout goes to the library at that section's view
+    /// (`win.home-section-library` with its name), as does a tile of the More Categories
+    /// row. Home's categories show while Categories on Home (`CATEGORIES_KEY`) is on.
     pub(crate) fn setup_home(&self) {
         let show_library = gio::ActionEntry::builder("show-library")
             .activate(|window: &Self, _, _| window.show_library())
@@ -430,9 +430,13 @@ impl PinduWindow {
     }
 
     /// Shows the games of Home's section named `name` (`SectionId::name`), back down on
-    /// Home; Home shows only in fullscreen mode.
+    /// Home, or the Apps page for the Apps tile; Home shows only in fullscreen mode.
     fn show_home_section(&self, name: &str) {
         if !self.is_fullscreen() {
+            return;
+        }
+        if SectionId::from_name(name) == Some(SectionId::Apps) {
+            self.show_apps();
             return;
         }
         let imp = self.imp();
@@ -475,7 +479,8 @@ impl PinduWindow {
             && imp.home_page.shows_section()
     }
 
-    /// Shows the library page: back down to it, or up from Home to it.
+    /// Shows the library page: back down to it, or up from Home to it; in the desktop
+    /// window, in the place of the Apps page.
     pub(crate) fn show_library(&self) {
         let imp = self.imp();
         let library = imp.library_page.get();
@@ -487,8 +492,10 @@ impl PinduWindow {
             .any(|page| page == library);
         if in_stack {
             imp.navigation_view.pop_to_page(&library);
-        } else {
+        } else if self.is_fullscreen() {
             imp.navigation_view.push(&library);
+        } else {
+            imp.navigation_view.replace(&[library]);
         }
     }
 
@@ -608,6 +615,9 @@ impl PinduWindow {
         };
         if page == *imp.home_page.upcast_ref::<adw::NavigationPage>() {
             imp.home_page.focus_remembered();
+            return;
+        }
+        if self.shows_apps() && self.focus_app(imp.apps_cursor.get()) {
             return;
         }
         if let Some(page) = page.downcast_ref::<GamePage>() {

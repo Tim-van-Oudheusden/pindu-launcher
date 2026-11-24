@@ -7,6 +7,7 @@ use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
 
 use crate::add_store_service::AddStoreService;
+use crate::apps_service::AppsService;
 use crate::audio_output_service::AudioOutputService;
 use crate::bluetooth_service::BluetoothService;
 use crate::config::{APP_ID, RESOURCE_BASE_PATH, VERSION};
@@ -114,6 +115,8 @@ mod imp {
         pub system_update_service: OnceCell<SystemUpdateService>,
         /// The "add a store" flow, for Quick Access and the empty library.
         pub add_store_service: OnceCell<AddStoreService>,
+        /// The installed apps, for both shells' Apps.
+        pub apps_service: OnceCell<AppsService>,
         /// The network, for Quick Access's Network.
         pub network_service: OnceCell<NetworkService>,
         /// Suspend, restart and power off, for the drawer's Power.
@@ -272,6 +275,9 @@ mod imp {
                 .expect("start-up runs once");
             self.system_power_service
                 .set(SystemPowerService::new(&self.notification_service))
+                .expect("start-up runs once");
+            self.apps_service
+                .set(AppsService::new())
                 .expect("start-up runs once");
             // Loaded here, not on the first window: Shell search and --launch need the
             // library when no window opens.
@@ -547,6 +553,14 @@ impl PinduApplication {
             .expect("the application has started")
     }
 
+    /// The installed apps.
+    pub fn apps_service(&self) -> &AppsService {
+        self.imp()
+            .apps_service
+            .get()
+            .expect("the application has started")
+    }
+
     /// The network.
     pub fn network_service(&self) -> &NetworkService {
         self.imp()
@@ -711,7 +725,8 @@ impl PinduApplication {
                 });
             })
             .build();
-        // Stop ends a game we started, and closes a store-launched game's windows.
+        // Stop ends a game we started, and closes a store-launched game's windows, or an
+        // opened app's (Exit).
         let stop_action = gio::ActionEntry::builder("stop")
             .parameter_type(Some(glib::VariantTy::STRING))
             .activate(move |app: &Self, _, id| {
@@ -719,10 +734,9 @@ impl PinduApplication {
                     return;
                 };
                 let in_store = app
-                    .library_service()
-                    .model()
-                    .game_object(&id)
-                    .is_some_and(|game| game.playing() == Playing::InStore);
+                    .gamescope_service()
+                    .store_playing()
+                    .is_some_and(|(playing, _)| playing == id);
                 if in_store {
                     app.gamescope_service().exit_store_game(&id);
                 } else {

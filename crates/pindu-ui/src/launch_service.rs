@@ -3,7 +3,8 @@
 //! `gamescope --steam` session, a Steam game goes to Steam as `steam -silent <uri>` on the
 //! host; games we start ourselves run on the host as our child, from an argument list, and
 //! Windows games and native games in the Steam Linux Runtime run through umu in the
-//! sandbox (see `proton_launch`).
+//! sandbox (see `proton_launch`). Apps (`pindu_core::apps`) open on the host from their
+//! entry's argument list, as an opened store does.
 
 use std::collections::BTreeMap;
 use std::rc::Rc;
@@ -12,6 +13,7 @@ use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::add_store::{self, StoreApp};
+use pindu_core::apps::{self, App};
 use pindu_core::launch::{self, Command, Route, Start, SteamSession, WebPage};
 use pindu_core::launch_outcome::{Ending, SIGTERM};
 use pindu_core::model::{Game, LaunchRoute, Source};
@@ -557,4 +559,28 @@ pub fn open_store(app: &gtk::Application, store: StoreApp, toast: impl Fn(adw::T
             }
         }
     });
+}
+
+/// Opens `entry`, an installed app, on the host from its argument list
+/// (`pindu_core::apps`). In a `gamescope --steam` session its windows then take the
+/// launcher's place until they close, as an opened store's do
+/// (`GamescopeService::store_launch_started`), and the menu drawer offers Exit for it;
+/// elsewhere its window takes focus, and with it the controller.
+pub fn open_app(app: &gtk::Application, entry: &App, toast: impl Fn(adw::Toast)) {
+    glib::g_debug!("pindu", "Opening an app: {:?}", entry.command.argv);
+    match session_service::spawn(&entry.command, None) {
+        Ok(_) => {
+            if let Some(application) = app.downcast_ref::<PinduApplication>() {
+                application
+                    .gamescope_service()
+                    .store_launch_started(&apps::opened_id(&entry.id));
+            }
+        }
+        Err(error) => {
+            glib::g_warning!("pindu", "Could not open {}: {error}", entry.id);
+            toast(adw::Toast::new(
+                &gettext("Could not open {launcher}").replace("{launcher}", &entry.name),
+            ));
+        }
+    }
 }

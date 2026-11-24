@@ -8,11 +8,13 @@
 //! Activating a section (`win.home-section`) opens the second screen: its games, with the
 //! focused game's hero behind them. The Categories tile, after Installed, opens the
 //! Categories screen instead (`.home-categories`): a tile per category, each opening its
-//! games. B goes back one screen, to the tile it came from. The other two are one screen
-//! of rows that scroll; Up and Down change row (`HomePage::navigate`). Shelves: every
-//! section as a row of its games (`pindu_core::home::shelves`), then the eight categories
-//! with the most games (`.home-shelf-category`), the More Categories row for the others,
-//! and the Library row. Explore (`home::explore_rows`),
+//! games. The Apps tile, after it while there are apps (`set_apps`), opens the window's
+//! Apps page (`apps_page`). B goes back one screen, to the tile it came from. The other
+//! two are one screen of rows that scroll; Up and Down change row (`HomePage::navigate`).
+//! Shelves: every section as a row of its games (`pindu_core::home::shelves`), then the
+//! eight categories with the most games (`.home-shelf-category`), the More Categories row
+//! for the others, and the Library row, which holds the Apps tile. Explore
+//! (`home::explore_rows`),
 //! Adwaita's: a carousel of the Jump Back In games with Play and Details on each page
 //! (`.home-featured`), a row of compact section tiles with the Library and Big Picture
 //! tiles, then a row of games for each other section, all on the window's own background.
@@ -101,6 +103,7 @@ fn detail_item(detail: Detail) -> gtk::Box {
             category_count(count),
             gettext("Categories"),
         ),
+        Detail::Apps(count) => (APPS_ICON, app_count(count), gettext("Apps")),
     };
     let item = gtk::Box::builder()
         .spacing(6)
@@ -129,6 +132,15 @@ fn category_count(count: u32) -> String {
     ngettext("{count} category", "{count} categories", count).replace("{count}", &count.to_string())
 }
 
+/// The icon that stands for Apps, on its tile and in the desktop window's sidebar.
+pub(crate) const APPS_ICON: &str = "preferences-desktop-apps-symbolic";
+
+/// How many apps the Apps tile leads to, as its details row and its labelled tile say
+/// it.
+pub(crate) fn app_count(count: u32) -> String {
+    ngettext("{count} app", "{count} apps", count).replace("{count}", &count.to_string())
+}
+
 /// How many games `section` holds.
 fn games_in(section: &Section) -> u32 {
     u32::try_from(section.games.len()).unwrap_or(u32::MAX)
@@ -145,6 +157,7 @@ fn section_title(section: &Section) -> String {
         (SectionId::Installed, None) => gettext("Installed"),
         (SectionId::Source(source), None) => source_name(source),
         (SectionId::Categories, None) => gettext("Categories"),
+        (SectionId::Apps, _) => gettext("Apps"),
         (SectionId::Collection(_) | SectionId::Category(_), None) => String::new(),
     }
 }
@@ -196,6 +209,7 @@ fn section_glyph(id: SectionId, size: i32) -> gtk::Widget {
         SectionId::Installed => "drive-harddisk-symbolic",
         SectionId::Collection(_) => "folder-symbolic",
         SectionId::Categories => "view-app-grid-symbolic",
+        SectionId::Apps => APPS_ICON,
         SectionId::Category(_) => "view-list-bullet-symbolic",
         SectionId::Source(source) => {
             match (sections::source_icon(source), sections::monogram(source)) {
@@ -277,7 +291,10 @@ fn section_tile(
         tile.add_css_class("home-collection-tile");
     }
     tile.update_property(&[gtk::accessible::Property::Label(title)]);
-    if matches!(id, SectionId::Categories | SectionId::Category(_)) {
+    if matches!(
+        id,
+        SectionId::Categories | SectionId::Category(_) | SectionId::Apps
+    ) {
         tile.add_css_class(&id.css_class());
         tile.update_property(&[gtk::accessible::Property::Description(count)]);
     }
@@ -485,13 +502,15 @@ impl Focused {
     }
 }
 
-/// Home's sections, in order, and its categories, by name, with the games of each.
+/// Home's sections, in order, and its categories, by name, with the games of each, and
+/// how many apps the Apps tile leads to.
 #[derive(Debug, Default)]
 struct Sections {
     sections: Vec<Section>,
     games: Vec<Vec<GameObject>>,
     categories: Vec<Section>,
     category_games: Vec<Vec<GameObject>>,
+    apps: u32,
 }
 
 impl Sections {
@@ -507,7 +526,8 @@ impl Sections {
     }
 
     /// The name, and the count its tile shows, of the tile `id` stands for: a section, a
-    /// category, or the Categories tile, which counts the categories.
+    /// category, the Categories tile, which counts the categories, or the Apps tile,
+    /// which counts the apps.
     fn tile(&self, id: SectionId) -> Option<(String, u32, String)> {
         if id == SectionId::Categories {
             if self.categories.is_empty() {
@@ -515,6 +535,9 @@ impl Sections {
             }
             let count = u32::try_from(self.categories.len()).unwrap_or(u32::MAX);
             return Some((gettext("Categories"), count, category_count(count)));
+        }
+        if id == SectionId::Apps {
+            return (self.apps > 0).then(|| (gettext("Apps"), self.apps, app_count(self.apps)));
         }
         let (section, _) = self.get(id)?;
         let count = games_in(section);
@@ -1437,15 +1460,26 @@ impl HomePage {
         let first = imp.sections.borrow().sections.is_empty()
             && !sections.is_empty()
             && imp.library_tile.is_focus();
+        let apps = imp.sections.borrow().apps;
         imp.sections.replace(Sections {
             sections,
             games,
             categories,
             category_games,
+            apps,
         });
         self.refresh();
         if first {
             self.focus_first();
+        }
+    }
+
+    /// Takes the number of installed apps (`pindu_core::apps`): Home shows the Apps tile
+    /// while there are some, and none without.
+    pub fn set_apps(&self, count: u32) {
+        let imp = self.imp();
+        if std::mem::replace(&mut imp.sections.borrow_mut().apps, count) != count {
+            self.refresh();
         }
     }
 
@@ -1754,7 +1788,12 @@ impl HomePage {
                 .map(RowItem::Section)
                 .collect()
         } else {
-            home::first_screen_row(layout.home_start, &sections.sections, &sections.categories)
+            home::first_screen_row(
+                layout.home_start,
+                &sections.sections,
+                &sections.categories,
+                sections.apps > 0,
+            )
         };
         let items: Vec<(RowKey, Shown<'_>)> = row
             .into_iter()
@@ -1897,7 +1936,7 @@ impl HomePage {
             Tiles(Vec<(SectionId, String, String)>),
             Section(home::Shelf, Vec<&'a GameObject>),
             MoreCategories(Vec<(SectionId, String, String)>),
-            Library,
+            Library(Vec<(SectionId, String, String)>),
         }
         let imp = self.imp();
         let layout = imp.layout.get();
@@ -1947,7 +1986,7 @@ impl HomePage {
         };
         // What each row shows: its key, and what it is built from.
         let wanted: Vec<(ShelfKey, Parts<'_>)> = if layout.home == HomeLayout::Explore {
-            home::explore_rows(&sections.sections, &sections.categories)
+            home::explore_rows(&sections.sections, &sections.categories, sections.apps > 0)
                 .into_iter()
                 .filter_map(|row| match row {
                     ExploreRow::Featured(ids) => {
@@ -1964,13 +2003,15 @@ impl HomePage {
                 })
                 .collect()
         } else {
+            // The Library row leads elsewhere, as the Apps tile does: it stands there.
+            let (apps_keys, apps_tiles) = tiles(&[SectionId::Apps]);
             home::shelves(&sections.sections, &sections.categories)
                 .into_iter()
                 .filter_map(section_row)
                 .chain(more_row(&home::more_categories(&sections.categories)))
                 .chain([(
-                    (RowId::Library, gettext("Library"), 0, Vec::new()),
-                    Parts::Library,
+                    (RowId::Library, gettext("Library"), 0, apps_keys),
+                    Parts::Library(apps_tiles),
                 )])
                 .collect()
         };
@@ -2008,7 +2049,7 @@ impl HomePage {
                         Parts::MoreCategories(tiles) => {
                             self.more_categories_shelf(key, &tiles, layout)
                         }
-                        Parts::Library => self.library_shelf(key, layout),
+                        Parts::Library(tiles) => self.library_shelf(key, &tiles, layout),
                     };
                     imp.shelves
                         .insert_child_after(&shelf.row, previous.as_ref());
@@ -2180,29 +2221,59 @@ impl HomePage {
         }
     }
 
-    /// The last row of the Shelves layout (`.shelf-library`): the Library tile and, where
-    /// Steam is present, the Steam Big Picture tile, moved here from the carousel.
-    fn library_shelf(&self, key: ShelfKey, layout: ThemeLayout) -> Shelf {
+    /// The last row of the Shelves layout (`.shelf-library`): the Library tile, the tile
+    /// of each of `tiles`, the Apps tile while there are apps, and, where Steam is present,
+    /// the Steam Big Picture tile, the Library and Big Picture tiles moved here from the
+    /// carousel.
+    fn library_shelf(
+        &self,
+        key: ShelfKey,
+        tiles: &[(SectionId, String, String)],
+        layout: ThemeLayout,
+    ) -> Shelf {
         let imp = self.imp();
         let shape = layout.home_tile;
+        let size = home::card_size(shape, layout.home_tile_size);
         let (row, carousel) = Self::shelf_frame(&key.1, None, shape);
         row.add_css_class("shelf-library");
         for tile in [&*imp.library_tile, &*imp.big_picture_tile] {
             if let Some(parent) = tile.parent().and_downcast::<gtk::Box>() {
                 parent.remove(tile);
             }
-            carousel.append(tile);
         }
+        carousel.append(&*imp.library_tile);
+        let mut items = vec![(imp.library_tile.get(), Focused::Library)];
+        for (id, title, count) in tiles {
+            let tile = section_tile(
+                *id,
+                title,
+                count,
+                size,
+                layout.home_section_tile,
+                "win.home-section",
+            );
+            let id = *id;
+            tile.connect_has_focus_notify(glib::clone!(
+                #[weak(rename_to = page)]
+                self,
+                move |tile| {
+                    if tile.has_focus() {
+                        page.card_focused(tile, &Focused::Section(id));
+                    }
+                }
+            ));
+            carousel.append(&tile);
+            items.push((tile, Focused::Section(id)));
+        }
+        carousel.append(&*imp.big_picture_tile);
+        items.push((imp.big_picture_tile.get(), Focused::BigPicture));
         Shelf {
             id: RowId::Library,
             key,
             row,
-            items: vec![
-                (imp.library_tile.get(), Focused::Library),
-                (imp.big_picture_tile.get(), Focused::BigPicture),
-            ],
+            items,
             shape,
-            size: home::card_size(shape, layout.home_tile_size),
+            size,
             pending: RefCell::default(),
         }
     }
@@ -2934,8 +3005,9 @@ impl HomePage {
     /// name and details, without art, or over its first game's on such a first screen and
     /// on the Categories screen, with its first covers (`.home-preview`) where the design
     /// asks for them; the Categories tile as a section whose first game is its first
-    /// category's; the title alone for the Library and Steam Big Picture tiles. Nothing in
-    /// the Explore layout, whose rows say it all themselves.
+    /// category's; the Apps tile's name and how many apps it leads to; the title alone for
+    /// the Library and Steam Big Picture tiles. Nothing in the Explore layout, whose rows
+    /// say it all themselves.
     fn show_focused(&self, focused: &Focused) {
         let imp = self.imp();
         self.focus_moved(focused.item());
@@ -2961,6 +3033,13 @@ impl HomePage {
             let details = home::categories_details(&sections.categories);
             drop(sections);
             self.show_info(&gettext("Categories"), &details, art);
+            return;
+        }
+        if matches!(focused, Focused::Section(SectionId::Apps)) {
+            let details = home::apps_details(sections.apps);
+            drop(sections);
+            self.show_preview(None);
+            self.show_info(&gettext("Apps"), &details, None);
             return;
         }
         let section = match focused {

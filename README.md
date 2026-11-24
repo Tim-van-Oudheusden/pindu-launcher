@@ -529,6 +529,14 @@ forced, and they go in any order; closing Quick Access comes back to the list. *
 Access → Manage → **Set-Up Checklist** brings it back. Once a game is in the library, it is gone for good. The desktop
 window does not show it.
 
+### Apps
+
+Home has an **Apps** tile, and the desktop window's sidebar an **Apps** item, while applications that are not games
+are installed: game launchers such as Steam and Heroic, and apps such as a browser. Each opens with one press (A with
+a controller); in a gamescope `--steam` session it comes to the front, the launcher comes back when it closes, and the
+menu drawer offers Exit for it. Games are not listed there, and apps never enter the library. The list follows apps
+installed or removed while the launcher runs. Details in [`docs/apps.md`](docs/apps.md).
+
 ### Add a Store
 
 A library with no games, such as a fresh Pindu OS install, offers **Add a Store** on its empty page, both in
