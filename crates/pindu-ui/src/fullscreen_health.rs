@@ -16,6 +16,7 @@ use gtk::{gio, glib};
 use pindu_core::health::{
     FullscreenSession, HealthReport, Install, NextStep, Problem, SourceHealth, StepReach, Tool,
 };
+use pindu_core::model::SourceFound;
 use pindu_core::panels::QuickAccessLevel;
 use pindu_core::sync_age::sync_age;
 
@@ -348,23 +349,31 @@ fn fact_row(title: &str, value: &str) -> adw::ActionRow {
 /// A source's row: whether it is on and found, then its games, how it is installed, where
 /// and when it last synced.
 fn source_row(source: &SourceHealth) -> adw::ActionRow {
-    let subtitle = if !source.enabled {
-        gettext("Turned off")
-    } else if let Some(folder) = &source.folder {
-        let games = u32::try_from(source.games).unwrap_or(u32::MAX);
-        let games =
-            ngettext("{count} game", "{count} games", games).replace("{count}", &games.to_string());
-        let install = match source.install {
-            Some(Install::Flatpak) => gettext("Flatpak"),
-            _ => gettext("Native"),
-        };
-        let synced = gettext("Last synced: {when}").replace(
+    let games = u32::try_from(source.games).unwrap_or(u32::MAX);
+    let games =
+        ngettext("{count} game", "{count} games", games).replace("{count}", &games.to_string());
+    let synced = || {
+        gettext("Last synced: {when}").replace(
             "{when}",
             &sync_age_text(sync_age(source.last_sync, session_service::now())),
-        );
-        format!("{games}, {install}\n{}\n{synced}", folder.display())
+        )
+    };
+    let subtitle = if !source.enabled {
+        gettext("Turned off")
     } else {
-        gettext("Not found on this computer")
+        match &source.found {
+            SourceFound::Folder(folder) => {
+                let install = match source.install {
+                    Some(Install::Flatpak) => gettext("Flatpak"),
+                    _ => gettext("Native"),
+                };
+                format!("{games}, {install}\n{}\n{}", folder.display(), synced())
+            }
+            SourceFound::ApplicationFolders => {
+                format!("{games}\n{}\n{}", gettext("Application folders"), synced())
+            }
+            SourceFound::NotFound => gettext("Not found on this computer"),
+        }
     };
     adw::ActionRow::builder()
         .title(source_name(source.source))

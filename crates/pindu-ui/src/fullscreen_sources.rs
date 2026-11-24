@@ -14,7 +14,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
-use pindu_core::model::{Source, SourceState};
+use pindu_core::model::{Source, SourceFound, SourceState};
 use pindu_core::panels::QuickAccessLevel;
 use pindu_core::sources::external::listing::Listed;
 use pindu_core::sources::sync::imported_source_states;
@@ -117,10 +117,10 @@ impl PinduQuickAccess {
         }
         let (source_rows, helper_rows) = rows.split_at(states.len());
         for ((_, row, handler), state) in source_rows.iter().zip(states) {
-            row.set_subtitle(&if state.resolved_location.is_some() {
-                gettext("Found on this computer")
-            } else {
+            row.set_subtitle(&if state.found() == SourceFound::NotFound {
                 gettext("Not found on this computer")
+            } else {
+                gettext("Found on this computer")
             });
             show_active(row, handler, state.enabled);
         }

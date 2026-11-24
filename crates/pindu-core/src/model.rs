@@ -565,6 +565,31 @@ impl SourceState {
             errors: Vec::new(),
         }
     }
+
+    /// Where the source was found: its folder, or, for the Desktop source, which reads
+    /// every application folder rather than one, the application folders once it has
+    /// synced.
+    pub fn found(&self) -> SourceFound {
+        match &self.resolved_location {
+            Some(folder) => SourceFound::Folder(folder.clone()),
+            None if self.source == Source::Desktop && self.last_sync.is_some() => {
+                SourceFound::ApplicationFolders
+            }
+            None => SourceFound::NotFound,
+        }
+    }
+}
+
+/// Where a source was found on this computer, as the app shows it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SourceFound {
+    /// The folder its launcher keeps its data in.
+    Folder(PathBuf),
+    /// The application folders on the XDG search path, which the Desktop source reads; it
+    /// has no one folder.
+    ApplicationFolders,
+    /// Not on this computer, or not looked for yet.
+    NotFound,
 }
 
 /// What we know about one external importer on this machine: the state a built-in source
@@ -603,6 +628,27 @@ impl ExternalImporterState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_source_is_found_in_the_folder_it_was_read_from() {
+        let mut steam = SourceState::new(Source::Steam);
+        assert_eq!(steam.found(), SourceFound::NotFound);
+        steam.last_sync = Some(100);
+        assert_eq!(steam.found(), SourceFound::NotFound);
+        steam.resolved_location = Some(PathBuf::from("/home/u/.local/share/Steam"));
+        assert_eq!(
+            steam.found(),
+            SourceFound::Folder(PathBuf::from("/home/u/.local/share/Steam"))
+        );
+    }
+
+    #[test]
+    fn the_desktop_source_is_found_in_the_application_folders_once_it_has_synced() {
+        let mut desktop = SourceState::new(Source::Desktop);
+        assert_eq!(desktop.found(), SourceFound::NotFound);
+        desktop.last_sync = Some(100);
+        assert_eq!(desktop.found(), SourceFound::ApplicationFolders);
+    }
 
     #[test]
     fn a_game_id_is_the_source_and_native_id_joined_by_a_colon() {
