@@ -254,7 +254,8 @@ bundled ones; where the two differ, it says so.
   version the release does not speak means the helper is never run: no probe, no import.
 - **In each request.** A request names the version; a helper that gets one it does not speak writes why to standard
   error and exits non-zero, which the source shows as its importer not answering. Since Pindu sends the manifest's
-  version, this only happens when a helper's manifest and program disagree.
+  version, this only happens when a helper's manifest and program disagree. The bundled helpers do this through
+  `external::server::serve`.
 - **In each answer.** An answer in another version than the manifest's is refused, as a problem of the source: "it
   answered in protocol 1, and its manifest says 0".
 - **Ahead of time.** A helper's author learns of a new version, a deprecation and the release that drops a version
@@ -275,7 +276,9 @@ installs it; fullscreen mode's Sources says "Cannot run".
 | Too old | Cannot run: "it speaks protocol 0, which this version of Pindu no longer speaks; ask its author for an update that speaks 1 or 2" | Refused with the same reason | Stay as they were, and sync again once the helper is updated |
 | An answer in another version | The source's problem: "it answered in protocol 1, and its manifest says 0" | | Stay as they were |
 
-A bundled helper is always in the second row, or, as Bottles is, a built-in source that shows no protocol at all.
+A bundled helper that serves a built-in source, as Bottles' does, is never listed as a helper: its source shows as a
+built-in row, neither experimental nor removable. Any other bundled helper speaks the release's newest version, so it
+is in one of the first two rows.
 
 ### Announcing a change
 
@@ -425,4 +428,5 @@ their release when it is tagged ([Releasing](releasing.md)).
 | Release | Protocol | Change |
 | --- | --- | --- |
 | Unreleased | `0` | The compatibility policy (#826). A helper Pindu cannot run because of its version is told whether it needs a newer Pindu or an update from its author |
+| Unreleased | `0` | Addition: launch kind `none`, a game that is listed and cannot be started. The first bundled helper, Bottles' `pindu-import-bottles` (#834) |
 | Unreleased | `0` | Protocol `0` adopted (#547): manifests, probe and import (#831), the Sources lists (#832), installing from Preferences (#833) |
