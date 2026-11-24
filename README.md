@@ -500,7 +500,9 @@ When fullscreen mode starts with no games and no store installed, as on a fresh 
 - **Join a Network**: opens Quick Access's Network, where the system offers it.
 - **Choose a Design**: opens Quick Access's Design section; gone once a design was picked.
 - **Add a Store**: opens Add a Store.
-- **Sign In**: opens the installed store to sign in: Steam in Big Picture, Heroic or Lutris in their own window.
+- **Sign In**: opens the installed store to sign in: Steam in Big Picture, Heroic or Lutris in their own window. The
+  Flatpak opens Heroic and Lutris only with [host access](#starting-games-on-the-host); without it, the row says to
+  open the store on a desktop and sign in there.
 
 Each step is marked done from what is true now: a controller connected, the machine online, a store installed. None is
 forced, and they go in any order; closing Quick Access comes back to the list. **Hide This List** hides it, and Quick

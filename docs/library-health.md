@@ -89,7 +89,8 @@ outside the launcher, so **fullscreen mode shows a set-up checklist** in place o
 games and no store installed (`pindu_core::setup`, `setup_checklist.rs`): Connect a Controller (Quick Access's
 Bluetooth, or its Controller section without one), Join a Network where the system panel offers it, Choose a Design
 until the design was changed, Add a Store, and Sign In to the installed store (Steam through Big Picture, Heroic and
-Lutris in their own window, #797). Each entry opens the screen that already does the step and is marked done from the
+Lutris in their own window, #797; the Flatpak opens Heroic and Lutris only with host access, and without it the entry
+says to sign in on a desktop). Each entry opens the screen that already does the step and is marked done from the
 live state; none is forced. It is gone for good once a game is in the library. Hide This List keeps it hidden (the
 `fullscreen-setup` GSettings key), and Quick Access → Manage → Set-Up Checklist brings it back. It shows for any
 fullscreen start with nothing set up, not only on Pindu OS; the desktop window shows nothing of it. A first controller
