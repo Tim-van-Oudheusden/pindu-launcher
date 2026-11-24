@@ -215,6 +215,7 @@ list, and the matrix of hardware reports from other machines.
 | Steam game | A native Steam game starts from the launcher, and its playtime counts once it quits |
 | Proton game | A Windows game through Proton starts from the launcher, and its playtime counts once it quits |
 | System Update | **Quick Access → System Update** shows the installed version, and the update state and actions it offers work |
+| Leaving Steam Big Picture | In Steam mode, with Big Picture opened from Home's tile and a download running: the notice shows Guide + Y and "Back to Pindu" over Big Picture for a few seconds; Guide + Y brings the launcher back with the controller, and so does Steam's Switch to Desktop; the download goes on, and the tile shows Steam's window again at once. With a Steam game started from Big Picture, leaving shows its Playing Now card, whose Return brings it back |
 
 **Record it on the "Release X.Y.Z" issue**, which the [Release issue form](../.github/ISSUE_TEMPLATE/release.yml)
 creates with the checklist in it. The title is exactly `Release X.Y.Z`, the final version without `v` or `-rc.N`, so

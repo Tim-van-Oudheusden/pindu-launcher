@@ -61,6 +61,7 @@ body:
         - label: "Steam game: a native Steam game starts from the launcher, and its playtime counts after it quits"
         - label: "Proton game: a Windows game through Proton starts from the launcher, and its playtime counts after it quits"
         - label: "System Update: Quick Access, System Update shows the installed version, and the update state and actions it offers work"
+        - label: "Leaving Steam Big Picture: in Steam mode, the notice shows Guide + Y over Big Picture; Guide + Y and Steam's Switch to Desktop each bring the launcher back while Steam keeps running, the tile shows Steam's window again at once, and a Steam game started there gets a Playing Now card"
   - type: textarea
     id: notes
     attributes:

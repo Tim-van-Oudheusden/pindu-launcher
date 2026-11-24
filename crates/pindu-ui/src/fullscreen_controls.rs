@@ -254,5 +254,7 @@ pub(crate) fn action_label(intent: Intent) -> String {
         // Guide opens the menu drawer too, and from the desktop it opens fullscreen mode.
         Intent::Home => gettext("Menu"),
         Intent::QuickAccess | Intent::SystemQuickAccess => gettext("Quick Access"),
+        // Guide + Y leaves Steam Big Picture for the launcher.
+        Intent::LeaveBigPicture => gettext("Back to Pindu"),
     }
 }

@@ -2,7 +2,8 @@
 //! from a [`GamepadBackend`]; [`Intents`] maps their mapped buttons and sticks to intents,
 //! repeats held directions, notices a held Back, reads Guide on its release unless
 //! another button went down while it was held (Guide + A, [`QUICK_ACCESS_CHORD`], asks for
-//! Quick Access), and keeps the connected pads. Each pad's [`Layout`] (its glyphs, whether
+//! Quick Access, and Guide + Y, [`LEAVE_BIG_PICTURE_CHORD`], to leave Steam Big Picture),
+//! and keeps the connected pads. Each pad's [`Layout`] (its glyphs, whether
 //! confirm and back swap, and the [`Bindings`] the player chose for its buttons) comes from
 //! its kind and the user's [`ControllerSettings`], and serves the hints and the intents
 //! alike.
@@ -112,6 +113,10 @@ pub enum Intent {
     /// ([`QUICK_ACCESS_CHORD`]) or the Steam Deck's "…". Unlike R3's, it reaches the
     /// launcher while a game has the controller, and opens Quick Access over the game.
     SystemQuickAccess,
+    /// Leave Steam Big Picture for the launcher, leaving Steam running: Guide + North
+    /// ([`LEAVE_BIG_PICTURE_CHORD`]). It reaches the launcher while Steam has the
+    /// controller, and does nothing elsewhere.
+    LeaveBigPicture,
 }
 
 /// The intents a button asks for when held down for [`HOLD_DURATION`] rather than pressed:
@@ -122,6 +127,13 @@ const HOLDS: [(Intent, Intent); 1] = [(Intent::Back, Intent::BackHeld)];
 /// held down and the second pressed while it is. Both go by position whatever the layout,
 /// so the second is the bottom face button even where confirm and back swap.
 pub const QUICK_ACCESS_CHORD: (Button, Button) = (Button::Guide, Button::South);
+
+/// The chord that asks for [`Intent::LeaveBigPicture`]: Guide held down and the top face
+/// button (Y, Triangle, X on Nintendo) pressed while it is, by position whatever the
+/// layout. Steam leaves it alone: a press of Guide opens its menu, a long one its list of
+/// chords, and its chords take A, B, X, the shoulders, the triggers, the sticks and the
+/// D-pad's left, right and down.
+pub const LEAVE_BIG_PICTURE_CHORD: (Button, Button) = (Button::Guide, Button::North);
 
 impl Intent {
     /// The intent whose button, held down, asks for this one: Back for BackHeld.
@@ -748,6 +760,9 @@ impl Intents {
                     if button == second {
                         return Some(Intent::SystemQuickAccess);
                     }
+                    if button == LEAVE_BIG_PICTURE_CHORD.1 {
+                        return Some(Intent::LeaveBigPicture);
+                    }
                 }
                 let intent = self.layout(device).intent(button);
                 match intent {
@@ -1297,6 +1312,25 @@ mod tests {
         );
         assert_eq!(intents.handle(&release(Button::South), ms(100)), None);
         assert_eq!(intents.handle(&release(Button::Guide), ms(150)), None);
+    }
+
+    #[test]
+    fn guide_and_the_top_face_button_leave_big_picture_rather_than_search() {
+        let mut intents = Intents::new();
+        intents.handle(&connected(DeviceKind::PlayStation), ms(0));
+
+        intents.handle(&press(Button::Guide), ms(0));
+        assert_eq!(
+            intents.handle(&press(Button::North), ms(50)),
+            Some(Intent::LeaveBigPicture)
+        );
+        assert_eq!(intents.handle(&release(Button::North), ms(100)), None);
+        assert_eq!(intents.handle(&release(Button::Guide), ms(150)), None);
+        // Alone, the top face button searches again.
+        assert_eq!(
+            intents.handle(&press(Button::North), ms(200)),
+            Some(Intent::Search)
+        );
     }
 
     #[test]
