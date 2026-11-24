@@ -15,6 +15,7 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gettextrs::ngettext;
 use gtk::{gdk, gio, glib};
+use pindu_core::apps::{self, DESKTOP_HIDE_KEY, StackPage};
 use pindu_core::home::{
     self, BACKGROUND_KEY, BLUR_KEY, BackgroundContext, CATEGORIES_KEY, DIM_KEY, Strength,
 };
@@ -510,11 +511,14 @@ impl PinduWindow {
     }
 
     /// Fullscreen mode opens on Home, which the library and game pages go above; the
-    /// desktop window keeps the library at the bottom, under any game page.
+    /// desktop window keeps the library at the bottom, under any game page, or fullscreen
+    /// mode's Apps page in its place while the sidebar has an Apps item
+    /// (`apps::desktop_stack`), with the sidebar's row of the page selected.
     fn arrange_pages(&self, fullscreen: bool) {
         let imp = self.imp();
         let home = imp.home_page.get().upcast::<adw::NavigationPage>();
         let library = imp.library_page.get();
+        let apps = imp.apps_page.get();
         let stack: Vec<adw::NavigationPage> = imp
             .navigation_view
             .navigation_stack()
@@ -525,15 +529,35 @@ impl PinduWindow {
             if stack.first() != Some(&home) {
                 imp.navigation_view.replace(&[home]);
             }
-        } else if stack.contains(&home) {
-            let pages: Vec<adw::NavigationPage> = std::iter::once(library.clone())
-                .chain(
-                    stack
-                        .into_iter()
-                        .filter(|page| *page != home && *page != library),
-                )
-                .collect();
-            imp.navigation_view.replace(&pages);
+            return;
+        }
+        if !stack.contains(&home) {
+            return;
+        }
+        let kinds = stack
+            .into_iter()
+            .map(|page| match page {
+                page if page == home => StackPage::Home,
+                page if page == library => StackPage::Library,
+                page if page == apps => StackPage::Apps,
+                page => StackPage::Other(page),
+            })
+            .collect();
+        let apps_in_sidebar = !self.settings().boolean(DESKTOP_HIDE_KEY);
+        let pages: Vec<adw::NavigationPage> = apps::desktop_stack(kinds, apps_in_sidebar)
+            .into_iter()
+            .map(|page| match page {
+                StackPage::Home => home.clone(),
+                StackPage::Library => library.clone(),
+                StackPage::Apps => apps.clone(),
+                StackPage::Other(page) => page,
+            })
+            .collect();
+        imp.navigation_view.replace(&pages);
+        if pages.first() == Some(&apps) {
+            imp.sidebar.set_selected(imp.apps_item.index());
+        } else {
+            self.select_view(self.library().view());
         }
     }
 

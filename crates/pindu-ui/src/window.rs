@@ -1380,7 +1380,7 @@ impl PinduWindow {
     }
 
     /// Selects the sidebar row of a view, without showing it again.
-    fn select_view(&self, view: View) {
+    pub(crate) fn select_view(&self, view: View) {
         let imp = self.imp();
         if let Some(item) = imp
             .views
