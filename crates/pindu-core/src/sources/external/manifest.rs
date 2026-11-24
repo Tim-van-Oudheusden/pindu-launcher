@@ -144,19 +144,19 @@ pub fn is_helper_id(id: &str) -> bool {
 /// Checks that a helper speaking `protocol` can run in a build that speaks `spoken`, in
 /// order. The error says which side needs updating, for the user.
 fn check_protocol(protocol: u64, spoken: &[u64]) -> Result<(), String> {
-    if spoken.contains(&protocol) {
-        return Ok(());
+    if spoken.last().is_some_and(|&newest| protocol > newest) {
+        return Err(format!(
+            "it speaks protocol {protocol}, which needs a newer version of Pindu; this version speaks {}",
+            versions(spoken, "and")
+        ));
     }
-    if spoken.last().is_some_and(|&newest| protocol < newest) {
+    if !spoken.contains(&protocol) {
         return Err(format!(
             "it speaks protocol {protocol}, which this version of Pindu no longer speaks; ask its author for an update that speaks {}",
             versions(spoken, "or")
         ));
     }
-    Err(format!(
-        "it speaks protocol {protocol}, which needs a newer version of Pindu; this version speaks {}",
-        versions(spoken, "and")
-    ))
+    Ok(())
 }
 
 /// The protocol versions `spoken`, for a sentence, the last joined with `conjunction`.
@@ -251,6 +251,12 @@ mod tests {
                     .into()
             )
         );
+    }
+
+    #[test]
+    fn each_protocol_pindu_speaks_runs() {
+        assert_eq!(check_protocol(1, &[1, 2]), Ok(()));
+        assert_eq!(check_protocol(2, &[1, 2]), Ok(()));
     }
 
     #[test]
