@@ -25,6 +25,7 @@ blueprint_names = [
   'save_snapshots_dialog',
   'secret_dialog',
   'shortcuts-dialog',
+  'steam_setup_dialog',
   'window',
 ]
 

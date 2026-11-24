@@ -27,6 +27,7 @@
     <file preprocess="xml-stripblanks">ui/secret_dialog.ui</file>
     <!-- AdwApplication loads it from here and adds app.shortcuts on Ctrl+?. -->
     <file preprocess="xml-stripblanks" alias="shortcuts-dialog.ui">ui/shortcuts-dialog.ui</file>
+    <file preprocess="xml-stripblanks">ui/steam_setup_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/window.ui</file>
     <file compressed="true">style.css</file>
     <!-- The art of fullscreen Home's section tiles, by section name (`SectionId::name`). -->

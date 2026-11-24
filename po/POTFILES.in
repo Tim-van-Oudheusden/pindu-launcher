@@ -61,6 +61,7 @@ crates/pindu-ui/src/selection_mode.rs
 crates/pindu-ui/src/session_service.rs
 crates/pindu-ui/src/setup_checklist.rs
 crates/pindu-ui/src/sources.rs
+crates/pindu-ui/src/steam_setup_dialog.rs
 crates/pindu-ui/src/steamgriddb_service.rs
 crates/pindu-ui/src/sync_service.rs
 crates/pindu-ui/src/system_power_service.rs
@@ -99,4 +100,5 @@ data/ui/quick_access.blp
 data/ui/save_snapshots_dialog.blp
 data/ui/secret_dialog.blp
 data/ui/shortcuts-dialog.blp
+data/ui/steam_setup_dialog.blp
 data/ui/window.blp
