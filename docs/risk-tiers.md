@@ -52,8 +52,10 @@ never touch the Flathub manifest. A schema change is a new migration appended to
 edit to a released one, with a test that opens a database at the previous version and checks its rows survive. A
 backup-format change raises `VERSION` in `backup.rs` when older builds could misread the new file, and keeps reading
 every older version, with a test for each. A pull request that raises `VERSION` also adds a fixture exported by the last
-release that wrote the old version to `crates/pindu-core/tests/fixtures/backup/`, and a test in
-`crates/pindu-core/tests/backup_fixtures.rs` that imports it; that folder's README says how to make one.
+release that wrote the old version (the newest tag before it, release candidates included) to
+`crates/pindu-core/tests/fixtures/backup/`, and a test in `crates/pindu-core/tests/backup_fixtures.rs` that imports it;
+that folder's README lists the fixtures by format and says how to make one. When a new format records something the
+old ones lacked, the import gives old backups the best value they allow, with a test against their fixtures.
 
 ## Tier: medium
 

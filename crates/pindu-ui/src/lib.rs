@@ -70,6 +70,7 @@ pub mod merge_dialog;
 pub mod models;
 pub mod network_service;
 pub mod networkmanager_backend;
+pub mod newer_library;
 pub mod notification_service;
 pub mod outcome_service;
 pub mod permission_service;

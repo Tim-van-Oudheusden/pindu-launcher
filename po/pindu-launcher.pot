@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 17:56+0100\n"
+"POT-Creation-Date: 2026-11-24 18:24+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -38,7 +38,7 @@ msgstr ""
 msgid "Cancelling…"
 msgstr ""
 
-#: crates/pindu-ui/src/add_store.rs:419 crates/pindu-ui/src/application.rs:894
+#: crates/pindu-ui/src/add_store.rs:419 crates/pindu-ui/src/application.rs:905
 #: crates/pindu-ui/src/fullscreen_activity.rs:290
 #: crates/pindu-ui/src/hint_bar.rs:253
 msgid "Cancel"
@@ -173,27 +173,27 @@ msgid ""
 "Check the network connection, then try again."
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:155
+#: crates/pindu-ui/src/application.rs:157
 msgid "Start a game by its ID, without opening the window"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:163
+#: crates/pindu-ui/src/application.rs:165
 msgid "Open the window in fullscreen mode"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:171
+#: crates/pindu-ui/src/application.rs:173
 msgid "Run as the client of a gamescope-session-plus session"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:844
+#: crates/pindu-ui/src/application.rs:855
 msgid "Getting artwork from SteamGridDB…"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:893
+#: crates/pindu-ui/src/application.rs:904
 msgid "Getting metadata from Wikidata…"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:943
+#: crates/pindu-ui/src/application.rs:954
 #, rust-format
 msgid "Added one game"
 msgid_plural "Added {count} games"
@@ -201,12 +201,12 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
-#: crates/pindu-ui/src/application.rs:946
+#: crates/pindu-ui/src/application.rs:957
 #, rust-format
 msgid "From {sources}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:957
+#: crates/pindu-ui/src/application.rs:968
 #, rust-format
 msgid "One game is missing"
 msgid_plural "{count} games are missing"
@@ -214,65 +214,65 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
-#: crates/pindu-ui/src/application.rs:963
+#: crates/pindu-ui/src/application.rs:974
 #, rust-format
 msgid "No longer listed by {sources}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1020
+#: crates/pindu-ui/src/application.rs:1045
 msgid "Game Art From SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1022
+#: crates/pindu-ui/src/application.rs:1047
 msgid ""
 "SteamGridDB has covers, banners and logos for games that come without them. "
 "To use it, make a free account on steamgriddb.com and add your own API key "
 "in Preferences; it is kept in your keyring."
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1028
+#: crates/pindu-ui/src/application.rs:1053
 msgid "_Not Now"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1029
+#: crates/pindu-ui/src/application.rs:1054
 msgid "_Open Settings"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1053
+#: crates/pindu-ui/src/application.rs:1078
 msgid "Export Library"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1072
+#: crates/pindu-ui/src/application.rs:1097
 msgid "Library exported"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1075
+#: crates/pindu-ui/src/application.rs:1100
 #, rust-format
 msgid "Could not export the library: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1089
+#: crates/pindu-ui/src/application.rs:1114
 msgid "Library Backups"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1094
+#: crates/pindu-ui/src/application.rs:1119
 msgid "Import Backup"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1107
+#: crates/pindu-ui/src/application.rs:1132
 msgid "This file is not a library backup"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1109
+#: crates/pindu-ui/src/application.rs:1134
 msgid "This backup is from a newer version of Pindu launcher"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1112
+#: crates/pindu-ui/src/application.rs:1137
 #, rust-format
 msgid "Could not import the backup: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1197
+#: crates/pindu-ui/src/application.rs:1222
 #: data/gamescope-session/gamescope-session-pindu.desktop.in:2
 #: data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in:2
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:7
@@ -281,75 +281,75 @@ msgid "Pindu launcher"
 msgstr ""
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-#: crates/pindu-ui/src/application.rs:1205
+#: crates/pindu-ui/src/application.rs:1230
 msgid "translator-credits"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1211
+#: crates/pindu-ui/src/application.rs:1236
 msgid "Launcher Icons"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1255
+#: crates/pindu-ui/src/application.rs:1280
 #, rust-format
 msgid "Added artwork for one game"
 msgid_plural "Added artwork for {count} games"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:1260
+#: crates/pindu-ui/src/application.rs:1285
 msgid "No new artwork found"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1261
+#: crates/pindu-ui/src/application.rs:1286
 msgid "SteamGridDB did not accept the key"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1262
+#: crates/pindu-ui/src/application.rs:1287
 msgid "Could not reach SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1270
+#: crates/pindu-ui/src/application.rs:1295
 #, rust-format
 msgid "Updated metadata for one game"
 msgid_plural "Updated metadata for {count} games"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:1275
+#: crates/pindu-ui/src/application.rs:1300
 msgid "Wikidata has no metadata for these games"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1277
+#: crates/pindu-ui/src/application.rs:1302
 msgid "No game has a Steam app ID to look up on Wikidata"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1279
+#: crates/pindu-ui/src/application.rs:1304
 msgid "Could not reach Wikidata"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1295
+#: crates/pindu-ui/src/application.rs:1322
 msgid "Nothing new to restore"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1297
+#: crates/pindu-ui/src/application.rs:1324
 msgid "Backup restored"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1303
+#: crates/pindu-ui/src/application.rs:1330
 #, rust-format
 msgid "one game in it is not in this library"
 msgid_plural "{count} games in it are not in this library"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:1313
+#: crates/pindu-ui/src/application.rs:1340
 #, rust-format
 msgid "one group of copies in it was skipped"
 msgid_plural "{count} groups of copies in it were skipped"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:1321
+#: crates/pindu-ui/src/application.rs:1348
 #, rust-format
 msgid "{result}; {note}"
 msgstr ""
@@ -831,6 +831,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/first_sync_summary.rs:33
 #: crates/pindu-ui/src/launch_service.rs:372
+#: crates/pindu-ui/src/newer_library.rs:26
 #: crates/pindu-ui/src/preferences.rs:844
 #: crates/pindu-ui/src/proton_launch.rs:446
 #: crates/pindu-ui/src/proton_launch.rs:695 crates/pindu-ui/src/window.rs:1790
@@ -873,7 +874,7 @@ msgid_plural "{count} things need attention:"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/fullscreen.rs:733
+#: crates/pindu-ui/src/fullscreen.rs:743
 #, rust-format
 msgid "Your fullscreen style has a problem"
 msgid_plural "Your fullscreen style has {count} problems"
@@ -2969,6 +2970,31 @@ msgstr ""
 #: crates/pindu-ui/src/network_service.rs:97
 #, rust-format
 msgid "The connection failed (reason {reason})."
+msgstr ""
+
+#: crates/pindu-ui/src/newer_library.rs:21
+msgid "Library From a Newer Version"
+msgstr ""
+
+#: crates/pindu-ui/src/newer_library.rs:28
+msgid "_Start From Kept Copy"
+msgstr ""
+
+#: crates/pindu-ui/src/newer_library.rs:69
+msgid ""
+"This library was saved by a newer version of Pindu launcher, which this "
+"version cannot open. Nothing in it was changed."
+msgstr ""
+
+#: crates/pindu-ui/src/newer_library.rs:73
+msgid ""
+"Update Pindu launcher again to open it, or start from the copy kept before "
+"the last upgrade, without what changed since. The newer library is then kept "
+"aside as it is."
+msgstr ""
+
+#: crates/pindu-ui/src/newer_library.rs:76
+msgid "Update Pindu launcher again to open it."
 msgstr ""
 
 #: crates/pindu-ui/src/preferences.rs:473

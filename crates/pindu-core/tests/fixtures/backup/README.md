@@ -8,13 +8,17 @@ and checks that everything it holds comes back.
 | --- | --- | --- |
 | `0.5.1.json` | `v0.5.1`, the last release that wrote format 1 | 1 |
 | `0.6.0.json` | `v0.6.0`, the first release that wrote format 2 | 2 |
+| `0.7.0-rc.3.json` | `v0.7.0-rc.3`, the last release that wrote format 2 | 2 |
 
 The libraries hold launchers' games (as a sync adds them), favourites, games pinned to "Jump back in", a hidden game,
 two games added by hand (a native one run on the host and a Windows one) with launch settings changed after adding,
-collections with and without games, and play sessions. The format 2 library adds a group made by hand with a preferred
-copy, an automatic group, a pair remembered as not the same game, three saved filters (over every game, a store and a
-collection), metadata a provider fetched and metadata the user edited on a grouped game. The backup formats carry no
-pins and no launch settings of launchers' games, so those are in the libraries but not in the files.
+collections with and without games, and play sessions. The format 2 libraries add a group made by hand with a
+preferred copy, an automatic group, a pair remembered as not the same game, three saved filters (over every game, a
+store and a collection), metadata a provider fetched and metadata the user edited on a grouped game; the
+`0.7.0-rc.3` one also has launch settings the user set on a launcher's game. Formats 1 and 2 carry no pins, no
+launch settings of launchers' games and not how a game added by hand runs, so those are in the libraries but not in
+the files: the tests check that the Windows game added by hand still comes back run through Proton, from the prefix
+its launch config names. Format 3 (`VERSION` 3) added them.
 
 All names and paths are made up: `Fixture …` titles, invented store IDs and folders under `/var/fixture/`. The
 generators fix the time at 2026-01-01 so the times in the files do not depend on the day they were made. The IDs of

@@ -283,7 +283,15 @@ impl PinduWindow {
                 action.set_enabled(fullscreen);
             }
         }
+        // GTK hides the focus three seconds after the last key or controller press
+        // (`gtk-keyboard-focus-visible-timeout`). From across the room the focus is the only
+        // sign of where the controller is, so fullscreen mode keeps it until the pointer is
+        // used; the desktop window follows the session's setting again. The setting is the
+        // display's, so the game overlay follows it too.
+        let toolkit = gtk::prelude::WidgetExt::settings(self);
         if fullscreen {
+            toolkit.set_gtk_keyboard_focus_visible_timeout(0);
+            // This also drops a countdown started under the old timeout.
             self.set_focus_visible(true);
             // Focus in a bar that is now hidden goes to the page.
             let focus = gtk::prelude::GtkWindowExt::focus(self);
@@ -293,6 +301,8 @@ impl PinduWindow {
             if self.settings().boolean("navigation-sounds") {
                 self.imp().sounds.get_or_init(NavigationSounds::default);
             }
+        } else {
+            toolkit.reset_property("gtk-keyboard-focus-visible-timeout");
         }
     }
 
