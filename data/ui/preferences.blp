@@ -30,6 +30,11 @@ template $PinduPreferencesDialog: Adw.PreferencesDialog {
         title: _("Show Badges");
         subtitle: _("The launcher and state badges on covers");
       }
+
+      Adw.SwitchRow hide_apps_row {
+        title: _("Hide Apps in the Sidebar");
+        subtitle: _("The installed apps that are not games still show in fullscreen mode");
+      }
     }
 
     Adw.PreferencesGroup {

@@ -42,6 +42,11 @@
       <summary>Show badges on covers</summary>
       <description>The launcher badge top left and the state badge top right.</description>
     </key>
+    <key name="desktop-hide-apps" type="b">
+      <default>true</default>
+      <summary>Hide Apps in the desktop sidebar</summary>
+      <description>Leave the Apps item, the installed applications that are not games, out of the desktop window's sidebar. Fullscreen Home's Apps tile shows either way.</description>
+    </key>
     <key name="hidden-sources" type="as">
       <default>[]</default>
       <summary>Sources left out of the sidebar</summary>

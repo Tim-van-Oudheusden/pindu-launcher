@@ -12,8 +12,11 @@ issue #830; the OS half is Tim-van-Oudheusden/pindu-os#66. Apps installs and rem
   sections are rows of games, in its last row beside the Library and Steam Big Picture tiles. Its art is
   `data/home/apps.svg`; designs can tint it through `.section-apps`. The tile leads to the Apps page, a grid of app
   icons with their names: A opens the focused app, B goes back to Home. Home has no Apps tile while there are no apps.
-- **Desktop window:** an Apps item in the sidebar, under the library's views, with the number of apps. It shows the same
-  page in the library's place; a click opens an app. With no apps, the page says what Apps lists.
+- **Desktop window:** an Apps item in the sidebar, under the library's views, with the number of apps, once **Hide Apps
+  in the Sidebar** in Preferences (General, Library; the `desktop-hide-apps` key, #868) is off. The switch is on by
+  default, since a desktop already has its own list of apps. The item shows the same page in the library's place; a
+  click opens an app. With no apps, the page says what Apps lists. Turning the switch on while the page shows goes back
+  to the library. Fullscreen Home's Apps tile does not depend on the switch.
 - **Not** in Quick Access, the library, search, counts or exports.
 
 ## What counts as an app

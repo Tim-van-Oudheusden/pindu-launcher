@@ -16,6 +16,7 @@ use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib};
 use pindu_core::accessibility::{TEXT_SIZE_KEY, TextSize};
+use pindu_core::apps::DESKTOP_HIDE_KEY;
 use pindu_core::custom_style::ProblemSummary;
 use pindu_core::gamepad::{PROMPTS_KEY, Prompts, SWAP_KEY, Swap};
 use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
@@ -108,6 +109,8 @@ mod imp {
         pub titles_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub badges_row: TemplateChild<adw::SwitchRow>,
+        #[template_child]
+        pub hide_apps_row: TemplateChild<adw::SwitchRow>,
         #[template_child]
         pub sources_page: TemplateChild<adw::PreferencesPage>,
         #[template_child]
@@ -294,6 +297,9 @@ mod imp {
                 .build();
             settings
                 .bind("show-badges", &*self.badges_row, "active")
+                .build();
+            settings
+                .bind(DESKTOP_HIDE_KEY, &*self.hide_apps_row, "active")
                 .build();
             settings
                 .bind("prefer-steamgriddb", &*self.prefer_row, "active")
