@@ -31,7 +31,10 @@ flowchart LR
 3. **Write the notes** as a new `<release version="X.Y.Z" date="YYYY-MM-DD">` at the top of `<releases>` in
    `data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in`: one `<p>` and a `<ul>` of user-visible changes
    since the last tag (`git log vPREVIOUS..`). The same text becomes the release notes on GitHub and in software
-   centres, so write it for users. Preview it with `build-aux/release-notes.py X.Y.Z`.
+   centres, so write it for users. Preview it with `build-aux/release-notes.py X.Y.Z`. When the external importer
+   [changelog](external-importers.md#changelog) has "Unreleased" entries, replace "Unreleased" with X.Y.Z there and give
+   the notes a sentence for helper authors, as its [compatibility policy](external-importers.md#announcing-a-change)
+   asks.
 4. **Refresh the translation template**, which carries the MetaInfo strings: `meson compile -C _build
    pindu-launcher-pot`. CI's `po/check-pot.sh` fails otherwise.
 5. **Check** with `meson test -C _build`: its `versions` test fails while the versions disagree.
@@ -202,9 +205,10 @@ launcher from `:testing` to `:stable` ([pindu-os#30](https://github.com/Tim-van-
 
 **The machine** runs Pindu OS with the build under test installed, because the system panel's Network, Bluetooth,
 Power and System Update sections only show there (see [System panel](system-panel.md)). It needs a Bluetooth adapter,
-Wi-Fi, a Bluetooth controller, and a Steam library with one native game and one Windows game set to run through Proton.
-[Hardware](hardware.md) lists the machines in the published set, the desktop window's checks that run beside this
-list, and the matrix of hardware reports from other machines.
+Wi-Fi, a Bluetooth controller, a Steam library with one native game and one Windows game set to run through Proton, one
+game in another launcher (Heroic, Lutris, Bottles or itch), one game installed as an app, and a Windows game to add by
+hand. [Hardware](hardware.md) lists the machines in the published set, the desktop window's checks that run beside
+this list, and the matrix of hardware reports from other machines.
 
 | Check | Passes when |
 | --- | --- |
@@ -214,8 +218,11 @@ list, and the matrix of hardware reports from other machines.
 | Suspend and resume | **Power → Suspend** puts the machine to sleep; after waking, the launcher, the controller and the network work again |
 | Steam game | A native Steam game starts from the launcher, and its playtime counts once it quits |
 | Proton game | A Windows game through Proton starts from the launcher, and its playtime counts once it quits |
+| Game from another launcher | The game in the other launcher starts through that launcher, and the game installed as an app starts on the host (in the Flatpak, once [host access](../README.md#starting-games-on-the-host) is granted) |
+| Game added by hand | The Windows game, added with **Add a Game**, starts through Proton, and its playtime counts once it quits |
 | System Update | **Quick Access → System Update** shows the installed version, and the update state and actions it offers work |
 | Leaving Steam Big Picture | In Steam mode, with Big Picture opened from Home's tile and a download running: the notice shows Guide + Y and "Back to Pindu" over Big Picture for a few seconds; Guide + Y brings the launcher back with the controller, and so does Steam's Switch to Desktop; the download goes on, and the tile shows Steam's window again at once. With a Steam game started from Big Picture, leaving shows its Playing Now card, whose Return brings it back |
+| Rollback after a migration | On Pindu OS, update to the build under test so it migrates a library from the previous release, then roll back to the previous release (**Quick Access → System Update → Roll Back**). The older launcher says **Library From a Newer Version** and that nothing was changed, `library.db` is unchanged, and **Start From Kept Copy** opens the library as it was before the update, with the newer library kept aside as `library.db.v<N>.newer`. A release whose library format did not change passes with a note saying so |
 | Steam's first start | On a user account that has never run Steam, Home's **Big Picture** shows **Setting Up Steam** with the download moving until Steam's sign-in window is there, Steam's own update windows do not cover it in a `gamescope --steam` session, and **Cancel** returns to Home |
 
 **Record it on the "Release X.Y.Z" issue**, which the [Release issue form](../.github/ISSUE_TEMPLATE/release.yml)

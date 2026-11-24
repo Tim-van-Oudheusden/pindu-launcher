@@ -98,7 +98,9 @@ and behaves like the rest of GNOME.
 - You can export your collections, saved filters, favourites, hidden games, games added by hand, tracked playtime,
   groups of copies and the game details you set to a file, and import them again. Before an update changes the
   library's format, Pindu launcher saves a copy of the library beside it, named for the format it had (such as
-  `library.db.v5.bak`), and keeps the two newest copies.
+  `library.db.v5.bak`), and keeps the two newest copies. An older Pindu launcher, after a rollback, leaves a library
+  from a newer version as it is and says so; it offers to start from the newest kept copy it can open, setting the
+  newer library aside unchanged as `library.db.v<N>.newer`.
 - When a Windows game you added by hand quits normally, Pindu launcher copies its saves out of the game's prefix into
   `~/Games/pindu-launcher/save-snapshots`. It leaves out caches, runtimes, screenshots and stored logins, and keeps the
   last five snapshots. Any game can have save folders as well: add them with the file chooser under **Save
@@ -115,7 +117,7 @@ and behaves like the rest of GNOME.
 
 | Source | Games | How they start |
 | --- | --- | --- |
-| Steam, native or Flatpak | Installed games, with their playtime and Steam Deck rating | Through Steam |
+| Steam, native or Flatpak | Installed games, and games still downloading as not installed, with their playtime and Steam Deck rating | Through Steam |
 | Heroic, native or Flatpak | Epic Games, GOG, Amazon and sideloaded games, installed or not | Through Heroic |
 | Lutris, native or Flatpak | Lutris games | Through Lutris |
 | Bottles, native or Flatpak | Programs in your bottles | Through Bottles |
@@ -123,7 +125,9 @@ and behaves like the rest of GNOME.
 | Legendary, the standalone client, native only | Installed Epic Games Store games that Heroic does not already list | On the host with `legendary launch` ([needs host access](#starting-games-on-the-host)) |
 | itch, native or Flatpak | Games installed through the itch app, with their playtime | Through the itch app |
 | Desktop entries and Flatpaks | Games installed as apps | On the host ([needs host access](#starting-games-on-the-host)) |
-| Added by hand | Native programs, and Windows games or installers | Native ones on the host; Windows ones with Proton in the sandbox |
+| Added by hand | Native programs, and Windows games or installers | Native ones in the Steam Linux Runtime in the sandbox, or on the host if you choose; Windows ones with Proton in the sandbox |
+
+[Source claims](docs/source-claims.md) lists each claim this section makes and the test or check that covers it.
 
 The importers only read each launcher's data, and never its credentials. From the itch app's database, for example,
 they read its installs and games, never the profiles that hold your itch.io key. Preferences → Sources shows, for each
@@ -219,9 +223,10 @@ To build the app yourself, see [Building from source](#building-from-source).
 ### Starting games on the host
 
 Store games start through the OpenURI portal and always work. Games that start as a program on the host (desktop
-entries, Flatpak games, Faugus and Legendary games, and native games added by hand) need the app to reach the host
-through `org.freedesktop.Flatpak`, which Pindu launcher never asks for itself. Until you grant that access, those games
-say what is missing instead of failing, and **Preferences → Permissions** shows the command that grants it:
+entries, Flatpak games, Faugus and Legendary games, and native games added by hand to run on the host) need the app to
+reach the host through `org.freedesktop.Flatpak`, which Pindu launcher never asks for itself. Until you grant that
+access, those games say what is missing instead of failing, and **Preferences → Permissions** shows the command that
+grants it:
 
 ```sh
 flatpak override --user --talk-name=org.freedesktop.Flatpak io.github.tim_van_oudheusden.pindu-launcher
@@ -975,6 +980,7 @@ own with no network that sees only the Bottles folders.
 | [`docs/accessibility-polish.md`](docs/accessibility-polish.md) | Accessibility polish: text sizes, held buttons, high contrast, screen reader, navigation settings |
 | [`docs/emulation.md`](docs/emulation.md) | Emulation: what a first version would be and cost, and a recommendation; the decision is the maintainer's |
 | [`docs/external-importers.md`](docs/external-importers.md) | External importers: a versioned JSON protocol for sources kept outside the core, adopted on 2026-11-23, and how a helper is installed from Preferences |
+| [`docs/source-claims.md`](docs/source-claims.md) | What the README's Game sources section claims for each source, and the test or check that covers each claim |
 | [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
 | [`docs/releasing.md`](docs/releasing.md) | How to cut a release: versions, notes, the tag and the Release workflow |
 | [`docs/support-policy.md`](docs/support-policy.md) | The support policy: which versions get fixes, how each install type updates, and until when |

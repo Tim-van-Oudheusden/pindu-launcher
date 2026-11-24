@@ -88,6 +88,7 @@ use crate::fullscreen_playing::{PlayingCards, card_return};
 use crate::fullscreen_proton_downloads::PinduProtonLevel;
 use crate::fullscreen_report::PinduReportLevel;
 use crate::fullscreen_sound_output::PinduSoundOutputLevel;
+use crate::fullscreen_sources::SourceKey;
 use crate::fullscreen_system_update::PinduSystemUpdateLevel;
 use crate::hint_bar::HINT_BAR_KEY;
 use crate::models::GameObject;
@@ -408,6 +409,10 @@ mod imp {
         /// Whether the activity strip's task has no telling how far it is, so its bar
         /// moves.
         pub activity_strip_pulses: Cell<bool>,
+        /// The rows Sources shows, each with the source or external importer it stands for
+        /// and its switch's handler, which a refill blocks while it sets the switch to the
+        /// stored state.
+        pub source_rows: RefCell<Vec<(SourceKey, adw::SwitchRow, glib::SignalHandlerId)>>,
         /// The game Surprise Me picked last, which it does not pick again next time.
         pub surprise_previous: RefCell<Option<GameId>>,
         /// Whether the panel is hosted over a running game.

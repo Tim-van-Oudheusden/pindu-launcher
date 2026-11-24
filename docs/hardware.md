@@ -51,6 +51,8 @@ The [hardware checklist](releasing.md#hardware-checklist) in the release guide, 
 - Suspend and resume
 - Steam game
 - Proton game
+- Game from another launcher
+- Game added by hand
 - System Update
 
 The release's recorded pass stays where the release guide puts it: the "Release X.Y.Z" issue and its
