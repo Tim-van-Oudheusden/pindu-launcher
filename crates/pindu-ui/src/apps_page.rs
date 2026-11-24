@@ -1,14 +1,15 @@
 //! Apps (#830) in both shells: the installed applications that are not games
 //! (`pindu_core::apps`, kept by `AppsService`), a tile each with its icon and name, which
 //! opens its app (`launch_service::open_app`). The desktop window's sidebar has an Apps
-//! item that shows the page in the library's place, with an empty state that says what it
-//! lists; fullscreen mode's Home has an Apps tile, while there are apps, that shows it
-//! above Home, where A opens the focused app and B goes back.
+//! item, unless Hide Apps in the Sidebar (`DESKTOP_HIDE_KEY`, #868) is on, that shows the
+//! page in the library's place, with an empty state that says what it lists; fullscreen
+//! mode's Home has an Apps tile, while there are apps, that shows it above Home, where A
+//! opens the focused app and B goes back.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::glib;
-use pindu_core::apps::App;
+use pindu_core::apps::{App, DESKTOP_HIDE_KEY};
 
 use crate::application::PinduApplication;
 use crate::home_page::APPS_ICON;
@@ -24,7 +25,8 @@ const NAME_CHARS: i32 = 14;
 
 impl PinduWindow {
     /// The Apps page and the sidebar's Apps item, filled now and again whenever the
-    /// installed apps change; Home learns how many there are.
+    /// installed apps change; Home learns how many there are. The item shows while Hide
+    /// Apps in the Sidebar is off.
     pub(crate) fn setup_apps(&self, application: &PinduApplication) {
         let imp = self.imp();
         imp.apps_grid.connect_child_activated(glib::clone!(
@@ -37,11 +39,33 @@ impl PinduWindow {
             self,
             move || window.show_installed_apps()
         ));
+        self.settings()
+            .bind(DESKTOP_HIDE_KEY, &*imp.apps_item, "visible")
+            .invert_boolean()
+            .get()
+            .build();
+        self.settings().connect_changed(
+            Some(DESKTOP_HIDE_KEY),
+            glib::clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_, _| window.leave_hidden_apps()
+            ),
+        );
         self.show_installed_apps();
         // The page names itself where fullscreen mode hides its header bar.
         self.connect_fullscreened_notify(|window| {
             window.imp().apps_title.set_visible(window.is_fullscreen());
         });
+    }
+
+    /// Goes from the desktop window's Apps page to the library once Hide Apps in the
+    /// Sidebar turns on, as its sidebar item is gone.
+    fn leave_hidden_apps(&self) {
+        if self.settings().boolean(DESKTOP_HIDE_KEY) && !self.is_fullscreen() && self.shows_apps() {
+            self.set_shown_view(self.library().view());
+            self.show_library();
+        }
     }
 
     /// Shows the installed apps on the Apps page, or its empty state without any, their

@@ -14,6 +14,11 @@ use crate::model::{GameId, Source};
 use crate::sources::desktop;
 use crate::sources::location::HostDirs;
 
+/// The GSettings key of Hide Apps in the Sidebar: while it is on, which it is by
+/// default, the desktop window's sidebar has no Apps item. Fullscreen Home's Apps tile
+/// does not depend on it.
+pub const DESKTOP_HIDE_KEY: &str = "desktop-hide-apps";
+
 /// The ID a `gamescope --steam` session follows the app with desktop ID `id` under once
 /// it is opened, as it follows an opened store (`add_store::opened_id`): its desktop
 /// entry, which the library never imports as a game.
@@ -247,5 +252,23 @@ mod tests {
             assert_eq!(session.locale, None, "{locale}");
         }
         assert_eq!(Session::from_vars(vars(&[])), Session::default());
+    }
+
+    #[test]
+    fn hiding_apps_in_the_desktop_sidebar_is_a_setting_that_starts_on() {
+        let schema = std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../data/io.github.tim_van_oudheusden.pindu-launcher.gschema.xml.in"),
+        )
+        .unwrap();
+        let key = format!("<key name=\"{DESKTOP_HIDE_KEY}\" type=\"b\">");
+
+        let after = schema.split_once(&key).map(|(_, after)| after);
+        let default = after.and_then(|after| after.split_once("</default>"));
+
+        assert!(
+            default.is_some_and(|(start, _)| start.trim_end().ends_with("<default>true")),
+            "{DESKTOP_HIDE_KEY} is missing or not on by default"
+        );
     }
 }

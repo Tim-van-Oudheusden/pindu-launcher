@@ -540,11 +540,12 @@ window does not show it.
 
 ### Apps
 
-Home has an **Apps** tile, and the desktop window's sidebar an **Apps** item, while applications that are not games
-are installed: game launchers such as Steam and Heroic, and apps such as a browser. Each opens with one press (A with
-a controller); in a gamescope `--steam` session it comes to the front, the launcher comes back when it closes, and the
-menu drawer offers Exit for it. Games are not listed there, and apps never enter the library. The list follows apps
-installed or removed while the launcher runs. Details in [`docs/apps.md`](docs/apps.md).
+Home has an **Apps** tile while applications that are not games are installed: game launchers such as Steam and
+Heroic, and apps such as a browser. Each opens with one press (A with a controller); in a gamescope `--steam` session it
+comes to the front, the launcher comes back when it closes, and the menu drawer offers Exit for it. Games are not listed
+there, and apps never enter the library. The list follows apps installed or removed while the launcher runs. The
+desktop window's sidebar has an **Apps** item too once you turn off **Hide Apps in the Sidebar** in Preferences, which
+is on by default, as a desktop already lists its apps. Details in [`docs/apps.md`](docs/apps.md).
 
 ### Add a Store
 
