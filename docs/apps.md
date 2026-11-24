@@ -16,7 +16,9 @@ issue #830; the OS half is Tim-van-Oudheusden/pindu-os#66. Apps installs and rem
   in the Sidebar** in Preferences (General, Library; the `desktop-hide-apps` key, #868) is off. The switch is on by
   default, since a desktop already has its own list of apps. The item shows the same page in the library's place; a
   click opens an app. With no apps, the page says what Apps lists. Turning the switch on while the page shows goes back
-  to the library. Fullscreen Home's Apps tile does not depend on the switch.
+  to the library. Fullscreen Home's Apps tile does not depend on the switch. Leaving fullscreen mode from its Apps page
+  (#879, `apps::desktop_stack`) shows the Apps page with its sidebar item selected while the item is there, and the
+  library view that was selected while it is hidden.
 - **Not** in Quick Access, the library, search, counts or exports.
 
 ## What counts as an app

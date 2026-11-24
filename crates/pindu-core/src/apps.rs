@@ -19,6 +19,40 @@ use crate::sources::location::HostDirs;
 /// does not depend on it.
 pub const DESKTOP_HIDE_KEY: &str = "desktop-hide-apps";
 
+/// A page of the window's navigation stack, as `desktop_stack` arranges it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StackPage<P> {
+    /// Fullscreen mode's Home.
+    Home,
+    /// The library page.
+    Library,
+    /// The Apps page.
+    Apps,
+    /// Any other page, such as a game's.
+    Other(P),
+}
+
+/// The desktop window's pages once fullscreen mode, with the pages `fullscreen`, is
+/// left. Home goes. The bottom page is the Apps page where fullscreen mode showed it and
+/// the desktop sidebar has an Apps item (`apps_in_sidebar`), as the desktop window shows
+/// Apps in the library's place; otherwise the library, and an Apps page the sidebar has
+/// no item for is left behind. The other pages keep their order above it.
+pub fn desktop_stack<P>(fullscreen: Vec<StackPage<P>>, apps_in_sidebar: bool) -> Vec<StackPage<P>> {
+    let bottom = if apps_in_sidebar
+        && fullscreen
+            .iter()
+            .any(|page| matches!(page, StackPage::Apps))
+    {
+        StackPage::Apps
+    } else {
+        StackPage::Library
+    };
+    let above = fullscreen
+        .into_iter()
+        .filter(|page| matches!(page, StackPage::Other(_)));
+    std::iter::once(bottom).chain(above).collect()
+}
+
 /// The ID a `gamescope --steam` session follows the app with desktop ID `id` under once
 /// it is opened, as it follows an opened store (`add_store::opened_id`): its desktop
 /// entry, which the library never imports as a game.
@@ -270,5 +304,43 @@ mod tests {
             default.is_some_and(|(start, _)| start.trim_end().ends_with("<default>true")),
             "{DESKTOP_HIDE_KEY} is missing or not on by default"
         );
+    }
+
+    #[test]
+    fn leaving_fullscreen_drops_home_and_keeps_the_pages_above_the_library() {
+        let fullscreen = vec![
+            StackPage::Home,
+            StackPage::Library,
+            StackPage::Other("game"),
+        ];
+
+        assert_eq!(
+            desktop_stack(fullscreen, true),
+            [StackPage::Library, StackPage::Other("game")]
+        );
+    }
+
+    #[test]
+    fn leaving_fullscreen_puts_the_library_under_pages_opened_from_home() {
+        let fullscreen = vec![StackPage::Home, StackPage::Other("game")];
+
+        assert_eq!(
+            desktop_stack(fullscreen, true),
+            [StackPage::Library, StackPage::Other("game")]
+        );
+    }
+
+    #[test]
+    fn leaving_fullscreen_from_apps_shows_apps_in_the_library_s_place_while_the_sidebar_has_it() {
+        let fullscreen = vec![StackPage::<&str>::Home, StackPage::Apps];
+
+        assert_eq!(desktop_stack(fullscreen, true), [StackPage::Apps]);
+    }
+
+    #[test]
+    fn leaving_fullscreen_from_apps_shows_the_library_while_the_sidebar_hides_apps() {
+        let fullscreen = vec![StackPage::<&str>::Home, StackPage::Apps];
+
+        assert_eq!(desktop_stack(fullscreen, false), [StackPage::Library]);
     }
 }
