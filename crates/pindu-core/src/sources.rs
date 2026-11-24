@@ -5,6 +5,7 @@
 
 pub mod bottles;
 pub mod desktop;
+pub mod external;
 pub mod faugus;
 pub mod heroic;
 mod iso_time;

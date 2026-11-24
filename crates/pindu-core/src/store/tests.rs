@@ -820,6 +820,47 @@ fn source_state_round_trips_and_is_replaced_on_write() {
 }
 
 #[test]
+fn an_external_importers_state_round_trips_and_a_new_one_is_off() {
+    let (_dir, store) = temp_store();
+    assert_eq!(store.external_importer("example-launcher").unwrap(), None);
+    assert!(!ExternalImporterState::new("example-launcher").enabled);
+    let mut state = ExternalImporterState {
+        helper_id: "example-launcher".into(),
+        enabled: true,
+        root: Some("/home/me/.local/share/example-launcher".into()),
+        watch: vec!["/home/me/.local/share/example-launcher/library.json".into()],
+        last_sync: Some(1_700_000_000),
+        errors: vec!["Entry 17 in library.json has no title".into()],
+    };
+    store.set_external_importer(&state).unwrap();
+    state.errors.clear();
+    store.set_external_importer(&state).unwrap();
+    let other = ExternalImporterState::new("another");
+    store.set_external_importer(&other).unwrap();
+
+    assert_eq!(
+        store.external_importer("example-launcher").unwrap(),
+        Some(state.clone())
+    );
+    assert_eq!(store.external_importers().unwrap(), vec![other, state]);
+}
+
+#[test]
+fn deleting_an_external_importers_state_forgets_only_that_helper() {
+    let (_dir, store) = temp_store();
+    let mut kept = ExternalImporterState::new("kept");
+    kept.enabled = true;
+    store.set_external_importer(&kept).unwrap();
+    store
+        .set_external_importer(&ExternalImporterState::new("gone"))
+        .unwrap();
+
+    store.delete_external_importer("gone").unwrap();
+
+    assert_eq!(store.external_importers().unwrap(), vec![kept]);
+}
+
+#[test]
 fn deleting_a_game_deletes_everything_attached_to_it() {
     let (_dir, store) = temp_store();
     let id = stored_game(&store, "witcher");

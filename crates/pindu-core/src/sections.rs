@@ -173,7 +173,7 @@ pub fn monogram(source: Source) -> Option<&'static str> {
         Source::Faugus => Some("Fa"),
         Source::Legendary => Some("Le"),
         Source::Itch => Some("It"),
-        Source::Desktop | Source::Manual => None,
+        Source::Desktop | Source::Manual | Source::External => None,
     }
 }
 
@@ -194,6 +194,7 @@ pub fn source_icon(source: Source) -> Option<&'static str> {
         Source::Itch => Some("pindu-source-itch-symbolic"),
         Source::Desktop => Some("computer-symbolic"),
         Source::Manual => Some("document-edit-symbolic"),
+        Source::External => Some("application-x-addon-symbolic"),
     }
 }
 
@@ -591,6 +592,7 @@ mod tests {
             (Source::Itch, Some("It")),
             (Source::Desktop, None),
             (Source::Manual, None),
+            (Source::External, None),
         ];
 
         assert_eq!(table.len(), Source::ALL.len());
@@ -617,6 +619,7 @@ mod tests {
             (Source::Itch, Some("pindu-source-itch-symbolic")),
             (Source::Desktop, Some("computer-symbolic")),
             (Source::Manual, Some("document-edit-symbolic")),
+            (Source::External, Some("application-x-addon-symbolic")),
         ];
 
         assert_eq!(table.len(), Source::ALL.len());

@@ -76,10 +76,11 @@ updates a helper.
 }
 ```
 
-`id` is lowercase letters, digits and `-`. `program` is an argv list relative to the helper's folder (an interpreter
-and a script are two entries), never a shell string. `runs` is `sub-sandbox` or `host`; natively both run as a child
-process. `reads` lists the candidate folders, in the order `Location::of` tries them for a built-in source; the probe
-picks one.
+`id` is lowercase letters, digits and `-`, at most 64 characters, and is the name of the helper's folder. `program` is
+an argv list, never a shell string: its first entry is a file inside the helper's folder, relative to it, and the
+rest are its arguments. `runs` is `sub-sandbox` or `host`; natively both run as a child process. `reads` lists the
+candidate folders, each absolute or under `~/`, in the order `Location::of` tries them for a built-in source; the
+probe picks one. A user's folder with the ID of a bundled helper never runs.
 
 The sub-sandbox cannot see Pindu's data folder, so Pindu exposes an installed helper's own folder read-only beside the
 folders it declares. A bundled helper needs nothing exposed: the sub-sandbox sees `/app`. Both were checked with
@@ -120,8 +121,9 @@ with `tar` (`proton_download_service.rs`); the workspace has no zip reader, so `
 Pindu runs the helper once per request, with the request as one JSON document on standard input, and reads one JSON
 document from standard output. Standard error goes to Pindu's log. The helper exits 0 when it answered, non-zero when
 it could not, in which case the source shows a problem and its games stay as they were, as a built-in source that
-cannot be read does (`sync_source`). A helper that runs longer than 30 seconds is killed; an answer over 32 MiB is
-refused. Both are problems of the source, not failures of Pindu.
+cannot be read does (`sync_source`). A helper that runs longer than 30 seconds is killed (through `flatpak-spawn`,
+`timeout` kills it where it runs, since killing `flatpak-spawn` alone would leave it running); an answer over 32 MiB
+is refused. Both are problems of the source, not failures of Pindu.
 
 ### Probe
 
@@ -134,9 +136,9 @@ refused. Both are problems of the source, not failures of Pindu.
  "watch": ["/home/user/.local/share/example-launcher/library.json"]}
 ```
 
-`found: false` is a source that is not on this machine (an empty source, never an error). `root` must be one of the
-candidates or below one. `watch` lists files or folders below `root` and replaces `key_paths` for the helper; a path
-outside `root` is ignored.
+`found: false` is a source that is not on this machine (an empty source, never an error); Pindu then watches the
+candidates, where it would appear. `root` must be one of the candidates or below one. `watch` lists files or folders
+below `root` and replaces `key_paths` for the helper; a path outside `root` is ignored.
 
 ### Import
 
@@ -176,7 +178,7 @@ The answer is the `Snapshot` written down:
 | `install_path` | string | `install_path` | Absolute |
 | `size_bytes`, `playtime_secs` | integer | `size_bytes`, `playtime_secs` | Not negative |
 | `last_played_at` | integer | `last_played_at` | Unix seconds, UTC; the helper converts local times with `utc_offset` |
-| `genres` | list of strings | `genres` | |
+| `genres` | list of strings | `genres` | Only names in Pindu's category set count, as for the built-in sources; others are ignored |
 | `artwork` | object: `cover`, `hero`, `logo`, `icon`, `square` | `artwork` | Absolute paths Pindu can read; others dropped with a problem |
 | `flags` | object: `hidden`, `favourite`, `categories` | `source_flags` | Applied once, when the game first enters the library; `categories` names the launcher's own categories that hold the game, which become collections, not the game's categories in `genres` |
 | `service` | object: `service`, `service_id` | `service` | See [Grouping](#grouping) |
@@ -215,9 +217,10 @@ let a helper point Pindu's own runner at any program in a folder Pindu can see.
 - **Outside helpers share one variant**, `Source::External` (`external`), with native IDs `<helper ID>/<native ID>`:
   `external:example-launcher/1234`. A helper ID is the manifest's `id`, lowercase letters, digits and `-`, so the ID
   splits unambiguously. Renaming a helper's `id` makes new games.
-- **Per-helper state** (turned on, last sync, problems) does not fit `source_states`, keyed by source: it needs a
-  small table of its own, `external_importers` (helper ID, enabled, last sync, errors), in one migration at the next
-  free number (`0013` today). `games.source` has no `CHECK`, so the variant needs no migration.
+- **Per-helper state** (turned on, the probe's root and paths to watch, last sync, problems) does not fit
+  `source_states`, keyed by source: it has a small table of its own, `external_importers`, added by migration `0013`.
+  `games.source` has no `CHECK`, so the variant needs no migration. When a helper's folder is gone, its games get
+  `missing_since`, as the games of a source no longer on the machine do, and its state is forgotten.
 - **A built-in importer moved behind the protocol keeps its own variant.** The protocol is the transport; the source
   is assigned by Pindu, so `bottles:` IDs, play history and groups stay as they are.
 - `DEFAULT_SOURCE_ORDER` (`game_groups.rs`) places `External` after `Manual`, since Pindu knows least about it.
@@ -229,7 +232,8 @@ let a helper point Pindu's own runner at any program in a folder Pindu can see.
 [Game identity](game-identity.md) applies to helpers' games unchanged: one tile per group, the Copies section,
 title suggestions between sources. One difference: a Lutris store link is grouped automatically (spike #501) because
 Lutris is a built-in source Pindu reads itself; a helper's `service` is only a **high-confidence suggestion**, never an
-automatic group, since a helper's claim is not checked.
+automatic group, since a helper's claim is not checked. The `service` names it matches are Lutris's: `steam` and
+`steamwindows` for a Steam game, `gog` for a Heroic GOG game and `egs` for a Heroic Epic game.
 
 ## Rollout
 

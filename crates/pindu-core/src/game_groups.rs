@@ -26,6 +26,8 @@ pub const DEFAULT_SOURCE_ORDER: &[Source] = &[
     Source::Bottles,
     Source::HeroicSideload,
     Source::Manual,
+    // Pindu knows least about a helper's copy, which no built-in importer checked.
+    Source::External,
     Source::Desktop,
 ];
 

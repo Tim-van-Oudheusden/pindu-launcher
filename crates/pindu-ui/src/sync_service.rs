@@ -10,13 +10,18 @@ use gtk::glib::subclass::Signal;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use pindu_core::health::is_first_sync;
-use pindu_core::model::{Source, SourceState};
-use pindu_core::paths::default_library_db_path;
+use pindu_core::model::{ExternalImporterState, Source, SourceState};
+use pindu_core::paths::{default_importers_dir, default_library_db_path};
+use pindu_core::sources::external::install::{self, InstallLimits, Prepared};
+use pindu_core::sources::external::listing::{Listed, Running, listing, running};
+use pindu_core::sources::external::{self, runner};
 use pindu_core::sources::location::{self, HostDirs};
 use pindu_core::sources::sync::{SyncSummary, Tally, sync_all};
 use pindu_core::store::Store;
 use pindu_core::tasks::TaskKind;
 
+use crate::config::PKGLIBEXECDIR;
+use crate::permission_service;
 use crate::session_service;
 use crate::sources::source_name;
 use crate::task_service::TaskService;
@@ -88,17 +93,6 @@ impl SyncService {
         self.imp().first.get()
     }
 
-    /// Each source's stored state: enabled, override, where it was last found.
-    pub async fn source_states(&self) -> Vec<SourceState> {
-        gtk::gio::spawn_blocking(|| {
-            Store::open(&default_library_db_path())
-                .and_then(|store| store.source_states())
-                .unwrap_or_default()
-        })
-        .await
-        .unwrap_or_default()
-    }
-
     /// Turns a source's import on or off, then syncs.
     pub fn set_source_enabled(&self, source: Source, enabled: bool) {
         self.change_source(move |store| {
@@ -115,6 +109,113 @@ impl SyncService {
         self.change_source(move |store| {
             location::set_user_override(store, source, folder.as_deref())
         });
+    }
+
+    /// Each source's stored state (enabled, override, where it was last found), and each
+    /// external importer as the Sources lists show it, in the order Pindu finds them: both
+    /// at once, so a Sources list fills in one step.
+    pub async fn sources(&self) -> (Vec<SourceState>, Vec<Listed>) {
+        gtk::gio::spawn_blocking(|| {
+            let dirs = HostDirs::from_env();
+            let helpers = helper_environment(&dirs);
+            let store = Store::open(&default_library_db_path()).ok();
+            let states = store
+                .as_ref()
+                .and_then(|store| store.source_states().ok())
+                .unwrap_or_default();
+            let helper_states = store
+                .as_ref()
+                .and_then(|store| store.external_importers().ok())
+                .unwrap_or_default();
+            let listed = listing(
+                &external::discover(&helpers.installed, helpers.bundled.as_deref()),
+                &helper_states,
+                helpers.place,
+                &helpers.home,
+            );
+            (states, listed)
+        })
+        .await
+        .unwrap_or_default()
+    }
+
+    /// Turns an external importer on or off, then syncs.
+    pub fn set_helper_enabled(&self, helper_id: String, enabled: bool) {
+        self.change_source(move |store| {
+            let mut state = store
+                .external_importer(&helper_id)?
+                .unwrap_or_else(|| ExternalImporterState::new(&helper_id));
+            state.enabled = enabled;
+            store.set_external_importer(&state)
+        });
+    }
+
+    /// Unpacks and checks the external importer in `archive` for the user to confirm; the
+    /// reason it is refused, for the user, otherwise.
+    pub async fn prepare_install(&self, archive: PathBuf) -> Result<PendingInstall, String> {
+        gtk::gio::spawn_blocking(move || {
+            let helpers = helper_environment(&HostDirs::from_env());
+            let bundled: Vec<String> =
+                external::discover(&helpers.installed, helpers.bundled.as_deref())
+                    .into_iter()
+                    .filter(|helper| helper.bundled)
+                    .map(|helper| helper.id)
+                    .collect();
+            let prepared = install::prepare(
+                &archive,
+                &helpers.installed,
+                &bundled,
+                InstallLimits::DEFAULT,
+            )?;
+            Ok(PendingInstall {
+                running: running(&prepared.manifest, helpers.place),
+                reads: runner::reads(&prepared.manifest, &helpers.home),
+                prepared,
+            })
+        })
+        .await
+        .unwrap_or_else(|_| Err(gettext("The importer could not be checked")))
+    }
+
+    /// Installs a confirmed external importer, then syncs.
+    pub async fn install(&self, pending: PendingInstall) -> Result<(), String> {
+        let installed = gtk::gio::spawn_blocking(move || {
+            let store =
+                Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
+            install::install(pending.prepared, &default_importers_dir(), &store)
+        })
+        .await
+        .unwrap_or_else(|_| Err(gettext("The importer could not be installed")));
+        if installed.is_ok() {
+            self.sync();
+        }
+        installed
+    }
+
+    /// Forgets an external importer the user cancelled installing, off the main thread,
+    /// where its unpacked folder is deleted.
+    pub fn cancel_install(&self, pending: PendingInstall) {
+        gtk::gio::spawn_blocking(move || drop(pending));
+    }
+
+    /// Removes an installed external importer, whose games leave the library, then syncs.
+    pub async fn remove_helper(&self, helper_id: String) -> Result<(), String> {
+        let removed = gtk::gio::spawn_blocking(move || {
+            let store =
+                Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
+            install::remove(
+                &store,
+                &default_importers_dir(),
+                &helper_id,
+                session_service::now(),
+            )
+        })
+        .await
+        .unwrap_or_else(|_| Err(gettext("The importer could not be removed")));
+        if removed.is_ok() {
+            self.sync();
+        }
+        removed
     }
 
     fn change_source(
@@ -221,7 +322,35 @@ fn run_sync() -> Result<(SyncSummary, bool), String> {
     let now = session_service::now();
     // GLib reads the local time zone; the core has none of its own.
     let utc_offset = glib::DateTime::now_local().map_or(0, |local| local.utc_offset().as_seconds());
-    sync_all(&store, &HostDirs::from_env(), now, utc_offset)
+    let dirs = HostDirs::from_env();
+    let helpers = helper_environment(&dirs);
+    sync_all(&store, &dirs, &helpers, now, utc_offset)
         .map(|summary| (summary, first))
         .map_err(|error| error.to_string())
+}
+
+/// An external importer unpacked and checked, waiting for the user to confirm it, with
+/// what the confirmation tells them.
+#[derive(Debug)]
+pub struct PendingInstall {
+    /// The checked helper; dropping it deletes its unpacked folder.
+    pub prepared: Prepared,
+    /// Where it would run here.
+    pub running: Running,
+    /// The folders it would read.
+    pub reads: Vec<PathBuf>,
+}
+
+/// Where the external importers live, and what this instance can offer them.
+fn helper_environment(dirs: &HostDirs) -> external::Environment {
+    external::Environment {
+        installed: default_importers_dir(),
+        bundled: Some(PathBuf::from(PKGLIBEXECDIR).join("importers")),
+        place: runner::Place {
+            in_flatpak: permission_service::in_flatpak(),
+            host_spawn: permission_service::host_spawn_allowed(),
+        },
+        home: dirs.home.clone(),
+        limits: runner::Limits::PROTOCOL,
+    }
 }

@@ -143,6 +143,34 @@ fn a_cross_reference_ignores_surrounding_whitespace() {
     assert_eq!(pairs(&library.suggestions()), vec![pair(&gog, &lutris)]);
 }
 
+/// An external importer's record of `title` linking to `service` and `service_id`.
+fn external(library: &mut Library, title: &str, service: &str, service_id: &str) -> GameId {
+    let id = library.lutris("unused", title, service, service_id);
+    let details = library.details.remove(&id).unwrap();
+    library.games.retain(|game| game.id != id);
+    let external = library.add(Source::External, "example-launcher/1", title);
+    library.details.insert(external.clone(), details);
+    external
+}
+
+#[test]
+fn a_helpers_store_link_is_a_high_confidence_suggestion_whatever_the_titles() {
+    let mut library = Library::default();
+    let steam = library.add(Source::Steam, "220", "Half-Life 2");
+    let external = external(&mut library, "HL2", "steam", "220");
+
+    let found = library.suggestions();
+
+    assert_eq!(pairs(&found), vec![pair(&steam, &external)]);
+    assert_eq!(found[0].confidence, Confidence::High);
+    assert_eq!(
+        found[0].reason,
+        Reason::CrossReference {
+            service: "steam".into()
+        }
+    );
+}
+
 #[test]
 fn records_gone_from_their_source_or_removed_are_never_suggested() {
     let mut library = Library::default();
@@ -480,6 +508,18 @@ fn exact_matches_are_grouped_automatically_and_title_matches_are_not() {
     assert_eq!(store.game_group_of(&steam).unwrap(), None);
     assert_eq!(store.game_group_of(&desktop).unwrap(), None);
     assert!(group_exact_matches(&store).unwrap().is_empty());
+}
+
+#[test]
+fn a_helpers_store_link_is_never_grouped_without_the_user() {
+    let (_dir, store) = temp_store();
+    let mut library = Library::default();
+    library.add(Source::HeroicGog, "1207", "Celeste");
+    external(&mut library, "Celeste", "gog", "1207");
+    store_library(&store, &library);
+
+    assert_eq!(group_exact_matches(&store).unwrap(), Vec::<i64>::new());
+    assert!(store.game_groups().unwrap().is_empty());
 }
 
 #[test]

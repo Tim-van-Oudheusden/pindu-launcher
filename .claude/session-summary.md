@@ -8,13 +8,14 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-24, #547 (this commit): recorded the maintainer's 2026-11-23 decision in `docs/external-importers.md`
-  (contract adopted at protocol `0`; install a helper from Preferences from a local `.tar.gz`, ten rules; helper
-  folder exposed read-only in the sub-sandbox; bundled helpers in `<libexecdir>/pindu-launcher/importers/`). Filed
-  XP-2 #831, XP-3 #832, XP-5 #833, XP-4 #834 in M9 with `hold`. Sub-sandbox facts were checked in the devel
-  Flatpak (`flatpak run --command=sh <app> -c 'flatpak-spawn --sandbox …'`): the data folder is invisible without
-  `--sandbox-expose-path-ro`, `/app` is visible. Earlier today, #820: milestone 12 "M10 1.0", #63 moved to it, and
-  M10 issues #823 to #829 filed, all on `hold`.
+- 2026-11-24, #833 XP-5 (this commit, stacked on #832 XP-3 and #831 XP-2): install, replace and remove an
+  external importer from Preferences (`external::install`: lists the `.tar.gz` with `tar --list --absolute-names`
+  before unpacking, unpacks into `pindu-launcher/.importer-install-*`, checks the tree, one rename). Harness:
+  GTK's own file chooser (no portal) takes `ctrl+l`, the folder path, Return, then `ctrl+l ctrl+a`, one letter and
+  End to accept its completion; in Preferences the selectable property subtitles take Tab stops. XP-3:
+  `SyncService::sources` reads states and helpers in one call (two awaits let Quick Access focus the copy order
+  first); `run.sh --seed DIR` copies DIR into the run's XDG data home. Pre-existing: after a Sources switch's sync
+  rebuilds the fullscreen list, focus is lost. XP-4 #834 is a subagent's worktree (`wt-834`).
 - Other agents work this repo at the same time (a "hive": issue comments trigger them, and the merge queue merges
   their PRs). An early decision comment on #792 was implemented as #795 and merged before the maintainer's later
   choice; #803 duplicated #791. Post a decision comment only once it is final, and check `gh pr list` before

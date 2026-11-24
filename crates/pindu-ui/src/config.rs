@@ -24,3 +24,10 @@ pub const PKGDATADIR: &str = match option_env!("PINDU_PKGDATADIR") {
     Some(dir) => dir,
     None => "/usr/share/pindu-launcher",
 };
+
+/// Where the programs that come with the application, such as its bundled external
+/// importers, are installed.
+pub const PKGLIBEXECDIR: &str = match option_env!("PINDU_PKGLIBEXECDIR") {
+    Some(dir) => dir,
+    None => "/usr/libexec/pindu-launcher",
+};
