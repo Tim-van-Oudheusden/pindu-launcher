@@ -891,6 +891,11 @@ Everything that can be decided without GTK lives in `crates/pindu-core` and is t
 shells never read files or spawn processes. They observe the models and send the user's intents back to the services,
 so fullscreen mode is a second presentation of the same library.
 
+Bottles is read by `pindu-import-bottles`, the first importer that runs as a separate program over the
+[external importer protocol](docs/external-importers.md). Every package installs it in
+`<libexecdir>/pindu-launcher/importers/bottles/` with its `importer.json`, and in the Flatpak it runs in a sandbox of its
+own with no network that sees only the Bottles folders.
+
 ## Documentation
 
 | Document | Covers |

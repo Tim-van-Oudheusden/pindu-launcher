@@ -198,6 +198,78 @@ fn missing_helper_folders_hold_no_helpers() {
 }
 
 #[test]
+fn a_bundled_helper_that_serves_a_built_in_source_is_not_an_external_importer() {
+    let fixture = fixture();
+    let bundled = fixture.environment.bundled.clone().unwrap();
+    let folder = fixture.helper(
+        &bundled,
+        "bottles",
+        &found(&fixture.launcher("bottles")),
+        &json!({"protocol": 0, "games": [game("1", "One")]}),
+    );
+
+    let synced = fixture.sync(100);
+
+    assert_eq!(synced, []);
+    assert!(!ran(&folder));
+    assert_eq!(fixture.store.external_importers().unwrap(), []);
+}
+
+#[test]
+fn a_users_helper_with_the_id_of_a_built_in_source_is_refused_even_without_the_bundled_one() {
+    let fixture = fixture();
+    let installed = &fixture.environment.installed;
+    let probe = json!({});
+    let folder = fixture.helper(installed, "bottles", &probe, &probe);
+
+    let helpers = discover(installed, None);
+    let synced = fixture.sync(100);
+
+    assert_eq!(helpers.len(), 1);
+    assert!(
+        helpers[0]
+            .manifest
+            .as_ref()
+            .unwrap_err()
+            .contains("comes with Pindu")
+    );
+    assert_eq!(synced, []);
+    assert!(!ran(&folder));
+    assert_eq!(fixture.store.external_importers().unwrap(), []);
+}
+
+#[test]
+fn a_built_in_sources_helper_also_sees_a_folder_the_user_chose_outside_its_reads() {
+    let fixture = fixture();
+    let home = fixture.dir.path();
+    let native = home.join(".local/share/bottles");
+    std::fs::create_dir_all(&native).unwrap();
+    let manifest = manifest::Manifest {
+        protocol: 0,
+        id: "bottles".into(),
+        name: "Bottles".into(),
+        version: "1.0".into(),
+        program: vec!["./pindu-import-bottles".into()],
+        runs: manifest::Runs::SubSandbox,
+        reads: vec![
+            "~/.local/share/bottles".into(),
+            "~/.var/app/com.usebottles.bottles/data/bottles".into(),
+        ],
+        uri_schemes: vec!["bottles".into()],
+    };
+    let chosen = Path::new("/run/user/1000/doc/1a2b3c/bottles");
+
+    assert_eq!(
+        built_in_reads(&manifest, home, &native),
+        std::slice::from_ref(&native)
+    );
+    assert_eq!(
+        built_in_reads(&manifest, home, chosen),
+        [native, chosen.to_owned()]
+    );
+}
+
+#[test]
 fn a_new_helper_is_stored_off_and_does_not_run() {
     let fixture = fixture();
     let folder = fixture.installed("alpha", json!([game("1", "One")]));
