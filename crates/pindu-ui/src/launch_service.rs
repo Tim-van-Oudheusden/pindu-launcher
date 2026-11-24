@@ -14,7 +14,7 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::add_store::{self, StoreApp};
 use pindu_core::apps::{self, App};
-use pindu_core::launch::{self, Command, Route, Start, SteamSession, WebPage};
+use pindu_core::launch::{self, Command, Route, Start, SteamSession, StoreClient, WebPage};
 use pindu_core::launch_outcome::{Ending, SIGTERM};
 use pindu_core::model::{Game, LaunchRoute, Source};
 use pindu_core::notifications::{Kind, Target};
@@ -441,13 +441,21 @@ pub fn open_web_page(
     });
 }
 
-/// How Steam Big Picture opens from Home, as [`launch::big_picture`] decides it for this
-/// session, and whether it is Steam's first start (`SteamSession::first_start`); `None`
-/// where Steam is neither imported nor installed, so Home does not offer it.
+/// How Steam Big Picture opens from Home, as [`launch::big_picture`] decides it.
+pub struct BigPictureRoute {
+    /// How Big Picture goes to Steam.
+    pub route: Route,
+    /// The Steam client whose first start this is (`SteamSession::first_start_client`),
+    /// which sets itself up behind the Setting Up Steam screen first.
+    pub first_start: Option<StoreClient>,
+}
+
+/// How Steam Big Picture opens from Home for this session; `None` where Steam is neither
+/// imported nor installed, so Home does not offer it.
 pub async fn big_picture_route(
     app: &gtk::Application,
     library: &LibraryService,
-) -> Option<(Route, bool)> {
+) -> Option<BigPictureRoute> {
     let steam_gamescope = app
         .downcast_ref::<PinduApplication>()
         .is_some_and(|application| application.gamescope_service().is_active());
@@ -463,60 +471,64 @@ pub async fn big_picture_route(
         steam_root: steam_root.as_deref(),
         steam_client,
     };
-    launch::big_picture(&session).map(|route| (route, session.first_start()))
+    launch::big_picture(&session).map(|route| BigPictureRoute {
+        route,
+        first_start: session.first_start_client(),
+    })
 }
 
-/// Hands Steam Big Picture to Steam, the way Play hands a Steam game over. In a
-/// `gamescope --steam` session it then takes the launcher's place (see
-/// `GamescopeService::big_picture_started`); elsewhere Steam's window takes focus, and
-/// with it the controller.
+/// Hands Steam Big Picture to Steam along `big_picture`, the way Play hands a Steam game
+/// over, then tells `opened` whether that worked. In a `gamescope --steam` session it then
+/// takes the launcher's place (see `GamescopeService::big_picture_started`); elsewhere
+/// Steam's window takes focus, and with it the controller.
 pub fn open_big_picture(
     app: &gtk::Application,
     window: &gtk::Window,
-    library: &LibraryService,
+    big_picture: &BigPictureRoute,
     toast: impl Fn(adw::Toast) + 'static,
+    opened: impl FnOnce(bool) + 'static,
 ) {
-    let (app, window, library) = (app.clone(), window.clone(), library.clone());
-    glib::spawn_future_local(async move {
-        let route = big_picture_route(&app, &library).await;
-        let first_start = route.as_ref().is_some_and(|&(_, first_start)| first_start);
-        let opened = move |result: Result<(), String>| match result {
-            Ok(()) => {
-                if let Some(application) = app.downcast_ref::<PinduApplication>() {
-                    application
-                        .gamescope_service()
-                        .big_picture_started(first_start);
-                }
+    let app = app.clone();
+    let first_start = big_picture.first_start.is_some();
+    let done = move |result: Result<(), String>| match result {
+        Ok(()) => {
+            if let Some(application) = app.downcast_ref::<PinduApplication>() {
+                application
+                    .gamescope_service()
+                    .big_picture_started(first_start);
             }
-            Err(error) => {
-                glib::g_warning!("pindu", "{error}");
-                toast(adw::Toast::new(
-                    &gettext("Could not open {launcher}").replace("{launcher}", "Steam"),
-                ));
-            }
-        };
-        match route.map(|(route, _)| route) {
-            Some(Route::HostSpawn(command)) => {
-                glib::g_debug!("pindu", "Opening Big Picture: {:?}", command.argv);
-                opened(
-                    session_service::spawn(&command, None)
-                        .map(drop)
-                        .map_err(|error| format!("Could not start {:?}: {error}", command.argv)),
-                );
-            }
-            Some(Route::StoreUri(uri)) => {
-                glib::g_debug!("pindu", "Opening Big Picture: {uri}");
-                gtk::UriLauncher::new(&uri).launch(
-                    Some(&window),
-                    gio::Cancellable::NONE,
-                    move |result| {
-                        opened(result.map_err(|error| format!("Could not open {uri}: {error}")));
-                    },
-                );
-            }
-            _ => {}
+            opened(true);
         }
-    });
+        Err(error) => {
+            glib::g_warning!("pindu", "{error}");
+            toast(adw::Toast::new(
+                &gettext("Could not open {launcher}").replace("{launcher}", "Steam"),
+            ));
+            opened(false);
+        }
+    };
+    match &big_picture.route {
+        Route::HostSpawn(command) => {
+            glib::g_debug!("pindu", "Opening Big Picture: {:?}", command.argv);
+            done(
+                session_service::spawn(command, None)
+                    .map(drop)
+                    .map_err(|error| format!("Could not start {:?}: {error}", command.argv)),
+            );
+        }
+        Route::StoreUri(uri) => {
+            glib::g_debug!("pindu", "Opening Big Picture: {uri}");
+            let uri = uri.clone();
+            gtk::UriLauncher::new(&uri).launch(
+                Some(window),
+                gio::Cancellable::NONE,
+                move |result| {
+                    done(result.map_err(|error| format!("Could not open {uri}: {error}")));
+                },
+            );
+        }
+        _ => {}
+    }
 }
 
 /// Opens `store`'s client on the host for its first sign-in (`add_store::open_command`):

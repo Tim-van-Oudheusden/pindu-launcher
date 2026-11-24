@@ -222,21 +222,21 @@ impl PinduWindow {
         }
     }
 
-    /// Open, once Add a Store installed `app`: the flow goes back to its stores, Quick
-    /// Access closes, and the store opens for its first sign-in: Steam in Big Picture, as
-    /// Home's tile opens it, Heroic and Lutris in their own window
-    /// (`launch_service::open_store`).
+    /// Open, once Add a Store installed `app`: the flow goes back to its stores, and the
+    /// store opens for its first sign-in: Steam in Big Picture, as Home's tile opens it,
+    /// which closes Quick Access once Steam is there (`big_picture`), Heroic and Lutris in
+    /// their own window (`launch_service::open_store`) once Quick Access has closed.
     fn open_installed_store(&self, app: StoreApp) {
         if let Some(service) = self.add_store_service() {
             service.dismiss();
         }
-        self.close_panel();
         if app == StoreApp::Steam {
             if let Err(error) = WidgetExt::activate_action(self, "win.steam-big-picture", None) {
                 glib::g_warning!("pindu", "Could not open Steam: {error}");
             }
             return;
         }
+        self.close_panel();
         if let Some(application) = self.application() {
             let window = self.downgrade();
             launch_service::open_store(application.upcast_ref(), app, move |toast| {
