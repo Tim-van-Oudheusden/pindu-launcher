@@ -30,7 +30,7 @@ The recommended order of work:
 6. **Save snapshots** for the Windows games Pindu runs itself, within what the sandbox can reach.
 7. **Later, each after a decision:** an online metadata provider, emulation (a stated non-goal of the v1 spec), and an external importer contract.
 
-Because a new version currently appears every day or two, the roadmap in section 9 is written as milestones M6 to M9 with gates, the way M1 to M5 were, and leaves version numbers to the release process.
+Because a new version currently appears every day or two, the roadmap in section 9 is written as milestones M6 to M10 with gates, the way M1 to M5 were, and leaves version numbers to the release process.
 
 # 1. Scope, method and how to use this document
 
@@ -773,6 +773,29 @@ A 1.0 should mean more than a long feature list:
 - The support policy for the Flatpak, the native packages and Pindu OS is stated.
 - The app is on Flathub.
 - No known defect loses data, breaks a group or leaves a launch stuck.
+
+## 9.6 M10: 1.0
+
+Section 9.5 lists what a 1.0 should mean, but no milestone held it. M9's remaining items are two spikes waiting on the maintainer (#546, #547), and the work in 0.7.0 went into Nice to have, which has no gate: 33 of the 48 issues closed between `v0.6.0` and 0.7.0-rc.3 are there, and none in M9. M10 gives that work a gate.
+
+**Goal:** a 1.0 that a user can rely on, as section 9.5 defines it.
+
+**Contents:** work that closes one of the conditions below, including console and fullscreen work that a condition needs. Nice to have keeps work that serves none of them. M10 runs beside M9 and does not wait for it; the external importer condition only applies once #547 lands a contract.
+
+**Gate:** every condition in section 9.5 holds, checked against a final release.
+
+Where each condition stands, from the repository as of 0.7.0-rc.3:
+
+| Condition (section 9.5) | What exists | What is missing |
+| --- | --- | --- |
+| Every database version migrates, and the path back after a rollback is tested | Append-only migrations; a newer database is refused with a test (`opening_a_database_from_a_newer_version_fails`) | What a user sees after a rollback is untraced (section 4.9); no test or written check covers it |
+| Older backup formats import | Backup format 2 reads version 1 (`backup.rs`) | A test that imports a version 1 file as written by an old release |
+| The built-in sources behave as documented | The docs-follow-behaviour gate (#486) | A check of each source against its README section |
+| An external importer contract has a written compatibility policy | `docs/external-importers.md`, adopted on #547 | The policy itself, once the contract ships |
+| Desktop and fullscreen flows are checked on a small, published set of hardware | The hardware checklist in `docs/releasing.md`, on one machine | The published set of machines, and a matrix of voluntary reports (sections 4.7 and 12) |
+| The support policy for the Flatpak, the native packages and Pindu OS is stated | Install instructions per type in the README | A stated policy: which versions get fixes, and how each type updates |
+| The app is on Flathub | #63, human-only | The submission, which stays the maintainer's |
+| No known defect loses data, breaks a group or leaves a launch stuck | Bug reports in issues | A label or query that lists such defects, so the gate can be read |
 
 # 10. Architecture notes for implementers
 
