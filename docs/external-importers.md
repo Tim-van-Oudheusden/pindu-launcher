@@ -7,8 +7,9 @@ the core. This page is workstream **XP** of the
 (XP-1) asks: where a helper runs and what that means for safety, what it may return, which launches it may describe,
 how the contract is versioned, and a rollout that proves it on a built-in importer.
 
-**Nothing here is decided.** Whether the contract is adopted, and any build work, are the maintainer's call (see
-[Decisions](#decisions)).
+**Decided on 2026-11-23.** The maintainer adopted the contract as this page recommends, at protocol `0`, with one
+addition: a helper is installed from Preferences (see [Decisions](#decisions) and
+[Installing a helper from Preferences](#installing-a-helper-from-preferences)).
 
 ## The contract already exists
 
@@ -33,7 +34,7 @@ which of the three it is, and Pindu shows it when the user turns the helper on.
 
 | Where | How Pindu starts it | What the helper can reach | Launches it may describe |
 | --- | --- | --- | --- |
-| **Sub-sandbox** (Flatpak only) | `flatpak-spawn --sandbox --no-network --sandbox-expose-path-ro=<folder>` for each folder it declares | Only the declared folders, read-only, and only if Pindu's sandbox sees them: the launcher folders in `finish-args`, or a folder the user chose through the file chooser. No network, no display, no session bus, none of Pindu's data | URI, Flatpak app |
+| **Sub-sandbox** (Flatpak only) | `flatpak-spawn --sandbox --no-network --sandbox-expose-path-ro=<folder>` for the helper's own folder and each folder it declares | The helper's own folder and the declared folders, read-only, and only if Pindu's sandbox sees them: the launcher folders in `finish-args`, or a folder the user chose through the file chooser. No network, no display, no session bus, none of Pindu's data | URI, Flatpak app |
 | **Pindu's sandbox** (native packages and Pindu OS, where Pindu has no sandbox) | A child process | Everything the user can reach | URI, Flatpak app, host argv |
 | **Host** (Flatpak, with host spawn) | `flatpak-spawn --host`, which needs the `--talk-name=org.freedesktop.Flatpak` override Preferences explains | Everything the user can reach | URI, Flatpak app, host argv |
 
@@ -47,16 +48,24 @@ which of the three it is, and Pindu shows it when the user turns the helper on.
   return a host argv, or a helper the user trusted with nothing would get Pindu to run any command on the host. A
   host argv from a sub-sandboxed helper is dropped with a problem naming the game.
 
-### Installing a helper
+### Where helpers live
 
-A helper is a folder in `$XDG_DATA_HOME/pindu-launcher/importers/<helper ID>/` (in the Flatpak, Pindu's own data
-folder), holding `importer.json` and the program. Pindu finds helpers there, lists them in Preferences and fullscreen
-mode's Sources beside the built-in sources, each **off** until the user turns it on, showing where it runs, the folders
-it reads and the URI schemes it uses. Pindu never downloads or updates a helper.
+A helper is a folder holding `importer.json` and the program. Pindu finds helpers in two places:
+
+- **Installed helpers** in `$XDG_DATA_HOME/pindu-launcher/importers/<helper ID>/` (in the Flatpak, Pindu's own data
+  folder). The folder is the installed form: Preferences installs into it, and a folder copied there by hand works the
+  same, which helper authors need while developing.
+- **Bundled helpers**, shipped in the package rather than the user's importers folder, in
+  `<libexecdir>/pindu-launcher/importers/<helper ID>/` (`/app/libexec/pindu-launcher/importers/` in the Flatpak).
+  Bottles is the first ([Rollout](#rollout)).
+
+Pindu lists helpers in Preferences and fullscreen mode's Sources beside the built-in sources, each **off** until the
+user turns it on, showing where it runs, the folders it reads and the URI schemes it uses. Pindu never downloads or
+updates a helper.
 
 ```json
 {
-  "protocol": 1,
+  "protocol": 0,
   "id": "example-launcher",
   "name": "Example Launcher",
   "version": "0.3.0",
@@ -67,9 +76,44 @@ it reads and the URI schemes it uses. Pindu never downloads or updates a helper.
 }
 ```
 
-`program` is an argv list relative to the helper's folder (an interpreter and a script are two entries), never a shell
-string. `runs` is `sub-sandbox` or `host`; natively both run as a child process. `reads` lists the candidate folders,
-in the order `Location::of` tries them for a built-in source; the probe picks one.
+`id` is lowercase letters, digits and `-`. `program` is an argv list relative to the helper's folder (an interpreter
+and a script are two entries), never a shell string. `runs` is `sub-sandbox` or `host`; natively both run as a child
+process. `reads` lists the candidate folders, in the order `Location::of` tries them for a built-in source; the probe
+picks one.
+
+The sub-sandbox cannot see Pindu's data folder, so Pindu exposes an installed helper's own folder read-only beside the
+folders it declares. A bundled helper needs nothing exposed: the sub-sandbox sees `/app`. Both were checked with
+Flatpak 1.18 from inside the development Flatpak: without `--sandbox-expose-path-ro`, a helper in the data folder is
+not found in the sub-sandbox; with it, the helper runs and cannot write to its folder; and `/app/bin` is listed.
+
+### Installing a helper from Preferences
+
+Preferences → Sources installs a helper from a **local `.tar.gz` the user chooses in the file chooser**, never a
+download from a URL. A download would need integrity checks and signatures, and would put the network on the import
+path; a file the user chose comes through the file chooser, so no `finish-args` change. Pindu already unpacks tarballs
+with `tar` (`proton_download_service.rs`); the workspace has no zip reader, so `.zip` would need a new dependency.
+
+1. **Package.** A `.tar.gz` holding `importer.json` and the program, at the top level or inside exactly one top-level
+   folder.
+2. **Nothing reaches the importers folder unchecked.** The archive is unpacked into a work folder beside it, on the
+   same filesystem. An absolute path, a `..`, a link or a special file fails the install, and nothing is written
+   outside the work folder while unpacking.
+3. **Limits.** An archive over 16 MiB, or one that unpacks to more than 64 MiB or 1,000 entries, is refused. These
+   are defaults the maintainer may change.
+4. **Manifest.** The install fails with a reason when `importer.json` is missing or invalid: a protocol Pindu does not
+   speak, an `id` outside lowercase letters, digits and `-`, a `runs` that is neither `sub-sandbox` nor `host`, a
+   `program` whose first entry is not a file inside the folder, or `file`, `http` or `https` in `uri_schemes`.
+5. **Confirmation.** Before installing, Pindu shows the helper's name and version, where it runs (with "Runs with your
+   permissions" for a host helper, and for every helper natively), the folders it reads and its URI schemes. The user
+   confirms or cancels.
+6. **One rename.** The checked folder is moved to `importers/<helper ID>/` in one rename, as
+   `proton_downloads::finish_install` does. The work folder is deleted however the install ends.
+7. **Off.** An installed helper is off until the user turns it on.
+8. **Replacing.** An archive whose `id` is already installed asks to replace it. The games keep their IDs. The helper
+   is turned off again unless `runs`, `reads` and `uri_schemes` are unchanged.
+9. **Removing.** Each installed helper has a Remove action that deletes its folder and its `external_importers` row.
+   Its games get `missing_since`, as the games of a source that is no longer on the machine do, and keep their data.
+10. **Bundled helpers.** A bundled helper cannot be removed, and an archive with its `id` is refused.
 
 ## The protocol
 
@@ -82,11 +126,11 @@ refused. Both are problems of the source, not failures of Pindu.
 ### Probe
 
 ```json
-{"protocol": 1, "request": "probe", "candidates": ["/home/user/.local/share/example-launcher"]}
+{"protocol": 0, "request": "probe", "candidates": ["/home/user/.local/share/example-launcher"]}
 ```
 
 ```json
-{"protocol": 1, "found": true, "root": "/home/user/.local/share/example-launcher",
+{"protocol": 0, "found": true, "root": "/home/user/.local/share/example-launcher",
  "watch": ["/home/user/.local/share/example-launcher/library.json"]}
 ```
 
@@ -97,14 +141,14 @@ outside `root` is ignored.
 ### Import
 
 ```json
-{"protocol": 1, "request": "import", "root": "/home/user/.local/share/example-launcher", "utc_offset": 3600}
+{"protocol": 0, "request": "import", "root": "/home/user/.local/share/example-launcher", "utc_offset": 3600}
 ```
 
 The answer is the `Snapshot` written down:
 
 ```json
 {
-  "protocol": 1,
+  "protocol": 0,
   "games": [
     {
       "native_id": "1234",
@@ -172,9 +216,8 @@ let a helper point Pindu's own runner at any program in a folder Pindu can see.
   `external:example-launcher/1234`. A helper ID is the manifest's `id`, lowercase letters, digits and `-`, so the ID
   splits unambiguously. Renaming a helper's `id` makes new games.
 - **Per-helper state** (turned on, last sync, problems) does not fit `source_states`, keyed by source: it needs a
-  small table of its own, `external_importers` (helper ID, enabled, last sync, errors), in one migration appended
-  after the chain this roadmap fixes (0006 to MD-2, MD-4, CL-1). `games.source` has no `CHECK`, so the variant needs
-  no migration.
+  small table of its own, `external_importers` (helper ID, enabled, last sync, errors), in one migration at the next
+  free number (`0013` today). `games.source` has no `CHECK`, so the variant needs no migration.
 - **A built-in importer moved behind the protocol keeps its own variant.** The protocol is the transport; the source
   is assigned by Pindu, so `bottles:` IDs, play history and groups stay as they are.
 - `DEFAULT_SOURCE_ORDER` (`game_groups.rs`) places `External` after `Manual`, since Pindu knows least about it.
@@ -214,20 +257,25 @@ automatic group, since a helper's claim is not checked.
 ## Out of scope
 
 - A binary or in-process plugin interface.
-- Implementing the protocol or moving an importer behind it ([Issues](#issues) below, if the maintainer decides yes).
 - Distributing helpers: a catalogue, downloads, updates or signatures.
+- `.zip` packages.
+- Installing a helper from fullscreen mode.
 - Helpers that write to Pindu's library beyond the snapshot: artwork providers, metadata, play sessions, collections.
 - Helpers starting games inside Pindu's sandbox (`proton`, `runtime-native`).
 
 ## Issues
 
-A draft, to be filed only if the maintainer decides yes:
+Filed in M9 Breadth after the decision, each labelled `hold` for the maintainer's CLI session:
 
 | Issue | Covers | Depends on |
 | --- | --- | --- |
-| XP-2 Run external importers through the protocol | Manifest discovery, probe and import over stdin and stdout, validation, the timeout and size limits, the sub-sandbox and host runners, the no-escalation rule, `Source::External`, the `external_importers` table | The decision, CL-1 #531 (the last migration in the chain) |
-| XP-3 List external importers in both shells | Preferences and fullscreen mode's Sources: off by default, where it runs, what it reads, experimental | XP-2 |
-| XP-4 Move the Bottles importer behind the protocol | `pindu-import-bottles`, packaging in the RPM, DEB and Flatpak, the existing Bottles tests against the helper | XP-2 |
+| #831 XP-2 Run external importers through the protocol | Manifest discovery, probe and import over stdin and stdout, validation, the timeout and size limits, the sub-sandbox and host runners, the no-escalation rule, `Source::External`, the `external_importers` table | #547 |
+| #832 XP-3 List external importers in both shells | Preferences and fullscreen mode's Sources: off by default, where it runs, what it reads, experimental | XP-2 |
+| #833 XP-5 Install, replace and remove an external importer from Preferences | The ten rules under [Installing a helper from Preferences](#installing-a-helper-from-preferences), tested against fixture archives | XP-2, XP-3 |
+| #834 XP-4 Move the Bottles importer behind the protocol | `pindu-import-bottles` as a bundled helper, packaging in the RPM, DEB and Flatpak, the existing Bottles tests against the helper | XP-2 |
+
+Order: XP-2, then XP-3 and XP-5. XP-4 can start any time after XP-2. The compatibility policy that 1.0 asks for is
+#826 (milestone M10 1.0).
 
 ## Recommendation
 
@@ -244,14 +292,17 @@ A draft, to be filed only if the maintainer decides yes:
 
 ## Decisions
 
-**The decision is the maintainer's and is pending.** Decided by the maintainer on 2026-11-19 (analysis
-[section 14](product-analysis.md#14-decisions-to-take-before-issues-are-filed)): this page carries a recommendation; the
-decision itself, and any build work, stay with the maintainer, and #547 stays open until then. The choices for the
-maintainer:
+On 2026-11-19 (analysis [section 14](product-analysis.md#14-decisions-to-take-before-issues-are-filed)) the
+maintainer left the decision to after this page. **Decided by the maintainer on 2026-11-23** (#547): the contract is
+adopted as recommended above.
 
-- **Whether to adopt the contract** at all, and whether helpers may run on the host or only in the sub-sandbox.
-- **No escalation**: a sub-sandboxed helper may describe URI and Flatpak launches only.
-- **One `external` source** with `<helper ID>/<native ID>` IDs and its own state table, rather than opening the
-  `Source` set.
-- **Bottles** as the built-in to move first, and protocol `0` until two outside integrations exist.
-- **A helper's store link** suggests a group but never makes one.
+| Choice | Decision |
+| --- | --- |
+| Adopt the contract, and where helpers may run | **Yes**, at protocol `0`. Sub-sandboxed by default in the Flatpak. Host helpers are allowed as specified: the host-spawn override, and "Runs with your permissions" |
+| No escalation | **Yes.** A sub-sandboxed helper may describe URI and Flatpak launches only |
+| One `external` source | **Yes.** `Source::External`, IDs `external:<helper ID>/<native ID>`, and the `external_importers` state table |
+| Bottles first, protocol `0` until two outside integrations exist | **Yes** |
+| A helper's store link suggests a group, never makes one | **Yes** |
+
+One addition: a helper is installed from Preferences, from a local `.tar.gz`, by the ten rules under
+[Installing a helper from Preferences](#installing-a-helper-from-preferences).
