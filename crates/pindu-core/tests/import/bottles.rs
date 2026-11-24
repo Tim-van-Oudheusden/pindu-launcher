@@ -2,9 +2,9 @@ use std::path::PathBuf;
 
 use pindu_core::model::{ArtLayout, LaunchKind, Platform, Source};
 use pindu_core::sources::location::{HostDirs, Location};
-use pindu_core::sources::{ImportedGame, Snapshot, bottles};
+use pindu_core::sources::{ImportedGame, Snapshot};
 
-use crate::support::fixture_into;
+use crate::support::{bottles, fixture_into};
 
 const NATIVE: &str = ".local/share/bottles";
 const FLATPAK: &str = ".var/app/com.usebottles.bottles/data/bottles";

@@ -80,7 +80,8 @@ updates a helper.
 an argv list, never a shell string: its first entry is a file inside the helper's folder, relative to it, and the
 rest are its arguments. `runs` is `sub-sandbox` or `host`; natively both run as a child process. `reads` lists the
 candidate folders, each absolute or under `~/`, in the order `Location::of` tries them for a built-in source; the
-probe picks one. A user's folder with the ID of a bundled helper never runs.
+probe picks one. A user's folder with the ID of a bundled helper, or of a built-in source's helper (`bottles`) even
+where that helper is not installed, never runs.
 
 The sub-sandbox cannot see Pindu's data folder, so Pindu exposes an installed helper's own folder read-only beside the
 folders it declares. A bundled helper needs nothing exposed: the sub-sandbox sees `/app`. Both were checked with
@@ -197,6 +198,7 @@ Only the kinds that already exist, never a shell string:
 | `uri` | `uri` | `store-uri` with `launch_uri`, opened through the OpenURI portal | Every tier, for the schemes in `uri_schemes`; never `file`, `http` or `https` |
 | `flatpak` | `app_id`, `args` (list), `command` (optional) | `host-command` running `flatpak run [--command=<command>] <app_id> <args…>`, as Faugus's Flatpak launch does | Every tier; needs host spawn in the Flatpak, like any host launch |
 | `host` | `argv` (list, first entry absolute), `working_dir`, `env` | `host-command` with a `LaunchConfig` | `host` helpers, and every helper natively |
+| `none` | | `store-uri` without a URI: the game is listed and cannot be started, as a built-in importer keeps a game whose launch it cannot build; the helper says why among its `problems` | Every tier |
 
 Proton and Steam Linux Runtime launches inside Pindu's sandbox (`proton`, `runtime-native`) are not offered: they would
 let a helper point Pindu's own runner at any program in a folder Pindu can see.
@@ -242,9 +244,38 @@ automatic group, since a helper's claim is not checked. The `service` names it m
    run in the sub-sandbox in the Flatpak, and keeping `Source::Bottles`. Bottles is the lowest-risk built-in: it reads
    one file (`library.yml`, plus `data.yml` for a custom path), launches only through `bottles:run/…` URIs, so a mistake
    cannot start a command on the host, and has few users. The built-in importer's tests (`tests/import/bottles.rs`)
-   run against the helper unchanged, which proves the snapshot written down is the snapshot.
+   run against the helper unchanged, which proves the snapshot written down is the snapshot. **Done in #834**, as
+   [The Bottles helper](#the-bottles-helper) describes.
 3. **Promise stability (protocol `1`)** once two integrations from outside exist and work unchanged across a release.
 4. Only then consider moving more built-ins, starting with those Pindu's users use least.
+
+### The Bottles helper
+
+- **The program.** `crates/pindu-import-bottles` is a thin `main` over the core: `external::server::serve` answers one
+  request with `bottles::probe` (the first candidate holding `library.yml`, watching it) and `bottles::import`, and
+  `server::import_answer` writes the snapshot down as the exact inverse of `protocol::parse_import_as`. When it cannot
+  answer (a broken `library.yml`, say) it writes the importer's error to standard error, which goes to Pindu's log,
+  and exits with 1; the source then shows that its importer could not answer, and its games stay as they were.
+- **Where it is.** Meson's one cargo build makes it beside the app and installs it with its `importer.json` (protocol
+  `0`, `runs: sub-sandbox`, the two Bottles folders `Location::of` tries, the `bottles` URI scheme, the package's
+  version) in `<libexecdir>/pindu-launcher/importers/bottles/`. The RPM, the DEB, the AUR and Nix recipes and both
+  Flatpak manifests install what Meson installs, so none needed a new module or permission.
+- **Still a built-in source.** `external::BUILT_IN` names the bundled helpers that serve a built-in source. Such a
+  helper is never listed, stored or synced as an external importer, and a user's helper with its ID never runs.
+  `sync_source` resolves Bottles as before, honouring the folder the user chose and watching the same files, then
+  sends the helper only the import request for that folder and reads its answer as `Source::Bottles` games with their
+  own native IDs: `bottles:` IDs, play history and groups stay as they are, and Bottles stays a built-in row in
+  Sources, neither experimental nor removable.
+- **What the sub-sandbox sees.** Its own folder under `/app`, the Bottles folders of its manifest that exist, and the
+  resolved folder when it lies outside them: a folder the user chose through the file chooser's document portal.
+  Checked from inside the development Flatpak: run as `runner::command` runs it, the helper answered a probe and an
+  import of a Bottles library in `~/.var/app/com.usebottles.bottles/data/bottles`, and could not write to it.
+- **Without the helper.** A build that installs no bundled helpers (a plain `cargo` build, the tests) imports Bottles
+  in-process with the same `bottles::import`, so development and the core's tests need no install step.
+- **Its tests.** `pindu-core`'s Bottles tests run the importer in-process; `pindu-import-bottles`'s tests include the
+  same file and run it against the built program, sending each import as a probe and an import request and reading
+  the answers back as from a sub-sandboxed helper. Only the file's `use` line for the importer changed, to take it from
+  each crate's test support.
 
 ## Flatpak, native and Pindu OS
 
@@ -276,7 +307,7 @@ Filed in M9 Breadth after the decision, each labelled `hold` for the maintainer'
 | #831 XP-2 Run external importers through the protocol | Manifest discovery, probe and import over stdin and stdout, validation, the timeout and size limits, the sub-sandbox and host runners, the no-escalation rule, `Source::External`, the `external_importers` table | #547 |
 | #832 XP-3 List external importers in both shells | Preferences and fullscreen mode's Sources: off by default, where it runs, what it reads, experimental | XP-2 |
 | #833 XP-5 Install, replace and remove an external importer from Preferences | The ten rules under [Installing a helper from Preferences](#installing-a-helper-from-preferences), tested against fixture archives | XP-2, XP-3 |
-| #834 XP-4 Move the Bottles importer behind the protocol | `pindu-import-bottles` as a bundled helper, packaging in the RPM, DEB and Flatpak, the existing Bottles tests against the helper | XP-2 |
+| #834 XP-4 Move the Bottles importer behind the protocol | `pindu-import-bottles` as a bundled helper, packaging in the RPM, DEB and Flatpak, the existing Bottles tests against the helper ([done](#the-bottles-helper)) | XP-2 |
 
 Order: XP-2, then XP-3 and XP-5. XP-4 can start any time after XP-2. The compatibility policy that 1.0 asks for is
 #826 (milestone M10 1.0).
