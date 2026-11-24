@@ -1,0 +1,106 @@
+{
+  "collections": [
+    {
+      "games": [
+        "heroic-gog:1400000001",
+        "manual:c4afc8a0028e965f",
+        "steam:4000001"
+      ],
+      "name": "Couch Co-op"
+    },
+    {
+      "games": [
+        "lutris:fixture-caves"
+      ],
+      "name": "Weekend"
+    },
+    {
+      "games": [],
+      "name": "Empty Shelf"
+    }
+  ],
+  "exported_at": 1767225600,
+  "favourites": [
+    "heroic-gog:1400000001",
+    "manual:c4afc8a0028e965f",
+    "steam:4000001"
+  ],
+  "format": "pindu-launcher-backup",
+  "hidden": [
+    "faugus:fixture-demo"
+  ],
+  "manual_games": [
+    {
+      "added_at": 1766361600,
+      "id": "manual:3c3b9b5145355887",
+      "install_path": "/var/fixture/games/windows-port",
+      "last_played_at": null,
+      "launch": {
+        "arguments": [],
+        "environment": {
+          "DXVK_HUD": "fps"
+        },
+        "executable": "/var/fixture/games/windows-port/Port.exe",
+        "gamemode": true,
+        "mangohud": true,
+        "prefix_path": "/var/fixture/prefixes/3c3b9b5145355887",
+        "proton_version": "GE-Proton9-20",
+        "working_dir": "/var/fixture/games/windows-port",
+        "wrappers": [
+          "obs-gamecapture"
+        ]
+      },
+      "title": "Fixture Windows Port"
+    },
+    {
+      "added_at": 1765497600,
+      "id": "manual:c4afc8a0028e965f",
+      "install_path": "/var/fixture/games/native-tool",
+      "last_played_at": 1767139200,
+      "launch": {
+        "arguments": [
+          "--fullscreen",
+          "--name",
+          "two words"
+        ],
+        "environment": {},
+        "executable": "/var/fixture/games/native-tool/bin/tool",
+        "gamemode": false,
+        "mangohud": false,
+        "prefix_path": null,
+        "proton_version": null,
+        "working_dir": "/var/fixture/games/native-tool/bin",
+        "wrappers": []
+      },
+      "title": "Fixture Native Tool"
+    }
+  ],
+  "play_sessions": [
+    {
+      "ended_at": 1766968200,
+      "game": "lutris:fixture-caves",
+      "started_at": 1766966400
+    },
+    {
+      "ended_at": 1766887200,
+      "game": "manual:3c3b9b5145355887",
+      "started_at": 1766880000
+    },
+    {
+      "ended_at": 1767140100,
+      "game": "manual:c4afc8a0028e965f",
+      "started_at": 1767139200
+    },
+    {
+      "ended_at": 1766799000,
+      "game": "steam:4000001",
+      "started_at": 1766793600
+    },
+    {
+      "ended_at": 1767055500,
+      "game": "steam:4000001",
+      "started_at": 1767052800
+    }
+  ],
+  "version": 1
+}
