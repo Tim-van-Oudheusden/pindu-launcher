@@ -271,14 +271,15 @@ installs it; fullscreen mode's Sources says "Cannot run".
 | Case | Sources lists | Installing from Preferences | The helper's games |
 | --- | --- | --- | --- |
 | Protocol `0` | Runs; marked "Experimental" | Installs after the confirmation | Imported |
-| A stable version the release speaks | Runs, unmarked; a deprecated version is marked from #850 on | Installs after the confirmation | Imported |
+| The newest stable version the release speaks | Runs, unmarked | Installs after the confirmation | Imported |
+| A deprecated version (older than the newest the release speaks) | Runs; marked "Outdated" in both lists, and Preferences adds "Needs an Update": "It speaks an old version of the importer protocol, which a later version of Pindu stops speaking. Ask its author for an update." | Installs after the confirmation | Imported |
 | Too new | Cannot run: "it speaks protocol 2, which needs a newer version of Pindu; this version speaks 0 and 1" | Refused with the same reason | Stay as they were, with their play history, and sync again once Pindu is updated |
 | Too old | Cannot run: "it speaks protocol 0, which this version of Pindu no longer speaks; ask its author for an update that speaks 1 or 2" | Refused with the same reason | Stay as they were, and sync again once the helper is updated |
 | An answer in another version | The source's problem: "it answered in protocol 1, and its manifest says 0" | | Stay as they were |
 
 A bundled helper that serves a built-in source, as Bottles' does, is never listed as a helper: its source shows as a
-built-in row, neither experimental nor removable. Any other bundled helper speaks the release's newest version, so it
-is in one of the first two rows.
+built-in row, neither experimental nor removable. Any other bundled helper speaks the release's newest version, and is
+never marked "Outdated" (`listing` in `crates/pindu-core/src/sources/external/listing.rs` decides both marks).
 
 ### Announcing a change
 
@@ -427,6 +428,7 @@ their release when it is tagged ([Releasing](releasing.md)).
 
 | Release | Protocol | Change |
 | --- | --- | --- |
+| Unreleased | `0` | Both shells' Sources lists mark a helper on a deprecated protocol version "Outdated" (#850); none can be while Pindu speaks only `0` |
 | Unreleased | `0` | The compatibility policy (#826). A helper Pindu cannot run because of its version is told whether it needs a newer Pindu or an update from its author |
 | Unreleased | `0` | Addition: launch kind `none`, a game that is listed and cannot be started. The first bundled helper, Bottles' `pindu-import-bottles` (#834) |
 | Unreleased | `0` | Protocol `0` adopted (#547): manifests, probe and import (#831), the Sources lists (#832), installing from Preferences (#833) |

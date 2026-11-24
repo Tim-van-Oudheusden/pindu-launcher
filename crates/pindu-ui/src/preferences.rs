@@ -38,7 +38,9 @@ use crate::proton_downloads_page::ProtonDownloadsPage;
 use crate::proton_launch;
 use crate::save_service;
 use crate::session_service;
-use crate::sources::{bind_source_order, running_text, source_icon, source_name, sync_age_text};
+use crate::sources::{
+    bind_source_order, outdated_text, running_text, source_icon, source_name, sync_age_text,
+};
 use crate::steamgriddb_service;
 use crate::style_service::StyleService;
 use crate::sync_service::{PendingInstall, SyncService};
@@ -555,11 +557,11 @@ impl PreferencesDialog {
         row
     }
 
-    /// An external importer's expander: whether it is experimental, where its source was
-    /// found, its switch (off until the user turns it on), where it runs, the folders it
-    /// reads, the URI schemes it launches through, its version, and its last sync with that
-    /// sync's problems, or why it cannot run. A name and folders from a helper are data,
-    /// never markup.
+    /// An external importer's expander: whether it is experimental or speaks a deprecated
+    /// protocol (with what to do about it), where its source was found, its switch (off
+    /// until the user turns it on), where it runs, the folders it reads, the URI schemes it
+    /// launches through, its version, and its last sync with that sync's problems, or why
+    /// it cannot run. A name and folders from a helper are data, never markup.
     fn helper_row(&self, helper: &Listed) -> adw::ExpanderRow {
         let found = match (&helper.found, helper.running) {
             (_, Running::Unknown) => gettext("Cannot run"),
@@ -572,10 +574,15 @@ impl PreferencesDialog {
             .use_markup(false)
             .build();
         row.add_prefix(&gtk::Image::from_icon_name(source_icon(Source::External)));
-        if helper.experimental {
+        // An expander row packs its suffixes from the end, so the last mark added reads first.
+        let marks = [
+            (helper.deprecated, outdated_text()),
+            (helper.experimental, gettext("Experimental")),
+        ];
+        for (_, mark) in marks.into_iter().filter(|(shown, _)| *shown) {
             row.add_suffix(
                 &gtk::Label::builder()
-                    .label(gettext("Experimental"))
+                    .label(mark)
                     .valign(gtk::Align::Center)
                     .css_classes(["dimmed", "caption"])
                     .build(),
@@ -591,6 +598,22 @@ impl PreferencesDialog {
         enabled
             .connect_active_notify(move |row| sync.set_helper_enabled(id.clone(), row.is_active()));
         row.add_row(&enabled);
+        if helper.deprecated {
+            let outdated = adw::ActionRow::builder()
+                .title(gettext("Needs an Update"))
+                .subtitle(gettext(
+                    "It speaks an old version of the importer protocol, which a later version of Pindu stops speaking. Ask its author for an update.",
+                ))
+                .build();
+            outdated.add_prefix(
+                &gtk::Image::builder()
+                    .icon_name("dialog-warning-symbolic")
+                    .css_classes(["warning"])
+                    .accessible_role(gtk::AccessibleRole::Presentation)
+                    .build(),
+            );
+            row.add_row(&outdated);
+        }
 
         let property = |title: String, value: String| {
             adw::ActionRow::builder()
