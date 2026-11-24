@@ -306,6 +306,13 @@ impl PinduWindow {
                     previous.grab_focus();
                 }
             }
+            // Past an alert's first response, focus lands on its message area, which only
+            // the arrow keys can scroll: nothing there answers A, so stay on the response.
+            Some(focus) if self.is_alert_message_area(&focus) => {
+                if let Some(previous) = previous {
+                    previous.grab_focus();
+                }
+            }
             // GTK's grid takes focus on whichever cover it likes, often one far out of
             // view: coming in, focus goes to the cover the controller was last on instead.
             Some(_) if !in_grid && self.focused_tile().is_some() && model.n_items() > 0 => {
@@ -314,6 +321,15 @@ impl PinduWindow {
             }
             Some(_) => {}
         }
+    }
+
+    /// Whether `focus` is the scrolled message area of the alert the window shows.
+    fn is_alert_message_area(&self, focus: &gtk::Widget) -> bool {
+        focus.is::<gtk::ScrolledWindow>()
+            && self
+                .visible_dialog()
+                .and_downcast::<adw::AlertDialog>()
+                .is_some_and(|alert| focus.is_ancestor(&alert))
     }
 
     /// Scrolls to the cover at `position` and focuses it, remembering it for the shown view.
