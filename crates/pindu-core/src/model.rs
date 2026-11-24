@@ -92,6 +92,9 @@ string_enum! {
         Desktop => "desktop",
         /// A game the user added in Pindu.
         Manual => "manual",
+        /// A game an external importer, a helper program outside Pindu, listed; its native
+        /// ID is `<helper ID>/<the helper's own ID>` ([`crate::sources::external`]).
+        External => "external",
     }
 }
 
@@ -558,6 +561,39 @@ impl SourceState {
             enabled: true,
             resolved_location: None,
             user_override: None,
+            last_sync: None,
+            errors: Vec::new(),
+        }
+    }
+}
+
+/// What we know about one external importer on this machine: the state a built-in source
+/// keeps in its [`SourceState`], for one helper of [`Source::External`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExternalImporterState {
+    /// The helper's ID, the `id` of its manifest.
+    pub helper_id: String,
+    /// Whether the user has the helper turned on.
+    pub enabled: bool,
+    /// The folder its last probe found; `None` when it found none.
+    pub root: Option<PathBuf>,
+    /// What to watch so a change resyncs the library: the files its last probe named, or
+    /// where the source would appear when the probe found none.
+    pub watch: Vec<PathBuf>,
+    /// When the helper was last synced, if ever.
+    pub last_sync: Option<Timestamp>,
+    /// Problems the last sync ran into, or why the helper cannot run.
+    pub errors: Vec<String>,
+}
+
+impl ExternalImporterState {
+    /// The state of a helper we know nothing about yet: off, never synced.
+    pub fn new(helper_id: impl Into<String>) -> Self {
+        Self {
+            helper_id: helper_id.into(),
+            enabled: false,
+            root: None,
+            watch: Vec::new(),
             last_sync: None,
             errors: Vec::new(),
         }

@@ -121,6 +121,7 @@ pub fn source_name(source: Source) -> String {
         Source::Itch => "itch".to_owned(),
         Source::Desktop => gettext("Desktop"),
         Source::Manual => gettext("Added by Hand"),
+        Source::External => gettext("External Importers"),
     }
 }
 

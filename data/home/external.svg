@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder art for Home's "external" section; the maintainer replaces it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1c1d21"/>
+  <path d="M168 192h52c-8-34 10-56 36-56s44 22 36 56h52v52c34-8 56 10 56 36s-22 44-56 36v52H168z" fill="none" stroke="#c0c4cc" stroke-width="20" stroke-linejoin="round"/>
+</svg>

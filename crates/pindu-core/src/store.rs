@@ -6,6 +6,7 @@
 
 mod artwork;
 mod collections;
+mod external;
 mod games;
 mod groups;
 mod launch_configs;
@@ -41,6 +42,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("store/migrations/0010_saved_filter_genre.sql"),
     include_str!("store/migrations/0011_wikidata_items.sql"),
     include_str!("store/migrations/0012_genre_categories.sql"),
+    include_str!("store/migrations/0013_external_importers.sql"),
 ];
 
 /// The schema version a freshly opened store is at.

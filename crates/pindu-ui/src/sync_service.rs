@@ -11,12 +11,15 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use pindu_core::health::is_first_sync;
 use pindu_core::model::{Source, SourceState};
-use pindu_core::paths::default_library_db_path;
+use pindu_core::paths::{default_importers_dir, default_library_db_path};
+use pindu_core::sources::external::{self, runner};
 use pindu_core::sources::location::{self, HostDirs};
 use pindu_core::sources::sync::{SyncSummary, Tally, sync_all};
 use pindu_core::store::Store;
 use pindu_core::tasks::TaskKind;
 
+use crate::config::PKGLIBEXECDIR;
+use crate::permission_service;
 use crate::session_service;
 use crate::sources::source_name;
 use crate::task_service::TaskService;
@@ -221,7 +224,23 @@ fn run_sync() -> Result<(SyncSummary, bool), String> {
     let now = session_service::now();
     // GLib reads the local time zone; the core has none of its own.
     let utc_offset = glib::DateTime::now_local().map_or(0, |local| local.utc_offset().as_seconds());
-    sync_all(&store, &HostDirs::from_env(), now, utc_offset)
+    let dirs = HostDirs::from_env();
+    let helpers = helper_environment(&dirs);
+    sync_all(&store, &dirs, &helpers, now, utc_offset)
         .map(|summary| (summary, first))
         .map_err(|error| error.to_string())
+}
+
+/// Where the external importers live, and what this instance can offer them.
+fn helper_environment(dirs: &HostDirs) -> external::Environment {
+    external::Environment {
+        installed: default_importers_dir(),
+        bundled: Some(PathBuf::from(PKGLIBEXECDIR).join("importers")),
+        place: runner::Place {
+            in_flatpak: permission_service::in_flatpak(),
+            host_spawn: permission_service::host_spawn_allowed(),
+        },
+        home: dirs.home.clone(),
+        limits: runner::Limits::PROTOCOL,
+    }
 }

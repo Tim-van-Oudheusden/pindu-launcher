@@ -8,13 +8,13 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-24, #547 (this commit): recorded the maintainer's 2026-11-23 decision in `docs/external-importers.md`
-  (contract adopted at protocol `0`; install a helper from Preferences from a local `.tar.gz`, ten rules; helper
-  folder exposed read-only in the sub-sandbox; bundled helpers in `<libexecdir>/pindu-launcher/importers/`). Filed
-  XP-2 #831, XP-3 #832, XP-5 #833, XP-4 #834 in M9 with `hold`. Sub-sandbox facts were checked in the devel
-  Flatpak (`flatpak run --command=sh <app> -c 'flatpak-spawn --sandbox …'`): the data folder is invisible without
-  `--sandbox-expose-path-ro`, `/app` is visible. Earlier today, #820: milestone 12 "M10 1.0", #63 moved to it, and
-  M10 issues #823 to #829 filed, all on `hold`.
+- 2026-11-24, #831 XP-2 (this commit): external importers run through the protocol in `pindu-core`
+  (`sources/external.rs`: `manifest`, `protocol`, `runner`; `Source::External`, migration `0013`
+  `external_importers`). Helpers run as `std::process` children of the core (sub-sandbox through
+  `flatpak-spawn --sandbox`, host through `--host`, wrapped in `timeout --signal=KILL`); runner tests exec real
+  scripts, and a just-written script can hit ETXTBSY under parallel tests, so `runner::run` retries that. No UI
+  yet (XP-3 #832), so nothing can turn a helper on. Stacked follow-ups: XP-3 #832, XP-5 #833, XP-4 #834. Before
+  that: #547 decision recorded (#835), #820 M10 milestone and issues #823 to #829.
 - Other agents work this repo at the same time (a "hive": issue comments trigger them, and the merge queue merges
   their PRs). An early decision comment on #792 was implemented as #795 and merged before the maintainer's later
   choice; #803 duplicated #791. Post a decision comment only once it is final, and check `gh pr list` before

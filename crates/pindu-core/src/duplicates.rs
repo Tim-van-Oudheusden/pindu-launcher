@@ -3,10 +3,12 @@
 //!
 //! Matching is staged and conservative. First, exact cross-references: a Lutris record's
 //! store link (`service`, `service_id`) to the Steam, Heroic GOG or Heroic Epic record with
-//! that ID. Then equal normalised titles ([`normalize`]) of records from different
-//! sources, more sure when the developer or the year agrees. Only exact cross-references
-//! are grouped without the user ([`group_exact_matches`]); a title match is only ever a
-//! suggestion. A pair remembered as not the same game is never suggested again.
+//! that ID. An external importer's store link is the same kind of cross-reference, but
+//! only a high-confidence suggestion, since Pindu did not read it itself. Then equal
+//! normalised titles ([`normalize`]) of records from different sources, more sure when the
+//! developer or the year agrees. Only exact cross-references are grouped without the user
+//! ([`group_exact_matches`]); every other match is only ever a suggestion. A pair
+//! remembered as not the same game is never suggested again.
 //!
 //! Finding suggestions writes nothing.
 
@@ -18,7 +20,8 @@ use crate::search::normalize;
 use crate::store::{self, Store};
 
 /// The Lutris `service` values whose `service_id` is another source's own ID, and that
-/// source. Amazon is left out: Lutris stores the entitlement ID, Heroic the product ID.
+/// source; external importers name stores the same way. Amazon is left out: Lutris stores
+/// the entitlement ID, Heroic the product ID.
 const CROSS_REFERENCES: &[(&str, Source)] = &[
     ("steam", Source::Steam),
     ("steamwindows", Source::Steam),
@@ -34,18 +37,19 @@ const COMPANY_WORDS: &[&str] = &["inc", "ltd", "llc", "gmbh", "corp", "co"];
 pub enum Confidence {
     /// Equal titles, and neither the developer nor the year agrees on both records.
     Low,
-    /// Equal titles, and the developer or the year agrees on both records.
+    /// Equal titles, and the developer or the year agrees on both records; or an external
+    /// importer's store link.
     High,
-    /// A store cross-reference; grouped without asking, with an undo.
+    /// A Lutris store cross-reference; grouped without asking, with an undo.
     Exact,
 }
 
 /// Why two records look like copies of one game.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Reason {
-    /// A Lutris record links to the other record's store ID.
+    /// A Lutris record, or an external importer's, links to the other record's store ID.
     CrossReference {
-        /// The Lutris `service` the link is in, such as `steam`, `gog` or `egs`.
+        /// The `service` the link is in, such as `steam`, `gog` or `egs`.
         service: String,
     },
     /// The normalised titles are equal.
@@ -162,11 +166,17 @@ fn pair_match(
         if let Some((target, service)) = cross_reference(from, details)
             && target == to.id
         {
+            // A helper's claim is not checked, so it never groups without the user.
+            let confidence = if from.source() == Source::Lutris {
+                Confidence::Exact
+            } else {
+                Confidence::High
+            };
             return Some((
                 Reason::CrossReference {
                     service: service.to_owned(),
                 },
-                Confidence::Exact,
+                confidence,
             ));
         }
     }
@@ -197,13 +207,13 @@ fn pair_match(
     ))
 }
 
-/// The record a Lutris record's store link names, and the link's `service`; `None` for
-/// other sources and for links to stores we hold no records of.
+/// The record a Lutris or external importer's record's store link names, and the link's
+/// `service`; `None` for other sources and for links to stores we hold no records of.
 fn cross_reference<'a>(
     game: &Game,
     details: &'a HashMap<GameId, SourceDetails>,
 ) -> Option<(GameId, &'a str)> {
-    if game.source() != Source::Lutris {
+    if !matches!(game.source(), Source::Lutris | Source::External) {
         return None;
     }
     let link = details.get(&game.id)?.service.as_ref()?;

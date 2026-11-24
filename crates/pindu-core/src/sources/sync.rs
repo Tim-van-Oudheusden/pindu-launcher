@@ -3,6 +3,7 @@
 use std::collections::HashSet;
 use std::path::Path;
 
+use super::external::{self, HelperSync};
 use super::location::{self, HostDirs, ResolveError};
 use super::{
     ImportError, ImportedGame, Snapshot, bottles, desktop, faugus, heroic, itch, legendary, lutris,
@@ -103,12 +104,14 @@ pub struct SourceSync {
     pub changes: Changes,
 }
 
-/// Syncs every enabled source with an importer, then groups the copies exact store
+/// Syncs every enabled source with an importer, then every external importer the user
+/// turned on ([`external::sync_helpers`]), then groups the copies exact store
 /// cross-references link ([`duplicates::group_exact_matches`]). `utc_offset` (seconds
-/// east of UTC) reads the local times some sources record.
+/// east of UTC) reads the local times some sources record. A helper's problems name it.
 pub fn sync_all(
     store: &Store,
     dirs: &HostDirs,
+    helpers: &external::Environment,
     now: Timestamp,
     utc_offset: i64,
 ) -> store::Result<SyncSummary> {
@@ -124,6 +127,14 @@ pub fn sync_all(
                 .extend(synced.problems.into_iter().map(|problem| (source, problem)));
             summary.changes.push((source, synced.changes));
         }
+    }
+    for HelperSync { name, sync, .. } in external::sync_helpers(store, helpers, now, utc_offset)? {
+        summary.problems.extend(
+            sync.problems
+                .into_iter()
+                .map(|problem| (Source::External, format!("{name}: {problem}"))),
+        );
+        summary.changes.push((Source::External, sync.changes));
     }
     summary.grouped = duplicates::group_exact_matches(store)?;
     Ok(summary)
@@ -223,6 +234,17 @@ pub fn apply_snapshot(
     snapshot: &Snapshot,
     now: Timestamp,
 ) -> store::Result<Changes> {
+    apply_snapshot_within(store, snapshot, now, "")
+}
+
+/// [`apply_snapshot`] for the part of a source whose native IDs start with `prefix`: one
+/// external importer's games, which share [`Source::External`] with other helpers'.
+pub(crate) fn apply_snapshot_within(
+    store: &Store,
+    snapshot: &Snapshot,
+    now: Timestamp,
+    prefix: &str,
+) -> store::Result<Changes> {
     store.in_transaction(|store| {
         let mut changes = Changes::default();
         let mut present = HashSet::new();
@@ -290,6 +312,7 @@ pub fn apply_snapshot(
                 config.executable.clone_from(&command.executable);
                 config.arguments.clone_from(&command.arguments);
                 config.working_dir.clone_from(&command.working_dir);
+                config.environment.extend(command.environment.clone());
                 store.set_launch_config(&id, &config)?;
             }
             if let Some(total_secs) = imported.playtime_secs {
@@ -302,7 +325,11 @@ pub fn apply_snapshot(
             }
             present.insert(id);
         }
-        for mut game in store.games_from(snapshot.source)? {
+        let within = store
+            .games_from(snapshot.source)?
+            .into_iter()
+            .filter(|game| game.id.native_id().starts_with(prefix));
+        for mut game in within {
             if present.contains(&game.id) || game.missing_since.is_some() && !game.user_removed {
                 continue;
             }
@@ -748,6 +775,37 @@ mod tests {
     }
 
     #[test]
+    fn the_sources_environment_is_set_beside_the_users_own_variables() {
+        let (_dir, store) = temp_store();
+        let mut game = flagged(false, false, &[]);
+        game.launch_config = Some(LaunchConfig {
+            executable: "/opt/game/run".into(),
+            ..LaunchConfig::default()
+        });
+        apply_snapshot(&store, &snapshot(vec![game.clone()]), 100).unwrap();
+        let mut ours = store.launch_config(&id()).unwrap().unwrap();
+        ours.environment.insert("DXVK_HUD".into(), "1".into());
+        store.set_launch_config(&id(), &ours).unwrap();
+        game.launch_config = Some(LaunchConfig {
+            executable: "/opt/game/run".into(),
+            environment: [("GAME_MODE".into(), "fast".into())].into(),
+            ..LaunchConfig::default()
+        });
+
+        apply_snapshot(&store, &snapshot(vec![game]), 200).unwrap();
+
+        let config = store.launch_config(&id()).unwrap().unwrap();
+        assert_eq!(
+            config.environment,
+            [
+                ("DXVK_HUD".into(), "1".into()),
+                ("GAME_MODE".into(), "fast".into())
+            ]
+            .into()
+        );
+    }
+
+    #[test]
     fn a_game_without_source_playtime_stores_none() {
         let (_dir, store) = temp_store();
 
@@ -991,6 +1049,20 @@ mod tests {
         }
     }
 
+    /// No external importers: an empty helpers folder under `home`.
+    fn no_helpers(home: &std::path::Path) -> external::Environment {
+        external::Environment {
+            installed: home.join("importers"),
+            bundled: None,
+            place: external::runner::Place {
+                in_flatpak: false,
+                host_spawn: true,
+            },
+            home: home.to_owned(),
+            limits: external::runner::Limits::PROTOCOL,
+        }
+    }
+
     const SIDELOADED: &str = r#"{"app_name": "side", "title": "Side", "is_installed": true}"#;
 
     #[test]
@@ -1080,7 +1152,14 @@ mod tests {
         )
         .unwrap();
 
-        let summary = sync_all(&store, &host_dirs(dir.path()), 100, 0).unwrap();
+        let summary = sync_all(
+            &store,
+            &host_dirs(dir.path()),
+            &no_helpers(dir.path()),
+            100,
+            0,
+        )
+        .unwrap();
 
         let added = summary.added().games;
         assert!(added.contains(&GameId::new(Source::HeroicEpic, "Sugar")));
@@ -1161,7 +1240,14 @@ mod tests {
         disabled.enabled = false;
         store.set_source_state(&disabled).unwrap();
 
-        let summary = sync_all(&store, &host_dirs(dir.path()), 100, 0).unwrap();
+        let summary = sync_all(
+            &store,
+            &host_dirs(dir.path()),
+            &no_helpers(dir.path()),
+            100,
+            0,
+        )
+        .unwrap();
 
         assert!(
             store
@@ -1185,9 +1271,23 @@ mod tests {
         )
         .unwrap();
 
-        let first = sync_all(&store, &host_dirs(dir.path()), 100, 0).unwrap();
+        let first = sync_all(
+            &store,
+            &host_dirs(dir.path()),
+            &no_helpers(dir.path()),
+            100,
+            0,
+        )
+        .unwrap();
         std::fs::remove_dir_all(dir.path().join(".config/heroic")).unwrap();
-        let second = sync_all(&store, &host_dirs(dir.path()), 200, 0).unwrap();
+        let second = sync_all(
+            &store,
+            &host_dirs(dir.path()),
+            &no_helpers(dir.path()),
+            200,
+            0,
+        )
+        .unwrap();
 
         let side = GameId::new(Source::HeroicSideload, "side");
         let neverball = GameId::new(Source::Desktop, "neverball");
@@ -1226,7 +1326,14 @@ mod tests {
         )
         .unwrap();
 
-        let summary = sync_all(&store, &host_dirs(dir.path()), 100, 0).unwrap();
+        let summary = sync_all(
+            &store,
+            &host_dirs(dir.path()),
+            &no_helpers(dir.path()),
+            100,
+            0,
+        )
+        .unwrap();
 
         let groups = store.game_groups().unwrap();
         assert_eq!(summary.grouped, vec![groups[0].id]);
@@ -1240,7 +1347,14 @@ mod tests {
         );
 
         store.split_group(groups[0].id).unwrap();
-        let again = sync_all(&store, &host_dirs(dir.path()), 200, 0).unwrap();
+        let again = sync_all(
+            &store,
+            &host_dirs(dir.path()),
+            &no_helpers(dir.path()),
+            200,
+            0,
+        )
+        .unwrap();
 
         assert!(again.grouped.is_empty());
         assert_eq!(store.game_groups().unwrap(), vec![]);
