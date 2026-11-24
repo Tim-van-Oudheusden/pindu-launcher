@@ -31,6 +31,16 @@ pub fn overlay_props(open: bool) -> OverlayProps {
     }
 }
 
+/// The overlay window's properties while it shows a notice, such as how to leave Steam
+/// Big Picture: drawn, but leaving input to the window under it.
+pub fn notice_props() -> OverlayProps {
+    OverlayProps {
+        steam_overlay: 1,
+        opacity: u32::MAX,
+        input_focus: 0,
+    }
+}
+
 /// What the overlay window shows over a game.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OverGame {
@@ -75,6 +85,18 @@ mod tests {
                 steam_overlay: 1,
                 opacity: 0xffff_ffff,
                 input_focus: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn a_notice_shows_over_big_picture_and_leaves_it_the_input() {
+        assert_eq!(
+            notice_props(),
+            OverlayProps {
+                steam_overlay: 1,
+                opacity: 0xffff_ffff,
+                input_focus: 0,
             }
         );
     }

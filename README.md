@@ -713,6 +713,33 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   seconds, such as Big Picture's after an update window on a cold start, takes its place again. Until Steam's first
   window shows, the app keeps the controller and the tile says Opening…. Choosing the tile again gives up, and so does
   a minute with no window, or 10 minutes on Steam's first start, which downloads the client's update first.
+- Under gamescope Steam runs as its console interface: its menu has Switch to Desktop instead of Exit Big Picture, and
+  its window closes only when Steam quits. Two ways lead back to the app while Steam keeps running, so a download
+  started in Big Picture goes on and the tile shows Steam's window again at once:
+  - **Guide + Y**: hold Guide and press the top face button (Y, Triangle on PlayStation, X on Nintendo), with the
+    controller alone. The app reads it while Steam has the controller. Steam leaves this chord alone: a press of
+    Guide opens Steam's menu, holding it shows Steam's list of chords, and Steam's chords take A, B, X, the shoulders,
+    the triggers, the sticks and the D-pad's left, right and down. Steam still sees the Y. When Big Picture's window
+    first shows, the app's overlay window draws the chord's glyphs and "Back to Pindu" over it for 8 seconds, leaving
+    the input to Steam.
+  - The application action **`leave-big-picture`**, with no parameter, on the session bus, for a distribution to put
+    behind Steam's Switch to Desktop (`steamos-session-select`):
+
+    ```sh
+    gdbus call --session --timeout 5 \
+      --dest io.github.tim_van_oudheusden.pindu-launcher \
+      --object-path /io/github/tim_van_oudheusden/pindu_launcher \
+      --method org.freedesktop.Application.ActivateAction leave-big-picture '[]' '{}'
+    ```
+
+    Outside a Big Picture session the call succeeds and changes nothing, so a script can call it whenever the app owns
+    the name (check with `NameHasOwner` first: calling a name nobody owns starts a second app). A build with
+    `-Dprofile=development` answers as `io.github.tim_van_oudheusden.pindu-launcher-devel` at
+    `/io/github/tim_van_oudheusden/pindu_launcher_devel`.
+  - A Steam game that Steam started and that still runs when you leave keeps running behind the app, as a game handed
+    to its store does: it has a Playing Now card whose Return brings it back to the front and whose Stop closes it, and
+    the app stays in front when it ends. A game Steam started that is no Steam game, such as a shortcut added to
+    Steam, stays Steam's: open Big Picture again to return to it.
 - While a Steam store launch waits for the game's window, the Steam client's windows are pinned in the app's place,
   newest first, so you can answer what Steam asks. Big Picture shows sign-in, install, launch option and cloud conflict
   prompts inside its window. The launch does not time out while one of these windows is open; once the last one

@@ -3,9 +3,11 @@
 //! the games it started with their app IDs, and reads back who is in front. With a game in
 //! front it opens Quick Access over the game in its overlay window, which it marks
 //! `STEAM_OVERLAY` and opens and closes by opacity and `STEAM_INPUT_FOCUS`. Steam Big
-//! Picture opened from Home takes the launcher's place until its window closes
-//! (`pindu_core::gamescope::BigPicture`). The decisions are `pindu_core::gamescope`'s; this
-//! is the only module that touches X11, on GDK's own connection.
+//! Picture opened from Home takes the launcher's place until its window closes, or until
+//! the user leaves it with Guide + Y or the `leave-big-picture` action, and the overlay
+//! window says how once it shows (`pindu_core::gamescope::BigPicture`). The decisions are
+//! `pindu_core::gamescope`'s; this is the only module that touches X11, on GDK's own
+//! connection.
 //!
 //! The service is inert unless the display is X11 and gamescope runs with `--steam`: on a
 //! Wayland desktop and in a plain gamescope it writes nothing.
@@ -25,10 +27,11 @@ use gdk4_x11::x11::xlib;
 use gdk4_x11::{X11Display, X11Surface};
 use gtk::glib;
 use gtk::prelude::*;
+use pindu_core::gamepad::Intent;
 use pindu_core::gamescope::overlay::{self, OverGame};
 use pindu_core::gamescope::{
-    self, BaseLayerClaim, BigPicture, EXIT_GRACE, ExpectedGame, Front, InGameIntent, PickedWindow,
-    Reclaims, STEAM_APP_ID, StoreExit, StoreLaunch, WindowFacts, Xid, mangoapp,
+    self, BaseLayerClaim, BigPicture, EXIT_GRACE, ExpectedGame, Front, InGameIntent, Leave,
+    PickedWindow, Reclaims, STEAM_APP_ID, StoreExit, StoreLaunch, WindowFacts, Xid, mangoapp,
 };
 use pindu_core::model::{GameId, LaunchConfig, Timestamp};
 
@@ -149,6 +152,10 @@ struct Inner {
     /// The timer that looks at Big Picture again at its deadline.
     big_picture_timer: RefCell<Option<glib::SourceId>>,
     big_picture_listeners: RefCell<Vec<BigPictureListener>>,
+    /// Whether the overlay window says how to leave Steam Big Picture.
+    notice: Cell<bool>,
+    /// The timer that hides the notice of how to leave Steam Big Picture.
+    notice_timer: RefCell<Option<glib::SourceId>>,
 }
 
 impl GamescopeService {
@@ -188,6 +195,8 @@ impl GamescopeService {
                 big_picture: RefCell::default(),
                 big_picture_timer: RefCell::default(),
                 big_picture_listeners: RefCell::default(),
+                notice: Cell::default(),
+                notice_timer: RefCell::default(),
             }),
         };
         let Some(x11) = &service.inner.x11 else {
@@ -220,10 +229,15 @@ impl GamescopeService {
             let Some(inner) = weak.upgrade() else {
                 return;
             };
+            let service = GamescopeService { inner };
+            // Guide + Y, which Steam leaves alone, is the way back while Steam has it.
+            if intent == Intent::LeaveBigPicture {
+                service.leave_big_picture();
+                return;
+            }
             let Some(intent) = gamescope::in_game_intent(intent) else {
                 return;
             };
-            let service = GamescopeService { inner };
             // Steam Big Picture has the controller, Guide included.
             if service.big_picture_has_controller() {
                 return;
@@ -722,6 +736,51 @@ impl GamescopeService {
         self.big_picture_changed();
     }
 
+    /// Leaves Steam Big Picture on request, from the `leave-big-picture` action or Guide + Y
+    /// (`gamescope::leave_big_picture`): the launcher comes back to the front with its
+    /// controller and the Steam client keeps running behind it, with a Steam game it
+    /// started kept playing behind the launcher as a store-launched game. Outside a session
+    /// nothing changes.
+    pub fn leave_big_picture(&self) {
+        let leave = gamescope::leave_big_picture(self.inner.big_picture.borrow().as_ref());
+        glib::g_info!(
+            "pindu",
+            "gamescope: asked to leave Steam Big Picture: {leave:?}"
+        );
+        match leave {
+            Leave::Nothing => {}
+            Leave::ToLauncher => self.end_big_picture(),
+            Leave::ToLauncherWithGame(id) => {
+                self.end_big_picture();
+                self.keep_playing(&id);
+            }
+        }
+    }
+
+    /// Follows the game with `id`, which Steam started and which plays, as a store launch
+    /// behind the launcher: it gets a Playing Now card with Return and Stop, and the
+    /// launcher stays in front when it ends.
+    fn keep_playing(&self, id: &GameId) {
+        let Some(x11) = &self.inner.x11 else {
+            return;
+        };
+        let now = Instant::now();
+        let mut launch = StoreLaunch::new(id, now);
+        let apps = x11.cardinals(x11.root, FOCUSABLE_APPS).unwrap_or_default();
+        launch.focusable_apps_changed(&apps, now);
+        glib::g_info!("pindu", "gamescope: {id} plays behind the launcher");
+        self.inner.store_launch.replace(Some(launch));
+        self.schedule_store_check();
+        self.write_base_layer();
+        self.update_store_playing();
+    }
+
+    /// Whether the overlay says how to leave Steam Big Picture, which it does once a
+    /// session for a while after Big Picture's window shows (`BigPicture::shows_notice`).
+    pub fn big_picture_notice(&self) -> bool {
+        self.inner.notice.get()
+    }
+
     /// Forgets Steam Big Picture; says whether it was there.
     fn forget_big_picture(&self) -> bool {
         if let Some(timer) = self.inner.big_picture_timer.take() {
@@ -730,9 +789,47 @@ impl GamescopeService {
         self.inner.big_picture.take().is_some()
     }
 
+    /// Tells the listeners that Steam Big Picture opened, showed or ended, or that the
+    /// notice of how to leave it came or went, which it follows first.
     fn big_picture_changed(&self) {
+        self.update_notice();
         for listener in self.inner.big_picture_listeners.borrow().iter() {
             listener();
+        }
+    }
+
+    /// Shows or hides the notice of how to leave Steam Big Picture in the overlay window,
+    /// and sets the timer that hides it.
+    fn update_notice(&self) {
+        if let Some(timer) = self.inner.notice_timer.take() {
+            timer.remove();
+        }
+        let now = Instant::now();
+        let (shown, until) = self
+            .inner
+            .big_picture
+            .borrow()
+            .as_ref()
+            .map_or((false, None), |session| {
+                (session.shows_notice(now), session.notice_until())
+            });
+        if let Some(until) = until.filter(|_| shown) {
+            let weak = Rc::downgrade(&self.inner);
+            let timer = glib::timeout_add_local_once(until - now, move || {
+                if let Some(inner) = weak.upgrade() {
+                    // The timer has fired, so there is nothing left to remove.
+                    inner.notice_timer.take();
+                    GamescopeService { inner }.big_picture_changed();
+                }
+            });
+            self.inner.notice_timer.replace(Some(timer));
+        }
+        if self.inner.notice.replace(shown) != shown {
+            glib::g_debug!(
+                "pindu",
+                "gamescope: how to leave Big Picture shown: {shown}"
+            );
+            self.write_overlay_window();
         }
     }
 
@@ -1076,7 +1173,8 @@ impl GamescopeService {
         self.write_base_layer();
     }
 
-    /// Writes the overlay window's properties for it open or closed over the game.
+    /// Writes the overlay window's properties for it open or closed over the game, or
+    /// showing the notice of how to leave Steam Big Picture.
     fn write_overlay_window(&self) {
         let (Some(x11), Some(window)) = (&self.inner.x11, self.inner.overlay.upgrade()) else {
             return;
@@ -1085,7 +1183,12 @@ impl GamescopeService {
             return;
         };
         let xid = surface.xid();
-        let props = overlay::overlay_props(self.inner.over_game.get().is_some());
+        let open = self.inner.over_game.get().is_some();
+        let props = if !open && self.inner.notice.get() {
+            overlay::notice_props()
+        } else {
+            overlay::overlay_props(open)
+        };
         x11.write_cardinals(xid, STEAM_OVERLAY, &[props.steam_overlay]);
         x11.write_cardinals(xid, NET_WM_WINDOW_OPACITY, &[props.opacity]);
         x11.write_cardinals(xid, STEAM_INPUT_FOCUS, &[props.input_focus]);
