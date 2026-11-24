@@ -57,7 +57,10 @@ gh pr create --title "type(scope): summary (#<number>)" --body-file <file>   # L
   research link, plus depends-on when there is one.
 - Labels: `area:core`, `area:import`, `area:ui`, `area:launch`, `area:art`, `area:gamepad`, `area:packaging`;
   `type:feature`, `type:spike`, `type:chore`; `human-only`; `hardware-check:passed`, which only the maintainer adds,
-  to a "Release X.Y.Z" issue whose hardware checklist passed (`docs/releasing.md`).
+  to a "Release X.Y.Z" issue whose hardware checklist passed (`docs/releasing.md`); `blocks-1.0`, which whoever
+  triages a `bug` (the maintainer, or an agent asked to triage) adds when the bug loses data, breaks a group of a
+  game's copies, or leaves a launch stuck with no way out. An open `blocks-1.0` issue fails the M10 gate
+  (`docs/product-analysis.md`, section 9.6).
 
 ## Sessions with GitHub Issues
 
