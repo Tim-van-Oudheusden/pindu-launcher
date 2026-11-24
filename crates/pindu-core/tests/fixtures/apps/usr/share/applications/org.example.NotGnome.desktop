@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Not on GNOME
+Exec=not-gnome
+NotShowIn=GNOME;

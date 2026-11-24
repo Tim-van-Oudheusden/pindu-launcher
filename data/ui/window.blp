@@ -114,6 +114,21 @@ template $PinduWindow: Adw.ApplicationWindow {
                     }
                   }
 
+                  // Apps (#830): not a view of the library, so not under it.
+                  Adw.SidebarSection {
+                    Adw.SidebarItem apps_item {
+                      title: _("Apps");
+                      icon-name: "preferences-desktop-apps-symbolic";
+
+                      suffix: Label apps_count {
+                        styles [
+                          "dimmed",
+                          "numeric",
+                        ]
+                      };
+                    }
+                  }
+
                   Adw.SidebarSection sources_section {
                     title: _("Sources");
                   }
@@ -659,6 +674,85 @@ template $PinduWindow: Adw.ApplicationWindow {
 
                   // Fullscreen mode's first page, under the library.
                   $PinduHomePage home_page {}
+
+                  // Apps (#830): the installed applications that are not games, a tile
+                  // each that opens its app. The desktop sidebar's Apps item shows it in
+                  // the library's place, and Home's Apps tile above Home.
+                  Adw.NavigationPage apps_page {
+                    title: _("Apps");
+                    tag: "apps";
+
+                    child: Adw.ToolbarView {
+                      [top]
+                      Adw.HeaderBar {
+                        [start]
+                        ToggleButton {
+                          icon-name: "sidebar-show-symbolic";
+                          tooltip-text: _("Toggle Sidebar");
+                          active: bind split_view.show-sidebar bidirectional;
+                        }
+                      }
+
+                      content: Stack apps_stack {
+                        StackPage {
+                          name: "apps";
+
+                          child: ScrolledWindow {
+                            hscrollbar-policy: never;
+
+                            child: Box {
+                              orientation: vertical;
+                              margin-top: 24;
+                              margin-bottom: 24;
+                              margin-start: 24;
+                              margin-end: 24;
+                              spacing: 24;
+
+                              // Fullscreen mode hides the header bar, which names the page.
+                              Label apps_title {
+                                label: _("Apps");
+                                xalign: 0;
+                                visible: false;
+
+                                styles [
+                                  "title-1",
+                                ]
+                              }
+
+                              FlowBox apps_grid {
+                                valign: start;
+                                homogeneous: true;
+                                selection-mode: none;
+                                activate-on-single-click: true;
+                                min-children-per-line: 2;
+                                max-children-per-line: 12;
+                                column-spacing: 12;
+                                row-spacing: 12;
+
+                                styles [
+                                  "apps-grid",
+                                ]
+
+                                accessibility {
+                                  label: _("Apps");
+                                }
+                              }
+                            };
+                          };
+                        }
+
+                        StackPage {
+                          name: "empty";
+
+                          child: Adw.StatusPage {
+                            icon-name: "preferences-desktop-apps-symbolic";
+                            title: _("No Apps");
+                            description: _("Apps lists the applications installed on this computer that are not games, such as game launchers. Games show in the library.");
+                          };
+                        }
+                      };
+                    };
+                  }
                 };
               };
             };

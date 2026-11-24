@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Not Installed
+TryExec=not-installed
+Exec=not-installed

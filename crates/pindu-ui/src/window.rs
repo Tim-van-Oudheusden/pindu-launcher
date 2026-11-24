@@ -126,6 +126,22 @@ mod imp {
         #[template_child]
         pub home_page: TemplateChild<HomePage>,
         #[template_child]
+        pub apps_page: TemplateChild<adw::NavigationPage>,
+        #[template_child]
+        pub apps_stack: TemplateChild<gtk::Stack>,
+        #[template_child]
+        pub apps_grid: TemplateChild<gtk::FlowBox>,
+        #[template_child]
+        pub apps_title: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub apps_item: TemplateChild<adw::SidebarItem>,
+        #[template_child]
+        pub apps_count: TemplateChild<gtk::Label>,
+        /// The apps the Apps page shows, in its order.
+        pub apps_shown: RefCell<Vec<pindu_core::apps::App>>,
+        /// The place of the app last opened on the Apps page, where focus comes back to.
+        pub apps_cursor: Cell<i32>,
+        #[template_child]
         pub sync_spinner: TemplateChild<adw::Spinner>,
         #[template_child]
         pub empty_page: TemplateChild<adw::StatusPage>,
@@ -397,6 +413,7 @@ impl PinduWindow {
             window.setup_hint_bar(application);
             window.setup_quick_access(application);
             window.setup_playing_cards(application);
+            window.setup_apps(application);
         }
         window
     }
@@ -1246,6 +1263,8 @@ impl PinduWindow {
                 if item == *window.imp().new_collection_item {
                     window.select_view(window.library().view());
                     window.new_collection(None);
+                } else if item == *window.imp().apps_item {
+                    window.show_apps();
                 } else {
                     window.show_view_of(&item);
                 }
