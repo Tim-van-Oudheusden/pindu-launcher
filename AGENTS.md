@@ -50,9 +50,9 @@ gh pr create --title "type(scope): summary (#<number>)" --body-file <file>   # L
 
 - Titles are imperative ("Import Steam libraries"); every issue has one milestone.
 - GitHub milestones are the epics: M1 Library MVP, M2 Everyday library, M3 Windows games, M4 Fullscreen mode, M5
-  Release, then M6 One library, M7 Launch confidence, M8 Resilience and M9 Breadth (the roadmap in
+  Release, then M6 One library, M7 Launch confidence, M8 Resilience, M9 Breadth and M10 1.0 (the roadmap in
   `docs/product-analysis.md`, section 9), plus Nice to have, which has no gate. Each other description holds a gate
-  that must pass before the next milestone starts.
+  that must pass before the next milestone starts; M10 runs beside M9 and does not wait for it.
 - Bodies have: context with a link to the spec section, scope, acceptance criteria as a checklist, out of scope, and a
   research link, plus depends-on when there is one.
 - Labels: `area:core`, `area:import`, `area:ui`, `area:launch`, `area:art`, `area:gamepad`, `area:packaging`;

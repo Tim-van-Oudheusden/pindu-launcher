@@ -8,13 +8,12 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-23 (late night), #788 (this commit): 0.7.0-rc.3, after #810 (#811): the first-sync summary no longer
-  covers a new console's set-up checklist (`health::summary_owed`, `first_sync_summary` takes the `SetupState`).
-  The harness presets `first-sync-summary-shown=true`; pass `--set first-sync-summary-shown=false` to see the
-  summary. Before that, 0.7.0-rc.2: #793 (#796), #791 (#798), #792 (#802, replacing #795's decoder probe with a
-  frame-rate step-down, the maintainer's call), #794 (#804) and #797 (#805). #792 stays open for the laptop
-  measurement; #791, #794, #797 and #810 each end in a person's Pindu OS device check. Filed pindu-os#54 (VA-API
-  packages).
+- 2026-11-24, #820 (this commit): the maintainer took the recommendation, so the agent created milestone 12 "M10 1.0"
+  (gate: every condition in `docs/product-analysis.md` section 9.5, plan in section 9.6) and added M10 to the
+  milestone lists in `AGENTS.md`, `.github/ISSUE_TEMPLATE/issue.yml` and `docs/spec-amendments.md`. No issue was
+  moved; the "what is missing" cells of section 9.6 are candidate M10 issues, and #63 (Flathub, `human-only`) still
+  sits in Nice to have although it is an M10 condition. Before that, #788: 0.7.0-rc.3 (#811); #792 stays open for
+  the laptop measurement, and #791, #794, #797 and #810 each end in a person's Pindu OS device check.
 - Other agents work this repo at the same time (a "hive": issue comments trigger them, and the merge queue merges
   their PRs). An early decision comment on #792 was implemented as #795 and merged before the maintainer's later
   choice; #803 duplicated #791. Post a decision comment only once it is final, and check `gh pr list` before
