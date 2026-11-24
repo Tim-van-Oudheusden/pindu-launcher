@@ -34,7 +34,8 @@ This page is the workstream's spec as issue #550 asks for it. Where this page an
 - **A copy before every migration.** Opening an older database first writes a copy beside it, named for its schema
   version (for example `library.db.v5.bak`); the newest two copies are kept, and a failed copy stops the migration.
 - **Backups.** Backup format 2 carries groups, preferred copies and remembered splits, naming games by their
-  per-source IDs. Format 1 still imports; a group whose games are absent is skipped and counted.
+  per-source IDs; format 3 adds how each game added by hand runs, pins and launch settings set on launchers' games.
+  Formats 1 and 2 still import; a group whose games are absent is skipped and counted.
 
 ## How groups are stored and read
 
@@ -146,6 +147,25 @@ Backup format 2 (#509) adds two lists to the backup file, both naming games by t
   backup rather than drop its groups. Format 2 also carries each saved filter's filter (#600) and the metadata the user
   set or a provider fetched (#619; both in `docs/shelves-and-metadata.md`).
 
+## What else hangs off the per-source ID in a backup
+
+Backup format 3 (#854) adds the rest of the user state the identity table lists, all of it named by per-source ID:
+
+- **How a game added by hand runs:** its entry in `manual_games` carries `launch_kind` and `platform`, so a native
+  game run in the Steam Linux Runtime comes back run there and a Windows game comes back run through umu and Proton.
+  Formats 1 and 2 do not say: a game whose launch config names a prefix, which only Windows games have, restores as a
+  Windows game run through Proton, and any other as a native game run on the host.
+- **Pins:** `pins` lists the games pinned to "Jump back in" in their order. Each one not pinned here takes the first
+  free place, so the order holds and a pin already here keeps its place; a pin with no place left is not restored.
+- **Launch settings on launchers' games:** `launch_settings` holds, for each launcher's game whose launch config has
+  more than its command, its environment, Proton build, prefix, MangoHud, GameMode and wrappers. The command itself is
+  the source's and comes back with a sync. Importing adds to the game's launch config here only what it lacks:
+  variables and wrappers it does not have, a Proton build or prefix where it has none, and MangoHud or GameMode
+  switched on. A game with no launch config here, such as one its launcher starts, gets none. The environment
+  includes the variables the source set; those are in the config here already after a sync, so they add nothing.
+
+An older build refuses a format 3 backup rather than drop these. Artwork and SteamGridDB matches stay out of backups.
+
 ## Flatpak, native and Pindu OS
 
 The same everywhere: grouping needs no permission and no network. The Lutris fields are read from `pga.db` in its
@@ -174,6 +194,7 @@ interface.
 | #508 Review duplicate suggestions | Accept and dismiss in both shells; undo for automatic groups | #505, #506 |
 | #509 Carry game groups in backups | Backup format 2; format 1 still imports | #504 |
 | #606 Let the user change the source order for preferred copies | The `source-order` setting; Copy Order in Preferences and fullscreen mode | #504, #565 |
+| #854 Restore how games added by hand run, and back up pins and launch settings | Backup format 3; old formats restore a Windows game added by hand as one | #824 |
 
 ## Decisions
 
