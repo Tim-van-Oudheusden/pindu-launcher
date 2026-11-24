@@ -21,7 +21,7 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
-use rusqlite::{Connection, Row, TransactionBehavior};
+use rusqlite::{Connection, OpenFlags, Row, TransactionBehavior};
 
 use crate::model::{
     ArtLayout, ArtOrigin, GameId, LaunchKind, LaunchRoute, MetadataField, MetadataOrigin, Platform,
@@ -139,12 +139,15 @@ pub struct Store {
 impl Store {
     /// Opens or creates the database at `path`, creating its folder, and migrates it.
     /// Before migrating an existing database it keeps a copy beside it, named for its
-    /// schema version (`library.db.v5.bak`), and only the newest two such copies.
+    /// schema version (`library.db.v5.bak`), and only the newest two such copies. A
+    /// database a newer version saved is refused with [`StoreError::TooNew`] and left
+    /// as it is.
     pub fn open(path: &Path) -> Result<Self> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(StoreError::Io)?;
         }
         let _setting_up = SettingUp::begin(path)?;
+        refuse_newer(path)?;
         let conn = Connection::open(path)?;
         // Another thread or process may hold the database for a moment (start-up loads
         // the library while the sync writes): wait for it instead of failing.
@@ -263,6 +266,21 @@ fn use_wal(conn: &Connection) -> Result<()> {
     }
 }
 
+/// Refuses an existing database a newer version saved, reading it without the right to
+/// write: a writing connection would fold the write-ahead log into the file as it closes,
+/// and switching to WAL would change its header.
+fn refuse_newer(path: &Path) -> Result<()> {
+    if !path.exists() {
+        return Ok(());
+    }
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    conn.busy_timeout(BUSY_TIMEOUT)?;
+    match schema_version(&conn)? {
+        version if version > LATEST_SCHEMA_VERSION => Err(StoreError::TooNew { version }),
+        _ => Ok(()),
+    }
+}
+
 /// Brings the schema up to date, one migration per transaction. Each step takes the
 /// write lock before reading the version, so connections opening a new database at the
 /// same time apply every migration once between them. An existing database is copied
@@ -297,10 +315,7 @@ const KEPT_COPIES: usize = 2;
 /// Copies the database at `path`, at schema `version`, to `<file>.v<version>.bak` beside
 /// it, then removes all but the newest [`KEPT_COPIES`] copies.
 fn keep_copy(conn: &Connection, path: &Path, version: u32) -> Result<()> {
-    let name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or_else(|| StoreError::NonUtf8Path(path.to_owned()))?;
+    let name = file_name(path)?;
     let copy = path.with_file_name(format!("{name}.v{version}.bak"));
     write_copy(conn, &copy, version)
         .and_then(|()| remove_old_copies(path, name))
@@ -340,6 +355,16 @@ fn write_copy(conn: &Connection, copy: &Path, version: u32) -> Result<()> {
 /// Removes the copies of the database `name` beside `path` except the newest
 /// [`KEPT_COPIES`], newest meaning the highest schema version.
 fn remove_old_copies(path: &Path, name: &str) -> Result<()> {
+    let mut copies = kept_copies(path, name)?;
+    copies.sort_unstable_by_key(|copy| std::cmp::Reverse(copy.version));
+    for old in copies.into_iter().skip(KEPT_COPIES) {
+        std::fs::remove_file(old.path).map_err(StoreError::Io)?;
+    }
+    Ok(())
+}
+
+/// The copies of the database `name` kept beside `path`, in no order.
+fn kept_copies(path: &Path, name: &str) -> Result<Vec<KeptCopy>> {
     let folder = path.parent().unwrap_or(Path::new("."));
     let mut copies = Vec::new();
     for entry in std::fs::read_dir(folder).map_err(StoreError::Io)? {
@@ -353,14 +378,82 @@ fn remove_old_copies(path: &Path, name: &str) -> Result<()> {
                 .ok()
         });
         if let Some(version) = version {
-            copies.push((version, entry.path()));
+            copies.push(KeptCopy {
+                path: entry.path(),
+                version,
+            });
         }
     }
-    copies.sort_unstable_by_key(|&(version, _)| std::cmp::Reverse(version));
-    for (_, old) in copies.into_iter().skip(KEPT_COPIES) {
-        std::fs::remove_file(old).map_err(StoreError::Io)?;
+    Ok(copies)
+}
+
+/// A copy of the database that [`Store::open`] kept beside it before a migration.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeptCopy {
+    /// Where the copy is, such as `library.db.v12.bak`.
+    pub path: PathBuf,
+    /// The schema version the copy is at.
+    pub version: u32,
+}
+
+/// The way back from a database at `path` that a newer version saved: the newest copy
+/// kept beside it at a schema version this version knows, if there is one.
+pub fn kept_copy_to_open(path: &Path) -> Result<Option<KeptCopy>> {
+    let name = file_name(path)?;
+    Ok(kept_copies(path, name)?
+        .into_iter()
+        .filter(|copy| copy.version <= LATEST_SCHEMA_VERSION)
+        .max_by_key(|copy| copy.version))
+}
+
+/// Starts over from `copy` (from [`kept_copy_to_open`]) instead of the database at
+/// `path`, which a newer version saved. The newer database is set aside whole first, as
+/// `<file>.v<version>.newer` beside it (`.newer.2` up to `.newer.99` when that name is
+/// taken), and that path is returned; the kept copy stays where it is.
+pub fn start_from_kept_copy(path: &Path, copy: &KeptCopy) -> Result<PathBuf> {
+    let name = file_name(path)?;
+    let _setting_up = SettingUp::begin(path)?;
+    let newer = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    newer.busy_timeout(BUSY_TIMEOUT)?;
+    let version = schema_version(&newer)?;
+    let aside = (1..=99)
+        .map(|n| match n {
+            1 => path.with_file_name(format!("{name}.v{version}.newer")),
+            n => path.with_file_name(format!("{name}.v{version}.newer.{n}")),
+        })
+        .find(|aside| !aside.exists())
+        .ok_or_else(|| {
+            StoreError::Io(std::io::Error::new(
+                std::io::ErrorKind::AlreadyExists,
+                "every name to set the library aside under is taken",
+            ))
+        })?;
+    // One file with the writes still in the write-ahead log, which goes next.
+    newer.execute("VACUUM INTO ?1", [path_to_sql(&aside)?])?;
+    drop(newer);
+    for log in ["-wal", "-shm"] {
+        let mut file = path.as_os_str().to_owned();
+        file.push(log);
+        match std::fs::remove_file(PathBuf::from(file)) {
+            Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
+                return Err(StoreError::Io(error));
+            }
+            _ => {}
+        }
     }
-    Ok(())
+    let mut partial = path.as_os_str().to_owned();
+    partial.push(".partial");
+    let partial = PathBuf::from(partial);
+    std::fs::copy(&copy.path, &partial).map_err(StoreError::Io)?;
+    std::fs::rename(&partial, path).map_err(StoreError::Io)?;
+    Ok(aside)
+}
+
+/// The database's file name, which names its copies.
+fn file_name(path: &Path) -> Result<&str> {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| StoreError::NonUtf8Path(path.to_owned()))
 }
 
 /// Stores the text form of model values and parses it back on read.

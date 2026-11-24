@@ -97,6 +97,8 @@ mod imp {
         pub gamepad_service: OnceCell<GamepadService>,
         /// gamescope's `--steam` focus protocol; inert outside such a gamescope.
         pub gamescope_service: OnceCell<GamescopeService>,
+        /// Whether the alert about a library from a newer version was shown this run.
+        pub newer_library_shown: std::cell::Cell<bool>,
         /// The Library Health report, for both shells.
         pub health_service: OnceCell<HealthService>,
         /// Whether a finished sync owes the summary of what the library found
@@ -273,6 +275,12 @@ mod imp {
             self.system_power_service
                 .set(SystemPowerService::new(&self.notification_service))
                 .expect("start-up runs once");
+            // A library from a newer version is left as it is; the window says so.
+            library.connect_newer_library(glib::clone!(
+                #[weak(rename_to = app)]
+                self.obj(),
+                move |_| app.show_newer_library()
+            ));
             // Loaded here, not on the first window: Shell search and --launch need the
             // library when no window opens.
             library.reload();
@@ -362,6 +370,9 @@ mod imp {
                 }
             }
             window.present();
+            if new_window {
+                application.show_newer_library();
+            }
             // In a `--steam` gamescope the menu drawer and Quick Access also open over a
             // running game, in a window of their own; shown without focus, it stays
             // see-through until one opens.
@@ -975,6 +986,20 @@ impl PinduApplication {
         match window.visible_dialog().and_downcast::<PreferencesDialog>() {
             Some(preferences) => preferences.add_toast(toast.clone()),
             None => window.add_toast(toast.clone()),
+        }
+    }
+
+    /// Once a run, when the library is from a newer version, says so in the active
+    /// window (`newer_library`); without a window yet, the first window shows it.
+    fn show_newer_library(&self) {
+        let (Some(newer), Some(window)) = (
+            self.library_service().newer_library(),
+            self.active_window().and_downcast::<PinduWindow>(),
+        ) else {
+            return;
+        };
+        if !self.imp().newer_library_shown.replace(true) {
+            window.show_newer_library(&newer);
         }
     }
 

@@ -72,6 +72,192 @@ fn opening_a_database_from_a_newer_version_fails() {
     );
 }
 
+/// A library at `version`, as the launcher that saved it left it when it stopped without
+/// closing it: in WAL mode, with its last writes still in the write-ahead log.
+fn library_left_open_at(dir: &Path, version: u32) -> PathBuf {
+    let path = dir.join("library.db");
+    let writing = tempfile::tempdir().unwrap();
+    let open = writing.path().join("library.db");
+    let conn = rusqlite::Connection::open(&open).unwrap();
+    conn.pragma_update(None, "journal_mode", "wal").unwrap();
+    conn.execute_batch("CREATE TABLE newer (value TEXT); INSERT INTO newer VALUES ('kept');")
+        .unwrap();
+    conn.pragma_update(None, "user_version", version).unwrap();
+    // Copied while the connection is open, so the log is not folded into the file.
+    std::fs::copy(&open, &path).unwrap();
+    std::fs::copy(
+        writing.path().join("library.db-wal"),
+        dir.join("library.db-wal"),
+    )
+    .unwrap();
+    path
+}
+
+#[test]
+fn opening_a_newer_library_refuses_it_and_leaves_its_files_unchanged() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = library_left_open_at(dir.path(), LATEST_SCHEMA_VERSION + 1);
+    let wal = dir.path().join("library.db-wal");
+    let before = (std::fs::read(&path).unwrap(), std::fs::read(&wal).unwrap());
+
+    let result = Store::open(&path);
+
+    assert!(
+        matches!(result, Err(StoreError::TooNew { version }) if version == LATEST_SCHEMA_VERSION + 1)
+    );
+    drop(result);
+    assert_eq!(
+        (std::fs::read(&path).unwrap(), std::fs::read(&wal).unwrap()),
+        before
+    );
+}
+
+#[test]
+fn the_way_back_is_the_newest_kept_copy_this_version_opens() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = library_left_open_at(dir.path(), LATEST_SCHEMA_VERSION + 2);
+    for version in [
+        LATEST_SCHEMA_VERSION - 1,
+        LATEST_SCHEMA_VERSION,
+        LATEST_SCHEMA_VERSION + 1,
+    ] {
+        std::fs::write(
+            dir.path().join(format!("library.db.v{version}.bak")),
+            "copy",
+        )
+        .unwrap();
+    }
+    // Another database's copy in the same folder is not this one's way back.
+    std::fs::write(dir.path().join("other.db.v1.bak"), "other").unwrap();
+
+    assert_eq!(
+        kept_copy_to_open(&path).unwrap(),
+        Some(KeptCopy {
+            path: dir
+                .path()
+                .join(format!("library.db.v{LATEST_SCHEMA_VERSION}.bak")),
+            version: LATEST_SCHEMA_VERSION,
+        })
+    );
+}
+
+#[test]
+fn there_is_no_way_back_when_every_kept_copy_is_too_new() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = library_left_open_at(dir.path(), LATEST_SCHEMA_VERSION + 2);
+    std::fs::write(
+        dir.path()
+            .join(format!("library.db.v{}.bak", LATEST_SCHEMA_VERSION + 1)),
+        "copy",
+    )
+    .unwrap();
+
+    assert_eq!(kept_copy_to_open(&path).unwrap(), None);
+}
+
+/// A copy kept at this version beside the library at `path`, holding one game.
+fn kept_copy_with_a_game(path: &Path) -> KeptCopy {
+    let earlier = tempfile::tempdir().unwrap();
+    let store = Store::open(&earlier.path().join("library.db")).unwrap();
+    store.insert_game(&steam_game("570", "Dota 2")).unwrap();
+    let copy = path.with_file_name(format!("library.db.v{LATEST_SCHEMA_VERSION}.bak"));
+    store
+        .conn
+        .execute("VACUUM INTO ?1", [copy.to_str().unwrap()])
+        .unwrap();
+    KeptCopy {
+        path: copy,
+        version: LATEST_SCHEMA_VERSION,
+    }
+}
+
+#[test]
+fn starting_from_a_kept_copy_opens_it_and_sets_the_newer_library_aside_whole() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = library_left_open_at(dir.path(), LATEST_SCHEMA_VERSION + 1);
+    let copy = kept_copy_with_a_game(&path);
+
+    let aside = start_from_kept_copy(&path, &copy).unwrap();
+
+    let store = Store::open(&path).unwrap();
+    assert!(
+        store
+            .game(&GameId::new(Source::Steam, "570"))
+            .unwrap()
+            .is_some()
+    );
+    assert!(copy.path.is_file());
+    assert_eq!(
+        aside,
+        dir.path()
+            .join(format!("library.db.v{}.newer", LATEST_SCHEMA_VERSION + 1))
+    );
+    // The newer library's last writes were still in its write-ahead log.
+    let newer = rusqlite::Connection::open(&aside).unwrap();
+    let value: String = newer
+        .query_row("SELECT value FROM newer", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(value, "kept");
+    assert_eq!(schema_version(&newer).unwrap(), LATEST_SCHEMA_VERSION + 1);
+}
+
+#[test]
+fn a_newer_library_set_aside_before_is_not_overwritten() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = library_left_open_at(dir.path(), LATEST_SCHEMA_VERSION + 1);
+    let copy = kept_copy_with_a_game(&path);
+    let earlier = dir
+        .path()
+        .join(format!("library.db.v{}.newer", LATEST_SCHEMA_VERSION + 1));
+    std::fs::write(&earlier, "set aside before").unwrap();
+
+    let aside = start_from_kept_copy(&path, &copy).unwrap();
+
+    assert_eq!(
+        aside,
+        dir.path()
+            .join(format!("library.db.v{}.newer.2", LATEST_SCHEMA_VERSION + 1))
+    );
+    assert_eq!(std::fs::read(&earlier).unwrap(), b"set aside before");
+}
+
+#[test]
+fn starting_from_a_kept_copy_works_for_a_newer_library_without_a_write_ahead_log() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("library.db");
+    rusqlite::Connection::open(&path)
+        .unwrap()
+        .pragma_update(None, "user_version", LATEST_SCHEMA_VERSION + 1)
+        .unwrap();
+    let copy = kept_copy_with_a_game(&path);
+
+    start_from_kept_copy(&path, &copy).unwrap();
+
+    assert_eq!(
+        Store::open(&path).unwrap().schema_version().unwrap(),
+        LATEST_SCHEMA_VERSION
+    );
+}
+
+#[test]
+fn a_log_that_cannot_be_removed_leaves_the_newer_library_in_place() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("library.db");
+    rusqlite::Connection::open(&path)
+        .unwrap()
+        .pragma_update(None, "user_version", LATEST_SCHEMA_VERSION + 1)
+        .unwrap();
+    let copy = kept_copy_with_a_game(&path);
+    // A folder in the shared-memory file's place cannot be removed as a file.
+    std::fs::create_dir(dir.path().join("library.db-shm")).unwrap();
+
+    let result = start_from_kept_copy(&path, &copy);
+
+    assert!(matches!(result, Err(StoreError::Io(_))), "{result:?}");
+    let library = rusqlite::Connection::open(&path).unwrap();
+    assert_eq!(schema_version(&library).unwrap(), LATEST_SCHEMA_VERSION + 1);
+}
+
 #[test]
 fn a_game_round_trips_with_every_field() {
     let (_dir, store) = temp_store();
