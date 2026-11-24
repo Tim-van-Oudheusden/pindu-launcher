@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 13:21+0100\n"
+"POT-Creation-Date: 2026-11-24 14:05+0100\n"
 "PO-Revision-Date: 2026-11-07 18:15+0000\n"
 "Last-Translator: Tim <tim-van-oudheusden@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/pindu-launcher/"
@@ -646,6 +646,8 @@ msgstr "een game hierin is niet in deze bibliotheek"
 #: crates/pindu-ui/src/fullscreen_proton_downloads.rs:368
 #: crates/pindu-ui/src/fullscreen_system_update.rs:164
 #: crates/pindu-ui/src/game_dialog.rs:938
+#: crates/pindu-ui/src/preferences.rs:770
+#: crates/pindu-ui/src/preferences.rs:816
 #: crates/pindu-ui/src/proton_downloads_page.rs:225
 #: crates/pindu-ui/src/proton_launch.rs:721
 #: crates/pindu-ui/src/save_snapshots_dialog.rs:475 data/ui/game_dialog.blp:16
@@ -820,6 +822,7 @@ msgstr ""
 
 #: crates/pindu-ui/src/first_sync_summary.rs:33
 #: crates/pindu-ui/src/launch_service.rs:372
+#: crates/pindu-ui/src/preferences.rs:846
 #: crates/pindu-ui/src/proton_launch.rs:446
 #: crates/pindu-ui/src/proton_launch.rs:695 crates/pindu-ui/src/window.rs:1790
 msgid "_Close"
@@ -1380,12 +1383,12 @@ msgid "Launching"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controls.rs:240
-#: crates/pindu-ui/src/menu_drawer.rs:485 crates/pindu-ui/src/sources.rs:70
+#: crates/pindu-ui/src/menu_drawer.rs:485 crates/pindu-ui/src/sources.rs:71
 msgid "Move Up"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_controls.rs:241
-#: crates/pindu-ui/src/menu_drawer.rs:490 crates/pindu-ui/src/sources.rs:71
+#: crates/pindu-ui/src/menu_drawer.rs:490 crates/pindu-ui/src/sources.rs:72
 msgid "Move Down"
 msgstr ""
 
@@ -1474,13 +1477,13 @@ msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_health.rs:239
 #: crates/pindu-ui/src/health_page.rs:174
-#: crates/pindu-ui/src/preferences.rs:376
+#: crates/pindu-ui/src/preferences.rs:380
 msgid "Allowed"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_health.rs:241
 #: crates/pindu-ui/src/health_page.rs:176
-#: crates/pindu-ui/src/preferences.rs:378
+#: crates/pindu-ui/src/preferences.rs:382
 msgid "Not allowed"
 msgstr ""
 
@@ -1603,9 +1606,10 @@ msgid "Last synced: {when}"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_health.rs:367
-#: crates/pindu-ui/src/fullscreen_sources.rs:87
+#: crates/pindu-ui/src/fullscreen_sources.rs:92
 #: crates/pindu-ui/src/health_page.rs:280
-#: crates/pindu-ui/src/preferences.rs:469
+#: crates/pindu-ui/src/preferences.rs:474
+#: crates/pindu-ui/src/preferences.rs:567 crates/pindu-ui/src/sources.rs:195
 msgid "Not found on this computer"
 msgstr ""
 
@@ -1986,7 +1990,7 @@ msgid "Games set to this build will not start until you choose another one."
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_proton_downloads.rs:369
-#: crates/pindu-ui/src/game_page.rs:871
+#: crates/pindu-ui/src/game_page.rs:871 crates/pindu-ui/src/preferences.rs:817
 #: crates/pindu-ui/src/proton_downloads_page.rs:226
 #: crates/pindu-ui/src/widgets/cover_tile.rs:456
 msgid "_Remove"
@@ -2018,7 +2022,8 @@ msgstr ""
 msgid "Could not save a copy: {error}"
 msgstr "Kon de backup niet importeren: {error}"
 
-#: crates/pindu-ui/src/fullscreen_sources.rs:85
+#: crates/pindu-ui/src/fullscreen_sources.rs:90
+#: crates/pindu-ui/src/sources.rs:193
 msgid "Found on this computer"
 msgstr ""
 
@@ -2283,7 +2288,7 @@ msgid "Launcher"
 msgstr ""
 
 #. Translators: when a source last synced; it never has.
-#: crates/pindu-ui/src/game_page.rs:935 crates/pindu-ui/src/sources.rs:158
+#: crates/pindu-ui/src/game_page.rs:935 crates/pindu-ui/src/sources.rs:159
 #: crates/pindu-ui/src/widgets/game_list_cell.rs:213
 msgid "Never"
 msgstr ""
@@ -2527,7 +2532,9 @@ msgid "None installed; umu downloads one the first time a game needs it"
 msgstr ""
 
 #. Translators: the separator between the first items of a list.
-#: crates/pindu-ui/src/health_page.rs:195 crates/pindu-ui/src/sources.rs:137
+#: crates/pindu-ui/src/health_page.rs:195
+#: crates/pindu-ui/src/preferences.rs:623
+#: crates/pindu-ui/src/preferences.rs:756 crates/pindu-ui/src/sources.rs:138
 msgid ", "
 msgstr ""
 
@@ -2555,7 +2562,7 @@ msgid "Run this command, then restart Pindu launcher: {command}"
 msgstr ""
 
 #: crates/pindu-ui/src/health_page.rs:262
-#: crates/pindu-ui/src/preferences.rs:176
+#: crates/pindu-ui/src/preferences.rs:180
 msgid "Command copied"
 msgstr ""
 
@@ -2570,7 +2577,7 @@ msgid "Installed As"
 msgstr "Installeren"
 
 #: crates/pindu-ui/src/health_page.rs:310
-#: crates/pindu-ui/src/preferences.rs:550
+#: crates/pindu-ui/src/preferences.rs:1170
 msgid "Last Synced"
 msgstr ""
 
@@ -2933,109 +2940,204 @@ msgstr ""
 msgid "The connection failed (reason {reason})."
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:467
+#: crates/pindu-ui/src/preferences.rs:472
 msgid "The sandbox cannot see this folder: choose it to import its games"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:483
+#: crates/pindu-ui/src/preferences.rs:488
+#: crates/pindu-ui/src/preferences.rs:587
 msgid "Import"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:495
+#: crates/pindu-ui/src/preferences.rs:500
 msgid "Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:497
+#: crates/pindu-ui/src/preferences.rs:502
 msgid "Found automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:502 data/ui/game_dialog.blp:62
+#: crates/pindu-ui/src/preferences.rs:507 data/ui/game_dialog.blp:62
 #: data/ui/preferences.blp:211 data/ui/preferences.blp:256
 msgid "_Choose…"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:508
+#: crates/pindu-ui/src/preferences.rs:513
 msgid "Find Automatically"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:539
+#: crates/pindu-ui/src/preferences.rs:544
 msgid "Show in Sidebar"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:564
-msgid "The last sync ran into {count} problem"
-msgid_plural "The last sync ran into {count} problems"
-msgstr[0] ""
-msgstr[1] ""
+#: crates/pindu-ui/src/preferences.rs:565 crates/pindu-ui/src/sources.rs:189
+msgid "Cannot run"
+msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:596
+#: crates/pindu-ui/src/preferences.rs:578 crates/pindu-ui/src/sources.rs:185
+msgid "Experimental"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:605
+msgid "Where It Runs"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:613
+msgid "Reads"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:622
+msgid "Launches Through"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:627
+msgid "Version"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:632
+msgid "_Remove…"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:659
+#, fuzzy
+#| msgid "Installing"
+msgid "_Install External Importer…"
+msgstr "Installeren"
+
+#: crates/pindu-ui/src/preferences.rs:697
+msgid "Importer Archives"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:703
+msgid "Choose an External Importer"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:720
+#: crates/pindu-ui/src/preferences.rs:799
+msgid "Cannot Install the Importer"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:731
+msgid "Replace {name}?"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:733
+#, fuzzy
+#| msgid "Installing"
+msgid "Install {name}?"
+msgstr "Installeren"
+
+#: crates/pindu-ui/src/preferences.rs:746
+msgid "It reads:"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:755
+msgid "It opens games through {schemes}"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:761
+msgid ""
+"It runs, reads or opens games differently from the installed one, so it is "
+"turned off until you turn it on again."
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:774
+msgid "_Replace"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:776
+#: crates/pindu-ui/src/proton_downloads_page.rs:341
+msgid "_Install"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:809
+msgid "Remove {name}?"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:811
+msgid ""
+"Its games leave the library. Installing it again brings them back with their "
+"play history."
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:833
+msgid "Cannot Remove the Importer"
+msgstr ""
+
+#: crates/pindu-ui/src/preferences.rs:855
 msgid "Choose the Folder of {source}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:638
+#: crates/pindu-ui/src/preferences.rs:897
 msgid "Choose the Prefix Folder"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:662
+#: crates/pindu-ui/src/preferences.rs:921
 msgid "Snapshots stay only on this computer"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:684
+#: crates/pindu-ui/src/preferences.rs:943
 msgid "Choose a Folder for Save Snapshots"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:752
+#: crates/pindu-ui/src/preferences.rs:1011
 msgid "The key was not saved: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:770
+#: crates/pindu-ui/src/preferences.rs:1029
 #: crates/pindu-ui/src/quick_access.rs:1803
 msgid "Your fullscreen.css, over the design"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:772
+#: crates/pindu-ui/src/preferences.rs:1031
 msgid "Create the style file or import one to turn it on"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:797
+#: crates/pindu-ui/src/preferences.rs:1056
 msgid "The style folder cannot be created: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:816
+#: crates/pindu-ui/src/preferences.rs:1075
 msgid "Stylesheets"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:822
+#: crates/pindu-ui/src/preferences.rs:1081
 msgid "Import Style"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:840
+#: crates/pindu-ui/src/preferences.rs:1099
 msgid "Style imported"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:842
+#: crates/pindu-ui/src/preferences.rs:1101
 msgid "The style was not imported: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:857
+#: crates/pindu-ui/src/preferences.rs:1116
 msgid "Style moved to fullscreen.css.bak"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:858
+#: crates/pindu-ui/src/preferences.rs:1117
 msgid "My Stylesheet is off"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:860
+#: crates/pindu-ui/src/preferences.rs:1119
 msgid "The style was not reset: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:878 data/ui/preferences.blp:404
+#: crates/pindu-ui/src/preferences.rs:1137 data/ui/preferences.blp:404
 msgid "No Problems"
 msgstr ""
 
-#: crates/pindu-ui/src/preferences.rs:881
+#: crates/pindu-ui/src/preferences.rs:1140
 msgid "{count} Problem"
 msgid_plural "{count} Problems"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/pindu-ui/src/preferences.rs:1181
+msgid "The last sync ran into {count} problem"
+msgid_plural "The last sync ran into {count} problems"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -3135,10 +3237,6 @@ msgstr ""
 
 #: crates/pindu-ui/src/proton_downloads_page.rs:258
 msgid "{build} was not installed: {error}"
-msgstr ""
-
-#: crates/pindu-ui/src/proton_downloads_page.rs:341
-msgid "_Install"
 msgstr ""
 
 #: crates/pindu-ui/src/proton_downloads_page.rs:393
@@ -3615,61 +3713,78 @@ msgstr ""
 msgid "Open {store} on a desktop and sign in. Its games then show here."
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:113
+#: crates/pindu-ui/src/sources.rs:114
 msgid "Heroic: Epic"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:114
+#: crates/pindu-ui/src/sources.rs:115
 msgid "Heroic: GOG"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:115
+#: crates/pindu-ui/src/sources.rs:116
 msgid "Heroic: Amazon"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:116
+#: crates/pindu-ui/src/sources.rs:117
 msgid "Heroic: Sideloaded"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:122
+#: crates/pindu-ui/src/sources.rs:123
 msgid "Desktop"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:123
+#: crates/pindu-ui/src/sources.rs:124
 msgid "Added by Hand"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:124
+#: crates/pindu-ui/src/sources.rs:125
 msgid "External Importers"
 msgstr ""
 
 #. Translators: a list's first items and its last, as in "Steam, Lutris and Bottles".
-#: crates/pindu-ui/src/sources.rs:139
+#: crates/pindu-ui/src/sources.rs:140
 msgid "{items} and {last}"
 msgstr ""
 
 #. Translators: when a source last synced; under a minute ago.
-#: crates/pindu-ui/src/sources.rs:160
+#: crates/pindu-ui/src/sources.rs:161
 msgid "Just now"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:161
+#: crates/pindu-ui/src/sources.rs:162
 msgid "{count} minute ago"
 msgid_plural "{count} minutes ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/sources.rs:162
+#: crates/pindu-ui/src/sources.rs:163
 msgid "{count} hour ago"
 msgid_plural "{count} hours ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/sources.rs:163
+#: crates/pindu-ui/src/sources.rs:164
 msgid "{count} day ago"
 msgid_plural "{count} days ago"
 msgstr[0] ""
 msgstr[1] ""
+
+#: crates/pindu-ui/src/sources.rs:172
+msgid "In its own sandbox, without network"
+msgstr ""
+
+#: crates/pindu-ui/src/sources.rs:173
+msgid "Runs with your permissions"
+msgstr ""
+
+#: crates/pindu-ui/src/sources.rs:174
+msgid "Needs host access to run"
+msgstr ""
+
+#. Translators: the separator between the facts about one source.
+#: crates/pindu-ui/src/sources.rs:199
+msgid " · "
+msgstr ""
 
 #: crates/pindu-ui/src/steamgriddb_service.rs:69
 msgid "A key is stored in your keyring"
@@ -3683,11 +3798,23 @@ msgstr ""
 msgid "Artwork From SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/sync_service.rs:149
+#: crates/pindu-ui/src/sync_service.rs:177
+msgid "The importer could not be checked"
+msgstr ""
+
+#: crates/pindu-ui/src/sync_service.rs:188
+msgid "The importer could not be installed"
+msgstr ""
+
+#: crates/pindu-ui/src/sync_service.rs:214
+msgid "The importer could not be removed"
+msgstr ""
+
+#: crates/pindu-ui/src/sync_service.rs:247
 msgid "Refreshing Library"
 msgstr ""
 
-#: crates/pindu-ui/src/sync_service.rs:155
+#: crates/pindu-ui/src/sync_service.rs:253
 msgid "The import stopped unexpectedly"
 msgstr ""
 
