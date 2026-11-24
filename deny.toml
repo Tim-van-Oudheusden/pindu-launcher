@@ -44,6 +44,7 @@ exceptions = [
     { crate = "manette", allow = ["GPL-3.0-or-later"] },
     { crate = "manette-sys", allow = ["GPL-3.0-or-later"] },
     { crate = "pindu-core", allow = ["GPL-3.0-or-later"] },
+    { crate = "pindu-import-bottles", allow = ["GPL-3.0-or-later"] },
     { crate = "pindu-ui", allow = ["GPL-3.0-or-later"] },
 ]
 
