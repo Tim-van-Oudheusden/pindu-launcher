@@ -131,10 +131,11 @@ and behaves like the rest of GNOME.
 
 The importers only read each launcher's data, and never its credentials. From the itch app's database, for example,
 they read its installs and games, never the profiles that hold your itch.io key. Preferences → Sources shows, for each
-source, the folder it was found in, when it last synced and the problems that sync ran into. Its **Copy Order** decides
-which copy Play starts when a game has copies from several sources and you have not chosen one: the installed copy
-from the source highest in the list, with native copies still ahead of Windows ones. **Move Up** and **Move Down**
-change the order.
+source, the folder it was found in (for desktop entries and Flatpaks, which come from every application folder,
+**Application folders**), when it last synced and the problems that sync ran into. Its **Copy Order** decides which
+copy Play starts when a game has copies from several sources and you have not chosen one: the installed copy from the
+source highest in the list, with native copies still ahead of Windows ones. **Move Up** and **Move Down** change the
+order.
 
 A game's page shows the details its launcher keeps offline. Heroic gives the developer, categories and description;
 Steam's own app cache gives the developer, release year, categories and whether the game has full or partial
@@ -536,6 +537,14 @@ Each step is marked done from what is true now: a controller connected, the mach
 forced, and they go in any order; closing Quick Access comes back to the list. **Hide This List** hides it, and Quick
 Access → Manage → **Set-Up Checklist** brings it back. Once a game is in the library, it is gone for good. The desktop
 window does not show it.
+
+### Apps
+
+Home has an **Apps** tile, and the desktop window's sidebar an **Apps** item, while applications that are not games
+are installed: game launchers such as Steam and Heroic, and apps such as a browser. Each opens with one press (A with
+a controller); in a gamescope `--steam` session it comes to the front, the launcher comes back when it closes, and the
+menu drawer offers Exit for it. Games are not listed there, and apps never enter the library. The list follows apps
+installed or removed while the launcher runs. Details in [`docs/apps.md`](docs/apps.md).
 
 ### Add a Store
 

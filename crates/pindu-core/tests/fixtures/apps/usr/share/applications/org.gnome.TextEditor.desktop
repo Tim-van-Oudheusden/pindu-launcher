@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Text Editor
+Name[de]=Texteditor
+Name[pt_BR]=Editor de texto
+Name[sr@latin]=Uređivač teksta
+Exec=gnome-text-editor %U
+Icon=org.gnome.TextEditor
+Categories=GNOME;GTK;Utility;TextEditor;

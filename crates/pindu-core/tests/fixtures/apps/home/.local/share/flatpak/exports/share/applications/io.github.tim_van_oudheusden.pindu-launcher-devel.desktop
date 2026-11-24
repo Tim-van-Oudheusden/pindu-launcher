@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Pindu launcher (Development)
+Exec=/usr/bin/flatpak run --branch=master --arch=x86_64 io.github.tim_van_oudheusden.pindu-launcher-devel
+Type=Application
+Categories=Game;
+X-Flatpak=io.github.tim_van_oudheusden.pindu-launcher-devel

@@ -30,6 +30,9 @@ Pindu OS needs last. That last layer grows only through a Pindu OS work package 
 panel did. TDP, performance tuning and other hardware control remain out of scope unless such a work package asks for
 them.
 
+The first piece of that work package is **Apps** (#830, [`docs/apps.md`](apps.md)): a list of the installed
+applications that are not games, such as game launchers, each opened with one press from Home or the desktop sidebar.
+
 ### First run on a console, revised
 
 The product analysis (section 8.2) turned down a set-up sequence on first start in favour of empty states and prompts in

@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Player
+Exec=player --new-window %U --title=%c
+Path=/srv/media
+Categories=AudioVideo;

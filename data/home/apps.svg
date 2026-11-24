@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder art for Home's "apps" section; the maintainer replaces it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1c1d21"/>
+  <g fill="none" stroke="#c0c4cc" stroke-width="20" stroke-linejoin="round"><rect x="146" y="146" width="90" height="90" rx="18"/><rect x="276" y="146" width="90" height="90" rx="18"/><rect x="146" y="276" width="90" height="90" rx="18"/><rect x="276" y="276" width="90" height="90" rx="18"/></g>
+</svg>

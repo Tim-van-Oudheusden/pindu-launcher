@@ -11,7 +11,7 @@
 
 use std::path::{Component, Path, PathBuf};
 
-use crate::model::{Game, Source, SourceState, Timestamp};
+use crate::model::{Game, Source, SourceFound, SourceState, Timestamp};
 use crate::permissions;
 use crate::setup::SetupState;
 use crate::sources::sync::IMPORTED_SOURCES;
@@ -217,8 +217,8 @@ pub struct SourceHealth {
     pub source: Source,
     /// Whether the user has it turned on.
     pub enabled: bool,
-    /// The folder its data was found in; `None` when it was not found on this computer.
-    pub folder: Option<PathBuf>,
+    /// Where it was found on this computer.
+    pub found: SourceFound,
     /// How the launcher is installed; `None` when it was not found.
     pub install: Option<Install>,
     /// How many of the library's games come from it.
@@ -412,7 +412,7 @@ fn source_health(facts: &SourceFacts) -> SourceHealth {
     SourceHealth {
         source: state.source,
         enabled: state.enabled,
-        folder: state.resolved_location.clone(),
+        found: state.found(),
         install: state.resolved_location.as_deref().map(Install::of),
         games: facts.games,
         last_sync: state.last_sync,
@@ -463,7 +463,7 @@ pub fn first_sync_summary(
     let launchers: Vec<Source> = report
         .sources
         .iter()
-        .filter(|source| source.folder.is_some())
+        .filter(|source| matches!(source.found, SourceFound::Folder(_)))
         .map(|source| source.source)
         .collect();
     let games = report.sources.iter().map(|source| source.games).sum();
@@ -598,7 +598,7 @@ mod tests {
         assert_eq!(steam.games, 40);
         assert_eq!(steam.last_sync, Some(1_700_000_000));
         let lutris = &report.sources[1];
-        assert_eq!(lutris.folder, None);
+        assert_eq!(lutris.found, SourceFound::NotFound);
         assert_eq!(lutris.install, None);
         assert!(lutris.problems.is_empty(), "not installed is not a problem");
         assert!(report.launching.umu);
@@ -899,6 +899,29 @@ mod tests {
             },
         ];
         assert!(!is_first_sync(&synced));
+    }
+
+    #[test]
+    fn the_desktop_source_is_found_in_the_application_folders_and_is_no_launcher() {
+        let mut facts = flatpak_without_host_access();
+        facts.sources.push(SourceFacts {
+            state: SourceState {
+                last_sync: Some(1_700_000_000),
+                ..SourceState::new(Source::Desktop)
+            },
+            games: 9,
+        });
+
+        let report = report(&facts);
+
+        let desktop = &report.sources[2];
+        assert_eq!(desktop.found, SourceFound::ApplicationFolders);
+        assert_eq!(desktop.install, None);
+        assert_eq!(desktop.games, 9);
+        assert!(desktop.problems.is_empty());
+        let summary = first_sync_summary(&report, true, false, SetupState::Unseen).unwrap();
+        assert_eq!(summary.launchers, [Source::Steam]);
+        assert_eq!(summary.games, 49);
     }
 
     #[test]

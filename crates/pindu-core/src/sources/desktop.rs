@@ -13,8 +13,9 @@ use super::location::HostDirs;
 use super::{ImportedGame, Snapshot};
 use crate::model::{ArtLayout, LaunchConfig, LaunchKind, Platform, Source};
 
-/// Desktop IDs, Flatpak IDs and commands of the launchers we import directly, and ours.
-const KNOWN_LAUNCHERS: &[&str] = &[
+/// Desktop IDs, Flatpak IDs and commands of the launchers we import directly. The Apps
+/// list (`crate::apps`) keeps their own entries, which open them.
+pub(crate) const KNOWN_LAUNCHERS: &[&str] = &[
     "steam",
     "com.valvesoftware.Steam",
     "heroic",
@@ -29,9 +30,14 @@ const KNOWN_LAUNCHERS: &[&str] = &[
     "io.github.Faugus.faugus-launcher",
     "itch",
     "io.itch.itch",
-    "pindu-launcher",
-    "io.github.tim_van_oudheusden.pindu-launcher",
 ];
+
+/// Our own desktop ID and command, and our app ID, which the development build extends
+/// (`…pindu-launcher-devel`).
+const OWN: &[&str] = &["pindu-launcher", APP_ID];
+
+/// Pindu launcher's app ID.
+const APP_ID: &str = "io.github.tim_van_oudheusden.pindu-launcher";
 
 /// URI schemes of launchers we import directly; an Exec line using one is a shortcut.
 const LAUNCHER_SCHEMES: &[&str] = &["steam:", "heroic:", "lutris:", "bottles:"];
@@ -63,32 +69,75 @@ fn share_dirs(dirs: &HostDirs) -> Vec<PathBuf> {
 /// unreadable are skipped; the source is then just smaller.
 pub fn import(dirs: &HostDirs) -> Snapshot {
     let mut snapshot = Snapshot::new(Source::Desktop);
+    for (id, path, entry) in entries(dirs) {
+        match game_from_entry(&id, &path, &entry) {
+            Ok(Some(mut game)) => {
+                game.artwork = game
+                    .artwork
+                    .first()
+                    .and_then(|(_, name)| icon_file(dirs, &name.to_string_lossy()))
+                    .map(|path| vec![(ArtLayout::Icon, path)])
+                    .unwrap_or_default();
+                snapshot.games.push(game);
+            }
+            Ok(None) => {}
+            Err(message) => snapshot
+                .errors
+                .push(format!("{}: {message}", path.display())),
+        }
+    }
+    snapshot
+}
+
+/// Every desktop entry in the application folders, in XDG order, with its desktop ID, its
+/// file and its `[Desktop Entry]` keys. The first entry of an ID wins, even when it hides
+/// the others; files that cannot be read are skipped.
+pub(crate) fn entries(dirs: &HostDirs) -> Vec<(String, PathBuf, HashMap<String, String>)> {
     let mut seen = HashSet::new();
+    let mut entries = Vec::new();
     for folder in application_dirs(dirs) {
         let mut files = Vec::new();
         collect_desktop_files(&folder, &folder, &mut files);
         files.sort();
         for (id, path) in files {
-            // The first entry of an ID wins, even when it hides the others.
             if !seen.insert(id.clone()) {
                 continue;
             }
             let Ok(text) = std::fs::read_to_string(&path) else {
                 continue;
             };
-            match game_from_entry(&id, &path, &parse_entry(&text)) {
-                Ok(Some(mut game)) => {
-                    game.artwork = icon(dirs, game.artwork.first().map(|(_, p)| p.as_path()));
-                    snapshot.games.push(game);
-                }
-                Ok(None) => {}
-                Err(message) => snapshot
-                    .errors
-                    .push(format!("{}: {message}", path.display())),
-            }
+            let entry = parse_entry(&text);
+            entries.push((id, path, entry));
         }
     }
-    snapshot
+    entries
+}
+
+/// Whether the entry with desktop ID `id` and `X-Flatpak` app ID `flatpak_id` is a
+/// launcher's own, which opens it: one we import directly ([`KNOWN_LAUNCHERS`]).
+pub(crate) fn is_launcher(id: &str, flatpak_id: Option<&str>) -> bool {
+    KNOWN_LAUNCHERS.contains(&id) || flatpak_id.is_some_and(|app| KNOWN_LAUNCHERS.contains(&app))
+}
+
+/// Whether the entry with desktop ID `id` and `X-Flatpak` app ID `flatpak_id` is ours,
+/// the release's or the development build's.
+pub(crate) fn is_own(id: &str, flatpak_id: Option<&str>) -> bool {
+    [Some(id), flatpak_id]
+        .into_iter()
+        .flatten()
+        .any(|id| OWN.contains(&id) || id.starts_with(APP_ID))
+}
+
+/// Whether `argv`, an entry's Exec line, runs a launcher we import directly, or ours, or
+/// opens one of their URIs: a game shortcut, which its launcher's source lists.
+pub(crate) fn is_shortcut(argv: &[String]) -> bool {
+    argv.iter().any(|word| {
+        let command = word.rsplit('=').next().unwrap_or(word);
+        let command = command.rsplit('/').next().unwrap_or(command);
+        KNOWN_LAUNCHERS.contains(&command)
+            || OWN.contains(&command)
+            || LAUNCHER_SCHEMES.iter().any(|scheme| word.contains(scheme))
+    })
 }
 
 /// Every `.desktop` file under `folder`, with its desktop ID (the path below the folder,
@@ -112,7 +161,7 @@ fn collect_desktop_files(base: &Path, folder: &Path, out: &mut Vec<(String, Path
 
 /// The game a desktop entry describes, `None` when it is not one we list. The icon name,
 /// if any, is passed back as the only artwork entry for [`import`] to resolve.
-fn game_from_entry(
+pub(crate) fn game_from_entry(
     id: &str,
     path: &Path,
     entry: &HashMap<String, String>,
@@ -125,8 +174,8 @@ fn game_from_entry(
         || is_true("Hidden")
         || is_true("NoDisplay")
         || !is_game
-        || KNOWN_LAUNCHERS.contains(&id)
-        || flatpak_id.is_some_and(|app| KNOWN_LAUNCHERS.contains(&app))
+        || is_launcher(id, flatpak_id)
+        || is_own(id, flatpak_id)
     {
         return Ok(None);
     }
@@ -134,13 +183,7 @@ fn game_from_entry(
         return Ok(None);
     };
     let argv = exec_argv(exec, name, get("Icon"), path)?;
-    let is_shortcut = argv.iter().any(|word| {
-        let command = word.rsplit('=').next().unwrap_or(word);
-        let command = command.rsplit('/').next().unwrap_or(command);
-        KNOWN_LAUNCHERS.contains(&command)
-            || LAUNCHER_SCHEMES.iter().any(|scheme| word.contains(scheme))
-    });
-    if is_shortcut {
+    if is_shortcut(&argv) {
         return Ok(None);
     }
     let mut argv = argv.into_iter();
@@ -161,27 +204,23 @@ fn game_from_entry(
 }
 
 /// The icon file for an `Icon` value: an absolute path as it is, or a name looked up in
-/// the hicolor theme of each data folder (best size first), then in the host's pixmaps.
-fn icon(dirs: &HostDirs, icon: Option<&Path>) -> Vec<(ArtLayout, PathBuf)> {
-    let Some(icon) = icon else { return Vec::new() };
-    let found = if icon.is_absolute() {
-        Some(icon.to_owned()).filter(|path| path.is_file())
-    } else {
-        let name = icon.to_string_lossy();
-        let name = name.as_ref();
-        let themed = share_dirs(dirs).into_iter().flat_map(|share| {
-            ICON_SIZES.iter().flat_map(move |size| {
-                ["png", "svg"]
-                    .map(|ext| share.join(format!("icons/hicolor/{size}/apps/{name}.{ext}")))
-            })
-        });
-        let pixmaps = ["png", "svg", "xpm"]
-            .map(|ext| dirs.host_usr.join(format!("share/pixmaps/{name}.{ext}")));
-        themed.chain(pixmaps).find(|path| path.is_file())
-    };
-    found
-        .map(|path| vec![(ArtLayout::Icon, path)])
-        .unwrap_or_default()
+/// the hicolor theme of each data folder (best size first), then in the host's pixmaps;
+/// `None` when there is no such file.
+pub(crate) fn icon_file(dirs: &HostDirs, icon: &str) -> Option<PathBuf> {
+    if icon.is_empty() {
+        return None;
+    }
+    if Path::new(icon).is_absolute() {
+        return Some(PathBuf::from(icon)).filter(|path| path.is_file());
+    }
+    let themed = share_dirs(dirs).into_iter().flat_map(|share| {
+        ICON_SIZES.iter().flat_map(move |size| {
+            ["png", "svg"].map(|ext| share.join(format!("icons/hicolor/{size}/apps/{icon}.{ext}")))
+        })
+    });
+    let pixmaps =
+        ["png", "svg", "xpm"].map(|ext| dirs.host_usr.join(format!("share/pixmaps/{icon}.{ext}")));
+    themed.chain(pixmaps).find(|path| path.is_file())
 }
 
 /// The keys of a desktop file's `[Desktop Entry]` group, with string escapes undone.
@@ -235,7 +274,7 @@ fn unescape(value: &str) -> String {
 /// expands its field codes: file and URL codes are dropped (we pass none) along with
 /// Flatpak's file-forwarding markers, `%i` becomes `--icon <icon>`, `%c` the name, `%k`
 /// the desktop file and `%%` a percent sign.
-fn exec_argv(
+pub(crate) fn exec_argv(
     exec: &str,
     name: &str,
     icon: Option<&str>,
