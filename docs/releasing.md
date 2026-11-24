@@ -204,7 +204,8 @@ launcher from `:testing` to `:stable` ([pindu-os#30](https://github.com/Tim-van-
 Power and System Update sections only show there (see [System panel](system-panel.md)). It needs a Bluetooth adapter,
 Wi-Fi, a Bluetooth controller, a Steam library with one native game and one Windows game set to run through Proton, one
 game in another launcher (Heroic, Lutris, Bottles or itch), one game installed as an app, and a Windows game to add by
-hand.
+hand. [Hardware](hardware.md) lists the machines in the published set, the desktop window's checks that run beside
+this list, and the matrix of hardware reports from other machines.
 
 | Check | Passes when |
 | --- | --- |
