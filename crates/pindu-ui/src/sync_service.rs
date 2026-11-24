@@ -10,8 +10,9 @@ use gtk::glib::subclass::Signal;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use pindu_core::health::is_first_sync;
-use pindu_core::model::{Source, SourceState};
+use pindu_core::model::{ExternalImporterState, Source, SourceState};
 use pindu_core::paths::{default_importers_dir, default_library_db_path};
+use pindu_core::sources::external::listing::{Listed, listing};
 use pindu_core::sources::external::{self, runner};
 use pindu_core::sources::location::{self, HostDirs};
 use pindu_core::sources::sync::{SyncSummary, Tally, sync_all};
@@ -91,17 +92,6 @@ impl SyncService {
         self.imp().first.get()
     }
 
-    /// Each source's stored state: enabled, override, where it was last found.
-    pub async fn source_states(&self) -> Vec<SourceState> {
-        gtk::gio::spawn_blocking(|| {
-            Store::open(&default_library_db_path())
-                .and_then(|store| store.source_states())
-                .unwrap_or_default()
-        })
-        .await
-        .unwrap_or_default()
-    }
-
     /// Turns a source's import on or off, then syncs.
     pub fn set_source_enabled(&self, source: Source, enabled: bool) {
         self.change_source(move |store| {
@@ -117,6 +107,45 @@ impl SyncService {
     pub fn set_source_override(&self, source: Source, folder: Option<PathBuf>) {
         self.change_source(move |store| {
             location::set_user_override(store, source, folder.as_deref())
+        });
+    }
+
+    /// Each source's stored state (enabled, override, where it was last found), and each
+    /// external importer as the Sources lists show it, in the order Pindu finds them: both
+    /// at once, so a Sources list fills in one step.
+    pub async fn sources(&self) -> (Vec<SourceState>, Vec<Listed>) {
+        gtk::gio::spawn_blocking(|| {
+            let dirs = HostDirs::from_env();
+            let helpers = helper_environment(&dirs);
+            let store = Store::open(&default_library_db_path()).ok();
+            let states = store
+                .as_ref()
+                .and_then(|store| store.source_states().ok())
+                .unwrap_or_default();
+            let helper_states = store
+                .as_ref()
+                .and_then(|store| store.external_importers().ok())
+                .unwrap_or_default();
+            let listed = listing(
+                &external::discover(&helpers.installed, helpers.bundled.as_deref()),
+                &helper_states,
+                helpers.place,
+                &helpers.home,
+            );
+            (states, listed)
+        })
+        .await
+        .unwrap_or_default()
+    }
+
+    /// Turns an external importer on or off, then syncs.
+    pub fn set_helper_enabled(&self, helper_id: String, enabled: bool) {
+        self.change_source(move |store| {
+            let mut state = store
+                .external_importer(&helper_id)?
+                .unwrap_or_else(|| ExternalImporterState::new(&helper_id));
+            state.enabled = enabled;
+            store.set_external_importer(&state)
         });
     }
 
