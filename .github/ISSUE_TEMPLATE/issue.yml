@@ -6,7 +6,7 @@ body:
       value: |
         Thanks for contributing! Keep the title imperative, e.g. "Import Steam libraries".
         After filing, apply the labels shown in brackets and set one milestone (M1 to M5, M6 One library,
-        M7 Launch confidence, M8 Resilience, M9 Breadth, or Nice to have).
+        M7 Launch confidence, M8 Resilience, M9 Breadth, M10 1.0, or Nice to have).
         Found something broken? Use the "Bug report" form instead.
   - type: dropdown
     id: type

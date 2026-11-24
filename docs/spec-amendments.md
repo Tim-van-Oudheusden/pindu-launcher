@@ -50,7 +50,8 @@ fullscreen mode (#458) have shipped. TDP stays out of scope, as above.
 
 The spec plans a Flathub release in M5. Since #226 M5 is the first GitHub release, GitHub Releases are the release
 channel, and the Flathub submission (#63, `human-only`) is in Nice to have. After M5 come M6 One library, M7 Launch
-confidence, M8 Resilience and M9 Breadth (#549); the milestone descriptions on GitHub hold the gates.
+confidence, M8 Resilience and M9 Breadth (#549), and beside M9 runs M10 1.0 (#820); the milestone descriptions on
+GitHub hold the gates.
 
 ## Backlog
 
