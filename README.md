@@ -167,6 +167,9 @@ you install it again. A folder copied into the importers folder by hand works th
 
 ## Installing
 
+Pick one of the ways below. The [support policy](docs/support-policy.md) says, for each of them and for Pindu OS, which
+versions get fixes, how updates arrive and until when each runtime and distribution release is supported.
+
 ### Flatpak bundle from a release
 
 Each [release](https://github.com/Tim-van-Oudheusden/pindu-launcher/releases/latest) has a
@@ -915,6 +918,7 @@ own with no network that sees only the Bottles folders.
 | [`docs/external-importers.md`](docs/external-importers.md) | External importers: a versioned JSON protocol for sources kept outside the core, adopted on 2026-11-23, and how a helper is installed from Preferences |
 | [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
 | [`docs/releasing.md`](docs/releasing.md) | How to cut a release: versions, notes, the tag and the Release workflow |
+| [`docs/support-policy.md`](docs/support-policy.md) | The support policy: which versions get fixes, how each install type updates, and until when |
 | [`docs/hardware.md`](docs/hardware.md) | The hardware 1.0 is checked on, the flows checked on each, and the matrix of hardware reports |
 | [`docs/ai-ops-runbook.md`](docs/ai-ops-runbook.md) | Watching, pausing and reverting agent work; CI and Release failures; the `main` ruleset |
 | [`docs/translating.md`](docs/translating.md) | How translations are laid out, the Weblate settings, and translating without Weblate |

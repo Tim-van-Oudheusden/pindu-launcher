@@ -61,6 +61,8 @@ body:
         - Flatpak from a GitHub release
         - RPM package
         - DEB package
+        - Pindu OS
+        - AUR or nixpkgs package
         - Built from source
         - Other
     validations:
