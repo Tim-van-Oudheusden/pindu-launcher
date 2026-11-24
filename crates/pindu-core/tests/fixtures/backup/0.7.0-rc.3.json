@@ -1,0 +1,287 @@
+{
+  "collections": [
+    {
+      "games": [
+        "heroic-gog:1400000001",
+        "manual:e61996a6a3eda481",
+        "steam:4000001"
+      ],
+      "name": "Couch Co-op"
+    },
+    {
+      "games": [
+        "lutris:fixture-caves"
+      ],
+      "name": "Weekend"
+    },
+    {
+      "games": [],
+      "name": "Empty Shelf"
+    },
+    {
+      "filter": {
+        "favourites": false,
+        "genre": "Puzzle",
+        "installed": false,
+        "native": true,
+        "never_played": true,
+        "not_installed": false,
+        "search": "fixture",
+        "view": "all",
+        "windows": false
+      },
+      "games": [],
+      "name": "Unplayed Puzzles"
+    },
+    {
+      "filter": {
+        "favourites": false,
+        "genre": null,
+        "installed": true,
+        "native": false,
+        "never_played": false,
+        "not_installed": false,
+        "search": "",
+        "view": "source:steam",
+        "windows": false
+      },
+      "games": [],
+      "name": "Installed on Steam"
+    },
+    {
+      "filter": {
+        "collection": "Couch Co-op",
+        "favourites": true,
+        "genre": null,
+        "installed": false,
+        "native": false,
+        "never_played": false,
+        "not_installed": false,
+        "search": "",
+        "view": "collection",
+        "windows": false
+      },
+      "games": [],
+      "name": "Couch Favourites"
+    }
+  ],
+  "exported_at": 1767225600,
+  "favourites": [
+    "heroic-gog:1400000001",
+    "manual:e61996a6a3eda481",
+    "steam:4000001"
+  ],
+  "format": "pindu-launcher-backup",
+  "groups": [
+    {
+      "automatic": false,
+      "games": [
+        "heroic-gog:1400000002",
+        "steam:4000001"
+      ],
+      "preferred": "heroic-gog:1400000002"
+    },
+    {
+      "automatic": true,
+      "games": [
+        "heroic-epic:fixturearena",
+        "legendary:fixturearena"
+      ],
+      "preferred": null
+    }
+  ],
+  "hidden": [
+    "faugus:fixture-demo"
+  ],
+  "manual_games": [
+    {
+      "added_at": 1766361600,
+      "id": "manual:3d4e731ae7623e9a",
+      "install_path": "/var/fixture/games/windows-port",
+      "last_played_at": null,
+      "launch": {
+        "arguments": [],
+        "environment": {
+          "DXVK_HUD": "fps"
+        },
+        "executable": "/var/fixture/games/windows-port/Port.exe",
+        "gamemode": true,
+        "mangohud": true,
+        "prefix_path": "/var/fixture/prefixes/3d4e731ae7623e9a",
+        "proton_version": "GE-Proton9-20",
+        "working_dir": "/var/fixture/games/windows-port",
+        "wrappers": [
+          "obs-gamecapture"
+        ]
+      },
+      "title": "Fixture Windows Port"
+    },
+    {
+      "added_at": 1765497600,
+      "id": "manual:e61996a6a3eda481",
+      "install_path": "/var/fixture/games/native-tool",
+      "last_played_at": 1767139200,
+      "launch": {
+        "arguments": [
+          "--fullscreen",
+          "--name",
+          "two words"
+        ],
+        "environment": {},
+        "executable": "/var/fixture/games/native-tool/bin/tool",
+        "gamemode": false,
+        "mangohud": false,
+        "prefix_path": null,
+        "proton_version": null,
+        "working_dir": "/var/fixture/games/native-tool/bin",
+        "wrappers": []
+      },
+      "title": "Fixture Native Tool"
+    }
+  ],
+  "metadata": [
+    {
+      "field": "controller-support",
+      "game": "heroic-gog:1400000002",
+      "origin": "user",
+      "updated_at": 1766620800,
+      "value": "full"
+    },
+    {
+      "field": "developer",
+      "game": "heroic-gog:1400000002",
+      "origin": "user",
+      "updated_at": 1766620800,
+      "value": "Fixture Studio"
+    },
+    {
+      "field": "genres",
+      "game": "heroic-gog:1400000002",
+      "origin": "user",
+      "updated_at": 1766620800,
+      "value": [
+        "Puzzle",
+        "Adventure"
+      ]
+    },
+    {
+      "field": "release-year",
+      "game": "heroic-gog:1400000002",
+      "origin": "user",
+      "updated_at": 1766620800,
+      "value": 2019
+    },
+    {
+      "field": "title",
+      "game": "heroic-gog:1400000002",
+      "origin": "user",
+      "updated_at": 1766620800,
+      "value": "Fixture Quest: Director's Cut"
+    },
+    {
+      "field": "description",
+      "game": "lutris:fixture-caves",
+      "origin": "provider",
+      "updated_at": 1766448000,
+      "value": "A fixture game about caves."
+    },
+    {
+      "field": "genres",
+      "game": "lutris:fixture-caves",
+      "origin": "provider",
+      "updated_at": 1766448000,
+      "value": [
+        "Adventure"
+      ]
+    },
+    {
+      "field": "release-year",
+      "game": "lutris:fixture-caves",
+      "origin": "provider",
+      "updated_at": 1766448000,
+      "value": 2008
+    },
+    {
+      "field": "controller-support",
+      "game": "steam:4000001",
+      "origin": "user",
+      "updated_at": 1766620800,
+      "value": "full"
+    },
+    {
+      "field": "deck-compatibility",
+      "game": "steam:4000001",
+      "origin": "provider",
+      "updated_at": 1766534400,
+      "value": {
+        "rating": "verified",
+        "tested_at": 1758585600
+      }
+    },
+    {
+      "field": "developer",
+      "game": "steam:4000001",
+      "origin": "user",
+      "updated_at": 1766620800,
+      "value": "Fixture Studio"
+    },
+    {
+      "field": "genres",
+      "game": "steam:4000001",
+      "origin": "user",
+      "updated_at": 1766620800,
+      "value": [
+        "Puzzle",
+        "Adventure"
+      ]
+    },
+    {
+      "field": "release-year",
+      "game": "steam:4000001",
+      "origin": "user",
+      "updated_at": 1766620800,
+      "value": 2019
+    },
+    {
+      "field": "title",
+      "game": "steam:4000001",
+      "origin": "user",
+      "updated_at": 1766620800,
+      "value": "Fixture Quest: Director's Cut"
+    }
+  ],
+  "not_the_same": [
+    [
+      "desktop:fixture-caves.desktop",
+      "lutris:fixture-caves"
+    ]
+  ],
+  "play_sessions": [
+    {
+      "ended_at": 1766968200,
+      "game": "lutris:fixture-caves",
+      "started_at": 1766966400
+    },
+    {
+      "ended_at": 1766887200,
+      "game": "manual:3d4e731ae7623e9a",
+      "started_at": 1766880000
+    },
+    {
+      "ended_at": 1767140100,
+      "game": "manual:e61996a6a3eda481",
+      "started_at": 1767139200
+    },
+    {
+      "ended_at": 1766799000,
+      "game": "steam:4000001",
+      "started_at": 1766793600
+    },
+    {
+      "ended_at": 1767055500,
+      "game": "steam:4000001",
+      "started_at": 1767052800
+    }
+  ],
+  "version": 2
+}

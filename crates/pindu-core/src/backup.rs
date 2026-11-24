@@ -1,27 +1,30 @@
 //! A JSON backup of what the user made here and exists nowhere else: collections,
-//! favourites, hidden games, games added by hand, the playtime tracked here and, from
+//! favourites, hidden games, games added by hand, the playtime tracked here; from
 //! format 2, game groups with their preferred copies, the pairs remembered as not the
 //! same game, the filter of each saved filter and the metadata values the user set or a
-//! provider fetched, each with its time.
+//! provider fetched, each with its time; and from format 3, how each game added by hand
+//! runs (its launch kind and platform), the games pinned to "Jump back in" and the
+//! launch settings set on launchers' games.
 //!
 //! Games are named by ID, so a backup restores into a library where the launchers have
 //! been synced again; a game the library does not have is skipped and counted, and so is
 //! a group left with fewer than two of its games. A saved filter's view of a collection
 //! names that collection, as its ID differs between libraries. A metadata value is
-//! restored only where its origin has no value for that field here. Format 1 backups
-//! still import.
+//! restored only where its origin has no value for that field here. Format 1 and 2
+//! backups still import.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Value, json};
 
 use crate::category;
-use crate::library::{Filters, View};
+use crate::library::{self, Filters, View};
 use crate::metadata::{self, FieldValue, MetadataValue};
 use crate::model::{
-    Game, GameId, LaunchConfig, LaunchKind, MetadataField, MetadataOrigin, Source, Timestamp,
+    Game, GameId, LaunchConfig, LaunchKind, MetadataField, MetadataOrigin, Platform, Source,
+    Timestamp,
 };
 use crate::saved_filters::{self, SavedFilter};
 use crate::search;
@@ -29,10 +32,11 @@ use crate::store::{Store, StoreError};
 
 /// What the `format` field of a backup says.
 const FORMAT: &str = "pindu-launcher-backup";
-/// The backup version this build writes and the newest it reads. Version 2 added
-/// `groups`, `not_the_same`, a collection's `filter` and `metadata`; version 1 backups
-/// have none of them and still import.
-const VERSION: u64 = 2;
+/// The backup version this build writes and the newest it reads. Version 3 added a game
+/// added by hand's `launch_kind` and `platform`, `pins` and `launch_settings`; version 2
+/// added `groups`, `not_the_same`, a collection's `filter` and `metadata`. Version 1 and
+/// 2 backups lack what came later and still import.
+const VERSION: u64 = 3;
 
 /// Why a backup could not be written or restored.
 #[derive(Debug)]
@@ -93,6 +97,10 @@ pub struct ImportSummary {
     /// Metadata values the user set or a provider fetched, for a field that origin had
     /// no value for here.
     pub metadata: usize,
+    /// Launchers' games whose launch settings here gained some from the backup.
+    pub launch_settings: usize,
+    /// Games newly pinned to "Jump back in", at the places free here.
+    pub pins: usize,
 }
 
 /// The library's backup as JSON text.
@@ -129,12 +137,17 @@ pub fn export(store: &Store, now: Timestamp) -> Result<String, BackupError> {
         collections.push(json!({ "name": collection.name, "games": members }));
     }
     let mut manual_games = Vec::new();
+    let mut launch_settings = Vec::new();
     let mut sessions = Vec::new();
     let mut metadata = Vec::new();
     for game in &games {
+        let launch = store.launch_config(&game.id)?;
         if game.id.source() == Source::Manual {
-            let launch = store.launch_config(&game.id)?;
             manual_games.push(manual_game_json(game, launch.as_ref()));
+        } else if let Some(launch) = launch.filter(has_launch_settings) {
+            let mut entry = launch_settings_json(&launch);
+            entry["game"] = game.id.as_str().into();
+            launch_settings.push(entry);
         }
         for session in store.play_sessions(&game.id)? {
             sessions.push(json!({
@@ -166,6 +179,12 @@ pub fn export(store: &Store, now: Timestamp) -> Result<String, BackupError> {
         .iter()
         .map(|(first, second)| json!([first.as_str(), second.as_str()]))
         .collect();
+    let mut pinned: Vec<&Game> = games
+        .iter()
+        .filter(|game| game.pin_order.is_some())
+        .collect();
+    pinned.sort_by_key(|game| game.pin_order);
+    let pins: Vec<&str> = pinned.iter().map(|game| game.id.as_str()).collect();
     let backup = json!({
         "format": FORMAT,
         "version": VERSION,
@@ -173,7 +192,9 @@ pub fn export(store: &Store, now: Timestamp) -> Result<String, BackupError> {
         "collections": collections,
         "favourites": ids(|game| game.favourite),
         "hidden": ids(|game| game.hidden),
+        "pins": pins,
         "manual_games": manual_games,
+        "launch_settings": launch_settings,
         "play_sessions": sessions,
         "groups": groups,
         "not_the_same": not_the_same,
@@ -191,8 +212,10 @@ pub fn last_backup(stored: Timestamp) -> Option<Timestamp> {
 /// Restores a backup into the library, in one transaction. It adds and never removes:
 /// favourites and hidden games stay as they are unless the backup marks them, existing
 /// collections gain members, sessions or games already here are not added twice, a
-/// group is made again only from games that are in no group here, and a metadata value
-/// is added only where its origin has none for that field, keeping the time it was set.
+/// group is made again only from games that are in no group here, a metadata value is
+/// added only where its origin has none for that field, keeping the time it was set, a
+/// pin goes to the first place free here, in the backup's order, and launch settings
+/// add to a launcher's game's only what it does not have here.
 pub fn import(store: &Store, text: &str) -> Result<ImportSummary, BackupError> {
     let backup: Value = serde_json::from_str(text).map_err(|_| BackupError::NotABackup)?;
     if backup["format"] != FORMAT {
@@ -236,6 +259,16 @@ pub fn import(store: &Store, text: &str) -> Result<ImportSummary, BackupError> {
                 game.hidden = true;
                 store.update_game(game)?;
                 summary.hidden += 1;
+            }
+        }
+        for id in list(&backup["pins"]).filter_map(|v| known(v, &mut missing)) {
+            let Some(place) = library::next_pin(games.values()) else {
+                continue;
+            };
+            if let Some(game) = games.get_mut(&id).filter(|game| game.pin_order.is_none()) {
+                game.pin_order = Some(place);
+                store.update_game(game)?;
+                summary.pins += 1;
             }
         }
         let mut collections: HashMap<String, i64> = store
@@ -389,6 +422,19 @@ pub fn import(store: &Store, text: &str) -> Result<ImportSummary, BackupError> {
             store.set_metadata(&game, origin, &metadata::resolve(&own), updated_at)?;
             summary.metadata += 1;
         }
+        for entry in list(&backup["launch_settings"]) {
+            let Some(game) = known(&entry["game"], &mut missing) else {
+                continue;
+            };
+            // A game without a command here has no launch settings to add to.
+            let Some(mut config) = store.launch_config(&game)? else {
+                continue;
+            };
+            if add_launch_settings(&mut config, launch_settings_from(entry)) {
+                store.set_launch_config(&game, &config)?;
+                summary.launch_settings += 1;
+            }
+        }
         summary.missing_games = missing.len();
         Ok(())
     })?;
@@ -489,32 +535,86 @@ fn saved_filter_from(value: &Value) -> Option<(BackupView<'_>, Filters, String)>
     Some((view, filters, search))
 }
 
+/// A game added by hand: what it is, how it runs and its launch config.
 fn manual_game_json(game: &Game, launch: Option<&LaunchConfig>) -> Value {
-    let path = |path: &Option<PathBuf>| path.as_ref().map(|p| p.to_string_lossy().into_owned());
     let launch = launch.map(|launch| {
-        json!({
-            "executable": launch.executable.to_string_lossy(),
-            "arguments": launch.arguments,
-            "working_dir": path(&launch.working_dir),
-            "environment": launch.environment,
-            "proton_version": launch.proton_version,
-            "prefix_path": path(&launch.prefix_path),
-            "mangohud": launch.mangohud,
-            "gamemode": launch.gamemode,
-            "wrappers": launch.wrappers,
-        })
+        let mut value = launch_settings_json(launch);
+        value["executable"] = launch.executable.to_string_lossy().into();
+        value["arguments"] = json!(launch.arguments);
+        value["working_dir"] = path_json(launch.working_dir.as_deref());
+        value
     });
     json!({
         "id": game.id.as_str(),
         "title": game.title,
-        "install_path": path(&game.install_path),
+        "launch_kind": game.launch_kind.as_str(),
+        "platform": game.platform.map(|platform| platform.as_str()),
+        "install_path": path_json(game.install_path.as_deref()),
         "added_at": game.added_at,
         "last_played_at": game.last_played_at,
         "launch": launch,
     })
 }
 
-/// A game added by hand and how it starts, if the backup says.
+/// Whether a launch config has settings on top of its command. Its environment includes
+/// what the source set, which a backup carries too: restoring it adds nothing a sync
+/// has not added already.
+fn has_launch_settings(launch: &LaunchConfig) -> bool {
+    let settings = LaunchConfig {
+        executable: PathBuf::new(),
+        arguments: Vec::new(),
+        working_dir: None,
+        ..launch.clone()
+    };
+    settings != LaunchConfig::default()
+}
+
+/// Adds a backup's launch settings to a game's here, which win: its environment
+/// variables and wrappers this one lacks, its Proton build and prefix where this has
+/// none, and MangoHud and GameMode where it has them on. Whether anything was added.
+fn add_launch_settings(config: &mut LaunchConfig, theirs: LaunchConfig) -> bool {
+    let before = config.clone();
+    for (key, value) in theirs.environment {
+        config.environment.entry(key).or_insert(value);
+    }
+    if config.proton_version.is_none() {
+        config.proton_version = theirs.proton_version;
+    }
+    if config.prefix_path.is_none() {
+        config.prefix_path = theirs.prefix_path;
+    }
+    config.mangohud |= theirs.mangohud;
+    config.gamemode |= theirs.gamemode;
+    for wrapper in theirs.wrappers {
+        if !config.wrappers.contains(&wrapper) {
+            config.wrappers.push(wrapper);
+        }
+    }
+    *config != before
+}
+
+/// The launch settings of a launch config, on top of its command (see
+/// [`launch_settings_from`]).
+fn launch_settings_json(launch: &LaunchConfig) -> Value {
+    json!({
+        "environment": launch.environment,
+        "proton_version": launch.proton_version,
+        "prefix_path": path_json(launch.prefix_path.as_deref()),
+        "mangohud": launch.mangohud,
+        "gamemode": launch.gamemode,
+        "wrappers": launch.wrappers,
+    })
+}
+
+/// A path as a backup holds it: text, or null for none.
+fn path_json(path: Option<&Path>) -> Value {
+    path.map(|path| path.to_string_lossy()).into()
+}
+
+/// A game added by hand and how it starts, if the backup says. A backup from before
+/// format 3 does not say how the game runs: a launch config with a prefix is a Windows
+/// game's, run through Proton, and any other game runs on the host, as these formats
+/// cannot tell it from one run in the Steam Linux Runtime.
 fn manual_game_from(entry: &Value) -> Option<(Game, Option<LaunchConfig>)> {
     let id: GameId = entry["id"].as_str()?.parse().ok()?;
     if id.source() != Source::Manual {
@@ -534,14 +634,37 @@ fn manual_game_from(entry: &Value) -> Option<(Game, Option<LaunchConfig>)> {
     game.installed = true;
     game.last_played_at = entry["last_played_at"].as_i64();
     let launch = &entry["launch"];
-    if launch.is_null() {
-        return Some((game, None));
-    }
-    let strings = |value: &Value| -> Vec<String> {
-        list(value)
-            .filter_map(|v| v.as_str().map(str::to_owned))
-            .collect()
+    let config = if launch.is_null() {
+        None
+    } else {
+        Some(LaunchConfig {
+            executable: path(&launch["executable"])?,
+            arguments: strings(&launch["arguments"]),
+            working_dir: path(&launch["working_dir"]),
+            ..launch_settings_from(launch)
+        })
     };
+    let recorded = entry["launch_kind"]
+        .as_str()
+        .and_then(|text| text.parse().ok());
+    (game.launch_kind, game.platform) = match (recorded, config.as_ref()) {
+        (Some(kind), _) => (
+            kind,
+            entry["platform"]
+                .as_str()
+                .and_then(|text| text.parse().ok()),
+        ),
+        (None, Some(config)) if config.prefix_path.is_some() => {
+            (LaunchKind::Proton, Some(Platform::Windows))
+        }
+        (None, _) => (LaunchKind::HostCommand, Some(Platform::Linux)),
+    };
+    Some((game, config))
+}
+
+/// The launch settings a backup holds on top of a game's command: its environment,
+/// Proton build, prefix, MangoHud, GameMode and wrappers; the command stays empty.
+fn launch_settings_from(launch: &Value) -> LaunchConfig {
     let environment: BTreeMap<String, String> = launch["environment"]
         .as_object()
         .map(Map::iter)
@@ -549,18 +672,22 @@ fn manual_game_from(entry: &Value) -> Option<(Game, Option<LaunchConfig>)> {
         .flatten()
         .filter_map(|(key, value)| Some((key.clone(), value.as_str()?.to_owned())))
         .collect();
-    let config = LaunchConfig {
-        executable: path(&launch["executable"])?,
-        arguments: strings(&launch["arguments"]),
-        working_dir: path(&launch["working_dir"]),
+    LaunchConfig {
         environment,
         proton_version: launch["proton_version"].as_str().map(str::to_owned),
         prefix_path: path(&launch["prefix_path"]),
         mangohud: launch["mangohud"].as_bool().unwrap_or(false),
         gamemode: launch["gamemode"].as_bool().unwrap_or(false),
         wrappers: strings(&launch["wrappers"]),
-    };
-    Some((game, Some(config)))
+        ..LaunchConfig::default()
+    }
+}
+
+/// The strings in a JSON array; anything else in it is left out.
+fn strings(value: &Value) -> Vec<String> {
+    list(value)
+        .filter_map(|v| v.as_str().map(str::to_owned))
+        .collect()
 }
 
 fn path(value: &Value) -> Option<PathBuf> {
@@ -819,9 +946,9 @@ mod tests {
         assert!(matches!(
             import(
                 &store,
-                r#"{"format": "pindu-launcher-backup", "version": 3}"#
+                r#"{"format": "pindu-launcher-backup", "version": 4}"#
             ),
-            Err(BackupError::TooNew { version: 3 })
+            Err(BackupError::TooNew { version: 4 })
         ));
         assert_eq!(
             import(
@@ -1009,14 +1136,160 @@ mod tests {
     }
 
     #[test]
-    fn a_backup_is_written_in_format_2() {
+    fn a_backup_is_written_in_format_3() {
         let (_dir, store) = synced_store();
 
         let backup: Value = serde_json::from_str(&export(&store, 300).unwrap()).unwrap();
 
-        assert_eq!(backup["version"], 2);
+        assert_eq!(backup["version"], 3);
         assert_eq!(backup["groups"], json!([]));
         assert_eq!(backup["not_the_same"], json!([]));
+        assert_eq!(backup["pins"], json!([]));
+        assert_eq!(backup["launch_settings"], json!([]));
+    }
+
+    #[test]
+    fn how_each_game_added_by_hand_runs_survives_a_backup() {
+        let (_dir, store) = synced_store();
+        let (mut runtime, config) = manual_game();
+        runtime.launch_kind = LaunchKind::RuntimeNative;
+        runtime.platform = Some(Platform::Linux);
+        store.insert_game(&runtime).unwrap();
+        store.set_launch_config(&runtime.id, &config).unwrap();
+        let mut host = Game::new(
+            GameId::new(Source::Manual, "host-1"),
+            "Host Game",
+            LaunchKind::HostCommand,
+            1_700_000_200,
+        );
+        host.platform = Some(Platform::Linux);
+        store.insert_game(&host).unwrap();
+        let mut windows = Game::new(
+            GameId::new(Source::Manual, "windows-1"),
+            "Windows Game",
+            LaunchKind::Proton,
+            1_700_000_300,
+        );
+        windows.platform = Some(Platform::Windows);
+        store.insert_game(&windows).unwrap();
+        let backup = export(&store, 300).unwrap();
+        let (_fresh_dir, fresh) = synced_store();
+
+        import(&fresh, &backup).unwrap();
+
+        let runs = |id: &GameId| {
+            let game = fresh.game(id).unwrap().unwrap();
+            (game.launch_kind, game.platform)
+        };
+        assert_eq!(
+            runs(&runtime.id),
+            (LaunchKind::RuntimeNative, Some(Platform::Linux))
+        );
+        assert_eq!(
+            runs(&host.id),
+            (LaunchKind::HostCommand, Some(Platform::Linux))
+        );
+        assert_eq!(
+            runs(&windows.id),
+            (LaunchKind::Proton, Some(Platform::Windows))
+        );
+    }
+
+    #[test]
+    fn pins_are_restored_in_their_order_to_the_places_free_here() {
+        let (_dir, store) = synced_store();
+        let pin = |store: &Store, native_id: &str, place: u8| {
+            let mut game = store
+                .game(&GameId::new(Source::Steam, native_id))
+                .unwrap()
+                .unwrap();
+            game.pin_order = Some(place);
+            store.update_game(&game).unwrap();
+        };
+        pin(&store, "620", 3);
+        pin(&store, "400", 1);
+        pin(&store, "570", 2);
+        let backup = export(&store, 300).unwrap();
+        let (_fresh_dir, fresh) = synced_store();
+        pin(&fresh, "620", 1);
+
+        let first = import(&fresh, &backup).unwrap();
+        let second = import(&fresh, &backup).unwrap();
+
+        assert_eq!((first.pins, second.pins), (2, 0));
+        let places: Vec<_> = ["400", "570", "620"]
+            .iter()
+            .map(|native_id| {
+                fresh
+                    .game(&GameId::new(Source::Steam, native_id))
+                    .unwrap()
+                    .unwrap()
+                    .pin_order
+            })
+            .collect();
+        assert_eq!(places, [Some(2), Some(3), Some(1)]);
+    }
+
+    #[test]
+    fn launch_settings_set_on_launchers_games_are_added_to_theirs_here() {
+        let lutris = GameId::new(Source::Lutris, "portal");
+        let desktop = GameId::new(Source::Desktop, "portal-2.desktop");
+        let only_a_command = LaunchConfig {
+            executable: PathBuf::from("/usr/bin/portal2"),
+            ..LaunchConfig::default()
+        };
+        let synced = |store: &Store, id: &GameId| {
+            let command = LaunchConfig {
+                executable: PathBuf::from("/usr/bin/lutris"),
+                arguments: vec!["lutris:rungame/portal".into()],
+                environment: BTreeMap::from([("FROM_SOURCE".into(), "1".into())]),
+                ..LaunchConfig::default()
+            };
+            store.set_launch_config(id, &command).unwrap();
+            command
+        };
+        let (_dir, store) = store_with_copies();
+        let mut mine = synced(&store, &lutris);
+        mine.environment.insert("MINE".into(), "yes".into());
+        mine.proton_version = Some("GE-Proton10-34".into());
+        mine.prefix_path = Some(PathBuf::from("/prefixes/portal"));
+        mine.mangohud = true;
+        mine.gamemode = true;
+        mine.wrappers = vec!["obs-gamecapture".into(), "strace".into()];
+        store.set_launch_config(&lutris, &mine).unwrap();
+        store.set_launch_config(&desktop, &only_a_command).unwrap();
+        let backup = export(&store, 300).unwrap();
+        let (_fresh_dir, fresh) = store_with_copies();
+        let mut here = synced(&fresh, &lutris);
+        here.environment.insert("MINE".into(), "kept".into());
+        here.proton_version = Some("GE-Proton9-1".into());
+        here.wrappers = vec!["strace".into()];
+        fresh.set_launch_config(&lutris, &here).unwrap();
+
+        let first = import(&fresh, &backup).unwrap();
+        let second = import(&fresh, &backup).unwrap();
+
+        assert_eq!((first.launch_settings, second.launch_settings), (1, 0));
+        assert_eq!(
+            fresh.launch_config(&lutris).unwrap(),
+            Some(LaunchConfig {
+                environment: BTreeMap::from([
+                    ("FROM_SOURCE".into(), "1".into()),
+                    ("MINE".into(), "kept".into()),
+                ]),
+                proton_version: Some("GE-Proton9-1".into()),
+                prefix_path: Some(PathBuf::from("/prefixes/portal")),
+                mangohud: true,
+                gamemode: true,
+                wrappers: vec!["strace".into(), "obs-gamecapture".into()],
+                ..here
+            })
+        );
+        let written: Value = serde_json::from_str(&backup).unwrap();
+        let named: Vec<_> = list(&written["launch_settings"])
+            .map(|entry| entry["game"].clone())
+            .collect();
+        assert_eq!(named, [json!("lutris:portal")]);
     }
 
     fn saved(view: View, filters: Filters, search: &str) -> SavedFilter {

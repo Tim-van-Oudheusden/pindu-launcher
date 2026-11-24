@@ -10,7 +10,7 @@ use pindu_core::library::{Filters, View};
 use pindu_core::metadata::{FieldValue, MetadataValue};
 use pindu_core::model::{
     ControllerSupport, DeckCompatibility, DeckRating, Game, GameId, LaunchConfig, LaunchKind,
-    MetadataOrigin, Source, Timestamp,
+    MetadataOrigin, Platform, Source, Timestamp,
 };
 use pindu_core::saved_filters::SavedFilter;
 use pindu_core::store::Store;
@@ -123,13 +123,17 @@ fn assert_format_1_state(store: &Store) {
             restored.installed,
             restored.install_path,
             restored.added_at,
-            restored.last_played_at
+            restored.last_played_at,
+            restored.launch_kind,
+            restored.platform,
         ),
         (
             true,
             Some(PathBuf::from("/var/fixture/games/native-tool")),
             NOW - 20 * DAY,
-            Some(NOW - DAY)
+            Some(NOW - DAY),
+            LaunchKind::HostCommand,
+            Some(Platform::Linux),
         )
     );
     assert_eq!(
@@ -146,12 +150,16 @@ fn assert_format_1_state(store: &Store) {
         (
             restored.install_path,
             restored.added_at,
-            restored.last_played_at
+            restored.last_played_at,
+            restored.launch_kind,
+            restored.platform,
         ),
         (
             Some(PathBuf::from("/var/fixture/games/windows-port")),
             NOW - 10 * DAY,
-            None
+            None,
+            LaunchKind::Proton,
+            Some(Platform::Windows),
         )
     );
     assert_eq!(
@@ -242,8 +250,20 @@ fn metadata(
 fn a_backup_0_6_0_wrote_in_format_2_restores_everything_it_holds() {
     let (_dir, store, summary) = import_fixture("0.6.0");
 
+    assert_format_2_import(&store, &summary);
+}
+
+#[test]
+fn a_backup_0_7_0_rc_3_the_last_release_writing_format_2_wrote_restores_everything_it_holds() {
+    let (_dir, store, summary) = import_fixture("0.7.0-rc.3");
+
+    assert_format_2_import(&store, &summary);
+}
+
+/// What both format 2 generators made, and the summary of its import.
+fn assert_format_2_import(store: &Store, summary: &ImportSummary) {
     assert_eq!(
-        summary,
+        *summary,
         ImportSummary {
             manual_games: 2,
             favourites: 3,
@@ -256,7 +276,7 @@ fn a_backup_0_6_0_wrote_in_format_2_restores_everything_it_holds() {
             ..ImportSummary::default()
         }
     );
-    assert_format_1_state(&store);
+    assert_format_1_state(store);
 
     let quest = id("steam:4000001");
     let quest_gog = id("heroic-gog:1400000002");
@@ -366,10 +386,10 @@ fn a_backup_0_6_0_wrote_in_format_2_restores_everything_it_holds() {
         })],
     ));
     expected.sort_by_key(|value| (value.origin.as_str(), value.value.field().as_str()));
-    assert_eq!(carried_metadata(&store, &quest), expected);
-    assert_eq!(carried_metadata(&store, &quest_gog), edited());
+    assert_eq!(carried_metadata(store, &quest), expected);
+    assert_eq!(carried_metadata(store, &quest_gog), edited());
     assert_eq!(
-        carried_metadata(&store, &id("lutris:fixture-caves")),
+        carried_metadata(store, &id("lutris:fixture-caves")),
         metadata(
             MetadataOrigin::Provider,
             NOW - 9 * DAY,

@@ -1282,7 +1282,9 @@ fn import_message(summary: &ImportSummary) -> String {
         + summary.sessions
         + summary.groups
         + summary.splits
-        + summary.metadata;
+        + summary.metadata
+        + summary.launch_settings
+        + summary.pins;
     let mut message = if restored == 0 {
         gettext("Nothing new to restore")
     } else {
