@@ -989,6 +989,7 @@ own with no network that sees only the Bottles folders.
 | [`docs/save-snapshots.md`](docs/save-snapshots.md) | Save snapshots of Windows games in managed prefixes and of save folders added by hand, and restoring them |
 | [`docs/accessibility-polish.md`](docs/accessibility-polish.md) | Accessibility polish: text sizes, held buttons, high contrast, screen reader, navigation settings |
 | [`docs/emulation.md`](docs/emulation.md) | Emulation: what a first version would be and cost, and a recommendation; the decision is the maintainer's |
+| [`docs/get-games.md`](docs/get-games.md) | Get Games: the plan for a catalogue of Flathub's games inside the launcher, and its work packages (#884 to #889); nothing of it has shipped |
 | [`docs/external-importers.md`](docs/external-importers.md) | External importers: a versioned JSON protocol for sources kept outside the core, adopted on 2026-11-23, and how a helper is installed from Preferences |
 | [`docs/source-claims.md`](docs/source-claims.md) | What the README's Game sources section claims for each source, and the test or check that covers each claim |
 | [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
