@@ -10,8 +10,22 @@ use std::path::{Path, PathBuf};
 
 use yaml_rust2::{Yaml, YamlLoader};
 
-use super::{ImportError, ImportedGame, Snapshot};
+use super::external::protocol::Probe;
+use super::{ImportError, ImportedGame, Snapshot, watch};
 use crate::model::{ArtLayout, LaunchKind, Platform, Source};
+
+/// The Bottles folder among `candidates`, for the protocol's probe: the first that holds
+/// `library.yml`, as [`super::location::Location`] resolves it, with the files whose
+/// change means a resync ([`watch::key_paths`]).
+pub fn probe(candidates: &[PathBuf]) -> Option<Probe> {
+    let root = candidates
+        .iter()
+        .find(|candidate| candidate.join("library.yml").exists())?;
+    Some(Probe {
+        root: root.clone(),
+        watch: watch::key_paths(Source::Bottles, root),
+    })
+}
 
 /// Imports the Bottles folder at `root` (a resolved Bottles location).
 pub fn import(root: &Path) -> Result<Snapshot, ImportError> {
@@ -90,5 +104,33 @@ fn text(value: &Yaml) -> Option<String> {
         Yaml::String(text) => Some(text.clone()),
         Yaml::Integer(number) => Some(number.to_string()),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_probe_finds_the_first_candidate_with_a_library_and_watches_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let candidates: Vec<PathBuf> = ["native", "flatpak", "other"]
+            .into_iter()
+            .map(|name| dir.path().join(name))
+            .collect();
+        std::fs::create_dir(&candidates[0]).unwrap();
+        for candidate in &candidates[1..] {
+            std::fs::create_dir(candidate).unwrap();
+            std::fs::write(candidate.join("library.yml"), "{}\n").unwrap();
+        }
+
+        assert_eq!(
+            probe(&candidates),
+            Some(Probe {
+                root: candidates[1].clone(),
+                watch: vec![candidates[1].join("library.yml")],
+            })
+        );
+        assert_eq!(probe(&candidates[..1]), None);
     }
 }
