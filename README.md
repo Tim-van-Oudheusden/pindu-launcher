@@ -558,9 +558,38 @@ with a controller alone.
   where each store it has not found yet keeps its library, so a store's first sign-in brings its games in without
   Refresh Library. In fullscreen mode, **Open Steam** (or Heroic, or Lutris) comes first once the store is installed,
   and so does its Installed notification: they close Quick Access and open the store, so its sign-in happens with a
-  controller. Steam opens in Big Picture, as Home's tile does. Heroic and Lutris open their own window through their
-  Flatpak or the host's package, whichever is installed; in a `gamescope --steam` session it takes the app's place, as
-  a game handed to its store does, until its last window closes.
+  controller. Steam opens in Big Picture, as Home's tile does; on its first start [Setting Up
+  Steam](#setting-up-steam) shows over Add a Store instead, and Quick Access closes once Steam's sign-in is there.
+  Heroic and Lutris open their own window through their Flatpak or the host's package, whichever is installed; in a
+  `gamescope --steam` session it takes the app's place, as a game handed to its store does, until its last window
+  closes.
+- Add a Store does not start Steam by itself once Steam is installed: Steam's set-up downloads several hundred MB and
+  starts its client, so it waits until you choose Open or Sign In.
+
+### Setting Up Steam
+
+A Steam that has never run downloads its own client update, unpacks and installs it, and only then shows its sign-in,
+which takes minutes. When Home's Big Picture tile, the Get Started checklist's Sign In or Add a Store's Open starts
+such a Steam (one whose library folder the app has not found), the app shows **Setting Up Steam** over the window:
+what Steam is doing (starting, looking for its update, downloading it with how much of it is done, unpacking,
+installing, opening the sign-in), read every second from the lines Steam writes to `logs/bootstrap_log.txt` in its
+folder (`~/.local/share/Steam`, or the Steam Flatpak's `~/.var/app/com.valvesoftware.Steam/.local/share/Steam` or
+`…/data/Steam`). A Steam that has run before opens as it always did, without the screen.
+
+- **Cancel** (or B, or Escape) returns to where you were: Home, the checklist or Add a Store. Steam goes on setting
+  itself up in the background, and the next Big Picture or Sign In finds it further along.
+- The screen never runs out while Steam's log moves: it says **Steam Is Not Responding** only after 5 minutes without
+  a new line, or 10 minutes before the first. A failed download says so, **No Internet Connection** when Steam reached
+  none of its servers. Both offer **Try Again**, which starts Steam again with the wait from the start.
+- In a `gamescope --steam` session the screen stays until Steam's sign-in window takes the app's place; Steam's own
+  small update windows stay behind it.
+- Anywhere else (a plain gamescope, as Pindu OS runs today, or a desktop) the app cannot see Steam's windows, so the
+  screen goes once Steam's log says its update is installed and its client starts (or that it was up to date), and
+  Steam's windows show as gamescope or the desktop places them, its update window over the screen included.
+- The native packages follow the log as above. The Flatpak does not show a never-run Steam's progress: its sandbox
+  sees a Steam folder only if it was there when the app started, which a Steam that never ran has not made yet, so
+  the screen shows Starting Steam… without progress until the sign-in or the 10 minutes. This is by design: the
+  Flatpak gets no extra permission or host command for it.
 
 ### Proton
 
@@ -721,6 +750,9 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   started is running, the app is back in front with the controller at once. A Steam window that opens in the next 10
   seconds, such as Big Picture's after an update window on a cold start, takes its place again. Until Steam's first
   window shows, the app keeps the controller and the tile says Opening…. Choosing the tile again gives up, and so does
+  a minute with no window. On Steam's first start the [Setting Up Steam](#setting-up-steam) screen waits instead, with
+  no time-out of its own, and keeps Steam's small update windows behind it: only Steam's web helper window, its
+  sign-in, takes the app's place.
   a minute with no window, or 10 minutes on Steam's first start, which downloads the client's update first.
 - Under gamescope Steam runs as its console interface: its menu has Switch to Desktop instead of Exit Big Picture, and
   its window closes only when Steam quits. Two ways lead back to the app while Steam keeps running, so a download
