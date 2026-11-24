@@ -203,6 +203,8 @@ launcher from `:testing` to `:stable` ([pindu-os#30](https://github.com/Tim-van-
 **The machine** runs Pindu OS with the build under test installed, because the system panel's Network, Bluetooth,
 Power and System Update sections only show there (see [System panel](system-panel.md)). It needs a Bluetooth adapter,
 Wi-Fi, a Bluetooth controller, and a Steam library with one native game and one Windows game set to run through Proton.
+[Hardware](hardware.md) lists the machines in the published set, the desktop window's checks that run beside this
+list, and the matrix of hardware reports from other machines.
 
 | Check | Passes when |
 | --- | --- |
@@ -213,6 +215,7 @@ Wi-Fi, a Bluetooth controller, and a Steam library with one native game and one 
 | Steam game | A native Steam game starts from the launcher, and its playtime counts once it quits |
 | Proton game | A Windows game through Proton starts from the launcher, and its playtime counts once it quits |
 | System Update | **Quick Access → System Update** shows the installed version, and the update state and actions it offers work |
+| Leaving Steam Big Picture | In Steam mode, with Big Picture opened from Home's tile and a download running: the notice shows Guide + Y and "Back to Pindu" over Big Picture for a few seconds; Guide + Y brings the launcher back with the controller, and so does Steam's Switch to Desktop; the download goes on, and the tile shows Steam's window again at once. With a Steam game started from Big Picture, leaving shows its Playing Now card, whose Return brings it back |
 | Steam's first start | On a user account that has never run Steam, Home's **Big Picture** shows **Setting Up Steam** with the download moving until Steam's sign-in window is there, Steam's own update windows do not cover it in a `gamescope --steam` session, and **Cancel** returns to Home |
 
 **Record it on the "Release X.Y.Z" issue**, which the [Release issue form](../.github/ISSUE_TEMPLATE/release.yml)

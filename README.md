@@ -167,6 +167,9 @@ you install it again. A folder copied into the importers folder by hand works th
 
 ## Installing
 
+Pick one of the ways below. The [support policy](docs/support-policy.md) says, for each of them and for Pindu OS, which
+versions get fixes, how updates arrive and until when each runtime and distribution release is supported.
+
 ### Flatpak bundle from a release
 
 Each [release](https://github.com/Tim-van-Oudheusden/pindu-launcher/releases/latest) has a
@@ -743,6 +746,34 @@ gamescope -f --steam -- flatpak run --nosocket=wayland io.github.tim_van_oudheus
   a minute with no window. On Steam's first start the [Setting Up Steam](#setting-up-steam) screen waits instead, with
   no time-out of its own, and keeps Steam's small update windows behind it: only Steam's web helper window, its
   sign-in, takes the app's place.
+  a minute with no window, or 10 minutes on Steam's first start, which downloads the client's update first.
+- Under gamescope Steam runs as its console interface: its menu has Switch to Desktop instead of Exit Big Picture, and
+  its window closes only when Steam quits. Two ways lead back to the app while Steam keeps running, so a download
+  started in Big Picture goes on and the tile shows Steam's window again at once:
+  - **Guide + Y**: hold Guide and press the top face button (Y, Triangle on PlayStation, X on Nintendo), with the
+    controller alone. The app reads it while Steam has the controller. Steam leaves this chord alone: a press of
+    Guide opens Steam's menu, holding it shows Steam's list of chords, and Steam's chords take A, B, X, the shoulders,
+    the triggers, the sticks and the D-pad's left, right and down. Steam still sees the Y. When Big Picture's window
+    first shows, the app's overlay window draws the chord's glyphs and "Back to Pindu" over it for 8 seconds, leaving
+    the input to Steam.
+  - The application action **`leave-big-picture`**, with no parameter, on the session bus, for a distribution to put
+    behind Steam's Switch to Desktop (`steamos-session-select`):
+
+    ```sh
+    gdbus call --session --timeout 5 \
+      --dest io.github.tim_van_oudheusden.pindu-launcher \
+      --object-path /io/github/tim_van_oudheusden/pindu_launcher \
+      --method org.freedesktop.Application.ActivateAction leave-big-picture '[]' '{}'
+    ```
+
+    Outside a Big Picture session the call succeeds and changes nothing, so a script can call it whenever the app owns
+    the name (check with `NameHasOwner` first: calling a name nobody owns starts a second app). A build with
+    `-Dprofile=development` answers as `io.github.tim_van_oudheusden.pindu-launcher-devel` at
+    `/io/github/tim_van_oudheusden/pindu_launcher_devel`.
+  - A Steam game that Steam started and that still runs when you leave keeps running behind the app, as a game handed
+    to its store does: it has a Playing Now card whose Return brings it back to the front and whose Stop closes it, and
+    the app stays in front when it ends. A game Steam started that is no Steam game, such as a shortcut added to
+    Steam, stays Steam's: open Big Picture again to return to it.
 - While a Steam store launch waits for the game's window, the Steam client's windows are pinned in the app's place,
   newest first, so you can answer what Steam asks. Big Picture shows sign-in, install, launch option and cloud conflict
   prompts inside its window. The launch does not time out while one of these windows is open; once the last one
@@ -921,6 +952,11 @@ Everything that can be decided without GTK lives in `crates/pindu-core` and is t
 shells never read files or spawn processes. They observe the models and send the user's intents back to the services,
 so fullscreen mode is a second presentation of the same library.
 
+Bottles is read by `pindu-import-bottles`, the first importer that runs as a separate program over the
+[external importer protocol](docs/external-importers.md). Every package installs it in
+`<libexecdir>/pindu-launcher/importers/bottles/` with its `importer.json`, and in the Flatpak it runs in a sandbox of its
+own with no network that sees only the Bottles folders.
+
 ## Documentation
 
 | Document | Covers |
@@ -940,6 +976,8 @@ so fullscreen mode is a second presentation of the same library.
 | [`docs/external-importers.md`](docs/external-importers.md) | External importers: a versioned JSON protocol for sources kept outside the core, adopted on 2026-11-23, and how a helper is installed from Preferences |
 | [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
 | [`docs/releasing.md`](docs/releasing.md) | How to cut a release: versions, notes, the tag and the Release workflow |
+| [`docs/support-policy.md`](docs/support-policy.md) | The support policy: which versions get fixes, how each install type updates, and until when |
+| [`docs/hardware.md`](docs/hardware.md) | The hardware 1.0 is checked on, the flows checked on each, and the matrix of hardware reports |
 | [`docs/ai-ops-runbook.md`](docs/ai-ops-runbook.md) | Watching, pausing and reverting agent work; CI and Release failures; the `main` ruleset |
 | [`docs/translating.md`](docs/translating.md) | How translations are laid out, the Weblate settings, and translating without Weblate |
 | [`docs/agent-tasks/README.md`](docs/agent-tasks/README.md) | How each change traces to its issue: branch, commit, pull request and merge |
@@ -989,6 +1027,13 @@ also records how each of a game's last five launches ended ([Launch outcomes](do
 one failed, the game's page says why and lists the next steps that exist for the game: **How to Enable**, **How to
 Install umu-launcher**, **Choose Another Proton Build**, **Start Safely** and **Open Log**, which opens that launch's
 log. In fullscreen mode, the game's options list them.
+
+### Reporting your hardware
+
+Tried Pindu launcher on a handheld, a television PC or any other machine? File a
+[Hardware report](https://github.com/Tim-van-Oudheusden/pindu-launcher/issues/new?template=hardware-report.yml) with
+the machine, its GPU, the OS, the version and which checks passed. Each report becomes a row of the public matrix in
+[`docs/hardware.md`](docs/hardware.md), which also lists the machines every release is checked on.
 
 ## Acknowledgments
 

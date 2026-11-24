@@ -2072,6 +2072,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "pindu-import-bottles"
+version = "0.7.0-rc.3"
+dependencies = [
+ "pindu-core",
+ "tempfile",
+]
+
+[[package]]
 name = "pindu-ui"
 version = "0.7.0-rc.3"
 dependencies = [

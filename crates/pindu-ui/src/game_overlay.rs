@@ -24,7 +24,7 @@ use std::cell::{Cell, RefCell};
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gio, glib};
-use pindu_core::gamepad::{Direction, Intent, Layout, WindowFocus};
+use pindu_core::gamepad::{DeviceKind, Direction, Intent, Layout, WindowFocus};
 use pindu_core::gamescope::Xid;
 use pindu_core::gamescope::overlay::OverGame;
 use pindu_core::hints::{self, Context, Focus, Hint, Launching};
@@ -58,6 +58,8 @@ mod imp {
         pub drawer_hint_bar: TemplateChild<gtk::Box>,
         #[template_child]
         pub shade: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub notice: TemplateChild<gtk::Box>,
         #[template_child]
         pub quick_access_pane: TemplateChild<gtk::Box>,
         #[template_child]
@@ -147,6 +149,11 @@ impl PinduGameOverlay {
             #[weak]
             overlay,
             move |shown| overlay.set_shown(shown)
+        ));
+        gamescope.connect_big_picture_changed(glib::clone!(
+            #[weak]
+            overlay,
+            move || overlay.update_notice()
         ));
         let gamepad = application.gamepad_service();
         gamepad.connect_intent(glib::clone!(
@@ -321,6 +328,24 @@ impl PinduGameOverlay {
             window.close_panel();
             window.return_to_game(id);
         }
+    }
+
+    /// Shows the notice of how to leave Steam Big Picture while the gamescope service says
+    /// so, with the glyphs of the controller last used.
+    fn update_notice(&self) {
+        let imp = self.imp();
+        let Some(application) = imp.application.upgrade() else {
+            return;
+        };
+        let shown = application.gamescope_service().big_picture_notice();
+        if shown {
+            let layout = application
+                .gamepad_service()
+                .active_layout()
+                .unwrap_or_else(|| Layout::detected(DeviceKind::Generic));
+            fill_hint_bar(&imp.notice, &hints::big_picture_hints(), layout);
+        }
+        imp.notice.set_visible(shown);
     }
 
     /// The gamescope service opened a panel over the game, or closed it: the drawer opens

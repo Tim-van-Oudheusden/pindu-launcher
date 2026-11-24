@@ -79,19 +79,32 @@ pub fn parse_probe(
 }
 
 /// Checks an import's `answer` from the helper of `manifest` into a snapshot of
-/// [`Source::External`] games. `host_launches` says whether the helper runs where it may
-/// describe a command on the host.
+/// [`Source::External`] games, whose native IDs start with the helper's ID.
+/// `host_launches` says whether the helper runs where it may describe a command on the
+/// host.
 pub fn parse_import(
     answer: &[u8],
     manifest: &Manifest,
     host_launches: bool,
+) -> Result<Snapshot, String> {
+    parse_import_as(answer, manifest, host_launches, Source::External)
+}
+
+/// [`parse_import`] into a snapshot of `source`: [`Source::External`] games with the
+/// helper's ID in front of their native IDs, or, for a bundled helper that serves a
+/// built-in source ([`super::BUILT_IN`]), that source's games with their own native IDs.
+pub fn parse_import_as(
+    answer: &[u8],
+    manifest: &Manifest,
+    host_launches: bool,
+    source: Source,
 ) -> Result<Snapshot, String> {
     let object = answer_object(answer, manifest)?;
     let games = object
         .get("games")
         .and_then(Value::as_array)
         .ok_or("its answer has no list of games")?;
-    let mut snapshot = Snapshot::new(Source::External);
+    let mut snapshot = Snapshot::new(source);
     snapshot.errors.extend(
         object
             .get("problems")
@@ -118,7 +131,9 @@ pub fn parse_import(
                     ));
                     continue;
                 }
-                game.native_id = format!("{}/{}", manifest.id, game.native_id);
+                if source == Source::External {
+                    game.native_id = format!("{}/{}", manifest.id, game.native_id);
+                }
                 snapshot.games.push(game);
             }
             Err(problem) => snapshot.errors.push(format!("{label}: {problem}")),
@@ -277,6 +292,9 @@ fn launch(
 ) -> Result<(LaunchKind, Option<String>, Option<LaunchConfig>), String> {
     let launch = Entry(launch);
     match launch.0.get("kind").and_then(Value::as_str) {
+        // A game the source lists but cannot start, as a built-in importer keeps one whose
+        // launch it cannot build; the helper says why among its problems.
+        Some("none") => Ok((LaunchKind::StoreUri, None, None)),
         Some("uri") => {
             let uri = launch.text("uri")?.ok_or("its launch has no uri")?;
             let scheme = uri
@@ -661,6 +679,27 @@ mod tests {
         assert_eq!(snapshot.source, Source::External);
         assert_eq!(snapshot.games, vec![expected]);
         assert_eq!(snapshot.errors, Vec::<String>::new());
+    }
+
+    #[test]
+    fn a_built_in_importers_games_keep_its_source_and_their_own_native_ids() {
+        let answer = answer(json!([game(json!({}))]));
+
+        let snapshot = parse_import_as(&answer, &manifest(), false, Source::Bottles).unwrap();
+
+        assert_eq!(snapshot.source, Source::Bottles);
+        assert_eq!(snapshot.games[0].native_id, "1234");
+    }
+
+    #[test]
+    fn a_game_with_no_launch_is_listed_and_cannot_be_started() {
+        let snapshot = import_one(json!({"launch": {"kind": "none"}}));
+
+        let game = &snapshot.games[0];
+        assert_eq!(game.launch_kind, LaunchKind::StoreUri);
+        assert_eq!(game.launch_uri, None);
+        assert_eq!(game.launch_config, None);
+        assert!(snapshot.errors.is_empty(), "{:?}", snapshot.errors);
     }
 
     #[test]

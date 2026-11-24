@@ -24,7 +24,10 @@ mod game_windows;
 pub mod mangoapp;
 mod steam_prompts;
 mod store_launch;
-pub use big_picture::{BIG_PICTURE_GRACE, BIG_PICTURE_TIMEOUT, BigPicture};
+pub use big_picture::{
+    BIG_PICTURE_GRACE, BIG_PICTURE_NOTICE, BIG_PICTURE_TIMEOUT, BigPicture, Leave,
+    leave_big_picture,
+};
 pub use claim::{BaseLayerClaim, RECLAIM_LIMIT, RECLAIM_PERIOD, Reclaims};
 pub use game_windows::{
     EXIT_GRACE, FocusableWindow, PickedWindow, StoreExit, focusable_windows, game_windows,

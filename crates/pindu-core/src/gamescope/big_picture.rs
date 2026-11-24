@@ -2,7 +2,9 @@
 //! Picture in its own `steamwebhelper` window, tagged app 769 as the launcher's main window
 //! is, and starts its games itself. While the session runs the launcher steps aside: it
 //! shows Steam's window in its own place, leaves the base layer to a game Steam started,
-//! and takes back the front once Big Picture's window has closed.
+//! and takes back the front once Big Picture's window has closed, or when the user asks to
+//! leave ([`leave_big_picture`]): under gamescope Steam's window closes only when Steam
+//! quits.
 
 use std::time::{Duration, Instant};
 
@@ -10,6 +12,7 @@ use super::steam_prompts::SteamPrompts;
 use super::{
     BaseLayerClaim, STEAM_APP_ID, STORE_LAUNCH_GRACE, STORE_LAUNCH_TIMEOUT, WindowFacts, Xid,
 };
+use crate::model::{GameId, Source};
 
 /// How long the launcher waits for Big Picture's window before it gives up on it.
 pub const BIG_PICTURE_TIMEOUT: Duration = STORE_LAUNCH_TIMEOUT;
@@ -22,6 +25,10 @@ const STEAM_WEB_HELPER: &str = "steamwebhelper";
 /// a while before another opens: on a cold start, Steam's update or sign-in window before
 /// Big Picture's, as for a store launch.
 pub const BIG_PICTURE_GRACE: Duration = STORE_LAUNCH_GRACE;
+
+/// How long the launcher's overlay says how to leave Big Picture once its window first
+/// shows in a session, 8 seconds.
+pub const BIG_PICTURE_NOTICE: Duration = Duration::from_secs(8);
 
 /// Steam Big Picture, opened from Home, in front of the launcher.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,6 +43,9 @@ pub struct BigPicture {
     /// Whether Steam has never run: its set-up screen does the waiting, and Steam's
     /// updater's windows stay behind it (see [`Self::first_start`]).
     first_start: bool,
+    /// When the Steam client's first window showed, which starts the notice of how to
+    /// leave.
+    shown_at: Option<Instant>,
 }
 
 /// Where the session is.
@@ -60,6 +70,7 @@ impl BigPicture {
             game: None,
             before: before.to_vec(),
             first_start: false,
+            shown_at: None,
         }
     }
 
@@ -107,6 +118,18 @@ impl BigPicture {
         self.phase == Phase::Shown || self.game.is_some()
     }
 
+    /// Until when the launcher says how to leave Big Picture: [`BIG_PICTURE_NOTICE`] from
+    /// the Steam client's first window in the session; `None` before it shows.
+    pub fn notice_until(&self) -> Option<Instant> {
+        self.shown_at.map(|shown| shown + BIG_PICTURE_NOTICE)
+    }
+
+    /// Whether the launcher says how to leave Big Picture at `now` (see
+    /// [`Self::notice_until`]): once a session, while Big Picture has just shown.
+    pub fn shows_notice(&self, now: Instant) -> bool {
+        self.notice_until().is_some_and(|until| now < until)
+    }
+
     /// Follows a top-level window another client mapped at `now`, or that was there when
     /// the session started (`own` holds the launcher's windows): one of the Steam client's
     /// shows Big Picture, or on a first start its web helper's shows the sign-in.
@@ -121,6 +144,7 @@ impl BigPicture {
         self.steam.mapped(window, own, now);
         if self.steam.latest().is_some() {
             self.phase = Phase::Shown;
+            self.shown_at.get_or_insert(now);
         }
     }
 
@@ -163,6 +187,44 @@ impl BigPicture {
         if had_game && self.game.is_none() && matches!(self.phase, Phase::Left(_)) {
             self.phase = Phase::Left(now);
         }
+    }
+}
+
+/// What the launcher does when asked to leave Steam Big Picture, by the `leave-big-picture`
+/// action or the chord ([`LEAVE_BIG_PICTURE_CHORD`](crate::gamepad::LEAVE_BIG_PICTURE_CHORD)).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Leave {
+    /// There is no session: nothing changes.
+    Nothing,
+    /// The session ends and the launcher comes back to the front with the controller. The
+    /// Steam client keeps running behind it, so its downloads go on and Big Picture opens
+    /// again at once.
+    ToLauncher,
+    /// As [`Self::ToLauncher`], while the game Steam started, a Steam game, keeps running
+    /// behind the launcher as a game handed to its store: it has a Playing Now card whose
+    /// Return brings it back to the front and whose Stop exits it, and the launcher stays
+    /// in front when it ends.
+    ToLauncherWithGame(GameId),
+}
+
+/// What leaving `session`, the Big Picture session while there is one, does on request. A
+/// game Steam started that is a Steam game, whose app ID is its Steam app ID as
+/// [`app_id`](super::app_id) gives it, stays playing behind the launcher; any other, such
+/// as a shortcut Steam added, is left to Steam.
+pub fn leave_big_picture(session: Option<&BigPicture>) -> Leave {
+    let Some(session) = session else {
+        return Leave::Nothing;
+    };
+    match session.game {
+        Some(app) => {
+            let id = GameId::new(Source::Steam, &app.to_string());
+            if super::app_id(&id) == app {
+                Leave::ToLauncherWithGame(id)
+            } else {
+                Leave::ToLauncher
+            }
+        }
+        None => Leave::ToLauncher,
     }
 }
 
@@ -222,6 +284,25 @@ mod tests {
         // Once Steam is there, its other windows show as in any session.
         session.window_mapped(&updater, &[MAIN], start);
         assert_eq!(session.claim(Some(MAIN)).window, Some(0x220_0010));
+    }
+
+    #[test]
+    fn how_to_leave_shows_once_for_a_while_after_big_picture_shows() {
+        let start = Instant::now();
+        let at = |seconds| start + Duration::from_secs(seconds);
+        let mut session = BigPicture::new(start, &[]);
+        // Not while Big Picture opens.
+        assert!(!session.shows_notice(start));
+        session.window_mapped(&steam_window(0x220_0035), &[], at(5));
+        assert!(session.shows_notice(at(5)));
+        assert_eq!(session.notice_until(), Some(at(5) + BIG_PICTURE_NOTICE));
+        assert!(session.shows_notice(at(5) + BIG_PICTURE_NOTICE - Duration::from_millis(1)));
+        assert!(!session.shows_notice(at(5) + BIG_PICTURE_NOTICE));
+        // Another window of Steam's later says nothing again.
+        session.window_unmapped(0x220_0035, at(60));
+        session.window_mapped(&steam_window(0x220_0070), &[], at(61));
+        assert_eq!(session.notice_until(), Some(at(5) + BIG_PICTURE_NOTICE));
+        assert!(!session.shows_notice(at(61)));
     }
 
     #[test]
@@ -379,5 +460,48 @@ mod tests {
         // A game started from Big Picture is Steam's.
         session.focusable_apps_changed(&[STEAM_APP_ID, CELESTE, BALATRO, HADES], now);
         assert_eq!(session.claim(Some(MAIN)).app_ids, [HADES, STEAM_APP_ID]);
+    }
+
+    #[test]
+    fn leaving_outside_a_session_changes_nothing() {
+        assert_eq!(leave_big_picture(None), Leave::Nothing);
+    }
+
+    #[test]
+    fn leaving_big_picture_brings_the_launcher_back() {
+        let now = Instant::now();
+        let mut session = BigPicture::new(now, &[]);
+        // Leaving while Big Picture still opens gives up on it.
+        assert_eq!(leave_big_picture(Some(&session)), Leave::ToLauncher);
+        session.window_mapped(&steam_window(0x220_0035), &[MAIN], now);
+        assert_eq!(leave_big_picture(Some(&session)), Leave::ToLauncher);
+    }
+
+    #[test]
+    fn leaving_with_a_game_steam_started_keeps_it_playing_behind_the_launcher() {
+        const BALATRO: u32 = 2_379_780;
+        let now = Instant::now();
+        let mut session = BigPicture::new(now, &[]);
+        session.window_mapped(&steam_window(0x220_0035), &[MAIN], now);
+        session.focusable_apps_changed(&[STEAM_APP_ID, BALATRO], now);
+        session.window_unmapped(0x220_0035, now);
+        assert_eq!(
+            leave_big_picture(Some(&session)),
+            Leave::ToLauncherWithGame(GameId::new(Source::Steam, "2379780"))
+        );
+        // The game ended: the launcher alone.
+        session.focusable_apps_changed(&[STEAM_APP_ID], now);
+        assert_eq!(leave_big_picture(Some(&session)), Leave::ToLauncher);
+    }
+
+    #[test]
+    fn a_non_steam_game_steam_started_is_left_to_steam() {
+        // A shortcut Steam added runs under an app ID that is no Steam game's.
+        const SHORTCUT: u32 = 0xa1b2_c3d4;
+        let now = Instant::now();
+        let mut session = BigPicture::new(now, &[]);
+        session.window_mapped(&steam_window(0x220_0035), &[MAIN], now);
+        session.focusable_apps_changed(&[STEAM_APP_ID, SHORTCUT], now);
+        assert_eq!(leave_big_picture(Some(&session)), Leave::ToLauncher);
     }
 }

@@ -52,7 +52,9 @@ pub struct Listed {
 
 /// The helpers Pindu found, in order, with their stored `states`, as they are listed where
 /// Pindu runs at `place` with the home folder `home`. A helper with an ID listed before
-/// (a user's folder with a bundled helper's ID) is left out, as it never runs.
+/// (a user's folder with a bundled helper's ID) is left out, as it never runs, and so is a
+/// bundled helper that serves a built-in source ([`super::BUILT_IN`]), which is listed as
+/// that source.
 pub fn listing(
     helpers: &[Helper],
     states: &[ExternalImporterState],
@@ -62,6 +64,7 @@ pub fn listing(
     let mut seen = HashSet::new();
     helpers
         .iter()
+        .filter(|helper| !(helper.bundled && super::built_in(&helper.id).is_some()))
         .filter(|helper| seen.insert(helper.id.as_str()))
         .map(|helper| {
             let state = states
@@ -252,5 +255,23 @@ mod tests {
             .map(|listed| (listed.id.as_str(), listed.bundled))
             .collect();
         assert_eq!(ids, [("alpha", true), ("beta", false)]);
+    }
+
+    #[test]
+    fn a_bundled_helper_that_serves_a_built_in_source_is_that_source_not_an_importer() {
+        let bottles = Helper {
+            bundled: true,
+            ..helper("bottles", Runs::SubSandbox)
+        };
+
+        let listed = listing(
+            &[bottles, helper("beta", Runs::Host)],
+            &[],
+            FLATPAK,
+            Path::new("/home/me"),
+        );
+
+        let ids: Vec<_> = listed.iter().map(|listed| listed.id.as_str()).collect();
+        assert_eq!(ids, ["beta"]);
     }
 }

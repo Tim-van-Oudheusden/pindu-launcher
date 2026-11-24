@@ -51,7 +51,9 @@ when they add a workflow or change a token grant. Manifest changes never grow `f
 never touch the Flathub manifest. A schema change is a new migration appended to `MIGRATIONS` in `store.rs`, never an
 edit to a released one, with a test that opens a database at the previous version and checks its rows survive. A
 backup-format change raises `VERSION` in `backup.rs` when older builds could misread the new file, and keeps reading
-every older version, with a test for each.
+every older version, with a test for each. A pull request that raises `VERSION` also adds a fixture exported by the last
+release that wrote the old version to `crates/pindu-core/tests/fixtures/backup/`, and a test in
+`crates/pindu-core/tests/backup_fixtures.rs` that imports it; that folder's README says how to make one.
 
 ## Tier: medium
 

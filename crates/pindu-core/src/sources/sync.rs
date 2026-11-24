@@ -121,7 +121,7 @@ pub fn sync_all(
             .source_state(source)?
             .is_none_or(|state| state.enabled);
         if enabled {
-            let synced = sync_source(store, source, dirs, now, utc_offset)?;
+            let synced = sync_source(store, source, dirs, helpers, now, utc_offset)?;
             summary
                 .problems
                 .extend(synced.problems.into_iter().map(|problem| (source, problem)));
@@ -145,10 +145,16 @@ pub fn sync_all(
 /// override, or a source that could not be read at all, whose games are then left as
 /// they were) and how its games changed. A source no longer on the machine is an empty
 /// source.
+///
+/// A source whose importer is a bundled helper ([`external::BUILT_IN`]) is imported by
+/// running that helper from `helpers` on the folder resolved here, which keeps the
+/// user's chosen folder and the paths to watch as they were. Where the helper is not
+/// installed (a plain `cargo` build, the tests), the same importer runs in-process.
 pub fn sync_source(
     store: &Store,
     source: Source,
     dirs: &HostDirs,
+    helpers: &external::Environment,
     now: Timestamp,
     utc_offset: i64,
 ) -> store::Result<SourceSync> {
@@ -157,7 +163,10 @@ pub fn sync_source(
         Ok(desktop::import(dirs))
     } else {
         match location::resolve_and_record(store, source, dirs)? {
-            Ok(root) => import(source, &root, utc_offset).map_err(|error| error.to_string()),
+            Ok(root) => external::import_built_in(helpers, source, &root, utc_offset)
+                .unwrap_or_else(|| {
+                    import(source, &root, utc_offset).map_err(|error| error.to_string())
+                }),
             Err(ResolveError::NotFound) => Ok(Snapshot::new(source)),
             Err(error) => Err(error.to_string()),
         }
@@ -1074,6 +1083,7 @@ mod tests {
             &store,
             Source::HeroicSideload,
             &host_dirs(dir.path()),
+            &no_helpers(dir.path()),
             100,
             0,
         )
@@ -1104,6 +1114,7 @@ mod tests {
             &store,
             Source::HeroicSideload,
             &host_dirs(dir.path()),
+            &no_helpers(dir.path()),
             100,
             0,
         )
@@ -1118,6 +1129,7 @@ mod tests {
             &store,
             Source::HeroicSideload,
             &host_dirs(dir.path()),
+            &no_helpers(dir.path()),
             200,
             0,
         )
@@ -1181,6 +1193,7 @@ mod tests {
             &store,
             Source::HeroicSideload,
             &host_dirs(dir.path()),
+            &no_helpers(dir.path()),
             100,
             0,
         )
@@ -1191,6 +1204,7 @@ mod tests {
             &store,
             Source::HeroicSideload,
             &host_dirs(dir.path()),
+            &no_helpers(dir.path()),
             200,
             0,
         )
@@ -1216,9 +1230,16 @@ mod tests {
         )
         .unwrap();
 
-        let problems = sync_source(&store, Source::Desktop, &host_dirs(dir.path()), 100, 0)
-            .unwrap()
-            .problems;
+        let problems = sync_source(
+            &store,
+            Source::Desktop,
+            &host_dirs(dir.path()),
+            &no_helpers(dir.path()),
+            100,
+            0,
+        )
+        .unwrap()
+        .problems;
 
         assert!(problems.is_empty(), "{problems:?}");
         let id = GameId::new(Source::Desktop, "neverball");
@@ -1227,6 +1248,126 @@ mod tests {
         let config = store.launch_config(&id).unwrap().unwrap();
         assert_eq!(config.executable, std::path::Path::new("neverball"));
         assert_eq!(config.arguments, ["-f"]);
+    }
+
+    /// A Bottles library in `home`'s native Bottles folder, which it returns.
+    fn bottles_home(home: &std::path::Path) -> std::path::PathBuf {
+        let root = home.join(".local/share/bottles");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("library.yml"), "{}\n").unwrap();
+        root
+    }
+
+    /// Helpers from `home`, with a bundled `bottles` helper that notes the request it gets
+    /// in `request.json` beside it, answers `answer` and exits with `status`.
+    fn bottles_helper(home: &std::path::Path, answer: &str, status: i32) -> external::Environment {
+        use std::os::unix::fs::PermissionsExt;
+        let bundled = home.join("bundled");
+        let folder = bundled.join("bottles");
+        std::fs::create_dir_all(&folder).unwrap();
+        let manifest = serde_json::json!({
+            "protocol": 0, "id": "bottles", "name": "Bottles", "version": "1.0",
+            "program": ["./pindu-import-bottles"], "runs": "sub-sandbox",
+            "reads": ["~/.local/share/bottles"], "uri_schemes": ["bottles"],
+        });
+        std::fs::write(folder.join("importer.json"), manifest.to_string()).unwrap();
+        std::fs::write(folder.join("answer.json"), answer).unwrap();
+        let program = folder.join("pindu-import-bottles");
+        std::fs::write(
+            &program,
+            format!(
+                "#!/bin/sh\nhere=$(dirname \"$0\")\ncat > \"$here/request.json\"\n\
+                 cat \"$here/answer.json\"\nexit {status}\n"
+            ),
+        )
+        .unwrap();
+        std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o755)).unwrap();
+        external::Environment {
+            bundled: Some(bundled),
+            ..no_helpers(home)
+        }
+    }
+
+    #[test]
+    fn bottles_imports_through_its_bundled_helper_and_keeps_its_source() {
+        let (dir, store) = temp_store();
+        let root = bottles_home(dir.path());
+        let answer = serde_json::json!({"protocol": 0, "games": [{
+            "native_id": "7f1e", "title": "Celeste", "installed": true,
+            "launch": {"kind": "uri", "uri": "bottles:run/Gaming/Celeste"},
+        }], "problems": ["“AC/DC Live” has a “/”"]});
+        let helpers = bottles_helper(dir.path(), &answer.to_string(), 0);
+
+        let synced = sync_source(
+            &store,
+            Source::Bottles,
+            &host_dirs(dir.path()),
+            &helpers,
+            100,
+            3600,
+        )
+        .unwrap();
+
+        assert_eq!(synced.changes.added, [GameId::new(Source::Bottles, "7f1e")]);
+        assert_eq!(synced.problems, ["“AC/DC Live” has a “/”"]);
+        let request: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(dir.path().join("bundled/bottles/request.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            request,
+            serde_json::json!({"protocol": 0, "request": "import", "root": root,
+                               "utc_offset": 3600})
+        );
+    }
+
+    #[test]
+    fn a_bottles_helper_that_cannot_answer_leaves_its_games_and_says_why() {
+        let (dir, store) = temp_store();
+        bottles_home(dir.path());
+        let answer = serde_json::json!({"protocol": 0, "games": [{
+            "native_id": "7f1e", "title": "Celeste", "installed": true,
+            "launch": {"kind": "uri", "uri": "bottles:run/Gaming/Celeste"},
+        }]});
+        let dirs = host_dirs(dir.path());
+        let helpers = bottles_helper(dir.path(), &answer.to_string(), 0);
+        sync_source(&store, Source::Bottles, &dirs, &helpers, 100, 0).unwrap();
+        let broken = bottles_helper(dir.path(), "", 1);
+
+        let problems = sync_source(&store, Source::Bottles, &dirs, &broken, 200, 0)
+            .unwrap()
+            .problems;
+
+        assert_eq!(problems.len(), 1, "{problems:?}");
+        assert!(problems[0].contains("could not answer"), "{problems:?}");
+        let game = store
+            .game(&GameId::new(Source::Bottles, "7f1e"))
+            .unwrap()
+            .unwrap();
+        assert!(game.in_library());
+    }
+
+    #[test]
+    fn without_its_bundled_helper_bottles_imports_in_process() {
+        let (dir, store) = temp_store();
+        let root = bottles_home(dir.path());
+        std::fs::write(
+            root.join("library.yml"),
+            "7f1e:\n  id: 7f1e\n  name: Celeste\n  bottle:\n    name: Gaming\n    path: Gaming\n",
+        )
+        .unwrap();
+
+        let synced = sync_source(
+            &store,
+            Source::Bottles,
+            &host_dirs(dir.path()),
+            &no_helpers(dir.path()),
+            100,
+            0,
+        )
+        .unwrap();
+
+        assert_eq!(synced.changes.added, [GameId::new(Source::Bottles, "7f1e")]);
     }
 
     #[test]
