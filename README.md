@@ -129,10 +129,11 @@ and behaves like the rest of GNOME.
 
 The importers only read each launcher's data, and never its credentials. From the itch app's database, for example,
 they read its installs and games, never the profiles that hold your itch.io key. Preferences → Sources shows, for each
-source, the folder it was found in, when it last synced and the problems that sync ran into. Its **Copy Order** decides
-which copy Play starts when a game has copies from several sources and you have not chosen one: the installed copy
-from the source highest in the list, with native copies still ahead of Windows ones. **Move Up** and **Move Down**
-change the order.
+source, the folder it was found in (for desktop entries and Flatpaks, which come from every application folder,
+**Application folders**), when it last synced and the problems that sync ran into. Its **Copy Order** decides which
+copy Play starts when a game has copies from several sources and you have not chosen one: the installed copy from the
+source highest in the list, with native copies still ahead of Windows ones. **Move Up** and **Move Down** change the
+order.
 
 A game's page shows the details its launcher keeps offline. Heroic gives the developer, categories and description;
 Steam's own app cache gives the developer, release year, categories and whether the game has full or partial

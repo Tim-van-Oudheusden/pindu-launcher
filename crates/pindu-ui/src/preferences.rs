@@ -20,7 +20,7 @@ use pindu_core::custom_style::ProblemSummary;
 use pindu_core::gamepad::{PROMPTS_KEY, Prompts, SWAP_KEY, Swap};
 use pindu_core::hold::HOLD_TO_CONFIRM_KEY;
 use pindu_core::home::CATEGORIES_KEY;
-use pindu_core::model::{Source, SourceState};
+use pindu_core::model::{Source, SourceFound, SourceState};
 use pindu_core::paths;
 use pindu_core::sources::external::listing::{Listed, Running};
 use pindu_core::sources::location::sandbox_hides;
@@ -466,16 +466,14 @@ impl PreferencesDialog {
             && state.user_override.is_none()
             && permission_service::in_flatpak()
             && sandbox_hides(source);
-        let found = state.resolved_location.as_ref().map_or_else(
-            || {
-                if hidden {
-                    gettext("The sandbox cannot see this folder: choose it to import its games")
-                } else {
-                    gettext("Not found on this computer")
-                }
-            },
-            |path| path.display().to_string(),
-        );
+        let found = match state.found() {
+            SourceFound::Folder(path) => path.display().to_string(),
+            SourceFound::ApplicationFolders => gettext("Application folders"),
+            SourceFound::NotFound if hidden => {
+                gettext("The sandbox cannot see this folder: choose it to import its games")
+            }
+            SourceFound::NotFound => gettext("Not found on this computer"),
+        };
         let row = adw::ExpanderRow::builder()
             .title(source_name(source))
             .subtitle(&found)

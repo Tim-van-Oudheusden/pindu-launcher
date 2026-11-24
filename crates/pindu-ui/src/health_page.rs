@@ -11,6 +11,7 @@ use adw::subclass::prelude::*;
 use gettextrs::{gettext, ngettext};
 use gtk::glib;
 use pindu_core::health::{HealthReport, Install, NextStep, Problem, SourceHealth};
+use pindu_core::model::SourceFound;
 use pindu_core::paths;
 use pindu_core::sync_age::sync_age;
 
@@ -275,12 +276,13 @@ impl HealthPage {
 /// One source: found or not, where and how it is installed, its games, its last sync and
 /// what that sync could not read.
 fn source_row(source: &SourceHealth) -> gtk::Widget {
-    let subtitle = match (&source.folder, source.enabled) {
+    let subtitle = match (&source.found, source.enabled) {
         (_, false) => gettext("Not imported"),
-        (None, true) => gettext("Not found on this computer"),
-        (Some(folder), true) => home_relative(folder),
+        (SourceFound::NotFound, true) => gettext("Not found on this computer"),
+        (SourceFound::ApplicationFolders, true) => gettext("Application folders"),
+        (SourceFound::Folder(folder), true) => home_relative(folder),
     };
-    let found = source.enabled && source.folder.is_some();
+    let found = source.enabled && source.found != SourceFound::NotFound;
     if !found {
         let row = adw::ActionRow::builder()
             .title(source_name(source.source))
@@ -296,11 +298,14 @@ fn source_row(source: &SourceHealth) -> gtk::Widget {
         .build();
     row.add_prefix(&gtk::Image::from_icon_name(source_icon(source.source)));
     add_warning(&row, source);
-    let install = match source.install {
-        Some(Install::Flatpak) => gettext("Flatpak"),
-        _ => gettext("Native"),
-    };
-    row.add_row(&property_row(&gettext("Installed As"), &install));
+    // The Desktop source reads every application folder, so it is installed as nothing.
+    if let Some(install) = source.install {
+        let install = match install {
+            Install::Flatpak => gettext("Flatpak"),
+            Install::Native => gettext("Native"),
+        };
+        row.add_row(&property_row(&gettext("Installed As"), &install));
+    }
     let games = u32::try_from(source.games).unwrap_or(u32::MAX);
     row.add_row(&property_row(
         &gettext("Games"),

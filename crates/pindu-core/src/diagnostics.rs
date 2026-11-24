@@ -8,7 +8,7 @@
 use std::fmt;
 use std::path::PathBuf;
 
-use crate::model::{Game, GameId, Source, SourceState};
+use crate::model::{Game, GameId, Source, SourceFound, SourceState};
 use crate::permissions::host_spawn_allowed;
 use crate::store::LATEST_SCHEMA_VERSION;
 use crate::system::update::OsRelease;
@@ -342,10 +342,11 @@ fn source_line(facts: &SourceFacts) -> String {
         return format!("  {}: off", state.source);
     }
     let mut parts = vec!["on".to_owned()];
-    parts.push(state.resolved_location.as_ref().map_or_else(
-        || "not found".to_owned(),
-        |folder| format!("found at {}", folder.display()),
-    ));
+    parts.push(match state.found() {
+        SourceFound::Folder(folder) => format!("found at {}", folder.display()),
+        SourceFound::ApplicationFolders => "found in the application folders".to_owned(),
+        SourceFound::NotFound => "not found".to_owned(),
+    });
     if let Some(folder) = &state.user_override {
         parts.push(format!("folder picked {}", folder.display()));
     }
@@ -609,6 +610,23 @@ mod tests {
         ] {
             assert!(report.contains(line), "{line:?} not in\n{report}");
         }
+    }
+
+    #[test]
+    fn the_desktop_source_is_found_in_the_application_folders() {
+        let mut facts = facts();
+        let mut desktop = SourceState::new(Source::Desktop);
+        desktop.last_sync = Some(1_700_000_000);
+        facts.sources.push(SourceFacts {
+            state: desktop,
+            games: 9,
+            missing: 0,
+        });
+
+        let report = facts.report(&private());
+
+        let line = "  desktop: on, found in the application folders, 9 games";
+        assert!(report.contains(line), "{line:?} not in\n{report}");
     }
 
     #[test]
