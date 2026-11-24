@@ -8,14 +8,14 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-24, #833 XP-5 (this commit, stacked on #832 XP-3 and #831 XP-2): install, replace and remove an
-  external importer from Preferences (`external::install`: lists the `.tar.gz` with `tar --list --absolute-names`
-  before unpacking, unpacks into `pindu-launcher/.importer-install-*`, checks the tree, one rename). Harness:
-  GTK's own file chooser (no portal) takes `ctrl+l`, the folder path, Return, then `ctrl+l ctrl+a`, one letter and
-  End to accept its completion; in Preferences the selectable property subtitles take Tab stops. XP-3:
-  `SyncService::sources` reads states and helpers in one call (two awaits let Quick Access focus the copy order
-  first); `run.sh --seed DIR` copies DIR into the run's XDG data home. Pre-existing: after a Sources switch's sync
-  rebuilds the fullscreen list, focus is lost. XP-4 #834 is a subagent's worktree (`wt-834`).
+- 2026-11-24, #834 XP-4 (this commit; the stack is #831 XP-2 ← #832 XP-3 ← #833 XP-5 ← #834 XP-4): Bottles runs
+  as the bundled helper `pindu-import-bottles` (`<libexecdir>/pindu-launcher/importers/bottles/`), keeping
+  `Source::Bottles`; without it installed (plain cargo builds) Bottles imports in-process. `external::BUILT_IN`
+  keeps such helpers out of the importer list and sync. Built in a worktree (`~/.cache/pindu-work/wt-834`); the
+  devel Flatpak was built with `flatpak run org.flatpak.Builder` (no host `flatpak-builder`). XP-5: install from
+  Preferences (`external::install`, `tar --list --absolute-names` before unpacking). Harness: GTK's own file
+  chooser takes `ctrl+l`, the folder, Return, then `ctrl+l ctrl+a`, one letter and End; `run.sh --seed DIR` copies
+  DIR into the run's XDG data home. Pre-existing: a Sources switch's sync loses fullscreen focus.
 - Other agents work this repo at the same time (a "hive": issue comments trigger them, and the merge queue merges
   their PRs). An early decision comment on #792 was implemented as #795 and merged before the maintainer's later
   choice; #803 duplicated #791. Post a decision comment only once it is final, and check `gh pr list` before

@@ -30,6 +30,8 @@ beside a stable install and keeps its own data.
 ```text
 crates/pindu-core/   the GTK-free core: importers (sources/), the library database, launch plans, playtime, Proton,
                      artwork cache, themes, navigation; tested with plain `cargo test`, fixtures under tests/
+crates/pindu-import-bottles/  the Bottles importer as a bundled helper over the external importer protocol
+                     (docs/external-importers.md); its tests run pindu-core's Bottles tests against the program
 crates/pindu-ui/     the GTK shells (binary `pindu-launcher`): services, GObject list models, desktop and fullscreen
 crates/manette*/     libmanette bindings, generated with gir (do not edit the generated code)
 data/                Blueprint files, GSettings schema, desktop file, MetaInfo, icons, fullscreen designs
