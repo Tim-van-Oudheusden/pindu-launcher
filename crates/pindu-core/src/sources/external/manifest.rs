@@ -74,12 +74,7 @@ pub fn parse_manifest(text: &str, folder: &Path) -> Result<Manifest, String> {
         .get("protocol")
         .and_then(Value::as_u64)
         .ok_or_else(|| format!("{MANIFEST} names no protocol version"))?;
-    if !PROTOCOLS.contains(&protocol) {
-        return Err(format!(
-            "it speaks protocol {protocol}, and this version of Pindu speaks {}",
-            spoken()
-        ));
-    }
+    check_protocol(protocol, PROTOCOLS)?;
     let id = text_field(object, "id")?;
     if !is_helper_id(&id) {
         return Err(format!(
@@ -146,13 +141,33 @@ pub fn is_helper_id(id: &str) -> bool {
             .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
 }
 
-/// The protocol versions this build speaks, for a sentence.
-fn spoken() -> String {
-    PROTOCOLS
-        .iter()
-        .map(u64::to_string)
-        .collect::<Vec<_>>()
-        .join(", ")
+/// Checks that a helper speaking `protocol` can run in a build that speaks `spoken`, in
+/// order. The error says which side needs updating, for the user.
+fn check_protocol(protocol: u64, spoken: &[u64]) -> Result<(), String> {
+    if spoken.last().is_some_and(|&newest| protocol > newest) {
+        return Err(format!(
+            "it speaks protocol {protocol}, which needs a newer version of Pindu; this version speaks {}",
+            versions(spoken, "and")
+        ));
+    }
+    if !spoken.contains(&protocol) {
+        return Err(format!(
+            "it speaks protocol {protocol}, which this version of Pindu no longer speaks; ask its author for an update that speaks {}",
+            versions(spoken, "or")
+        ));
+    }
+    Ok(())
+}
+
+/// The protocol versions `spoken`, for a sentence, the last joined with `conjunction`.
+fn versions(spoken: &[u64], conjunction: &str) -> String {
+    let mut versions: Vec<String> = spoken.iter().map(u64::to_string).collect();
+    let last = versions.pop().unwrap_or_default();
+    if versions.is_empty() {
+        last
+    } else {
+        format!("{} {conjunction} {last}", versions.join(", "))
+    }
 }
 
 /// Whether `relative` names a file inside `folder`, with no way out of it: no absolute
@@ -215,6 +230,40 @@ fn strings(value: Option<&Value>) -> Option<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_protocol_newer_than_pindu_speaks_asks_for_a_newer_pindu() {
+        assert_eq!(
+            check_protocol(7, &[1, 2]),
+            Err(
+                "it speaks protocol 7, which needs a newer version of Pindu; this version speaks 1 and 2"
+                    .into()
+            )
+        );
+    }
+
+    #[test]
+    fn a_protocol_older_than_pindu_speaks_asks_for_an_update_from_its_author() {
+        assert_eq!(
+            check_protocol(0, &[1, 2]),
+            Err(
+                "it speaks protocol 0, which this version of Pindu no longer speaks; ask its author for an update that speaks 1 or 2"
+                    .into()
+            )
+        );
+    }
+
+    #[test]
+    fn each_protocol_pindu_speaks_runs() {
+        assert_eq!(check_protocol(1, &[1, 2]), Ok(()));
+        assert_eq!(check_protocol(2, &[1, 2]), Ok(()));
+    }
+
+    #[test]
+    fn a_build_speaks_at_most_two_versions_oldest_first() {
+        assert!((1..=2).contains(&PROTOCOLS.len()), "{PROTOCOLS:?}");
+        assert!(PROTOCOLS.is_sorted(), "{PROTOCOLS:?}");
+    }
 
     /// A helper folder holding `example-importer`.
     fn folder() -> tempfile::TempDir {
@@ -321,7 +370,10 @@ mod tests {
 
         assert_eq!(
             error,
-            Err("it speaks protocol 7, and this version of Pindu speaks 0".into())
+            Err(
+                "it speaks protocol 7, which needs a newer version of Pindu; this version speaks 0"
+                    .into()
+            )
         );
     }
 
