@@ -320,6 +320,32 @@ fn a_broken_manifest_is_reported_and_the_rest_imported() {
 }
 
 #[test]
+fn steams_login_files_are_never_opened() {
+    let (_dir, root) = fixture("steam");
+    let steam_root = Location::of(Source::Steam, &host_dirs(&root.join("home")))
+        .unwrap()
+        .resolve(None)
+        .unwrap();
+    write_appinfo(&steam_root);
+    // Folders in the places of the files that hold Steam's sign-in tokens and accounts:
+    // they exist, but reading them fails even for root, which CI's test user is.
+    for credentials in ["config/config.vdf", "config/loginusers.vdf"] {
+        std::fs::create_dir_all(steam_root.join(credentials)).unwrap();
+    }
+    let (_clean_dir, _clean_root, clean) = import_fixture("steam", true);
+
+    let snapshot = steam::import(&steam_root).unwrap();
+
+    assert_eq!(
+        snapshot.errors.len(),
+        clean.errors.len(),
+        "{:?}",
+        snapshot.errors
+    );
+    assert_eq!(ids(&snapshot), ids(&clean));
+}
+
+#[test]
 fn without_appinfo_games_still_import_without_platform() {
     let (_dir, _root, snapshot) = import_fixture("steam", false);
 

@@ -96,6 +96,8 @@ body:
         - Suspend and resume: not run
         - Steam game: not run
         - Proton game: not run
+        - Game from another launcher: not run
+        - Game added by hand: not run
         - System Update: not run
     validations:
       required: true

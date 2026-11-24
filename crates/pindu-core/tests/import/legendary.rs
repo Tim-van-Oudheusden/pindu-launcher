@@ -93,6 +93,20 @@ fn installed_games_import_and_dlc_is_skipped() {
 }
 
 #[test]
+fn the_credentials_file_is_never_opened() {
+    let (_dir, root) = native_root();
+    let (_clean_dir, clean) = native_root();
+    // A folder in `user.json`'s place: it exists, but reading it fails even for root, which
+    // CI's test user is and which ignores a 0o000 mode.
+    std::fs::create_dir(root.join("user.json")).unwrap();
+
+    let snapshot = legendary::import(&root).unwrap();
+
+    assert!(snapshot.errors.is_empty(), "{:?}", snapshot.errors);
+    assert_eq!(snapshot, legendary::import(&clean).unwrap());
+}
+
+#[test]
 fn a_game_takes_its_install_and_metadata() {
     let (_dir, root) = native_root();
 
