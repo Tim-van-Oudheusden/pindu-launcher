@@ -17,7 +17,7 @@ use pindu_core::sources::external::listing::{Listed, Running, listing, running};
 use pindu_core::sources::external::{self, runner};
 use pindu_core::sources::location::{self, HostDirs};
 use pindu_core::sources::sync::{SyncSummary, Tally, sync_all};
-use pindu_core::store::Store;
+use pindu_core::store::{Store, StoreError};
 use pindu_core::tasks::TaskKind;
 
 use crate::config::PKGLIBEXECDIR;
@@ -312,9 +312,14 @@ impl Default for SyncService {
 }
 
 /// Opens its own connection to the library and syncs every source. Also says whether
-/// this was the library's first sync.
+/// this was the library's first sync. A library a newer version saved syncs nothing and
+/// is no import problem: the library service tells the user about it.
 fn run_sync() -> Result<(SyncSummary, bool), String> {
-    let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
+    let store = match Store::open(&default_library_db_path()) {
+        Ok(store) => store,
+        Err(StoreError::TooNew { .. }) => return Ok((SyncSummary::default(), false)),
+        Err(error) => return Err(error.to_string()),
+    };
     let first = store
         .source_states()
         .map(|states| is_first_sync(&states))

@@ -98,7 +98,9 @@ and behaves like the rest of GNOME.
 - You can export your collections, saved filters, favourites, hidden games, games added by hand, tracked playtime,
   groups of copies and the game details you set to a file, and import them again. Before an update changes the
   library's format, Pindu launcher saves a copy of the library beside it, named for the format it had (such as
-  `library.db.v5.bak`), and keeps the two newest copies.
+  `library.db.v5.bak`), and keeps the two newest copies. An older Pindu launcher, after a rollback, leaves a library
+  from a newer version as it is and says so; it offers to start from the newest kept copy it can open, setting the
+  newer library aside unchanged as `library.db.v<N>.newer`.
 - When a Windows game you added by hand quits normally, Pindu launcher copies its saves out of the game's prefix into
   `~/Games/pindu-launcher/save-snapshots`. It leaves out caches, runtimes, screenshots and stored logins, and keeps the
   last five snapshots. Any game can have save folders as well: add them with the file chooser under **Save

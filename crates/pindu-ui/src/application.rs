@@ -98,6 +98,8 @@ mod imp {
         pub gamepad_service: OnceCell<GamepadService>,
         /// gamescope's `--steam` focus protocol; inert outside such a gamescope.
         pub gamescope_service: OnceCell<GamescopeService>,
+        /// Whether the alert about a library from a newer version was shown this run.
+        pub newer_library_shown: std::cell::Cell<bool>,
         /// The Library Health report, for both shells.
         pub health_service: OnceCell<HealthService>,
         /// Whether a finished sync owes the summary of what the library found
@@ -279,6 +281,12 @@ mod imp {
             self.apps_service
                 .set(AppsService::new())
                 .expect("start-up runs once");
+            // A library from a newer version is left as it is; the window says so.
+            library.connect_newer_library(glib::clone!(
+                #[weak(rename_to = app)]
+                self.obj(),
+                move |_| app.show_newer_library()
+            ));
             // Loaded here, not on the first window: Shell search and --launch need the
             // library when no window opens.
             library.reload();
@@ -368,6 +376,9 @@ mod imp {
                 }
             }
             window.present();
+            if new_window {
+                application.show_newer_library();
+            }
             // In a `--steam` gamescope the menu drawer and Quick Access also open over a
             // running game, in a window of their own; shown without focus, it stays
             // see-through until one opens.
@@ -992,6 +1003,20 @@ impl PinduApplication {
         }
     }
 
+    /// Once a run, when the library is from a newer version, says so in the active
+    /// window (`newer_library`); without a window yet, the first window shows it.
+    fn show_newer_library(&self) {
+        let (Some(newer), Some(window)) = (
+            self.library_service().newer_library(),
+            self.active_window().and_downcast::<PinduWindow>(),
+        ) else {
+            return;
+        };
+        if !self.imp().newer_library_shown.replace(true) {
+            window.show_newer_library(&newer);
+        }
+    }
+
     /// Once the report gathered after a sync that owes the summary is in
     /// (`health::summary_owed`), shows what the library found in the active window,
     /// unless the summary was dismissed before, the sync found nothing, or the set-up
@@ -1304,7 +1329,9 @@ fn import_message(summary: &ImportSummary) -> String {
         + summary.sessions
         + summary.groups
         + summary.splits
-        + summary.metadata;
+        + summary.metadata
+        + summary.launch_settings
+        + summary.pins;
     let mut message = if restored == 0 {
         gettext("Nothing new to restore")
     } else {

@@ -95,7 +95,8 @@ jobs:
     name: Mutants in changed pindu-core code
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # One mutant takes about 8 s here, run one at a time; #838's 208 mutants needed more than 30 min.
+    timeout-minutes: 60
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
