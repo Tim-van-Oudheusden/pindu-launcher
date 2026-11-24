@@ -28,20 +28,36 @@ cargo_env = [
   'PINDU_PKGLIBEXECDIR=' + pkglibexecdir,
 ]
 
-app_binary = custom_target(
+# The bundled external importers, each in its own folder with its manifest
+# (docs/external-importers.md): Bottles' importer runs as one.
+bottles_importer_dir = pkglibexecdir / 'importers' / 'bottles'
+
+# One cargo build makes every program in the workspace: the app, and the bundled importers.
+cargo_build = custom_target(
   'cargo-build',
   build_by_default: true,
   build_always_stale: true,
-  output: meson.project_name(),
+  output: [meson.project_name(), 'pindu-import-bottles'],
   console: true,
   install: true,
-  install_dir: bindir,
+  install_dir: [bindir, bottles_importer_dir],
   depends: resources,
   command: [
     'env', cargo_env, cargo, 'build', cargo_options,
     '&&',
-    'cp', meson.project_build_root() / 'cargo-target' / rust_target / meson.project_name(), '@OUTPUT@',
+    'cp', meson.project_build_root() / 'cargo-target' / rust_target / meson.project_name(), '@OUTPUT0@',
+    '&&',
+    'cp', meson.project_build_root() / 'cargo-target' / rust_target / 'pindu-import-bottles', '@OUTPUT1@',
   ],
+)
+app_binary = cargo_build[0]
+
+configure_file(
+  input: 'pindu-import-bottles' / 'importer.json.in',
+  output: 'importer.json',
+  configuration: {'VERSION': meson.project_version()},
+  install: true,
+  install_dir: bottles_importer_dir,
 )
 
 test(

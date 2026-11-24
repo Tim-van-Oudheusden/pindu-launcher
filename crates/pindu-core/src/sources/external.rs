@@ -13,6 +13,7 @@ pub mod listing;
 pub mod manifest;
 pub mod protocol;
 pub mod runner;
+pub mod server;
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -24,9 +25,25 @@ use super::sync::{Changes, SourceSync, apply_snapshot_within};
 use crate::model::{ExternalImporterState, Source, Timestamp};
 use crate::store::{self, Store};
 
-/// The protocol versions this build speaks. `0` is unstable: it may change in any release
-/// until two integrations from outside exist.
+/// The protocol versions this build speaks, oldest first: the newest and, while it is
+/// deprecated, the one before it, as the compatibility policy in
+/// `docs/external-importers.md` says. `0` is unstable: it may change in any release until
+/// two integrations from outside exist.
 pub const PROTOCOLS: &[u64] = &[0];
+
+/// The bundled helpers that serve a built-in source, by helper ID: a built-in importer
+/// moved behind the protocol. Such a helper is not an external importer: it is never
+/// listed or synced as one, and its games keep their source and its IDs.
+/// [`super::sync::sync_source`] runs it for its source.
+pub const BUILT_IN: &[(&str, Source)] = &[("bottles", Source::Bottles)];
+
+/// The built-in source the bundled helper `id` serves, if it serves one.
+pub fn built_in(id: &str) -> Option<Source> {
+    BUILT_IN
+        .iter()
+        .find(|(built_in, _)| *built_in == id)
+        .map(|&(_, source)| source)
+}
 
 /// A helper folder Pindu found.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,12 +85,14 @@ pub struct HelperSync {
 }
 
 /// The helpers in the bundled folder, then the user's, each in order of ID. A folder whose
-/// name is not a helper ID is not a helper.
+/// name is not a helper ID is not a helper. A user's helper with the ID of a bundled
+/// helper, or of one that serves a built-in source ([`BUILT_IN`]) even where it is not
+/// installed, cannot run.
 pub fn discover(installed: &Path, bundled: Option<&Path>) -> Vec<Helper> {
     let mut helpers = bundled.map_or_else(Vec::new, |dir| helpers_in(dir, true));
     let bundled_ids: HashSet<String> = helpers.iter().map(|helper| helper.id.clone()).collect();
     for mut helper in helpers_in(installed, false) {
-        if bundled_ids.contains(&helper.id) {
+        if bundled_ids.contains(&helper.id) || built_in(&helper.id).is_some() {
             helper.manifest = Err(format!(
                 "a helper that comes with Pindu has its ID “{}”",
                 helper.id
@@ -133,7 +152,8 @@ pub fn sync_helpers(
     let mut seen = HashSet::new();
     for helper in discover(&environment.installed, environment.bundled.as_deref()) {
         // A user's folder with a bundled helper's ID never runs; the bundled one owns it.
-        if !seen.insert(helper.id.clone()) {
+        // A helper that serves a built-in source syncs with that source.
+        if !seen.insert(helper.id.clone()) || built_in(&helper.id).is_some() {
             continue;
         }
         let mut state = store
@@ -247,6 +267,65 @@ fn cannot_run(problem: String) -> SourceSync {
         problems: vec![problem],
         changes: Changes::default(),
     }
+}
+
+/// Imports the built-in `source` from its folder `root` by running the bundled helper
+/// that serves it ([`BUILT_IN`]). `None` when that helper is not installed (a plain
+/// `cargo` build, the tests), and the caller imports in-process. Pindu resolves `root`
+/// itself, honouring the folder the user chose, so the helper only gets the import
+/// request. The error, for the user, says why the helper could not run or answer.
+pub fn import_built_in(
+    environment: &Environment,
+    source: Source,
+    root: &Path,
+    utc_offset: i64,
+) -> Option<Result<Snapshot, String>> {
+    let &(id, _) = BUILT_IN.iter().find(|&&(_, serves)| serves == source)?;
+    let helper = helpers_in(environment.bundled.as_deref()?, true)
+        .into_iter()
+        .find(|helper| helper.id == id)?;
+    Some(
+        run_built_in(&helper, environment, source, root, utc_offset)
+            .map_err(|problem| format!("The importer that comes with Pindu: {problem}")),
+    )
+}
+
+/// Runs the bundled `helper` that serves `source` once, importing `root`.
+fn run_built_in(
+    helper: &Helper,
+    environment: &Environment,
+    source: Source,
+    root: &Path,
+    utc_offset: i64,
+) -> Result<Snapshot, String> {
+    let manifest = helper.manifest.as_ref().map_err(Clone::clone)?;
+    let tier = runner::tier(manifest.runs, environment.place)?;
+    let command = runner::command(
+        &helper.folder,
+        manifest,
+        tier,
+        &built_in_reads(manifest, &environment.home, root),
+        environment.limits.timeout,
+    );
+    let request = protocol::import_request(manifest.protocol, root, utc_offset);
+    runner::run(&command, &request, environment.limits).and_then(|answer| {
+        protocol::parse_import_as(&answer, manifest, tier.host_launches(), source)
+    })
+}
+
+/// The folders a built-in source's helper is shown in its sub-sandbox: those of its
+/// manifest's reads that exist, and the source's folder `root` unless it is below one of
+/// them, since the user may have chosen a folder elsewhere (through the file chooser's
+/// document portal, say).
+fn built_in_reads(manifest: &Manifest, home: &Path, root: &Path) -> Vec<PathBuf> {
+    let mut reads: Vec<PathBuf> = runner::reads(manifest, home)
+        .into_iter()
+        .filter(|read| read.exists())
+        .collect();
+    if !reads.iter().any(|read| root.starts_with(read)) {
+        reads.push(root.to_owned());
+    }
+    reads
 }
 
 #[cfg(test)]

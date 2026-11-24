@@ -1,0 +1,10 @@
+{
+  "protocol": 0,
+  "id": "bottles",
+  "name": "Bottles",
+  "version": "@VERSION@",
+  "program": ["./pindu-import-bottles"],
+  "runs": "sub-sandbox",
+  "reads": ["~/.local/share/bottles", "~/.var/app/com.usebottles.bottles/data/bottles"],
+  "uri_schemes": ["bottles"]
+}

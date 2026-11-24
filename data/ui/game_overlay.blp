@@ -7,7 +7,8 @@ using Adw 1;
 // right, as they do in the main window, each with the hint bar under it; the game shows
 // beside them, and a click there closes the panel. The rows' `win.*` actions are the ones
 // `PinduQuickAccess::setup` adds to this window, plus the ones `game_overlay` hands on to
-// the main window.
+// the main window. Over Steam Big Picture it shows a notice of how to leave it, which
+// leaves the input to Steam.
 template $PinduGameOverlay: Adw.Window {
   title: _("Pindu launcher");
   decorated: false;
@@ -45,6 +46,23 @@ template $PinduGameOverlay: Adw.Window {
 
     Box shade {
       hexpand: true;
+
+      // Over Steam Big Picture, for a while after it shows, how to leave it: the chord's
+      // glyphs and "Back to Pindu", with no panel open and the input left to Steam.
+      Box notice {
+        hexpand: true;
+        halign: center;
+        valign: start;
+        margin-top: 48;
+        spacing: 24;
+        visible: false;
+
+        styles [
+          "hint-bar",
+          "osd",
+          "big-picture-notice",
+        ]
+      }
     }
 
     Box quick_access_pane {

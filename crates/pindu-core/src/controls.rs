@@ -103,6 +103,7 @@ fn group(intent: Intent) -> Group {
         | Intent::Home
         | Intent::QuickAccess
         | Intent::SystemQuickAccess
+        | Intent::LeaveBigPicture
         | Intent::Options => Group::Panels,
         Intent::BackHeld => Group::Launching,
     }
