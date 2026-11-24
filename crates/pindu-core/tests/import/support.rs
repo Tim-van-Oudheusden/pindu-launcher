@@ -2,6 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
+// The Bottles importer the Bottles tests run: in-process here, and the bundled helper
+// program in `pindu-import-bottles`'s tests, which run the same file.
+pub(crate) use pindu_core::sources::bottles;
 use pindu_core::sources::vdf::Value;
 
 /// Copies `tests/fixtures/<name>` into a fresh temporary folder, replacing `@ROOT@` in

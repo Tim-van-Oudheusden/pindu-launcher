@@ -1,0 +1,17 @@
+[package]
+name = "pindu-import-bottles"
+description = "Pindu launcher's Bottles importer, a bundled helper speaking the external importer protocol"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+pindu-core.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true
