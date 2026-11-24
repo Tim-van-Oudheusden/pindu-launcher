@@ -83,6 +83,8 @@ appstreamcli validate --no-net %{buildroot}%{_metainfodir}/%{app_id}.metainfo.xm
 %license LICENSE
 %doc README.md
 %{_bindir}/%{name}
+# The bundled external importers: Bottles' importer, pindu-import-bottles, and its manifest
+%{_libexecdir}/%{name}/
 %{_datadir}/%{name}/
 %{_datadir}/applications/%{app_id}.desktop
 %{_datadir}/dbus-1/services/%{app_id}.service

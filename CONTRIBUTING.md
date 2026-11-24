@@ -30,6 +30,8 @@ beside a stable install and keeps its own data.
 ```text
 crates/pindu-core/   the GTK-free core: importers (sources/), the library database, launch plans, playtime, Proton,
                      artwork cache, themes, navigation; tested with plain `cargo test`, fixtures under tests/
+crates/pindu-import-bottles/  the Bottles importer as a bundled helper over the external importer protocol
+                     (docs/external-importers.md); its tests run pindu-core's Bottles tests against the program
 crates/pindu-ui/     the GTK shells (binary `pindu-launcher`): services, GObject list models, desktop and fullscreen
 crates/manette*/     libmanette bindings, generated with gir (do not edit the generated code)
 data/                Blueprint files, GSettings schema, desktop file, MetaInfo, icons, fullscreen designs
@@ -51,7 +53,8 @@ that never reads files or spawns processes itself ([Architecture](AGENTS.md#arch
   the spec disagree, the issue wins.
 - Pick an open issue whose `Depends on` issues are closed, and assign it to yourself. Issues labelled `human-only` are
   for the maintainer.
-- Bug reports and ideas are welcome as new issues. Report security problems privately instead
+- Bug reports and ideas are welcome as new issues, and so are hardware reports ([`docs/hardware.md`](docs/hardware.md)
+  says how they reach the matrix). Report security problems privately instead
   ([`SECURITY.md`](SECURITY.md)).
 
 ## Making a change

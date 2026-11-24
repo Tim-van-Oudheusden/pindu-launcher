@@ -894,6 +894,11 @@ Everything that can be decided without GTK lives in `crates/pindu-core` and is t
 shells never read files or spawn processes. They observe the models and send the user's intents back to the services,
 so fullscreen mode is a second presentation of the same library.
 
+Bottles is read by `pindu-import-bottles`, the first importer that runs as a separate program over the
+[external importer protocol](docs/external-importers.md). Every package installs it in
+`<libexecdir>/pindu-launcher/importers/bottles/` with its `importer.json`, and in the Flatpak it runs in a sandbox of its
+own with no network that sees only the Bottles folders.
+
 ## Documentation
 
 | Document | Covers |
@@ -914,6 +919,7 @@ so fullscreen mode is a second presentation of the same library.
 | [`docs/fullscreen-style.md`](docs/fullscreen-style.md) | The fullscreen style contract: design folders, `theme.json`, CSS names |
 | [`docs/releasing.md`](docs/releasing.md) | How to cut a release: versions, notes, the tag and the Release workflow |
 | [`docs/support-policy.md`](docs/support-policy.md) | The support policy: which versions get fixes, how each install type updates, and until when |
+| [`docs/hardware.md`](docs/hardware.md) | The hardware 1.0 is checked on, the flows checked on each, and the matrix of hardware reports |
 | [`docs/ai-ops-runbook.md`](docs/ai-ops-runbook.md) | Watching, pausing and reverting agent work; CI and Release failures; the `main` ruleset |
 | [`docs/translating.md`](docs/translating.md) | How translations are laid out, the Weblate settings, and translating without Weblate |
 | [`docs/agent-tasks/README.md`](docs/agent-tasks/README.md) | How each change traces to its issue: branch, commit, pull request and merge |
@@ -963,6 +969,13 @@ also records how each of a game's last five launches ended ([Launch outcomes](do
 one failed, the game's page says why and lists the next steps that exist for the game: **How to Enable**, **How to
 Install umu-launcher**, **Choose Another Proton Build**, **Start Safely** and **Open Log**, which opens that launch's
 log. In fullscreen mode, the game's options list them.
+
+### Reporting your hardware
+
+Tried Pindu launcher on a handheld, a television PC or any other machine? File a
+[Hardware report](https://github.com/Tim-van-Oudheusden/pindu-launcher/issues/new?template=hardware-report.yml) with
+the machine, its GPU, the OS, the version and which checks passed. Each report becomes a row of the public matrix in
+[`docs/hardware.md`](docs/hardware.md), which also lists the machines every release is checked on.
 
 ## Acknowledgments
 

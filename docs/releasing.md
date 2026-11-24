@@ -203,6 +203,8 @@ launcher from `:testing` to `:stable` ([pindu-os#30](https://github.com/Tim-van-
 **The machine** runs Pindu OS with the build under test installed, because the system panel's Network, Bluetooth,
 Power and System Update sections only show there (see [System panel](system-panel.md)). It needs a Bluetooth adapter,
 Wi-Fi, a Bluetooth controller, and a Steam library with one native game and one Windows game set to run through Proton.
+[Hardware](hardware.md) lists the machines in the published set, the desktop window's checks that run beside this
+list, and the matrix of hardware reports from other machines.
 
 | Check | Passes when |
 | --- | --- |
