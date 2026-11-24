@@ -46,7 +46,8 @@ pub fn key_paths(source: Source, root: &Path) -> Vec<PathBuf> {
         // butler keeps the database in WAL mode, so new rows land in the log first.
         Source::Itch => vec![root.join("db/butler.db"), root.join("db/butler.db-wal")],
         Source::Legendary => vec![root.join("installed.json")],
-        Source::Desktop | Source::Manual => Vec::new(),
+        // An external importer's helper names its own paths in its probe.
+        Source::Desktop | Source::Manual | Source::External => Vec::new(),
     }
 }
 

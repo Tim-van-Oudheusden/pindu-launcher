@@ -20,6 +20,8 @@ bindir = prefix / get_option('bindir')
 datadir = prefix / get_option('datadir')
 localedir = prefix / get_option('localedir')
 pkgdatadir = datadir / meson.project_name()
+# Helpers that come with the app, such as external importers, live here.
+pkglibexecdir = prefix / get_option('libexecdir') / meson.project_name()
 
 dependency('gtk4', version: '>= 4.24')
 dependency('libadwaita-1', version: '>= 1.10')

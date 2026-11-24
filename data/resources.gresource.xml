@@ -33,6 +33,7 @@
     <file preprocess="xml-stripblanks">home/bottles.svg</file>
     <file preprocess="xml-stripblanks">home/categories.svg</file>
     <file preprocess="xml-stripblanks">home/desktop.svg</file>
+    <file preprocess="xml-stripblanks">home/external.svg</file>
     <file preprocess="xml-stripblanks">home/faugus.svg</file>
     <file preprocess="xml-stripblanks">home/favourites.svg</file>
     <file preprocess="xml-stripblanks">home/heroic-amazon.svg</file>

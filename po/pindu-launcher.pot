@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 23:28+0100\n"
+"POT-Creation-Date: 2026-11-24 13:21+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -688,46 +688,50 @@ msgstr ""
 msgid "{first} and {second}"
 msgstr ""
 
-#: crates/pindu-ui/src/duplicate_review.rs:32
+#: crates/pindu-ui/src/duplicate_review.rs:36
+msgid "An external importer links to this store game"
+msgstr ""
+
+#: crates/pindu-ui/src/duplicate_review.rs:38
 msgid "Lutris links to this store game"
 msgstr ""
 
-#: crates/pindu-ui/src/duplicate_review.rs:36
+#: crates/pindu-ui/src/duplicate_review.rs:42
 msgid "Same title, developer and year"
 msgstr ""
 
-#: crates/pindu-ui/src/duplicate_review.rs:40
+#: crates/pindu-ui/src/duplicate_review.rs:46
 msgid "Same title and developer"
 msgstr ""
 
-#: crates/pindu-ui/src/duplicate_review.rs:44
+#: crates/pindu-ui/src/duplicate_review.rs:50
 msgid "Same title and year"
 msgstr ""
 
-#: crates/pindu-ui/src/duplicate_review.rs:45
+#: crates/pindu-ui/src/duplicate_review.rs:51
 msgid "Same title"
 msgstr ""
 
-#: crates/pindu-ui/src/duplicate_review.rs:48
+#: crates/pindu-ui/src/duplicate_review.rs:54
 msgid "Certainly the same game"
 msgstr ""
 
-#: crates/pindu-ui/src/duplicate_review.rs:49
+#: crates/pindu-ui/src/duplicate_review.rs:55
 msgid "Likely the same game"
 msgstr ""
 
-#: crates/pindu-ui/src/duplicate_review.rs:50
+#: crates/pindu-ui/src/duplicate_review.rs:56
 msgid "Possibly the same game"
 msgstr ""
 
 #. Translators: a duplicate suggestion's sources, its reason and its confidence.
-#: crates/pindu-ui/src/duplicate_review.rs:53
+#: crates/pindu-ui/src/duplicate_review.rs:59
 #, rust-format
 msgid "{sources} · {reason} · {confidence}"
 msgstr ""
 
 #. Translators: a group of copies of one game the sync made, and their sources.
-#: crates/pindu-ui/src/duplicate_review.rs:75
+#: crates/pindu-ui/src/duplicate_review.rs:81
 #, rust-format
 msgid "Grouped automatically · {sources}"
 msgstr ""
@@ -824,7 +828,7 @@ msgid "Your Library Is Ready"
 msgstr ""
 
 #: crates/pindu-ui/src/first_sync_summary.rs:33
-#: crates/pindu-ui/src/launch_service.rs:368
+#: crates/pindu-ui/src/launch_service.rs:372
 #: crates/pindu-ui/src/proton_launch.rs:446
 #: crates/pindu-ui/src/proton_launch.rs:695 crates/pindu-ui/src/window.rs:1790
 msgid "_Close"
@@ -2295,7 +2299,7 @@ msgid "Launcher"
 msgstr ""
 
 #. Translators: when a source last synced; it never has.
-#: crates/pindu-ui/src/game_page.rs:935 crates/pindu-ui/src/sources.rs:157
+#: crates/pindu-ui/src/game_page.rs:935 crates/pindu-ui/src/sources.rs:158
 #: crates/pindu-ui/src/widgets/game_list_cell.rs:213
 msgid "Never"
 msgstr ""
@@ -2393,7 +2397,7 @@ msgid "Open the Wikidata Item"
 msgstr ""
 
 #: crates/pindu-ui/src/game_page.rs:1119
-#: crates/pindu-ui/src/launch_service.rs:433
+#: crates/pindu-ui/src/launch_service.rs:437
 msgid "Could not open the web page"
 msgstr ""
 
@@ -2544,7 +2548,7 @@ msgid "None installed; umu downloads one the first time a game needs it"
 msgstr ""
 
 #. Translators: the separator between the first items of a list.
-#: crates/pindu-ui/src/health_page.rs:195 crates/pindu-ui/src/sources.rs:136
+#: crates/pindu-ui/src/health_page.rs:195 crates/pindu-ui/src/sources.rs:137
 msgid ", "
 msgstr ""
 
@@ -2826,50 +2830,50 @@ msgstr ""
 msgid "+{count}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:186
+#: crates/pindu-ui/src/launch_service.rs:190
 #: crates/pindu-ui/src/proton_launch.rs:596
 #, rust-format
 msgid "Could not start “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:205
+#: crates/pindu-ui/src/launch_service.rs:209
 msgid "This game cannot be started yet"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:231
+#: crates/pindu-ui/src/launch_service.rs:235
 #, rust-format
 msgid "Starting “{title}” safely"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:232
+#: crates/pindu-ui/src/launch_service.rs:236
 #, rust-format
 msgid "Starting “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:317
+#: crates/pindu-ui/src/launch_service.rs:321
 #, rust-format
 msgid "Starting “{title}” in {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:323
-#: crates/pindu-ui/src/launch_service.rs:413
-#: crates/pindu-ui/src/launch_service.rs:488
-#: crates/pindu-ui/src/launch_service.rs:551
+#: crates/pindu-ui/src/launch_service.rs:327
+#: crates/pindu-ui/src/launch_service.rs:417
+#: crates/pindu-ui/src/launch_service.rs:492
+#: crates/pindu-ui/src/launch_service.rs:555
 #, rust-format
 msgid "Could not open {launcher}"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:369
+#: crates/pindu-ui/src/launch_service.rs:373
 msgid "_How to Enable"
 msgstr ""
 
 #. / The heading of the explanation that a game needs a permission.
 
-#: crates/pindu-ui/src/launch_service.rs:383
+#: crates/pindu-ui/src/launch_service.rs:387
 msgid "Permission Needed"
 msgstr ""
 
-#: crates/pindu-ui/src/launch_service.rs:389
+#: crates/pindu-ui/src/launch_service.rs:393
 #, rust-format
 msgid ""
 "“{title}” starts on this computer, outside the sandbox. Allow that in "
@@ -3703,32 +3707,36 @@ msgstr ""
 msgid "Added by Hand"
 msgstr ""
 
+#: crates/pindu-ui/src/sources.rs:124
+msgid "External Importers"
+msgstr ""
+
 #. Translators: a list's first items and its last, as in "Steam, Lutris and Bottles".
-#: crates/pindu-ui/src/sources.rs:138
+#: crates/pindu-ui/src/sources.rs:139
 #, rust-format
 msgid "{items} and {last}"
 msgstr ""
 
 #. Translators: when a source last synced; under a minute ago.
-#: crates/pindu-ui/src/sources.rs:159
+#: crates/pindu-ui/src/sources.rs:160
 msgid "Just now"
 msgstr ""
 
-#: crates/pindu-ui/src/sources.rs:160
+#: crates/pindu-ui/src/sources.rs:161
 #, rust-format
 msgid "{count} minute ago"
 msgid_plural "{count} minutes ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/sources.rs:161
+#: crates/pindu-ui/src/sources.rs:162
 #, rust-format
 msgid "{count} hour ago"
 msgid_plural "{count} hours ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/sources.rs:162
+#: crates/pindu-ui/src/sources.rs:163
 #, rust-format
 msgid "{count} day ago"
 msgid_plural "{count} days ago"
@@ -3748,11 +3756,11 @@ msgstr ""
 msgid "Artwork From SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/sync_service.rs:146
+#: crates/pindu-ui/src/sync_service.rs:149
 msgid "Refreshing Library"
 msgstr ""
 
-#: crates/pindu-ui/src/sync_service.rs:152
+#: crates/pindu-ui/src/sync_service.rs:155
 msgid "The import stopped unexpectedly"
 msgstr ""
 

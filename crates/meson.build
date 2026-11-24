@@ -25,6 +25,7 @@ cargo_env = [
   'PINDU_APP_ID=' + application_id,
   'PINDU_LOCALEDIR=' + localedir,
   'PINDU_PKGDATADIR=' + pkgdatadir,
+  'PINDU_PKGLIBEXECDIR=' + pkglibexecdir,
 ]
 
 app_binary = custom_target(

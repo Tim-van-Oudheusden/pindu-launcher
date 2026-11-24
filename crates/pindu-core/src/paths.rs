@@ -47,6 +47,12 @@ pub fn default_tools_dir() -> PathBuf {
         .join("compatibilitytools.d")
 }
 
+/// `$XDG_DATA_HOME/pindu-launcher/importers`: the user's external importers, one folder
+/// each.
+pub fn default_importers_dir() -> PathBuf {
+    default_data_home().join(APP_DIR).join("importers")
+}
+
 /// `~/Games/pindu-launcher/prefixes`: the Wine prefixes of Windows games without one of
 /// their own, in the games folder the sandbox may write to.
 pub fn default_prefixes_dir() -> PathBuf {
@@ -241,6 +247,14 @@ mod tests {
         assert_eq!(default_library_db_path(), app_dir.join("library.db"));
         assert_eq!(default_user_art_dir(), app_dir.join("art"));
         assert_eq!(default_tools_dir(), app_dir.join("compatibilitytools.d"));
+    }
+
+    #[test]
+    fn external_importers_live_beside_the_library_in_the_default_data_home() {
+        assert_eq!(
+            default_importers_dir(),
+            default_data_home().join(APP_DIR).join("importers")
+        );
     }
 
     #[test]

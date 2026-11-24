@@ -157,7 +157,8 @@ impl Location {
                 ],
                 &["db/butler.db"],
             ),
-            Source::Desktop | Source::Manual => return None,
+            // Each external importer's helper probes its own candidates.
+            Source::Desktop | Source::Manual | Source::External => return None,
         };
         Some(Self {
             candidates,

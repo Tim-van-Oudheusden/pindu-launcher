@@ -96,18 +96,27 @@ impl WatchService {
 
 /// The key files of each source where the last sync found it, where each source it did
 /// not find would appear (`watch::appear_paths`: a store installed but never run, such
-/// as Steam before its first sign-in), and the desktop folders.
+/// as Steam before its first sign-in), what each external importer that is on named in its
+/// last probe, and the desktop folders.
 fn watched_paths() -> Vec<PathBuf> {
     let dirs = HostDirs::from_env();
     let mut paths = watch::desktop_paths(&dirs);
-    if let Ok(store) = Store::open(&default_library_db_path())
-        && let Ok(states) = store.source_states()
-    {
-        for state in states.into_iter().filter(|state| state.enabled) {
-            match &state.resolved_location {
-                Some(root) => paths.extend(watch::key_paths(state.source, root)),
-                None => paths.extend(watch::appear_paths(state.source, &dirs)),
+    if let Ok(store) = Store::open(&default_library_db_path()) {
+        if let Ok(states) = store.source_states() {
+            for state in states.into_iter().filter(|state| state.enabled) {
+                match &state.resolved_location {
+                    Some(root) => paths.extend(watch::key_paths(state.source, root)),
+                    None => paths.extend(watch::appear_paths(state.source, &dirs)),
+                }
             }
+        }
+        if let Ok(helpers) = store.external_importers() {
+            paths.extend(
+                helpers
+                    .into_iter()
+                    .filter(|helper| helper.enabled)
+                    .flat_map(|helper| helper.watch),
+            );
         }
     }
     paths

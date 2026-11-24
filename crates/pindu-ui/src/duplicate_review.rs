@@ -29,6 +29,12 @@ pub fn suggestion_title(review: &Review, suggestion: &Suggestion) -> String {
 /// as in "Steam and Desktop · Same title and developer · Likely the same game".
 pub fn suggestion_subtitle(suggestion: &Suggestion) -> String {
     let reason = match &suggestion.reason {
+        Reason::CrossReference { .. }
+            if suggestion.first.source() == Source::External
+                || suggestion.second.source() == Source::External =>
+        {
+            gettext("An external importer links to this store game")
+        }
         Reason::CrossReference { .. } => gettext("Lutris links to this store game"),
         Reason::Title {
             same_developer: true,
