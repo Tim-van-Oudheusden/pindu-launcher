@@ -580,9 +580,10 @@ folder (`~/.local/share/Steam`, or the Steam Flatpak's `~/.var/app/com.valvesoft
 - Anywhere else (a plain gamescope, as Pindu OS runs today, or a desktop) the app cannot see Steam's windows, so the
   screen goes once Steam's log says its update is installed and its client starts (or that it was up to date), and
   Steam's windows show as gamescope or the desktop places them, its update window over the screen included.
-- The Flatpak reads the log only where its Steam folder permissions reach (`xdg-data/Steam` and the Steam Flatpak's
-  `data/Steam`), and only if the folder was there when the app started, which a Steam that never ran has not made yet.
-  Without the log the screen shows Starting Steam… until the sign-in or the 10 minutes.
+- The native packages follow the log as above. The Flatpak does not show a never-run Steam's progress: its sandbox
+  sees a Steam folder only if it was there when the app started, which a Steam that never ran has not made yet, so
+  the screen shows Starting Steam… without progress until the sign-in or the 10 minutes. This is by design: the
+  Flatpak gets no extra permission or host command for it.
 
 ### Proton
 
