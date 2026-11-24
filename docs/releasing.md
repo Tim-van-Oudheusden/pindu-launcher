@@ -31,7 +31,10 @@ flowchart LR
 3. **Write the notes** as a new `<release version="X.Y.Z" date="YYYY-MM-DD">` at the top of `<releases>` in
    `data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in`: one `<p>` and a `<ul>` of user-visible changes
    since the last tag (`git log vPREVIOUS..`). The same text becomes the release notes on GitHub and in software
-   centres, so write it for users. Preview it with `build-aux/release-notes.py X.Y.Z`.
+   centres, so write it for users. Preview it with `build-aux/release-notes.py X.Y.Z`. When the external importer
+   [changelog](external-importers.md#changelog) has "Unreleased" entries, replace "Unreleased" with X.Y.Z there and give
+   the notes a sentence for helper authors, as its [compatibility policy](external-importers.md#announcing-a-change)
+   asks.
 4. **Refresh the translation template**, which carries the MetaInfo strings: `meson compile -C _build
    pindu-launcher-pot`. CI's `po/check-pot.sh` fails otherwise.
 5. **Check** with `meson test -C _build`: its `versions` test fails while the versions disagree.

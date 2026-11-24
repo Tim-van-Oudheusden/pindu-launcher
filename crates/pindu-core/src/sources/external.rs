@@ -25,8 +25,10 @@ use super::sync::{Changes, SourceSync, apply_snapshot_within};
 use crate::model::{ExternalImporterState, Source, Timestamp};
 use crate::store::{self, Store};
 
-/// The protocol versions this build speaks. `0` is unstable: it may change in any release
-/// until two integrations from outside exist.
+/// The protocol versions this build speaks, oldest first: the newest and, while it is
+/// deprecated, the one before it, as the compatibility policy in
+/// `docs/external-importers.md` says. `0` is unstable: it may change in any release until
+/// two integrations from outside exist.
 pub const PROTOCOLS: &[u64] = &[0];
 
 /// The bundled helpers that serve a built-in source, by helper ID: a built-in importer
