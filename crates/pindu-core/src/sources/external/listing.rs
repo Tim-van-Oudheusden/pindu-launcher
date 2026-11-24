@@ -3,9 +3,9 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-use super::Helper;
 use super::manifest::Manifest;
 use super::runner::{self, Place, Tier};
+use super::{Helper, PROTOCOLS};
 use crate::model::{ExternalImporterState, Timestamp};
 
 /// Where a listed helper runs, as the user is told.
@@ -42,6 +42,9 @@ pub struct Listed {
     pub uri_schemes: Vec<String>,
     /// Whether it speaks a protocol that may still change, which the lists mark.
     pub experimental: bool,
+    /// Whether it speaks a deprecated protocol, one a later version of Pindu stops
+    /// speaking, so it needs an update from its author; the lists mark it.
+    pub deprecated: bool,
     /// The folder its last probe found its source in.
     pub found: Option<PathBuf>,
     /// When it was last synced, if ever.
@@ -60,6 +63,17 @@ pub fn listing(
     states: &[ExternalImporterState],
     place: Place,
     home: &Path,
+) -> Vec<Listed> {
+    listing_in(helpers, states, place, home, PROTOCOLS)
+}
+
+/// [`listing`] in a build that speaks the protocol versions `spoken`, oldest first.
+fn listing_in(
+    helpers: &[Helper],
+    states: &[ExternalImporterState],
+    place: Place,
+    home: &Path,
+    spoken: &[u64],
 ) -> Vec<Listed> {
     let mut seen = HashSet::new();
     helpers
@@ -82,6 +96,7 @@ pub fn listing(
                 reads: Vec::new(),
                 uri_schemes: Vec::new(),
                 experimental: true,
+                deprecated: false,
                 found: state.root,
                 last_sync: state.last_sync,
                 problems: state.errors,
@@ -95,6 +110,12 @@ pub fn listing(
                     listed.uri_schemes.clone_from(&manifest.uri_schemes);
                     // Protocol 0 may change in any release, until it is promised as 1.
                     listed.experimental = manifest.protocol == 0;
+                    // Older than the newest version spoken: deprecated, by the compatibility
+                    // policy. A bundled helper comes with the release and needs no update.
+                    listed.deprecated = !helper.bundled
+                        && spoken
+                            .last()
+                            .is_some_and(|&newest| manifest.protocol < newest);
                 }
                 Err(problem) => listed.problems = vec![problem.clone()],
             }
@@ -141,6 +162,20 @@ mod tests {
     };
 
     #[test]
+    fn a_helper_on_the_older_of_two_spoken_protocols_is_deprecated_unless_it_is_bundled() {
+        let on = |protocol, bundled| {
+            let mut helper = helper("alpha", Runs::SubSandbox);
+            helper.bundled = bundled;
+            helper.manifest.as_mut().unwrap().protocol = protocol;
+            listing_in(&[helper], &[], FLATPAK, Path::new("/home/me"), &[1, 2])[0].deprecated
+        };
+
+        assert!(on(1, false));
+        assert!(!on(2, false));
+        assert!(!on(1, true));
+    }
+
+    #[test]
     fn a_helper_shows_what_it_reads_and_launches_and_is_experimental_and_off_at_first() {
         let listed = listing(
             &[helper("alpha", Runs::SubSandbox)],
@@ -161,6 +196,7 @@ mod tests {
                 reads: vec!["/home/me/.local/share/example".into()],
                 uri_schemes: vec!["example".into()],
                 experimental: true,
+                deprecated: false,
                 found: None,
                 last_sync: None,
                 problems: Vec::new(),

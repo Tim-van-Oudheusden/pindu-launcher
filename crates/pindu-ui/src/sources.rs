@@ -177,12 +177,15 @@ pub fn running_text(running: Running) -> Option<String> {
 }
 
 /// An external importer in one line, as fullscreen mode's Sources shows it: whether it is
-/// experimental, where it runs, and whether its source is on this computer or it cannot
-/// run.
+/// experimental or speaks a deprecated protocol, where it runs, and whether its source is
+/// on this computer or it cannot run.
 pub fn helper_summary(helper: &Listed) -> String {
     let mut parts = Vec::new();
     if helper.experimental {
         parts.push(gettext("Experimental"));
+    }
+    if helper.deprecated {
+        parts.push(outdated_text());
     }
     match running_text(helper.running) {
         Some(running) => parts.push(running),
@@ -197,4 +200,12 @@ pub fn helper_summary(helper: &Listed) -> String {
     }
     // Translators: the separator between the facts about one source.
     parts.join(&gettext(" · "))
+}
+
+/// The mark of an external importer that speaks a deprecated protocol, in both shells'
+/// Sources lists.
+pub fn outdated_text() -> String {
+    // Translators: an external importer that speaks an old version of the importer
+    // protocol, which a later version of Pindu stops speaking.
+    gettext("Outdated")
 }
