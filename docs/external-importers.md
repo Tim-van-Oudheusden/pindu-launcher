@@ -115,7 +115,9 @@ with `tar` (`proton_download_service.rs`); the workspace has no zip reader, so `
    is turned off again unless `runs`, `reads` and `uri_schemes` are unchanged.
 9. **Removing.** Each installed helper has a Remove action that deletes its folder and its `external_importers` row.
    Its games get `missing_since`, as the games of a source that is no longer on the machine do, and keep their data.
-10. **Bundled helpers.** A bundled helper cannot be removed, and an archive with its `id` is refused.
+10. **Bundled helpers.** A bundled helper cannot be removed, and an archive with its `id` is refused, as is one with
+    the `id` of a built-in source's helper (`bottles`) even where that helper is not installed, since it would never
+    run.
 
 ## The protocol
 

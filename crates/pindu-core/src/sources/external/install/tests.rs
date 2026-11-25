@@ -69,8 +69,15 @@ impl Fixture {
         self.archive(&tree, &format!("{id}-{}", changes.len()), &[])
     }
 
+    /// Prepares `archive` in a build whose one bundled helper, `example-bundled`, serves no
+    /// built-in source.
     fn prepare(&self, archive: &Path) -> Result<Prepared, String> {
-        prepare(archive, &self.importers(), &["bottles".to_owned()], LIMITS)
+        prepare(
+            archive,
+            &self.importers(),
+            &["example-bundled".to_owned()],
+            LIMITS,
+        )
     }
 }
 
@@ -323,6 +330,14 @@ fn each_kind_of_invalid_manifest_is_refused_with_its_reason() {
 
 #[test]
 fn a_helper_with_a_bundled_helpers_id_is_refused() {
+    let fixture = Fixture::new();
+    let archive = fixture.helper_archive("example-bundled", &[]);
+
+    assert_refused(&fixture, &archive, "comes with Pindu");
+}
+
+#[test]
+fn a_helper_with_a_built_in_sources_id_is_refused_though_its_helper_is_not_bundled() {
     let fixture = Fixture::new();
     let archive = fixture.helper_archive("bottles", &[]);
 
