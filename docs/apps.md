@@ -73,8 +73,8 @@ The launcher watches the application folders, there yet or not, and reads the li
 changed (`apps_service.rs`). An app that Get Games installs or removes while the launcher runs appears or disappears
 without a restart or Refresh Library.
 
-## Open question
+## A full desktop's list
 
-On a full desktop the list holds every installed application, not just a store and a few launchers, so the desktop
-window's Apps shows them all. Whether to keep that, or offer a switch, is the maintainer's call (#830); the list is not
-filtered by guesswork.
+On a full desktop the list holds every installed application, not just a store and a few launchers. The maintainer
+decided on a switch rather than a filter (#868): the desktop window leaves its Apps item out until **Hide Apps in the
+Sidebar** is turned off (see Where it shows), and the list itself is not filtered by guesswork.
