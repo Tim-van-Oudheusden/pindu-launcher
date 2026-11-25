@@ -784,16 +784,16 @@ Section 9.5 lists what a 1.0 should mean, but no milestone held it. M9's remaini
 
 **Gate:** every condition in section 9.5 holds, checked against a final release.
 
-Where each condition stands, from the repository as of 0.7.0-rc.3:
+Where each condition stands, from the repository as of 0.7.0-rc.4. Every condition but Flathub now has its piece in the repository; what is left is the maintainer's, or a check run against a final release:
 
 | Condition (section 9.5) | What exists | What is missing |
 | --- | --- | --- |
-| Every database version migrates, and the path back after a rollback is tested | Append-only migrations; a newer database is refused with a test (`opening_a_database_from_a_newer_version_fails`) | What a user sees after a rollback is untraced (section 4.9); no test or written check covers it |
-| Older backup formats import | Backup format 2 reads version 1 (`backup.rs`) | A test that imports a version 1 file as written by an old release |
-| The built-in sources behave as documented | The docs-follow-behaviour gate (#486) | A check of each source against its README section |
-| An external importer contract has a written compatibility policy | `docs/external-importers.md`, adopted on #547 | The policy itself, once the contract ships |
-| Desktop and fullscreen flows are checked on a small, published set of hardware | The hardware checklist in `docs/releasing.md`, on one machine | The published set of machines, and a matrix of voluntary reports (sections 4.7 and 12) |
-| The support policy for the Flatpak, the native packages and Pindu OS is stated | Install instructions per type in the README | A stated policy: which versions get fixes, and how each type updates |
+| Every database version migrates, and the path back after a rollback is tested | Append-only migrations; an older launcher refuses a newer library without writing to it and offers Start From Kept Copy, with core tests (`opening_a_newer_library_refuses_it_and_leaves_its_files_unchanged` and the tests beside it); the hardware checklist's "Rollback after a migration" row in `docs/releasing.md` (#823) | That row passing on Pindu OS against a final release |
+| Older backup formats import | `tests/backup_fixtures.rs` imports backups written by 0.5.1 (format 1), 0.6.0 and 0.7.0-rc.3 (format 2) (#824, #854) | Nothing |
+| The built-in sources behave as documented | The docs-follow-behaviour gate (#486); `docs/source-claims.md` ties each README claim about a source to a test or a hardware check, and the hardware checklist starts a game from another launcher and one added by hand (#825) | The hardware rows passing against a final release |
+| An external importer contract has a written compatibility policy | The Compatibility section of `docs/external-importers.md`, at protocol `0` (#547, #826) | Nothing |
+| Desktop and fullscreen flows are checked on a small, published set of hardware | `docs/hardware.md`: the published set, the flows each machine runs, the hardware report form and the matrix of reports (#827) | Machines for four of the five classes (handheld, television PC, desktops with AMD and NVIDIA GPUs) and for all five controller families; the one covered machine's details (pindu-os#51) |
+| The support policy for the Flatpak, the native packages and Pindu OS is stated | `docs/support-policy.md`, a draft for each install type (#828) | The maintainer's approval of its "Choices for the maintainer" |
 | The app is on Flathub | #63, human-only | The submission, which stays the maintainer's |
 | No known defect loses data, breaks a group or leaves a launch stuck | Bug reports in issues; the `blocks-1.0` label, which triage adds to such a bug, and the bug form's question that asks the reporter (#829) | Nothing, while the query below lists no open issue; the first triage, on 2026-11-24, labelled none of the open bugs |
 
