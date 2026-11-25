@@ -97,8 +97,10 @@ impl Drop for WorkFolder {
 }
 
 /// Unpacks and checks the helper in `archive`, to install into `importers`; refused, with
-/// the reason for the user, when it breaks a rule or has the ID of a helper in
-/// `bundled_ids`, which come with Pindu.
+/// the reason for the user, when it breaks a rule or has an ID a helper that comes with
+/// Pindu holds: one in `bundled_ids`, or one that serves a built-in source
+/// ([`super::BUILT_IN`]) even where it is not installed, as [`super::discover`] would
+/// never run it.
 pub fn prepare(
     archive: &Path,
     importers: &Path,
@@ -135,7 +137,7 @@ pub fn prepare(
     check_tree(&unpacked, &unpacked, limits, &mut entries, &mut bytes)?;
     let folder = helper_folder(&unpacked)?;
     let manifest = read_manifest(&folder)?;
-    if bundled_ids.contains(&manifest.id) {
+    if bundled_ids.contains(&manifest.id) || super::built_in(&manifest.id).is_some() {
         return Err(format!(
             "a helper that comes with Pindu has its ID “{}”",
             manifest.id
