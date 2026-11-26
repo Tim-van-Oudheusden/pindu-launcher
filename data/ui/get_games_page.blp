@@ -14,7 +14,13 @@ template $PinduGetGamesPage: Adw.NavigationPage {
 
   child: Adw.ToolbarView toolbar {
     [top]
-    Adw.HeaderBar {}
+    Adw.HeaderBar {
+      [start]
+      ToggleButton sidebar_toggle {
+        icon-name: "sidebar-show-symbolic";
+        tooltip-text: _("Toggle Sidebar");
+      }
+    }
 
     content: Box {
       orientation: vertical;

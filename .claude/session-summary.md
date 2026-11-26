@@ -8,48 +8,27 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
 
 ## Latest session
 
-- 2026-11-24, 0.7.0-rc.4 (this commit, under #788): one session worked #823–#837 plus the follow-ups they filed,
-  ten subagents at once, each in `~/.cache/pindu-work/wt-<N>` with its own `target-<N>`/`prefix-<N>`, PRs labelled
-  `hold` and merged by the parent with `~/.cache/pindu-work/land.sh PR N` (waits for CLEAN + green, merges, then
-  deletes the branch, the worktree and every `*-<N>` folder). Merged: #845 (#834, re-landed: #841 had merged into
-  the `feat/833` branch 8 s after #840 merged that branch, so its commits never reached `main`; a stacked PR's base
-  must be retargeted to `main` before the base merges), #844, #849, #851, #853, #855, #856, #857, #858, #861, #862,
-  #864, #865, #867, #869, #871, #872, #876, #880, hive's #847 and #870, Weblate's #866 and #877. Maintainer
-  decisions: the hardware set is "HP laptop" with no other details yet (#827); #863 (Steam's log in the Flatpak)
-  closed, left as documented; Apps hidden in the desktop window by default with a switch (#868). Every device-only
-  acceptance item became a row of the hardware checklist in `docs/releasing.md` and the Release form. The harness
-  cannot leave fullscreen mode within a run (no window manager): remove `_NET_WM_STATE_FULLSCREEN` with `xprop`.
-- Merge friction: `po/pindu-launcher.pot` conflicts on nearly every merge; regenerate it, never hand-merge. Hive's
-  reviewer leaves review threads (required resolution blocks the merge: `BLOCKED` with green checks) and its sentinel
-  labels PRs touching `.github/ISSUE_TEMPLATE/release.yml` `sentinel-alert`; read, then resolve or remove.
-- Other agents work this repo at the same time (a "hive": issue comments trigger them, and the merge queue merges
-  their PRs). An early decision comment on #792 was implemented as #795 and merged before the maintainer's later
-  choice; #803 duplicated #791. Post a decision comment only once it is final, and check `gh pr list` before
-  opening a PR. cargo-mutants in CI misses `10 * 60` style constants and untested edges: write literals, and test
-  thresholds at their boundary.
-- Harness gained `--offline` (the app in a network namespace with no network, `unshare -rn`) and `--bare`
-  (`harness/bare.sh`: the host's application folders bind-mounted empty, so with `--empty` the app sees a new
-  console with no games and no store). No rust-analyzer on this host: `lsp rename` fails, use `ast_edit` (it only
-  rewrites expression paths; fix type positions by hand).
-- Harness `--gnome-buttons` (close-only title buttons through `gtk-4.0/settings.ini`): without it the desktop window
-  at 360 px always logs `exceeds … width`, as CI's `ui-smoke-narrow` pins the same layout.
-- /var/home filled up once (ENOSPC mid-build): each `target-<N>`/`prefix-<N>.build` is 4–9 GB. Delete them once an
-  issue merges.
-- Harness (outside the repo, `~/.cache/pindu-work/harness/`, README there): `install.sh SOURCE PREFIX` builds and
-  installs through `~/.cache/pindu-work/sdk.sh` (runs a command in `org.gnome.Sdk//51` with rust-stable);
-  `run.sh PREFIX [--design ID] ACTION...` runs fullscreen at 1280×720 in headless gamescope with a throwaway profile,
-  a fake Faugus library, a uinput pad (`pad:r3`, `pad:rb`, `pad:guide+a`, `pad:down*3`, `pad:a@1.5`), keys
-  (`key:ctrl+Page_Down`) and `shot:PATH.png`. The host's own desktop games and Flatpaks show up in its library, and
-  its first notification is "Added 20 games", so Quick Access opens on Notifications there. The pad is a real host
-  device while it runs. Pass `--env GTK_A11Y=none`: without an accessibility bus the first `announce()` crashes the
-  app (#729, also on `main` with the search keyboard). The app gets no system bus (`DBUS_SYSTEM_BUS_ADDRESS` points
-  nowhere): before that, two runs suspended the real PC from the power dock. A fake logind needs its own private bus.
-- Gotchas: `/tmp` is a tmpfs with a per-user quota; keep cargo targets and prefixes in `~/.cache/pindu-work/`, and
-  run cargo-mutants (installed in the SDK cargo home) with `TMPDIR` there, `--gitignore true` and
-  `CARGO_TARGET_DIR` unset (`sdk.sh` sets one, and parallel workers sharing it test each other's mutants), or it
-  copies `_build/` into `/tmp` and fills the quota. CI's mutants check covers every changed pindu-core line. This
-  host has no meson, blueprint-compiler, GTK headers or sqlite3 dev library: host `cargo check -p pindu-core --tests`
-  works, everything else runs in the SDK. Give parallel agents their own `CARGO_TARGET_DIR`. GTK measures an
-  ellipsizing label with `letter-spacing` too narrow (`widgets/spaced_label.rs`); a wrapping label asked for its width
-  at a fixed height answers with one long line (`widgets/tile_frame.rs`). Light style:
-  `ADW_DEBUG_COLOR_SCHEME=prefer-light`; high contrast: `ADW_DEBUG_HIGH_CONTRAST=1`.
+- 2026-11-26, Get Games (#884–#889, this commit under #889): GG-1 spike merged (#910); GG-2 #912, then GG-3, GG-4,
+  GG-6 and GG-5 as a stack of branches (`feat/886-…` on the GG-2 commit, each next one on the previous), each PR
+  opened once its base merged and rebased onto `main`. Maintainer decisions: `quick-xml` 0.42.0 only (no gzip crate:
+  Flatpak deploys an uncompressed `appstream.xml`), installs without `--noninteractive` (it prints no progress; Add a
+  Store too, stdin closed), the 62-entry blocklist in the launcher's default and pindu-os#77, Kodi and Firefox as
+  extras, the first-catalogue time recorded in the hardware checklist's Get Games row.
+- Harness for Get Games: `~/.cache/pindu-work/fakebin/flatpak` fakes the host's `flatpak` (put it first in `PATH` for
+  `run.sh` only: exported in the persistent shell, `sdk.sh`'s `flatpak run` hit the fake and every build silently
+  did nothing). It links the real Flathub catalogue on `update --appstream`, replays GG-1's install output, deploys a
+  fake app and desktop entry, touches `.changed`, and takes `FAKE_FLATPAK_OFFLINE/FAIL/HUGE/STEP/REFRESH` and
+  `FAKE_FLATPAK_EXTERNAL=<id>` (another program installs it after `FAKE_FLATPAK_EXTERNAL_AFTER` seconds).
+  `run.sh` takes `click:X,Y` and `move:X,Y` for the desktop window (`--desktop --size 1280x1000` fits long menus).
+- Gotchas: never share a `CARGO_TARGET_DIR` between worktrees: cargo keys a path dependency's build by its path
+  relative to the workspace, so one worktree's tests ran the other's `pindu-core` without rebuilding. cargo-mutants
+  in CI times out (and fails) on mutants that make code quadratic: the AppStream parser cleared its text as elements
+  opened, and a wrong clear let it grow over the whole catalogue; each element now reads its text from where it
+  started. A pushed PR gets fix-up commits, not an amend and force-push. `land.sh` loops left running with `nohup`
+  never saw #910 merge; check and merge by hand. The sentinel also flags `Cargo.toml` changes.
+- Still true from before: regenerate `po/pindu-launcher.pot` on conflicts, never hand-merge; hive's reviewer threads
+  block merges until resolved; `--env GTK_A11Y=none` for every harness run; keep targets and mutants' `TMPDIR` in
+  `~/.cache/pindu-work/`, and delete each `target-<N>`/`prefix-<N>.build` (4–9 GB) once its issue merges. The harness
+  (`~/.cache/pindu-work/harness/`, README there: `install.sh SOURCE PREFIX`, `run.sh PREFIX [--design ID] [--bare]
+  [--empty] [--offline] [--desktop] ACTION...`) and every cargo or meson command run in the SDK through `sdk.sh`:
+  this host has no meson, blueprint-compiler, GTK headers or sqlite3 dev library.

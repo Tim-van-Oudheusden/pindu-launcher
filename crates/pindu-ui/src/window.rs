@@ -137,6 +137,8 @@ mod imp {
         #[template_child]
         pub apps_item: TemplateChild<adw::SidebarItem>,
         #[template_child]
+        pub get_games_item: TemplateChild<adw::SidebarItem>,
+        #[template_child]
         pub apps_count: TemplateChild<gtk::Label>,
         /// The apps the Apps page shows, in its order.
         pub apps_shown: RefCell<Vec<pindu_core::apps::App>>,
@@ -1269,6 +1271,8 @@ impl PinduWindow {
                     window.new_collection(None);
                 } else if item == *window.imp().apps_item {
                     window.show_apps();
+                } else if item == *window.imp().get_games_item {
+                    window.show_get_games();
                 } else {
                     window.show_view_of(&item);
                 }
