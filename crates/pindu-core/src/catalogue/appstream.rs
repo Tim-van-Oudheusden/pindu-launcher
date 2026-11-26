@@ -263,6 +263,8 @@ struct Element {
     scale: Option<u32>,
     key: Option<String>,
     id: Option<String>,
+    /// Where its text, with that of the elements in it, starts in the parser's.
+    start: usize,
 }
 
 /// A translated text: the best one so far, ranked by the session's languages.
@@ -345,7 +347,7 @@ struct Parser<'a> {
     languages: &'a [String],
     path: Vec<Element>,
     entry: Option<Entry>,
-    /// The text of the element that closes next, with that of the inline elements in it.
+    /// The text of the component being read; each element's is the part since it opened.
     text: String,
     apps: Vec<App>,
 }
@@ -369,6 +371,7 @@ impl Parser<'_> {
             scale: None,
             key: None,
             id: None,
+            start: self.text.len(),
         };
         for attribute in start.attributes() {
             let attribute = attribute.map_err(quick_xml::Error::InvalidAttr)?;
@@ -382,13 +385,6 @@ impl Parser<'_> {
                 "id" => element.id = Some(value),
                 _ => {}
             }
-        }
-        if !self
-            .path
-            .iter()
-            .any(|open| open.name == "p" || open.name == "li")
-        {
-            self.text.clear();
         }
         // Each child of the root is a component, which only counts once it has an ID.
         if self.path.len() == 1 {
@@ -414,6 +410,7 @@ impl Parser<'_> {
             return;
         };
         if self.path.len() == 1 {
+            self.text.clear();
             if let Some(entry) = self.entry.take()
                 && !entry.id.is_empty()
             {
@@ -431,7 +428,8 @@ impl Parser<'_> {
         let Some(entry) = &mut self.entry else {
             return;
         };
-        let value = || self.text.split_whitespace().collect::<Vec<_>>().join(" ");
+        let text = &self.text[element.start..];
+        let value = || text.split_whitespace().collect::<Vec<_>>().join(" ");
         match (parent, element.name.as_str()) {
             ("component", "id") => entry.id = value(),
             ("component", "name") => {
