@@ -112,47 +112,54 @@ A new console has no catalogue until something asks Flatpak for one. When Get Ga
 
 An app is offered when all of these hold:
 
-- it has the category `Game` (the freedesktop main category; its additional categories, such as `ActionGame`, `StrategyGame` or `Emulator`, become the catalogue's shelves);
+- it has one of the lists file's `categories` (by default only `Game`, the freedesktop main category; its additional categories, such as `ActionGame`, `StrategyGame` or `Emulator`, become the catalogue's shelves);
 - it is not on the blocklist;
-- it is an application, not a runtime, extension or add-on;
+- it is an application (`desktop-application`, or `desktop` in older entries), not a runtime, add-on, console application or generic component;
 - it is not end-of-life.
 
-Or it is on the **extras** list: named non-game apps a console owner reasonably wants.
+Or it is on the **extras** list: named non-game apps a console owner reasonably wants. An extra must be an application and not blocked or end-of-life either.
 
-Categories are declared by each app's developer, so the Game category contains tools and miscategorised apps. The blocklist exists for that, and GG-1 measures how much of it there is.
+Categories are declared by each app's developer, so the Game category contains tools and miscategorised apps. The blocklist exists for that: GG-1 (#884) found 62 tools among Flathub's 799 Game applications, beside 53 launchers and 11 streaming clients, which stay.
+
+The catalogue carries no end-of-life state; Flathub keeps it in the repository summary. The launcher reads it from `flatpak remote-ls --app --all --columns=application,options` (an `eol=` or `eol-rebase=` option), and offers everything when that command fails, for instance offline. Flathub already leaves almost every end-of-life app out of the catalogue.
 
 ### 6.4 The lists file
 
-One YAML file holds every editorial choice. The launcher ships a default; a distributor replaces it with a file under `/usr/share` (proposed: `/usr/share/pindu-launcher/distributor/get-games.yaml`; GG-2 fixes the path and format). Pindu OS already ships a file at that path, in a format of its own proposal: `version: 1` with `categories`, `blocklist`, `extras` and `picks` as lists of app IDs, each with a comment ([decision 0015](https://github.com/Tim-van-Oudheusden/pindu-os/blob/main/docs/decisions/0015-get-games.md)). GG-2 settles on one format, and the example below follows whichever it is.
+One YAML file holds every editorial choice. The launcher ships a default, `data/get-games.yaml`, built into the program. A distributor replaces it whole with `/usr/share/pindu-launcher/distributor/get-games.yaml`; the two are never merged, so a distributor's file states every list it wants. Pindu OS ships one ([decision 0015](https://github.com/Tim-van-Oudheusden/pindu-os/blob/main/docs/decisions/0015-get-games.md)), and its format is the one the launcher reads:
 
 ```yaml
-# Illustrative. The real entries are the maintainer's to choose.
-categories: [Game]
-block:
-  - id: com.example.GameTool      # a modding tool, needs a mouse and a file manager
+version: 1
+categories:
+  - Game # freedesktop's main category for games
+blocklist:
+  - com.steamgriddb.SGDBoop # writes artwork into a desktop Steam's folders from links on SteamGridDB's website
 extras:
-  - id: org.mozilla.firefox       # a browser, for store sign-ins that open a web page
-  - id: tv.kodi.Kodi              # media player with a controller interface
+  - tv.kodi.Kodi # a media centre made for the television, with gamepad and remote control support
 picks:
-  - id: net.supertuxkart.SuperTuxKart
-  - id: org.libretro.RetroArch
+  - net.supertuxkart.SuperTuxKart # kart racing for up to four players on one screen
 ```
 
-Every entry carries a comment with its reason. An ID that is not in the catalogue is skipped silently, so the file survives apps being renamed or removed.
+- `version` is required and must be `1`.
+- Each list is a sequence of strings: Flathub app IDs, or AppStream categories for `categories`. Every entry carries a comment with its reason.
+- A missing list is empty, except `categories`, which is then `[Game]`.
+- An ID that is not in the catalogue is skipped silently, so the file survives apps being renamed or removed.
+- A distributor's file that cannot be read (bad YAML, another version, an entry that is not a string) is logged, and the launcher's default applies.
 
 ### 6.5 Order
 
-The catalogue has no popularity data. The first version orders by the lists file's picks, then by category shelf, then by name. Sorting by popularity would need Flathub's web API and is left out until someone has confirmed that API and its terms (section 16).
+The catalogue has no popularity data. Its shelves come in this order: the lists file's picks in its order; Launchers (Steam, Heroic and Lutris, section 7.3); one shelf per game category that has games (Action, Adventure, Arcade, Board, Blocks, Card, Kids, Logic, Role playing, Shooter, Simulation, Sports, Strategy, then Emulators); More games, for games in no such category (201 of Flathub's 799); then Extras. Within a shelf, apps go by name. A game shows on every shelf of its categories; the three stores show only under Launchers. Sorting by popularity would need Flathub's web API and is left out until someone has confirmed that API and its terms (section 16).
+
+Search matches as each character is typed, as the library's search does (case and accents ignored): apps whose name matches come first, then apps whose summary or a keyword matches.
 
 ### 6.6 Reading it
 
-The catalogue is large and changes at most daily. It is parsed once per catalogue version, off the main thread, into a compact index kept in the cache folder (not in the library database, and safe to delete). Startup and browsing read the index.
+The catalogue is large and changes at most daily. It is parsed once per catalogue version, off the main thread, into a compact index kept in the cache folder (`~/.cache/pindu-launcher/catalogue/system.json` or `user.json`; not in the library database, and safe to delete). Startup and browsing read the index. It holds only the applications the lists' categories and extras let through, with their texts in the session's language when the catalogue has them, and is made again when the catalogue's time or size, the session's languages, or the lists' categories or extras change.
 
-Parsing needs an XML reader and gzip in `pindu-core`. That is a new direct dependency, which AGENTS.md reserves for the maintainer (H-1). `flate2` is already in the lock file through other crates; an XML reader is not.
+The launcher reads the uncompressed `appstream.xml` that Flatpak deploys beside `appstream.xml.gz`, with `quick-xml` (approved on #884), so it needs no gzip. GG-1 measured 160 ms to parse Flathub's 52 MB catalogue on a Ryzen 7 7800X3D, and a 2.3 MB index for its 797 games. No catalogue (Flatpak has not downloaded one yet) and a broken one are told apart, so the screens can say which.
 
 ### 6.7 What an app shows
 
-Name, icon, one-line summary, description, screenshots, developer, licence (free or proprietary, in words), age rating derived from the catalogue's content rating, download and installed size (from `flatpak remote-info`, fetched when the page opens), and whether Flathub has verified the developer, if the catalogue carries that.
+Name, icon, one-line summary, description, screenshots, developer, licence (free or proprietary, in words), age rating derived from the catalogue's content rating (the youngest age its OARS rating suits, by the Common Sense Media ages AppStream maps it to; all ages for an empty rating), download and installed size (from `flatpak remote-info`, fetched when the page opens), and whether Flathub has verified the developer (`flathub::verification::verified` in the catalogue; 495 of 804 games were verified when GG-1 measured).
 
 Unverified and proprietary apps are shown with a plain label, not hidden. Hiding them is a lists-file decision, not a code one.
 
@@ -293,7 +300,7 @@ Open decisions, all for H-1:
 
 ## 16. What I could not check
 
-- **A real catalogue.** The number of games, the miscategorisation rate, whether Flathub's verification and end-of-life state are in the catalogue file, and the parse cost are all GG-1's to measure. The file's location and general contents are standard Flatpak and AppStream behaviour.
+- **A real catalogue.** Measured by GG-1 on #884: the number of games, the miscategorisation rate, which fields the catalogue carries (verification yes, end-of-life no) and the parse cost. The HP laptop's parse time is not measured yet; the hardware checklist carries it.
 - **Flathub's web API.** I found only an old forum thread naming a v1 endpoint and no usage terms. The plan does not depend on it.
 - **The details polkit receives on uninstall**, and that a catalogue refresh needs no prompt on the image. pindu-os#66 checked both: flatpak's helper passes only the ref on uninstall, so the rule allows any ref (Flathub is the only remote), and `flatpak update --appstream --system --noninteractive` runs as `pindu` with no polkit agent.
 - **Flathub's brand guidance** for using its name and logo in another interface.
