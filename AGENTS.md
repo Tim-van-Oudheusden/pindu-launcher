@@ -191,6 +191,9 @@ The workspace enforces the Rust for Linux lint set (`[workspace.lints]` in `Carg
 - **`gdk4-x11` 0.11.5 with the `xlib` feature** (approved 2026-11-17, #387), in `pindu-ui` only, for gamescope's
   `--steam` protocol (`gamescope_service.rs`, #390). It adds `gdk4-x11`, `gdk4-x11-sys` 0.11.5 and `x11-dl` 2.21.0,
   which loads `libX11.so.6` at run time; its `v4_18` feature stays off
+- **`quick-xml` 0.42.0 with no default features** (approved 2026-11-26, #884), in `pindu-core` only, for Get Games'
+  catalogue (`catalogue/appstream.rs`, #885). Its one dependency, `memchr`, was already in the lock; the catalogue is
+  read uncompressed, so no gzip crate was added
 - **Verify the crate exists** on crates.io with a real repository and history (slopsquatting)
 - **Prefer the platform and existing dependencies** — the standard library and the GNOME runtime cover most needs
 - **Never upgrade a major version as a side-effect** of another change; major upgrades and GNOME runtime bumps are

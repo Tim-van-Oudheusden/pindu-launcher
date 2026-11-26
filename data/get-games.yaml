@@ -1,0 +1,91 @@
+# Get Games' lists (docs/get-games.md, section 6.4): which Flathub apps the catalogue offers
+# besides its games' own categories, which it never shows, and which it shows first.
+#
+# A distributor replaces this whole file with its own at
+# /usr/share/pindu-launcher/distributor/get-games.yaml, in the same format, so a console's
+# lists change with an image update rather than a launcher release. Each entry is a Flathub
+# app ID (for `categories`, an AppStream category) with a comment saying why it is there. An
+# ID the catalogue does not have is skipped.
+version: 1
+
+# Categories whose apps count as games.
+categories:
+  - Game # freedesktop's main category for games; Flathub files emulators and streaming clients under it too
+
+# Apps Get Games never shows, though they carry a game category: tools that are not games,
+# and need a mouse, a file manager or another program to be any use (measured on #884).
+blocklist:
+  - com.steamgriddb.SGDBoop # writes artwork into a desktop Steam's folders from links on SteamGridDB's website
+  - io.github.benjamimgois.goverlay # a mouse-driven settings window for MangoHud; the launcher has its own performance overlay
+  - io.github.Foldex.AdwSteamGtk # restyles a desktop Steam client; not a game
+  - dev.creeperkatze.full-steam-ahead # adds shortcuts to Steam's library; the launcher imports games itself
+  - io.github.kyuyrii.meganimus # creates desktop shortcuts for games
+  - net.blumia.pineapple-steam-recording-exporter # exports Steam's game recordings to video files
+  - codes.merritt.Nyrna # suspends desktop windows by hotkey
+  - net.davidotek.pupgui2 # manages Proton and Wine builds for other launchers; the launcher downloads Proton itself
+  - com.vysp3r.ProtonPlus # manages Proton and Wine builds for other launchers; the launcher downloads Proton itself
+  - io.github.loot.loot # a load-order tool for Bethesda game mods
+  - dev.invrs.oxide # a mod manager
+  - moe.nomm.Nomm # a mod manager
+  - io.github.everestapi.Olympus # a mod manager for Celeste
+  - io.github.hedge_dev.hedgemodmanager # a mod manager for Sonic games
+  - com.outerwildsmods.owmods_gui # a mod manager for Outer Wilds
+  - xyz.rust4diva.Rust4Diva # a mod manager for Project Diva
+  - io.github.TeamWheelWizard.WheelWizard # a mod manager and updater for Mario Kart Wii
+  - io.blockloader.BlockLoader # a Minecraft mod manager
+  - dev.mrquantumoff.mcmodpackmanager # a Minecraft mod manager
+  - com.overwolf.curseforge # a mod manager
+  - gg.minion.Minion # an add-on manager for online games
+  - la.ogri.strongbox # an add-on manager for World of Warcraft
+  - com.jaquadro.NBTExplorer # an editor for Minecraft's data files
+  - page.codeberg.JakobDev.jdNBTExplorer # an editor for Minecraft's data files
+  - io.github.huderlem.porymap # a map editor for Pokémon decompilation projects
+  - io.github.Rangi42.tilemap-studio # a tilemap editor for game development
+  - io.github.myst6re.makoureactor # a field editor for Final Fantasy VII
+  - io.github.sithlord48.blackchocobo # a save editor for Final Fantasy VII
+  - io.github.nearinfinitybrowser.nearinfinity # a resource editor for Infinity Engine games
+  - net.darkradiant.DarkRadiant # a level editor
+  - ch.dragondreams.deigde # a game development environment
+  - org.gnome.Crosswords.Editor # makes crossword puzzles rather than playing them
+  - com.github.cubitect.cubiomes-viewer # a Minecraft seed finder
+  - it.mq1.TinyWiiBackupManager # manages Wii game backups on a drive
+  - io.github.chnapy.pkvault # manages Pokémon save files
+  - id.my.ttl.TruckersToolLinux # manages Euro and American Truck Simulator profiles
+  - community.pathofbuilding.PathOfBuilding # a character build planner for Path of Exile
+  - io.github.GoldenGnu.jEveAssets # an asset manager for EVE Online
+  - io.github.achetagames.epic_asset_manager # manages Unreal Engine assets
+  - io.github.appoutlet.GameOutlet # compares game prices
+  - net.mccompanion.MCCompanion # a Minecraft companion app
+  - dev.mariinkys.StarryDex # a Pokédex reference
+  - io.github.lxndr.gswatcher # monitors game servers
+  - io.github.sugarycandybar.Hosty # hosts Minecraft servers
+  - io.github.berarma.Oversteer # configures steering wheels
+  - io.github.lawstorant.boxflat # configures Moza racing hardware
+  - org.dpsoftware.FireflyLuciferin # drives ambient lighting hardware
+  - de.nicokimmel.shadowcast-electron # shows a capture card's video
+  - io.github.iSlammedMyKindle.godotGem # turns a phone into a controller for Windows
+  - io.github.glaumar.QRookie # sideloads games onto a Quest headset
+  - io.github.vallabhvidy.CubeTimer # times Rubik's cube solves
+  - io.github.weclaw1.ScoreTracker # keeps scores for card and board games played on a table
+  - dev.j7126.combat_tracker # tracks turns for tabletop role-playing games
+  - net.nogasgofast.adventure_wrench # tracks turns for tabletop role-playing games
+  - page.codeberg.friedrich.DND-Dice-Roller # rolls dice for tabletop games
+  - page.codeberg.jaerrib.RNGremlin # rolls dice for tabletop role-playing games
+  - io.github.alamahant.IChingDiviner # a divination app
+  - io.github.alamahant.TarotCaster # a divination app
+  - com.almaarijstudios.pxjrprof # a management tool for teachers
+  - ar.com.pilas_engine.App # a game development environment
+  - org.love2d.love2d # a game framework that opens nothing without a game's files
+  - org.twinery.Twine # a tool for writing interactive stories
+
+# Apps outside the game categories that a console still wants, on the Extras shelf.
+extras:
+  - tv.kodi.Kodi # a media centre made for the television, with gamepad and remote control support
+  - org.mozilla.firefox # a web browser, for the sites a game or a store sends you to
+
+# Games shown first: free games that play with a controller from their first screen.
+picks:
+  - net.supertuxkart.SuperTuxKart # kart racing for up to four players on one screen; declares gamepad support
+  - org.srb2.SRB2 # 3D platformer; declares gamepad support
+  - org.supertuxproject.SuperTux # 2D platformer with gamepad support
+  - org.taisei_project.Taisei # shoot 'em up with gamepad support

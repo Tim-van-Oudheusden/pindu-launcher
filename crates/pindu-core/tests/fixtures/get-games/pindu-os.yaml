@@ -1,0 +1,34 @@
+# Pindu OS's lists for Pindu launcher's Get Games (docs/decisions/0015-get-games.md).
+#
+# Get Games shows Flathub's games from the system installation's catalogue, plus a few
+# extras, and installs and removes them with a controller. The launcher carries default lists;
+# a distributor replaces them with this file, so a console's blocklist and picks change with
+# an image update, not a launcher release.
+#
+# The launcher's work package GG-2 settles this file's path and format. Until it does, this is
+# Pindu OS's proposal: four lists, each entry a Flathub app ID (or, for `categories`, an
+# AppStream category) with a comment that says why it is there.
+version: 1
+
+# Flathub categories whose apps count as games.
+categories:
+  - Game # freedesktop's main category for games; Flathub files emulators and streaming clients under it too
+
+# Apps Get Games never shows, even though they carry a game category, because they cannot work
+# on a console with a controller alone.
+blocklist:
+  - com.steamgriddb.SGDBoop # acts only on links clicked on SteamGridDB's website, and writes art into a desktop Steam's folders
+  - io.github.benjamimgois.goverlay # a mouse-driven settings window for MangoHud, which the launcher's Performance Overlay drives on this console
+
+# Apps outside the game categories that a console still wants, shown under Get Games' extras.
+extras:
+  - tv.kodi.Kodi # a media centre made for the television, with gamepad and remote control support
+  - org.mozilla.firefox # a web browser, for the sites a game or a store sends you to
+
+# Games shown first, before the rest of the catalogue: free games that play with a controller
+# from their first screen.
+picks:
+  - net.supertuxkart.SuperTuxKart # kart racing for up to four players on one screen; declares gamepad support
+  - org.srb2.SRB2 # 3D platformer; declares gamepad support
+  - org.supertuxproject.SuperTux # 2D platformer with gamepad support
+  - org.taisei_project.Taisei # shoot 'em up with gamepad support
