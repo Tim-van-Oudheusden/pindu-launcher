@@ -246,6 +246,7 @@ fn same_row(shown: &Task, task: &Task) -> bool {
     shown.id == task.id
         && shown.kind == task.kind
         && shown.label == task.label
+        && shown.detail == task.detail
         && shown.cancel == task.cancel
         && matches!(shown.progress, Progress::Working) == matches!(task.progress, Progress::Working)
 }
@@ -327,16 +328,19 @@ fn task_row(task: &Task) -> (gtk::ListBoxRow, gtk::ProgressBar) {
 
 /// What a task is doing, under its label.
 fn task_state(task: &Task) -> String {
-    match (task.cancel, task.kind) {
-        (Cancel::Requested, _) => gettext("Cancelling…"),
-        (_, TaskKind::LibrarySync) => gettext("Reading your launchers"),
+    match (task.cancel, task.kind, &task.detail) {
+        (Cancel::Requested, ..) => gettext("Cancelling…"),
+        (_, _, Some(detail)) => detail.clone(),
+        (_, TaskKind::LibrarySync, None) => gettext("Reading your launchers"),
         // A name, so it is not translated.
-        (_, TaskKind::ArtFetch) => "SteamGridDB".to_owned(),
-        (_, TaskKind::MetadataFetch) => "Wikidata".to_owned(),
-        (Cancel::Available, TaskKind::ProtonDownload) => gettext("Downloading"),
-        (Cancel::Unavailable, TaskKind::ProtonDownload) => gettext("Installing"),
-        (_, TaskKind::StoreInstall) => gettext("From Flathub"),
-        (_, TaskKind::SaveSnapshot) => gettext("Backing up saves"),
+        (_, TaskKind::ArtFetch, None) => "SteamGridDB".to_owned(),
+        (_, TaskKind::MetadataFetch, None) => "Wikidata".to_owned(),
+        (Cancel::Available, TaskKind::ProtonDownload, None) => gettext("Downloading"),
+        (Cancel::Unavailable, TaskKind::ProtonDownload, None) => gettext("Installing"),
+        (_, TaskKind::StoreInstall | TaskKind::GameInstall | TaskKind::CatalogueRefresh, None) => {
+            gettext("From Flathub")
+        }
+        (_, TaskKind::SaveSnapshot, None) => gettext("Backing up saves"),
     }
 }
 
@@ -347,7 +351,8 @@ fn kind_icon(kind: TaskKind) -> &'static str {
         TaskKind::ArtFetch => "image-x-generic-symbolic",
         TaskKind::MetadataFetch => "text-x-generic-symbolic",
         TaskKind::ProtonDownload => "folder-download-symbolic",
-        TaskKind::StoreInstall => "system-software-install-symbolic",
+        TaskKind::StoreInstall | TaskKind::GameInstall => "system-software-install-symbolic",
+        TaskKind::CatalogueRefresh => "view-refresh-symbolic",
         TaskKind::SaveSnapshot => "document-save-symbolic",
     }
 }

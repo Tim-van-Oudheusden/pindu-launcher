@@ -106,7 +106,7 @@ The catalogue comes from the same installation that installs go to (`Installatio
 
 ### 6.2 Refresh
 
-A new console has no catalogue until something asks Flatpak for one. When Get Games opens and the catalogue is missing or more than a day old, the launcher runs `flatpak update --appstream` for that installation as a task, and shows the previous catalogue meanwhile. With no catalogue and no network, the screen says so and offers to try again.
+A new console has no catalogue until something asks Flatpak for one. When Get Games opens and the catalogue is missing or more than a day old, the launcher runs `flatpak update --appstream --noninteractive` for that installation as a task, and shows the previous catalogue meanwhile; once it ends, the catalogue is read again. That command prints nothing and succeeds even offline (#884), so only the catalogue file tells whether it came. With no catalogue and no network, the screen says so and offers to try again; with no catalogue after a refresh on a network, it says the catalogue could not be downloaded.
 
 ### 6.3 What counts as a game
 
@@ -169,19 +169,21 @@ Text is "from Flathub" in words. Flathub's logo is used only if its brand guidan
 
 ### 7.1 Install
 
-- The command is Add a Store's, with the app ID from the catalogue: `flatpak install`, non-interactive, from `flathub`, into the chosen installation. Arguments are an argv list; an app ID is never spliced into a shell string, and only IDs that came out of the catalogue are accepted.
-- One install runs at a time; more are queued. Each is a task: it survives leaving the screen, shows progress in Quick Access, can be cancelled, and ends in a notification.
-- The first game also downloads a runtime, often larger than the game. The progress reader already counts each operation; the page says "Installing 2 of 3" in words so a long first install does not look stuck.
-- Before starting, compare the download and installed sizes with free space and say so if it will not fit.
-- A failure shows flatpak's own last error line, as Add a Store does, and leaves the app page ready to try again.
+- The command is Add a Store's, with the app ID from the catalogue: `flatpak install -y flathub <id>` into the chosen installation (`--system` or `--user`; the user installation gets the Flathub remote first). Arguments are an argv list; an app ID is never spliced into a shell string, only IDs the catalogue offers are accepted, and every ID is checked to be an app ID before it reaches a command line. The stores (section 7.3) are refused here and go through Add a Store.
+- It passes `-y` but not `--noninteractive`, which prints no progress at all (#884, the maintainer's choice there); its standard input is closed, so a question `-y` does not answer reads the end of input instead of waiting. Add a Store installs the same way, which also gave its progress bar the numbers it had never seen.
+- One job runs at a time, installs and removals alike; more are queued. Each is a task: it survives leaving the screen, shows progress in Quick Access ("Waiting", "Checking the space", "Installing 2 of 5"), an install can be cancelled there, and each ends in a notification. A cancelled install keeps the runtimes it finished until Pindu OS's cleanup removes them.
+- The first game also downloads a runtime, often larger than the game. The progress reader counts each of flatpak's operations; Quick Access says "Installing 2 of 3" so a long first install does not look stuck.
+- Before starting, the launcher asks `flatpak remote-info` (in the C locale, so its sizes read the same in every language) for the download and installed sizes, and refuses when the installed size plus the 500 MB Flatpak keeps free (`min-free-space-size`) is more than the free space, saying how much is needed. A runtime the app needs is not in those sizes; Flatpak's own check catches that. When the sizes or the free space cannot be found, the install goes ahead.
+- A failure shows flatpak's own last error line, as Add a Store does, and leaves the app page ready to try again; one Flathub could not be reached for says so in words.
+- An install or removal that ends syncs the library, so a game appears or goes without a restart.
 
 ### 7.2 Remove
 
-- `flatpak uninstall`, non-interactive, for an app Get Games can see as installed.
+- `flatpak uninstall --noninteractive -y`, for an app Get Games can see as installed. It cannot be cancelled once it runs.
 - A confirmation asks first and offers to delete the app's data too (`--delete-data`), off by default.
 - Reachable from the app's page in Get Games and from the game's page in the library, for a game that came from a Flatpak.
 - On Pindu OS this needs the polkit change in pindu-os#66. Without it the command fails; the launcher shows that failure like any other.
-- Unused runtimes are not the launcher's to remove. Pindu OS cleans them up in its update service.
+- Unused runtimes are not the launcher's to remove. Pindu OS cleans them up in its update service. `flatpak uninstall` itself also takes the runtime and extensions that installing the app pulled in, once nothing else uses them (#884).
 
 ### 7.3 The three stores
 

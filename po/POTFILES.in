@@ -35,6 +35,7 @@ crates/pindu-ui/src/fullscreen_system_update.rs
 crates/pindu-ui/src/game_dialog.rs
 crates/pindu-ui/src/game_page.rs
 crates/pindu-ui/src/genres.rs
+crates/pindu-ui/src/get_games_service.rs
 crates/pindu-ui/src/group_actions.rs
 crates/pindu-ui/src/health_page.rs
 crates/pindu-ui/src/health_service.rs

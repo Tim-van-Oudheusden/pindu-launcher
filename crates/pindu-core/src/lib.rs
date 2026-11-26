@@ -29,6 +29,7 @@ pub mod game_control;
 pub mod game_groups;
 pub mod gamepad;
 pub mod gamescope;
+pub mod get_games;
 pub mod grid;
 pub mod health;
 pub mod hints;

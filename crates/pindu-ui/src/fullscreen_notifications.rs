@@ -194,5 +194,8 @@ fn kind_icon(kind: Kind) -> &'static str {
         Kind::StoreInstalled => "system-software-install-symbolic",
         Kind::StoreFailed => "dialog-warning-symbolic",
         Kind::SaveCopyFailed => "dialog-warning-symbolic",
+        Kind::AppInstalled => "system-software-install-symbolic",
+        Kind::AppRemoved => "user-trash-symbolic",
+        Kind::AppFailed => "dialog-warning-symbolic",
     }
 }

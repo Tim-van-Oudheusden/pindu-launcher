@@ -91,7 +91,7 @@ pub fn load(
 }
 
 /// The version of the index's format; an index in another is made again.
-const FORMAT: u64 = 1;
+const FORMAT: u64 = 2;
 
 /// What an index was made from: the catalogue file as it was then, the languages and the
 /// parts of the lists that decide which entries it holds.
