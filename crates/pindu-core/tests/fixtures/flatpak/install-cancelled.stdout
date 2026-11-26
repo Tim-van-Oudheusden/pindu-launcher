@@ -1,0 +1,53 @@
+Looking for matches…
+Required runtime for io.github.riftr.intelpy/x86_64/stable (runtime/org.kde.Platform/x86_64/5.15-23.08) found in remote flathub
+
+Info: runtime org.kde.Platform branch 5.15-23.08 is end-of-life, with reason:
+   We strongly recommend moving to the latest stable version of the Platform and SDK
+Info: applications using this runtime:
+   io.github.riftr.intelpy
+
+Info: runtime org.freedesktop.Platform.GL.default branch 23.08-extra is end-of-life, with reason:
+   org.freedesktop.Platform 23.08 is no longer receiving fixes and security updates. Please update to a supported runtime version.
+Info: applications using this runtime:
+   io.github.riftr.intelpy
+
+Info: runtime org.freedesktop.Platform.GL.default branch 23.08 is end-of-life, with reason:
+   org.freedesktop.Platform 23.08 is no longer receiving fixes and security updates. Please update to a supported runtime version.
+Info: applications using this runtime:
+   io.github.riftr.intelpy
+
+io.github.riftr.intelpy permissions:
+    ipc	pulseaudio	x11	dri
+    file access [1]	dbus access [2]
+
+    [1] home, xdg-config/kdeglobals:ro
+    [2] com.canonical.AppMenu.Registrar, org.kde.KGlobalSettings,
+        org.kde.kconfig.notify
+
+
+ 1.	   	org.freedesktop.Platform.GL.default	23.08	i	flathub	< 170.0 MB
+ 2.	   	org.freedesktop.Platform.GL.default	23.08-extra	i	flathub	< 170.0 MB
+ 3.	   	org.kde.Platform.Locale	5.15-23.08	i	flathub	< 401.1 MB (partial)
+ 4.	   	org.kde.Platform	5.15-23.08	i	flathub	< 346.1 MB
+ 5.	   	io.github.riftr.intelpy	stable	i	flathub	< 22.6 MB
+
+
+Installing 1/5…
+Installing 1/5…                        0%  0 bytes/s
+Installing 1/5… ████▍                 22%
+Installing 1/5… ████████▏             41%
+Installing 1/5… ████████████          60%
+Installing 1/5… ███████████████▊      79%  130.8 MB/s
+Installing 1/5… ██████████████████▌   93%  157.2 MB/s
+Installing 1/5… ████████████████████ 100%  169.3 MB/s
+Installing 2/5…
+Installing 2/5…                        0%  0 bytes/s
+Installing 2/5… ████████████████████ 100%
+Installing 2/5… ████████████████████ 100%
+Installing 3/5…
+Installing 3/5…                        0%  0 bytes/s
+Installing 3/5… ████████████████████ 100%
+Installing 4/5…
+Installing 4/5…                        0%  0 bytes/s
+Installing 4/5… ███▏                  16%
+[?25h
