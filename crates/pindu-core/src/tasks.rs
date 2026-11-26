@@ -1,7 +1,8 @@
 //! What Pindu is doing in the background, which Quick Access's Activity lists: library
 //! syncs, SteamGridDB art fetches, Wikidata metadata refreshes, Proton downloads, store
-//! installs and save snapshots, each with how far it is and whether the user can cancel
-//! it. A task leaves the list when its work ends.
+//! installs, Get Games' installs, removals and catalogue refreshes, and save snapshots,
+//! each with how far it is and whether the user can cancel it. A task leaves the list when
+//! its work ends.
 
 /// What a task does, which picks its icon.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -16,6 +17,10 @@ pub enum TaskKind {
     ProtonDownload,
     /// Installing a store from Flathub (see [`crate::add_store`]).
     StoreInstall,
+    /// Installing or removing an app through Get Games (see [`crate::get_games`]).
+    GameInstall,
+    /// Downloading Flathub's catalogue for Get Games again.
+    CatalogueRefresh,
     /// Taking a snapshot of a Windows game's saves, or restoring one (see
     /// [`crate::saves`]).
     SaveSnapshot,
@@ -71,6 +76,9 @@ pub struct Task {
     pub progress: Progress,
     /// Whether the user can cancel it.
     pub cancel: Cancel,
+    /// What it is doing now, when it says more than its kind does, such as which of an
+    /// install's operations runs.
+    pub detail: Option<String>,
 }
 
 /// The running tasks, oldest first.
@@ -101,6 +109,7 @@ impl Tasks {
             } else {
                 Cancel::Unavailable
             },
+            detail: None,
         });
         id
     }
@@ -136,6 +145,18 @@ impl Tasks {
         match self.task_mut(id) {
             Some(task) if task.cancel == Cancel::Available => {
                 task.cancel = Cancel::Unavailable;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Says what the task `id` is doing now ([`Task::detail`]); says whether that changed
+    /// anything. A task that ended is left alone.
+    pub fn set_detail(&mut self, id: TaskId, detail: Option<&str>) -> bool {
+        match self.task_mut(id) {
+            Some(task) if task.detail.as_deref() != detail => {
+                task.detail = detail.map(str::to_owned);
                 true
             }
             _ => false,
@@ -269,5 +290,23 @@ mod tests {
         assert_eq!(Progress::of(0, 3), Progress::Fraction(0.0));
         assert_eq!(Progress::of(5, 4), Progress::Fraction(1.0));
         assert_eq!(Progress::of(0, 0), Progress::Working);
+    }
+
+    #[test]
+    fn a_tasks_detail_says_which_step_runs_and_says_whether_it_changed() {
+        let mut tasks = Tasks::new();
+        let install = tasks.start(TaskKind::GameInstall, "Installing SuperTuxKart", true);
+        assert_eq!(tasks.tasks()[0].detail, None);
+
+        assert!(tasks.set_detail(install, Some("Installing 2 of 3")));
+
+        assert_eq!(
+            tasks.tasks()[0].detail.as_deref(),
+            Some("Installing 2 of 3")
+        );
+        assert!(!tasks.set_detail(install, Some("Installing 2 of 3")));
+        assert!(tasks.set_detail(install, None));
+        tasks.finish(install);
+        assert!(!tasks.set_detail(install, Some("Installing 3 of 3")));
     }
 }

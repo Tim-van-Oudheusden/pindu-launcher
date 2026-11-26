@@ -17,6 +17,7 @@ use crate::game_dialog::GameDialog;
 use crate::game_overlay::PinduGameOverlay;
 use crate::gamepad_service::GamepadService;
 use crate::gamescope_service::GamescopeService;
+use crate::get_games_service::GetGamesService;
 use crate::health_service::HealthService;
 use crate::launch_service;
 use crate::library_service::{ImportFailure, LibraryService};
@@ -119,6 +120,8 @@ mod imp {
         pub add_store_service: OnceCell<AddStoreService>,
         /// The installed apps, for both shells' Apps.
         pub apps_service: OnceCell<AppsService>,
+        /// Get Games' catalogue and its installs and removals, for both shells.
+        pub get_games_service: OnceCell<GetGamesService>,
         /// The network, for Quick Access's Network.
         pub network_service: OnceCell<NetworkService>,
         /// Suspend, restart and power off, for the drawer's Power.
@@ -267,6 +270,13 @@ mod imp {
                 .expect("start-up runs once");
             self.add_store_service
                 .set(AddStoreService::new(
+                    &self.sync_service,
+                    &self.task_service,
+                    &self.notification_service,
+                ))
+                .expect("start-up runs once");
+            self.get_games_service
+                .set(GetGamesService::new(
                     &self.sync_service,
                     &self.task_service,
                     &self.notification_service,
@@ -560,6 +570,14 @@ impl PinduApplication {
     pub fn add_store_service(&self) -> &AddStoreService {
         self.imp()
             .add_store_service
+            .get()
+            .expect("the application has started")
+    }
+
+    /// Get Games: the catalogue, its installs and removals.
+    pub fn get_games_service(&self) -> &GetGamesService {
+        self.imp()
+            .get_games_service
             .get()
             .expect("the application has started")
     }

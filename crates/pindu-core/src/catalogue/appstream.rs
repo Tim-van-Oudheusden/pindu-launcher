@@ -105,7 +105,9 @@ pub struct App {
     pub age: Option<u8>,
     /// Whether it says it supports a gamepad.
     pub gamepad: bool,
-    /// The desktop entry that starts it, once installed.
+    /// The desktop ID of the entry that starts it once installed, as the launcher names
+    /// desktop entries (`crate::apps`, the desktop source): its file name without
+    /// `.desktop`.
     pub desktop_id: Option<String>,
 }
 
@@ -516,7 +518,8 @@ impl Parser<'_> {
             ("component", "launchable")
                 if element.kind.as_deref() == Some("desktop-id") && entry.desktop_id.is_none() =>
             {
-                entry.desktop_id = Some(value());
+                let id = value();
+                entry.desktop_id = Some(id.strip_suffix(".desktop").unwrap_or(&id).to_owned());
             }
             _ => {}
         }
@@ -681,7 +684,7 @@ mod tests {
         assert!(kart.gamepad);
         assert_eq!(
             kart.desktop_id.as_deref(),
-            Some("net.supertuxkart.SuperTuxKart.desktop")
+            Some("net.supertuxkart.SuperTuxKart")
         );
         assert!(!app("org.gnome.Calculator").gamepad);
     }
@@ -788,7 +791,7 @@ mod tests {
              <launchable type=\"desktop-id\">first.desktop</launchable>\
              <launchable type=\"desktop-id\">second.desktop</launchable>",
         );
-        assert_eq!(app.desktop_id.as_deref(), Some("first.desktop"));
+        assert_eq!(app.desktop_id.as_deref(), Some("first"));
     }
 
     #[test]

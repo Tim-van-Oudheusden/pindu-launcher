@@ -4,7 +4,8 @@
 //! that did not pair, connect, disconnect or go, a sound output that could not be chosen, a
 //! rollback or restart the system refused, a network that could not be joined, a program
 //! that kept the machine from suspending, restarting or powering off, a save snapshot that
-//! could not be copied to the user's folder). Kept in memory for the running session only,
+//! could not be copied to the user's folder, an app Get Games installed, removed or could
+//! not). Kept in memory for the running session only,
 //! newest first, at most [`CAPACITY`] of them.
 
 use std::collections::VecDeque;
@@ -52,6 +53,12 @@ pub enum Kind {
     StoreFailed,
     /// A save snapshot was not copied to the folder the user picked for copies.
     SaveCopyFailed,
+    /// Get Games installed an app.
+    AppInstalled,
+    /// Get Games removed an app.
+    AppRemoved,
+    /// Get Games did not install or remove an app.
+    AppFailed,
 }
 
 /// What a notification opens when the user picks it.

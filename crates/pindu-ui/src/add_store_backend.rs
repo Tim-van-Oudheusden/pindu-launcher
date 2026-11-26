@@ -69,8 +69,9 @@ impl AddStoreBackend for FlatpakBackend {
 /// Runs `argv`, with its standard error merged into its standard output, giving `line`
 /// each line; on failure the error is everything it printed, for
 /// `pindu_core::add_store::error_message` to pick from, or how it ended when it printed
-/// nothing.
-async fn run(
+/// nothing. Its standard input is closed: `flatpak install -y` answers its own questions,
+/// and one it still asked would read the end of input rather than wait.
+pub(crate) async fn run(
     argv: &[String],
     running: &RefCell<Option<gio::Subprocess>>,
     line: Line,
@@ -78,9 +79,15 @@ async fn run(
     let args: Vec<&OsStr> = argv.iter().map(OsStr::new).collect();
     let process = gio::Subprocess::newv(
         &args,
-        gio::SubprocessFlags::STDOUT_PIPE | gio::SubprocessFlags::STDERR_MERGE,
+        gio::SubprocessFlags::STDIN_PIPE
+            | gio::SubprocessFlags::STDOUT_PIPE
+            | gio::SubprocessFlags::STDERR_MERGE,
     )
     .map_err(|error| error.to_string())?;
+    if let Some(stdin) = process.stdin_pipe() {
+        // Closing a pipe nothing was written to cannot lose anything.
+        let _ = stdin.close(gio::Cancellable::NONE);
+    }
     running.replace(Some(process.clone()));
     let mut printed = String::new();
     if let Some(stdout) = process.stdout_pipe() {

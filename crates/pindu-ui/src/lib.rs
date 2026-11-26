@@ -55,6 +55,8 @@ pub mod game_page;
 pub mod gamepad_service;
 pub mod gamescope_service;
 pub mod genres;
+pub mod get_games_backend;
+pub mod get_games_service;
 pub mod group_actions;
 pub mod health_page;
 pub mod health_service;
