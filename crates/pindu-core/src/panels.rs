@@ -107,13 +107,12 @@ impl QuickAccessSection {
     }
 
     /// Whether one of the section's entries leads to `level`: the section that holds it
-    /// ([`QuickAccessLevel::section`]), and Quick for Sound Output, Bluetooth and Network,
-    /// which it lists too.
+    /// ([`QuickAccessLevel::section`]), and Quick for the levels its tiles lead to
+    /// ([`QuickTile::level`]), which it lists too.
     pub fn leads_to(self, level: QuickAccessLevel) -> bool {
-        let quick = matches!(
-            level,
-            QuickAccessLevel::SoundOutput | QuickAccessLevel::Bluetooth | QuickAccessLevel::Network
-        );
+        let quick = QuickTile::ALL
+            .into_iter()
+            .any(|tile| tile.level() == Some(level));
         level != QuickAccessLevel::Main
             && (level.section() == self || (self == Self::Quick && quick))
     }
@@ -283,6 +282,16 @@ pub enum QuickTile {
 }
 
 impl QuickTile {
+    /// Every tile, in the grid's order.
+    pub const ALL: [Self; 6] = [
+        Self::SoundOutput,
+        Self::Bluetooth,
+        Self::Network,
+        Self::SurpriseMe,
+        Self::RefreshLibrary,
+        Self::AddGame,
+    ];
+
     /// The entry the tile stands for, which acts or leads where the tile does.
     pub fn entry(self) -> QuickAccessEntry {
         match self {
