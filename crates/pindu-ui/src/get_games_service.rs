@@ -75,6 +75,9 @@ struct Inner {
     flatpak_dir: RefCell<Option<PathBuf>>,
     /// The apps installed in it, as last read.
     installed: RefCell<HashSet<String>>,
+    /// Watches the installation, so the installed marks follow installs and removals that
+    /// others make.
+    watch: RefCell<Option<gio::FileMonitor>>,
     online: Cell<bool>,
     /// When a refresh last ended. Flatpak leaves the catalogue as it was when Flathub's
     /// has not changed, so its own time alone would ask for a refresh on every read.
@@ -269,6 +272,7 @@ impl GetGamesService {
         }
         self.changed();
         self.read_installed();
+        self.watch_installed();
         if self.inner.wanted.get() {
             self.load();
         }
@@ -291,6 +295,31 @@ impl GetGamesService {
                 Self { inner }.changed();
             }
         });
+    }
+
+    /// Reads which apps the installation has again whenever `flatpak` marks it changed,
+    /// as it does after every install, update or removal, whoever runs it: the Pindu OS
+    /// update timer, a terminal or another session.
+    fn watch_installed(&self) {
+        let Some(dir) = self.inner.flatpak_dir.borrow().clone() else {
+            return;
+        };
+        let changed = gio::File::for_path(dir.join(".changed"));
+        let monitor =
+            match changed.monitor_file(gio::FileMonitorFlags::NONE, gio::Cancellable::NONE) {
+                Ok(monitor) => monitor,
+                Err(error) => {
+                    glib::g_warning!("pindu", "Get Games cannot watch the installation: {error}");
+                    return;
+                }
+            };
+        let weak = Rc::downgrade(&self.inner);
+        monitor.connect_changed(move |_, _, _, _| {
+            if let Some(inner) = weak.upgrade() {
+                Self { inner }.read_installed();
+            }
+        });
+        self.inner.watch.replace(Some(monitor));
     }
 
     /// Reads the catalogue off the main thread, through its index, then which apps
