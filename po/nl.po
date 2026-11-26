@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pindu-launcher\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 20:17+0100\n"
+"POT-Creation-Date: 2026-11-26 22:24+0100\n"
 "PO-Revision-Date: 2026-11-07 18:15+0000\n"
 "Last-Translator: Tim <tim-van-oudheusden@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/pindu-launcher/"
@@ -37,12 +37,12 @@ msgid ""
 msgstr ""
 
 #: crates/pindu-ui/src/add_store.rs:416
-#: crates/pindu-ui/src/fullscreen_activity.rs:331
+#: crates/pindu-ui/src/fullscreen_activity.rs:332
 msgid "Cancelling…"
 msgstr "Aan het annuleren…"
 
-#: crates/pindu-ui/src/add_store.rs:419 crates/pindu-ui/src/application.rs:919
-#: crates/pindu-ui/src/fullscreen_activity.rs:290
+#: crates/pindu-ui/src/add_store.rs:419 crates/pindu-ui/src/application.rs:937
+#: crates/pindu-ui/src/fullscreen_activity.rs:291
 #: crates/pindu-ui/src/hint_bar.rs:253
 msgid "Cancel"
 msgstr "Annuleren"
@@ -173,55 +173,55 @@ msgid ""
 "Check the network connection, then try again."
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:160
+#: crates/pindu-ui/src/application.rs:163
 msgid "Start a game by its ID, without opening the window"
 msgstr "Begin een game op basis van zijn ID, zonder het scherm te openen"
 
-#: crates/pindu-ui/src/application.rs:168
+#: crates/pindu-ui/src/application.rs:171
 msgid "Open the window in fullscreen mode"
 msgstr "Openen in Volledig Scherm modus"
 
-#: crates/pindu-ui/src/application.rs:176
+#: crates/pindu-ui/src/application.rs:179
 msgid "Run as the client of a gamescope-session-plus session"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:869
+#: crates/pindu-ui/src/application.rs:887
 msgid "Getting artwork from SteamGridDB…"
 msgstr "SteamGridDB kunstwerken aan het ophalen…"
 
-#: crates/pindu-ui/src/application.rs:918
+#: crates/pindu-ui/src/application.rs:936
 #, fuzzy
 #| msgid "Getting artwork from SteamGridDB…"
 msgid "Getting metadata from Wikidata…"
 msgstr "SteamGridDB kunstwerken aan het ophalen…"
 
-#: crates/pindu-ui/src/application.rs:968
+#: crates/pindu-ui/src/application.rs:986
 msgid "Added one game"
 msgid_plural "Added {count} games"
 msgstr[0] "Een game toegevoegd"
 msgstr[1] "{count} games toegevoegd"
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
-#: crates/pindu-ui/src/application.rs:971
+#: crates/pindu-ui/src/application.rs:989
 msgid "From {sources}"
 msgstr "Van {sources}"
 
-#: crates/pindu-ui/src/application.rs:982
+#: crates/pindu-ui/src/application.rs:1000
 msgid "One game is missing"
 msgid_plural "{count} games are missing"
 msgstr[0] "Eén game ontbreekt"
 msgstr[1] "{count} games ontbreken"
 
 #. Translators: {sources} names launchers, such as "Steam and Lutris".
-#: crates/pindu-ui/src/application.rs:988
+#: crates/pindu-ui/src/application.rs:1006
 msgid "No longer listed by {sources}"
 msgstr "Niet meer bekend bij {sources}"
 
-#: crates/pindu-ui/src/application.rs:1059
+#: crates/pindu-ui/src/application.rs:1077
 msgid "Game Art From SteamGridDB"
 msgstr "Game Kunst Van SteamGridDB"
 
-#: crates/pindu-ui/src/application.rs:1061
+#: crates/pindu-ui/src/application.rs:1079
 msgid ""
 "SteamGridDB has covers, banners and logos for games that come without them. "
 "To use it, make a free account on steamgriddb.com and add your own API key "
@@ -232,47 +232,47 @@ msgstr ""
 "steamgriddb.com en je eigen API sleutel in Voorkeuren toevoegen. Dit wordt "
 "opgeslagen in je de keyring."
 
-#: crates/pindu-ui/src/application.rs:1067
+#: crates/pindu-ui/src/application.rs:1085
 msgid "_Not Now"
 msgstr "_Niet Nu"
 
-#: crates/pindu-ui/src/application.rs:1068
+#: crates/pindu-ui/src/application.rs:1086
 msgid "_Open Settings"
 msgstr "_Instellingen Openen"
 
-#: crates/pindu-ui/src/application.rs:1092
+#: crates/pindu-ui/src/application.rs:1110
 msgid "Export Library"
 msgstr "Bibliotheek Exporteren"
 
-#: crates/pindu-ui/src/application.rs:1111
+#: crates/pindu-ui/src/application.rs:1129
 msgid "Library exported"
 msgstr "Bibliotheek geëxporteerd"
 
-#: crates/pindu-ui/src/application.rs:1114
+#: crates/pindu-ui/src/application.rs:1132
 msgid "Could not export the library: {error}"
 msgstr "Kon de bibliotheek niet exporteren: {error}"
 
-#: crates/pindu-ui/src/application.rs:1128
+#: crates/pindu-ui/src/application.rs:1146
 msgid "Library Backups"
 msgstr "Bibliotheek Backups"
 
-#: crates/pindu-ui/src/application.rs:1133
+#: crates/pindu-ui/src/application.rs:1151
 msgid "Import Backup"
 msgstr "Backup Importeren"
 
-#: crates/pindu-ui/src/application.rs:1146
+#: crates/pindu-ui/src/application.rs:1164
 msgid "This file is not a library backup"
 msgstr "Dit bestand is geen bibliotheek backup"
 
-#: crates/pindu-ui/src/application.rs:1148
+#: crates/pindu-ui/src/application.rs:1166
 msgid "This backup is from a newer version of Pindu launcher"
 msgstr "Deze backup is van een nieuwere versie van Pindu launcher"
 
-#: crates/pindu-ui/src/application.rs:1151
+#: crates/pindu-ui/src/application.rs:1169
 msgid "Could not import the backup: {error}"
 msgstr "Kon de backup niet importeren: {error}"
 
-#: crates/pindu-ui/src/application.rs:1236
+#: crates/pindu-ui/src/application.rs:1254
 #: data/gamescope-session/gamescope-session-pindu.desktop.in:2
 #: data/io.github.tim_van_oudheusden.pindu-launcher.desktop.in:2
 #: data/io.github.tim_van_oudheusden.pindu-launcher.metainfo.xml.in:7
@@ -281,33 +281,33 @@ msgid "Pindu launcher"
 msgstr "Pindu launcher"
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
-#: crates/pindu-ui/src/application.rs:1244
+#: crates/pindu-ui/src/application.rs:1262
 msgid "translator-credits"
 msgstr "vertaler-credits"
 
-#: crates/pindu-ui/src/application.rs:1250
+#: crates/pindu-ui/src/application.rs:1268
 msgid "Launcher Icons"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1294
+#: crates/pindu-ui/src/application.rs:1312
 msgid "Added artwork for one game"
 msgid_plural "Added artwork for {count} games"
 msgstr[0] "Kunstwerk voor een game toegevoegd"
 msgstr[1] "Kunstwerk voor {count} games toegevoegd"
 
-#: crates/pindu-ui/src/application.rs:1299
+#: crates/pindu-ui/src/application.rs:1317
 msgid "No new artwork found"
 msgstr "Geen nieuw kunstwerk kunnen vinden"
 
-#: crates/pindu-ui/src/application.rs:1300
+#: crates/pindu-ui/src/application.rs:1318
 msgid "SteamGridDB did not accept the key"
 msgstr "SteamGridDB heeft de sleutel niet geaccepteerd"
 
-#: crates/pindu-ui/src/application.rs:1301
+#: crates/pindu-ui/src/application.rs:1319
 msgid "Could not reach SteamGridDB"
 msgstr "Kon SteamGridDB niet bereiken"
 
-#: crates/pindu-ui/src/application.rs:1309
+#: crates/pindu-ui/src/application.rs:1327
 #, fuzzy
 #| msgid "Added artwork for one game"
 #| msgid_plural "Added artwork for {count} games"
@@ -316,41 +316,41 @@ msgid_plural "Updated metadata for {count} games"
 msgstr[0] "Kunstwerk voor een game toegevoegd"
 msgstr[1] "Kunstwerk voor {count} games toegevoegd"
 
-#: crates/pindu-ui/src/application.rs:1314
+#: crates/pindu-ui/src/application.rs:1332
 msgid "Wikidata has no metadata for these games"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1316
+#: crates/pindu-ui/src/application.rs:1334
 msgid "No game has a Steam app ID to look up on Wikidata"
 msgstr ""
 
-#: crates/pindu-ui/src/application.rs:1318
+#: crates/pindu-ui/src/application.rs:1336
 #, fuzzy
 #| msgid "Could not reach SteamGridDB"
 msgid "Could not reach Wikidata"
 msgstr "Kon SteamGridDB niet bereiken"
 
-#: crates/pindu-ui/src/application.rs:1336
+#: crates/pindu-ui/src/application.rs:1354
 msgid "Nothing new to restore"
 msgstr "Niks om te herstellen op dit moment"
 
-#: crates/pindu-ui/src/application.rs:1338
+#: crates/pindu-ui/src/application.rs:1356
 msgid "Backup restored"
 msgstr "Backup hersteld"
 
-#: crates/pindu-ui/src/application.rs:1344
+#: crates/pindu-ui/src/application.rs:1362
 msgid "one game in it is not in this library"
 msgid_plural "{count} games in it are not in this library"
 msgstr[0] "een game hierin is niet in deze bibliotheek"
 msgstr[1] "{count} games hierin zijn niet in deze bibliotheek"
 
-#: crates/pindu-ui/src/application.rs:1354
+#: crates/pindu-ui/src/application.rs:1372
 msgid "one group of copies in it was skipped"
 msgid_plural "{count} groups of copies in it were skipped"
 msgstr[0] ""
 msgstr[1] ""
 
-#: crates/pindu-ui/src/application.rs:1362
+#: crates/pindu-ui/src/application.rs:1380
 msgid "{result}; {note}"
 msgstr "{result}; {note}"
 
@@ -359,7 +359,7 @@ msgid "Choose {kind}"
 msgstr ""
 
 #: crates/pindu-ui/src/artwork_dialog.rs:458
-#: crates/pindu-ui/src/game_dialog.rs:983
+#: crates/pindu-ui/src/game_dialog.rs:971
 msgid "Your image"
 msgstr ""
 
@@ -415,12 +415,12 @@ msgid "{kind} changed"
 msgstr ""
 
 #: crates/pindu-ui/src/artwork_dialog.rs:830
-#: crates/pindu-ui/src/game_dialog.rs:871
+#: crates/pindu-ui/src/game_dialog.rs:859
 msgid "Images"
 msgstr ""
 
 #: crates/pindu-ui/src/artwork_dialog.rs:835
-#: crates/pindu-ui/src/game_dialog.rs:876
+#: crates/pindu-ui/src/game_dialog.rs:864
 msgid "Choose an Image"
 msgstr ""
 
@@ -531,7 +531,7 @@ msgid "Save Filter"
 msgstr ""
 
 #: crates/pindu-ui/src/collection_actions.rs:206
-#: crates/pindu-ui/src/game_dialog.rs:289
+#: crates/pindu-ui/src/game_dialog.rs:277
 msgid "_Save"
 msgstr ""
 
@@ -645,7 +645,7 @@ msgstr "een game hierin is niet in deze bibliotheek"
 #: crates/pindu-ui/src/fullscreen_power.rs:208
 #: crates/pindu-ui/src/fullscreen_proton_downloads.rs:368
 #: crates/pindu-ui/src/fullscreen_system_update.rs:164
-#: crates/pindu-ui/src/game_dialog.rs:938
+#: crates/pindu-ui/src/game_dialog.rs:926
 #: crates/pindu-ui/src/preferences.rs:797
 #: crates/pindu-ui/src/preferences.rs:843
 #: crates/pindu-ui/src/proton_downloads_page.rs:225
@@ -897,12 +897,12 @@ msgid "What Do You Want to Add?"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:264
-#: crates/pindu-ui/src/game_dialog.rs:465
+#: crates/pindu-ui/src/game_dialog.rs:453
 msgid "Choose the Game's Folder"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:265
-#: crates/pindu-ui/src/game_dialog.rs:666
+#: crates/pindu-ui/src/game_dialog.rs:654
 msgid "Choose the Game's Installer"
 msgstr ""
 
@@ -911,7 +911,7 @@ msgid "No folder this launcher can read was found"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:278
-#: crates/pindu-ui/src/fullscreen_activity.rs:337
+#: crates/pindu-ui/src/fullscreen_activity.rs:339
 msgid "Installing"
 msgstr "Installeren"
 
@@ -920,7 +920,7 @@ msgid "Choose the Game's Program"
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:290
-#: crates/pindu-ui/src/game_dialog.rs:543
+#: crates/pindu-ui/src/game_dialog.rs:531
 msgid "No programs found in this folder"
 msgstr ""
 
@@ -964,17 +964,17 @@ msgid "The game's name, as the library shows it."
 msgstr "een game hierin is niet in deze bibliotheek"
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:558
-#: crates/pindu-ui/src/game_dialog.rs:735
+#: crates/pindu-ui/src/game_dialog.rs:723
 msgid "Installed. Pick the game's program."
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:563
-#: crates/pindu-ui/src/game_dialog.rs:739
+#: crates/pindu-ui/src/game_dialog.rs:727
 msgid "The installer added no programs. Choose the game's folder instead."
 msgstr ""
 
 #: crates/pindu-ui/src/fullscreen_add_game.rs:619
-#: crates/pindu-ui/src/game_dialog.rs:1025
+#: crates/pindu-ui/src/game_dialog.rs:1013
 msgid "Added “{title}”"
 msgstr ""
 
@@ -1032,19 +1032,19 @@ msgstr ""
 msgid "{percent} %"
 msgstr "{percent} %"
 
-#: crates/pindu-ui/src/fullscreen_activity.rs:332
+#: crates/pindu-ui/src/fullscreen_activity.rs:334
 msgid "Reading your launchers"
 msgstr "Je Launchers aan het uitlezen"
 
-#: crates/pindu-ui/src/fullscreen_activity.rs:336
+#: crates/pindu-ui/src/fullscreen_activity.rs:338
 msgid "Downloading"
 msgstr "Downloaden"
 
-#: crates/pindu-ui/src/fullscreen_activity.rs:338
+#: crates/pindu-ui/src/fullscreen_activity.rs:341
 msgid "From Flathub"
 msgstr ""
 
-#: crates/pindu-ui/src/fullscreen_activity.rs:339
+#: crates/pindu-ui/src/fullscreen_activity.rs:343
 msgid "Backing up saves"
 msgstr ""
 
@@ -2128,90 +2128,90 @@ msgstr ""
 msgid "Restarting…"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:270 data/ui/fullscreen_add_game.blp:9
+#: crates/pindu-ui/src/game_dialog.rs:258 data/ui/fullscreen_add_game.blp:9
 #: data/ui/fullscreen_add_game.blp:116 data/ui/shortcuts-dialog.blp:14
 msgid "Add Game"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:271
+#: crates/pindu-ui/src/game_dialog.rs:259
 msgid "_Add"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:287
+#: crates/pindu-ui/src/game_dialog.rs:275
 msgid "Edit “{title}”"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:478
+#: crates/pindu-ui/src/game_dialog.rs:466
 msgid "This folder cannot be used"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:629
+#: crates/pindu-ui/src/game_dialog.rs:617
 msgid "A new folder in {folder}"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:640 crates/pindu-ui/src/game_page.rs:791
+#: crates/pindu-ui/src/game_dialog.rs:628 crates/pindu-ui/src/game_page.rs:791
 msgid "Choose the Game's Prefix"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:661
+#: crates/pindu-ui/src/game_dialog.rs:649
 msgid "Windows Programs"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:756 data/ui/fullscreen_add_game.blp:59
+#: crates/pindu-ui/src/game_dialog.rs:744 data/ui/fullscreen_add_game.blp:59
 msgid "Installing… Finish the installer to go on."
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:758 data/ui/game_dialog.blp:148
+#: crates/pindu-ui/src/game_dialog.rs:746 data/ui/game_dialog.blp:148
 msgid ""
 "Run the game's installer in its prefix, then pick the program it installed"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:839
+#: crates/pindu-ui/src/game_dialog.rs:827
 msgid "Choose an Image File"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:840
-#: crates/pindu-ui/src/game_dialog.rs:929
+#: crates/pindu-ui/src/game_dialog.rs:828
+#: crates/pindu-ui/src/game_dialog.rs:917
 msgid "Use a Web Address"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:841
+#: crates/pindu-ui/src/game_dialog.rs:829
 msgid "Choose From SteamGridDB"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:842
+#: crates/pindu-ui/src/game_dialog.rs:830
 msgid "Remove Your Image"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:931
+#: crates/pindu-ui/src/game_dialog.rs:919
 msgid "The image is downloaded once and kept with your library."
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:938
+#: crates/pindu-ui/src/game_dialog.rs:926
 msgid "_Use"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:952
+#: crates/pindu-ui/src/game_dialog.rs:940
 msgid "Could not use the address: {error}"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:979
+#: crates/pindu-ui/src/game_dialog.rs:967
 msgid "New image ({extension})"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:982
+#: crates/pindu-ui/src/game_dialog.rs:970
 msgid "Your image will be removed"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:984
+#: crates/pindu-ui/src/game_dialog.rs:972
 msgid "None"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:985
+#: crates/pindu-ui/src/game_dialog.rs:973
 msgid "From the launcher, if it has one"
 msgstr ""
 
-#: crates/pindu-ui/src/game_dialog.rs:1064
+#: crates/pindu-ui/src/game_dialog.rs:1041
 msgid "Choose a folder and a program first"
 msgstr ""
 
@@ -2481,6 +2481,85 @@ msgstr ""
 
 #: crates/pindu-ui/src/genres.rs:24
 msgid "Fighting"
+msgstr ""
+
+#: crates/pindu-ui/src/get_games_service.rs:402
+msgid "Waiting"
+msgstr ""
+
+#. Translators: which of an install's downloads runs, such as "Installing
+#. 2 of 3": the app, its runtime and their extensions.
+#: crates/pindu-ui/src/get_games_service.rs:421
+msgid "Installing {operation} of {operations}"
+msgstr ""
+
+#: crates/pindu-ui/src/get_games_service.rs:426
+msgid "Checking the space"
+msgstr ""
+
+#. Translators: {name} is an app's name, such as SuperTuxKart.
+#: crates/pindu-ui/src/get_games_service.rs:450
+#, fuzzy
+#| msgid "Installing"
+msgid "Installing {name}"
+msgstr "Installeren"
+
+#. Translators: {name} is an app's name, such as SuperTuxKart.
+#: crates/pindu-ui/src/get_games_service.rs:457
+msgid "Removing {name}"
+msgstr ""
+
+#: crates/pindu-ui/src/get_games_service.rs:462
+msgid "Updating the Game Catalogue"
+msgstr ""
+
+#. Translators: {name} is an app's name, such as SuperTuxKart.
+#: crates/pindu-ui/src/get_games_service.rs:494
+#, fuzzy
+#| msgid "Installing"
+msgid "{name} Installed"
+msgstr "Installeren"
+
+#: crates/pindu-ui/src/get_games_service.rs:496
+msgid "Open it from Apps."
+msgstr ""
+
+#: crates/pindu-ui/src/get_games_service.rs:498
+#, fuzzy
+#| msgid "one game in it is not in this library"
+#| msgid_plural "{count} games in it are not in this library"
+msgid "It is in your library."
+msgstr "een game hierin is niet in deze bibliotheek"
+
+#. Translators: {name} is an app's name, such as SuperTuxKart.
+#: crates/pindu-ui/src/get_games_service.rs:508
+msgid "{name} Removed"
+msgstr ""
+
+#. Translators: {name} is an app's name, such as SuperTuxKart.
+#: crates/pindu-ui/src/get_games_service.rs:517
+msgid "{name} Did Not Install"
+msgstr ""
+
+#. Translators: {name} is an app's name, such as SuperTuxKart.
+#: crates/pindu-ui/src/get_games_service.rs:530
+msgid "{name} Was Not Removed"
+msgstr ""
+
+#. Translators: {name} is an app's name, such as SuperTuxKart.
+#: crates/pindu-ui/src/get_games_service.rs:539
+msgid "Not Enough Space for {name}"
+msgstr ""
+
+#. / Why an app did not install when the network failed it.
+#: crates/pindu-ui/src/get_games_service.rs:557
+msgid "Flathub could not be reached. Check the network, then try again."
+msgstr ""
+
+#. / What an app that would not fit needs: `needed` bytes free, where `free` are.
+#. Translators: {needed} and {free} are sizes, such as "1.2 GB".
+#: crates/pindu-ui/src/get_games_service.rs:563
+msgid "It needs {needed} free, and {free} is. Remove a game to make room."
 msgstr ""
 
 #: crates/pindu-ui/src/group_actions.rs:24
