@@ -181,7 +181,8 @@ Text is "from Flathub" in words. Flathub's logo is used only if its brand guidan
 
 - `flatpak uninstall --noninteractive -y`, for an app Get Games can see as installed. It cannot be cancelled once it runs.
 - A confirmation asks first and offers to delete the app's data too (`--delete-data`), off by default.
-- Reachable from the app's page in Get Games and from the game's page in the library, for a game that came from a Flatpak.
+- Reachable from the app's page in Get Games, and as **Uninstall** on the game's page in the library (the options sheet in fullscreen mode, the menu on the desktop) for a game whose desktop entry a Flatpak in Get Games' installation exports: Flatpak names exported entries for the app's ID, alone or followed by a dot, so the entry's ID says which app it is (`get_games::removable_app`, #888).
+- The installed marks and the app page's action follow the installation: the launcher watches the `.changed` file flatpak touches after every install, update or removal, so changes the Pindu OS update timer, a terminal or another session makes show without a restart.
 - On Pindu OS this needs the polkit change in pindu-os#66. Without it the command fails; the launcher shows that failure like any other.
 - Unused runtimes are not the launcher's to remove. Pindu OS cleans them up in its update service. `flatpak uninstall` itself also takes the runtime and extensions that installing the app pulled in, once nothing else uses them (#884).
 

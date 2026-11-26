@@ -310,11 +310,12 @@ impl GamePage {
             library,
             move |button| {
                 let collections = library.model().manual_collections();
-                let grouping = button
-                    .root()
-                    .and_downcast::<PinduWindow>()
-                    .map(|window| group_menu(&window, &object));
-                button.set_menu_model(Some(&more_menu(&object, &collections, grouping)));
+                let window = button.root().and_downcast::<PinduWindow>();
+                let grouping = window.as_ref().map(|window| group_menu(window, &object));
+                let uninstall = window
+                    .as_ref()
+                    .is_some_and(|window| window.removable_app(&object.id()).is_some());
+                button.set_menu_model(Some(&more_menu(&object, &collections, grouping, uninstall)));
             }
         ));
         imp.launch_summary.set_label(&launch_summary(game));
@@ -823,11 +824,13 @@ fn parsed<T>(row: &adw::EntryRow, parse: impl Fn(&str) -> Result<T, String>) -> 
 }
 
 /// The page's "more" menu, built when it opens so collection changes show at once, with
-/// `grouping`'s Merge With, Preferred Copy and Split after the collections.
+/// `grouping`'s Merge With, Preferred Copy and Split after the collections, and Uninstall
+/// for a game Get Games can remove (`uninstall`).
 fn more_menu(
     object: &GameObject,
     collections: &[Collection],
     grouping: Option<gio::Menu>,
+    uninstall: bool,
 ) -> gio::Menu {
     let game = object.game();
     let hidden = game.hidden;
@@ -867,6 +870,9 @@ fn more_menu(
         manage.append_item(&item(gettext("_Unhide"), "win.unhide-game"));
     } else {
         manage.append_item(&item(gettext("_Hide"), "win.hide-game"));
+    }
+    if uninstall {
+        manage.append_item(&item(gettext("Unin_stall…"), "win.uninstall-game"));
     }
     manage.append_item(&item(gettext("_Remove"), "win.remove-game"));
     if pindu_core::launch::launcher_uri(&game).is_some() {

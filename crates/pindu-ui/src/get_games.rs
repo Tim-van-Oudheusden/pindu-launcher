@@ -3,8 +3,9 @@
 //! B goes back down. The pages follow `GetGamesService`: the catalogue as it loads and
 //! refreshes, the installed marks, and the job each app has. Y searches with the search
 //! keyboard, the shoulder buttons jump between shelves or turn an app's screenshots, the
-//! main button installs, cancels, plays or opens, and Remove asks before it removes. The
-//! native build only: the Flatpak build has no Get Games tile.
+//! main button installs, cancels, plays or opens, and Remove asks before it removes. A
+//! library game Get Games can remove (#888) offers Uninstall on its page, which asks the
+//! same. The native build only: the Flatpak build has no Get Games tile.
 
 use std::collections::HashSet;
 
@@ -13,7 +14,7 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::gamepad::Intent;
-use pindu_core::get_games::Refusal;
+use pindu_core::get_games::{Refusal, removable_app};
 use pindu_core::hints::Shoulders;
 use pindu_core::model::{GameId, Source};
 
@@ -62,6 +63,7 @@ impl PinduWindow {
             })
             .build();
         self.add_action_entries([open_app, main, remove, refresh, screenshot]);
+        self.add_game_action("uninstall-game", Self::ask_uninstall_game);
         application
             .get_games_service()
             .connect_changed(glib::clone!(
@@ -409,6 +411,32 @@ impl PinduWindow {
             return page.focus_main();
         }
         false
+    }
+
+    /// The app Get Games can remove for the library game `id`: the Flatpak, in the
+    /// installation Get Games uses, whose desktop entry it is.
+    pub(crate) fn removable_app(&self, id: &GameId) -> Option<String> {
+        let service = self.get_games_service()?;
+        removable_app(id, &service.installed()).map(str::to_owned)
+    }
+
+    /// Asks before removing the Flatpak of the library game `id`, as Get Games' Remove does.
+    fn ask_uninstall_game(&self, id: &GameId) {
+        let (Some(app), Some(service)) = (self.removable_app(id), self.get_games_service()) else {
+            return;
+        };
+        let name = service
+            .catalogue()
+            .offer
+            .get(&app)
+            .map(|offered| offered.name.clone())
+            .or_else(|| {
+                self.library()
+                    .game_object(id)
+                    .map(|game| game.game().title.clone())
+            })
+            .unwrap_or_else(|| app.clone());
+        self.ask_remove_app(&app, &name, self.upcast_ref());
     }
 }
 

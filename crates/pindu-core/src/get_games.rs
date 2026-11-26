@@ -15,6 +15,7 @@ use crate::add_store::{
     network_failure,
 };
 use crate::catalogue::Offer;
+use crate::model::{GameId, Source};
 
 /// The commands that install the app `id` into `installation`, in order, each an argv
 /// list: the user installation gets Flathub first, unless it has it already. They pass
@@ -214,6 +215,26 @@ pub fn installed_apps(dir: &Path) -> HashSet<String> {
         .filter_map(|entry| entry.file_name().into_string().ok())
         .filter(|id| is_app_id(id))
         .collect()
+}
+
+/// The app of `installed` whose desktop entry the library game `game` is, which Get Games
+/// can remove from its page in the library; `None` for a game of another source. Flatpak
+/// exports only entries named for the app's ID, alone or followed by a dot and more, so
+/// the longest ID the entry's starts with that way is its app.
+pub fn removable_app<'a>(game: &GameId, installed: &'a HashSet<String>) -> Option<&'a str> {
+    if game.source() != Source::Desktop {
+        return None;
+    }
+    let entry = game.native_id();
+    installed
+        .iter()
+        .filter(|app| {
+            entry
+                .strip_prefix(app.as_str())
+                .is_some_and(|rest| rest.is_empty() || rest.starts_with('.'))
+        })
+        .max_by_key(|app| app.len())
+        .map(String::as_str)
 }
 
 /// A piece of work Get Games does with `flatpak`.
@@ -1002,6 +1023,35 @@ mod tests {
         std::fs::create_dir_all(app("not-an-id").join("current")).unwrap();
         assert_eq!(installed_apps(dir.path()), HashSet::from([GAME.to_owned()]));
         assert!(installed_apps(&dir.path().join("missing")).is_empty());
+    }
+
+    #[test]
+    fn a_library_game_is_removable_as_the_installed_app_whose_entry_it_is() {
+        let installed = HashSet::from([
+            GAME.to_owned(),
+            "org.example.Game".to_owned(),
+            "org.example.Game.Editor".to_owned(),
+        ]);
+        let desktop = |id: &str| GameId::new(Source::Desktop, id);
+        assert_eq!(removable_app(&desktop(GAME), &installed), Some(GAME));
+        // Flatpak exports entries named for the app's ID and, after a dot, more.
+        assert_eq!(
+            removable_app(&desktop("org.example.Game.Level"), &installed),
+            Some("org.example.Game")
+        );
+        assert_eq!(
+            removable_app(&desktop("org.example.Game.Editor"), &installed),
+            Some("org.example.Game.Editor")
+        );
+        assert_eq!(
+            removable_app(&desktop("org.example.GameTwo"), &installed),
+            None
+        );
+        assert_eq!(removable_app(&desktop("org.srb2.SRB2"), &installed), None);
+        assert_eq!(
+            removable_app(&GameId::new(Source::Steam, GAME), &installed),
+            None
+        );
     }
 
     #[test]
