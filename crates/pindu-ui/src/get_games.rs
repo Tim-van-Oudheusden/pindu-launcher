@@ -5,7 +5,9 @@
 //! keyboard, the shoulder buttons jump between shelves or turn an app's screenshots, the
 //! main button installs, cancels, plays or opens, and Remove asks before it removes. A
 //! library game Get Games can remove (#888) offers Uninstall on its page, which asks the
-//! same. The native build only: the Flatpak build has no Get Games tile.
+//! same. In the desktop window (#889, section 8.2) the sidebar's Get Games item shows the
+//! same catalogue in the library's place, for the mouse. The native build only: the
+//! Flatpak build has no Get Games tile or item.
 
 use std::collections::HashSet;
 
@@ -29,9 +31,11 @@ impl PinduWindow {
     /// Home's Get Games tile where the build offers it, the pages' actions, and the pages
     /// kept up to date with the service.
     pub(crate) fn setup_get_games(&self, application: &PinduApplication) {
-        self.imp()
-            .home_page
-            .set_get_games_offered(GetGamesService::available());
+        let imp = self.imp();
+        let available = GetGamesService::available();
+        imp.home_page.set_get_games_offered(available);
+        // The desktop sidebar's item, in the native build only.
+        imp.get_games_item.set_visible(available);
         let open_app = gio::ActionEntry::builder("get-games-app")
             .parameter_type(Some(glib::VariantTy::STRING))
             .activate(|window: &Self, _, target| {
@@ -130,12 +134,19 @@ impl PinduWindow {
                 }
             }
         ));
+        // On the desktop, its header bar's toggle shows and hides the sidebar.
+        imp.split_view
+            .bind_property("show-sidebar", &page.sidebar_toggle(), "active")
+            .bidirectional()
+            .sync_create()
+            .build();
         imp.get_games_page.replace(Some(page.clone()));
         page
     }
 
-    /// Shows the catalogue above Home, reading it the first time, and focuses its first
-    /// card.
+    /// Shows the catalogue, reading it the first time: in fullscreen mode above Home,
+    /// focused on its first card; on the desktop in the library's place, as the sidebar's
+    /// Get Games item does.
     pub(crate) fn show_get_games(&self) {
         let Some(service) = self.get_games_service() else {
             return;
@@ -144,10 +155,20 @@ impl PinduWindow {
         let imp = self.imp();
         let page = self.get_games_page();
         page.set_fullscreen(self.is_fullscreen());
-        imp.navigation_view.pop_to_page(&*imp.home_page);
-        imp.navigation_view.push(&page);
+        if self.is_fullscreen() {
+            imp.navigation_view.pop_to_page(&*imp.home_page);
+            imp.navigation_view.push(&page);
+            self.refresh_get_games();
+            page.focus_first_when_ready();
+            return;
+        }
+        imp.navigation_view
+            .replace(&[page.upcast::<adw::NavigationPage>()]);
+        imp.sidebar.set_selected(imp.get_games_item.index());
+        if imp.split_view.is_collapsed() {
+            imp.split_view.set_show_sidebar(false);
+        }
         self.refresh_get_games();
-        page.focus_first_when_ready();
     }
 
     /// Shows the page of the app `id` above the catalogue, and asks Flathub for its sizes.

@@ -59,6 +59,8 @@ mod imp {
         #[template_child]
         pub title: TemplateChild<gtk::Label>,
         #[template_child]
+        pub sidebar_toggle: TemplateChild<gtk::ToggleButton>,
+        #[template_child]
         pub search_entry: TemplateChild<gtk::SearchEntry>,
         #[template_child]
         pub stack: TemplateChild<gtk::Stack>,
@@ -130,6 +132,11 @@ impl GetGamesPage {
     /// The page's search field, which the search keyboard types into.
     pub fn search_entry(&self) -> gtk::SearchEntry {
         self.imp().search_entry.get()
+    }
+
+    /// The header bar's button that shows and hides the desktop window's sidebar.
+    pub fn sidebar_toggle(&self) -> gtk::ToggleButton {
+        self.imp().sidebar_toggle.get()
     }
 
     /// Shows the page as fullscreen mode does, without its header bar and with its title

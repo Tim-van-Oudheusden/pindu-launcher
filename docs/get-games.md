@@ -204,7 +204,7 @@ It is built from the widgets fullscreen mode already has: the home tiles' button
 
 ### 8.2 Desktop window
 
-A Get Games item in the sidebar, in the native build: the same catalogue as a grid with a search field, and the app page as a navigation page. It comes last (GG-5), since a desktop has a software centre and Pindu OS has no desktop.
+A Get Games item in the sidebar, beside Apps, in the native build only (#889): it shows the same catalogue page in the library's place, with its shelves, its search field (results as a grid) and every state of section 8.1, and a card opens the app page as a navigation page above it, with the same actions. The page's header bar has the sidebar toggle. It came last (GG-5), since a desktop has a software centre and Pindu OS has no desktop.
 
 ## 9. After an install
 
