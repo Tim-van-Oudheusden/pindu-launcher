@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::metadata::{self, Metadata};
 use crate::model::{
     ArtLayout, ArtOrigin, Artwork, Game, GameId, LaunchConfig, LaunchKind, Platform, Source,
     Timestamp,
@@ -57,6 +58,52 @@ pub struct WindowsOptions {
     pub proton_version: Option<String>,
     /// The game's Wine prefix; `None` for a new one of its own in the prefixes folder.
     pub prefix: Option<PathBuf>,
+}
+
+/// What the Add or Edit form saves for: adding a game by hand, or editing a game.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum Mode {
+    /// Adding a game by hand.
+    #[default]
+    Add,
+    /// Editing a game; `manual` games also have their folder and program edited.
+    Edit {
+        /// The game being edited.
+        id: GameId,
+        /// Whether the game was added by hand.
+        manual: bool,
+    },
+}
+
+/// A pending change to the user's art in one layout.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ArtChange {
+    /// Replace the art with an image.
+    Set {
+        /// The image's file extension, without the dot.
+        extension: String,
+        /// The image file's contents.
+        bytes: Vec<u8>,
+    },
+    /// Remove the user's own image.
+    Remove,
+}
+
+/// Everything the Add or Edit form saves at once; see [`save`].
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Change {
+    /// Whether a game is added or edited.
+    pub mode: Mode,
+    /// The form of a game added by hand, or `None` when it is unchanged (or the game was
+    /// not added by hand). Adding needs one.
+    pub form: Option<ManualGame>,
+    /// The icon a Windows game's program carries, kept as the game's own icon.
+    pub icon: Option<Icon>,
+    /// The changes to the user's art, by layout.
+    pub art: Vec<(ArtLayout, ArtChange)>,
+    /// The details as the form showed them and as the user left them, when the user
+    /// changed them.
+    pub details: Option<(Metadata, Metadata)>,
 }
 
 /// Why an action on a game added by hand failed.
@@ -152,6 +199,106 @@ pub fn update_game(
         store.set_launch_config(id, &config)
     })?;
     Ok(())
+}
+
+/// Saves what the Add or Edit form changed: the game itself when there is a form (an
+/// edited game only when it was added by hand), then the program's icon, the art changes
+/// and the details, with art files in `art_dir`. Returns whether a game was added.
+///
+/// Adding is all or nothing: when a step fails, the new game, its records and its art
+/// folder are gone, so saving again adds one game rather than a second copy.
+pub fn save(
+    store: &Store,
+    art_dir: &Path,
+    change: &Change,
+    defaults: &Defaults,
+    now: Timestamp,
+) -> Result<bool, ManualError> {
+    let id = match (&change.mode, &change.form) {
+        (Mode::Add, Some(form)) => {
+            return add_with_art(store, art_dir, form, change, defaults, now).map(|_| true);
+        }
+        (Mode::Add, None) => return Err(ManualError::NoExecutable),
+        (Mode::Edit { id, manual: true }, Some(form)) => {
+            update_game(store, id, form, &defaults.prefixes)?;
+            id
+        }
+        (Mode::Edit { id, .. }, _) => id,
+    };
+    // An edit commits step by step rather than in one transaction: removing user art
+    // deletes its file before its record, and rolling the record back would leave it
+    // naming a file that is gone, which is worse than an edit saved in part.
+    save_art_and_details(store, art_dir, id, change, now)?;
+    Ok(false)
+}
+
+/// Adds the game in `form` with the icon, art and details in `change`, in one
+/// transaction; when it fails, removes the art folder the new game had.
+fn add_with_art(
+    store: &Store,
+    art_dir: &Path,
+    form: &ManualGame,
+    change: &Change,
+    defaults: &Defaults,
+    now: Timestamp,
+) -> Result<GameId, ManualError> {
+    let mut folder = None;
+    let added = in_one_transaction(store, |store| {
+        let id = add_game(store, form, defaults, now)?;
+        folder = Some(art_folder(art_dir, &id));
+        save_art_and_details(store, art_dir, &id, change, now)?;
+        Ok(id)
+    });
+    if added.is_err()
+        && let Some(folder) = folder
+    {
+        // The ID is new, so no other game shares the folder. Removing it is best effort:
+        // the error to report is the one that stopped the add.
+        let _ = std::fs::remove_dir_all(folder);
+    }
+    added
+}
+
+/// Stores the program's icon, the art changes and the details in `change` for `id`.
+fn save_art_and_details(
+    store: &Store,
+    art_dir: &Path,
+    id: &GameId,
+    change: &Change,
+    now: Timestamp,
+) -> Result<(), ManualError> {
+    if let Some(icon) = &change.icon {
+        set_exe_icon(store, art_dir, id, icon)?;
+    }
+    for (layout, art) in &change.art {
+        match art {
+            ArtChange::Set { extension, bytes } => {
+                set_user_art(store, art_dir, id, *layout, extension, bytes)?;
+            }
+            ArtChange::Remove => remove_user_art(store, id, *layout)?,
+        }
+    }
+    if let Some((shown, edited)) = &change.details {
+        metadata::edit_by_user(store, id, shown, edited, now)?;
+    }
+    Ok(())
+}
+
+/// Runs `work` in one transaction, as [`Store::in_transaction`] does, failing with the
+/// error `work` failed with.
+fn in_one_transaction<T>(
+    store: &Store,
+    work: impl FnOnce(&Store) -> Result<T, ManualError>,
+) -> Result<T, ManualError> {
+    let mut failed = None;
+    let done = store.in_transaction(|store| {
+        work(store).map_err(|error| {
+            let rollback = store::StoreError::Io(std::io::Error::other(error.to_string()));
+            failed = Some(error);
+            rollback
+        })
+    });
+    done.map_err(|error| failed.unwrap_or_else(|| error.into()))
 }
 
 /// The form of a stored game added by hand, for editing.
@@ -526,7 +673,7 @@ fn store_art(
     extension: &str,
     bytes: &[u8],
 ) -> Result<PathBuf, ManualError> {
-    let folder = art_dir.join(&sha256_hex(id.as_str().as_bytes())[..16]);
+    let folder = art_folder(art_dir, id);
     let name = match origin {
         ArtOrigin::User => format!("{layout}.{extension}"),
         _ => format!("{layout}-{origin}.{extension}"),
@@ -542,6 +689,11 @@ fn store_art(
         path: path.clone(),
     })?;
     Ok(path)
+}
+
+/// The folder in `art_dir` that holds a game's art files, its own and no other game's.
+fn art_folder(art_dir: &Path, id: &GameId) -> PathBuf {
+    art_dir.join(&sha256_hex(id.as_str().as_bytes())[..16])
 }
 
 fn remove_art(
@@ -1049,5 +1201,91 @@ mod tests {
             (art[0].layout, art[0].origin, &art[0].path),
             (ArtLayout::Icon, ArtOrigin::Source, &path)
         );
+    }
+
+    /// Adding a Windows game with its program's icon and a cover the user picked.
+    fn adding_with_art() -> Change {
+        Change {
+            mode: Mode::Add,
+            form: Some(windows_form()),
+            icon: Some(Icon {
+                bytes: b"icon".to_vec(),
+                extension: "png",
+            }),
+            art: vec![(
+                ArtLayout::Cover,
+                ArtChange::Set {
+                    extension: "png".into(),
+                    bytes: b"cover".to_vec(),
+                },
+            )],
+            details: None,
+        }
+    }
+
+    fn manual_games(store: &Store) -> Vec<Game> {
+        store
+            .games()
+            .unwrap()
+            .into_iter()
+            .filter(|game| game.source() == Source::Manual)
+            .collect()
+    }
+
+    #[test]
+    fn an_add_whose_art_cannot_be_written_leaves_no_game_so_saving_again_adds_one() {
+        let (dir, store) = temp_store();
+        // A file where the art folder should be: no art can be written below it.
+        let blocked = dir.path().join("blocked");
+        std::fs::write(&blocked, "").unwrap();
+
+        let saved = save(&store, &blocked, &adding_with_art(), &defaults(), 100);
+
+        assert!(matches!(saved, Err(ManualError::Io(_))), "{saved:?}");
+        assert!(manual_games(&store).is_empty());
+
+        // Saving again, once the art can be written, adds the game once.
+        let art_dir = dir.path().join("art");
+        let saved = save(&store, &art_dir, &adding_with_art(), &defaults(), 100);
+        assert_eq!(saved, Ok(true));
+        assert_eq!(manual_games(&store).len(), 1);
+    }
+
+    #[test]
+    fn an_add_stores_the_game_with_its_icon_art_and_details() {
+        let (dir, store) = temp_store();
+        let art_dir = dir.path().join("art");
+        let edited = Metadata {
+            developer: Some("Maddy Makes Games".into()),
+            ..Metadata::default()
+        };
+        let change = Change {
+            details: Some((Metadata::default(), edited)),
+            ..adding_with_art()
+        };
+
+        let saved = save(&store, &art_dir, &change, &defaults(), 100);
+
+        assert_eq!(saved, Ok(true));
+        let games = manual_games(&store);
+        assert_eq!(games.len(), 1);
+        assert_eq!(games[0].title, "Celeste");
+        let id = &games[0].id;
+        let mut art = Vec::new();
+        for stored in store.artwork(id).unwrap() {
+            assert!(stored.path.starts_with(&art_dir));
+            let bytes = std::fs::read(&stored.path).unwrap();
+            art.push((stored.layout, stored.origin, bytes));
+        }
+        art.sort();
+        assert_eq!(
+            art,
+            [
+                (ArtLayout::Cover, ArtOrigin::User, b"cover".to_vec()),
+                (ArtLayout::Icon, ArtOrigin::Source, b"icon".to_vec()),
+            ]
+        );
+        let shown = metadata::resolve(&store.metadata_values(id).unwrap());
+        assert_eq!(shown.developer.as_deref(), Some("Maddy Makes Games"));
     }
 }

@@ -15,7 +15,7 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::{gio, glib};
 use pindu_core::manual::{self, ManualGame, WindowsOptions};
-use pindu_core::metadata::{self, Metadata, NotAYear};
+use pindu_core::metadata::{Metadata, NotAYear};
 use pindu_core::model::{ArtLayout, ArtOrigin, GameId, Source};
 use pindu_core::paths::{default_library_db_path, default_user_art_dir};
 use pindu_core::pe::{self, Icon};
@@ -31,23 +31,11 @@ use crate::session_service;
 use crate::steamgriddb_service::steam_app_id;
 use crate::window::PinduWindow;
 
+// What the dialog is for: adding a game by hand or editing one.
+pub use pindu_core::manual::Mode;
+
 /// The Windows row of the Type list; the native one comes first.
 const WINDOWS: u32 = 1;
-
-/// What the dialog is for.
-#[derive(Debug, Clone, Default)]
-pub enum Mode {
-    /// Adding a game by hand.
-    #[default]
-    Add,
-    /// Editing a game; `manual` games also have their folder and program edited.
-    Edit {
-        /// The game being edited.
-        id: GameId,
-        /// Whether the game was added by hand.
-        manual: bool,
-    },
-}
 
 /// A pending change to the user's art in one layout.
 #[derive(Debug, Clone)]
@@ -1039,7 +1027,8 @@ impl GameDialog {
 
 /// Stores the dialog's changes, with `details` as the dialog showed them and as the user
 /// left them when the user changed them; returns whether a game was added. Fullscreen
-/// mode's Add Game (`fullscreen_add_game`) stores its games through it too.
+/// mode's Add Game (`fullscreen_add_game`) stores its games through it too. The writes
+/// are `pindu_core::manual::save`'s.
 pub(crate) fn save_to_store(
     mode: Mode,
     form: Option<ManualGame>,
@@ -1048,45 +1037,38 @@ pub(crate) fn save_to_store(
     details: Option<(Metadata, Metadata)>,
     defaults: Defaults,
 ) -> Result<bool, String> {
+    if matches!(mode, Mode::Add) && form.is_none() {
+        return Err(gettext("Choose a folder and a program first"));
+    }
     let store = Store::open(&default_library_db_path()).map_err(|error| error.to_string())?;
-    let now = session_service::now();
-    let (id, added) = match (mode, form) {
-        (Mode::Add, Some(form)) => (
-            manual::add_game(&store, &form, &defaults, now).map_err(|e| e.to_string())?,
-            true,
-        ),
-        (Mode::Edit { id, manual: true }, Some(form)) => {
-            manual::update_game(&store, &id, &form, &defaults.prefixes)
-                .map_err(|e| e.to_string())?;
-            (id, false)
-        }
-        (Mode::Edit { id, .. }, _) => (id, false),
-        (Mode::Add, None) => return Err(gettext("Choose a folder and a program first")),
+    let art = art
+        .into_iter()
+        .map(|(layout, change)| {
+            let change = match change {
+                ArtChange::Set(image) => manual::ArtChange::Set {
+                    extension: image.extension,
+                    bytes: image.bytes,
+                },
+                ArtChange::Remove => manual::ArtChange::Remove,
+            };
+            (layout, change)
+        })
+        .collect();
+    let change = manual::Change {
+        mode,
+        form,
+        icon,
+        art,
+        details,
     };
-    let art_dir = default_user_art_dir();
-    if let Some(icon) = icon {
-        manual::set_exe_icon(&store, &art_dir, &id, &icon).map_err(|error| error.to_string())?;
-    }
-    for (layout, change) in art {
-        match change {
-            ArtChange::Set(image) => manual::set_user_art(
-                &store,
-                &art_dir,
-                &id,
-                layout,
-                &image.extension,
-                &image.bytes,
-            )
-            .map(drop),
-            ArtChange::Remove => manual::remove_user_art(&store, &id, layout),
-        }
-        .map_err(|error| error.to_string())?;
-    }
-    if let Some((shown, edited)) = details {
-        metadata::edit_by_user(&store, &id, &shown, &edited, now)
-            .map_err(|error| error.to_string())?;
-    }
-    Ok(added)
+    manual::save(
+        &store,
+        &default_user_art_dir(),
+        &change,
+        &defaults,
+        session_service::now(),
+    )
+    .map_err(|error| error.to_string())
 }
 
 /// The game the editor loads, or the error to show when it was removed after the dialog
