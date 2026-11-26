@@ -173,6 +173,10 @@ impl PinduWindow {
         if self.report_page_intent(intent) {
             return;
         }
+        if self.get_games_intent(intent) {
+            self.play_sound(Sound::Move);
+            return;
+        }
         let panels = self.imp().panels.get();
         if self.handle_panel_intent(intent) {
             match intent {

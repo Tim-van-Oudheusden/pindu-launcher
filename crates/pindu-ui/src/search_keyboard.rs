@@ -1,7 +1,8 @@
 //! Fullscreen mode's on-screen keyboard for the search field: Y opens it in a panel above
-//! the hint bar, and while it is open the controller types into the search entry, which
-//! keeps focus. The grid and what each button does are `pindu_core::osk`; this draws the
-//! keys, marks the cursor's, and applies what the keyboard says to the search entry.
+//! the hint bar, and while it is open the controller types into the page's search entry
+//! (the library's, or Get Games' catalogue's), which keeps focus. The grid and what each
+//! button does are `pindu_core::osk`; this draws the keys, marks the cursor's, and applies
+//! what the keyboard says to the search entry.
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -45,8 +46,7 @@ impl PinduWindow {
 
         self.connect_focus_widget_notify(|window| {
             let typing = window
-                .imp()
-                .search_entry
+                .keyboard_entry()
                 .state_flags()
                 .contains(gtk::StateFlags::FOCUS_WITHIN);
             if !typing {
@@ -100,7 +100,7 @@ impl PinduWindow {
         let Some(mut keyboard) = imp.search_keyboard.get() else {
             return false;
         };
-        let entry = &imp.search_entry;
+        let entry = &self.keyboard_entry();
         let outcome = keyboard.handle(intent, &entry.text());
         imp.search_keyboard.set(Some(keyboard));
         match outcome {
@@ -138,8 +138,15 @@ impl PinduWindow {
         let imp = self.imp();
         imp.search_keyboard.get().map(|keyboard| Typing {
             key: keyboard.key(),
-            empty: imp.search_entry.text().is_empty(),
+            empty: self.keyboard_entry().text().is_empty(),
         })
+    }
+
+    /// The search entry the keyboard types into: Get Games' catalogue's while it shows,
+    /// else the library's.
+    fn keyboard_entry(&self) -> gtk::SearchEntry {
+        self.get_games_search_entry()
+            .unwrap_or_else(|| self.imp().search_entry.get())
     }
 
     /// Marks the key under the cursor, and tells screen readers which key it is.

@@ -124,7 +124,7 @@ impl PinduWindow {
             // An open menu closes on B like a dialog, and keeps the page's buttons too.
             dialog: self.visible_dialog().is_some() || self.open_menu().is_some(),
             page_below,
-            search: library || home,
+            search: library || home || self.get_games_search_entry().is_some(),
             tabs: library && self.is_fullscreen(),
             dialog_tabs: self
                 .visible_dialog()
@@ -149,6 +149,7 @@ impl PinduWindow {
             keyboard: self
                 .secret_dialog_typing()
                 .or_else(|| self.search_keyboard_typing()),
+            shoulders: self.get_games_shoulders(),
         }
     }
 
@@ -258,6 +259,8 @@ fn action_label(action: Action) -> String {
         Action::Search => gettext("Search"),
         Action::Tabs => gettext("Tabs"),
         Action::Sections => gettext("Section"),
+        Action::Shelves => gettext("Shelves"),
+        Action::Screenshots => gettext("Screenshots"),
         Action::Pages => gettext("Pages"),
         Action::Sort => gettext("Sort"),
         Action::Adjust => gettext("Adjust"),

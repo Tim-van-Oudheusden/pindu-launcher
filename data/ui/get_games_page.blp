@@ -1,0 +1,138 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Get Games' catalogue (#887): Flathub's games and a few extras, as shelves of cards, a
+// search field the search keyboard types into, and a status page for each state with no
+// catalogue to show or nothing found.
+template $PinduGetGamesPage: Adw.NavigationPage {
+  title: _("Get Games");
+  tag: "get-games";
+
+  styles [
+    "get-games-page",
+  ]
+
+  child: Adw.ToolbarView toolbar {
+    [top]
+    Adw.HeaderBar {}
+
+    content: Box {
+      orientation: vertical;
+      margin-top: 24;
+      margin-start: 24;
+      margin-end: 24;
+      spacing: 18;
+
+      Box {
+        spacing: 18;
+
+        Box {
+          orientation: vertical;
+          valign: center;
+          hexpand: true;
+
+          // Fullscreen mode hides the header bar, which names the page.
+          Label title {
+            label: _("Get Games");
+            xalign: 0;
+
+            styles [
+              "title-1",
+            ]
+          }
+
+          Label {
+            label: _("From Flathub");
+            xalign: 0;
+
+            styles [
+              "dim-label",
+            ]
+          }
+        }
+
+        SearchEntry search_entry {
+          valign: center;
+          width-request: 360;
+          placeholder-text: _("Search Games");
+          search-delay: 150;
+
+          accessibility {
+            label: _("Search Games");
+          }
+        }
+      }
+
+      Stack stack {
+        vexpand: true;
+        transition-type: crossfade;
+
+        StackPage {
+          name: "shelves";
+
+          child: ScrolledWindow shelves_scroller {
+            hscrollbar-policy: never;
+
+            child: Box shelves {
+              orientation: vertical;
+              spacing: 24;
+              margin-bottom: 24;
+            };
+          };
+        }
+
+        StackPage {
+          name: "results";
+
+          child: ScrolledWindow {
+            hscrollbar-policy: never;
+
+            child: FlowBox results {
+              valign: start;
+              homogeneous: true;
+              selection-mode: none;
+              activate-on-single-click: true;
+              min-children-per-line: 2;
+              max-children-per-line: 12;
+              column-spacing: 12;
+              row-spacing: 12;
+              margin-bottom: 24;
+
+              accessibility {
+                label: _("Results");
+              }
+            };
+          };
+        }
+
+        StackPage {
+          name: "loading";
+
+          child: Adw.Spinner {
+            halign: center;
+            valign: center;
+            width-request: 48;
+            height-request: 48;
+          };
+        }
+
+        StackPage {
+          name: "status";
+
+          child: Adw.StatusPage status {
+            child: Button status_button {
+              label: _("Try Again");
+              halign: center;
+              action-name: "win.get-games-refresh";
+
+              styles [
+                "pill",
+                "suggested-action",
+              ]
+            };
+          };
+        }
+      }
+    };
+  };
+}

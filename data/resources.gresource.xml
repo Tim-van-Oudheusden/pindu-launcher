@@ -17,6 +17,8 @@
     <file preprocess="xml-stripblanks">ui/game_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/game_overlay.ui</file>
     <file preprocess="xml-stripblanks">ui/game_page.ui</file>
+    <file preprocess="xml-stripblanks">ui/get_games_app_page.ui</file>
+    <file preprocess="xml-stripblanks">ui/get_games_page.ui</file>
     <file preprocess="xml-stripblanks">ui/health_page.ui</file>
     <file preprocess="xml-stripblanks">ui/home_page.ui</file>
     <file preprocess="xml-stripblanks">ui/menu_drawer.ui</file>
@@ -38,6 +40,7 @@
     <file preprocess="xml-stripblanks">home/external.svg</file>
     <file preprocess="xml-stripblanks">home/faugus.svg</file>
     <file preprocess="xml-stripblanks">home/favourites.svg</file>
+    <file preprocess="xml-stripblanks">home/get-games.svg</file>
     <file preprocess="xml-stripblanks">home/heroic-amazon.svg</file>
     <file preprocess="xml-stripblanks">home/heroic-epic.svg</file>
     <file preprocess="xml-stripblanks">home/heroic-gog.svg</file>

@@ -4,8 +4,9 @@
 //! install first asks Flathub for its sizes and checks the free space.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::path::Path;
 use std::rc::{Rc, Weak};
 use std::time::{Duration, SystemTime};
 
@@ -201,6 +202,20 @@ pub fn is_app_id(id: &str) -> bool {
         })
 }
 
+/// The apps installed in the Flatpak installation in `dir` (`/var/lib/flatpak` or the
+/// user's): those with a deployed `current` branch under `app/`.
+pub fn installed_apps(dir: &Path) -> HashSet<String> {
+    let Ok(entries) = std::fs::read_dir(dir.join("app")) else {
+        return HashSet::new();
+    };
+    entries
+        .flatten()
+        .filter(|entry| entry.path().join("current").exists())
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .filter(|id| is_app_id(id))
+        .collect()
+}
+
 /// A piece of work Get Games does with `flatpak`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Job {
@@ -247,6 +262,9 @@ pub struct Running {
     pub step: Option<(u32, u32)>,
     /// Whether the user cancelled it, and it is stopping.
     pub cancelling: bool,
+    /// Whether an install still asks for its sizes and checks the free space, before
+    /// `flatpak` runs.
+    pub checking: bool,
 }
 
 /// How a job ended.
@@ -541,6 +559,7 @@ impl GetGames {
             }
             let job = state.queue.remove(0);
             state.running = Some(Running {
+                checking: matches!(job, Job::Install { .. }),
                 job: job.clone(),
                 progress: None,
                 step: None,
@@ -621,6 +640,16 @@ impl GetGames {
         if self.cancelling() {
             self.finish(Outcome::Cancelled);
             return;
+        }
+        let checked = {
+            let mut state = self.inner.state.borrow_mut();
+            state
+                .running
+                .as_mut()
+                .is_some_and(|running| std::mem::replace(&mut running.checking, false))
+        };
+        if checked {
+            self.changed();
         }
         let reader = RefCell::new(ProgressReader::new());
         let weak = self.downgrade();
@@ -964,6 +993,18 @@ mod tests {
     }
 
     #[test]
+    fn installed_apps_are_those_with_a_current_deployment() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = |id: &str| dir.path().join("app").join(id);
+        std::fs::create_dir_all(app(GAME).join("x86_64/stable/active")).unwrap();
+        std::os::unix::fs::symlink("x86_64/stable", app(GAME).join("current")).unwrap();
+        std::fs::create_dir_all(app("org.srb2.SRB2").join("x86_64/stable")).unwrap();
+        std::fs::create_dir_all(app("not-an-id").join("current")).unwrap();
+        assert_eq!(installed_apps(dir.path()), HashSet::from([GAME.to_owned()]));
+        assert!(installed_apps(&dir.path().join("missing")).is_empty());
+    }
+
+    #[test]
     fn only_app_ids_are_app_ids() {
         assert!(is_app_id(GAME));
         assert!(is_app_id("org.srb2.SRB2"));
@@ -1058,6 +1099,7 @@ mod tests {
         );
         let running = jobs.state().running.unwrap();
         assert_eq!(running.progress, None);
+        assert!(running.checking);
         fake.answer(&capture("remote-info"));
         assert_eq!(
             jobs.state().sizes.get(GAME),
@@ -1071,6 +1113,7 @@ mod tests {
             "installs before the space is known"
         );
         fake.free(Some(100 * GIB));
+        assert!(!jobs.state().running.unwrap().checking);
         assert_eq!(
             fake.last_command(),
             install_commands(Installation::System, GAME)[0]

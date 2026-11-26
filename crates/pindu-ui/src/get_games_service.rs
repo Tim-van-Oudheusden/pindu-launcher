@@ -18,7 +18,8 @@ use gtk::{gio, glib};
 use pindu_core::add_store::{Installation, REMOTES_COMMAND, StoreApp};
 use pindu_core::catalogue::{self, Lists, Offer, appstream, index, lists};
 use pindu_core::get_games::{
-    CatalogueStatus, GetGames, Job, Outcome, Refusal, State, catalogue_status, needs_refresh,
+    CatalogueStatus, GetGames, Job, Outcome, Refusal, State, catalogue_status, installed_apps,
+    needs_refresh,
 };
 use pindu_core::model::{GameId, Source};
 use pindu_core::notifications::{Kind, Target};
@@ -70,6 +71,10 @@ struct Inner {
     tasks: RefCell<HashMap<Option<String>, TaskId>>,
     /// The screens asked for the catalogue, so it is read once the installation is known.
     wanted: Cell<bool>,
+    /// The installation's folder, `/var/lib/flatpak` or the user's, once known.
+    flatpak_dir: RefCell<Option<PathBuf>>,
+    /// The apps installed in it, as last read.
+    installed: RefCell<HashSet<String>>,
     online: Cell<bool>,
     /// When a refresh last ended. Flatpak leaves the catalogue as it was when Flathub's
     /// has not changed, so its own time alone would ask for a refresh on every read.
@@ -147,6 +152,11 @@ impl GetGamesService {
     /// The catalogue as it is.
     pub fn catalogue(&self) -> Catalogue {
         self.inner.catalogue.borrow().clone()
+    }
+
+    /// The apps installed in the installation, as last read.
+    pub fn installed(&self) -> HashSet<String> {
+        self.inner.installed.borrow().clone()
     }
 
     /// The jobs as they are; `None` until the installation is known.
@@ -231,7 +241,11 @@ impl GetGamesService {
             Installation::System => dirs.system_flatpak.clone(),
             Installation::User => dirs.data_home.join("flatpak"),
         };
-        let jobs = GetGames::new(installation, Box::new(FlatpakJobs::new(flatpak_dir)));
+        let jobs = GetGames::new(
+            installation,
+            Box::new(FlatpakJobs::new(flatpak_dir.clone())),
+        );
+        self.inner.flatpak_dir.replace(Some(flatpak_dir));
         jobs.set_online(self.inner.online.get());
         let weak = Rc::downgrade(&self.inner);
         jobs.connect_changed(move |state| {
@@ -254,9 +268,29 @@ impl GetGamesService {
             catalogue.folder = Some(catalogue::active_dir(installation, &dirs));
         }
         self.changed();
+        self.read_installed();
         if self.inner.wanted.get() {
             self.load();
         }
+    }
+
+    /// Reads which apps the installation has, off the main thread.
+    fn read_installed(&self) {
+        let Some(dir) = self.inner.flatpak_dir.borrow().clone() else {
+            return;
+        };
+        let weak = Rc::downgrade(&self.inner);
+        glib::spawn_future_local(async move {
+            let installed = gio::spawn_blocking(move || installed_apps(&dir))
+                .await
+                .unwrap_or_default();
+            if let Some(inner) = weak.upgrade()
+                && *inner.installed.borrow() != installed
+            {
+                inner.installed.replace(installed);
+                Self { inner }.changed();
+            }
+        });
     }
 
     /// Reads the catalogue off the main thread, through its index, then which apps
@@ -301,13 +335,15 @@ impl GetGamesService {
             if let Some(error) = lists_error {
                 glib::g_warning!("pindu", "Get Games' lists file was not read: {}", error.0);
             }
-            service.loaded(lists, loaded);
+            // The refresh is queued first, so a missing catalogue shows as on its way
+            // rather than as one that could not be downloaded.
             let checked = modified.max(service.inner.refreshed_at.get());
             if needs_refresh(checked, SystemTime::now())
                 && let Some(jobs) = service.jobs()
             {
                 jobs.refresh();
             }
+            service.loaded(lists, loaded);
             service.read_end_of_life(installation);
         });
     }
@@ -474,6 +510,9 @@ impl GetGamesService {
         let offer = self.inner.catalogue.borrow().offer.clone();
         if *job == Job::Refresh {
             self.inner.refreshed_at.set(Some(SystemTime::now()));
+        }
+        if job.app_id().is_some() {
+            self.read_installed();
         }
         match (job, outcome) {
             (Job::Refresh, Outcome::Done) => self.load(),
