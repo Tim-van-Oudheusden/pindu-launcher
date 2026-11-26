@@ -9,7 +9,7 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 
 use crate::model::{Source, SourceState};
-use crate::paths::data_home;
+use crate::paths::{config_home, data_home};
 use crate::store::{self, Store};
 
 /// The host's home, XDG and system folders, as seen from inside or outside the sandbox.
@@ -48,14 +48,10 @@ impl HostDirs {
                 .or_else(|| (!in_flatpak).then(|| vars(name)).flatten());
             value.map(PathBuf::from)
         };
-        let config_home = match host_dir("XDG_CONFIG_HOME") {
-            Some(dir) if dir.is_absolute() => dir,
-            _ => home.join(".config"),
-        };
         Self {
             home: home.to_owned(),
             data_home: data_home(host_dir("XDG_DATA_HOME").as_deref(), home),
-            config_home,
+            config_home: config_home(host_dir("XDG_CONFIG_HOME").as_deref(), home),
             host_usr: PathBuf::from(if in_flatpak { "/run/host/usr" } else { "/usr" }),
             system_flatpak: PathBuf::from("/var/lib/flatpak"),
         }
