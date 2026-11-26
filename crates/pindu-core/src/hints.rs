@@ -77,6 +77,18 @@ pub struct Context {
     pub launching: Launching,
     /// The search keyboard or the passphrase dialog is open, which takes the buttons.
     pub keyboard: Option<Typing>,
+    /// What the shoulder buttons step through on the page, besides tabs: Get Games'
+    /// shelves, or an app's screenshots.
+    pub shoulders: Option<Shoulders>,
+}
+
+/// What the shoulder buttons step through on a page of Get Games.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Shoulders {
+    /// The catalogue's shelves, which they jump between.
+    Shelves,
+    /// An app's screenshots, which they turn.
+    Screenshots,
 }
 
 /// The open on-screen keyboard, over the search field or in the passphrase dialog: the
@@ -130,6 +142,10 @@ pub enum Action {
     Tabs,
     /// Switch to Quick Access's section before or after.
     Sections,
+    /// Jump to the shelf above or below, in Get Games' catalogue.
+    Shelves,
+    /// Turn to the screenshot before or after, on an app's page in Get Games.
+    Screenshots,
     /// Turn to the page before or after, in the diagnostics report.
     Pages,
     /// Cycle the sort order back or forward.
@@ -323,6 +339,18 @@ pub fn hints(context: Context, layout: Layout) -> Vec<Hint> {
             Action::Sections,
         ),
         pair(tabs, Intent::PreviousSort, Intent::NextSort, Action::Sort),
+        pair(
+            page && context.shoulders == Some(Shoulders::Shelves),
+            Intent::PreviousTab,
+            Intent::NextTab,
+            Action::Shelves,
+        ),
+        pair(
+            page && context.shoulders == Some(Shoulders::Screenshots),
+            Intent::PreviousTab,
+            Intent::NextTab,
+            Action::Screenshots,
+        ),
     ]
     .into_iter()
     .flatten()
@@ -495,6 +523,7 @@ mod tests {
             menu: false,
             panel: None,
             sections: false,
+            shoulders: None,
             launching: Launching::No,
         }
     }
@@ -556,6 +585,49 @@ mod tests {
                 (Button::South, Action::Select),
                 (Button::East, Action::Close),
                 (Button::LeftShoulder, Action::Tabs)
+            ]
+        );
+    }
+
+    #[test]
+    fn get_games_jumps_shelves_and_turns_screenshots_with_the_shoulders() {
+        let catalogue = Context {
+            page_below: true,
+            search: true,
+            shoulders: Some(Shoulders::Shelves),
+            ..context(Focus::Other)
+        };
+        assert_eq!(
+            actions(catalogue, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Back),
+                (Button::North, Action::Search),
+                (Button::LeftShoulder, Action::Shelves)
+            ]
+        );
+        let app_page = Context {
+            page_below: true,
+            shoulders: Some(Shoulders::Screenshots),
+            ..context(Focus::Other)
+        };
+        assert_eq!(
+            actions(app_page, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Back),
+                (Button::LeftShoulder, Action::Screenshots)
+            ]
+        );
+        let confirming = Context {
+            dialog: true,
+            ..app_page
+        };
+        assert_eq!(
+            actions(confirming, DeviceKind::Xbox),
+            [
+                (Button::South, Action::Select),
+                (Button::East, Action::Close)
             ]
         );
     }

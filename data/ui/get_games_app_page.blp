@@ -1,0 +1,172 @@
+using Gtk 4.0;
+using Adw 1;
+
+// An app's page in Get Games (#887): its icon, name and summary, what Flathub says about
+// it, one main action that follows its state (Install, Cancel, Play, Open), Remove beside
+// it once installed, how a job for it goes, its screenshots and its description.
+template $PinduGetGamesAppPage: Adw.NavigationPage {
+  styles [
+    "get-games-app-page",
+  ]
+
+  child: Adw.ToolbarView toolbar {
+    [top]
+    Adw.HeaderBar {}
+
+    content: ScrolledWindow scroller {
+      hscrollbar-policy: never;
+
+      child: Box {
+        orientation: vertical;
+        margin-top: 24;
+        margin-bottom: 24;
+        margin-start: 24;
+        margin-end: 24;
+        spacing: 24;
+
+        Box {
+          spacing: 24;
+
+          Image icon {
+            pixel-size: 128;
+            icon-name: "system-software-install-symbolic";
+            valign: start;
+            accessible-role: presentation;
+
+            styles [
+              "icon-dropshadow",
+            ]
+          }
+
+          Box {
+            orientation: vertical;
+            spacing: 6;
+            valign: center;
+            hexpand: true;
+
+            Label name {
+              xalign: 0;
+              wrap: true;
+
+              styles [
+                "title-1",
+              ]
+            }
+
+            Label summary {
+              xalign: 0;
+              wrap: true;
+            }
+
+            FlowBox facts {
+              selection-mode: none;
+              can-focus: false;
+              column-spacing: 6;
+              row-spacing: 6;
+              max-children-per-line: 12;
+              margin-top: 6;
+
+              styles [
+                "get-games-facts",
+              ]
+            }
+          }
+        }
+
+        Box {
+          spacing: 12;
+
+          Button main_button {
+            action-name: "win.get-games-main";
+
+            styles [
+              "pill",
+              "suggested-action",
+            ]
+          }
+
+          Button remove_button {
+            label: _("Remove");
+            action-name: "win.get-games-remove";
+
+            styles [
+              "pill",
+            ]
+          }
+        }
+
+        Box job {
+          orientation: vertical;
+          spacing: 6;
+
+          ProgressBar progress {}
+
+          Label job_label {
+            xalign: 0;
+            wrap: true;
+
+            styles [
+              "dim-label",
+            ]
+          }
+        }
+
+        Box screenshots {
+          orientation: vertical;
+          spacing: 6;
+
+          Box {
+            spacing: 12;
+
+            Button previous_shot {
+              icon-name: "go-previous-symbolic";
+              valign: center;
+              tooltip-text: _("Previous Screenshot");
+              action-name: "win.get-games-screenshot";
+              action-target: "-1";
+
+              styles [
+                "circular",
+              ]
+            }
+
+            Picture screenshot {
+              hexpand: true;
+              height-request: 360;
+              content-fit: contain;
+              can-shrink: true;
+
+              styles [
+                "card",
+              ]
+            }
+
+            Button next_shot {
+              icon-name: "go-next-symbolic";
+              valign: center;
+              tooltip-text: _("Next Screenshot");
+              action-name: "win.get-games-screenshot";
+              action-target: "1";
+
+              styles [
+                "circular",
+              ]
+            }
+          }
+
+          Label screenshot_count {
+            styles [
+              "dim-label",
+              "caption",
+            ]
+          }
+        }
+
+        Box description {
+          orientation: vertical;
+          spacing: 12;
+        }
+      };
+    };
+  };
+}

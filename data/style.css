@@ -1212,3 +1212,31 @@ window.fullscreen-mode.no-design.reduced-motion .playing-card button,
 window.fullscreen-mode.no-design.reduced-motion .menu-drawer .dock-button {
   transition: none;
 }
+
+/* Get Games (#887): an app's card, focused as Home's cards are, and the facts on its page
+   as pills. */
+.get-games-card {
+  min-width: 140px;
+  padding: 0;
+  transition: transform 120ms ease-out;
+}
+
+.get-games-card:focus-visible {
+  transform: scale(1.05);
+  outline: 3px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+window.reduced-motion .get-games-card:focus-visible {
+  transform: none;
+}
+
+.get-games-shelf scrolledwindow {
+  padding: 6px 6px 12px;
+}
+
+.get-games-fact {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background-color: alpha(currentColor, 0.1);
+}

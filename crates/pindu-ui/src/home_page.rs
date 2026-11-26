@@ -134,6 +134,8 @@ fn category_count(count: u32) -> String {
 
 /// The icon that stands for Apps, on its tile and in the desktop window's sidebar.
 pub(crate) const APPS_ICON: &str = "preferences-desktop-apps-symbolic";
+/// The icon of the Get Games tile and its pages.
+pub(crate) const GET_GAMES_ICON: &str = "system-software-install-symbolic";
 
 /// How many apps the Apps tile leads to, as its details row and its labelled tile say
 /// it.
@@ -158,6 +160,7 @@ fn section_title(section: &Section) -> String {
         (SectionId::Source(source), None) => source_name(source),
         (SectionId::Categories, None) => gettext("Categories"),
         (SectionId::Apps, _) => gettext("Apps"),
+        (SectionId::GetGames, _) => gettext("Get Games"),
         (SectionId::Collection(_) | SectionId::Category(_), None) => String::new(),
     }
 }
@@ -210,6 +213,7 @@ fn section_glyph(id: SectionId, size: i32) -> gtk::Widget {
         SectionId::Collection(_) => "folder-symbolic",
         SectionId::Categories => "view-app-grid-symbolic",
         SectionId::Apps => APPS_ICON,
+        SectionId::GetGames => GET_GAMES_ICON,
         SectionId::Category(_) => "view-list-bullet-symbolic",
         SectionId::Source(source) => {
             match (sections::source_icon(source), sections::monogram(source)) {
@@ -293,7 +297,7 @@ fn section_tile(
     tile.update_property(&[gtk::accessible::Property::Label(title)]);
     if matches!(
         id,
-        SectionId::Categories | SectionId::Category(_) | SectionId::Apps
+        SectionId::Categories | SectionId::Category(_) | SectionId::Apps | SectionId::GetGames
     ) {
         tile.add_css_class(&id.css_class());
         tile.update_property(&[gtk::accessible::Property::Description(count)]);
@@ -502,8 +506,8 @@ impl Focused {
     }
 }
 
-/// Home's sections, in order, and its categories, by name, with the games of each, and
-/// how many apps the Apps tile leads to.
+/// Home's sections, in order, and its categories, by name, with the games of each, how
+/// many apps the Apps tile leads to, and whether this build offers Get Games.
 #[derive(Debug, Default)]
 struct Sections {
     sections: Vec<Section>,
@@ -511,6 +515,7 @@ struct Sections {
     categories: Vec<Section>,
     category_games: Vec<Vec<GameObject>>,
     apps: u32,
+    get_games: bool,
 }
 
 impl Sections {
@@ -526,8 +531,8 @@ impl Sections {
     }
 
     /// The name, and the count its tile shows, of the tile `id` stands for: a section, a
-    /// category, the Categories tile, which counts the categories, or the Apps tile,
-    /// which counts the apps.
+    /// category, the Categories tile, which counts the categories, the Apps tile, which
+    /// counts the apps, or the Get Games tile, which says where its games come from.
     fn tile(&self, id: SectionId) -> Option<(String, u32, String)> {
         if id == SectionId::Categories {
             if self.categories.is_empty() {
@@ -539,9 +544,26 @@ impl Sections {
         if id == SectionId::Apps {
             return (self.apps > 0).then(|| (gettext("Apps"), self.apps, app_count(self.apps)));
         }
+        if id == SectionId::GetGames {
+            return self
+                .get_games
+                .then(|| (gettext("Get Games"), 0, gettext("From Flathub")));
+        }
         let (section, _) = self.get(id)?;
         let count = games_in(section);
         Some((section_title(section), count, game_count(count)))
+    }
+
+    /// The tiles that lead elsewhere than the library, after the Categories tile: Apps
+    /// while there are apps, Get Games where the build offers it.
+    fn elsewhere(&self) -> Vec<SectionId> {
+        [
+            (self.apps > 0).then_some(SectionId::Apps),
+            self.get_games.then_some(SectionId::GetGames),
+        ]
+        .into_iter()
+        .flatten()
+        .collect()
     }
 }
 
@@ -1460,13 +1482,17 @@ impl HomePage {
         let first = imp.sections.borrow().sections.is_empty()
             && !sections.is_empty()
             && imp.library_tile.is_focus();
-        let apps = imp.sections.borrow().apps;
+        let (apps, get_games) = {
+            let shown = imp.sections.borrow();
+            (shown.apps, shown.get_games)
+        };
         imp.sections.replace(Sections {
             sections,
             games,
             categories,
             category_games,
             apps,
+            get_games,
         });
         self.refresh();
         if first {
@@ -1479,6 +1505,15 @@ impl HomePage {
     pub fn set_apps(&self, count: u32) {
         let imp = self.imp();
         if std::mem::replace(&mut imp.sections.borrow_mut().apps, count) != count {
+            self.refresh();
+        }
+    }
+
+    /// Says whether this build offers Get Games: the native one does, with a tile on Home;
+    /// the Flatpak build, which cannot install from Flathub, does not.
+    pub fn set_get_games_offered(&self, offered: bool) {
+        let imp = self.imp();
+        if std::mem::replace(&mut imp.sections.borrow_mut().get_games, offered) != offered {
             self.refresh();
         }
     }
@@ -1594,6 +1629,13 @@ impl HomePage {
             row.grab_focus();
         } else if !shown && was_shown && in_setup {
             self.show_sections();
+            // Hide This List had focus: the first screen's tiles, shown again, take it once
+            // they are mapped, so the controller is not left on nothing.
+            glib::idle_add_local_once(glib::clone!(
+                #[weak(rename_to = page)]
+                self,
+                move || page.focus_remembered()
+            ));
         }
         shown && !was_shown
     }
@@ -1792,7 +1834,7 @@ impl HomePage {
                 layout.home_start,
                 &sections.sections,
                 &sections.categories,
-                sections.apps > 0,
+                &sections.elsewhere(),
             )
         };
         let items: Vec<(RowKey, Shown<'_>)> = row
@@ -1986,25 +2028,30 @@ impl HomePage {
         };
         // What each row shows: its key, and what it is built from.
         let wanted: Vec<(ShelfKey, Parts<'_>)> = if layout.home == HomeLayout::Explore {
-            home::explore_rows(&sections.sections, &sections.categories, sections.apps > 0)
-                .into_iter()
-                .filter_map(|row| match row {
-                    ExploreRow::Featured(ids) => {
-                        let games = games_of(SectionId::RecentlyPlayed, &ids);
-                        let key = (RowId::Featured, String::new(), 0, cards(&games));
-                        Some((key, Parts::Featured(games)))
-                    }
-                    ExploreRow::Tiles(ids) => {
-                        let (keys, tiles) = tiles(&ids);
-                        Some(((RowId::Tiles, String::new(), 0, keys), Parts::Tiles(tiles)))
-                    }
-                    ExploreRow::Shelf(shelf) => section_row(shelf),
-                    ExploreRow::MoreCategories(ids) => more_row(&ids),
-                })
-                .collect()
+            home::explore_rows(
+                &sections.sections,
+                &sections.categories,
+                &sections.elsewhere(),
+            )
+            .into_iter()
+            .filter_map(|row| match row {
+                ExploreRow::Featured(ids) => {
+                    let games = games_of(SectionId::RecentlyPlayed, &ids);
+                    let key = (RowId::Featured, String::new(), 0, cards(&games));
+                    Some((key, Parts::Featured(games)))
+                }
+                ExploreRow::Tiles(ids) => {
+                    let (keys, tiles) = tiles(&ids);
+                    Some(((RowId::Tiles, String::new(), 0, keys), Parts::Tiles(tiles)))
+                }
+                ExploreRow::Shelf(shelf) => section_row(shelf),
+                ExploreRow::MoreCategories(ids) => more_row(&ids),
+            })
+            .collect()
         } else {
-            // The Library row leads elsewhere, as the Apps tile does: it stands there.
-            let (apps_keys, apps_tiles) = tiles(&[SectionId::Apps]);
+            // The Library row leads elsewhere, as the Apps and Get Games tiles do: they
+            // stand there.
+            let (apps_keys, apps_tiles) = tiles(&sections.elsewhere());
             home::shelves(&sections.sections, &sections.categories)
                 .into_iter()
                 .filter_map(section_row)
@@ -3040,6 +3087,12 @@ impl HomePage {
             drop(sections);
             self.show_preview(None);
             self.show_info(&gettext("Apps"), &details, None);
+            return;
+        }
+        if matches!(focused, Focused::Section(SectionId::GetGames)) {
+            drop(sections);
+            self.show_preview(None);
+            self.show_info(&gettext("Get Games"), &[], None);
             return;
         }
         let section = match focused {

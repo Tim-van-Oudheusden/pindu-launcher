@@ -152,12 +152,13 @@ pub enum RowItem {
 /// each of `sections`, in order. With the games: a card for each Recently Played game, a
 /// divider, then a tile for every other section; Recently Played itself gets no tile.
 /// The Categories tile follows Installed, or where Installed would be, while the
-/// library has `categories`, and the Apps tile follows it while there are `apps`.
+/// library has `categories`, and the tiles of `elsewhere` follow it: Apps while there are
+/// apps, Get Games where the build offers it, there even in a library without games.
 pub fn first_screen_row(
     start: HomeStart,
     sections: &[Section],
     categories: &[Section],
-    apps: bool,
+    elsewhere: &[SectionId],
 ) -> Vec<RowItem> {
     let tiles = |sections: &[Section]| -> Vec<RowItem> {
         let mut tiles: Vec<RowItem> = sections
@@ -167,10 +168,10 @@ pub fn first_screen_row(
             })
             .map(|section| RowItem::Section(section.id))
             .collect();
-        let leads_elsewhere = [
-            (!categories.is_empty()).then_some(SectionId::Categories),
-            apps.then_some(SectionId::Apps),
-        ];
+        let leads_elsewhere = (!categories.is_empty())
+            .then_some(SectionId::Categories)
+            .into_iter()
+            .chain(elsewhere.iter().copied());
         // Before the launchers and collections, whose number varies.
         let at = tiles
             .iter()
@@ -181,10 +182,7 @@ pub fn first_screen_row(
                 )
             })
             .unwrap_or(tiles.len());
-        tiles.splice(
-            at..at,
-            leads_elsewhere.into_iter().flatten().map(RowItem::Section),
-        );
+        tiles.splice(at..at, leads_elsewhere.map(RowItem::Section));
         tiles
     };
     if start == HomeStart::Sections {
@@ -280,11 +278,15 @@ pub enum ExploreRow {
 
 /// The rows of the Explore layout: the Recently Played games, when there are any; a row
 /// of tiles for every other section, there even without one, and one Categories tile
-/// after them while there are `categories`, then the Apps tile while there are `apps`;
-/// then a shelf for each of those sections and the categories with the most games
+/// after them while there are `categories`, then the tiles of `elsewhere` (Apps, Get
+/// Games); then a shelf for each of those sections and the categories with the most games
 /// (`shelves`), in order, and the More Categories row for the other categories, if any
 /// (`more_categories`).
-pub fn explore_rows(sections: &[Section], categories: &[Section], apps: bool) -> Vec<ExploreRow> {
+pub fn explore_rows(
+    sections: &[Section],
+    categories: &[Section],
+    elsewhere: &[SectionId],
+) -> Vec<ExploreRow> {
     let (recent, others): (Vec<Section>, Vec<Section>) = sections
         .iter()
         .cloned()
@@ -294,15 +296,15 @@ pub fn explore_rows(sections: &[Section], categories: &[Section], apps: bool) ->
         .filter(|section| !section.games.is_empty())
         .map(|section| ExploreRow::Featured(section.games))
         .collect();
-    let tiles = [
-        (!categories.is_empty()).then_some(SectionId::Categories),
-        apps.then_some(SectionId::Apps),
-    ];
+    let tiles = (!categories.is_empty())
+        .then_some(SectionId::Categories)
+        .into_iter()
+        .chain(elsewhere.iter().copied());
     rows.push(ExploreRow::Tiles(
         others
             .iter()
             .map(|section| section.id)
-            .chain(tiles.into_iter().flatten())
+            .chain(tiles)
             .collect(),
     ));
     rows.extend(
@@ -1309,7 +1311,7 @@ mod tests {
             section(SectionId::Source(Source::Steam), 3),
         ];
 
-        let row = first_screen_row(HomeStart::Sections, &sections, &[], false);
+        let row = first_screen_row(HomeStart::Sections, &sections, &[], &[]);
 
         assert_eq!(
             row,
@@ -1330,7 +1332,7 @@ mod tests {
             section(SectionId::Source(Source::Steam), 3),
         ];
 
-        let row = first_screen_row(HomeStart::Games, &sections, &[], false);
+        let row = first_screen_row(HomeStart::Games, &sections, &[], &[]);
 
         assert_eq!(
             row,
@@ -1351,7 +1353,7 @@ mod tests {
             section(SectionId::Installed, 4),
         ];
 
-        let row = first_screen_row(HomeStart::Games, &sections, &[], false);
+        let row = first_screen_row(HomeStart::Games, &sections, &[], &[]);
 
         assert_eq!(
             row,
@@ -1366,7 +1368,7 @@ mod tests {
     fn a_row_of_recent_games_alone_has_no_divider() {
         let recent = section(SectionId::RecentlyPlayed, 1);
 
-        let row = first_screen_row(HomeStart::Games, std::slice::from_ref(&recent), &[], false);
+        let row = first_screen_row(HomeStart::Games, std::slice::from_ref(&recent), &[], &[]);
 
         assert_eq!(row, [RowItem::Game(recent.games[0].clone())]);
     }
@@ -1392,7 +1394,7 @@ mod tests {
         let categories = [category("Arcade", 1), category("Brawler", 2)];
 
         assert_eq!(
-            first_screen_row(HomeStart::Sections, &sections, &categories, false),
+            first_screen_row(HomeStart::Sections, &sections, &categories, &[]),
             [
                 RowItem::Section(SectionId::RecentlyPlayed),
                 RowItem::Section(SectionId::Favourites),
@@ -1403,7 +1405,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            first_screen_row(HomeStart::Games, &sections, &categories, false),
+            first_screen_row(HomeStart::Games, &sections, &categories, &[]),
             [
                 RowItem::Game(recent.games[0].clone()),
                 RowItem::Divider,
@@ -1426,7 +1428,7 @@ mod tests {
 
         for start in HomeStart::ALL {
             assert_eq!(
-                first_screen_row(start, &sections, &categories, false),
+                first_screen_row(start, &sections, &categories, &[]),
                 [
                     RowItem::Section(SectionId::Favourites),
                     RowItem::Section(SectionId::Categories),
@@ -1436,7 +1438,7 @@ mod tests {
             );
             // A library without a genre, or the Categories on Home switch off.
             assert_eq!(
-                first_screen_row(start, &sections, &[], false),
+                first_screen_row(start, &sections, &[], &[]),
                 [
                     RowItem::Section(SectionId::Favourites),
                     RowItem::Section(SectionId::Source(Source::Lutris)),
@@ -1446,7 +1448,7 @@ mod tests {
         }
         // At the end of a row of sections that has none after it.
         assert_eq!(
-            first_screen_row(HomeStart::Sections, &sections[..1], &categories, false),
+            first_screen_row(HomeStart::Sections, &sections[..1], &categories, &[]),
             [
                 RowItem::Section(SectionId::Favourites),
                 RowItem::Section(SectionId::Categories),
@@ -1465,7 +1467,12 @@ mod tests {
         let categories = [category("Arcade", 1)];
 
         assert_eq!(
-            first_screen_row(HomeStart::Sections, &sections, &categories, true),
+            first_screen_row(
+                HomeStart::Sections,
+                &sections,
+                &categories,
+                &[SectionId::Apps]
+            ),
             [
                 RowItem::Section(SectionId::RecentlyPlayed),
                 RowItem::Section(SectionId::Installed),
@@ -1475,7 +1482,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            first_screen_row(HomeStart::Games, &sections, &[], true),
+            first_screen_row(HomeStart::Games, &sections, &[], &[SectionId::Apps]),
             [
                 RowItem::Game(recent.games[0].clone()),
                 RowItem::Divider,
@@ -1486,13 +1493,32 @@ mod tests {
         );
         // Without apps, Home has no Apps tile.
         assert!(
-            !first_screen_row(HomeStart::Sections, &sections, &categories, false)
+            !first_screen_row(HomeStart::Sections, &sections, &categories, &[])
                 .contains(&RowItem::Section(SectionId::Apps))
         );
         // A library without games still shows its apps.
         assert_eq!(
-            first_screen_row(HomeStart::Games, &[], &[], true),
+            first_screen_row(HomeStart::Games, &[], &[], &[SectionId::Apps]),
             [RowItem::Section(SectionId::Apps)]
+        );
+    }
+
+    #[test]
+    fn get_games_comes_before_the_launchers_like_apps() {
+        let favourites = section(SectionId::Favourites, 1);
+        let steam = section(SectionId::Source(Source::Steam), 1);
+        assert_eq!(
+            first_screen_row(
+                HomeStart::Sections,
+                &[favourites, steam],
+                &[],
+                &[SectionId::GetGames]
+            ),
+            [
+                RowItem::Section(SectionId::Favourites),
+                RowItem::Section(SectionId::GetGames),
+                RowItem::Section(SectionId::Source(Source::Steam)),
+            ]
         );
     }
 
@@ -1815,7 +1841,7 @@ mod tests {
         let rows = explore_rows(
             &[recent.clone(), favourites.clone(), installed.clone()],
             &[],
-            false,
+            &[],
         );
 
         assert_eq!(
@@ -1838,7 +1864,7 @@ mod tests {
             vec![section(SectionId::RecentlyPlayed, 0), favourites.clone()],
         ] {
             assert_eq!(
-                explore_rows(&sections, &[], false),
+                explore_rows(&sections, &[], &[]),
                 [
                     ExploreRow::Tiles(vec![SectionId::Favourites]),
                     ExploreRow::Shelf(shelves(std::slice::from_ref(&favourites), &[]).remove(0)),
@@ -1849,10 +1875,7 @@ mod tests {
 
     #[test]
     fn an_empty_library_explores_the_tiles_row_alone() {
-        assert_eq!(
-            explore_rows(&[], &[], false),
-            [ExploreRow::Tiles(Vec::new())]
-        );
+        assert_eq!(explore_rows(&[], &[], &[]), [ExploreRow::Tiles(Vec::new())]);
     }
 
     #[test]
@@ -1865,7 +1888,7 @@ mod tests {
         let sections = [favourites.clone(), collection.clone()];
         let categories = ten_categories();
 
-        let rows = explore_rows(&sections, &categories, false);
+        let rows = explore_rows(&sections, &categories, &[]);
 
         let shelves = shelves(&sections, &categories);
         let expected: Vec<ExploreRow> = [ExploreRow::Tiles(vec![
@@ -1882,7 +1905,7 @@ mod tests {
         assert!(matches!(&rows[2], ExploreRow::Shelf(shelf) if shelf.id == collection.id));
         assert!(matches!(&rows[3], ExploreRow::Shelf(shelf) if shelf.id == categories[1].id));
         // Eight categories or fewer: a shelf each, and no More Categories row.
-        let few = explore_rows(&sections, &categories[..3], false);
+        let few = explore_rows(&sections, &categories[..3], &[]);
         assert_eq!(few.len(), 1 + 2 + 3);
         assert!(
             !few.iter()
@@ -1895,7 +1918,11 @@ mod tests {
         let favourites = section(SectionId::Favourites, 2);
         let categories = [category("Racing", 2)];
 
-        let rows = explore_rows(std::slice::from_ref(&favourites), &categories, true);
+        let rows = explore_rows(
+            std::slice::from_ref(&favourites),
+            &categories,
+            &[SectionId::Apps],
+        );
 
         assert_eq!(
             rows[0],
@@ -1906,13 +1933,36 @@ mod tests {
             ])
         );
         assert_eq!(
-            explore_rows(&[], &[], true),
+            explore_rows(&[], &[], &[SectionId::Apps]),
             [ExploreRow::Tiles(vec![SectionId::Apps])]
         );
-        let without = explore_rows(std::slice::from_ref(&favourites), &categories, false);
+        let without = explore_rows(std::slice::from_ref(&favourites), &categories, &[]);
         assert_eq!(
             without[0],
             ExploreRow::Tiles(vec![SectionId::Favourites, SectionId::Categories])
+        );
+    }
+
+    #[test]
+    fn get_games_follows_apps_and_is_there_in_a_library_without_games() {
+        let elsewhere = [SectionId::Apps, SectionId::GetGames];
+        assert_eq!(
+            first_screen_row(HomeStart::Games, &[], &[], &elsewhere),
+            [
+                RowItem::Section(SectionId::Apps),
+                RowItem::Section(SectionId::GetGames)
+            ]
+        );
+        assert_eq!(
+            first_screen_row(HomeStart::Sections, &[], &[], &[SectionId::GetGames]),
+            [RowItem::Section(SectionId::GetGames)]
+        );
+        assert_eq!(
+            explore_rows(&[], &[], &elsewhere),
+            [ExploreRow::Tiles(vec![
+                SectionId::Apps,
+                SectionId::GetGames
+            ])]
         );
     }
 

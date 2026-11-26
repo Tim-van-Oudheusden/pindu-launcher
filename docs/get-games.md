@@ -193,13 +193,13 @@ Steam, Heroic and Lutris are in Flathub's Game category. They appear in Get Game
 
 ### 8.1 Fullscreen mode
 
-- **Home:** a Get Games section in the place sections have in each design, with its art (`data/home/get-games.svg`). It appears in every design.
-- **Catalogue:** rows of cards. Picks first, then Launchers, then one shelf per category that has games, then Extras. Shoulder buttons jump between shelves. An installed app is marked.
-- **Search:** the existing search keyboard, matching name, summary and keywords as each character is typed.
-- **App page:** icon, name, summary, the facts from section 6.7, screenshots that page left and right, the description. One main action that changes with state: Install, Cancel with progress, Play or Open, and Remove behind a second button.
-- **States:** no catalogue yet, refreshing, offline, nothing found, install failed, not enough space. Each says what happened and what to do next.
+- **Home:** a Get Games tile with the other sections in each design (in the Library row in Shelves), with its art (`data/home/get-games.svg`). It shows in the native build only: the Flatpak cannot run `flatpak` on the host without host access.
+- **Catalogue:** rows of cards. Picks first, then Launchers, then one shelf per category that has games, then More, then Extras. LB and RB jump between shelves. An installed app's card says Installed. Back from an app's page, focus returns to that app's card.
+- **Search:** Y opens the search keyboard over the catalogue, matching name, summary and keywords as each character is typed; results show as a grid.
+- **App page:** icon, name, summary, the facts from section 6.7, screenshots that LB and RB page, the description. One main action that changes with state: Install, Cancel with the step and percent, Play (opens the game's library page and starts it) or Open (an extra), and Remove beside it, which asks first and offers to delete the app's data too.
+- **States:** getting the catalogue, offline, no catalogue (refresh failed), nothing found, install failed (flatpak's own message), not enough space (what it needs and what is free). Each says what happened and what to do next; the first three offer Try Again.
 
-It is built from the widgets fullscreen mode already has. No new design language.
+It is built from the widgets fullscreen mode already has: the home tiles' button style, the search keyboard, the hint bar and an `AdwAlertDialog`. No new design language.
 
 ### 8.2 Desktop window
 
