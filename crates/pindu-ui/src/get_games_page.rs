@@ -311,6 +311,9 @@ impl GetGamesPage {
                 &gtk::ScrolledWindow::builder()
                     .vscrollbar_policy(gtk::PolicyType::Never)
                     .hscrollbar_policy(gtk::PolicyType::External)
+                    // As tall as the row wants: its minimum leaves out a second line of a
+                    // card's name, and the room around a focused card with it.
+                    .propagate_natural_height(true)
                     .child(&row)
                     .build(),
             );
@@ -579,7 +582,51 @@ fn card(app: &App, folder: Option<&Path>, view: View<'_>) -> gtk::Button {
         gtk::accessible::Property::Label(&label),
         gtk::accessible::Property::Description(&app.summary),
     ]);
+    card.connect_has_focus_notify(|card| {
+        if card.has_focus() {
+            // After the scrollers' own scrolling to the focused card, which stops at its
+            // edges.
+            glib::idle_add_local_once(glib::clone!(
+                #[weak]
+                card,
+                move || keep_room_around(&card)
+            ));
+        }
+    });
     card
+}
+
+/// Scrolls each scroller around `card`, its shelf's and the page's, so it shows with the
+/// room its focus highlight takes around it (#919).
+fn keep_room_around(card: &gtk::Button) {
+    let mut ancestor = card.parent();
+    while let Some(widget) = ancestor {
+        if let Some(viewport) = widget.downcast_ref::<gtk::Viewport>()
+            && let Some(bounds) = card.compute_bounds(viewport)
+        {
+            if let Some(adjustment) = viewport.hadjustment() {
+                reveal(&adjustment, bounds.x(), bounds.width());
+            }
+            if let Some(adjustment) = viewport.vadjustment() {
+                reveal(&adjustment, bounds.y(), bounds.height());
+            }
+        }
+        ancestor = widget.parent();
+    }
+}
+
+/// Moves `adjustment` so the span of `size` at `start`, in its viewport's coordinates,
+/// shows with [`FOCUS_ROOM`] on both sides, as far as it can scroll.
+fn reveal(adjustment: &gtk::Adjustment, start: f32, size: f32) {
+    let room = f64::from(FOCUS_ROOM);
+    let value = adjustment.value();
+    let first = value + f64::from(start) - room;
+    let last = value + f64::from(start + size) + room;
+    if first < value {
+        adjustment.set_value(first);
+    } else if last > value + adjustment.page_size() {
+        adjustment.set_value(last - adjustment.page_size());
+    }
 }
 
 /// Where the app's icon is, under the catalogue's `folder`.

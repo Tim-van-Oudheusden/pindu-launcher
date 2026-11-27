@@ -26,14 +26,16 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   opened, and a wrong clear let it grow over the whole catalogue; each element now reads its text from where it
   started. A pushed PR gets fix-up commits, not an amend and force-push. `land.sh` loops left running with `nohup`
   never saw #910 merge; check and merge by hand. The sentinel also flags `Cargo.toml` changes.
-- 2026-11-27, #919 (this commit): the maintainer tests the native build in the `development` distrobox (Fedora
+- 2026-11-27, #919 and #922 (this commit): the maintainer tests the native build in the `development` distrobox (Fedora
   rawhide): built from `main` with `-Dprofile=development`, prefix `/usr` (distrobox mounts the host's icons
   read-only over `/usr/local/share/icons`), the RPM spec's BuildRequires and Requires installed (without
   `gstreamer1-plugins-good` Home's video backgrounds stay black), `/usr/bin/flatpak` a script that runs the host's
   through `distrobox-host-exec` (desktop entries call that path) and `/var/lib/flatpak` linked to
   `/run/host/var/lib/flatpak`. Export it by the desktop file's absolute path: by name, `distrobox-export` picked the
   user's development Flatpak's entry, which has the same ID. The session's shell had `FLATPAK_USER_DIR` left from
-  the GG-1 spike, which hid the user installation from `flatpak list`.
+  the GG-1 spike, which hid the user installation from `flatpak list`. #922: a `ScrolledWindow`'s implicit
+  `Viewport` gives its child the minimum height, which for wrapping labels is the one-line height; use an explicit
+  `Viewport { vscroll-policy: natural; }` and `propagate-natural-height`. Check UI fixes against the longest names.
 - Still true from before: regenerate `po/pindu-launcher.pot` on conflicts, never hand-merge; hive's reviewer threads
   block merges until resolved; `--env GTK_A11Y=none` for every harness run; keep targets and mutants' `TMPDIR` in
   `~/.cache/pindu-work/`, and delete each `target-<N>`/`prefix-<N>.build` (4–9 GB) once its issue merges. The harness
