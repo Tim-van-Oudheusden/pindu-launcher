@@ -283,7 +283,7 @@ GG-5 is last on purpose and can be dropped without hurting the console.
 | Games that need a mouse | Many Flathub games are not controller games | Nothing in the catalogue says which are. Accept it in the first version; picks favour controller games |
 | The Flatpak build has no Get Games | Two builds, two feature sets | Already true of Add a Store; say so in the README |
 
-Decisions for H-1, all taken on #884 on 2026-11-24 (the issue records them):
+Decisions for H-1 (#884 records that each was taken on 2026-11-24, not always which option):
 
 1. Confirm the amendment to the "no store front" non-goal.
 2. Approve an XML reader and gzip as direct dependencies of `pindu-core`.
