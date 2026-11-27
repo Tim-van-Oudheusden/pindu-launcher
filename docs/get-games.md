@@ -60,7 +60,7 @@ If Bazaar itself ever gains controller support, shipping it unmodified beside Ge
 
 The launcher's standing non-goal reads "No store front: buying, downloading and updating store games stays in Steam and Heroic", and the product analysis lists "a store client" under what not to build. Both were written about the stores' own games, and both still hold: Get Games does not sign in to anything or touch a store's library.
 
-It is still the launcher downloading games, which the launcher did not do before. `docs/spec-amendments.md` gets an entry that says so plainly: Add a Store installed three named apps from Flathub; Get Games extends that to Flathub's games. The non-goal's wording stays, with this as its recorded limit. This is the maintainer's decision to confirm (H-1).
+It is still the launcher downloading games, which the launcher did not do before. `docs/spec-amendments.md` gets an entry that says so plainly: Add a Store installed three named apps from Flathub; Get Games extends that to Flathub's games. The non-goal's wording stays, with this as its recorded limit. The maintainer confirmed it on #884 (H-1).
 
 ## 4. What already exists
 
@@ -293,7 +293,7 @@ GG-5 is last on purpose and can be dropped without hurting the console.
 | Games that need a mouse | Many Flathub games are not controller games | Nothing in the catalogue says which are. Accept it in the first version; picks favour controller games |
 | The Flatpak build has no Get Games | Two builds, two feature sets | Already true of Add a Store; say so in the README |
 
-Open decisions, all for H-1:
+Decisions for H-1 (#884 records that each was taken on 2026-11-24, not always which option):
 
 1. Confirm the amendment to the "no store front" non-goal.
 2. Approve an XML reader and gzip as direct dependencies of `pindu-core`.
