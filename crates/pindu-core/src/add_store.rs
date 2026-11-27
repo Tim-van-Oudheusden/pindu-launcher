@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::{Rc, Weak};
 
+use crate::get_games;
 use crate::launch::StoreClient;
 use crate::model::{GameId, Source};
 use crate::sources::desktop;
@@ -90,36 +91,10 @@ impl Installation {
 }
 
 /// The commands that install `app` into `installation`, in order, each an argv list: the
-/// user installation gets Flathub first, unless it has it already.
+/// user installation gets Flathub first, unless it has it already. They are Get Games'
+/// ([`get_games::install_commands`]), whose output reports progress.
 pub fn install_commands(installation: Installation, app: StoreApp) -> Vec<Vec<String>> {
-    let owned = |words: &[&str]| words.iter().map(|word| (*word).to_owned()).collect();
-    let flag = match installation {
-        Installation::System => "--system",
-        Installation::User => "--user",
-    };
-    let install = owned(&[
-        "flatpak",
-        "install",
-        flag,
-        "--noninteractive",
-        "-y",
-        FLATHUB,
-        app.app_id(),
-    ]);
-    match installation {
-        Installation::System => vec![install],
-        Installation::User => vec![
-            owned(&[
-                "flatpak",
-                "remote-add",
-                "--user",
-                "--if-not-exists",
-                FLATHUB,
-                FLATHUB_REPO,
-            ]),
-            install,
-        ],
-    }
+    get_games::install_commands(installation, app.app_id())
 }
 
 /// Follows what `flatpak install` prints on standard output while it runs, without a
@@ -155,6 +130,12 @@ impl ProgressReader {
         };
         let (operation, operations) = (self.operation.max(1), self.operations.max(1));
         Some((f64::from(operation - 1) + f64::from(percent) / 100.0) / f64::from(operations))
+    }
+
+    /// The operation that runs and how many the install has, once it has said and when it
+    /// has more than one.
+    pub fn step(&self) -> Option<(u32, u32)> {
+        (self.operations > 1).then_some((self.operation, self.operations))
     }
 }
 
@@ -211,7 +192,7 @@ const NETWORK_ERRORS: [&str; 9] = [
 
 /// Whether what `flatpak` printed on standard error says that Flathub could not be
 /// reached ([`NETWORK_ERRORS`]).
-fn network_failure(stderr: &str) -> bool {
+pub(crate) fn network_failure(stderr: &str) -> bool {
     let stderr = stderr.to_lowercase();
     NETWORK_ERRORS.iter().any(|words| stderr.contains(words))
 }
@@ -775,7 +756,6 @@ mod tests {
                 "flatpak",
                 "install",
                 "--system",
-                "--noninteractive",
                 "-y",
                 "flathub",
                 "com.valvesoftware.Steam",
@@ -800,7 +780,6 @@ mod tests {
                     "flatpak",
                     "install",
                     "--user",
-                    "--noninteractive",
                     "-y",
                     "flathub",
                     "com.heroicgameslauncher.hgl",
@@ -833,6 +812,16 @@ mod tests {
             reader.read("Installing 2/4… ██████████          50%  1.2 MB/s  00:10"),
             Some(0.375)
         );
+    }
+
+    #[test]
+    fn the_step_is_the_operation_and_count_of_an_install_with_several() {
+        let mut reader = ProgressReader::new();
+        assert_eq!(reader.step(), None);
+        reader.read("Installing 1/1…");
+        assert_eq!(reader.step(), None);
+        reader.read("Installing 2/3…        0%");
+        assert_eq!(reader.step(), Some((2, 3)));
     }
 
     #[test]

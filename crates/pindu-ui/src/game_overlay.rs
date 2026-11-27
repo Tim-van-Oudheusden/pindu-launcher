@@ -642,6 +642,7 @@ impl PinduGameOverlay {
             sections: sections(imp.quick_access.shown()).len() > 1,
             launching: Launching::No,
             keyboard: self.secret_dialog_typing(),
+            shoulders: None,
         };
         let shown = Some((on_drawer, layout, hints::hints(context, layout)));
         if *imp.hints.borrow() == shown {

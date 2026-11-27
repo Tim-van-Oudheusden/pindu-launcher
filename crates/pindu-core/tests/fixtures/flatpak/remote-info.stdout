@@ -1,0 +1,19 @@
+
+Snowboarder - A 3D simple snowboarding game
+
+            ID: com.voxdsp.Snowboarder
+           Ref: app/com.voxdsp.Snowboarder/x86_64/stable
+          Arch: x86_64
+        Branch: stable
+       Version: 3.0
+       License: GPL-2.0-only
+    Collection: org.flathub.Stable
+ Download Size: 408.7 kB
+Installed Size: 530.9 kB
+       Runtime: org.freedesktop.Platform/x86_64/25.08
+           Sdk: org.freedesktop.Sdk/x86_64/25.08
+
+        Commit: 3b33a642b83129132caf7da03c61723882a7afcb57ef25b6f47db7310eb5f25e
+        Parent: ba208a968ab69be32af56567be4601e09ea49d3cabf03adda9c165d91d5c7ffc
+       Subject: Clean up flathub/flathub leftovers [skip ci] (964cf8bdacda)
+          Date: 2026-11-18 14:49:34 +0000

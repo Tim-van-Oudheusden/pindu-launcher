@@ -1,0 +1,1 @@
+error: Failed to install com.github.tmewett.BrogueCE: While pulling app/com.github.tmewett.BrogueCE/x86_64/stable from remote flathub: Writing content object: min-free-space-size 500MB would be exceeded, at least 1.5 MB requested

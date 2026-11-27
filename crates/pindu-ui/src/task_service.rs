@@ -82,6 +82,14 @@ impl TaskService {
         }
     }
 
+    /// Says what the task `id` is doing now, beyond its kind.
+    pub fn set_detail(&self, id: TaskId, detail: Option<&str>) {
+        let changed = self.inner.tasks.borrow_mut().set_detail(id, detail);
+        if changed {
+            self.changed();
+        }
+    }
+
     /// The task `id` reached a part of its work that must run to its end.
     pub fn no_longer_cancellable(&self, id: TaskId) {
         let changed = self.inner.tasks.borrow_mut().no_longer_cancellable(id);

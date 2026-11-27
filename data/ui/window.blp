@@ -114,7 +114,8 @@ template $PinduWindow: Adw.ApplicationWindow {
                     }
                   }
 
-                  // Apps (#830): not a view of the library, so not under it.
+                  // Apps (#830) and Get Games (#889): not views of the library, so not
+                  // under it. Get Games is in the native build only.
                   Adw.SidebarSection {
                     Adw.SidebarItem apps_item {
                       title: _("Apps");
@@ -126,6 +127,12 @@ template $PinduWindow: Adw.ApplicationWindow {
                           "numeric",
                         ]
                       };
+                    }
+
+                    Adw.SidebarItem get_games_item {
+                      title: _("Get Games");
+                      icon-name: "folder-download-symbolic";
+                      visible: false;
                     }
                   }
 

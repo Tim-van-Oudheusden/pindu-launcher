@@ -1,0 +1,6 @@
+Info: org.kde.Platform is end-of-life, with reason: We strongly recommend moving to the latest stable version of the Platform and SDK
+Info: org.kde.Platform.Locale is end-of-life, with reason: We strongly recommend moving to the latest stable version of the Platform and SDK
+Info: org.freedesktop.Platform.GL.default is end-of-life, with reason: org.freedesktop.Platform 23.08 is no longer receiving fixes and security updates. Please update to a supported runtime version.
+Info: org.freedesktop.Platform.GL.default is end-of-life, with reason: org.freedesktop.Platform 23.08 is no longer receiving fixes and security updates. Please update to a supported runtime version.
+Installing runtime/org.kde.Platform/x86_64/5.15-23.08
+Installing app/io.github.riftr.intelpy/x86_64/stable

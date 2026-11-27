@@ -106,53 +106,60 @@ The catalogue comes from the same installation that installs go to (`Installatio
 
 ### 6.2 Refresh
 
-A new console has no catalogue until something asks Flatpak for one. When Get Games opens and the catalogue is missing or more than a day old, the launcher runs `flatpak update --appstream` for that installation as a task, and shows the previous catalogue meanwhile. With no catalogue and no network, the screen says so and offers to try again.
+A new console has no catalogue until something asks Flatpak for one. When Get Games opens and the catalogue is missing or more than a day old, the launcher runs `flatpak update --appstream --noninteractive` for that installation as a task, and shows the previous catalogue meanwhile; once it ends, the catalogue is read again. That command prints nothing and succeeds even offline (#884), so only the catalogue file tells whether it came. With no catalogue and no network, the screen says so and offers to try again; with no catalogue after a refresh on a network, it says the catalogue could not be downloaded.
 
 ### 6.3 What counts as a game
 
 An app is offered when all of these hold:
 
-- it has the category `Game` (the freedesktop main category; its additional categories, such as `ActionGame`, `StrategyGame` or `Emulator`, become the catalogue's shelves);
+- it has one of the lists file's `categories` (by default only `Game`, the freedesktop main category; its additional categories, such as `ActionGame`, `StrategyGame` or `Emulator`, become the catalogue's shelves);
 - it is not on the blocklist;
-- it is an application, not a runtime, extension or add-on;
+- it is an application (`desktop-application`, or `desktop` in older entries), not a runtime, add-on, console application or generic component;
 - it is not end-of-life.
 
-Or it is on the **extras** list: named non-game apps a console owner reasonably wants.
+Or it is on the **extras** list: named non-game apps a console owner reasonably wants. An extra must be an application and not blocked or end-of-life either.
 
-Categories are declared by each app's developer, so the Game category contains tools and miscategorised apps. The blocklist exists for that, and GG-1 measures how much of it there is.
+Categories are declared by each app's developer, so the Game category contains tools and miscategorised apps. The blocklist exists for that: GG-1 (#884) found 62 tools among Flathub's 799 Game applications, beside 53 launchers and 11 streaming clients, which stay.
+
+The catalogue carries no end-of-life state; Flathub keeps it in the repository summary. The launcher reads it from `flatpak remote-ls --app --all --columns=application,options` (an `eol=` or `eol-rebase=` option), and offers everything when that command fails, for instance offline. Flathub already leaves almost every end-of-life app out of the catalogue.
 
 ### 6.4 The lists file
 
-One YAML file holds every editorial choice. The launcher ships a default; a distributor replaces it with a file under `/usr/share` (proposed: `/usr/share/pindu-launcher/distributor/get-games.yaml`; GG-2 fixes the path and format). Pindu OS already ships a file at that path, in a format of its own proposal: `version: 1` with `categories`, `blocklist`, `extras` and `picks` as lists of app IDs, each with a comment ([decision 0015](https://github.com/Tim-van-Oudheusden/pindu-os/blob/main/docs/decisions/0015-get-games.md)). GG-2 settles on one format, and the example below follows whichever it is.
+One YAML file holds every editorial choice. The launcher ships a default, `data/get-games.yaml`, built into the program. A distributor replaces it whole with `/usr/share/pindu-launcher/distributor/get-games.yaml`; the two are never merged, so a distributor's file states every list it wants. Pindu OS ships one ([decision 0015](https://github.com/Tim-van-Oudheusden/pindu-os/blob/main/docs/decisions/0015-get-games.md)), and its format is the one the launcher reads:
 
 ```yaml
-# Illustrative. The real entries are the maintainer's to choose.
-categories: [Game]
-block:
-  - id: com.example.GameTool      # a modding tool, needs a mouse and a file manager
+version: 1
+categories:
+  - Game # freedesktop's main category for games
+blocklist:
+  - com.steamgriddb.SGDBoop # writes artwork into a desktop Steam's folders from links on SteamGridDB's website
 extras:
-  - id: org.mozilla.firefox       # a browser, for store sign-ins that open a web page
-  - id: tv.kodi.Kodi              # media player with a controller interface
+  - tv.kodi.Kodi # a media centre made for the television, with gamepad and remote control support
 picks:
-  - id: net.supertuxkart.SuperTuxKart
-  - id: org.libretro.RetroArch
+  - net.supertuxkart.SuperTuxKart # kart racing for up to four players on one screen
 ```
 
-Every entry carries a comment with its reason. An ID that is not in the catalogue is skipped silently, so the file survives apps being renamed or removed.
+- `version` is required and must be `1`.
+- Each list is a sequence of strings: Flathub app IDs, or AppStream categories for `categories`. Every entry carries a comment with its reason.
+- A missing list is empty, except `categories`, which is then `[Game]`.
+- An ID that is not in the catalogue is skipped silently, so the file survives apps being renamed or removed.
+- A distributor's file that cannot be read (bad YAML, another version, an entry that is not a string) is logged, and the launcher's default applies.
 
 ### 6.5 Order
 
-The catalogue has no popularity data. The first version orders by the lists file's picks, then by category shelf, then by name. Sorting by popularity would need Flathub's web API and is left out until someone has confirmed that API and its terms (section 16).
+The catalogue has no popularity data. Its shelves come in this order: the lists file's picks in its order; Launchers (Steam, Heroic and Lutris, section 7.3); one shelf per game category that has games (Action, Adventure, Arcade, Board, Blocks, Card, Kids, Logic, Role playing, Shooter, Simulation, Sports, Strategy, then Emulators); More games, for games in no such category (201 of Flathub's 799); then Extras. Within a shelf, apps go by name. A game shows on every shelf of its categories; the three stores show only under Launchers. Sorting by popularity would need Flathub's web API and is left out until someone has confirmed that API and its terms (section 16).
+
+Search matches as each character is typed, as the library's search does (case and accents ignored): apps whose name matches come first, then apps whose summary or a keyword matches.
 
 ### 6.6 Reading it
 
-The catalogue is large and changes at most daily. It is parsed once per catalogue version, off the main thread, into a compact index kept in the cache folder (not in the library database, and safe to delete). Startup and browsing read the index.
+The catalogue is large and changes at most daily. It is parsed once per catalogue version, off the main thread, into a compact index kept in the cache folder (`~/.cache/pindu-launcher/catalogue/system.json` or `user.json`; not in the library database, and safe to delete). Startup and browsing read the index. It holds only the applications the lists' categories and extras let through, with their texts in the session's language when the catalogue has them, and is made again when the catalogue's time or size, the session's languages, or the lists' categories or extras change.
 
-Parsing needs an XML reader and gzip in `pindu-core`. That is a new direct dependency, which AGENTS.md reserves for the maintainer (H-1). `flate2` is already in the lock file through other crates; an XML reader is not.
+The launcher reads the uncompressed `appstream.xml` that Flatpak deploys beside `appstream.xml.gz`, with `quick-xml` (approved on #884), so it needs no gzip. GG-1 measured 160 ms to parse Flathub's 52 MB catalogue on a Ryzen 7 7800X3D, and a 2.3 MB index for its 797 games. No catalogue (Flatpak has not downloaded one yet) and a broken one are told apart, so the screens can say which.
 
 ### 6.7 What an app shows
 
-Name, icon, one-line summary, description, screenshots, developer, licence (free or proprietary, in words), age rating derived from the catalogue's content rating, download and installed size (from `flatpak remote-info`, fetched when the page opens), and whether Flathub has verified the developer, if the catalogue carries that.
+Name, icon, one-line summary, description, screenshots, developer, licence (free or proprietary, in words), age rating derived from the catalogue's content rating (the youngest age its OARS rating suits, by the Common Sense Media ages AppStream maps it to; all ages for an empty rating), download and installed size (from `flatpak remote-info`, fetched when the page opens), and whether Flathub has verified the developer (`flathub::verification::verified` in the catalogue; 495 of 804 games were verified when GG-1 measured).
 
 Unverified and proprietary apps are shown with a plain label, not hidden. Hiding them is a lists-file decision, not a code one.
 
@@ -162,19 +169,22 @@ Text is "from Flathub" in words. Flathub's logo is used only if its brand guidan
 
 ### 7.1 Install
 
-- The command is Add a Store's, with the app ID from the catalogue: `flatpak install`, non-interactive, from `flathub`, into the chosen installation. Arguments are an argv list; an app ID is never spliced into a shell string, and only IDs that came out of the catalogue are accepted.
-- One install runs at a time; more are queued. Each is a task: it survives leaving the screen, shows progress in Quick Access, can be cancelled, and ends in a notification.
-- The first game also downloads a runtime, often larger than the game. The progress reader already counts each operation; the page says "Installing 2 of 3" in words so a long first install does not look stuck.
-- Before starting, compare the download and installed sizes with free space and say so if it will not fit.
-- A failure shows flatpak's own last error line, as Add a Store does, and leaves the app page ready to try again.
+- The command is Add a Store's, with the app ID from the catalogue: `flatpak install -y flathub <id>` into the chosen installation (`--system` or `--user`; the user installation gets the Flathub remote first). Arguments are an argv list; an app ID is never spliced into a shell string, only IDs the catalogue offers are accepted, and every ID is checked to be an app ID before it reaches a command line. The stores (section 7.3) are refused here and go through Add a Store.
+- It passes `-y` but not `--noninteractive`, which prints no progress at all (#884, the maintainer's choice there); its standard input is closed, so a question `-y` does not answer reads the end of input instead of waiting. Add a Store installs the same way, which also gave its progress bar the numbers it had never seen.
+- One job runs at a time, installs and removals alike; more are queued. Each is a task: it survives leaving the screen, shows progress in Quick Access ("Waiting", "Checking the space", "Installing 2 of 5"), an install can be cancelled there, and each ends in a notification. A cancelled install keeps the runtimes it finished until Pindu OS's cleanup removes them.
+- The first game also downloads a runtime, often larger than the game. The progress reader counts each of flatpak's operations; Quick Access says "Installing 2 of 3" so a long first install does not look stuck.
+- Before starting, the launcher asks `flatpak remote-info` (in the C locale, so its sizes read the same in every language) for the download and installed sizes, and refuses when the installed size plus the 500 MB Flatpak keeps free (`min-free-space-size`) is more than the free space, saying how much is needed. A runtime the app needs is not in those sizes; Flatpak's own check catches that. When the sizes or the free space cannot be found, the install goes ahead.
+- A failure shows flatpak's own last error line, as Add a Store does, and leaves the app page ready to try again; one Flathub could not be reached for says so in words.
+- An install or removal that ends syncs the library, so a game appears or goes without a restart.
 
 ### 7.2 Remove
 
-- `flatpak uninstall`, non-interactive, for an app Get Games can see as installed.
+- `flatpak uninstall --noninteractive -y`, for an app Get Games can see as installed. It cannot be cancelled once it runs.
 - A confirmation asks first and offers to delete the app's data too (`--delete-data`), off by default.
-- Reachable from the app's page in Get Games and from the game's page in the library, for a game that came from a Flatpak.
+- Reachable from the app's page in Get Games, and as **Uninstall** on the game's page in the library (the options sheet in fullscreen mode, the menu on the desktop) for a game whose desktop entry a Flatpak in Get Games' installation exports: Flatpak names exported entries for the app's ID, alone or followed by a dot, so the entry's ID says which app it is (`get_games::removable_app`, #888).
+- The installed marks and the app page's action follow the installation: the launcher watches the `.changed` file flatpak touches after every install, update or removal, so changes the Pindu OS update timer, a terminal or another session makes show without a restart.
 - On Pindu OS this needs the polkit change in pindu-os#66. Without it the command fails; the launcher shows that failure like any other.
-- Unused runtimes are not the launcher's to remove. Pindu OS cleans them up in its update service.
+- Unused runtimes are not the launcher's to remove. Pindu OS cleans them up in its update service. `flatpak uninstall` itself also takes the runtime and extensions that installing the app pulled in, once nothing else uses them (#884).
 
 ### 7.3 The three stores
 
@@ -184,17 +194,17 @@ Steam, Heroic and Lutris are in Flathub's Game category. They appear in Get Game
 
 ### 8.1 Fullscreen mode
 
-- **Home:** a Get Games section in the place sections have in each design, with its art (`data/home/get-games.svg`). It appears in every design.
-- **Catalogue:** rows of cards. Picks first, then Launchers, then one shelf per category that has games, then Extras. Shoulder buttons jump between shelves. An installed app is marked.
-- **Search:** the existing search keyboard, matching name, summary and keywords as each character is typed.
-- **App page:** icon, name, summary, the facts from section 6.7, screenshots that page left and right, the description. One main action that changes with state: Install, Cancel with progress, Play or Open, and Remove behind a second button.
-- **States:** no catalogue yet, refreshing, offline, nothing found, install failed, not enough space. Each says what happened and what to do next.
+- **Home:** a Get Games tile with the other sections in each design (in the Library row in Shelves), with its art (`data/home/get-games.svg`). It shows in the native build only: the Flatpak cannot run `flatpak` on the host without host access.
+- **Catalogue:** rows of cards. Picks first, then Launchers, then one shelf per category that has games, then More, then Extras. LB and RB jump between shelves. An installed app's card says Installed. Back from an app's page, focus returns to that app's card.
+- **Search:** Y opens the search keyboard over the catalogue, matching name, summary and keywords as each character is typed; results show as a grid.
+- **App page:** icon, name, summary, the facts from section 6.7, screenshots that LB and RB page, the description. One main action that changes with state: Install, Cancel with the step and percent, Play (opens the game's library page and starts it) or Open (an extra), and Remove beside it, which asks first and offers to delete the app's data too.
+- **States:** getting the catalogue, offline, no catalogue (refresh failed), nothing found, install failed (flatpak's own message), not enough space (what it needs and what is free). Each says what happened and what to do next; the first three offer Try Again.
 
-It is built from the widgets fullscreen mode already has. No new design language.
+It is built from the widgets fullscreen mode already has: the home tiles' button style, the search keyboard, the hint bar and an `AdwAlertDialog`. No new design language.
 
 ### 8.2 Desktop window
 
-A Get Games item in the sidebar, in the native build: the same catalogue as a grid with a search field, and the app page as a navigation page. It comes last (GG-5), since a desktop has a software centre and Pindu OS has no desktop.
+A Get Games item in the sidebar, beside Apps, in the native build only (#889): it shows the same catalogue page in the library's place, with its shelves, its search field (results as a grid) and every state of section 8.1, and a card opens the app page as a navigation page above it, with the same actions. The page's header bar has the sidebar toggle. It came last (GG-5), since a desktop has a software centre and Pindu OS has no desktop.
 
 ## 9. After an install
 
@@ -293,7 +303,7 @@ Decisions for H-1 (#884 records that each was taken on 2026-11-24, not always wh
 
 ## 16. What I could not check
 
-- **A real catalogue.** The number of games, the miscategorisation rate, whether Flathub's verification and end-of-life state are in the catalogue file, and the parse cost are all GG-1's to measure. The file's location and general contents are standard Flatpak and AppStream behaviour.
+- **A real catalogue.** Measured by GG-1 on #884: the number of games, the miscategorisation rate, which fields the catalogue carries (verification yes, end-of-life no) and the parse cost. The HP laptop's parse time is not measured yet; the hardware checklist carries it.
 - **Flathub's web API.** I found only an old forum thread naming a v1 endpoint and no usage terms. The plan does not depend on it.
 - **The details polkit receives on uninstall**, and that a catalogue refresh needs no prompt on the image. pindu-os#66 checked both: flatpak's helper passes only the ref on uninstall, so the rule allows any ref (Flathub is the only remote), and `flatpak update --appstream --system --noninteractive` runs as `pindu` with no polkit agent.
 - **Flathub's brand guidance** for using its name and logo in another interface.

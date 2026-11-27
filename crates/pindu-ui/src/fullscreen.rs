@@ -441,14 +441,16 @@ impl PinduWindow {
     }
 
     /// Shows the games of Home's section named `name` (`SectionId::name`), back down on
-    /// Home, or the Apps page for the Apps tile; Home shows only in fullscreen mode.
+    /// Home, or the Apps page for the Apps tile and Get Games for its tile; Home shows only
+    /// in fullscreen mode.
     fn show_home_section(&self, name: &str) {
         if !self.is_fullscreen() {
             return;
         }
-        if SectionId::from_name(name) == Some(SectionId::Apps) {
-            self.show_apps();
-            return;
+        match SectionId::from_name(name) {
+            Some(SectionId::Apps) => return self.show_apps(),
+            Some(SectionId::GetGames) => return self.show_get_games(),
+            _ => {}
         }
         let imp = self.imp();
         imp.navigation_view.pop_to_page(&*imp.home_page);
@@ -578,10 +580,15 @@ impl PinduWindow {
     }
 
     /// Y and Ctrl+F: search the library from Home or the library page, in the search
-    /// entry; `false` when nothing searches here (a dialog is open, or another page shows).
+    /// entry, or Get Games' catalogue in its own; `false` when nothing searches here (a
+    /// dialog is open, or another page shows).
     pub(crate) fn start_search(&self) -> bool {
         if self.visible_dialog().is_some() {
             return false;
+        }
+        if let Some(entry) = self.get_games_search_entry() {
+            entry.grab_focus();
+            return true;
         }
         let imp = self.imp();
         let page = imp.navigation_view.visible_page();
@@ -652,6 +659,9 @@ impl PinduWindow {
             return;
         }
         if self.shows_apps() && self.focus_app(imp.apps_cursor.get()) {
+            return;
+        }
+        if self.focus_get_games() {
             return;
         }
         if let Some(page) = page.downcast_ref::<GamePage>() {

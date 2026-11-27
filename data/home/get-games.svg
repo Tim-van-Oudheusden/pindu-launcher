@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder art for Home's "get-games" section; the maintainer replaces it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1c1d21"/>
+  <g fill="none" stroke="#c0c4cc" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M256 136v170"/><path d="M190 240l66 66 66-66"/><path d="M146 296v50a30 30 0 0 0 30 30h160a30 30 0 0 0 30-30v-50"/></g>
+</svg>

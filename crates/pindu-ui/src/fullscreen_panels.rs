@@ -22,7 +22,7 @@ use pindu_core::launch;
 use pindu_core::library::View;
 use pindu_core::panels::{
     DrawerLevel, GameOption, OptionsLevel, Panel, Panels, QuickAccessLevel, QuickAccessSection,
-    Under, page_entries, sheet_options, with_save_snapshots,
+    Under, page_entries, sheet_options, with_save_snapshots, with_uninstall,
 };
 
 use crate::application::PinduApplication;
@@ -630,6 +630,9 @@ impl PinduWindow {
         if !save_service::save_folders(&game.id()).is_empty() {
             options = with_save_snapshots(options);
         }
+        if self.removable_app(&game.id()).is_some() {
+            options = with_uninstall(options);
+        }
         imp.options_list.remove_all();
         for option in &options {
             let (icon, label) = option_label(*option, game);
@@ -751,6 +754,7 @@ impl PinduWindow {
             GameOption::PcGamingWiki => ("app", "open-pcgamingwiki"),
             GameOption::ChangeArtwork => ("win", "change-artwork"),
             GameOption::SaveSnapshots => ("win", "save-snapshots"),
+            GameOption::Uninstall => ("win", "uninstall-game"),
             GameOption::Split => ("win", "split-group"),
             GameOption::Collections | GameOption::MergeWith | GameOption::PreferredCopy => return,
         };
@@ -849,6 +853,7 @@ fn option_label(option: GameOption, game: &GameObject) -> (&'static str, String)
         GameOption::PreferredCopy => ("edit-copy-symbolic", gettext("Preferred Copy")),
         GameOption::Split => ("edit-cut-symbolic", gettext("Split Into Separate Games")),
         GameOption::SaveSnapshots => ("document-save-symbolic", gettext("Save Snapshots")),
+        GameOption::Uninstall => ("user-trash-symbolic", gettext("Uninstall")),
         GameOption::Hide => ("view-conceal-symbolic", gettext("Hide")),
         GameOption::Unhide => ("view-reveal-symbolic", gettext("Unhide")),
         GameOption::OpenInLauncher => (

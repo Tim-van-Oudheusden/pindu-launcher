@@ -30,6 +30,7 @@ use crate::duplicates_page::DuplicatesPage;
 use crate::fullscreen::NavigationSounds;
 use crate::fullscreen_clock::Clock;
 use crate::game_page::GamePage;
+use crate::get_games_page::GetGamesPage;
 use crate::health_page::HealthPage;
 use crate::hold_progress::HoldProgress;
 use crate::home_page::HomePage;
@@ -136,11 +137,15 @@ mod imp {
         #[template_child]
         pub apps_item: TemplateChild<adw::SidebarItem>,
         #[template_child]
+        pub get_games_item: TemplateChild<adw::SidebarItem>,
+        #[template_child]
         pub apps_count: TemplateChild<gtk::Label>,
         /// The apps the Apps page shows, in its order.
         pub apps_shown: RefCell<Vec<pindu_core::apps::App>>,
         /// The place of the app last opened on the Apps page, where focus comes back to.
         pub apps_cursor: Cell<i32>,
+        /// Get Games' catalogue page, made the first time it shows.
+        pub get_games_page: RefCell<Option<GetGamesPage>>,
         #[template_child]
         pub sync_spinner: TemplateChild<adw::Spinner>,
         #[template_child]
@@ -414,6 +419,7 @@ impl PinduWindow {
             window.setup_quick_access(application);
             window.setup_playing_cards(application);
             window.setup_apps(application);
+            window.setup_get_games(application);
         }
         window
     }
@@ -1265,6 +1271,8 @@ impl PinduWindow {
                     window.new_collection(None);
                 } else if item == *window.imp().apps_item {
                     window.show_apps();
+                } else if item == *window.imp().get_games_item {
+                    window.show_get_games();
                 } else {
                     window.show_view_of(&item);
                 }

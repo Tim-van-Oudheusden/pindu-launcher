@@ -1060,6 +1060,8 @@ pub enum GameOption {
     /// List the save snapshots of a Windows game we run, or of a game the user added save
     /// folders for, to restore one.
     SaveSnapshots,
+    /// Remove the Flatpak the game is from the console, through Get Games.
+    Uninstall,
 }
 
 /// The options sheet's actions for `game`, top to bottom, as it runs or not (`playing`).
@@ -1120,6 +1122,20 @@ pub fn with_save_snapshots(mut options: Vec<GameOption>) -> Vec<GameOption> {
             .position(|option| matches!(option, GameOption::Hide | GameOption::Unhide))
             .unwrap_or(options.len());
         options.insert(at, GameOption::SaveSnapshots);
+    }
+    options
+}
+
+/// The options sheet's actions `options` with Uninstall, for a game Get Games can remove
+/// (`get_games::removable_app`): right after Hide or Unhide. Options that hold it already
+/// stay as they are.
+pub fn with_uninstall(mut options: Vec<GameOption>) -> Vec<GameOption> {
+    if !options.contains(&GameOption::Uninstall) {
+        let at = options
+            .iter()
+            .position(|option| matches!(option, GameOption::Hide | GameOption::Unhide))
+            .map_or(options.len(), |index| index + 1);
+        options.insert(at, GameOption::Uninstall);
     }
     options
 }
@@ -2925,6 +2941,24 @@ mod tests {
         assert_eq!(offered.len(), steam.len() + 1);
         assert_eq!(before_hide(&offered), SaveSnapshots);
         assert_eq!(with_save_snapshots(offered.clone()), offered);
+    }
+
+    #[test]
+    fn a_game_get_games_can_remove_offers_uninstall_right_after_hide() {
+        use GameOption::*;
+        let flatpak = game(Source::Desktop, LaunchKind::DesktopEntry);
+        let options = sheet_options(&flatpak, Playing::No, 0);
+        let offered = with_uninstall(options.clone());
+        assert_eq!(offered.len(), options.len() + 1);
+        let hide = offered.iter().position(|o| *o == Hide).unwrap();
+        assert_eq!(offered[hide + 1], Uninstall);
+        assert_eq!(with_uninstall(offered.clone()), offered);
+        let mut hidden = flatpak.clone();
+        hidden.hidden = true;
+        let offered = with_uninstall(sheet_options(&hidden, Playing::No, 0));
+        let unhide = offered.iter().position(|o| *o == Unhide).unwrap();
+        assert_eq!(offered[unhide + 1], Uninstall);
+        assert!(!options.contains(&Uninstall));
     }
 
     #[test]
