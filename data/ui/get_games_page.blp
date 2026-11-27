@@ -79,10 +79,16 @@ template $PinduGetGamesPage: Adw.NavigationPage {
           child: ScrolledWindow shelves_scroller {
             hscrollbar-policy: never;
 
-            child: Box shelves {
-              orientation: vertical;
-              spacing: 24;
-              margin-bottom: 24;
+            // Natural, not minimum, heights for the shelves: a shelf whose names take two
+            // lines needs more than its minimum to keep room around a focused card.
+            child: Viewport {
+              vscroll-policy: natural;
+
+              child: Box shelves {
+                orientation: vertical;
+                spacing: 24;
+                margin-bottom: 24;
+              };
             };
           };
         }
