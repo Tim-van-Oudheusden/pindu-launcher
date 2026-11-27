@@ -6,7 +6,7 @@ Committed as `docs/get-games.md` on 2026-11-24 (#890), with an entry in `docs/sp
 
 - [pindu-os#66](https://github.com/Tim-van-Oudheusden/pindu-os/issues/66), what the image has to allow and provide (uninstall rights, runtime cleanup, the console's lists), is done: [decision 0015](https://github.com/Tim-van-Oudheusden/pindu-os/blob/main/docs/decisions/0015-get-games.md).
 - [#830](https://github.com/Tim-van-Oudheusden/pindu-launcher/issues/830), the Apps section that opens game launchers and installed non-game apps, has shipped ([`apps.md`](apps.md)).
-- The launcher work packages in section 13 are issues: GG-1 #884, GG-2 #885, GG-3 #886, GG-4 #887, GG-6 #888, GG-5 #889. The maintainer's decisions (H-1) are recorded on #884.
+- The launcher work packages in section 13 have shipped: the spike GG-1 #884, then GG-2 #885 (#912), GG-3 #886 (#913), GG-4 #887 (#914), GG-6 #888 (#916) and GG-5 #889 (#917), followed by the fixes #920 (#919) and #923 (#922). Get Games is in the native build only (section 5). The maintainer's decisions (H-1) are recorded on #884.
 
 ## 1. Summary
 
