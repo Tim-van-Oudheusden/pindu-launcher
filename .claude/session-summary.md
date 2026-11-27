@@ -36,6 +36,12 @@ Format: date, issue/PR worked, outcome, open follow-ups, gotchas for next time.
   the GG-1 spike, which hid the user installation from `flatpak list`. #922: a `ScrolledWindow`'s implicit
   `Viewport` gives its child the minimum height, which for wrapping labels is the one-line height; use an explicit
   `Viewport { vscroll-policy: natural; }` and `propagate-natural-height`. Check UI fixes against the longest names.
+- 2026-11-27, 0.7.0-rc.5 (this commit, under #788), from a cloud session: version bump and notes for #885–#889
+  (Get Games), #900 and #906. The cloud container has gettext 0.21 (no Rust parser, no `rust-format`, an older
+  MetaInfo ITS) and no GTK 4.24, so `meson compile pindu-launcher-pot` could not run: the pot's MetaInfo entries were
+  edited by a script that reproduces xgettext's wrapping (checked against all 1,441 other entries) and shifts the
+  later MetaInfo line numbers. If `po/check-pot.sh` disagrees, regenerate the pot in the SDK and commit that. The
+  external importer changelog keeps "Unreleased" until the final 0.7.0, as rc.4 did.
 - Still true from before: regenerate `po/pindu-launcher.pot` on conflicts, never hand-merge; hive's reviewer threads
   block merges until resolved; `--env GTK_A11Y=none` for every harness run; keep targets and mutants' `TMPDIR` in
   `~/.cache/pindu-work/`, and delete each `target-<N>`/`prefix-<N>.build` (4–9 GB) once its issue merges. The harness

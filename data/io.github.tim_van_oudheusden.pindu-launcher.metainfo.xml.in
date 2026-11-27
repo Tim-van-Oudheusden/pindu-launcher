@@ -87,9 +87,9 @@
   </supports>
 
   <releases>
-    <release version="0.7.0~rc4" type="development" date="2026-11-24">
+    <release version="0.7.0~rc5" type="development" date="2026-11-27">
       <description>
-        <p>Quick Access is split into six sections, the menu drawer has a power dock, fullscreen Home shows your games by category, a new console is led through its first set-up, and Steam's Big Picture and first start fit into fullscreen mode.</p>
+        <p>Quick Access is split into six sections, the menu drawer has a power dock, fullscreen Home shows your games by category, a new console is led through its first set-up, Steam's Big Picture and first start fit into fullscreen mode, and Get Games finds and installs games from Flathub.</p>
         <ul>
           <li>Quick Access has six sections that LB and RB switch between: Quick, Notifications, Design, Controller, System and Manage. Each setting now sits in the section it belongs to</li>
           <li>Quick Access's Quick section has tiles for Sound Output, Bluetooth, Network, Surprise Me, Refresh Library and Add a Game, plus a card for what the page underneath offers</li>
@@ -117,6 +117,11 @@
           <li>Backups keep pinned games, the launch settings of launchers' games and how each game added by hand runs; a Windows game added by hand comes back from an older backup as a Windows game</li>
           <li>The focus ring stays visible in fullscreen mode, toggling a source in Sources keeps the focus on it, and Up past an alert's first button keeps the focus on that button</li>
           <li>The Desktop source shows as found in the application folders instead of "Not found on this computer"</li>
+          <li>Get Games finds games on Flathub and installs them, in fullscreen mode with the controller and in the desktop window: shelves of picks, launchers and categories, search, a page for each game with its screenshots, and Install, Play and Remove. It shows in the system package, not the Flatpak</li>
+          <li>A game installed as a Flatpak app can be uninstalled from its library page, and Get Games' installed marks follow installs and removals made outside the launcher</li>
+          <li>Add a Store's progress bar now moves while a store installs</li>
+          <li>A game added by hand whose art cannot be saved is no longer added twice, once without its art</li>
+          <li>Preferences refuses an external importer that claims the ID of a source Pindu reads itself</li>
           <li>Fixed a crash in sessions without an accessibility bus</li>
           <li>Updated translations</li>
         </ul>

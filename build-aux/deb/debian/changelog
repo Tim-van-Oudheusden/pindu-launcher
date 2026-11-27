@@ -1,3 +1,9 @@
+pindu-launcher (0.7.0~rc5-1) unstable; urgency=medium
+
+  * Release 0.7.0-rc.5: https://github.com/Tim-van-Oudheusden/pindu-launcher/releases/tag/v0.7.0-rc.5
+
+ -- Tim van Oudheusden <118523958+Tim-van-Oudheusden@users.noreply.github.com>  Fri, 27 Nov 2026 02:00:00 +0100
+
 pindu-launcher (0.7.0~rc4-1) unstable; urgency=medium
 
   * Release 0.7.0-rc.4: https://github.com/Tim-van-Oudheusden/pindu-launcher/releases/tag/v0.7.0-rc.4
