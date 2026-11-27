@@ -25,6 +25,10 @@ const ICON_SIZE: i32 = 96;
 /// How wide an app's name may be on its card, in characters, before it wraps.
 const NAME_CHARS: i32 = 14;
 
+/// The room left around a shelf's cards, inside the scroller that clips them, for a
+/// focused card, which grows by 5% and has an outline outside it (#919).
+const FOCUS_ROOM: i32 = 12;
+
 /// What the page shows of the catalogue.
 #[derive(Debug, Clone, Copy)]
 pub struct View<'a> {
@@ -288,10 +292,17 @@ impl GetGamesPage {
                 &gtk::Label::builder()
                     .label(title)
                     .xalign(0.0)
+                    .margin_start(FOCUS_ROOM)
                     .css_classes(["heading"])
                     .build(),
             );
-            let row = gtk::Box::builder().spacing(12).build();
+            let row = gtk::Box::builder()
+                .spacing(12)
+                .margin_top(FOCUS_ROOM)
+                .margin_bottom(FOCUS_ROOM)
+                .margin_start(FOCUS_ROOM)
+                .margin_end(FOCUS_ROOM)
+                .build();
             row.update_property(&[gtk::accessible::Property::Label(title)]);
             for app in apps {
                 row.append(&card(app, folder, view));
@@ -313,7 +324,13 @@ impl GetGamesPage {
         let imp = self.imp();
         imp.results.remove_all();
         for app in apps {
-            imp.results.append(&card(app, folder, view));
+            // The card takes focus and shows it; the grid's cell around it would take it
+            // first and show only a thin line (#919).
+            let child = gtk::FlowBoxChild::builder()
+                .focusable(false)
+                .child(&card(app, folder, view))
+                .build();
+            imp.results.append(&child);
         }
         imp.rows.replace(Vec::new());
     }

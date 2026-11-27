@@ -1231,10 +1231,6 @@ window.reduced-motion .get-games-card:focus-visible {
   transform: none;
 }
 
-.get-games-shelf scrolledwindow {
-  padding: 6px 6px 12px;
-}
-
 .get-games-fact {
   padding: 2px 10px;
   border-radius: 999px;
