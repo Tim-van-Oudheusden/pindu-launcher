@@ -76,14 +76,7 @@ pub fn load(
     let apps: Vec<App> = appstream::parse(&xml, languages)
         .map_err(|error| CatalogueError::Broken(error.0))?
         .into_iter()
-        .filter(|app| {
-            app.kind == Kind::Application
-                && (lists.extras.contains(&app.id)
-                    || app
-                        .categories
-                        .iter()
-                        .any(|category| lists.categories.contains(category)))
-        })
+        .filter(|app| super::offerable(app, lists))
         .collect();
     // A cache: without it the next start parses the catalogue again.
     let _ = write_index(index, stamp, &apps);

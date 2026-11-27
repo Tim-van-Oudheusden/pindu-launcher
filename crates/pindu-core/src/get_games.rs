@@ -74,7 +74,7 @@ pub fn refresh_command(installation: Installation) -> Vec<String> {
 }
 
 /// `flatpak`'s option for `installation`.
-fn flag(installation: Installation) -> &'static str {
+pub(crate) fn flag(installation: Installation) -> &'static str {
     match installation {
         Installation::System => "--system",
         Installation::User => "--user",
