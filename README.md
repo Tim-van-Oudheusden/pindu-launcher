@@ -92,9 +92,11 @@ and behaves like the rest of GNOME.
   of replacing them, and details you enter yourself come before both. A game's page marks each detail from Wikidata
   with **Wikidata** and the date it was fetched, and on the desktop a button beside the detail opens the game's
   Wikidata page.
+- The native packages can find games on Flathub and install, play and remove them, in fullscreen mode with a
+  controller and in the desktop window ([Get Games](#get-games)).
 - Typing a game's name in the GNOME Shell Activities overview starts it.
 - The library works without a network. Pindu launcher goes online only for the artwork, metadata and Proton builds you
-  ask for.
+  ask for, and for Get Games' catalogue, screenshots and installs.
 - You can export your collections, saved filters, favourites, hidden games, games added by hand, tracked playtime,
   groups of copies and the game details you set to a file, and import them again. Before an update changes the
   library's format, Pindu launcher saves a copy of the library beside it, named for the format it had (such as
@@ -574,6 +576,30 @@ with a controller alone.
   closes.
 - Add a Store does not start Steam by itself once Steam is installed: Steam's set-up downloads several hundred MB and
   starts its client, so it waits until you choose Open or Sign In.
+
+### Get Games
+
+The native packages have **Get Games**, a catalogue of the games on Flathub plus a few extras, which you browse, install
+and remove with a controller alone. Home has a **Get Games** tile, and the desktop window's sidebar has a Get Games item
+that shows the same catalogue for the mouse. The Flatpak cannot run `flatpak` on the host, so it has neither.
+
+- The catalogue is the one Flatpak already downloads from Flathub, read from the installation that installs go to. When
+  it is missing or more than a day old, Get Games asks Flatpak for a new one and shows the old one meanwhile. With no
+  catalogue and no network it says so and offers Try Again.
+- It shows shelves of cards: picks, the launchers, one shelf per category that has games, More for the games in none,
+  and the extras. LB and RB jump between shelves, and an installed app's card says Installed. Y searches with the
+  search keyboard by name, summary and keywords; the desktop page has a search field.
+- A game's page shows its icon, summary, licence, age rating and sizes, screenshots that LB and RB turn, and its
+  description. Its main button follows the game's state: **Install**, **Cancel** while it installs, **Play** once it is
+  installed, or **Open** for an extra. **Remove** asks first and offers **Delete Its Data**, off by default.
+- Installs and removals run one at a time and show in Activity, where an install can be cancelled; each ends in a
+  notification. An install that would not fit says how much space it needs. Steam, Heroic and Lutris install through
+  [Add a Store](#add-a-store)'s flow.
+- A game installed this way joins the library when the install ends; an extra appears under [Apps](#apps). A game
+  installed as a Flatpak app also offers **Uninstall…** in its library page's menu (**Uninstall** in the options sheet
+  in fullscreen mode), and the installed marks follow installs and removals made outside the launcher.
+
+Details in [`docs/get-games.md`](docs/get-games.md).
 
 ### Setting Up Steam
 
