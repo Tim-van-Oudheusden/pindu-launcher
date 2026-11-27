@@ -240,10 +240,7 @@ impl GetGamesService {
     /// screens asked for it.
     fn start(&self, installation: Installation) {
         let dirs = HostDirs::from_env();
-        let flatpak_dir = match installation {
-            Installation::System => dirs.system_flatpak.clone(),
-            Installation::User => dirs.data_home.join("flatpak"),
-        };
+        let flatpak_dir = catalogue::installation_dir(installation, &dirs);
         let jobs = GetGames::new(
             installation,
             Box::new(FlatpakJobs::new(flatpak_dir.clone())),

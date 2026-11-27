@@ -15,17 +15,22 @@ pub use appstream::{App, Block, Kind, Licence, Screenshot};
 pub use lists::Lists;
 
 use crate::add_store::{FLATHUB, Installation, StoreApp};
+use crate::get_games;
 use crate::search::{Query, normalize, sort_name};
 use crate::sources::location::HostDirs;
+
+/// The folder Flatpak keeps `installation` in: its apps, their data and its catalogues.
+pub fn installation_dir(installation: Installation, dirs: &HostDirs) -> PathBuf {
+    match installation {
+        Installation::System => dirs.system_flatpak.clone(),
+        Installation::User => dirs.data_home.join("flatpak"),
+    }
+}
 
 /// The folder `installation` keeps Flathub's catalogue in, as Flatpak deploys it:
 /// `appstream.xml` and the `icons` folder.
 pub fn active_dir(installation: Installation, dirs: &HostDirs) -> PathBuf {
-    let flatpak = match installation {
-        Installation::System => dirs.system_flatpak.clone(),
-        Installation::User => dirs.data_home.join("flatpak"),
-    };
-    flatpak
+    installation_dir(installation, dirs)
         .join("appstream")
         .join(FLATHUB)
         .join(flatpak_arch())
@@ -43,14 +48,10 @@ fn flatpak_arch() -> &'static str {
 /// The command that lists Flathub's apps in `installation` with their options, the
 /// end-of-life ones among them, for [`end_of_life`].
 pub fn end_of_life_command(installation: Installation) -> Vec<String> {
-    let flag = match installation {
-        Installation::System => "--system",
-        Installation::User => "--user",
-    };
     [
         "flatpak",
         "remote-ls",
-        flag,
+        get_games::flag(installation),
         FLATHUB,
         "--app",
         "--all",
@@ -179,10 +180,9 @@ impl Offer {
         let mut apps: Vec<App> = apps
             .into_iter()
             .filter(|app| {
-                app.kind == Kind::Application
+                offerable(app, &lists)
                     && !end_of_life.contains(&app.id)
                     && !lists.blocklist.contains(&app.id)
-                    && (is_game(app, &lists) || lists.extras.contains(&app.id))
             })
             .collect();
         apps.sort_by_cached_key(|app| (sort_name(&app.name), app.id.clone()));
@@ -278,6 +278,12 @@ impl Offer {
         by_name.append(&mut by_text);
         by_name
     }
+}
+
+/// Whether `lists` lets Get Games offer `app`: an application that is a game or an extra.
+/// The index ([`index::load`]) keeps these, so [`Offer::new`] finds every one it may offer.
+fn offerable(app: &App, lists: &Lists) -> bool {
+    app.kind == Kind::Application && (is_game(app, lists) || lists.extras.contains(&app.id))
 }
 
 /// Whether `app` counts as a game under `lists`: it has one of its categories.
